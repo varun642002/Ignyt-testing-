@@ -265,6 +265,7 @@
       // Fast-load cache for Home: written only on a SUCCESSFUL explicit sync, read by
       // renderHomeHealthFeed() so Home never has to wait on (or trigger) a native call.
       try { localStorage.setItem("hx_hc_dashboard_cache", JSON.stringify(result.data)); } catch (e) { /* storage full/unavailable -- non-fatal, Home just falls back to no cached data */ }
+      window.dispatchEvent(new CustomEvent("ignyt:health-connect-updated"));
     } else {
       _errorMsg = result.error || "Sync failed.";
     }
@@ -293,7 +294,7 @@
    *  one source of truth. No-ops harmlessly if neither Home nor Health is the current tab. */
   function notifyDashboard() {
     if (typeof state === "undefined" || typeof render !== "function") return;
-    if (state.tab === "health" || state.tab === "home") render();
+    if (state.tab === "health" || state.tab === "home" || state.tab === "nutrition") render();
   }
 
   // Exposed so app.js's renderHealthDashboard() can drive the exact same connect/sync/
@@ -308,6 +309,18 @@
     disconnect: handleDisconnect
   };
 
+  // Reads never request permissions.  These refreshes only run after the user explicitly
+  // connected Health Connect, and a revoked grant is surfaced as "Permission required".
+  function refreshWhenConnected() {
+    const hcState = loadHcState();
+    if (hcState.connected && !_busy) handleSync();
+  }
+
+  window.addEventListener("ignyt:health-connect-navigation", refreshWhenConnected);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refreshWhenConnected();
+  });
+
   // ---------------------------------------------------------------------
   // Boot: single observer drives both the card and the export hooks.
   // No auto-sync, no auto-permission-request anywhere in this boot path.
@@ -320,7 +333,13 @@
 
   function startObserving() {
     const main = document.getElementById("main");
-    if (main) { observer.observe(main, { childList: true }); injectCard(); }
+    if (main) {
+      observer.observe(main, { childList: true }); injectCard();
+      refreshWhenConnected(); // app launch
+      window.setInterval(() => {
+        if (document.visibilityState === "visible") refreshWhenConnected();
+      }, 5 * 60 * 1000);
+    }
     else setTimeout(startObserving, 200);
   }
 
