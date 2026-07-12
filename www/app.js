@@ -3433,6 +3433,41 @@ function hcFmt(value, unit, decimals) {
   return `${num}${unit ? " " + unit : ""}`;
 }
 
+/** Maps each Health Connect insight tile to the exact native permission string it reads
+ *  (must match HealthConnectManager.kt's allPermissions). Used to tell "no data yet" apart
+ *  from "permission never granted" -- two different situations that used to render as the
+ *  same generic "No data"/"No data available" text. */
+const HC_METRIC_PERMISSION = {
+  "Steps": "android.permission.health.READ_STEPS",
+  "Heart Rate": "android.permission.health.READ_HEART_RATE",
+  "Sleep": "android.permission.health.READ_SLEEP",
+  "Active Calories": "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+  "Distance": "android.permission.health.READ_DISTANCE",
+  "Weight": "android.permission.health.READ_WEIGHT",
+  "Workouts": "android.permission.health.READ_EXERCISE",
+  "Exercise": "android.permission.health.READ_EXERCISE",
+  "Respiratory Rate": "android.permission.health.READ_RESPIRATORY_RATE",
+  "Oxygen Saturation": "android.permission.health.READ_OXYGEN_SATURATION",
+  "Blood Pressure": "android.permission.health.READ_BLOOD_PRESSURE",
+  "Body Temperature": "android.permission.health.READ_BODY_TEMPERATURE",
+  "Body Fat": "android.permission.health.READ_BODY_FAT",
+  "Height": "android.permission.health.READ_HEIGHT",
+  "Lean Body Mass": "android.permission.health.READ_LEAN_BODY_MASS",
+  "BMR": "android.permission.health.READ_BASAL_METABOLIC_RATE",
+  "Hydration": "android.permission.health.READ_HYDRATION",
+  "Nutrition": "android.permission.health.READ_NUTRITION"
+};
+
+/** true only when we positively know the permission was denied (a real grantedPermissions
+ *  list came back from a fresh sync and this metric's permission isn't in it). Older cached
+ *  payloads from before this field existed have no grantedPermissions array -- those fall
+ *  back to the plain "no data" reading rather than a false "permission required" claim. */
+function hcPermissionMissing(d, label) {
+  if (!d || !Array.isArray(d.grantedPermissions)) return false;
+  const perm = HC_METRIC_PERMISSION[label];
+  return !!perm && !d.grantedPermissions.includes(perm);
+}
+
 /* =========================================================
    LIGHTWEIGHT SVG MINI-CHARTS -- no charting library, just small reusable
    string-generating functions. Every one of these only draws what real
@@ -3646,22 +3681,41 @@ function renderHomeHealthFeed() {
   return `<div class="eyebrow-label">Health Connect</div>${cards.join("")}`;
 }
 
-function hcInsightTile(label, value, unit, period) {
-  const text = value == null ? "No data" : `${value}${unit ? ` <span class="stat-unit">${unit}</span>` : ""}`;
-  return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value" style="font-size:${value == null ? '13px' : '20px'};color:${value == null ? 'var(--muted)' : 'var(--text)'};">${text}</div><div style="font-size:10px;color:var(--muted);margin-top:2px;font-weight:700;text-transform:uppercase;">${period}</div></div>`;
+function hcInsightTile(label, value, unit, period, permissionMissing) {
+  const text = permissionMissing ? "Permission required" : (value == null ? "No data" : `${value}${unit ? ` <span class="stat-unit">${unit}</span>` : ""}`);
+  const dim = permissionMissing || value == null;
+  return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value" style="font-size:${dim ? '13px' : '20px'};color:${dim ? 'var(--muted)' : 'var(--text)'};">${text}</div><div style="font-size:10px;color:var(--muted);margin-top:2px;font-weight:700;text-transform:uppercase;">${period}</div></div>`;
 }
 
+/** Day shows today's/latest real reading for every metric, same as before. Week/Month/Year
+ *  used to just relabel that exact same today/latest snapshot as if it were a period total --
+ *  a real bug (audited: tapping through all four tabs showed identical numbers). Point-in-time
+ *  vitals (weight, height, body fat, lean body mass, BMR, respiratory rate, oxygen saturation,
+ *  blood pressure, body temperature, latest heart rate) are genuinely "latest known reading"
+ *  regardless of range, so those stay visible on every tab -- that's not a period total, so
+ *  showing the same value isn't misleading. True period-cumulative metrics (Steps, Active
+ *  Calories, Distance, Exercise count, Sleep, Hydration, Nutrition) only have a real "today"
+ *  figure from the native sync, plus a genuine 7-day history for Steps -- so Week shows the
+ *  real weekly Steps sum, and everything else without real period-scoped data honestly shows
+ *  "No data" (or "Permission required") under Week/Month/Year rather than a mislabeled Day value. */
 function renderHealthInsightMetrics(d, period) {
-  const sleep = d.sleep && d.sleep.totalMinutes != null ? `${Math.floor(d.sleep.totalMinutes / 60)}h ${d.sleep.totalMinutes % 60}m` : null;
-  const n = d.nutrition;
+  const isDay = period === "Day";
+  const weeklySteps = period === "Week" && Array.isArray(d.steps7Days) && d.steps7Days.length
+    ? d.steps7Days.reduce((sum, p) => sum + (Number(p.value) || 0), 0)
+    : null;
+  const stepsValue = isDay
+    ? (d.steps?.steps != null ? Number(d.steps.steps).toLocaleString() : null)
+    : (weeklySteps != null ? weeklySteps.toLocaleString() : null);
+  const sleep = isDay && d.sleep && d.sleep.totalMinutes != null ? `${Math.floor(d.sleep.totalMinutes / 60)}h ${d.sleep.totalMinutes % 60}m` : null;
+  const n = isDay ? d.nutrition : null;
   const metrics = [
-    ["Steps", d.steps?.steps != null ? Number(d.steps.steps).toLocaleString() : null, ""],
+    ["Steps", stepsValue, ""],
     ["Heart Rate", d.heartRate?.latestBpm != null ? Math.round(d.heartRate.latestBpm) : null, "bpm"],
     ["Sleep", sleep, ""],
-    ["Active Calories", d.activeCalories?.kcal != null ? Math.round(d.activeCalories.kcal) : null, "kcal"],
-    ["Distance", d.distance?.km != null ? d.distance.km.toFixed(2) : null, "km"],
+    ["Active Calories", isDay && d.activeCalories?.kcal != null ? Math.round(d.activeCalories.kcal) : null, "kcal"],
+    ["Distance", isDay && d.distance?.km != null ? d.distance.km.toFixed(2) : null, "km"],
     ["Weight", d.weight?.weightKg != null ? displayW(d.weight.weightKg) : null, wUnit()],
-    ["Exercise", d.workouts?.count != null ? d.workouts.count : null, "sessions"],
+    ["Exercise", isDay && d.workouts?.count != null ? d.workouts.count : null, "sessions"],
     ["Respiratory Rate", d.respiratoryRate?.rpm != null ? Math.round(d.respiratoryRate.rpm) : null, "rpm"],
     ["Oxygen Saturation", d.oxygenSaturation?.percentage != null ? Math.round(d.oxygenSaturation.percentage) : null, "%"],
     ["Blood Pressure", d.bloodPressure?.systolic != null ? `${Math.round(d.bloodPressure.systolic)}/${Math.round(d.bloodPressure.diastolic)}` : null, "mmHg"],
@@ -3670,10 +3724,10 @@ function renderHealthInsightMetrics(d, period) {
     ["Height", d.height?.meters != null ? Math.round(d.height.meters * 100) : null, "cm"],
     ["Lean Body Mass", d.leanBodyMass?.kg != null ? displayW(d.leanBodyMass.kg) : null, wUnit()],
     ["BMR", d.basalMetabolicRate?.kcalPerDay != null ? Math.round(d.basalMetabolicRate.kcalPerDay) : null, "kcal/day"],
-    ["Hydration", d.hydration?.liters != null ? d.hydration.liters.toFixed(2) : null, "L"],
+    ["Hydration", isDay && d.hydration?.liters != null ? d.hydration.liters.toFixed(2) : null, "L"],
     ["Nutrition", n?.kcal != null ? Math.round(n.kcal) : null, "kcal"]
   ];
-  return `<div class="grid2" style="margin-bottom:16px;">${metrics.map(([label, value, unit]) => hcInsightTile(label, value, unit, period)).join("")}</div>`;
+  return `<div class="grid2" style="margin-bottom:16px;">${metrics.map(([label, value, unit]) => hcInsightTile(label, value, unit, period, hcPermissionMissing(d, label))).join("")}</div>`;
 }
 
 function renderHealthDashboard() {
@@ -3741,13 +3795,17 @@ function renderHealthDashboard() {
 
     <div class="eyebrow-label">Today's Health</div>
     <div class="grid2" style="margin-bottom:16px;">
-      ${tiles.map(([label, value, sub]) => `
+      ${tiles.map(([label, value, sub]) => {
+        const permMissing = hcPermissionMissing(d, label);
+        const displayValue = permMissing ? "Permission required" : value;
+        const dim = permMissing || value === "No data available";
+        return `
         <div class="stat-card">
           <div class="stat-label">${label}</div>
-          <div class="stat-value" style="font-size:${value === "No data available" ? "13px" : "20px"};color:${value === "No data available" ? "var(--muted)" : "var(--text)"};">${value}</div>
+          <div class="stat-value" style="font-size:${dim ? "13px" : "20px"};color:${dim ? "var(--muted)" : "var(--text)"};">${displayValue}</div>
           <div style="font-size:10px;color:var(--muted);margin-top:2px;font-weight:700;text-transform:uppercase;">${sub}</div>
         </div>
-      `).join("")}
+      `;}).join("")}
     </div>
 
     <div class="eyebrow-label">Insights</div>
@@ -4736,9 +4794,9 @@ function renderNutritionTab(){
           <span class="mono" style="font-size:12px;color:${mealKcal>budget?'var(--accent)':'var(--muted)'};">${mealKcal} of ${budget} Cal <span style="color:var(--accent);font-weight:900;margin-left:6px;">${isOpen?'−':'+'}</span></span>
         </div>
         ${mealFoods.map(f=>`<div class="history-row" style="margin-top:8px;">
-          <div><div style="font-size:13px;font-weight:600;">${f.name}</div>
+          <div style="min-width:0;flex:1;margin-right:8px;"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.name}</div>
           ${(f.protein||f.carbs||f.fat)?`<div class="mono" style="font-size:10px;color:var(--muted);">P${f.protein||0} C${f.carbs||0} F${f.fat||0}</div>`:""}</div>
-          <span class="mono" style="font-size:12px;color:var(--accent);">${f.calories} kcal</span>
+          <span class="mono" style="font-size:12px;color:var(--accent);flex-shrink:0;">${f.calories} kcal</span>
           <button class="del" data-del-food="${f.id}" aria-label="Delete food entry">${svg('x',12)}</button>
         </div>`).join("")}
         ${isOpen?`<div style="margin-top:10px;">
@@ -6401,8 +6459,12 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{
       const meal = el.dataset.logMealFood;
       const name = document.getElementById("food-name").value.trim();
-      const cal = Number(document.getElementById("food-cal").value);
-      if(!name || !cal) return;
+      // A blank calorie field also reads as "0" through Number(), same as a deliberately
+      // logged 0-calorie item (black coffee, water) -- checking the raw string for blank/NaN
+      // instead of falsy-0 lets a genuine 0 through without also accepting an empty field.
+      const calStr = document.getElementById("food-cal").value.trim();
+      const cal = Number(calStr);
+      if(!name || calStr === "" || isNaN(cal) || cal < 0) return;
       state.foodLog.unshift({ id: Date.now(), date: todayStr(), name, calories: cal, meal,
         protein: Number(document.getElementById("food-protein").value)||0,
         carbs: Number(document.getElementById("food-carbs").value)||0,
@@ -6430,8 +6492,9 @@ function attachHandlers(){
   const saveFavBtn = document.querySelector('[data-action="save-as-favorite"]');
   if(saveFavBtn) saveFavBtn.addEventListener("click", ()=>{
     const name = document.getElementById("food-name").value.trim();
-    const cal = Number(document.getElementById("food-cal").value);
-    if(!name || !cal) return;
+    const calStr = document.getElementById("food-cal").value.trim();
+    const cal = Number(calStr);
+    if(!name || calStr === "" || isNaN(cal) || cal < 0) return;
     const fav = {
       name, calories: cal,
       protein: Number(document.getElementById("food-protein").value)||0,
@@ -6494,10 +6557,12 @@ function attachHandlers(){
   if(healthDisconnectBtn) healthDisconnectBtn.addEventListener("click", ()=>{
     if(window.HealthConnectIntegration) window.HealthConnectIntegration.disconnect();
   });
+  // Day/Week/Month/Year is a purely client-side display filter over data already synced --
+  // it doesn't need (and previously wastefully triggered) a full native Health Connect sync
+  // on every tap.
   document.querySelectorAll("[data-health-range]").forEach(el=>el.addEventListener("click", ()=>{
     state.healthInsightsRange = el.dataset.healthRange;
     render();
-    if(window.HealthConnectIntegration) window.HealthConnectIntegration.sync();
   }));
 
   // Toast / confirm dialog

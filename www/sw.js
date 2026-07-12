@@ -32,7 +32,12 @@ self.addEventListener("fetch", (e) => {
           caches.open(CACHE).then((c) => c.put(e.request, copy));
           return res;
         })
-        .catch(() => caches.match(e.request))
+        // If nothing is cached yet either (e.g. the very first launch happens offline, or
+        // install's caches.addAll partially failed), caches.match resolves undefined and
+        // respondWith(undefined) would surface the browser's bare connection-error page
+        // instead of anything Ignyt-branded. Fall back to the cached app shell itself so the
+        // user still gets a real (if stale) screen rather than a blank native error page.
+        .catch(() => caches.match(e.request).then((cached) => cached || caches.match("./index.html")))
     );
   } else {
     e.respondWith(
