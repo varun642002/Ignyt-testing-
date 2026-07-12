@@ -1,13 +1,5 @@
-const CACHE = "ignyt-v7"; // bumped: ui.js split into js/ui/*
-const ASSETS = [
-  "./", "./index.html", "./manifest.json",
-  "./assets/icons/icon-192.png", "./assets/icons/icon-512.png",
-  "./css/styles.css", "./css/components.css", "./css/utilities.css", "./css/responsive.css",
-  "./js/app.js", "./js/storage.js", "./js/workout.js", "./js/nutrition.js",
-  "./js/timer.js", "./js/charts.js", "./js/settings.js", "./js/utils.js", "./js/constants.js",
-  "./js/ui/index.js", "./js/ui/dashboard.js", "./js/ui/navigation.js", "./js/ui/modals.js",
-  "./js/ui/forms.js", "./js/ui/tables.js", "./js/ui/charts-ui.js", "./js/ui/toast.js", "./js/ui/dialogs.js"
-];
+const CACHE = "ignyt-v8"; // bumped: back to single-file format (app.js, index.html, sw.js only)
+const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./app.js"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
@@ -23,11 +15,11 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
-// Network-first for the app shell (index.html + every JS module) so a code update is
-// picked up on the very next load instead of staying frozen on whatever was precached
-// at install time. Falls back to cache only when offline. Other assets (icons, manifest,
-// css) stay cache-first since they rarely change.
-const NETWORK_FIRST = [/index\.html$/, /\/js\/.*\.js$/];
+// Network-first for the app shell (index.html, app.js) so a code update is picked up
+// on the very next load instead of staying frozen on whatever was precached at install
+// time. Falls back to cache only when offline. Other assets (icons, manifest) stay
+// cache-first since they rarely change.
+const NETWORK_FIRST = [/index\.html$/, /app\.js$/];
 
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
