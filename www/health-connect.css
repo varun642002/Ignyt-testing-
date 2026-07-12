@@ -1,0 +1,28 @@
+/* =========================================================
+   HEALTH CONNECT — dashboard card styling.
+   Add this block to the end of your existing <style> tag in index.html
+   (or as a separate linked stylesheet, doesn't matter which). Uses only
+   the CSS variables Ignyt already defines (--surface, --accent, --text,
+   --muted, --border, --mint) so it matches the existing dark theme
+   automatically, including your light-theme override if the user has
+   that toggled.
+========================================================= */
+
+.hc-card{background:var(--surface); border-radius:14px; padding:16px; margin-bottom:16px;}
+.hc-card-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;
+  font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--muted);}
+.hc-sync-btn{background:var(--surface-alt); color:var(--accent); border:none; border-radius:8px;
+  padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; min-width:56px; min-height:28px;
+  display:flex; align-items:center; justify-content:center;}
+.hc-sync-btn:disabled{opacity:.6; cursor:default;}
+.hc-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;}
+.hc-tile{background:var(--surface-alt); border-radius:10px; padding:10px 8px; text-align:center;}
+.hc-tile-value{font-family:'SF Mono', monospace; font-size:17px; font-weight:800; color:var(--text);}
+.hc-tile-unit{font-size:11px; font-weight:600; color:var(--muted); margin-left:2px;}
+.hc-tile-label{font-size:10px; font-weight:700; text-transform:uppercase; color:var(--muted); margin-top:3px;}
+.hc-empty{font-size:13px; color:var(--muted); text-align:center; padding:10px 4px;}
+.hc-error{color:var(--accent);}
+.hc-synced-at{font-size:10px; color:var(--muted); text-align:right; margin-top:10px;}
+.hc-spinner{width:15px; height:15px; border:2px solid var(--muted); border-top-color:var(--accent);
+  border-radius:50%; animation:hc-spin .7s linear infinite;}
+@keyframes hc-spin{ to{ transform:rotate(360deg); } }
