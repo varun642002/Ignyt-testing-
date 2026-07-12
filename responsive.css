@@ -1,0 +1,12 @@
+/* =========================================================
+   RESPONSIVE — media queries. Ignyt is built mobile-first as a single
+   fixed layout (no phone/tablet/desktop breakpoints exist yet, since
+   it's designed to be used as an installed PWA/APK on a phone), so the
+   only query here today is the prefers-reduced-motion accessibility
+   preference. Add viewport breakpoints here if a wider layout is
+   ever needed.
+========================================================= */
+
+@media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001s !important; animation-iteration-count:1 !important; transition-duration:0.001s !important;}
+  }

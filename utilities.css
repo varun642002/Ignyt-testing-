@@ -1,0 +1,22 @@
+/* =========================================================
+   UTILITIES — small, generic, reusable classes not tied to one
+   specific component (typography, flex/grid helpers, label styles).
+========================================================= */
+
+.mono{font-family:'SF Mono',ui-monospace,'Courier New',monospace;}
+
+.eyebrow-row{display:flex; align-items:center; gap:8px; margin-bottom:2px;}
+
+.eyebrow-dash{width:24px; height:4px; border-radius:2px; background:var(--accent);}
+
+.eyebrow{font-size:11px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--muted);}
+
+.eyebrow-label{font-size:11px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin:18px 0 8px;}
+
+.eyebrow-label:first-child{margin-top:4px;}
+
+.row-between{display:flex; align-items:center; justify-content:space-between;}
+
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+
+.empty-note{text-align:center; padding:32px 0; color:var(--muted); font-size:14px;}

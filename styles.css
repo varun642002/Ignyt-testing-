@@ -1,0 +1,35 @@
+/* =========================================================
+   STYLES — CSS custom properties (dark + light theme), base resets,
+   focus-visible accessibility outline, and the app shell (#app).
+   Everything else is layered on top of these variables.
+========================================================= */
+
+:root{
+    --bg:#121216; --surface:#1C1C22; --surface-alt:#26262E;
+    --accent:#FF5A1F; --steel:#4FA8D8; --text:#F2F1ED; --muted:#8B8B94; --mint:#3ECF8E;
+    --border:#33333d;
+  }
+
+[data-theme="light"]{
+    --bg:#F5F5F7; --surface:#FFFFFF; --surface-alt:#ECECF1;
+    --accent:#E24E15; --steel:#1F6E9C; --text:#16161A; --muted:#6B6B76; --mint:#188F5D;
+    --border:#DEDEE4;
+  }
+
+[data-theme="light"] .timer-ring{ color:#16161A; }
+
+[data-theme="light"] .week-chip.active{ color:#fff; }
+
+[data-theme="light"] .level-chip.active{ color:var(--accent); }
+
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible{
+    outline:2px solid var(--steel); outline-offset:2px; border-radius:4px;
+  }
+
+html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    height:100%; overscroll-behavior:none;}
+
+#app{max-width:480px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; position:relative;}
