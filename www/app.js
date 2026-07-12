@@ -1543,7 +1543,7 @@ const state = {
     plateCalc:true, rpeTracking:true, autoStartRest:true, waterTargetMl:2500,
     workoutReminders:false, hydrationReminders:false, weeklyReports:false,
     lastWorkoutReminderDate:null, lastHydrationReminderDate:null, lastWeeklyReportAt:null,
-    theme:"dark", weightUnit:"kg"
+    theme:"dark", weightUnit:"kg", exerciseCalorieBudget:false
   }, LS.get("hx_settings", {})),
   plateCalcOpen: null, // element id string when plate calc popover open
   restDuration: LS.get("hx_rest_duration",90),
@@ -3078,6 +3078,7 @@ function renderSettingsTab(){
       ${settingToggle("keepAwake","Keep Awake During Workout","Prevents your phone screen from sleeping while a session is in progress.")}
       ${settingToggle("plateCalc","Plate Calculator","Shows a plates button next to weight inputs for barbell exercises.")}
       ${settingToggle("rpeTracking","RPE Tracking","Show the RPE column in the workout logger.")}
+      ${settingToggle("exerciseCalorieBudget","Exercise Calorie Budget","Add today’s real Health Connect active calories to your Food Log calorie budget.")}
       <div style="padding:14px 0;">
         <div class="row-between">
           <span style="font-weight:700;font-size:15px;">Default Rest Timer</span>
@@ -3645,6 +3646,36 @@ function renderHomeHealthFeed() {
   return `<div class="eyebrow-label">Health Connect</div>${cards.join("")}`;
 }
 
+function hcInsightTile(label, value, unit, period) {
+  const text = value == null ? "No data" : `${value}${unit ? ` <span class="stat-unit">${unit}</span>` : ""}`;
+  return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value" style="font-size:${value == null ? '13px' : '20px'};color:${value == null ? 'var(--muted)' : 'var(--text)'};">${text}</div><div style="font-size:10px;color:var(--muted);margin-top:2px;font-weight:700;text-transform:uppercase;">${period}</div></div>`;
+}
+
+function renderHealthInsightMetrics(d, period) {
+  const sleep = d.sleep && d.sleep.totalMinutes != null ? `${Math.floor(d.sleep.totalMinutes / 60)}h ${d.sleep.totalMinutes % 60}m` : null;
+  const n = d.nutrition;
+  const metrics = [
+    ["Steps", d.steps?.steps != null ? Number(d.steps.steps).toLocaleString() : null, ""],
+    ["Heart Rate", d.heartRate?.latestBpm != null ? Math.round(d.heartRate.latestBpm) : null, "bpm"],
+    ["Sleep", sleep, ""],
+    ["Active Calories", d.activeCalories?.kcal != null ? Math.round(d.activeCalories.kcal) : null, "kcal"],
+    ["Distance", d.distance?.km != null ? d.distance.km.toFixed(2) : null, "km"],
+    ["Weight", d.weight?.weightKg != null ? displayW(d.weight.weightKg) : null, wUnit()],
+    ["Exercise", d.workouts?.count != null ? d.workouts.count : null, "sessions"],
+    ["Respiratory Rate", d.respiratoryRate?.rpm != null ? Math.round(d.respiratoryRate.rpm) : null, "rpm"],
+    ["Oxygen Saturation", d.oxygenSaturation?.percentage != null ? Math.round(d.oxygenSaturation.percentage) : null, "%"],
+    ["Blood Pressure", d.bloodPressure?.systolic != null ? `${Math.round(d.bloodPressure.systolic)}/${Math.round(d.bloodPressure.diastolic)}` : null, "mmHg"],
+    ["Body Temperature", d.bodyTemperature?.celsius != null ? d.bodyTemperature.celsius.toFixed(1) : null, "°C"],
+    ["Body Fat", d.bodyFat?.percentage != null ? d.bodyFat.percentage.toFixed(1) : null, "%"],
+    ["Height", d.height?.meters != null ? Math.round(d.height.meters * 100) : null, "cm"],
+    ["Lean Body Mass", d.leanBodyMass?.kg != null ? displayW(d.leanBodyMass.kg) : null, wUnit()],
+    ["BMR", d.basalMetabolicRate?.kcalPerDay != null ? Math.round(d.basalMetabolicRate.kcalPerDay) : null, "kcal/day"],
+    ["Hydration", d.hydration?.liters != null ? d.hydration.liters.toFixed(2) : null, "L"],
+    ["Nutrition", n?.kcal != null ? Math.round(n.kcal) : null, "kcal"]
+  ];
+  return `<div class="grid2" style="margin-bottom:16px;">${metrics.map(([label, value, unit]) => hcInsightTile(label, value, unit, period)).join("")}</div>`;
+}
+
 function renderHealthDashboard() {
   const isNative = window.HealthConnect && HealthConnect.isNativeAndroid();
   const integ = window.HealthConnectIntegration;
@@ -3688,7 +3719,10 @@ function renderHealthDashboard() {
     ? new Date(hcState.lastSyncAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
     : "Never";
 
-  const d = syncData || {};
+  let cachedData = null;
+  try { cachedData = JSON.parse(localStorage.getItem("hx_hc_dashboard_cache") || "null"); } catch (e) {}
+  const d = syncData || cachedData || {};
+  const range = state.healthInsightsRange || "Day";
   const tiles = [
     ["Steps", d.steps ? hcFmt(d.steps.steps) : hcFmt(null), "Today"],
     ["Distance", d.distance ? hcFmt(d.distance.km, "km", 1) : hcFmt(null), "Today"],
@@ -3715,6 +3749,12 @@ function renderHealthDashboard() {
         </div>
       `).join("")}
     </div>
+
+    <div class="eyebrow-label">Insights</div>
+    <div style="display:flex;gap:6px;margin:0 0 10px;">
+      ${["Day", "Week", "Month", "Year"].map(value => `<button class="cat-chip ${range === value ? 'active' : ''}" data-health-range="${value}">${value}</button>`).join("")}
+    </div>
+    ${renderHealthInsightMetrics(d, range)}
 
     ${errorMsg ? `<div class="info-box" style="padding:12px;margin-bottom:12px;font-size:12px;color:var(--accent);">${errorMsg}</div>` : ""}
 
@@ -4627,6 +4667,15 @@ function renderNutritionTab(){
   const weeklyLoss = (Math.abs(state.profile.goalDelta)*7)/7700;
 
   const eaten = todayEaten();
+  const hcData = window.HealthConnectIntegration ? window.HealthConnectIntegration.getSyncData() : null;
+  let cachedHcData = null;
+  try { cachedHcData = JSON.parse(localStorage.getItem("hx_hc_dashboard_cache") || "null"); } catch (e) {}
+  const activeCalories = (hcData || cachedHcData)?.activeCalories?.kcal;
+  let hcConnected = false;
+  try { hcConnected = !!JSON.parse(localStorage.getItem("hx_hc_state") || "{}").connected; } catch (e) {}
+  const useExerciseBudget = !!state.settings.exerciseCalorieBudget;
+  const calorieBudget = targets.kcal + (useExerciseBudget && activeCalories != null ? Math.round(activeCalories) : 0);
+  const remainingCalories = calorieBudget - Math.round(eaten);
   const burned = todayBurned();
   const netDeficit = burned - eaten;
   const activityKcal = Math.round(todayActivityKcal());
@@ -4641,8 +4690,12 @@ function renderNutritionTab(){
   return `
     <div class="eyebrow-label" style="margin-top:4px;">Today</div>
     <div class="grid2" style="margin-bottom:8px;">
-      <div class="stat-card"><div class="stat-label">Eaten</div><div class="stat-value" style="color:var(--text);">${Math.round(eaten)}<span class="stat-unit">/ ${targets.kcal} kcal</span></div></div>
+      <div class="stat-card"><div class="stat-label">Eaten</div><div class="stat-value" style="color:var(--text);">${Math.round(eaten)}<span class="stat-unit">/ ${calorieBudget} kcal</span></div></div>
       <div class="stat-card"><div class="stat-label">Burned (est.)</div><div class="stat-value" style="color:var(--steel);">${burned}<span class="stat-unit">kcal</span></div></div>
+    </div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:16px;">
+      <div class="row-between"><span style="font-size:13px;font-weight:700;">Calories Remaining</span><span class="mono" style="font-weight:900;color:${remainingCalories >= 0 ? 'var(--mint)' : 'var(--accent)'};">${remainingCalories} kcal</span></div>
+      ${useExerciseBudget ? `<div style="font-size:11px;color:var(--muted);margin-top:5px;">${activeCalories == null ? `Health Connect active calories: ${hcConnected ? 'No data' : 'Permission required'}` : `Includes ${Math.round(activeCalories)} kcal from Health Connect today.`}</div>` : ''}
     </div>
     <div class="info-box" style="text-align:center;padding:14px;margin-bottom:16px;background:${netDeficit>=0?'rgba(62,207,142,.08)':'rgba(255,90,31,.08)'};">
       <div class="stat-label">${netDeficit>=0?'Deficit Created':'Surplus (over target)'}</div>
@@ -5352,7 +5405,11 @@ function renderCsvImportPreview(){
 
 function attachHandlers(){
   document.querySelectorAll("[data-nav]").forEach(el=>{
-    el.addEventListener("click", ()=>{ state.tab = el.dataset.nav; render(); });
+    el.addEventListener("click", ()=>{
+      state.tab = el.dataset.nav;
+      render();
+      if (["home", "health", "nutrition"].includes(state.tab)) window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
+    });
   });
   document.querySelectorAll("[data-close-more]").forEach(el=>{
     el.addEventListener("click", (e)=>{
@@ -6437,6 +6494,11 @@ function attachHandlers(){
   if(healthDisconnectBtn) healthDisconnectBtn.addEventListener("click", ()=>{
     if(window.HealthConnectIntegration) window.HealthConnectIntegration.disconnect();
   });
+  document.querySelectorAll("[data-health-range]").forEach(el=>el.addEventListener("click", ()=>{
+    state.healthInsightsRange = el.dataset.healthRange;
+    render();
+    if(window.HealthConnectIntegration) window.HealthConnectIntegration.sync();
+  }));
 
   // Toast / confirm dialog
   const toastEl = document.querySelector('[data-action="dismiss-toast"]');
