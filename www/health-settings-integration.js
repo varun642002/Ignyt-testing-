@@ -262,6 +262,7 @@
       hcState.lastSyncAt = result.data.syncedAt;
       saveHcState(hcState);
       _errorMsg = null;
+      if (result.data.partialPermissions) _errorMsg = "Permission required for some Health Connect metrics.";
       // Fast-load cache for Home: written only on a SUCCESSFUL explicit sync, read by
       // renderHomeHealthFeed() so Home never has to wait on (or trigger) a native call.
       try { localStorage.setItem("hx_hc_dashboard_cache", JSON.stringify(result.data)); } catch (e) { /* storage full/unavailable -- non-fatal, Home just falls back to no cached data */ }

@@ -99,7 +99,8 @@ class HealthConnectPlugin : com.getcapacitor.Plugin() {
             try {
                 val granted = manager.grantedPermissions()
                 val data = JSObject().apply {
-                    put("granted", granted.containsAll(manager.allPermissions))
+                    put("granted", granted.any { manager.readPermissions.contains(it) })
+                    put("partial", !granted.containsAll(manager.allPermissions))
                     put("grantedPermissions", JSONArray(granted.toList()))
                 }
                 resolveSuccess(call, data)
@@ -120,7 +121,8 @@ class HealthConnectPlugin : com.getcapacitor.Plugin() {
                 val granted = manager.grantedPermissions()
                 resolveSuccess(call, JSObject().apply {
                     put("available", true)
-                    put("granted", granted.containsAll(manager.allPermissions))
+                    put("granted", granted.any { manager.readPermissions.contains(it) })
+                    put("partial", !granted.containsAll(manager.allPermissions))
                     put("grantedPermissions", JSONArray(granted.toList()))
                 })
             } catch (e: Exception) {
@@ -238,8 +240,13 @@ class HealthConnectPlugin : com.getcapacitor.Plugin() {
     @PluginMethod
     fun syncNow(call: PluginCall) {
         pluginScope.launch {
-            if (!ensurePermissions(call)) return@launch
+            if (!manager.isAvailable()) {
+                resolveError(call, "Health Connect is not available on this device.")
+                return@launch
+            }
             val data = JSObject()
+            val granted = manager.grantedPermissions()
+            data.put("partialPermissions", !granted.containsAll(manager.readPermissions))
             // Every field is independently wrapped in safeOrNull -- one metric failing
             // (missing permission for a newly-added type, a transient read error, etc.)
             // never prevents the others from returning. No single bad read blanks the screen.

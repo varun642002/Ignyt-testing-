@@ -85,6 +85,11 @@ class HealthConnectManager(private val context: Context) {
         HealthPermission.getWritePermission(WeightRecord::class)
     )
 
+    /** Reads are deliberately allowed to proceed with a partial grant. Each individual
+     * Health Connect query is isolated by the plugin, so one denied optional metric must
+     * not suppress otherwise permitted data such as steps or active calories. */
+    val readPermissions: Set<String> = allPermissions.filter { it.contains(".READ_") }.toSet()
+
     fun sdkStatus(): Int = HealthConnectClient.getSdkStatus(context, HEALTH_CONNECT_PACKAGE)
     fun isAvailable(): Boolean = sdkStatus() == HealthConnectClient.SDK_AVAILABLE
 
