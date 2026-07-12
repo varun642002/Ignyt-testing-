@@ -1,10 +1,12 @@
-const CACHE = "ignyt-v6"; // bumped for the flattened, further-split file layout
+const CACHE = "ignyt-v7"; // bumped: ui.js split into js/ui/*
 const ASSETS = [
   "./", "./index.html", "./manifest.json",
   "./assets/icons/icon-192.png", "./assets/icons/icon-512.png",
   "./css/styles.css", "./css/components.css", "./css/utilities.css", "./css/responsive.css",
-  "./js/app.js", "./js/ui.js", "./js/storage.js", "./js/workout.js", "./js/nutrition.js",
-  "./js/timer.js", "./js/charts.js", "./js/settings.js", "./js/utils.js", "./js/constants.js"
+  "./js/app.js", "./js/storage.js", "./js/workout.js", "./js/nutrition.js",
+  "./js/timer.js", "./js/charts.js", "./js/settings.js", "./js/utils.js", "./js/constants.js",
+  "./js/ui/index.js", "./js/ui/dashboard.js", "./js/ui/navigation.js", "./js/ui/modals.js",
+  "./js/ui/forms.js", "./js/ui/tables.js", "./js/ui/charts-ui.js", "./js/ui/toast.js", "./js/ui/dialogs.js"
 ];
 
 self.addEventListener("install", (e) => {

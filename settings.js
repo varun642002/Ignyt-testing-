@@ -1,5 +1,5 @@
 import { state } from './storage.js';
-import { renderCsvImportPreview } from './ui.js';
+import { renderCsvImportPreview } from './ui/index.js';
 
 /* =========================================================
    SETTINGS — theme application and the Settings tab (toggles, water

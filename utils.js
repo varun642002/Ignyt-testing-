@@ -1,6 +1,5 @@
 import { FINE_TO_BROAD, ICONS, MUSCLE_AVATAR_COLOR, MUSCLE_GROUP_COLOR, PLATE_SIZES, RPE_OPTIONS, SET_TYPE_CYCLE } from './constants.js';
 import { state } from './storage.js';
-import { render } from './ui.js';
 
 /* =========================================================
    UTILS — small, broadly-reusable helpers with no single domain owner:

@@ -1,7 +1,7 @@
 import { ALL_DATA_KEYS, SCHEMA_VERSION, SET_TYPE_IMPORT_MAP, VALID_MUSCLES } from './constants.js';
 import { csvEscape, downloadFile, parseCsvText, parseHevyDateTime, todayStr } from './utils.js';
 import { allLibraryExercises, computeSessionVolume, getMuscle, sessionTitle } from './workout.js';
-import { render } from './ui.js';
+import { render } from './ui/index.js';
 
 /* =========================================================
    STORAGE — localStorage wrapper, app state, persistence, migrations,

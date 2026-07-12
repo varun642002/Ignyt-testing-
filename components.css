@@ -253,3 +253,19 @@ textarea.note-input{background:var(--surface); border-radius:10px; padding:10px 
     background:var(--surface-alt); border:none; border-radius:10px; color:var(--text); font-weight:700; font-size:13px; cursor:pointer;}
 
 .routine-card{background:var(--surface); border-radius:14px; padding:14px; margin-bottom:12px;}
+
+/* Toast notification (replaces native alert() for non-critical messages) */
+.toast{position:fixed; left:16px; right:16px; bottom:calc(72px + env(safe-area-inset-bottom, 0px));
+  max-width:420px; margin:0 auto; background:var(--surface-alt); color:var(--text); border-radius:10px;
+  padding:13px 16px; font-size:13px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.4); z-index:200;
+  cursor:pointer; animation:toast-in .18s ease-out;}
+@keyframes toast-in{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+
+/* Confirm dialog (replaces native confirm() for destructive actions) */
+.dialog-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:210;}
+.dialog-box{position:fixed; left:20px; right:20px; top:50%; transform:translateY(-50%); max-width:360px;
+  margin:0 auto; background:var(--surface); border-radius:14px; padding:20px; z-index:211;
+  box-shadow:0 12px 32px rgba(0,0,0,.5);}
+.dialog-message{font-size:14px; font-weight:600; line-height:1.5; margin-bottom:18px;}
+.dialog-actions{display:flex; gap:8px;}
+.dialog-actions .btn{flex:1;}

@@ -1,6 +1,6 @@
 import { runMigrations, resolveOnboardingStatus, state } from './storage.js';
 import { rebuildWeeks } from './workout.js';
-import { render, renderErrorScreen } from './ui.js';
+import { render, renderErrorScreen } from './ui/index.js';
 
 /* =========================================================
    APP — entry point. Boots the app: runs migrations, resolves onboarding

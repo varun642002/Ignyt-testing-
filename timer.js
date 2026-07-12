@@ -1,6 +1,6 @@
 import { formatDuration, formatTime } from './utils.js';
 import { state } from './storage.js';
-import { render } from './ui.js';
+import { render } from './ui/index.js';
 
 /* =========================================================
    TIMER — rest timer, active-session elapsed timer, race-mode timer,
