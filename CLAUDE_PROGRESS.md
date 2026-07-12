@@ -33,31 +33,39 @@ None. The uncommitted diff is internally consistent and appears complete.
 N/A (none found)
 
 ## Pending audit areas
-- Actual Android compilation (Kotlin) not yet verified — proceeding to npx cap sync + gradlew build.
+None. This scoped task (finish pending Health Connect partial-permission work) is complete.
 
-## Files modified (pre-existing, uncommitted at session start)
+## Files modified
 - android/app/src/main/java/com/varun/ignyt/healthconnect/HealthConnectManager.kt
 - android/app/src/main/java/com/varun/ignyt/healthconnect/HealthConnectPlugin.kt
 - www/health-settings-integration.js
 - www/sw.js
+- CLAUDE_PROGRESS.md (new)
 
 ## Build attempts
-(none yet this session)
+1. `npx cap sync android` — succeeded.
+2. `cd android && .\gradlew.bat clean assembleDebug` — BUILD SUCCESSFUL in 55s (100 actionable
+   tasks, 90 executed / 10 up-to-date). Build verified.
 
 ## Current build status
-Not yet built.
+BUILD SUCCESSFUL. APK at android/app/build/outputs/apk/debug/app-debug.apk.
+Two pre-existing, unrelated Kotlin warnings only (deprecated `saveCall`, unused `result` param
+in `permissionCallback`) — not introduced by this change, not blocking.
 
 ## Errors encountered
-None yet.
+None.
 
 ## Fixes already attempted
-None yet.
+None needed — code review found no bugs in the pre-existing uncommitted diff.
 
 ## Git commit status
-Not committed.
+Committed: 795d83e "Allow Health Connect to sync with partial permission grants" on
+feature/phase1-stabilization.
 
 ## Git push status
-Not pushed.
+Pushed to origin/feature/phase1-stabilization.
 
 ## Exact next action
-Run `npx cap sync android`, then `cd android && .\gradlew.bat clean assembleDebug`.
+None — task complete. Real-device testing of the partial-permission flow (granting only some
+Health Connect metrics and confirming sync still returns data) requires real-device testing and
+was not performed by Claude Code.
