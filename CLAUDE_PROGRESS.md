@@ -1,14 +1,67 @@
 # CLAUDE_PROGRESS.md
 
 ## Current task
-Phase 2B (Firestore profile/settings sync foundation) — implementation COMPLETE and BUILD
-SUCCESSFUL; committing and pushing now. Immediately after: Phase 2C (cloud backup +
-multi-device sync for workout/progress data) on a new branch feature/cloud-workout-progress-sync.
-Phase 2C was requested mid-2B; per its own gating rule it starts only after the 2B foundation
-is complete, which is now.
+Phase 2C: cloud backup + multi-device sync for workout/progress data. Implementation
+complete; gradle build running. (Phase 2B was completed, committed de1c3ec, and pushed on
+feature/firestore-profile-settings-sync earlier this session.)
 
 ## Current branch
-feature/firestore-profile-settings-sync (from feature/google-signin-auth tip 1a0e58d).
+feature/cloud-workout-progress-sync (from feature/firestore-profile-settings-sync tip de1c3ec).
+
+## Phase 2C — what was built
+- MOD CloudSyncPlugin.kt: two new methods, both restricted natively to the collection
+  allowlist {workouts, routines, prs, bodylog, races, customExercises}:
+  - listCollection(name, since): incremental pull, updatedAt > since, 25s timeout,
+    fromCache flag passed through. Single-field inequality → no composite index needed.
+  - writeRecords(name, records[≤450]): one Firestore WriteBatch of merge-sets; 15s
+    timeout → {queued:true} (Firestore durable offline queue).
+- MOD www/cloud-sync.js (major extension):
+  - RECORD_CATEGORIES mapping the six local arrays to subcollections with per-category
+    validate()/idOf()/sort(). customExercises docId = encodeURIComponent(lowercased name)
+    (name is the app's natural key — NO local ID migration needed, none performed).
+  - Per-record 3-way sync via content hashes (stableStringify + djb2:length) of the
+    last-synced version, stored per uid in hx_cloud_sync_state.records. Only the changed
+    side propagates; both-changed → LOCAL WINS and is pushed (documented; no unresolved-
+    conflict UI this phase). Identical content → no-op (no duplicates — stable doc ids
+    make writes idempotent merge-sets).
+  - DELETIONS: tombstones {deleted:true, deletedAt} kept in Firestore forever; other
+    devices remove their copy on pull; tombstoned ids marked "T" locally, never re-pushed
+    or re-adopted (edit-vs-delete race → tombstone wins; same-name re-created custom
+    exercise stays local-only — both documented).
+  - Invalid local records: skipped for sync, ALWAYS preserved locally. Malformed cloud
+    docs: skipped, never fatal. Records >300KB serialized: kept local-only, logged.
+    Cloud docs with schemaVersion > 1: not interpreted.
+  - Pull cursor lastPulledAt advances only on server-confirmed (non-cache) reads, with a
+    10-min overlap window for device clock skew.
+  - NEW planProgress section in users/{uid}: {completed map "wk|day|ex"→ms, activeWeek,
+    activeLevel}; custom validator + per-key UNION merge of completed (uncheck can be
+    resurrected only if both devices changed between syncs — documented).
+  - Sync-state save only after full success → failed syncs repeat idempotent writes, never
+    lose track. localChangedSinceLastSync() extended to hash-compare all six categories.
+- Firestore rules: NO change needed — 2B rules already cover users/{userId}/{document=**}.
+- Triggers/UI: unchanged from 2B (auth event, foreground ≥5min, single 90s watcher, manual
+  Sync Now; one _busy guard). Status row already shows queued/offline/failed states.
+
+## Phase 2C — excluded (deliberate)
+foodLog, waterLog, favoriteFoods (food domain — later phase), achievements (derived,
+recomputable from workoutLog), active session/restDuration/UI state (device-local), ALL
+Health Connect data/state/cache (untouched, privacy), auth tokens (never stored).
+
+## Phase 2C build attempts
+1. npx cap sync android + gradlew clean assembleDebug — **BUILD SUCCESSFUL in 1m 49s**
+   (101 tasks; no new warnings; APK present).
+
+## Verification classification (2C)
+Statically verified + build verified ONLY. NOT Firebase-verified, NOT real-device-verified,
+NOT multi-device-verified. Requires: Firestore database created + rules deployed (see Phase
+2B console actions), then single-device and multi-device testing per the final report.
+
+## Exact next action
+Committed + pushed (this step); everything further is user-side testing.
+
+---
+
+## Phase 2B (COMPLETE — commit de1c3ec, pushed)
 
 ## Phase 2B — audit findings
 - Local schema: SCHEMA_VERSION=1 (hx_schema_version), runMigrations() hook at boot.

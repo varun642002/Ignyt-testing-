@@ -1,52 +1,54 @@
 /* =========================================================
-   IGNYT CLOUD SYNC (Phase 2B) — offline-first Firestore backup of the
-   fitness profile, nutrition targets, and app settings for signed-in
-   users. Everything else (workout history, food log, weight log,
-   Health Connect data/state, auth tokens, UI state) is deliberately
-   NOT synced in this phase.
+   IGNYT CLOUD SYNC — offline-first Firestore backup + multi-device
+   sync for signed-in users.
 
-   Native side: IgnytCloudSync Capacitor plugin — a dumb pipe that
-   reads/merge-writes exactly one document, users/{uid}. All policy
-   lives here.
+   Phase 2B: fitness profile, nutrition targets, app settings — synced
+   as sections of the single doc users/{uid}.
+   Phase 2C: per-record collections under users/{uid}/:
+     workouts/{id}         <- hx_workout_log   (stable id = Date.now() at creation)
+     routines/{id}         <- hx_routines      (stable id)
+     prs/{id}              <- hx_prs           (stable random string id)
+     bodylog/{id}          <- hx_bodylog       (stable id)  [weight/progress history]
+     races/{id}            <- hx_race_log      (stable id)
+     customExercises/{id}  <- hx_custom_exercises (no local id; the app's natural key is
+                              the exercise NAME -> docId = encodeURIComponent(lowercased
+                              name). No local migration needed or performed.)
+   Plus a planProgress section in users/{uid} (completed map + activeWeek/activeLevel)
+   with a per-key union merge for the completed map.
 
-   Cloud document shape (single doc — no fragmentation, 1 read + 1
-   merge-write per sync):
-     users/{uid} = {
-       schemaVersion: 1,
-       updatedAt: <ms>,
-       profile:   {...allowlist}, profileUpdatedAt:   <ms>,
-       nutrition: {...allowlist}, nutritionUpdatedAt: <ms>,
-       settings:  {...allowlist}, settingsUpdatedAt:  <ms>
-     }
+   DELIBERATELY NOT SYNCED: food log, water log, favorite foods (food domain — later
+   phase), achievements (derived, recomputable), active session / rest duration / UI
+   state (device-local), ALL Health Connect data/state/cache, auth tokens (never stored
+   anywhere by IGNYT).
 
-   CONFLICT POLICY (documented per Phase 2B spec):
-   Three-way comparison per section using the serialized snapshot of
-   the last successful sync (stored in hx_cloud_sync_state, keyed to
-   the uid). Only the side that changed since that snapshot propagates:
-     - cloud missing/invalid            -> push local        (Case A)
-     - local empty, cloud valid         -> apply cloud       (Case B)
-     - identical                        -> nothing           (Case C)
-     - only local changed               -> push local
-     - only cloud changed               -> apply cloud
-     - both changed, or first sign-in
-       with differing data (no snapshot)-> NON-DESTRUCTIVE MERGE:
-       start from cloud, overlay this device's values (local wins on
-       per-field conflicts — the device in hand is what the user sees),
-       apply merged locally AND push it. No field of populated local
-       data is ever replaced by emptiness, and cloud-only fields are
-       adopted rather than lost.
+   RECORD SYNC POLICY (3-way, per record, using content hashes of the last-synced
+   version kept in hx_cloud_sync_state, keyed to the uid):
+     - cloud record unknown locally, never seen before -> insert locally (Case B/D-merge)
+     - local record not in cloud -> upload (Case A); identical content -> no-op (Case C)
+     - only cloud changed since last sync -> adopt cloud version
+     - only local changed -> push local
+     - BOTH changed (or first sync with same id but different content) -> LOCAL WINS and
+       is pushed; the device in hand shows what the user believes is true. Documented
+       trade-off: no unresolved-conflict UI in this phase.
+   DELETIONS: tombstones. A record deleted locally (its id is in our synced-hash map but
+   gone from the local array) is written as {deleted:true, deletedAt} — never removed
+   from Firestore. Other devices remove their local copy when they pull the tombstone,
+   and the tombstone persists forever so an old offline device can never resurrect the
+   record. Tombstoned ids are marked "T" locally and never re-pushed or re-adopted.
+   Edit-vs-delete race: the tombstone wins; documented limitation.
 
-   OFFLINE: local saves never wait on this file. Reads fall back to
-   Firestore's disk cache; writes queue durably in Firestore and
-   deliver on reconnect (surfaced as "queued"). Failures set a status
-   flag and wait for the next natural trigger — no retry loops.
+   Malformed/unvalidated records (local or cloud) are skipped for sync but NEVER removed
+   from local storage. Records over ~300KB serialized are kept local-only (Firestore's
+   1MB doc limit) and logged.
 
-   TRIGGERS (all funnel through one guarded sync(); no overlap):
-     - auth change (sign-in / session restore)  [event from auth.js]
-     - manual "Sync Now" in Settings
-     - app returning to foreground (>=5 min since last sync)
-     - local change watcher: one 90s interval, visible tab only,
-       cheap serialize-and-compare, syncs only when something changed
+   INCREMENTAL PULL: one query per category per sync — updatedAt > (lastPulledAt - 10min
+   overlap window for device clock skew). lastPulledAt only advances on server-confirmed
+   (non-cache) reads. No full-database rereads after the first sync.
+
+   OFFLINE + TRIGGERS: unchanged from Phase 2B — Firestore disk cache + durable write
+   queue, no retry loops, triggers are sign-in/session-restore (auth event), foreground
+   resume (>=5 min), ONE 90s change-watcher interval (visible tab only), manual Sync Now.
+   A single _busy guard means there is never more than one sync in flight.
 ========================================================= */
 
 const IgnytCloudSync = (() => {
@@ -55,9 +57,12 @@ const IgnytCloudSync = (() => {
   const CLOUD_SCHEMA_VERSION = 1;
   const FOREGROUND_MIN_INTERVAL_MS = 5 * 60 * 1000;
   const WATCHER_INTERVAL_MS = 90 * 1000;
+  const PULL_OVERLAP_MS = 10 * 60 * 1000;
+  const MAX_RECORD_BYTES = 300000;
+  const TOMBSTONE = "T";
 
-  /* ---------- section definitions: explicit allowlists + types ---------- */
-  // "string[]" = array of strings. Anything not listed here never leaves the device.
+  /* ---------- doc sections (users/{uid} fields) ---------- */
+
   const SECTIONS = {
     profile: {
       fields: {
@@ -85,10 +90,92 @@ const IgnytCloudSync = (() => {
       },
       read: () => (typeof state !== "undefined" ? state.settings : null),
       apply: (clean) => { Object.assign(state.settings, clean); }
+    },
+    // Phase 2C: Hyrox plan progress. completed is a flat map
+    // "week|day|exerciseName" -> completion timestamp (ms).
+    planProgress: {
+      clean: (raw) => {
+        const out = {};
+        if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+        if (raw.completed && typeof raw.completed === "object" && !Array.isArray(raw.completed)) {
+          const map = {};
+          for (const key of Object.keys(raw.completed)) {
+            const value = raw.completed[key];
+            if (key.length <= 200 && typeof value === "number" && isFinite(value)) map[key] = value;
+          }
+          out.completed = map;
+        }
+        if (typeof raw.activeWeek === "number" && isFinite(raw.activeWeek)) out.activeWeek = raw.activeWeek;
+        if (typeof raw.activeLevel === "string") out.activeLevel = raw.activeLevel;
+        return out;
+      },
+      // Union of completion keys so neither device's ticked-off exercises are lost; the
+      // documented caveat is that an UNcheck can be resurrected if both sides changed
+      // between syncs (rare: requires concurrent edits on two devices).
+      merge: (cloud, local) => {
+        const merged = Object.assign({}, cloud, local);
+        merged.completed = Object.assign({}, cloud.completed || {}, local.completed || {});
+        return merged;
+      },
+      read: () => (typeof state !== "undefined"
+        ? { completed: state.completed, activeWeek: state.activeWeek, activeLevel: state.activeLevel }
+        : null),
+      apply: (clean) => {
+        if (clean.completed) state.completed = clean.completed;
+        if (clean.activeWeek != null) state.activeWeek = clean.activeWeek;
+        if (clean.activeLevel) state.activeLevel = clean.activeLevel;
+      }
     }
   };
 
-  /* ---------- tiny utils ---------- */
+  /* ---------- record categories (users/{uid}/{collection}/{docId}) ---------- */
+  // validate() is the minimum shape a record must have to travel; failing records stay
+  // local, untouched. sort keeps newest-first ordering the app's UI expects.
+  const RECORD_CATEGORIES = {
+    workouts: {
+      read: () => state.workoutLog, write: (arr) => { state.workoutLog = arr; },
+      idOf: (r) => String(r.id),
+      validate: (r) => !!r && (typeof r.id === "number" || typeof r.id === "string")
+        && typeof r.date === "string" && Array.isArray(r.exercises),
+      sort: (a, b) => Number(b.id) - Number(a.id)
+    },
+    routines: {
+      read: () => state.routines, write: (arr) => { state.routines = arr; },
+      idOf: (r) => String(r.id),
+      validate: (r) => !!r && (typeof r.id === "number" || typeof r.id === "string")
+        && typeof r.name === "string" && Array.isArray(r.exercises),
+      sort: (a, b) => Number(b.id) - Number(a.id)
+    },
+    prs: {
+      read: () => state.prs, write: (arr) => { state.prs = arr; },
+      idOf: (r) => String(r.id),
+      validate: (r) => !!r && (typeof r.id === "string" || typeof r.id === "number")
+        && typeof r.exerciseName === "string",
+      sort: (a, b) => (Number(b.achievedAt) || 0) - (Number(a.achievedAt) || 0)
+    },
+    bodylog: {
+      read: () => state.bodylog, write: (arr) => { state.bodylog = arr; },
+      idOf: (r) => String(r.id),
+      validate: (r) => !!r && (typeof r.id === "number" || typeof r.id === "string")
+        && typeof r.date === "string",
+      sort: (a, b) => Number(b.id) - Number(a.id)
+    },
+    races: {
+      read: () => state.raceLog, write: (arr) => { state.raceLog = arr; },
+      idOf: (r) => String(r.id),
+      validate: (r) => !!r && (typeof r.id === "number" || typeof r.id === "string")
+        && typeof r.date === "string" && Array.isArray(r.segments),
+      sort: (a, b) => Number(b.id) - Number(a.id)
+    },
+    customExercises: {
+      read: () => state.customExercises, write: (arr) => { state.customExercises = arr; },
+      idOf: (r) => encodeURIComponent(String(r.name).trim().toLowerCase()),
+      validate: (r) => !!r && typeof r.name === "string" && r.name.trim().length > 0,
+      sort: null // creation order is fine; the library UI sorts/filters itself
+    }
+  };
+
+  /* ---------- utils ---------- */
 
   function isNative() {
     return typeof window.Capacitor !== "undefined"
@@ -115,11 +202,10 @@ const IgnytCloudSync = (() => {
     return account && account.uid ? account.uid : null;
   }
 
-  /** Validates one section's raw object (local OR cloud — same rules both ways) against its
-   *  allowlist. Returns only allowlisted keys with correct types; unknown keys and wrong
-   *  types are dropped, never fatal. Returns {} for anything that isn't a plain object. */
   function cleanSection(sectionKey, raw) {
-    const spec = SECTIONS[sectionKey].fields;
+    const section = SECTIONS[sectionKey];
+    if (section.clean) return section.clean(raw);
+    const spec = section.fields;
     const out = {};
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
     for (const key of Object.keys(spec)) {
@@ -137,9 +223,25 @@ const IgnytCloudSync = (() => {
     return out;
   }
 
-  // Key-sorted serialization so semantically-equal objects always compare equal.
-  function serialize(obj) {
-    return JSON.stringify(obj, Object.keys(obj).sort());
+  /** Deterministic serialization: recursively key-sorted, so semantically-equal objects
+   *  serialize identically regardless of key insertion order (or which device wrote them). */
+  function stableStringify(value) {
+    if (value === null || typeof value !== "object") {
+      return value === undefined ? "null" : JSON.stringify(value);
+    }
+    if (Array.isArray(value)) return "[" + value.map(stableStringify).join(",") + "]";
+    return "{" + Object.keys(value).sort()
+      .filter(k => value[k] !== undefined)
+      .map(k => JSON.stringify(k) + ":" + stableStringify(value[k]))
+      .join(",") + "}";
+  }
+
+  /** Short content hash (djb2 + length) so hx_cloud_sync_state stays small even with a
+   *  large workout history. Used only for change detection, never for security. */
+  function contentHash(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+    return h + ":" + str.length;
   }
 
   function loadSyncState() {
@@ -166,8 +268,6 @@ const IgnytCloudSync = (() => {
     if (typeof state !== "undefined" && typeof render === "function" && state.tab === "settings") render();
   }
 
-  /** Turns native error strings (prefixed machine-readably by CloudSyncPlugin) into a
-   *  status + a short message safe to show users. */
   function classifyError(errorText) {
     const text = String(errorText || "");
     if (text.indexOf("offline:") === 0) return { status: "offline", detail: "Offline — changes stay saved on this device." };
@@ -177,6 +277,121 @@ const IgnytCloudSync = (() => {
       return { status: "failed", detail: "Cloud database not set up yet — create Firestore in the Firebase Console." };
     }
     return { status: "failed", detail: "Sync failed — will retry automatically later." };
+  }
+
+  // Internal marker so record-sync failures carry the native error text up to sync().
+  function SyncHalt(errorText) { this.errorText = errorText; }
+
+  /* ---------- per-record engine (Phase 2C) ---------- */
+
+  async function syncRecordCategory(category, syncState, now) {
+    const cfg = RECORD_CATEGORIES[category];
+    if (!syncState.records) syncState.records = {};
+    const catState = syncState.records[category] || (syncState.records[category] = { lastPulledAt: 0, hashes: {} });
+    if (!catState.hashes) catState.hashes = {};
+
+    const rawLocal = cfg.read();
+    const localArr = Array.isArray(rawLocal) ? rawLocal : [];
+    const localMap = new Map();
+    const invalidLocals = []; // never synced, but ALWAYS preserved in local storage
+    for (const record of localArr) {
+      if (cfg.validate(record)) localMap.set(cfg.idOf(record), record);
+      else invalidLocals.push(record);
+    }
+
+    // -- pull (incremental) --
+    const since = Math.max(0, (catState.lastPulledAt || 0) - PULL_OVERLAP_MS);
+    const pullResult = await callNative("listCollection", { name: category, since: String(since) });
+    if (!pullResult.success) throw new SyncHalt(pullResult.error);
+    const items = (pullResult.data && pullResult.data.items) || [];
+    const fromCache = !!(pullResult.data && pullResult.data.fromCache);
+
+    let changedLocal = false;
+    let maxSeen = catState.lastPulledAt || 0;
+
+    for (const item of items) {
+      // Validate the cloud envelope + payload; malformed docs are skipped, never fatal.
+      if (!item || typeof item.docId !== "string" || !item.docId) continue;
+      if (typeof item.updatedAt === "number" && item.updatedAt > maxSeen) maxSeen = item.updatedAt;
+      if (Number(item.schemaVersion || 1) > CLOUD_SCHEMA_VERSION) continue; // newer app wrote this; don't interpret
+      const docId = item.docId;
+      const lastHash = catState.hashes[docId];
+
+      if (item.deleted === true) {
+        if (localMap.has(docId)) { localMap.delete(docId); changedLocal = true; }
+        catState.hashes[docId] = TOMBSTONE; // never re-push, never re-adopt
+        continue;
+      }
+      const cloudRecord = item.data;
+      if (!cfg.validate(cloudRecord) || cfg.idOf(cloudRecord) !== docId) continue;
+      const cloudHash = contentHash(stableStringify(cloudRecord));
+      const local = localMap.get(docId);
+
+      if (local === undefined) {
+        if (lastHash === undefined) {
+          // Never seen here -> new record from another device. Adopt.
+          localMap.set(docId, cloudRecord);
+          catState.hashes[docId] = cloudHash;
+          changedLocal = true;
+        }
+        // else: it WAS synced here and the user deleted it locally -> the deletion wins;
+        // a tombstone is pushed in the push phase below.
+      } else {
+        const localHash = contentHash(stableStringify(local));
+        if (localHash === cloudHash) {
+          catState.hashes[docId] = cloudHash; // identical (Case C)
+        } else if (lastHash !== undefined && localHash === lastHash) {
+          // Only the cloud changed since our last sync -> adopt cloud version.
+          localMap.set(docId, cloudRecord);
+          catState.hashes[docId] = cloudHash;
+          changedLocal = true;
+        }
+        // else: local changed (or first-sync divergence) -> LOCAL WINS, pushed below.
+      }
+    }
+
+    // -- push (content-hash diff) --
+    const writes = [];
+    for (const [docId, record] of localMap) {
+      if (catState.hashes[docId] === TOMBSTONE) continue; // resurrecting a tombstoned id is not allowed
+      const serialized = stableStringify(record);
+      if (serialized.length > MAX_RECORD_BYTES) {
+        console.warn(`[IgnytCloudSync] ${category}/${docId} exceeds ${MAX_RECORD_BYTES} bytes serialized; kept local-only.`);
+        continue;
+      }
+      const h = contentHash(serialized);
+      if (catState.hashes[docId] === h) continue;
+      writes.push({ docId: docId, doc: { id: docId, schemaVersion: CLOUD_SCHEMA_VERSION, updatedAt: now, deleted: false, data: record } });
+      catState.hashes[docId] = h;
+    }
+    // Local deletions -> tombstones (ids we synced before that are gone from the array).
+    for (const docId of Object.keys(catState.hashes)) {
+      if (!localMap.has(docId) && catState.hashes[docId] !== TOMBSTONE) {
+        writes.push({ docId: docId, doc: { id: docId, schemaVersion: CLOUD_SCHEMA_VERSION, updatedAt: now, deleted: true, deletedAt: now } });
+        catState.hashes[docId] = TOMBSTONE;
+      }
+    }
+
+    let queued = false;
+    for (let i = 0; i < writes.length; i += 400) {
+      const writeResult = await callNative("writeRecords", { name: category, records: writes.slice(i, i + 400) });
+      if (!writeResult.success) throw new SyncHalt(writeResult.error);
+      queued = queued || !!(writeResult.data && writeResult.data.queued);
+    }
+
+    // -- write back locally (validated records + untouched invalid ones) --
+    if (changedLocal) {
+      let arr = Array.from(localMap.values());
+      if (cfg.sort) arr.sort(cfg.sort);
+      cfg.write(arr.concat(invalidLocals));
+    }
+
+    // Advance the pull cursor only on a server-confirmed read; a cache-served read may be
+    // missing newer server docs, so it must not move the cursor.
+    if (!fromCache) catState.lastPulledAt = Math.max(maxSeen, catState.lastPulledAt || 0, now - 60000);
+    else if (maxSeen > (catState.lastPulledAt || 0)) catState.lastPulledAt = maxSeen;
+
+    return { queued: queued, changedLocal: changedLocal };
   }
 
   /* ---------- the one sync routine ---------- */
@@ -198,66 +413,57 @@ const IgnytCloudSync = (() => {
       }
 
       let syncState = loadSyncState();
-      if (syncState.uid !== uid) syncState = { uid: uid, snapshots: {} }; // never reuse another account's snapshots
+      if (syncState.uid !== uid) syncState = { uid: uid, snapshots: {}, records: {} }; // never reuse another account's state
       if (!syncState.snapshots) syncState.snapshots = {};
 
       const cloudDoc = (readResult.data && readResult.data.exists && readResult.data.doc) ? readResult.data.doc : null;
-      // Unknown future cloud schema: read nothing from it (fields may mean something else
-      // now), but pushing our own well-formed current-version fields is still safe (merge).
       const cloudReadable = !cloudDoc || Number(cloudDoc.schemaVersion || 1) <= CLOUD_SCHEMA_VERSION;
 
       const now = Date.now();
-      const push = {};       // sections to upload
+      const push = {};
       let appliedAny = false;
 
       for (const sectionKey of Object.keys(SECTIONS)) {
         const local = cleanSection(sectionKey, SECTIONS[sectionKey].read());
         const cloud = cloudReadable && cloudDoc ? cleanSection(sectionKey, cloudDoc[sectionKey]) : {};
-        const localStr = serialize(local);
-        const cloudStr = serialize(cloud);
+        const localStr = stableStringify(local);
+        const cloudStr = stableStringify(cloud);
         const snapshot = syncState.snapshots[sectionKey] || null;
         const localEmpty = Object.keys(local).length === 0;
         const cloudEmpty = Object.keys(cloud).length === 0;
 
         if (localStr === cloudStr) {
-          // Case C: identical — just refresh the snapshot.
-          syncState.snapshots[sectionKey] = localStr;
+          syncState.snapshots[sectionKey] = localStr;                    // Case C
           continue;
         }
-        if (cloudEmpty) {
-          // Case A: cloud missing/empty/unreadable — upload, never delete anything.
+        if (cloudEmpty) {                                                // Case A
           if (!localEmpty) { push[sectionKey] = local; syncState.snapshots[sectionKey] = localStr; }
           continue;
         }
-        if (localEmpty) {
-          // Case B: local empty, cloud has data — adopt cloud.
+        if (localEmpty) {                                                // Case B
           SECTIONS[sectionKey].apply(cloud);
           syncState.snapshots[sectionKey] = cloudStr;
           appliedAny = true;
           continue;
         }
-        // Both sides have data and differ (Case D):
-        if (snapshot !== null && localStr === snapshot) {
-          // Local unchanged since last sync -> the cloud moved (another device). Adopt cloud.
+        if (snapshot !== null && localStr === snapshot) {                // only cloud moved
           SECTIONS[sectionKey].apply(cloud);
           syncState.snapshots[sectionKey] = cloudStr;
           appliedAny = true;
-        } else if (snapshot !== null && cloudStr === snapshot) {
-          // Cloud unchanged since last sync -> this device moved. Push local.
+        } else if (snapshot !== null && cloudStr === snapshot) {         // only local moved
           push[sectionKey] = local;
           syncState.snapshots[sectionKey] = localStr;
-        } else {
-          // Both changed, or first sign-in with pre-existing data on both sides:
-          // non-destructive merge, local values win per-field conflicts.
-          const merged = cleanSection(sectionKey, Object.assign({}, cloud, local));
+        } else {                                                         // Case D: both moved
+          const rawMerged = SECTIONS[sectionKey].merge
+            ? SECTIONS[sectionKey].merge(cloud, local)
+            : Object.assign({}, cloud, local);
+          const merged = cleanSection(sectionKey, rawMerged);
           SECTIONS[sectionKey].apply(merged);
           push[sectionKey] = merged;
-          syncState.snapshots[sectionKey] = serialize(merged);
+          syncState.snapshots[sectionKey] = stableStringify(merged);
           appliedAny = true;
         }
       }
-
-      if (appliedAny && typeof persist === "function") persist();
 
       let queued = false;
       if (Object.keys(push).length > 0) {
@@ -268,17 +474,37 @@ const IgnytCloudSync = (() => {
         }
         const writeResult = await callNative("setUserDoc", { data: payload });
         if (!writeResult.success) {
+          if (appliedAny && typeof persist === "function") persist();
           const cls = classifyError(writeResult.error);
           setStatus(cls.status, cls.detail);
-          return; // snapshots not saved -> the same changes are retried on the next trigger
+          return; // sync state not saved -> same changes retry on the next trigger
         }
         queued = !!(writeResult.data && writeResult.data.queued);
       }
 
+      // Phase 2C: record categories. A failure mid-way surfaces as a status; already-
+      // written batches are harmless to repeat (merge writes are idempotent) because the
+      // sync state is only persisted after full success.
+      try {
+        for (const category of Object.keys(RECORD_CATEGORIES)) {
+          const result = await syncRecordCategory(category, syncState, now);
+          queued = queued || result.queued;
+          appliedAny = appliedAny || result.changedLocal;
+        }
+      } catch (halt) {
+        if (!(halt instanceof SyncHalt)) throw halt;
+        if (appliedAny && typeof persist === "function") persist();
+        const cls = classifyError(halt.errorText);
+        setStatus(cls.status, cls.detail);
+        return;
+      }
+
+      if (appliedAny && typeof persist === "function") persist();
+
       syncState.lastSyncAt = now;
       saveSyncState(syncState);
       setStatus(queued ? "queued" : "synced");
-      if (appliedAny && typeof render === "function") render(); // one repaint, whatever the tab shows
+      if (appliedAny && typeof render === "function") render(); // one repaint at the end
     } catch (e) {
       // Absolute backstop — a sync bug must never take the app down with it.
       console.warn("[IgnytCloudSync] sync failed:", e);
@@ -294,8 +520,27 @@ const IgnytCloudSync = (() => {
     const syncState = loadSyncState();
     if (syncState.uid !== signedInUid() || !syncState.snapshots) return true;
     for (const sectionKey of Object.keys(SECTIONS)) {
-      const local = serialize(cleanSection(sectionKey, SECTIONS[sectionKey].read()));
+      const local = stableStringify(cleanSection(sectionKey, SECTIONS[sectionKey].read()));
       if (local !== (syncState.snapshots[sectionKey] || null)) return true;
+    }
+    const recordsState = syncState.records || {};
+    for (const category of Object.keys(RECORD_CATEGORIES)) {
+      const cfg = RECORD_CATEGORIES[category];
+      const catState = recordsState[category];
+      if (!catState || !catState.hashes) return true;
+      const rawLocal = cfg.read();
+      const localArr = Array.isArray(rawLocal) ? rawLocal : [];
+      let validCount = 0;
+      for (const record of localArr) {
+        if (!cfg.validate(record)) continue;
+        validCount++;
+        const h = catState.hashes[cfg.idOf(record)];
+        if (h === undefined || h === TOMBSTONE) return true;      // new or resurrected-by-user
+        if (h !== contentHash(stableStringify(record))) return true; // edited
+      }
+      // deletions: fewer live local records than non-tombstone hash entries
+      const liveHashes = Object.values(catState.hashes).filter(v => v !== TOMBSTONE).length;
+      if (validCount !== liveHashes) return true;
     }
     return false;
   }
@@ -305,25 +550,22 @@ const IgnytCloudSync = (() => {
     if (_watcherStarted) return; // no duplicate timers/listeners
     _watcherStarted = true;
 
-    // Sign-in / session-restore / sign-out (dispatched by auth.js).
     window.addEventListener("ignyt:auth-changed", (ev) => {
       const signedIn = !!(ev.detail && ev.detail.signedIn);
       if (signedIn) {
         sync("auth-change");
       } else {
-        clearSyncState(); // never carry one account's snapshots into another's session
+        clearSyncState(); // never carry one account's snapshots/hashes into another's session
         setStatus("signed-out");
       }
     });
 
-    // Foreground resume, throttled.
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState !== "visible" || !signedInUid()) return;
       const last = loadSyncState().lastSyncAt || 0;
       if (Date.now() - last >= FOREGROUND_MIN_INTERVAL_MS) sync("foreground");
     });
 
-    // Change watcher: ONE interval, visible tab only, cheap compare, sync only on real change.
     window.setInterval(() => {
       if (document.visibilityState !== "visible" || _busy || !signedInUid()) return;
       if (localChangedSinceLastSync()) sync("local-change");

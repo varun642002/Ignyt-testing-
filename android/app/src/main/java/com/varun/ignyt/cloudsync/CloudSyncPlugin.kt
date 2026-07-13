@@ -135,6 +135,106 @@ class CloudSyncPlugin : com.getcapacitor.Plugin() {
         }
     }
 
+    // ---- Phase 2C: per-record collections under users/{uid}/{collection}/{docId}. ----
+
+    /** Only these subcollections exist in the IGNYT schema; anything else is refused even
+     *  if a compromised/buggy JS layer asks for it. */
+    private val allowedCollections = setOf("workouts", "routines", "prs", "bodylog", "races", "customExercises")
+
+    /** Incremental pull: every record in users/{uid}/{collection} whose updatedAt is greater
+     *  than sinceMs (JS passes lastPulledAt minus an overlap window to tolerate clock skew
+     *  between devices). Single-field inequality queries need no composite index. */
+    @PluginMethod
+    fun listCollection(call: PluginCall) {
+        val uid = currentUidOrNull()
+        val db = firestoreOrNull()
+        if (uid == null || db == null) {
+            resolveError(call, if (db == null) "Cloud sync isn't configured in this build." else "Not signed in.")
+            return
+        }
+        val name = call.getString("name")
+        if (name == null || name !in allowedCollections) {
+            resolveError(call, "listCollection: unknown collection.")
+            return
+        }
+        val since = call.getString("since")?.toLongOrNull() ?: 0L
+        pluginScope.launch {
+            try {
+                val snapshot = withTimeout(25_000L) {
+                    db.collection("users").document(uid).collection(name)
+                        .whereGreaterThan("updatedAt", since)
+                        .get().await()
+                }
+                val items = JSONArray()
+                for (doc in snapshot.documents) {
+                    val obj = mapToJson(doc.data ?: emptyMap())
+                    obj.put("docId", doc.id)
+                    items.put(obj)
+                }
+                resolveSuccess(call, JSObject().apply {
+                    put("items", items)
+                    put("fromCache", snapshot.metadata.isFromCache)
+                })
+            } catch (e: TimeoutCancellationException) {
+                resolveError(call, "offline: cloud read timed out")
+            } catch (e: FirebaseFirestoreException) {
+                resolveError(call, firestoreErrorMessage(e))
+            } catch (e: Exception) {
+                resolveError(call, "Cloud read failed: ${e.message ?: "unknown error"}")
+            }
+        }
+    }
+
+    /** Batched merge-writes of record docs. JS keeps batches <= 450 (Firestore's hard limit
+     *  is 500 ops). Merge semantics again: a write can never clear fields it doesn't carry.
+     *  Offline -> the whole batch is queued durably by Firestore -> {"queued": true}. */
+    @PluginMethod
+    fun writeRecords(call: PluginCall) {
+        val uid = currentUidOrNull()
+        val db = firestoreOrNull()
+        if (uid == null || db == null) {
+            resolveError(call, if (db == null) "Cloud sync isn't configured in this build." else "Not signed in.")
+            return
+        }
+        val name = call.getString("name")
+        if (name == null || name !in allowedCollections) {
+            resolveError(call, "writeRecords: unknown collection.")
+            return
+        }
+        val records = call.getArray("records")
+        if (records == null || records.length() == 0 || records.length() > 450) {
+            resolveError(call, "writeRecords requires 1..450 records.")
+            return
+        }
+        pluginScope.launch {
+            try {
+                val batch = db.batch()
+                val collectionRef = db.collection("users").document(uid).collection(name)
+                for (i in 0 until records.length()) {
+                    val entry = records.getJSONObject(i)
+                    val docId = entry.optString("docId", "")
+                    val doc = entry.optJSONObject("doc")
+                    if (docId.isBlank() || doc == null) {
+                        resolveError(call, "writeRecords: every record needs docId and doc.")
+                        return@launch
+                    }
+                    batch.set(collectionRef.document(docId), jsonToMap(doc), SetOptions.merge())
+                }
+                val task = batch.commit()
+                try {
+                    withTimeout(15_000L) { task.await() }
+                    resolveSuccess(call, JSObject().apply { put("written", true); put("queued", false) })
+                } catch (e: TimeoutCancellationException) {
+                    resolveSuccess(call, JSObject().apply { put("written", false); put("queued", true) })
+                }
+            } catch (e: FirebaseFirestoreException) {
+                resolveError(call, firestoreErrorMessage(e))
+            } catch (e: Exception) {
+                resolveError(call, "Cloud write failed: ${e.message ?: "unknown error"}")
+            }
+        }
+    }
+
     /** Maps Firestore error codes to short machine-checkable prefixes + readable text.
      *  JS keys off the prefix ("offline:", "permission-denied:") -- raw exception text is
      *  never shown to end users. */
