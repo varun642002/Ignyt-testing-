@@ -1,14 +1,43 @@
 # CLAUDE_PROGRESS.md
 
 ## Current task
-Premium UI modular redesign — continuing incrementally on top of the first pass (Home
-extraction + nav reorg). This pass extends the shared premium CSS treatment (surface,
-border, radius, shadow tokens from tokens.css) to the components reused across every
-remaining tab that the first pass had not yet touched: buttons (accent/steel CTA shadow),
-search bar, library items, routine cards, the Tools "more" sheet + its cards, category/
-muscle chips (pill radius), day/week chips, confirm dialog, toast, exercise-picker avatar,
-and the rest-timer ring glow. CSS-only — zero HTML/JS changes, zero behavior risk. Clean
-Android build succeeded; commit and push are next.
+Premium UI modular redesign — continuing incrementally. Pass 3 (this session): removed a
+redundant Tools-sheet nav entry, and extracted the Workout tab's session-list view into
+`www/js/pages/workout.js` following the exact adapter pattern proven by Home. Clean Android
+build succeeded; commit and push are next.
+
+## Premium UI pass 3 — what was done (this session)
+1. Re-verified branch (`feature/premium-ui-modular-redesign`), clean working tree, and
+   confirmed AGENTS.md does not exist anywhere in this repo (searched full tree excluding
+   node_modules/.git) — proceeded on CLAUDE.md, the project's actual rules file.
+2. Bug fix — duplicate navigation path: `renderMoreSheet`'s Tools sheet had a "Fuel" card
+   (`{id:"nutrition", label:"Fuel", ...}`) pointing at the exact same `nutrition` tab that
+   is already on the primary bottom nav. Left over from before the nav restructuring, this
+   meant (a) two different-looking entry points landed on the identical screen, and (b)
+   `MORE_TABS` still listing `"nutrition"` made the Tools gear icon show as "active"
+   simultaneously with the Nutrition nav button when viewing that tab. Removed the duplicate
+   card and the `"nutrition"` entry from `MORE_TABS` (app.js ~3529, ~3576). Nutrition remains
+   fully reachable — only the redundant duplicate shortcut was removed, no feature lost.
+   Updated one stale "Fuel tab" copy reference (Body/Profile tab, ~line 5109) to "Nutrition
+   tab" for consistency. Verified no other "Fuel" references remain anywhere in www/.
+3. Modularization — Workout tab (partial, incremental): extracted the Workout tab's idle/
+   session-list view (Start Empty Workout CTA + Recent Sessions list) into NEW
+   `www/js/pages/workout.js`, `window.IgnytPages.renderWorkoutList(ctx)`, mirroring home.js's
+   dependency-injection adapter pattern exactly (state/helpers passed in, no logic rewritten,
+   same template output verified line-for-line against the original). `renderWorkoutTab` in
+   app.js now delegates to it for the list state only. Deliberately did NOT touch the routing
+   checks (exercise picker / workout complete / session detail) or the large (~1,600 line),
+   deeply stateful active-session renderer (sets, supersets, rest timer, plate calc,
+   swipe-to-delete) — those stay in app.js for a future dedicated incremental pass, per
+   "extract incrementally and safely." Swapped the list's `row-between`/`eyebrow-label`
+   section header for the shared `.section-heading` premium component (already used by Home)
+   for visual consistency — output structure/classes elsewhere in the list are unchanged.
+4. Registered the new script in `www/index.html` (loaded after home.js, before app.js) and
+   added it to `www/sw.js`'s precache list, bumping `CACHE` to `ignyt-v11` so the new asset
+   ships on next load (same pattern used when home.js was added).
+5. Verified: `node --check` on app.js + both page modules passed; full diff reviewed (only
+   the 4 intended files changed, no accidental content); secret/credential scan on the diff
+   and new file found nothing.
 
 ## Current branch
 feature/premium-ui-modular-redesign (branched from feature/mobile-ui-refinements).
@@ -72,22 +101,37 @@ feature/premium-ui-modular-redesign (branched from feature/mobile-ui-refinements
 - Commit: `43f96cf Modernize premium UI foundation and navigation`
 - Push: `origin/feature/premium-ui-modular-redesign` — successful.
 
-## Build attempts (this session)
+## Build attempts (pass 2)
 1. `node --check www/app.js` and `node --check www/js/pages/home.js` — passed (app.js was
-   not modified this session; check re-run as a sanity confirmation only).
+   not modified in pass 2; check re-run as a sanity confirmation only).
 2. `npx cap sync android` — succeeded.
 3. `android\gradlew.bat clean assembleDebug` — **BUILD SUCCESSFUL in 36s** (101 tasks; only
    the 2 pre-existing HealthConnectPlugin.kt deprecation warnings, unchanged from prior runs).
+4. Committed `642f883`, pushed to `origin/feature/premium-ui-modular-redesign`.
+
+## Build attempts (pass 3, this session)
+1. `node --check` on `www/app.js`, `www/js/pages/home.js`, `www/js/pages/workout.js` — all
+   passed.
+2. `npx cap sync android` — succeeded.
+3. `android\gradlew.bat clean assembleDebug` — **BUILD SUCCESSFUL in 1m 13s** (101 tasks;
+   only the 2 pre-existing HealthConnectPlugin.kt deprecation warnings).
+4. Full diff reviewed before staging — exactly `www/app.js`, `www/index.html`, `www/sw.js`
+   (modified) and `www/js/pages/workout.js` (new) — no accidental/unrelated content, no
+   secrets.
 
 ## Exact next action
-1. Real-device UI and integration verification (see checklist in the final report): test
-   320–430px layouts, all primary/Tools navigation, active-workout set entry/swipes, Health
-   Connect connect/sync/exports, Firebase sign-in/cloud sync, and offline reload.
-2. Next incremental modularization step (not yet started): extract `renderWorkoutTab` from
-   `www/app.js` into `www/js/pages/workout.js` following the exact adapter pattern already
-   proven for Home (pass state/helpers in via a ctx object, keep the function itself as a
-   thin wrapper in app.js) — then Nutrition, then Progress, one page per session with its own
-   build/verify/commit cycle.
+1. Real-device UI and integration verification (see checklist in the final report): confirm
+   the Tools sheet no longer shows a separate "Fuel" card and the gear icon no longer
+   double-highlights on the Nutrition tab; confirm the Workout tab's session list renders
+   and behaves identically to before (Start Empty Workout, Recent Sessions, Show All/Less,
+   delete, tap-to-view-detail, PR celebration banner) at 320–430px; then the same standing
+   checklist as before — active-workout set entry/swipes, Health Connect connect/sync/
+   exports, Firebase sign-in/cloud sync, and offline reload.
+2. Next incremental modularization step (not yet started): extract the active-session
+   renderer (sets, supersets, rest timer, plate calc, exercise menu — the remainder of
+   `renderWorkoutTab`, ~1,600 lines) into `www/js/pages/workout.js` alongside the list view
+   already moved — then Nutrition, then Progress, one coherent slice per session with its
+   own build/verify/commit cycle.
 
 ## Current branch
 feature/mobile-ui-refinements (from feature/progress-page-restructure tip a178d0f).

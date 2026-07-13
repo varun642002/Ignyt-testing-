@@ -1,6 +1,6 @@
-const CACHE = "ignyt-v10";
+const CACHE = "ignyt-v11";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./app.js",
-  "./css/tokens.css", "./css/base.css", "./css/layout.css", "./css/components.css", "./css/responsive.css", "./css/pages/home.css", "./css/pages/workout.css", "./css/pages/nutrition.css", "./css/pages/progress.css", "./css/pages/profile.css", "./css/pages/ai-coach.css", "./js/pages/home.js"];
+  "./css/tokens.css", "./css/base.css", "./css/layout.css", "./css/components.css", "./css/responsive.css", "./css/pages/home.css", "./css/pages/workout.css", "./css/pages/nutrition.css", "./css/pages/progress.css", "./css/pages/profile.css", "./css/pages/ai-coach.css", "./js/pages/home.js", "./js/pages/workout.js"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
