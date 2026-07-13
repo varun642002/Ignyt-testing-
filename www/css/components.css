@@ -8,3 +8,17 @@
 .metric-card__detail { margin-top:2px; color:var(--color-text-secondary); font-size:var(--font-size-xs); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .btn-primary { background:var(--color-primary); color:#17110e; }
 .btn-secondary { background:var(--color-surface-elevated); border:1px solid var(--color-border); color:var(--color-text-primary); }
+
+/* Shared premium treatment for legacy components reused across every remaining tab
+   (Workout, Nutrition, Progress, Plan, Library, Profile, Settings, Health, Tools sheet).
+   CSS-only: no class names, markup, or app.js logic change, so behavior is unaffected. */
+.btn-accent, .btn-steel { box-shadow:0 6px 16px rgba(0,0,0,.18); }
+.search-bar, .lib-item, .routine-card { border:1px solid var(--color-border); border-radius:var(--radius-card); box-shadow:var(--shadow-card); }
+.more-sheet { border-radius:var(--radius-card) var(--radius-card) 0 0; }
+.more-sheet-card { border:1px solid var(--color-border); border-radius:var(--radius-md); box-shadow:var(--shadow-card); }
+.cat-chip, .muscle-chip { border-radius:var(--radius-pill); }
+.day-tab, .week-chip { border-radius:var(--radius-sm); }
+.dialog-box { border-radius:var(--radius-card); }
+.toast { border-radius:var(--radius-md); }
+.ex-picker-avatar { border-radius:var(--radius-pill); }
+.timer-overlay .timer-ring { text-shadow:0 4px 18px rgba(255,90,31,.25); }

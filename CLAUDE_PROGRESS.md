@@ -1,13 +1,40 @@
 # CLAUDE_PROGRESS.md
 
 ## Current task
-Premium UI modular redesign — implementation complete for the safe first incremental pass:
-central CSS design system, Home-page extraction, premium Home dashboard, primary navigation
-reorganization, and honest AI Coach shell. Native/data layers are unchanged. Clean Android
-build succeeded; commit and push are next.
+Premium UI modular redesign — continuing incrementally on top of the first pass (Home
+extraction + nav reorg). This pass extends the shared premium CSS treatment (surface,
+border, radius, shadow tokens from tokens.css) to the components reused across every
+remaining tab that the first pass had not yet touched: buttons (accent/steel CTA shadow),
+search bar, library items, routine cards, the Tools "more" sheet + its cards, category/
+muscle chips (pill radius), day/week chips, confirm dialog, toast, exercise-picker avatar,
+and the rest-timer ring glow. CSS-only — zero HTML/JS changes, zero behavior risk. Clean
+Android build succeeded; commit and push are next.
 
 ## Current branch
 feature/premium-ui-modular-redesign (branched from feature/mobile-ui-refinements).
+
+## Premium UI pass 2 — what was done (this session)
+1. Audited git status/log/diff and the full current architecture before changing anything
+   (renderApp tab router, renderMoreSheet Tools sheet, nav bar, all renderXTab functions)
+   to confirm feature parity from the prior session was intact: Home/Workout/Nutrition/
+   Progress/AI Coach primary nav + Tools sheet (Plan, Library, Your Profile, Fuel, Settings,
+   Health Connect) all still wired in renderApp's tab switch — nothing regressed or hidden.
+2. Extended `www/css/components.css` only (no other file touched) with premium-token-based
+   rules for components shared across Workout/Nutrition/Progress/Plan/Library/Profile/
+   Settings/Health/Tools screens that the first pass's page-specific CSS files (home.css,
+   workout.css, nutrition.css, progress.css, profile.css) had not yet covered: `.btn-accent`/
+   `.btn-steel` CTA shadow, `.search-bar`/`.lib-item`/`.routine-card` card treatment,
+   `.more-sheet` rounded top + `.more-sheet-card` elevation, `.cat-chip`/`.muscle-chip` pill
+   radius, `.day-tab`/`.week-chip` radius, `.dialog-box`/`.toast` radius, `.ex-picker-avatar`
+   pill radius, and a subtle glow on the rest-timer ring. This is additive CSS layered after
+   the legacy inline `<style>` block (existing precedence pattern), so it changes visuals only
+   — no class names, markup, or app.js logic were touched, and no storage keys or Health
+   Connect/Firebase code paths were touched.
+3. Deliberately did NOT attempt further JS extraction (e.g. Workout tab into its own module)
+   this session — `renderWorkoutTab` is large (~1,600 lines) and interaction-heavy (active
+   session, supersets, rest timer, plate calc, exercise menu, swipe-to-delete); moving it
+   safely deserves its own dedicated incremental pass with its own build/verification cycle,
+   consistent with "extract incrementally and safely." Flagged as the next step below.
 
 ## Premium UI modular redesign — what was done
 1. Added modular CSS layers under `www/css/`: tokens, base, layout, shared components,
@@ -45,10 +72,22 @@ feature/premium-ui-modular-redesign (branched from feature/mobile-ui-refinements
 - Commit: `43f96cf Modernize premium UI foundation and navigation`
 - Push: `origin/feature/premium-ui-modular-redesign` — successful.
 
+## Build attempts (this session)
+1. `node --check www/app.js` and `node --check www/js/pages/home.js` — passed (app.js was
+   not modified this session; check re-run as a sanity confirmation only).
+2. `npx cap sync android` — succeeded.
+3. `android\gradlew.bat clean assembleDebug` — **BUILD SUCCESSFUL in 36s** (101 tasks; only
+   the 2 pre-existing HealthConnectPlugin.kt deprecation warnings, unchanged from prior runs).
+
 ## Exact next action
-Real-device UI and integration verification: test 320–430px layouts, all primary/Tools
-navigation, active-workout set entry/swipes, Health Connect connect/sync/exports, Firebase
-sign-in/cloud sync, and offline reload. No Android native or data-storage migration is needed.
+1. Real-device UI and integration verification (see checklist in the final report): test
+   320–430px layouts, all primary/Tools navigation, active-workout set entry/swipes, Health
+   Connect connect/sync/exports, Firebase sign-in/cloud sync, and offline reload.
+2. Next incremental modularization step (not yet started): extract `renderWorkoutTab` from
+   `www/app.js` into `www/js/pages/workout.js` following the exact adapter pattern already
+   proven for Home (pass state/helpers in via a ctx object, keep the function itself as a
+   thin wrapper in app.js) — then Nutrition, then Progress, one page per session with its own
+   build/verify/commit cycle.
 
 ## Current branch
 feature/mobile-ui-refinements (from feature/progress-page-restructure tip a178d0f).
