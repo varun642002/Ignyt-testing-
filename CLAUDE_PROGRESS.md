@@ -1,12 +1,89 @@
 # CLAUDE_PROGRESS.md
 
 ## Current task
-Phase 2C: cloud backup + multi-device sync for workout/progress data. Implementation
-complete; gradle build running. (Phase 2B was completed, committed de1c3ec, and pushed on
-feature/firestore-profile-settings-sync earlier this session.)
+Workout experience upgrade (18-task request: typography, Steps fix, active-workout stats
+header, set management, swipe-to-delete, rest timer, finish flow, Workout Complete screen,
+share cards, native sharing). Implementation complete; gradle build running.
+QUEUED NEXT (received mid-task): full Progress page restructure into home + 8 detail views —
+will start on its own branch after this task is built/committed/pushed.
 
 ## Current branch
-feature/cloud-workout-progress-sync (from feature/firestore-profile-settings-sync tip de1c3ec).
+feature/workout-experience-upgrade (from feature/cloud-workout-progress-sync tip f20f186).
+
+## Workout upgrade — what was done
+1. STEPS ROOT CAUSE (verified in code): native getTodaySteps() was already correct
+   (aggregate COUNT_TOTAL, local-timezone day range, null-vs-0); but HealthConnectPlugin
+   syncNow() NEVER put a "steps" field in the payload (only steps7Days for the chart),
+   while every UI reads d.steps.steps → Steps always "No data". FIX: added
+   data.put("steps", safeOrNull { manager.getTodaySteps() }...) to syncNow.
+   Refresh triggers already existed (launch, visibilitychange, 5-min single interval,
+   home/insights nav event, manual Sync Now) — verified, unchanged, no new timers.
+2. Volume/sets now count ONLY completed (done) non-warmup sets (computeSessionVolume
+   changed, computeCompletedSets added); finish flow and live header use them.
+3. Active workout: live stats bar (Duration timestamp-based w/ single DOM-node ticker —
+   pre-existing; Volume; completed Sets). getPreviousSet now prefers genuinely completed
+   history sets ("–" when none).
+4. Rest timer rewritten TIMESTAMP-based (endsAt source of truth; visibilitychange resume
+   catch-up; fired flag = one beep; no duplicate intervals).
+5. Swipe-to-delete: set rows wrapped (.set-row-wrap + behind Delete button reusing the
+   existing data-del-set handler); pointer-events engine (touch+mouse), 14px deliberate
+   threshold, vertical scroll wins via touch-action:pan-y + dy guard, max one open row.
+   Non-swipe fallbacks: existing X for empty sets, pointer(mouse)-drag works too.
+6. Finish flow: double-tap guard (_finishingSession), confirmDialog when 0 completed sets,
+   completed-only stats, then navigates to NEW Workout Complete screen. HC export unchanged
+   (id-deduped observer). renderApp() persists on every render (verified) → save durable.
+7. Workout Complete screen: real stats grid, PR list (genuine detectPRs output), exercise
+   breakdown (N× name, completed only), muscles trained (real getMuscle metadata, skipped
+   when unknown), 3 swipeable share cards (scroll-snap + dots + 3 theme choices), Share
+   Image / Save Image / Copy Summary. Share images drawn by hand on canvas (1080×1350) from
+   the saved workout only. Native share: tried @capacitor/share+filesystem@8 first — BUILD
+   FAILED (@capacitor/filesystem ships Kotlin 2.1 code; project pins Kotlin 1.9.24).
+   Uninstalled both (package.json restored byte-identical) and hand-rolled SharePlugin.kt
+   (IgnytShare: shareImage via existing manifest FileProvider + ACTION_SEND chooser;
+   saveImage via MediaStore Downloads on API29+/app pictures dir on 26-28 — both
+   permissionless). Fallbacks: navigator.share → clipboard copy.
+8. Typography scale (index.html + inline): title 30px, buttons 16px, stat values 24px,
+   set inputs 16px, set numbers 16px, prev 13px, exercise names 19px, hc card titles 17px /
+   values 28px, chips 14px, set-check 34px tap target; grid columns widened to match.
+9. Files: HealthConnectPlugin.kt, package.json/package-lock.json, www/app.js,
+   www/index.html, CLAUDE_PROGRESS.md (+ android capacitor gradle files from cap sync).
+   Junk empty files "node" and "npm" found in repo root (0 bytes, not created by this work) —
+   left untracked, not committed.
+
+## Build attempts (workout upgrade)
+1. node --check on app.js + cloud-sync.js — OK.
+2. Build with @capacitor/share+filesystem — **FAILED**: capacitor-filesystem
+   compileDebugKotlin, "metadata 2.1.0, expected 1.9.0" (kotlin-stdlib 2.1 dependency vs
+   project Kotlin 1.9.24). Root cause identified from full log.
+3. Fix: removed both npm plugins, hand-rolled SharePlugin.kt instead (zero new deps,
+   matches project plugin architecture). cap sync cleaned module refs (verified).
+4. Rebuild — **BUILD SUCCESSFUL in 54s** (101 tasks; SharePlugin.kt clean; only the two
+   pre-existing HealthConnectPlugin warnings).
+
+## Exact next action
+Commit + push feature/workout-experience-upgrade, final report. THEN the queued Progress
+restructure on feature/progress-page-restructure. Progress AUDIT ALREADY DONE:
+- renderProgressTab (app.js ~4536-4726) = 13 vertical sections; helpers all reusable:
+  computeStreak/computeLongestStreak/computeWeeklyActivity/computeMuscleDistribution/
+  thisWeekStats/monthlyComparison/bodyWeightTrend/exerciseProgressTrend/calorieProteinTrend/
+  renderBodyDistribution/renderCalendarMonth/weeklyBarChart/radarChart/sparklineChart
+  (all inline-SVG string charts — no Chart.js instances to destroy; lazy rendering =
+  only rendering the open view's template).
+- Achievement logic verified CORRECT (count-based checks, idempotent, never early);
+  confusing dates = achievedAt is the unlock day, which for CSV-imported history is the
+  import day — honest behavior, will document, not "fix" into fabricated dates.
+- Real Task-11 bugs found: monthlyComparison shows +100% when last month 0 (→ "New"/"No
+  change"), raw minutes ("670m" → h m), PR list "+N more in your export" string (→ paged
+  Show More), volume strings missing space before unit in history rows.
+- Plan: transient state.progressView router; home = This Week summary card (workouts/
+  training time h m/weekly volume/current streak from thisWeekStats) + 8 category cards
+  (PRs, Achievements, Workout Analytics, Exercise Progress, Body, Nutrition, Calendar,
+  Plan Progress); each detail view = existing section markup moved into its own function
+  + back button; scroll position saved/restored on back; analytics range selector maps to
+  computeWeeklyActivity weeks; achievements view shows unlocked + locked (from
+  ACHIEVEMENT_DEFS) with counts; PR view: search + 10-at-a-time Show More.
+
+## Previous task (Phase 2C — COMPLETE, commit f20f186, pushed)
 
 ## Phase 2C — what was built
 - MOD CloudSyncPlugin.kt: two new methods, both restricted natively to the collection

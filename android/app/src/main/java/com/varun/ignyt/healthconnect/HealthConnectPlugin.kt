@@ -275,6 +275,12 @@ class HealthConnectPlugin : com.getcapacitor.Plugin() {
                 // Every field is independently wrapped in safeOrNull -- one metric failing
                 // (missing permission for a newly-added type, a transient read error, etc.)
                 // never prevents the others from returning. No single bad read blanks the screen.
+                // FIXED (Steps bug root cause): syncNow never included today's steps total --
+                // it fetched steps7Days for the chart but not the "steps" field every UI
+                // surface (Home card, dashboard tile, Insights) actually reads. getTodaySteps()
+                // itself was already correct (aggregate COUNT_TOTAL, local-timezone day range,
+                // null-vs-0 distinction); the value just never made it into this payload.
+                data.put("steps", safeOrNull { manager.getTodaySteps() }?.let { JSObject.fromJSONObject(it) })
                 data.put("heartRate", safeOrNull { manager.getHeartRate() }?.let { JSObject.fromJSONObject(it) })
                 data.put("weight", safeOrNull { manager.getLatestWeight() }?.let { JSObject.fromJSONObject(it) })
                 data.put("activeCalories", safeOrNull { manager.getTodayActiveCalories() }?.let { JSObject.fromJSONObject(it) })

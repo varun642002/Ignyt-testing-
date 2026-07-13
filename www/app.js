@@ -1434,6 +1434,11 @@ function muscleGroupColor(muscle){
 
 const _debounceTimers = {};
 
+/* Workout Complete screen + share-card transient state (never persisted). */
+let _finishingSession = false;   // double-tap guard for the Finish button
+const SWIPE_OPEN = 84;           // px the set row slides to reveal Delete
+let _openSwipeEl = null;         // the one currently-open swiped row (never more than one)
+
 function debounce(key, fn, ms){
   clearTimeout(_debounceTimers[key]);
   _debounceTimers[key] = setTimeout(fn, ms);
@@ -1992,25 +1997,41 @@ function stopElapsedTimer(){
   if(elapsedTimerHandle){ clearInterval(elapsedTimerHandle); elapsedTimerHandle = null; }
 }
 
+/* Rest timer, TIMESTAMP-BASED: endsAt is the source of truth, the interval only
+   repaints. Android aggressively throttles WebView intervals in the background, so a
+   decrementing counter drifts — deriving remaining time from Date.now() means the timer
+   is always correct the moment the app comes back, and syncTimerAfterResume() below
+   settles an expiry that happened while backgrounded (beep fires once, via the fired flag). */
 function startTimer(seconds){
-  if(state.timer && state.timer.handle) clearInterval(state.timer.handle);
-  state.timer = {remaining:seconds, total:seconds, handle:null};
+  if(state.timer && state.timer.handle) clearInterval(state.timer.handle); // never two timers
+  const now = Date.now();
+  state.timer = {endsAt: now + seconds*1000, total:seconds, remaining:seconds, fired:false, handle:null};
   render();
-  const handle = setInterval(()=>{
-    if(!state.timer){ clearInterval(handle); return; } // safety net: never crash on a stray tick after external cleanup
-    state.timer.remaining--;
-    if(state.timer.remaining<=0){
-      clearInterval(state.timer.handle);
-      playBeep(); vibrate();
-      state.timer = null;
-      render();
-      return;
-    }
-    if(state.timer.remaining<=3){ vibrate(80); }
-    const ring = document.querySelector(".timer-ring");
-    if(ring) ring.textContent = formatTime(state.timer.remaining);
-  },1000);
+  const handle = setInterval(()=>{ tickRestTimer(); }, 500);
   state.timer.handle = handle;
+}
+
+function tickRestTimer(){
+  const t = state.timer;
+  if(!t){ return; } // safety net: never crash on a stray tick after external cleanup
+  const remaining = Math.ceil((t.endsAt - Date.now())/1000);
+  if(remaining <= 0){
+    clearInterval(t.handle);
+    if(!t.fired){ t.fired = true; playBeep(); vibrate(); }
+    state.timer = null;
+    render();
+    return;
+  }
+  if(remaining <= 3 && remaining !== t.remaining){ vibrate(80); }
+  t.remaining = remaining;
+  const ring = document.querySelector(".timer-ring");
+  if(ring) ring.textContent = formatTime(remaining);
+}
+
+/* Called on visibilitychange -> visible: recompute from the timestamp immediately so the
+   overlay shows the true remaining time (or completes) without waiting for a throttled tick. */
+function syncTimerAfterResume(){
+  if(state.timer) tickRestTimer();
 }
 
 function playBeep(){
@@ -2047,7 +2068,11 @@ async function applyWakeLock(){
     }
   }catch{ wakeLockHandle = null; }
 }
-document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") applyWakeLock(); });
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState!=="visible") return;
+  applyWakeLock();
+  syncTimerAfterResume(); // rest timer catches up from its endsAt timestamp after background
+});
 
 /* =========================================================
    LIBRARY TAB
@@ -2522,22 +2547,39 @@ function nextSetType(t){
 
 function isCountingSet(set){ return (set.type||"working") !== "warmup"; }
 
+/* Volume counts ONLY genuinely completed (checked-off) working sets: weight × reps.
+   Warm-ups stay excluded (pre-existing intentional behavior), incomplete/empty sets never
+   count, cardio has no weight×reps so it naturally contributes nothing. */
 function computeSessionVolume(exercises){
   let v = 0;
   (exercises||[]).forEach(ex=> (ex.sets||[]).forEach(s=>{
-    if(!isCountingSet(s)) return;
+    if(!s.done || !isCountingSet(s)) return;
     const w = parseFloat(s.weight), r = parseFloat(s.reps);
     if(!isNaN(w) && !isNaN(r)) v += w*r;
   }));
   return v;
 }
 
+/* Completed-set count for the live header and final stats — done sets only, warm-ups
+   excluded to match the volume definition. */
+function computeCompletedSets(exercises){
+  let n = 0;
+  (exercises||[]).forEach(ex=> (ex.sets||[]).forEach(s=>{ if(s.done && isCountingSet(s)) n++; }));
+  return n;
+}
+
+/* PREVIOUS column: genuine history only, preferring sets that were actually completed.
+   Old imported history may predate the done flag — those sets fall back to "has values".
+   Returns null (rendered as "–") when no real previous performance exists. */
 function getPreviousSet(exerciseName, setIndex){
   for(const sess of state.workoutLog){
     const ex = sess.exercises.find(e=>e.name===exerciseName);
     if(ex && ex.sets.length){
-      const set = ex.sets[setIndex] || ex.sets[ex.sets.length-1];
-      if(set && (set.weight||set.reps)) return set;
+      const usable = ex.sets.filter(s=> s && (s.weight||s.reps) && (s.done || s.done===undefined));
+      const pool = usable.length ? usable : ex.sets.filter(s=> s && (s.weight||s.reps));
+      if(pool.length){
+        return pool[setIndex] || pool[pool.length-1];
+      }
     }
   }
   return null;
@@ -3627,15 +3669,15 @@ function hcCard(opts) {
   return `
     <button class="hc-home-card" data-nav="health" style="width:100%;text-align:left;background:var(--surface);border:none;border-radius:16px;padding:16px;margin-bottom:12px;cursor:pointer;display:block;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <span style="font-size:15px;font-weight:800;">${label}</span>
-        <span style="color:var(--muted);font-size:16px;line-height:1;">\u203a</span>
+        <span style="font-size:17px;font-weight:800;">${label}</span>
+        <span style="color:var(--muted);font-size:18px;line-height:1;">\u203a</span>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px;">${rangeLabel}${rangeLabel && sourceLabel ? ' &middot; ' : ''}${sourceLabel}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">${rangeLabel}${rangeLabel && sourceLabel ? ' &middot; ' : ''}${sourceLabel}</div>
       <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-top:10px;">
         <div style="flex:1;min-width:0;">
           ${hasData ? `
-            <div style="font-size:26px;font-weight:900;">${value}<span style="font-size:13px;font-weight:600;color:var(--muted);margin-left:4px;">${unit||''}</span></div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${timeLabel}</div>
+            <div style="font-size:28px;font-weight:900;">${value}<span style="font-size:14px;font-weight:600;color:var(--muted);margin-left:4px;">${unit||''}</span></div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px;">${timeLabel}</div>
           ` : `<div style="font-size:14px;color:var(--muted);">No data</div>`}
         </div>
         ${hasData && chartHtml ? `<div style="flex-shrink:0;">${chartHtml}</div>` : ''}
@@ -5247,9 +5289,367 @@ function renderAchievementCelebration(){
   </div>`;
 }
 
+/* =========================================================
+   WORKOUT COMPLETE — post-workout summary + swipeable share cards.
+   Every number on screen and in the generated images comes from the
+   just-saved workoutLog entry: no synthetic stats, ever.
+========================================================= */
+
+const SHARE_THEMES = {
+  dark:  { label:"Dark",  bg0:"#121216", bg1:"#121216", text:"#F2F1ED", muted:"#8B8B94", accent:"#FF5A1F" },
+  ember: { label:"Ember", bg0:"#31150a", bg1:"#121216", text:"#F2F1ED", muted:"#B79F92", accent:"#FF5A1F" },
+  steel: { label:"Steel", bg0:"#0E1B26", bg1:"#121216", text:"#F2F1ED", muted:"#8FA7B5", accent:"#4FA8D8" }
+};
+
+function workoutDurationLabel(s){
+  const min = s.durationMin || 0;
+  const h = Math.floor(min/60), m = min%60;
+  return h>0 ? `${h}h ${m}m` : `${m} min`;
+}
+
+/* Per-exercise completed-set breakdown ("4× Lat Pulldown"), completed sets only. */
+function workoutBreakdown(s){
+  return (s.exercises||[]).map(ex=>({
+    name: ex.name,
+    sets: (ex.sets||[]).filter(x=>x.done && isCountingSet(x)).length
+  }));
+}
+
+/* Muscles actually associated with exercises that have >=1 completed set. getMuscle()
+   returns real library/custom metadata; exercises without known metadata are skipped
+   rather than guessed. */
+function workoutMusclesTrained(s){
+  const set = new Set();
+  workoutBreakdown(s).forEach(b=>{
+    if(b.sets>0){
+      const m = getMuscle(b.name);
+      if(m && m!=="Other") set.add(m);
+    }
+  });
+  return Array.from(set);
+}
+
+function workoutShareName(){
+  const auth = window.IgnytAuth && IgnytAuth.getAccount();
+  return (state.profile.name && state.profile.name.trim())
+    || (auth && auth.displayName) || "";
+}
+
+function buildWorkoutSummaryText(s){
+  const b = workoutBreakdown(s).filter(x=>x.sets>0);
+  const lines = [
+    `${sessionTitle(s)} — IGNYT`,
+    `${s.date} · ${workoutDurationLabel(s)}`,
+    `Volume: ${displayW(s.volume||0,0).toLocaleString()} ${wUnit()} · Sets: ${computeCompletedSets(s.exercises)} · Exercises: ${s.exercises.length}`
+  ];
+  if(b.length) lines.push("", ...b.map(x=>`${x.sets}× ${x.name}`));
+  const prs = state.prs.filter(p=>p.workoutId===s.id);
+  if(prs.length) lines.push("", `🏆 ${prs.length} PR${prs.length>1?'s':''}`);
+  return lines.join("\n");
+}
+
+function renderWorkoutComplete(s){
+  const completedSets = computeCompletedSets(s.exercises);
+  const breakdown = workoutBreakdown(s);
+  const muscles = workoutMusclesTrained(s);
+  const prs = state.prs.filter(p=>p.workoutId===s.id);
+  const theme = SHARE_THEMES[state.shareCardTheme] ? state.shareCardTheme : "dark";
+  const name = workoutShareName();
+  const timeLabel = s.startedAt ? new Date(s.startedAt).toLocaleString([], {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"}) : s.date;
+
+  const statTile = (label,value,unit)=>`
+    <div class="stat-card" style="text-align:center;">
+      <div class="stat-label">${label}</div>
+      <div class="stat-value">${value}${unit?`<span class="stat-unit">${unit}</span>`:''}</div>
+    </div>`;
+
+  const cardShell = (inner)=>`
+    <div class="share-card share-theme-${theme}">
+      <div class="share-card-brand">IGNYT</div>
+      ${inner}
+      <div class="share-card-footer">${name ? `${name} · ` : ""}${s.date}</div>
+    </div>`;
+
+  const card1 = cardShell(`
+    <div class="share-card-title">${sessionTitle(s)}</div>
+    <div class="share-big-stat">${workoutDurationLabel(s)}</div>
+    <div class="share-stat-grid">
+      <div><span>${displayW(s.volume||0,0).toLocaleString()}${wUnit()}</span>Volume</div>
+      <div><span>${completedSets}</span>Sets</div>
+      <div><span>${s.exercises.length}</span>Exercises</div>
+    </div>`);
+
+  const card2 = cardShell(`
+    <div class="share-card-title">${sessionTitle(s)}</div>
+    <div class="share-mini-stats">${workoutDurationLabel(s)} · ${displayW(s.volume||0,0).toLocaleString()}${wUnit()} · ${completedSets} sets</div>
+    <div class="share-ex-list">
+      ${breakdown.slice(0,8).map(b=>`<div><b>${b.sets}×</b> ${b.name}</div>`).join("")}
+      ${breakdown.length>8?`<div style="color:inherit;opacity:.6;">+ ${breakdown.length-8} more</div>`:""}
+    </div>`);
+
+  const card3 = cardShell(`
+    <div class="share-card-title">${sessionTitle(s)}</div>
+    <div class="share-mini-stats">Muscles Trained</div>
+    ${muscles.length
+      ? `<div class="share-muscle-chips">${muscles.map(m=>`<span>${m}</span>`).join("")}</div>`
+      : `<div class="share-mini-stats" style="margin-top:14px;">No muscle data for these exercises</div>`}
+    <div class="share-ex-list" style="margin-top:12px;">
+      ${breakdown.filter(b=>b.sets>0).slice(0,6).map(b=>`<div>${b.name}</div>`).join("")}
+    </div>`);
+
+  return `
+    <div style="text-align:center;margin:8px 0 4px;">
+      <div style="font-size:26px;font-weight:900;">Workout Complete 🎉</div>
+      <div style="font-size:14px;color:var(--muted);margin-top:4px;">${timeLabel}</div>
+    </div>
+
+    ${prs.length ? `<div class="info-box" style="padding:12px;margin:10px 0;border:1px solid rgba(255,90,31,.35);">
+      <div style="font-weight:900;font-size:15px;color:var(--accent);margin-bottom:4px;">🏆 ${prs.length} Personal Record${prs.length>1?'s':''}</div>
+      ${prs.slice(0,4).map(p=>`<div style="font-size:13px;color:var(--muted);">${p.exerciseName} — ${p.type==='1rm'?'est. 1RM':p.type} ${displayW(p.value,1)}${p.type==='volume'?wUnit():wUnit()}</div>`).join("")}
+    </div>`:""}
+
+    <div class="grid2" style="margin:12px 0;">
+      ${statTile("Duration", workoutDurationLabel(s))}
+      ${statTile("Volume", displayW(s.volume||0,0).toLocaleString(), wUnit())}
+      ${statTile("Completed Sets", completedSets)}
+      ${statTile("Exercises", s.exercises.length)}
+    </div>
+
+    <div class="eyebrow-label">Exercise Breakdown</div>
+    <div class="info-box" style="padding:12px 14px;">
+      ${breakdown.length ? breakdown.map(b=>`<div class="row-between" style="padding:5px 0;">
+        <span style="font-size:15px;">${b.name}</span>
+        <span class="mono" style="font-size:14px;color:${b.sets>0?'var(--text)':'var(--muted)'};">${b.sets} set${b.sets!==1?'s':''}</span>
+      </div>`).join("") : `<div style="color:var(--muted);font-size:14px;">No exercises</div>`}
+    </div>
+
+    ${muscles.length?`<div class="eyebrow-label">Muscles Trained</div>
+    <div style="margin-bottom:12px;">${muscles.map(m=>`<span class="muscle-chip active">${m}</span>`).join("")}</div>`:""}
+
+    <div class="eyebrow-label">Share</div>
+    <div class="share-carousel" id="share-carousel" aria-label="Share cards, swipe to browse">
+      ${card1}${card2}${card3}
+    </div>
+    <div class="share-dots" id="share-dots">
+      ${[0,1,2].map(i=>`<span class="share-dot ${i===(state.shareCardIndex||0)?'active':''}"></span>`).join("")}
+    </div>
+    <div style="display:flex;gap:6px;margin:8px 0 12px;justify-content:center;">
+      ${Object.entries(SHARE_THEMES).map(([key,t])=>`<button class="cat-chip ${theme===key?'active':''}" data-share-theme="${key}">${t.label}</button>`).join("")}
+    </div>
+    <div class="grid2" style="gap:8px;">
+      <button class="btn btn-accent" data-action="share-workout-image" aria-label="Share workout card image">Share Image</button>
+      <button class="btn btn-steel" data-action="save-workout-image" aria-label="Save workout card image">Save Image</button>
+    </div>
+    <button class="btn btn-ghost btn-block" data-action="copy-workout-summary" style="margin-top:8px;" aria-label="Copy workout summary text">Copy Summary Text</button>
+    <button class="btn btn-ghost btn-block" data-action="close-workout-complete" style="margin-top:8px;">Done</button>
+  `;
+}
+
+/* Draws one share card onto a 1080×1350 canvas — same real data as the DOM cards.
+   All text/shapes are drawn by hand (no external assets, nothing fabricated). */
+function drawShareCard(canvas, s, cardIndex, themeKey){
+  const t = SHARE_THEMES[themeKey] || SHARE_THEMES.dark;
+  const W = canvas.width = 1080, H = canvas.height = 1350;
+  const ctx = canvas.getContext("2d");
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,t.bg0); grad.addColorStop(1,t.bg1);
+  ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+
+  const F = (weight,px)=>`${weight} ${px}px -apple-system, Roboto, 'Segoe UI', sans-serif`;
+  // Brand
+  ctx.fillStyle = t.accent; ctx.font = F(900,64);
+  ctx.textBaseline = "top"; ctx.fillText("IGNYT", 72, 72);
+  ctx.fillStyle = t.muted; ctx.font = F(700,34);
+  const name = workoutShareName();
+  const footer = `${name ? name+" · " : ""}${s.date}`;
+  ctx.fillText(footer, 72, H-110);
+
+  const title = sessionTitle(s);
+  const completedSets = computeCompletedSets(s.exercises);
+  const volumeLabel = `${displayW(s.volume||0,0).toLocaleString()} ${wUnit()}`;
+  const breakdown = workoutBreakdown(s);
+
+  if(cardIndex===0){
+    ctx.fillStyle = t.text; ctx.font = F(900,84);
+    ctx.fillText(clipText(ctx, title, W-144), 72, 260);
+    ctx.fillStyle = t.accent; ctx.font = F(900,180);
+    ctx.fillText(workoutDurationLabel(s), 72, 430);
+    const stats = [[volumeLabel,"VOLUME"],[String(completedSets),"SETS"],[String(s.exercises.length),"EXERCISES"]];
+    stats.forEach((st,i)=>{
+      const y = 760 + i*160;
+      ctx.fillStyle = t.text; ctx.font = F(900,84); ctx.fillText(st[0], 72, y);
+      ctx.fillStyle = t.muted; ctx.font = F(800,34); ctx.fillText(st[1], 72, y+96);
+    });
+  } else if(cardIndex===1){
+    ctx.fillStyle = t.text; ctx.font = F(900,72);
+    ctx.fillText(clipText(ctx, title, W-144), 72, 240);
+    ctx.fillStyle = t.muted; ctx.font = F(700,40);
+    ctx.fillText(`${workoutDurationLabel(s)} · ${volumeLabel} · ${completedSets} sets`, 72, 350);
+    ctx.font = F(700,48);
+    breakdown.slice(0,10).forEach((b,i)=>{
+      const y = 470 + i*76;
+      ctx.fillStyle = t.accent; ctx.font = F(900,48); ctx.fillText(`${b.sets}×`, 72, y);
+      ctx.fillStyle = t.text; ctx.font = F(700,48); ctx.fillText(clipText(ctx, b.name, W-320), 200, y);
+    });
+    if(breakdown.length>10){ ctx.fillStyle = t.muted; ctx.font = F(700,40); ctx.fillText(`+ ${breakdown.length-10} more`, 72, 470+10*76); }
+  } else {
+    ctx.fillStyle = t.text; ctx.font = F(900,72);
+    ctx.fillText(clipText(ctx, title, W-144), 72, 240);
+    ctx.fillStyle = t.muted; ctx.font = F(800,40);
+    ctx.fillText("MUSCLES TRAINED", 72, 350);
+    const muscles = workoutMusclesTrained(s);
+    let x = 72, y = 440;
+    ctx.font = F(800,44);
+    muscles.forEach(m=>{
+      const w = ctx.measureText(m).width + 64;
+      if(x + w > W-72){ x = 72; y += 110; }
+      ctx.fillStyle = t.accent; roundRect(ctx, x, y, w, 84, 42); ctx.fill();
+      ctx.fillStyle = "#121216"; ctx.fillText(m, x+32, y+22);
+      x += w + 24;
+    });
+    if(!muscles.length){ ctx.fillStyle = t.muted; ctx.font = F(700,44); ctx.fillText("No muscle data for these exercises", 72, 440); y = 440; }
+    ctx.fillStyle = t.muted; ctx.font = F(700,44);
+    breakdown.filter(b=>b.sets>0).slice(0,7).forEach((b,i)=> ctx.fillText(clipText(ctx, b.name, W-144), 72, y+170+i*70));
+  }
+  return canvas;
+}
+
+function clipText(ctx, text, maxWidth){
+  if(ctx.measureText(text).width <= maxWidth) return text;
+  let s = text;
+  while(s.length>1 && ctx.measureText(s+"…").width > maxWidth) s = s.slice(0,-1);
+  return s+"…";
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+
+/* Share/save/copy — every path is failure-tolerant: any error surfaces as a toast, never
+   a blank screen, and never touches the saved workout itself. */
+async function generateShareImageBase64(s){
+  const canvas = document.createElement("canvas");
+  drawShareCard(canvas, s, state.shareCardIndex||0, state.shareCardTheme||"dark");
+  return canvas.toDataURL("image/png").split(",")[1];
+}
+
+async function shareWorkoutImage(s){
+  try{
+    const base64 = await generateShareImageBase64(s);
+    const share = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytShare;
+    if(share){
+      const result = await share.shareImage({ base64, fileName:`ignyt-workout-${s.id}.png`, text: buildWorkoutSummaryText(s) });
+      if(!result || !result.success) showToast("Sharing isn't available on this device.", "error", render);
+      return;
+    }
+    if(navigator.share){ await navigator.share({ title:"IGNYT Workout", text: buildWorkoutSummaryText(s) }); return; }
+    await copyWorkoutSummary(s);
+  }catch(e){
+    if(String(e).toLowerCase().includes("cancel") || String(e).toLowerCase().includes("abort")) return; // user closed the sheet — not an error
+    showToast("Sharing isn't available — summary copied instead.", "error", render);
+    try{ await navigator.clipboard.writeText(buildWorkoutSummaryText(s)); }catch(e2){}
+  }
+}
+
+async function saveWorkoutImage(s){
+  try{
+    const base64 = await generateShareImageBase64(s);
+    const share = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytShare;
+    if(share){
+      const result = await share.saveImage({ base64, fileName:`ignyt-workout-${s.id}.png` });
+      if(result && result.success) showToast(`Image saved to ${result.data && result.data.location ? result.data.location : "your device"}.`, "success", render);
+      else showToast("Couldn't save the image on this device.", "error", render);
+      return;
+    }
+    const a = document.createElement("a");
+    a.href = "data:image/png;base64,"+base64; a.download = `ignyt-workout-${s.id}.png`; a.click();
+  }catch(e){
+    showToast("Couldn't save the image on this device.", "error", render);
+  }
+}
+
+async function copyWorkoutSummary(s){
+  try{
+    await navigator.clipboard.writeText(buildWorkoutSummaryText(s));
+    showToast("Workout summary copied.", "success", render);
+  }catch(e){
+    showToast("Couldn't copy on this device.", "error", render);
+  }
+}
+
+/* =========================================================
+   SWIPE-TO-DELETE for workout set rows. Pointer-event based (works for
+   touch AND mouse, so the revealed Delete button is reachable without a
+   touchscreen too). Vertical scrolling stays native: .set-row declares
+   touch-action:pan-y, so the browser handles vertical pans itself and
+   cancels our gesture (pointercancel) when scrolling wins. A deliberate
+   horizontal move (>14px and clearly more horizontal than vertical) is
+   required before anything shifts; at most one row is ever open.
+========================================================= */
+function closeSwipe(wrap){
+  if(!wrap) return;
+  const row = wrap.querySelector(".set-row");
+  wrap.classList.remove("swiped");
+  if(row) row.style.transform = "";
+  if(_openSwipeEl===wrap) _openSwipeEl = null;
+}
+
+function attachSwipeToDelete(){
+  _openSwipeEl = null; // fresh DOM after render — nothing is open
+  document.querySelectorAll(".set-row-wrap").forEach(wrap=>{
+    const row = wrap.querySelector(".set-row");
+    if(!row) return;
+    let startX=0, startY=0, swiping=false, dead=false, startOffset=0;
+    row.addEventListener("pointerdown", (e)=>{
+      if(e.pointerType==="mouse" && e.button!==0) return;
+      startX=e.clientX; startY=e.clientY; swiping=false; dead=false;
+      startOffset = wrap.classList.contains("swiped") ? -SWIPE_OPEN : 0;
+    });
+    row.addEventListener("pointermove", (e)=>{
+      if(dead || (e.pointerType==="mouse" && e.buttons===0)) return;
+      const dx = e.clientX-startX, dy = e.clientY-startY;
+      if(!swiping){
+        if(Math.abs(dy)>12 && Math.abs(dy)>Math.abs(dx)){ dead=true; return; } // vertical scroll wins
+        if(Math.abs(dx)>14 && Math.abs(dx)>Math.abs(dy)*1.4){
+          swiping = true;
+          if(_openSwipeEl && _openSwipeEl!==wrap) closeSwipe(_openSwipeEl); // never two open rows
+          try{ row.setPointerCapture(e.pointerId); }catch(err){ /* non-fatal */ }
+        }
+      }
+      if(swiping){
+        const off = Math.max(-SWIPE_OPEN-14, Math.min(0, startOffset+dx));
+        row.style.transition = "none";
+        row.style.transform = `translateX(${off}px)`;
+      }
+    });
+    const finish = (e)=>{
+      if(!swiping){ return; }
+      swiping = false;
+      row.style.transition = "";
+      const off = startOffset + (e.clientX-startX);
+      if(off < -SWIPE_OPEN/2){
+        wrap.classList.add("swiped");
+        row.style.transform = `translateX(-${SWIPE_OPEN}px)`;
+        _openSwipeEl = wrap;
+      } else {
+        closeSwipe(wrap);
+      }
+    };
+    row.addEventListener("pointerup", finish);
+    row.addEventListener("pointercancel", ()=>{ swiping=false; row.style.transition=""; closeSwipe(wrap); });
+  });
+}
+
 function renderWorkoutTab(){
   if(state.session && state.showExercisePicker) return renderExercisePicker();
   if(!state.session){
+    if(state.workoutCompleteId){
+      const done = state.workoutLog.find(x=>x.id===state.workoutCompleteId);
+      if(done) return renderWorkoutComplete(done);
+      state.workoutCompleteId = null; // stale — fall through to list
+    }
     if(state.viewingSessionId){
       const s = state.workoutLog.find(x=>x.id===state.viewingSessionId);
       if(s) return renderSessionDetail(s);
@@ -5272,9 +5672,9 @@ function renderWorkoutTab(){
           const prCount = state.prs.filter(p=>p.workoutId===s.id).length;
           return `<div class="history-row" style="align-items:flex-start;cursor:pointer;" data-view-session="${s.id}">
           <div>
-            <div style="font-weight:800;font-size:14px;">${sessionTitle(s)}</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:1px;">${s.exercises.length} exercise${s.exercises.length!==1?'s':''}${s.durationMin?` · ${s.durationMin} min`:''}${prCount?` · 🏆 ${prCount} PR${prCount>1?'s':''}`:''}</div>
-            <div class="mono" style="font-size:11px;color:var(--muted);margin-top:2px;">${s.date}${s.volume?` · ${displayW(s.volume,0)}${wUnit()} vol`:''}</div>
+            <div style="font-weight:800;font-size:16px;">${sessionTitle(s)}</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:1px;">${s.exercises.length} exercise${s.exercises.length!==1?'s':''}${s.durationMin?` · ${workoutDurationLabel(s)}`:''}${prCount?` · 🏆 ${prCount} PR${prCount>1?'s':''}`:''}</div>
+            <div class="mono" style="font-size:12px;color:var(--muted);margin-top:2px;">${s.date}${s.volume?` · ${displayW(s.volume,0)}${wUnit()} vol`:''}</div>
             <div style="margin-top:5px;">${muscles.map(m=>`<span class="muscle-chip">${m}</span>`).join("")}</div>
           </div>
           <button class="del" data-del-session="${s.id}" aria-label="Delete workout">${svg('x',14)}</button>
@@ -5285,22 +5685,35 @@ function renderWorkoutTab(){
   const muscles = sessionMuscles(s.exercises);
   const isEditing = !!state.editingSessionId;
   const liveVolume = Math.round(computeSessionVolume(s.exercises));
+  const liveSets = computeCompletedSets(s.exercises);
   return `
     <div class="row-between" style="margin-bottom:4px;">
       <div style="flex:1;min-width:0;">
         <div class="eyebrow-label" style="margin:0 0 2px;">${isEditing ? 'Editing Workout' : 'In Progress'}</div>
-        <div class="mono" style="font-size:12px;color:var(--muted);">
-          ${isEditing ? s.date : `Started ${new Date(s.startedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} · <span id="session-elapsed">${formatDuration(Date.now()-s.startedAt)}</span>`}
-          ${liveVolume>0?` · ${displayW(liveVolume,0).toLocaleString()}${wUnit()} vol`:''}
-        </div>
+        ${isEditing ? `<div class="mono" style="font-size:13px;color:var(--muted);">${s.date}</div>` : ''}
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0;">
         ${isEditing?`<button class="btn btn-ghost" style="padding:10px 14px;" data-action="cancel-edit-session">Cancel</button>`:''}
         <button class="btn btn-accent" style="padding:10px 18px;" data-action="finish-session">${isEditing?'Save':'Finish'}</button>
       </div>
     </div>
+    ${isEditing ? '' : `
+    <div class="live-stats-bar">
+      <div class="live-stat">
+        <div class="live-stat-label">Duration</div>
+        <div class="live-stat-value mono" id="session-elapsed">${formatDuration(Date.now()-s.startedAt)}</div>
+      </div>
+      <div class="live-stat">
+        <div class="live-stat-label">Volume</div>
+        <div class="live-stat-value">${displayW(liveVolume,0).toLocaleString()}<span class="live-stat-unit">${wUnit()}</span></div>
+      </div>
+      <div class="live-stat">
+        <div class="live-stat-label">Sets</div>
+        <div class="live-stat-value">${liveSets}</div>
+      </div>
+    </div>`}
     <input type="text" id="session-title" placeholder="Workout title (e.g. Push Day)" value="${(s.title||'').replace(/"/g,'&quot;')}"
-      style="width:100%;background:none;border:none;border-bottom:2px solid var(--border);padding:8px 2px;font-size:20px;font-weight:900;color:var(--text);margin:10px 0 8px;font-family:inherit;">
+      style="width:100%;background:none;border:none;border-bottom:2px solid var(--border);padding:8px 2px;font-size:22px;font-weight:900;color:var(--text);margin:10px 0 8px;font-family:inherit;">
     ${muscles.length? `<div style="margin:2px 0 4px;">${muscles.map(m=>`<span class="muscle-chip active">${m}</span>`).join("")}</div>`:""}
     <textarea id="session-notes" placeholder="Workout notes (how it felt, conditions, anything worth remembering)…"
       style="width:100%;background:var(--surface-alt);border-radius:8px;padding:9px 10px;font-size:12px;color:var(--text);margin:6px 0 14px;resize:vertical;min-height:36px;border:none;font-family:inherit;">${s.notes||''}</textarea>
@@ -5315,14 +5728,14 @@ function renderWorkoutTab(){
         const showRPE = state.settings.rpeTracking;
         const isBarbell = (LIBRARY["Barbell"]||[]).some(i=>i[0]===ex.name);
         const showPlates = state.settings.plateCalc && isBarbell;
-        const gridCols = showRPE ? "30px 1fr 52px 52px 44px 32px" : "30px 1fr 62px 62px 32px";
+        const gridCols = showRPE ? "34px 1fr 58px 54px 48px 40px" : "34px 1fr 66px 66px 40px";
         const menuOpen = state.exerciseMenuOpen===exi;
         return `
         <div class="ex-log-card">
           ${ex.supersetWithNext ? `<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:var(--accent);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">${svg('link',12)} Superset with next exercise</div>` : ''}
           <div class="row-between" style="margin-bottom:4px;position:relative;">
-            <div>
-              <div style="font-weight:800;color:var(--steel);font-size:15px;">${ex.name}</div>
+            <div style="min-width:0;flex:1;">
+              <div style="font-weight:800;color:var(--steel);font-size:19px;line-height:1.25;">${ex.name}</div>
               <span class="muscle-chip">${muscle}</span>
             </div>
             <button class="del" data-toggle-ex-menu="${exi}" aria-label="Exercise options">${svg('moreVert',17)}</button>
@@ -5355,15 +5768,18 @@ function renderWorkoutTab(){
             const typeMeta = SET_TYPE_META[set.type||"working"];
             const isEmpty = !set.weight && !set.reps;
             const canDelete = ex.sets.length>1;
-            return `<div class="set-row ${set.done?'done':''}" style="grid-template-columns:${gridCols};">
-              <button class="mono set-num" data-cycle-set-type="${exi}|${si}" style="color:${typeMeta.color};background:none;border:none;cursor:pointer;font-weight:800;" title="Tap to mark warm-up / drop / failure set">${typeMeta.badge}${si+1}</button>
-              <span class="mono set-prev">${prevLabel}</span>
-              <input type="number" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–">
-              <input type="text" class="mono set-input" value="${set.reps}" data-set-field="${exi}|${si}|reps" placeholder="–">
-              ${showRPE?`<button class="rpe-btn" data-rpe="${exi}|${si}">${set.rpe||'RPE'}</button>`:""}
-              ${isEmpty && canDelete
-                ? `<button class="set-check" data-del-set="${exi}|${si}" title="Delete unused set" style="color:#ff6b6b;">${svg('x',13)}</button>`
-                : `<button class="set-check ${set.done?'done':''}" data-set-done="${exi}|${si}" aria-label="${set.done?'Mark set incomplete':'Mark set complete'}">${set.done?svg('check',13):''}</button>`}
+            return `<div class="set-row-wrap" data-swipe-row="${exi}|${si}">
+              <button class="swipe-del-btn" data-del-set="${exi}|${si}" aria-label="Delete set ${si+1}" tabindex="-1">Delete</button>
+              <div class="set-row ${set.done?'done':''}" style="grid-template-columns:${gridCols};">
+                <button class="mono set-num" data-cycle-set-type="${exi}|${si}" style="color:${typeMeta.color};background:none;border:none;cursor:pointer;font-weight:800;" title="Tap to mark warm-up / drop / failure set">${typeMeta.badge}${si+1}</button>
+                <span class="mono set-prev">${prevLabel}</span>
+                <input type="number" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–">
+                <input type="text" class="mono set-input" value="${set.reps}" data-set-field="${exi}|${si}|reps" placeholder="–">
+                ${showRPE?`<button class="rpe-btn" data-rpe="${exi}|${si}">${set.rpe||'RPE'}</button>`:""}
+                ${isEmpty && canDelete
+                  ? `<button class="set-check" data-del-set="${exi}|${si}" title="Delete unused set" style="color:#ff6b6b;">${svg('x',13)}</button>`
+                  : `<button class="set-check ${set.done?'done':''}" data-set-done="${exi}|${si}" aria-label="${set.done?'Mark set incomplete':'Mark set complete'}">${set.done?svg('check',13):''}</button>`}
+              </div>
             </div>`;
           }).join("")}
           <button class="add-set-btn" data-add-set="${exi}">${svg('plus',14)} Add Set</button>
@@ -5891,48 +6307,69 @@ function attachHandlers(){
     });
   });
   const finishBtn = document.querySelector('[data-action="finish-session"]');
-  if(finishBtn) finishBtn.addEventListener("click", ()=>{
-    if(state.session.exercises.length){
-      const volume = computeSessionVolume(state.session.exercises);
+  if(finishBtn) finishBtn.addEventListener("click", async ()=>{
+    if(_finishingSession) return; // double-tap guard: one workout, one save
+    if(!state.session) return;
+    // Validate completed work before finishing a live (non-edit) session. Finishing with
+    // nothing checked off is allowed after explicit confirmation (maybe cardio-only /
+    // forgot to tick) — but never silently.
+    if(!state.editingSessionId && state.session.exercises.length && computeCompletedSets(state.session.exercises)===0){
+      const ok = await confirmDialog("No sets are marked complete. Finish this workout anyway?", render);
+      if(!ok) return;
+    }
+    if(_finishingSession || !state.session) return; // re-check after the await
+    _finishingSession = true;
+    try{
+      let completedId = null;
+      if(state.session.exercises.length){
+        const volume = computeSessionVolume(state.session.exercises); // completed sets only
 
-      if(state.editingSessionId){
-        // Patch the existing history entry in place — no new PR detection (this is a correction,
-        // not a new performance) and no duplicate log entry.
-        const idx = state.workoutLog.findIndex(s=>s.id===state.editingSessionId);
-        if(idx!==-1){
-          state.workoutLog[idx] = Object.assign({}, state.workoutLog[idx], {
+        if(state.editingSessionId){
+          // Patch the existing history entry in place — no new PR detection (this is a correction,
+          // not a new performance) and no duplicate log entry.
+          const idx = state.workoutLog.findIndex(s=>s.id===state.editingSessionId);
+          if(idx!==-1){
+            state.workoutLog[idx] = Object.assign({}, state.workoutLog[idx], {
+              exercises: state.session.exercises,
+              notes: state.session.notes || "",
+              title: state.session.title || "",
+              volume
+            });
+          }
+          state.editingSessionId = null;
+        } else {
+          const finishedAt = Date.now();
+          const durationMin = Math.max(1, Math.round((finishedAt - state.session.startedAt)/60000));
+          const workoutId = Date.now();
+          const newPRs = detectPRs(state.session, workoutId, finishedAt, volume);
+          state.workoutLog.unshift({
+            id: workoutId,
+            date: new Date().toISOString().slice(0,10),
+            startedAt: state.session.startedAt,
+            finishedAt, durationMin, volume,
             exercises: state.session.exercises,
             notes: state.session.notes || "",
-            title: state.session.title || "",
-            volume
+            title: state.session.title || ""
           });
+          if(newPRs.length){
+            state.prs = newPRs.concat(state.prs);
+            state.lastSessionPRs = newPRs;
+          }
+          completedId = workoutId;
         }
-        state.editingSessionId = null;
-      } else {
-        const finishedAt = Date.now();
-        const durationMin = Math.max(1, Math.round((finishedAt - state.session.startedAt)/60000));
-        const workoutId = Date.now();
-        const newPRs = detectPRs(state.session, workoutId, finishedAt, volume);
-        state.workoutLog.unshift({
-          id: workoutId,
-          date: new Date().toISOString().slice(0,10),
-          startedAt: state.session.startedAt,
-          finishedAt, durationMin, volume,
-          exercises: state.session.exercises,
-          notes: state.session.notes || "",
-          title: state.session.title || ""
-        });
-        if(newPRs.length){
-          state.prs = newPRs.concat(state.prs);
-          state.lastSessionPRs = newPRs;
-        }
+        const newlyUnlocked = checkAchievements();
+        if(newlyUnlocked.length) state.lastUnlockedAchievements = newlyUnlocked;
       }
-      const newlyUnlocked = checkAchievements();
-      if(newlyUnlocked.length) state.lastUnlockedAchievements = newlyUnlocked;
+      state.session = null;
+      // Dedicated Workout Complete screen (summary + share cards) for real finishes with
+      // content; edits and empty sessions go back to the list as before.
+      state.workoutCompleteId = completedId;
+      state.shareCardIndex = 0;
+      applyWakeLock();
+      render(); // renderApp() persists — the workout is durably saved before anything else runs
+    } finally {
+      _finishingSession = false; // released after save+render; the null session blocks re-entry anyway
     }
-    state.session = null;
-    applyWakeLock();
-    render();
   });
   const cancelEditBtn = document.querySelector('[data-action="cancel-edit-session"]');
   if(cancelEditBtn) cancelEditBtn.addEventListener("click", ()=>{
@@ -5941,6 +6378,36 @@ function attachHandlers(){
     applyWakeLock();
     render();
   });
+
+  // ---- Workout Complete screen ----
+  const completeWorkout = state.workoutCompleteId ? state.workoutLog.find(x=>x.id===state.workoutCompleteId) : null;
+  const closeCompleteBtn = document.querySelector('[data-action="close-workout-complete"]');
+  if(closeCompleteBtn) closeCompleteBtn.addEventListener("click", ()=>{ state.workoutCompleteId = null; render(); });
+  if(completeWorkout){
+    const shareBtn = document.querySelector('[data-action="share-workout-image"]');
+    if(shareBtn) shareBtn.addEventListener("click", ()=> shareWorkoutImage(completeWorkout));
+    const saveBtn = document.querySelector('[data-action="save-workout-image"]');
+    if(saveBtn) saveBtn.addEventListener("click", ()=> saveWorkoutImage(completeWorkout));
+    const copyBtn = document.querySelector('[data-action="copy-workout-summary"]');
+    if(copyBtn) copyBtn.addEventListener("click", ()=> copyWorkoutSummary(completeWorkout));
+    document.querySelectorAll("[data-share-theme]").forEach(el=>{
+      el.addEventListener("click", ()=>{ state.shareCardTheme = el.dataset.shareTheme; render(); });
+    });
+    const carousel = document.getElementById("share-carousel");
+    if(carousel){
+      // Dot indicator follows the scroll-snap position; direct DOM update, no re-render.
+      carousel.addEventListener("scroll", ()=>{
+        const cardWidth = carousel.firstElementChild ? carousel.firstElementChild.offsetWidth + 12 : 1;
+        const idx = Math.max(0, Math.min(2, Math.round(carousel.scrollLeft / cardWidth)));
+        if(idx !== state.shareCardIndex){
+          state.shareCardIndex = idx;
+          document.querySelectorAll("#share-dots .share-dot").forEach((d,i)=> d.classList.toggle("active", i===idx));
+        }
+      }, {passive:true});
+    }
+  }
+
+  attachSwipeToDelete();
   const editWorkoutBtn = document.querySelector('[data-action="edit-workout"]');
   if(editWorkoutBtn) editWorkoutBtn.addEventListener("click", ()=>{
     const s = state.workoutLog.find(x=>x.id===Number(editWorkoutBtn.dataset.sessionId));
