@@ -1,13 +1,64 @@
 # CLAUDE_PROGRESS.md
 
 ## Current task
-Premium UI modular redesign — continuing incrementally. Pass 5 (this session): prepared the
-Home hero card for a right-side athlete image per the reference design. The required asset
-(`www/assets/images/athletes/home-athlete.webp`) does not exist anywhere in the repo — root
-cause is that it was never created, not a bug — so no image was fabricated; the hero was
-restructured into a text-left/image-right layout with a graceful onerror fallback that
-collapses to the exact prior text-only hero when the file is missing. Clean Android build
-succeeded; commit and push are next.
+Premium UI modular redesign — continuing incrementally. Pass 6 (this session): the athlete
+image was manually placed by the user at `www/assets/images/athletes/home-athlete.png`
+(1024x1536 PNG, 2.52MB) — verified it genuinely exists before touching any code. Updated the
+Home hero (built in pass 5 to point at a `.webp` path that didn't exist yet) to load the real
+`.png` instead, fixed a real long-username overflow bug found during verification, and added
+the now-real asset to the service worker's precache list. Clean Android build succeeded;
+commit and push are next.
+
+## Premium UI pass 6 — what was done (this session)
+1. Re-verified branch/clean tree; confirmed `AGENTS.md` still does not exist. Verified the
+   PNG genuinely exists before any code change: `ls www/assets/images/athletes/` showed
+   `home-athlete.png`, 2,638,708 bytes. Read the PNG header directly (IHDR chunk bytes) to
+   confirm real dimensions — 1024x1536 (2:3 portrait) — and viewed the file to confirm it's a
+   valid, sensible athlete photo (not corrupt/placeholder).
+2. `www/js/pages/home.js`: changed the hero `<img src>` from
+   `assets/images/athletes/home-athlete.webp` to `assets/images/athletes/home-athlete.png`
+   (the only required app-code change) and added `decoding="async"` so this ~2.5MB decode
+   doesn't block the main thread. The pass-5 `onerror` fallback (collapses the image wrap to
+   `display:none` on load failure) is unchanged and still in place as a safety net.
+3. `www/css/pages/home.css`: resized `.home-hero__image-wrap` from 118x150/92x128 to
+   126x189 (≥375px) / 98x147 (≤374px) — both exactly the source PNG's real 2:3 ratio, so
+   `object-fit:contain` fills the box edge-to-edge with minimal letterboxing instead of
+   shrinking the athlete into empty space, per the "visually prominent" requirement.
+   `object-fit:contain` + `object-position:bottom right` (no stretch, upper body/face
+   anchored bottom-right) were already correct from pass 5 and are unchanged.
+4. Real bug found and fixed during verification (not from a stated requirement, but directly
+   relevant to "do not clip the user name" / "no text-image collision"): tested a long,
+   single-word profile name ("Christopherson", no spaces) at 320px. `white-space:normal`
+   alone cannot break an unbroken word, so the name's rendered width (209px) exceeded its
+   148px column and, with `overflow:visible`, painted past its own box toward the image
+   column — not a hard CSS clip, but a real visual collision risk on real devices with long
+   names. Fixed by adding `overflow-wrap:anywhere` to `.home-hero__text` (inherited by
+   `.home-name`/`.home-greeting`/streak line) — re-verified afterward: scrollWidth now equals
+   clientWidth (148=148), zero overlap with the image at 320px. Short/normal names are
+   unaffected (word-wrap behavior only kicks in when a token can't otherwise fit).
+5. `www/sw.js`: added `./assets/images/athletes/home-athlete.png` to the `ASSETS` precache
+   list now that the file genuinely exists (pass 5 deliberately did NOT add the nonexistent
+   `.webp` path, since `cache.addAll()` fails atomically on any single 404 and would have
+   broken offline support app-wide). Bumped `CACHE` to `ignyt-v12`.
+6. Verification (browser-driven, this is a visual-fidelity + real-asset change):
+   - `read_network_requests` confirmed a genuine `200 OK` for
+     `assets/images/athletes/home-athlete.png` (old `.webp` path still 404s, as expected).
+   - Checked all 6 required widths (320/360/375/390/412/430px): at each, confirmed no
+     horizontal page overflow, no text/image bounding-box overlap, hero card fully within
+     viewport, and the image wrap's computed `display` is `block` (loaded and visible, not
+     hidden by the onerror fallback) with the expected breakpoint size.
+   - `img.naturalWidth/naturalHeight` confirmed 1024x1536 (matches the real file, proving the
+     browser actually decoded the real PNG, not a cached/stale asset).
+   - Android WebView asset path: after `npx cap sync android`, verified with `ls` that
+     `android/app/src/main/assets/public/assets/images/athletes/home-athlete.png` exists at
+     the exact expected relative path (2,638,708 bytes, matching the source file exactly).
+   - Screenshot capture is still unavailable in this environment (as in pass 4) — verification
+     used the DOM/accessibility tree, computed styles, and `getBoundingClientRect()` math, not
+     a rendered image. This is not a substitute for an actual visual check on a real device.
+7. Noted but not acted on: the source PNG is 2.52MB, unoptimized for mobile (no resizing/
+   compression). This directly increases APK size and Home's asset payload. Did not
+   re-encode/compress the user-supplied file without being asked to — flagged as a
+   recommendation in the final report instead.
 
 ## Premium UI pass 5 — what was done (this session)
 1. Re-verified branch/clean tree; confirmed `AGENTS.md` still does not exist (full-tree

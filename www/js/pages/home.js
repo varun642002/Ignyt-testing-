@@ -56,7 +56,7 @@
           </div>
           <div class="home-hero__image-wrap">
             <div class="home-hero__scrim"></div>
-            <img class="home-hero__athlete" src="assets/images/athletes/home-athlete.webp" alt=""
+            <img class="home-hero__athlete" src="assets/images/athletes/home-athlete.png" alt="" decoding="async"
               onerror="this.parentElement.style.display='none';">
           </div>
         </div>
