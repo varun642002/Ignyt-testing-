@@ -1,14 +1,57 @@
 # CLAUDE_PROGRESS.md
 
 ## Current task
-Workout experience upgrade (18-task request: typography, Steps fix, active-workout stats
-header, set management, swipe-to-delete, rest timer, finish flow, Workout Complete screen,
-share cards, native sharing). Implementation complete; gradle build running.
-QUEUED NEXT (received mid-task): full Progress page restructure into home + 8 detail views —
-will start on its own branch after this task is built/committed/pushed.
+Progress page restructure: giant single-scroll page → short home (This Week summary + 8
+category cards) + per-category detail views. Implementation complete; build running.
+(Workout experience upgrade COMPLETED this session: commit cc8e209 on
+feature/workout-experience-upgrade, BUILD SUCCESSFUL, pushed.)
 
 ## Current branch
-feature/workout-experience-upgrade (from feature/cloud-workout-progress-sync tip f20f186).
+feature/progress-page-restructure (from feature/workout-experience-upgrade tip cc8e209).
+
+## Progress restructure — what was done
+- renderProgressTab replaced (marker-based splice, node --check verified) with a router:
+  home (Progress title+subtitle, This Week card: Workouts[/goal], Training Time h m,
+  Weekly Volume, Current Streak — thisWeekStats, NaN-guarded "No data") + 8 .prog-cat-card
+  buttons (emoji icon, title, subtitle, chevron, 64px+ tap target).
+- Detail views (each = existing section markup moved into its own function; ALL existing
+  calculations/charts reused; lazy by construction — only the open view's template renders;
+  charts are inline SVG strings, no instances to destroy):
+  - PRs: total count, search (debounced 250ms, focus-preserving), 10-at-a-time Show More;
+    the "+N more in your export" string is gone.
+  - Achievements: unlocked X/Y, unlocked (newest first, full dates) then locked 🔒 list from
+    ACHIEVEMENT_DEFS; logic AUDITED CORRECT (count-based, idempotent, can't unlock early) —
+    honest note added that dates = unlock-in-IGNYT day (import day for CSV history).
+  - Workout Analytics: 7D/4W/8W/3M/6M/1Y/All range chips; summary (workouts, time h m,
+    volume, completed sets, est. calories, avg frequency); weekly activity chart with
+    sets/duration/volume metric chips; muscle radar (30d, real mappings only); This Month
+    vs Last Month with comparisonLabel() — NaN/Infinity impossible: prev>0 → %, prev=0 &
+    cur>0 → "New", both 0 → "No change"; minutes now h m (fixes "670m"); All-Time section
+    (old Overview stats preserved: streaks, totals).
+  - Exercise Progress: search + selector, Best Weight / Best est 1RM (Epley) / Best Reps
+    from FULL history, both trend sparklines, last-5-session history rows.
+  - Body: latest weight + all-time change, weight trend sparkline, latest measurements
+    (bodyfat/waist/chest/arms/hips/thighs/neck — only fields that actually exist in
+    entries), Body Distribution (existing, with its week nav).
+  - Nutrition: 30/60/90d chips, avg kcal + protein per LOGGED day (divide by logged-day
+    count — no zero-division), both sparklines, specified empty state.
+  - Calendar: existing month grid; active days now tappable (data-cal-day only on genuine
+    activity days), selected-day panel shows that day's workouts (title/duration/volume/
+    exercises/completed sets — tapping opens the workout detail) + plan check-off count.
+  - Plan Progress: overall % + n of N (relabeled honestly as "plan exercises checked off"),
+    HYROX-sessions-this-week row, per-week bars.
+- Navigation: data-progress-view / progress-back handlers (per-render binding = no listener
+  accumulation), scroll position saved on enter and restored on back, transient view state
+  resets on back. Bottom nav untouched. Android hardware back = pre-existing app-wide
+  behavior, unchanged (documented limitation).
+- Bug fixes: NaN%/Infinity% impossible (comparisonLabel), raw-minutes displays → fmtMinutes
+  h m, volume strings get a space before the unit, per-section try/catch in the router so
+  one broken view can't blank the tab.
+- Data safety: zero storage keys added/renamed/removed; all transient (progressView,
+  prSearch, prShowCount, exProgressSearch, analyticsRange, nutritionRange,
+  calendarSelectedDate) lives on state but is never persisted (persist() writes a fixed
+  key list — verified).
+- Files: www/app.js, www/index.html (.prog-cat-card CSS), CLAUDE_PROGRESS.md.
 
 ## Workout upgrade — what was done
 1. STEPS ROOT CAUSE (verified in code): native getTodaySteps() was already correct

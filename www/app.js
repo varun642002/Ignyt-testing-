@@ -1438,6 +1438,7 @@ const _debounceTimers = {};
 let _finishingSession = false;   // double-tap guard for the Finish button
 const SWIPE_OPEN = 84;           // px the set row slides to reveal Delete
 let _openSwipeEl = null;         // the one currently-open swiped row (never more than one)
+let _progressScrollPos = 0;      // Progress home scroll position, restored on back-from-detail
 
 function debounce(key, fn, ms){
   clearTimeout(_debounceTimers[key]);
@@ -2216,10 +2217,13 @@ function renderCalendarMonth(monthOffset){
     const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const active = dates.has(dateStr);
     const isToday = dateStr === new Date().toISOString().slice(0,10);
-    cells += `<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;
-      font-size:12px;font-weight:700;font-family:'SF Mono',monospace;
+    const selected = state.calendarSelectedDate === dateStr;
+    // Only genuinely-active days are tappable (data-cal-day) — empty days never highlight.
+    cells += `<div ${active?`data-cal-day="${dateStr}"`:''} style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;
+      font-size:13px;font-weight:700;font-family:'SF Mono',monospace;${active?'cursor:pointer;':''}
       background:${active?'#FF5A1F':'transparent'};
       color:${active?'#151515':'var(--muted)'};
+      ${selected ? 'box-shadow:0 0 0 2px var(--steel);':''}
       ${isToday && !active ? 'box-shadow:inset 0 0 0 1.5px var(--steel);color:var(--steel);':''}">${d}</div>`;
   }
   return `
@@ -4533,91 +4537,224 @@ function renderExerciseDetailHistory(history){
    and Nutrition (macro bars included, since they're chart-shaped too).
 ========================================================= */
 
+/* =========================================================
+   PROGRESS TAB — restructured into a short home screen (This Week
+   summary + category cards) with one detail view per category.
+   Pure reorganization: every calculation and chart helper is the
+   pre-existing one (thisWeekStats, computeWeeklyActivity,
+   computeMuscleDistribution, exerciseProgressTrend, bodyWeightTrend,
+   calorieProteinTrend, renderBodyDistribution, renderCalendarMonth,
+   weeklyBarChart, radarChart, sparklineChart) — sections were moved,
+   not rewritten, and nothing was removed. Detail content renders
+   lazily: only the open view's template (and its inline-SVG charts)
+   is generated at all; there are no chart instances to destroy.
+========================================================= */
+
+const PROGRESS_VIEWS = {
+  prs:          { icon:"🏆", title:"Personal Records",   sub:"Track your best lifts and performance records." },
+  achievements: { icon:"🎖️", title:"Achievements",       sub:"View milestones, streaks, and unlocked achievements." },
+  analytics:    { icon:"📊", title:"Workout Analytics",  sub:"Training frequency, volume, duration, and muscle distribution." },
+  exercise:     { icon:"📈", title:"Exercise Progress",  sub:"Weight and estimated 1RM trends for individual exercises." },
+  body:         { icon:"⚖️", title:"Body Progress",      sub:"Body weight and measurement trends." },
+  nutrition:    { icon:"🍎", title:"Nutrition Progress", sub:"Calorie and protein trends." },
+  calendar:     { icon:"📅", title:"Training Calendar",  sub:"See your workout activity by date." },
+  plan:         { icon:"✅", title:"Plan Progress",      sub:"Phase and weekly training-plan completion." }
+};
+
+function fmtMinutes(min){
+  const m = Math.max(0, Math.round(Number(min)||0));
+  const h = Math.floor(m/60);
+  return h>0 ? `${h}h ${m%60}m` : `${m}m`;
+}
+
+/* Comparison label that can never show NaN/Infinity: previous>0 → real percentage;
+   previous=0 & current>0 → "New"; both zero → "No change". */
+function comparisonLabel(current, previous){
+  const cur = Number(current)||0, prev = Number(previous)||0;
+  if(prev>0){
+    const pct = Math.round((cur-prev)/prev*100);
+    return { text:`${pct>=0?'+':''}${pct}%`, positive: pct>=0 };
+  }
+  if(cur>0) return { text:"New", positive:true };
+  return { text:"No change", positive:true };
+}
+
 function renderProgressTab(){
-  let total=0, done=0;
-  const perWeek = WEEKS.map(w=>{
-    let wt=0, wd=0;
-    w.days.forEach(d=>d.exercises.forEach(ex=>{ wt++; total++; if(state.completed[`${w.week}|${d.day}|${ex.name}`]){wd++; done++;} }));
-    return {week:w.week, pct: wt?Math.round(wd/wt*100):0, phase:w.phase};
-  });
-  const overall = total? Math.round(done/total*100):0;
-  const phaseColor = {base:'var(--steel)',build:'var(--steel)',load:'var(--accent)',peak:'var(--accent)',deload:'var(--mint)'};
-  const sessions = state.workoutLog.length;
-  const streak = computeStreak();
+  const view = state.progressView;
+  if(view && PROGRESS_VIEWS[view]){
+    const detailFns = {
+      prs: renderProgressPRs, achievements: renderProgressAchievements,
+      analytics: renderProgressAnalytics, exercise: renderProgressExercise,
+      body: renderProgressBody, nutrition: renderProgressNutrition,
+      calendar: renderProgressCalendar, plan: renderProgressPlan
+    };
+    let body;
+    try{ body = detailFns[view](); }
+    catch(e){
+      // One broken section must never blank the whole tab.
+      console.warn("Progress detail render failed:", view, e);
+      body = `<div class="empty-note">This section hit an error and couldn't load. Your data is untouched — try again or reopen the app.</div>`;
+    }
+    return `
+      <button class="btn btn-ghost" data-action="progress-back" style="padding:8px 14px;font-size:14px;margin:4px 0 10px;">← Progress</button>
+      <div style="font-size:25px;font-weight:900;margin-bottom:12px;">${PROGRESS_VIEWS[view].icon} ${PROGRESS_VIEWS[view].title}</div>
+      ${body}
+    `;
+  }
+  return renderProgressHome();
+}
+
+function renderProgressHome(){
+  const w = thisWeekStats();
+  const safeNum = v => (typeof v==="number" && isFinite(v)) ? v : null;
+  const workouts = safeNum(w.workoutsCompleted), minutes = safeNum(w.trainingMinutes),
+        volume = safeNum(w.weeklyVolume), streak = safeNum(w.currentStreak);
+  const row = (label, value) => `<div class="row-between" style="padding:10px 0;border-top:1px solid var(--border);">
+    <span style="font-size:15px;font-weight:700;">${label}</span>
+    <span class="mono" style="font-size:16px;font-weight:800;">${value}</span>
+  </div>`;
+  return `
+    <div style="margin:4px 0 14px;">
+      <div style="font-size:28px;font-weight:900;">Progress</div>
+      <div style="font-size:14px;color:var(--muted);margin-top:2px;">Your training, body and performance insights</div>
+    </div>
+
+    <div class="eyebrow-label" style="margin-top:0;">This Week</div>
+    <div class="info-box" style="padding:4px 14px;margin-bottom:14px;">
+      ${row("Workouts", workouts==null ? "No data" : (w.workoutsGoal ? `${workouts} / ${w.workoutsGoal}` : `${workouts}`))}
+      ${row("Training Time", minutes==null ? "No data" : fmtMinutes(minutes))}
+      ${row("Weekly Volume", volume==null ? "No data" : `${displayW(volume,0).toLocaleString()} ${wUnit()}`)}
+      ${row("Current Streak", streak==null ? "No data" : `${streak} day${streak!==1?'s':''}`)}
+    </div>
+
+    <div class="eyebrow-label">Explore</div>
+    ${Object.entries(PROGRESS_VIEWS).map(([key,v])=>`
+      <button class="prog-cat-card" data-progress-view="${key}" aria-label="Open ${v.title}">
+        <span class="prog-cat-icon">${v.icon}</span>
+        <span style="flex:1;min-width:0;text-align:left;">
+          <span style="display:block;font-size:18px;font-weight:800;color:var(--text);">${v.title}</span>
+          <span style="display:block;font-size:13px;color:var(--muted);margin-top:2px;line-height:1.35;">${v.sub}</span>
+        </span>
+        <span style="color:var(--muted);font-size:20px;flex-shrink:0;">›</span>
+      </button>
+    `).join("")}
+  `;
+}
+
+/* ---------- Personal Records ---------- */
+
+function renderProgressPRs(){
+  if(state.prs.length===0) return `<div class="empty-note">No PRs yet — finish a freestyle workout to start tracking heaviest weight, estimated 1RM, rep records, and session volume.</div>`;
+  const q = (state.prSearch||"").trim().toLowerCase();
+  const all = q ? state.prs.filter(pr=> (pr.exerciseName||"Session Volume").toLowerCase().includes(q)) : state.prs;
+  const showCount = state.prShowCount || 10;
+  const shown = all.slice(0, showCount);
+  const remaining = all.length - shown.length;
+  return `
+    <div style="font-size:14px;color:var(--muted);margin-bottom:10px;">${state.prs.length} record${state.prs.length!==1?'s':''} total${q?` · ${all.length} matching`:''}</div>
+    <div class="search-bar"><input type="text" id="pr-search" placeholder="Search by exercise…" value="${(state.prSearch||'').replace(/"/g,'&quot;')}" aria-label="Search personal records"></div>
+    ${all.length===0 ? `<div class="empty-note">No records match your search.</div>` : `
+    <div class="info-box" style="padding:4px 14px;">
+      ${shown.map(pr=>`<div class="history-row" style="background:none;padding:12px 0;margin:0;border-bottom:1px solid var(--border);">
+        <div style="min-width:0;">
+          <div style="font-size:15px;font-weight:700;">${pr.exerciseName||'Session Volume'}</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:1px;">${prTypeLabel(pr)} · ${new Date(pr.achievedAt).toLocaleDateString('default',{month:'short',day:'numeric',year:'numeric'})}</div>
+        </div>
+        <span class="mono" style="font-size:15px;color:var(--accent);font-weight:800;flex-shrink:0;">${prValueLabel(pr)}</span>
+      </div>`).join("")}
+    </div>
+    ${remaining>0?`<button class="btn btn-ghost btn-block" data-action="pr-show-more" style="margin-top:8px;">Show ${Math.min(10,remaining)} More (${remaining} remaining)</button>`:""}`}
+  `;
+}
+
+/* ---------- Achievements ---------- */
+
+function renderProgressAchievements(){
+  const unlockedIds = new Set(state.achievements.map(a=>a.id));
+  const unlocked = state.achievements.slice().sort((a,b)=>b.achievedAt-a.achievedAt);
+  const locked = ACHIEVEMENT_DEFS.filter(d=>!unlockedIds.has(d.id));
+  return `
+    <div style="font-size:14px;color:var(--muted);margin-bottom:10px;">${unlocked.length} of ${ACHIEVEMENT_DEFS.length} unlocked</div>
+    ${unlocked.length===0 ? `<div class="empty-note" style="margin-bottom:14px;">No achievements unlocked yet — your first workout is the first one.</div>` : `
+    <div class="info-box" style="padding:4px 14px;margin-bottom:14px;">
+      ${unlocked.map(a=>`<div class="history-row" style="background:none;padding:12px 0;margin:0;border-bottom:1px solid var(--border);">
+        <div style="min-width:0;">
+          <div style="font-size:15px;font-weight:700;">🎖️ ${a.name}</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:1px;">${a.desc}</div>
+        </div>
+        <span class="mono" style="font-size:12px;color:var(--muted);flex-shrink:0;">${new Date(a.achievedAt).toLocaleDateString('default',{month:'short',day:'numeric',year:'numeric'})}</span>
+      </div>`).join("")}
+    </div>`}
+    ${locked.length ? `
+    <div class="eyebrow-label">Locked</div>
+    <div class="info-box" style="padding:4px 14px;">
+      ${locked.map(d=>`<div class="history-row" style="background:none;padding:12px 0;margin:0;border-bottom:1px solid var(--border);opacity:.55;">
+        <div style="min-width:0;">
+          <div style="font-size:15px;font-weight:700;">🔒 ${d.name}</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:1px;">${d.desc}</div>
+        </div>
+      </div>`).join("")}
+    </div>`:""}
+    <div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5;">Dates show when each achievement was unlocked in IGNYT. For imported workout history, that's the day of the import — the counts themselves are always genuine.</div>
+  `;
+}
+
+/* ---------- Workout Analytics ---------- */
+
+const ANALYTICS_RANGES = {
+  "7D":{days:7, weeks:4}, "4W":{days:28, weeks:4}, "8W":{days:56, weeks:8},
+  "3M":{days:91, weeks:13}, "6M":{days:182, weeks:26}, "1Y":{days:365, weeks:52},
+  "All":{days:null, weeks:null}
+};
+
+function renderProgressAnalytics(){
+  const rangeKey = ANALYTICS_RANGES[state.analyticsRange] ? state.analyticsRange : "8W";
+  const range = ANALYTICS_RANGES[rangeKey];
+  const cutoff = range.days ? Date.now() - range.days*86400000 : 0;
+  const sessions = state.workoutLog.filter(s=> new Date(s.date).getTime() >= cutoff);
+  const minutes = sessions.reduce((a,s)=>a+(s.durationMin||0),0);
+  const volume = Math.round(sessions.reduce((a,s)=>a+(s.volume||0),0));
+  const doneSets = sessions.reduce((a,s)=>a+computeCompletedSets(s.exercises),0);
+  const estKcal = Math.round(minutes * ACTIVITY_KCAL_PER_MIN);
+
+  let chartWeeks = range.weeks;
+  if(!chartWeeks){
+    const oldest = state.workoutLog.length ? new Date(state.workoutLog[state.workoutLog.length-1].date).getTime() : Date.now();
+    chartWeeks = Math.min(104, Math.max(4, Math.ceil((Date.now()-oldest)/(7*86400000))+1));
+  }
   const metric = state.chartMetric || "sets";
-  const buckets = computeWeeklyActivity(8);
+  const buckets = computeWeeklyActivity(Math.max(4, chartWeeks));
   const currentMuscles = computeMuscleDistribution(30,0);
   const prevMuscles = computeMuscleDistribution(30,30);
+  const mc = monthlyComparison();
   const totalVolume = state.workoutLog.reduce((a,s)=>a+(s.volume||0),0);
   const totalSets = state.workoutLog.reduce((a,s)=>a+s.exercises.reduce((x,e)=>x+e.sets.length,0),0);
-  const longestStreak = computeLongestStreak();
-  const trainingHours = Math.floor(totalTrainingTimeMin()/60);
-  const trainingMinsRem = totalTrainingTimeMin()%60;
-  const freqAvg = workoutsPerWeekAvg();
+
+  const cmpRow = (label, curDisplay, cur, prev) => {
+    const c = comparisonLabel(cur, prev);
+    return `<div class="row-between" style="padding:9px 0;border-top:1px solid var(--border);">
+      <span style="font-size:14px;font-weight:700;">${label}</span>
+      <span style="display:flex;gap:10px;align-items:center;">
+        <span class="mono" style="font-size:14px;">${curDisplay}</span>
+        <span class="mono" style="font-size:12px;color:${c.positive?'var(--mint)':'var(--accent)'};font-weight:800;">${c.text}</span>
+      </span>
+    </div>`;
+  };
 
   return `
-    <div class="eyebrow-label" style="margin-top:4px;">Overview</div>
-    <div class="grid2" style="margin-bottom:16px;">
-      <div class="stat-card"><div class="stat-label">Current Streak</div><div class="stat-value" style="color:var(--accent);">🔥 ${streak}<span class="stat-unit">days</span></div></div>
-      <div class="stat-card"><div class="stat-label">Longest Streak</div><div class="stat-value" style="color:var(--steel);">${longestStreak}<span class="stat-unit">days</span></div></div>
-      <div class="stat-card"><div class="stat-label">Freestyle Sessions</div><div class="stat-value">${sessions}</div></div>
-      <div class="stat-card"><div class="stat-label">Avg Frequency</div><div class="stat-value">${freqAvg}<span class="stat-unit">/wk</span></div></div>
-      <div class="stat-card"><div class="stat-label">Total Volume</div><div class="stat-value">${displayW(totalVolume,0).toLocaleString()}<span class="stat-unit">${wUnit()}</span></div></div>
-      <div class="stat-card"><div class="stat-label">Total Training Time</div><div class="stat-value">${trainingHours}<span class="stat-unit">h ${trainingMinsRem}m</span></div></div>
-      <div class="stat-card"><div class="stat-label">Total Sets Logged</div><div class="stat-value">${totalSets}</div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+      ${Object.keys(ANALYTICS_RANGES).map(k=>`<button class="cat-chip ${rangeKey===k?'active':''}" data-analytics-range="${k}">${k}</button>`).join("")}
+    </div>
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="stat-card"><div class="stat-label">Workouts</div><div class="stat-value">${sessions.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Training Time</div><div class="stat-value" style="font-size:20px;">${fmtMinutes(minutes)}</div></div>
+      <div class="stat-card"><div class="stat-label">Volume</div><div class="stat-value" style="font-size:20px;">${displayW(volume,0).toLocaleString()}<span class="stat-unit">${wUnit()}</span></div></div>
+      <div class="stat-card"><div class="stat-label">Completed Sets</div><div class="stat-value">${doneSets}</div></div>
+      <div class="stat-card"><div class="stat-label">Est. Calories</div><div class="stat-value" style="font-size:20px;">${estKcal.toLocaleString()}<span class="stat-unit">kcal</span></div></div>
+      <div class="stat-card"><div class="stat-label">Avg Frequency</div><div class="stat-value">${workoutsPerWeekAvg()}<span class="stat-unit">/wk</span></div></div>
     </div>
 
-    <div class="eyebrow-label">Personal Records</div>
-    ${state.prs.length===0 ? `<div class="empty-note" style="margin-bottom:16px;">No PRs yet — finish a freestyle workout to start tracking heaviest weight, estimated 1RM, rep records, and session volume.</div>` : `
-    <div class="info-box" style="padding:4px 14px;margin-bottom:16px;">
-      ${state.prs.slice(0,10).map(pr=>`<div class="history-row" style="background:none;padding:10px 0;margin:0;border-bottom:1px solid var(--border);">
-        <div>
-          <div style="font-size:13px;font-weight:700;">${pr.exerciseName||'Session Volume'}</div>
-          <div style="font-size:11px;color:var(--muted);">${prTypeLabel(pr)} · ${new Date(pr.achievedAt).toLocaleDateString('default',{month:'short',day:'numeric'})}</div>
-        </div>
-        <span class="mono" style="font-size:13px;color:var(--accent);font-weight:800;">${prValueLabel(pr)}</span>
-      </div>`).join("")}
-      ${state.prs.length>10?`<div style="font-size:11px;color:var(--muted);padding:8px 0;text-align:center;">+ ${state.prs.length-10} more in your export</div>`:""}
-    </div>`}
-
-    <div class="row-between">
-      <span class="eyebrow-label" style="margin:18px 0 8px;">Achievements</span>
-      <span class="mono" style="font-size:11px;color:var(--muted);">${state.achievements.length} / ${ACHIEVEMENT_DEFS.length}</span>
-    </div>
-    ${state.achievements.length===0 ? `<div class="empty-note" style="margin-bottom:16px;">No achievements unlocked yet — your first workout is the first one.</div>` : `
-    <div class="info-box" style="padding:4px 14px;margin-bottom:16px;">
-      ${state.achievements.slice().sort((a,b)=>b.achievedAt-a.achievedAt).slice(0,10).map(a=>`<div class="history-row" style="background:none;padding:10px 0;margin:0;border-bottom:1px solid var(--border);">
-        <div>
-          <div style="font-size:13px;font-weight:700;">🎖️ ${a.name}</div>
-          <div style="font-size:11px;color:var(--muted);">${a.desc}</div>
-        </div>
-        <span class="mono" style="font-size:11px;color:var(--muted);">${new Date(a.achievedAt).toLocaleDateString('default',{month:'short',day:'numeric'})}</span>
-      </div>`).join("")}
-      ${state.achievements.length>10?`<div style="font-size:11px;color:var(--muted);padding:8px 0;text-align:center;">+ ${state.achievements.length-10} more</div>`:""}
-    </div>`}
-
-    <div class="eyebrow-label">This Week — Actual Values</div>
-    <div class="info-box" style="padding:14px;">
-      ${(()=>{
-        const w = thisWeekStats();
-        const th = Math.floor(w.trainingMinutes/60), tm = w.trainingMinutes%60;
-        const row = (label, valueHtml) => `<div class="row-between" style="padding:8px 0;border-top:1px solid var(--border);">
-          <span style="font-size:13px;font-weight:700;">${label}</span>
-          <span class="mono" style="font-size:13px;font-weight:800;color:var(--text);">${valueHtml}</span>
-        </div>`;
-        return `
-          ${row("Workouts", w.workoutsGoal ? `${w.workoutsCompleted} / ${w.workoutsGoal} completed` : `${w.workoutsCompleted} completed`)}
-          ${row("Training Time", `${th}h ${tm}m`)}
-          ${row("Weekly Volume", `${displayW(w.weeklyVolume,0).toLocaleString()} ${wUnit()}`)}
-          ${row("Calories Burned (est.)", `${w.caloriesBurned.toLocaleString()} kcal`)}
-          ${row("Current Streak", `${w.currentStreak} day${w.currentStreak!==1?'s':''}`)}
-          ${row("HYROX Sessions", `${w.hyroxSessions} completed`)}
-        `;
-      })()}
-      ${!state.profile.trainingDays ? `<div style="font-size:11px;color:var(--muted);margin-top:8px;">Set a weekly training-days target in Body → Your Profile to see a goal here.</div>` : ''}
-    </div>
-
-    <div class="eyebrow-label">Weekly Activity — Last 8 Weeks</div>
+    <div class="eyebrow-label">Weekly Activity</div>
     <div class="info-box" style="padding:14px;">
       <div style="display:flex;gap:6px;margin-bottom:10px;">
         ${["sets","duration","volume"].map(m=>`<button class="cat-chip ${metric===m?'active':''}" data-metric="${m}">${m.charAt(0).toUpperCase()+m.slice(1)}</button>`).join("")}
@@ -4629,98 +4766,214 @@ function renderProgressTab(){
     <div class="info-box" style="display:flex; flex-direction:column; align-items:center; padding:16px;">
       ${radarChart(currentMuscles, prevMuscles)}
       <div style="display:flex; gap:16px; margin-top:6px;">
-        <span style="font-size:11px;color:var(--muted);"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:5px;"></span>Current</span>
-        <span style="font-size:11px;color:var(--muted);"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);margin-right:5px;"></span>Previous 30d</span>
+        <span style="font-size:12px;color:var(--muted);"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:5px;"></span>Current</span>
+        <span style="font-size:12px;color:var(--muted);"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);margin-right:5px;"></span>Previous 30d</span>
       </div>
     </div>
 
+    <div class="eyebrow-label">This Month vs Last Month</div>
+    <div class="info-box" style="padding:6px 14px;">
+      ${cmpRow("Sessions", mc.thisMonth.sessions, mc.thisMonth.sessions, mc.lastMonth.sessions)}
+      ${cmpRow("Volume", `${displayW(mc.thisMonth.volume,0).toLocaleString()} ${wUnit()}`, mc.thisMonth.volume, mc.lastMonth.volume)}
+      ${cmpRow("Training Time", fmtMinutes(mc.thisMonth.minutes), mc.thisMonth.minutes, mc.lastMonth.minutes)}
+    </div>
+
+    <div class="eyebrow-label">All Time</div>
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="stat-card"><div class="stat-label">Current Streak</div><div class="stat-value" style="color:var(--accent);">🔥 ${computeStreak()}<span class="stat-unit">days</span></div></div>
+      <div class="stat-card"><div class="stat-label">Longest Streak</div><div class="stat-value" style="color:var(--steel);">${computeLongestStreak()}<span class="stat-unit">days</span></div></div>
+      <div class="stat-card"><div class="stat-label">Total Workouts</div><div class="stat-value">${state.workoutLog.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Volume</div><div class="stat-value" style="font-size:20px;">${displayW(totalVolume,0).toLocaleString()}<span class="stat-unit">${wUnit()}</span></div></div>
+      <div class="stat-card"><div class="stat-label">Total Training Time</div><div class="stat-value" style="font-size:20px;">${fmtMinutes(totalTrainingTimeMin())}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Sets Logged</div><div class="stat-value">${totalSets}</div></div>
+    </div>
+  `;
+}
+
+/* ---------- Exercise Progress ---------- */
+
+function renderProgressExercise(){
+  const names = exercisesWithHistory();
+  if(names.length===0) return `<div class="empty-note">Log the same exercise across a few workouts to see its strength trend here.</div>`;
+  const q = (state.exProgressSearch||"").trim().toLowerCase();
+  const filtered = q ? names.filter(n=>n.toLowerCase().includes(q)) : names;
+  const exName = (state.progressExercise && names.includes(state.progressExercise)) ? state.progressExercise : (filtered[0] || names[0]);
+  const trend = exerciseProgressTrend(exName, 20);
+  const weightPoints = trend.map(t=>({date:t.date, value:displayW(t.weight)}));
+  const ormPoints = trend.map(t=>({date:t.date, value:displayW(t.oneRM)}));
+
+  // Bests from the FULL genuine history (not just the charted window).
+  let bestW=0, best1RM=0, bestReps=0;
+  state.workoutLog.forEach(s=>{
+    const ex = s.exercises.find(e=>e.name===exName);
+    if(!ex) return;
+    ex.sets.forEach(st=>{
+      const w = parseFloat(st.weight), r = parseFloat(st.reps);
+      if(!isNaN(w) && w>bestW) bestW = w;
+      if(!isNaN(w) && !isNaN(r) && r>0){ const orm = w*(1+r/30); if(orm>best1RM) best1RM = orm; }
+      if(!isNaN(r) && r>bestReps) bestReps = r;
+    });
+  });
+  const recent = state.workoutLog.filter(s=>s.exercises.some(e=>e.name===exName)).slice(0,5);
+
+  return `
+    <div class="search-bar"><input type="text" id="ex-progress-search" placeholder="Search exercises…" value="${(state.exProgressSearch||'').replace(/"/g,'&quot;')}" aria-label="Search exercises"></div>
+    ${filtered.length===0 ? `<div class="empty-note">No tracked exercise matches your search.</div>` : `
+    <select class="select-input" id="progress-exercise-select" style="margin-bottom:12px;">
+      ${filtered.map(n=>`<option value="${n}" ${exName===n?'selected':''}>${n}</option>`).join("")}
+    </select>
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="stat-card"><div class="stat-label">Best Weight</div><div class="stat-value" style="font-size:20px;">${bestW>0?`${displayW(bestW)}<span class="stat-unit">${wUnit()}</span>`:'—'}</div></div>
+      <div class="stat-card"><div class="stat-label">Best Est. 1RM</div><div class="stat-value" style="font-size:20px;">${best1RM>0?`${displayW(best1RM,1)}<span class="stat-unit">${wUnit()}</span>`:'—'}</div></div>
+      <div class="stat-card"><div class="stat-label">Best Reps</div><div class="stat-value">${bestReps>0?bestReps:'—'}</div></div>
+      <div class="stat-card"><div class="stat-label">Sessions</div><div class="stat-value">${recent.length===5?'5+':recent.length}</div></div>
+    </div>
+    <div class="info-box" style="padding:14px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Top Set Weight</div>
+      ${sparklineChart(weightPoints, {color:"var(--accent)", unit:wUnit()})}
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;">Estimated 1RM</div>
+      ${sparklineChart(ormPoints, {color:"var(--mint)", unit:wUnit()})}
+    </div>
+    <div class="eyebrow-label">Recent History</div>
+    <div class="info-box" style="padding:4px 14px;">
+      ${recent.map(s=>{
+        const ex = s.exercises.find(e=>e.name===exName);
+        const top = ex.sets.reduce((best,st)=>{
+          const w = parseFloat(st.weight);
+          return (!isNaN(w) && w>(best.w||0)) ? {w, r:st.reps} : best;
+        }, {});
+        return `<div class="row-between" style="padding:11px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:14px;color:var(--muted);" class="mono">${s.date}</span>
+          <span class="mono" style="font-size:15px;font-weight:800;">${top.w?`${displayW(top.w)}${wUnit()} × ${top.r||'–'}`:'—'}</span>
+        </div>`;
+      }).join("")}
+    </div>`}
+  `;
+}
+
+/* ---------- Body Progress ---------- */
+
+function renderProgressBody(){
+  const entries = state.bodylog;
+  const latest = entries[0], first = entries[entries.length-1];
+  const delta = (first && latest && latest!==first) ? (Number(latest.weight)-Number(first.weight)) : null;
+  const MEASUREMENT_FIELDS = [["bodyfat","Body Fat","%"],["waist","Waist","cm"],["chest","Chest","cm"],["arms","Arms","cm"],["hips","Hips","cm"],["thighs","Thighs","cm"],["neck","Neck","cm"]];
+  const latestOf = f => entries.find(e=> e[f]!==undefined && e[f]!==null && e[f]!=="");
+  const measurements = MEASUREMENT_FIELDS.map(([f,label,unit])=>{
+    const e = latestOf(f);
+    return e ? {label, unit, value:Number(e[f]), date:e.date} : null;
+  }).filter(m=> m && isFinite(m.value));
+
+  return `
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="stat-card"><div class="stat-label">Latest Weight</div><div class="stat-value" style="font-size:20px;">${latest&&latest.weight?`${displayW(latest.weight)}<span class="stat-unit">${wUnit()}</span>`:'No data'}</div></div>
+      <div class="stat-card"><div class="stat-label">Change (all time)</div><div class="stat-value" style="font-size:20px;color:${delta==null?'var(--muted)':(delta<=0?'var(--mint)':'var(--accent)')};">${delta==null?'No data':`${delta>0?'+':''}${displayW(delta,1)}<span class="stat-unit">${wUnit()}</span>`}</div></div>
+    </div>
+
     <div class="eyebrow-label">Body Weight Trend</div>
-    <div class="info-box" style="padding:14px;">
+    <div class="info-box" style="padding:14px;margin-bottom:14px;">
       ${sparklineChart(bodyWeightTrend(20).map(p=>({date:p.date, value:displayW(p.value)})), {color:"var(--steel)", unit:wUnit()})}
     </div>
 
-    <div class="eyebrow-label">Exercise Progress</div>
-    <div class="info-box" style="padding:14px;">
-      ${exercisesWithHistory().length===0 ? `<div class="empty-note">Log the same exercise across a few workouts to see its strength trend here.</div>` : `
-        <select class="select-input" id="progress-exercise-select" style="margin-bottom:12px;">
-          ${exercisesWithHistory().map(n=>`<option value="${n}" ${state.progressExercise===n?'selected':''}>${n}</option>`).join("")}
-        </select>
-        ${(() => {
-          const exName = state.progressExercise && exercisesWithHistory().includes(state.progressExercise) ? state.progressExercise : exercisesWithHistory()[0];
-          const trend = exerciseProgressTrend(exName, 20);
-          const weightPoints = trend.map(t=>({date:t.date, value:displayW(t.weight)}));
-          const ormPoints = trend.map(t=>({date:t.date, value:displayW(t.oneRM)}));
-          return `
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Top Set Weight</div>
-            ${sparklineChart(weightPoints, {color:"var(--accent)", unit:wUnit()})}
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;">Estimated 1RM</div>
-            ${sparklineChart(ormPoints, {color:"var(--mint)", unit:wUnit()})}
-          `;
-        })()}
-      `}
-    </div>
-
-    <div class="eyebrow-label">This Month vs Last Month</div>
-    <div class="info-box" style="padding:14px;">
-      ${(() => {
-        const mc = monthlyComparison();
-        const row = (label, a, b, unit) => {
-          const delta = a-b;
-          const pct = b>0 ? Math.round(delta/b*100) : (a>0?100:0);
-          return `<div class="row-between" style="padding:8px 0;border-top:1px solid var(--border);">
-            <span style="font-size:13px;font-weight:700;">${label}</span>
-            <span style="display:flex;gap:10px;align-items:center;">
-              <span class="mono" style="font-size:13px;">${a}${unit}</span>
-              <span class="mono" style="font-size:11px;color:${delta>=0?'var(--mint)':'var(--accent)'};font-weight:800;">${delta>=0?'+':''}${pct}%</span>
-            </span>
-          </div>`;
-        };
-        return `
-          <div class="row-between" style="margin-bottom:4px;">
-            <span style="font-size:11px;color:var(--muted);font-weight:700;">THIS MONTH</span>
-            <span style="font-size:11px;color:var(--muted);font-weight:700;">VS LAST MONTH</span>
-          </div>
-          ${row("Sessions", mc.thisMonth.sessions, mc.lastMonth.sessions, "")}
-          ${row("Volume", displayW(mc.thisMonth.volume,0).toLocaleString(), displayW(mc.lastMonth.volume,0), wUnit())}
-          ${row("Training Time", mc.thisMonth.minutes, mc.lastMonth.minutes, "m")}
-        `;
-      })()}
-    </div>
-
-    <div class="eyebrow-label">Calories & Protein — Last 30 Days</div>
-    <div class="info-box" style="padding:14px;">
-      ${(() => {
-        const ct = calorieProteinTrend(30).filter(d=>d.kcal>0 || d.protein>0);
-        if(ct.length<2) return `<div class="empty-note">Log food across a few more days to see calorie and protein trends here.</div>`;
-        return `
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Calories</div>
-          ${sparklineChart(ct.map(d=>({date:d.date,value:Math.round(d.kcal)})), {color:"var(--accent)", unit:"kcal"})}
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;">Protein</div>
-          ${sparklineChart(ct.map(d=>({date:d.date,value:Math.round(d.protein)})), {color:"var(--steel)", unit:"g"})}
-        `;
-      })()}
-    </div>
+    ${measurements.length ? `
+    <div class="eyebrow-label">Latest Measurements</div>
+    <div class="grid2" style="margin-bottom:14px;">
+      ${measurements.map(m=>`<div class="stat-card"><div class="stat-label">${m.label}</div><div class="stat-value" style="font-size:20px;">${m.value}<span class="stat-unit">${m.unit}</span></div><div style="font-size:11px;color:var(--muted);margin-top:2px;">${m.date}</div></div>`).join("")}
+    </div>`:""}
 
     <div class="eyebrow-label">Body Distribution</div>
     <div class="info-box" style="padding:14px;">
       ${renderBodyDistribution(state.bodyDistWeekOffset||0)}
     </div>
+  `;
+}
 
-    <div class="eyebrow-label">Calendar</div>
-    <div class="info-box" style="padding:14px;">
-      ${renderCalendarMonth(state.calendarMonthOffset||0)}
+/* ---------- Nutrition Progress ---------- */
+
+function renderProgressNutrition(){
+  const days = [30,60,90].includes(state.nutritionRange) ? state.nutritionRange : 30;
+  const ct = calorieProteinTrend(days).filter(d=>d.kcal>0 || d.protein>0);
+  const chips = `<div style="display:flex;gap:6px;margin-bottom:12px;">
+    ${[30,60,90].map(d=>`<button class="cat-chip ${days===d?'active':''}" data-nutrition-range="${d}">${d}d</button>`).join("")}
+  </div>`;
+  if(ct.length<2) return `${chips}<div class="empty-note">Log food for a few more days to see calorie and protein trends.</div>`;
+  const avgK = Math.round(ct.reduce((a,d)=>a+d.kcal,0)/ct.length);
+  const avgP = Math.round(ct.reduce((a,d)=>a+d.protein,0)/ct.length);
+  return `
+    ${chips}
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="stat-card"><div class="stat-label">Avg Calories / logged day</div><div class="stat-value" style="font-size:20px;">${avgK.toLocaleString()}<span class="stat-unit">kcal</span></div></div>
+      <div class="stat-card"><div class="stat-label">Avg Protein / logged day</div><div class="stat-value" style="font-size:20px;">${avgP}<span class="stat-unit">g</span></div></div>
     </div>
+    <div class="info-box" style="padding:14px;">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Calories</div>
+      ${sparklineChart(ct.map(d=>({date:d.date,value:Math.round(d.kcal)})), {color:"var(--accent)", unit:"kcal"})}
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;">Protein</div>
+      ${sparklineChart(ct.map(d=>({date:d.date,value:Math.round(d.protein)})), {color:"var(--steel)", unit:"g"})}
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px;">Averages cover only days with logged food (${ct.length} of the last ${days}).</div>
+  `;
+}
 
-    <div class="eyebrow-label">Phase 1 Completion</div>
-    <div class="info-box" style="text-align:center;padding:20px;margin-bottom:16px;">
-      <div class="mono" style="font-weight:900;font-size:36px;color:var(--accent);">${overall}%</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:4px;">${done} of ${total} plan sessions logged</div>
+/* ---------- Training Calendar ---------- */
+
+function renderProgressCalendar(){
+  const sel = state.calendarSelectedDate;
+  let selHtml = "";
+  if(sel){
+    const sessions = state.workoutLog.filter(s=>s.date===sel);
+    const planCount = Object.values(state.completed).filter(ts=> new Date(ts).toISOString().slice(0,10)===sel).length;
+    const dayLabel = new Date(sel+"T12:00:00").toLocaleDateString('default',{weekday:'long', month:'long', day:'numeric'});
+    selHtml = `
+      <div class="eyebrow-label">${dayLabel}</div>
+      ${sessions.length===0 && planCount===0 ? `<div class="empty-note">No workout on this day.</div>` : `
+      ${sessions.map(s=>{
+        const doneSets = computeCompletedSets(s.exercises);
+        return `<div class="info-box" style="padding:14px;margin-bottom:10px;cursor:pointer;" data-view-session="${s.id}">
+          <div style="font-size:16px;font-weight:800;">${sessionTitle(s)}</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:3px;">${workoutDurationLabel(s)} · ${displayW(s.volume||0,0).toLocaleString()} ${wUnit()} · ${s.exercises.length} exercise${s.exercises.length!==1?'s':''} · ${doneSets} set${doneSets!==1?'s':''}</div>
+        </div>`;
+      }).join("")}
+      ${planCount ? `<div class="info-box" style="padding:12px 14px;font-size:14px;">✅ ${planCount} plan exercise${planCount!==1?'s':''} checked off</div>`:""}`}
+    `;
+  }
+  return `
+    <div class="info-box" style="padding:14px;margin-bottom:14px;">
+      ${renderCalendarMonth(state.calendarMonthOffset||0)}
+      <div style="font-size:12px;color:var(--muted);margin-top:8px;">Tap a highlighted day to see that day's training.</div>
+    </div>
+    ${selHtml}
+  `;
+}
+
+/* ---------- Plan Progress ---------- */
+
+function renderProgressPlan(){
+  let total=0, done=0;
+  const perWeek = WEEKS.map(w=>{
+    let wt=0, wd=0;
+    w.days.forEach(d=>d.exercises.forEach(ex=>{ wt++; total++; if(state.completed[`${w.week}|${d.day}|${ex.name}`]){wd++; done++;} }));
+    return {week:w.week, pct: wt?Math.round(wd/wt*100):0, phase:w.phase};
+  });
+  const overall = total? Math.round(done/total*100):0;
+  const phaseColor = {base:'var(--steel)',build:'var(--steel)',load:'var(--accent)',peak:'var(--accent)',deload:'var(--mint)'};
+  const w = thisWeekStats();
+  return `
+    <div class="info-box" style="text-align:center;padding:20px;margin-bottom:14px;">
+      <div class="mono" style="font-weight:900;font-size:38px;color:var(--accent);">${overall}%</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px;">${done} of ${total} plan exercises checked off</div>
+    </div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:14px;">
+      <div class="row-between">
+        <span style="font-size:14px;font-weight:700;">HYROX sessions this week</span>
+        <span class="mono" style="font-size:15px;font-weight:800;">${w.hyroxSessions}</span>
+      </div>
     </div>
     <div class="eyebrow-label">By Week</div>
-    ${perWeek.map(w=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-      <div class="mono" style="width:50px;font-size:11px;font-weight:700;color:var(--muted);">WK ${w.week}</div>
-      <div class="progress-track"><div class="progress-fill" style="width:${w.pct}%;background:${phaseColor[w.phase]};"></div></div>
-      <div class="mono" style="width:36px;text-align:right;font-size:11px;">${w.pct}%</div>
+    ${perWeek.map(pw=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">
+      <div class="mono" style="width:52px;font-size:12px;font-weight:700;color:var(--muted);">WK ${pw.week}</div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pw.pct}%;background:${phaseColor[pw.phase]};"></div></div>
+      <div class="mono" style="width:40px;text-align:right;font-size:12px;">${pw.pct}%</div>
     </div>`).join("")}
   `;
 }
@@ -5674,7 +5927,7 @@ function renderWorkoutTab(){
           <div>
             <div style="font-weight:800;font-size:16px;">${sessionTitle(s)}</div>
             <div style="font-size:13px;color:var(--muted);margin-top:1px;">${s.exercises.length} exercise${s.exercises.length!==1?'s':''}${s.durationMin?` · ${workoutDurationLabel(s)}`:''}${prCount?` · 🏆 ${prCount} PR${prCount>1?'s':''}`:''}</div>
-            <div class="mono" style="font-size:12px;color:var(--muted);margin-top:2px;">${s.date}${s.volume?` · ${displayW(s.volume,0)}${wUnit()} vol`:''}</div>
+            <div class="mono" style="font-size:12px;color:var(--muted);margin-top:2px;">${s.date}${s.volume?` · ${displayW(s.volume,0).toLocaleString()} ${wUnit()} vol`:''}</div>
             <div style="margin-top:5px;">${muscles.map(m=>`<span class="muscle-chip">${m}</span>`).join("")}</div>
           </div>
           <button class="del" data-del-session="${s.id}" aria-label="Delete workout">${svg('x',14)}</button>
@@ -6438,6 +6691,7 @@ function attachHandlers(){
   document.querySelectorAll("[data-view-session]").forEach(el=>{
     el.addEventListener("click", (e)=>{
       state.viewingSessionId = Number(el.dataset.viewSession);
+      state.tab = "workout"; // no-op on the Workout tab; lets the Progress calendar open a workout's detail
       render();
     });
   });
@@ -6999,6 +7253,58 @@ function attachHandlers(){
   if(progExSelect) progExSelect.addEventListener("change", ()=>{
     state.progressExercise = progExSelect.value;
     render();
+  });
+
+  // Progress home <-> detail navigation. Bound per-render like every other handler here
+  // (the DOM is rebuilt each render, so listeners never accumulate).
+  document.querySelectorAll("[data-progress-view]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const main = document.getElementById("main");
+      _progressScrollPos = main ? main.scrollTop : 0;
+      state.progressView = el.dataset.progressView;
+      render();
+      if(main) main.scrollTop = 0; // details start at the top
+    });
+  });
+  const progBackBtn = document.querySelector('[data-action="progress-back"]');
+  if(progBackBtn) progBackBtn.addEventListener("click", ()=>{
+    state.progressView = null;
+    state.prShowCount = 10; state.prSearch = ""; state.exProgressSearch = "";
+    state.calendarSelectedDate = null;
+    render();
+    const main = document.getElementById("main");
+    if(main) main.scrollTop = _progressScrollPos || 0; // restore where the user left off
+  });
+  const prMoreBtn = document.querySelector('[data-action="pr-show-more"]');
+  if(prMoreBtn) prMoreBtn.addEventListener("click", ()=>{ state.prShowCount = (state.prShowCount||10)+10; render(); });
+  const prSearchInput = document.getElementById("pr-search");
+  if(prSearchInput) prSearchInput.addEventListener("input", (e)=>{
+    state.prSearch = e.target.value;
+    state.prShowCount = 10;
+    debounce("pr-search", ()=>{
+      render();
+      setTimeout(()=>{ const s=document.getElementById("pr-search"); if(s){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
+    }, 250);
+  });
+  const exProgSearchInput = document.getElementById("ex-progress-search");
+  if(exProgSearchInput) exProgSearchInput.addEventListener("input", (e)=>{
+    state.exProgressSearch = e.target.value;
+    debounce("ex-progress-search", ()=>{
+      render();
+      setTimeout(()=>{ const s=document.getElementById("ex-progress-search"); if(s){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
+    }, 250);
+  });
+  document.querySelectorAll("[data-analytics-range]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.analyticsRange = el.dataset.analyticsRange; render(); });
+  });
+  document.querySelectorAll("[data-nutrition-range]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.nutritionRange = Number(el.dataset.nutritionRange); render(); });
+  });
+  document.querySelectorAll("[data-cal-day]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.calendarSelectedDate = state.calendarSelectedDate===el.dataset.calDay ? null : el.dataset.calDay;
+      render();
+    });
   });
   document.querySelectorAll("[data-cal-nav]").forEach(el=>{
     el.addEventListener("click", ()=>{

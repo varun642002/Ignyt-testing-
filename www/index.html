@@ -348,6 +348,13 @@ textarea.note-input{background:var(--surface); border-radius:10px; padding:10px 
 
 .routine-card{background:var(--surface); border-radius:14px; padding:14px; margin-bottom:12px;}
 
+/* Progress home category cards (restructured Progress page) */
+.prog-cat-card{display:flex; align-items:center; gap:12px; width:100%; background:var(--surface);
+    border:none; border-radius:14px; padding:16px; margin-bottom:10px; cursor:pointer;
+    min-height:64px; color:var(--text); font-family:inherit;}
+.prog-cat-card:active{background:var(--surface-alt);}
+.prog-cat-icon{font-size:24px; flex-shrink:0; width:32px; text-align:center;}
+
 /* Toast notification (replaces native alert() for non-critical messages) */
 .toast{position:fixed; left:16px; right:16px; bottom:calc(72px + env(safe-area-inset-bottom, 0px));
   max-width:420px; margin:0 auto; background:var(--surface-alt); color:var(--text); border-radius:10px;
