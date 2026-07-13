@@ -277,8 +277,8 @@ textarea.note-input{background:var(--surface); border-radius:10px; padding:10px 
 .rest-toggle{display:flex; align-items:center; gap:5px; background:none; border:none; color:var(--steel);
     font-size:14px; font-weight:700; padding:6px 0 10px; cursor:pointer;}
 
-.set-table-header{display:grid; grid-template-columns:24px 1fr 52px 52px 44px 32px; gap:6px; align-items:center;
-    font-size:11px; font-weight:800; letter-spacing:.06em; color:var(--muted); padding:0 2px 6px;}
+.set-table-header{display:grid; grid-template-columns:24px 1fr 52px 52px 44px 32px; gap:5px; align-items:center;
+    font-size:14px; font-weight:700; letter-spacing:.02em; color:var(--muted); padding:0 2px 6px;}
 
 /* Set rows are wrapped for swipe-to-delete: the red Delete sits behind the row, the row
    slides left to reveal it. Rows are opaque (surface color) so nothing shows through at
@@ -288,19 +288,32 @@ textarea.note-input{background:var(--surface); border-radius:10px; padding:10px 
 .swipe-del-btn{position:absolute; top:0; right:0; bottom:0; width:84px; background:#e53935; color:#fff;
     border:none; font-weight:800; font-size:15px; cursor:pointer;}
 
-.set-row{display:grid; grid-template-columns:24px 1fr 52px 52px 44px 32px; gap:6px; align-items:center;
-    padding:9px 2px; border-radius:8px; position:relative; z-index:1; background:var(--surface);
+.set-row{display:grid; grid-template-columns:24px 1fr 52px 52px 44px 32px; gap:5px; align-items:center;
+    padding:10px 2px; border-radius:8px; position:relative; z-index:1; background:var(--surface);
     touch-action:pan-y; transition:transform .18s ease;}
 
+/* Completed rows: tinted but values stay fully readable — no dimming of the numbers. */
 .set-row.done{background:color-mix(in srgb, var(--mint) 12%, var(--surface));}
 
-.set-num{font-weight:800; font-size:16px; color:var(--text); text-align:center;}
+.set-num{font-weight:800; font-size:19px; color:var(--text); text-align:center; min-width:0;}
 
-.set-prev{font-size:13px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+/* PREVIOUS: brighter than standard muted text (gym readability), truncates instead of
+   ever pushing the row wider than the screen. */
+.set-prev{font-size:15px; font-weight:600; color:var(--text); opacity:.78; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;}
 
-.set-input{background:var(--surface-alt); border-radius:7px; padding:9px 4px; text-align:center; font-size:16px; font-weight:700; color:var(--text); width:100%;}
+.set-input{background:var(--surface-alt); border-radius:7px; padding:10px 2px; text-align:center; font-size:18px; font-weight:700; color:var(--text); width:100%; min-width:0;}
+.set-input::placeholder{color:var(--muted); opacity:.9;}
 
-.rpe-btn{background:var(--surface-alt); border:none; border-radius:7px; padding:9px 2px; font-size:13px; font-weight:700; color:var(--muted); cursor:pointer;}
+.rpe-btn{background:var(--surface-alt); border:none; border-radius:7px; padding:10px 2px; font-size:16px; font-weight:700; color:var(--muted); cursor:pointer; min-width:0;}
+
+/* Very narrow phones (~320-374px): keep everything on-row without clipping. */
+@media (max-width: 374px){
+  .set-num{font-size:17px;}
+  .set-prev{font-size:13px;}
+  .set-input{font-size:16px;}
+  .rpe-btn{font-size:14px;}
+  .set-table-header{font-size:12px;}
+}
 
 .set-check{width:34px; height:34px; border-radius:8px; border:2px solid #4a4a54; background:none; display:flex; align-items:center; justify-content:center; margin:0 auto; color:#151515; cursor:pointer;}
 
@@ -389,7 +402,14 @@ textarea.note-input{background:var(--surface); border-radius:10px; padding:10px 
 
 .row-between{display:flex; align-items:center; justify-content:space-between;}
 
-.grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+/* minmax(0,1fr): plain 1fr lets a child's intrinsic content (big stat numbers, long
+   labels) force the column — and the whole page — wider than the viewport. */
+.grid2{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px;}
+.stat-card{min-width:0; overflow:hidden;}
+
+/* Horizontal-overflow guard: the genuine offenders (bar-chart labels, 1fr grids) are
+   fixed at the source; this stops any future wide child from shifting the page. */
+main{overflow-x:hidden;}
 
 .empty-note{text-align:center; padding:32px 0; color:var(--muted); font-size:14px;}
 /* =========================================================

@@ -1,13 +1,51 @@
 # CLAUDE_PROGRESS.md
 
 ## Current task
-Progress page restructure: giant single-scroll page → short home (This Week summary + 8
-category cards) + per-category detail views. Implementation complete; build running.
-(Workout experience upgrade COMPLETED this session: commit cc8e209 on
-feature/workout-experience-upgrade, BUILD SUCCESSFUL, pushed.)
+Mobile UI refinement pass (4 tasks): set-row readability, swipe-only set deletion,
+Log Weight folded into Your Profile, Progress horizontal-overflow fix. Implementation
+complete; build running. (Earlier this session: workout upgrade cc8e209 and Progress
+restructure a178d0f, both BUILD SUCCESSFUL and pushed.)
 
 ## Current branch
-feature/progress-page-restructure (from feature/workout-experience-upgrade tip cc8e209).
+feature/mobile-ui-refinements (from feature/progress-page-restructure tip a178d0f).
+
+## Mobile UI pass — what was done
+1. SET READABILITY: headers 14px, set number 19px (17px <375px), PREVIOUS 15px semibold
+   brightened (var(--text) @ .78 opacity — no longer dim muted) and compacted
+   ("30kg×13"), inputs 18px semibold w/ visible placeholders, RPE 16px; grid columns
+   rebalanced (40px set / minmax(0,1fr) prev / 58+54 inputs / 46 RPE / 44 check) with
+   ellipsis-not-overflow prev; ≤374px media query steps sizes down; profile/body form
+   inputs 13→16px. Completed rows keep full-strength values (tint only).
+2. SWIPE-ONLY DELETE: permanent red X removed from rows entirely (checkbox always shown);
+   deletion = swipe-left reveal (existing pointer-event engine: 14px deliberate threshold,
+   vertical-scroll wins, snap open/close, overswipe clamp, one row max, swipe-right
+   closes) + NEW once-only document-level outside-tap closer (capture phase, added once —
+   no per-render accumulation) + NEW accessible fallback "Remove Last Set" in the existing
+   ⋮ exercise menu. Deleting the final remaining set now explains via toast instead of
+   silently ignoring.
+3. YOUR PROFILE: More card renamed "Body — Weight & measurements" → "Your Profile —
+   Profile, body log & measurements" (nav id "body" kept for all existing references,
+   incl. the Home Log Weight quick action — verified they all route here). Page already
+   had the target structure (Basic Profile → Body Composition → Log Entry → History);
+   Body History now shows latest 5 + "View All (N)" toggle (transient
+   state.showAllBodyHistory). Sleep/HRV kept — genuinely part of the existing bodylog
+   entry model with existing user data. NO data/keys/handlers changed: hx_bodylog and
+   hx_profile untouched; log-body still updates profile weight → calories/macros; HC
+   weight integration untouched.
+4. PROGRESS OVERFLOW ROOT CAUSE (found, not papered over): weeklyBarChart is a flex row
+   where every bar carries an intrinsic-width value label and flex children default to
+   min-width:auto — the analytics ranges added 13-52 buckets, whose labels forced the row
+   (hence page) wider than the viewport, shifting/cutting everything. FIXES: min-width:0
+   + overflow:hidden on bar children, labels only when ≤9 buckets (else latest bar only),
+   >16 buckets aggregate into ≤13 genuine sum-buckets, bar duration labels now h m.
+   Also .grid2 → repeat(2,minmax(0,1fr)) + .stat-card{min-width:0;overflow:hidden} (same
+   min-width:auto trap for large stat numbers), and main{overflow-x:hidden} as a guard
+   AFTER the real causes were fixed. Radar (260px) and sparklines (width:100% viewBox)
+   verified fit ≥320px.
+5. Files: www/app.js, www/index.html, CLAUDE_PROGRESS.md.
+
+## Previous completed (this session)
+- a178d0f Progress restructure; cc8e209 workout upgrade — see history below.
 
 ## Progress restructure — what was done
 - renderProgressTab replaced (marker-based splice, node --check verified) with a router:

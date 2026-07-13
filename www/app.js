@@ -2182,17 +2182,23 @@ function weeklyBarChart(buckets, metric){
   const max = Math.max(1, ...vals);
   const fmt = (v)=>{
     if(metric==="volume") return v>0 ? displayW(v,0).toLocaleString() : "";
-    if(metric==="duration") return v>0 ? v+"m" : "";
+    if(metric==="duration") return v>0 ? fmtMinutes(v) : "";
     return v>0 ? String(v) : "";
   };
-  return `<div style="height:130px;display:flex;align-items:flex-end;gap:5px;">
+  // Value labels have real intrinsic width, and flex children default to min-width:auto —
+  // with many buckets that forced this row (and the whole page) wider than the viewport.
+  // min-width:0 lets bars shrink, and labels only render when there's genuinely room
+  // (otherwise just the latest bar's value).
+  const showAllLabels = buckets.length <= 9;
+  return `<div style="height:130px;display:flex;align-items:flex-end;gap:${buckets.length>20?2:5}px;min-width:0;max-width:100%;">
     ${buckets.map((b,i)=>{
       const val = b[metric];
       const isLast = i===buckets.length-1;
       const bh = Math.max(val>0?4:0, Math.round((val/max)*90));
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;">
-        <span class="mono" style="font-size:10px;font-weight:700;color:${isLast?'var(--accent)':'var(--steel)'};min-height:12px;">${fmt(val)}</span>
-        <div style="width:65%;border-radius:4px 4px 0 0;background:${isLast?'#FF5A1F':'#4FA8D8'};height:${bh}px;"></div>
+      const label = (showAllLabels || isLast) ? fmt(val) : "";
+      return `<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;overflow:hidden;">
+        <span class="mono" style="font-size:10px;font-weight:700;color:${isLast?'var(--accent)':'var(--steel)'};min-height:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</span>
+        <div style="width:${buckets.length>20?'85%':'65%'};border-radius:4px 4px 0 0;background:${isLast?'#FF5A1F':'#4FA8D8'};height:${bh}px;"></div>
       </div>`;
     }).join("")}
   </div>`;
@@ -3545,7 +3551,7 @@ function renderApp(){
 function renderMoreSheet(){
   const items = [
     {id:"library", label:"Library", desc:"Exercises & equipment", color:"var(--steel)", icon:"library"},
-    {id:"body", label:"Body", desc:"Weight & measurements", color:"var(--accent)", icon:"body"},
+    {id:"body", label:"Your Profile", desc:"Profile, body log & measurements", color:"var(--accent)", icon:"body"},
     {id:"nutrition", label:"Fuel", desc:"Meals, calories, macros", color:"var(--mint)", icon:"nutrition"},
     {id:"settings", label:"Settings", desc:"Backups & preferences", color:"var(--muted)", icon:"gear"},
     {id:"health", label:"Health Connect", desc:"Steps, heart rate, calories, weight, workouts", color:"var(--mint)", icon:"progress"}
@@ -4723,7 +4729,22 @@ function renderProgressAnalytics(){
     chartWeeks = Math.min(104, Math.max(4, Math.ceil((Date.now()-oldest)/(7*86400000))+1));
   }
   const metric = state.chartMetric || "sets";
-  const buckets = computeWeeklyActivity(Math.max(4, chartWeeks));
+  let buckets = computeWeeklyActivity(Math.max(4, chartWeeks));
+  // Long ranges: aggregate consecutive weekly buckets (genuine sums, no invention) so the
+  // chart stays readable and can never demand more width than the phone has.
+  if(buckets.length > 16){
+    const groupSize = Math.ceil(buckets.length / 13);
+    const merged = [];
+    for(let i=0; i<buckets.length; i+=groupSize){
+      const group = buckets.slice(i, i+groupSize);
+      merged.push({
+        duration: group.reduce((a,b)=>a+b.duration,0),
+        volume: group.reduce((a,b)=>a+b.volume,0),
+        sets: group.reduce((a,b)=>a+b.sets,0)
+      });
+    }
+    buckets = merged;
+  }
   const currentMuscles = computeMuscleDistribution(30,0);
   const prevMuscles = computeMuscleDistribution(30,30);
   const mc = monthlyComparison();
@@ -4988,7 +5009,7 @@ function renderBodyTab(){
   const latest = entries[0];
   const delta = (first && latest) ? (Number(latest.weight)-Number(first.weight)) : null;
   const fieldSm = (id,label,ph,color) => `<div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">${label}</label>
-    <input type="number" id="${id}" placeholder="${ph}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:8px;margin-top:4px;font-size:13px;color:${color};"></div>`;
+    <input type="number" id="${id}" placeholder="${ph}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin-top:4px;font-size:16px;color:${color};"></div>`;
 
   const p = state.profile;
   const maint = profileMaintenance();
@@ -5014,14 +5035,14 @@ function renderBodyTab(){
     <div class="eyebrow-label" style="margin-top:4px;">Your Profile</div>
     <div class="info-box" style="padding:14px;">
       <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Name</label>
-      <input type="text" id="p-name" value="${p.name||''}" placeholder="Optional" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:8px;margin:4px 0 12px;font-size:13px;color:var(--text);">
+      <input type="text" id="p-name" value="${p.name||''}" placeholder="Optional" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin:4px 0 12px;font-size:16px;color:var(--text);">
       <div class="grid2">
         <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Weight (${wUnit()})</label>
           <div style="padding:8px;margin-top:4px;font-size:13px;color:var(--accent);font-weight:700;">${displayW(p.weight)} <span style="font-size:10px;color:var(--muted);font-weight:400;">(from log)</span></div></div>
         <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Height (cm)</label>
-          <input type="number" id="p-height" value="${p.height}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:8px;margin-top:4px;font-size:13px;color:var(--text);"></div>
+          <input type="number" id="p-height" value="${p.height}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin-top:4px;font-size:16px;color:var(--text);"></div>
         <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Age</label>
-          <input type="number" id="p-age" value="${p.age}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:8px;margin-top:4px;font-size:13px;color:var(--text);"></div>
+          <input type="number" id="p-age" value="${p.age}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin-top:4px;font-size:16px;color:var(--text);"></div>
         <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Gender</label>
           <div style="display:flex;gap:6px;margin-top:4px;">
             <button class="cat-chip ${p.gender==='male'?'active':''}" data-profile-gender="male" style="flex:1;text-align:center;">Male</button>
@@ -5073,7 +5094,7 @@ function renderBodyTab(){
     <div class="info-box" style="padding:14px;">
       <div class="grid2">
         <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Date</label>
-          <input type="date" id="b-date" value="${new Date().toISOString().slice(0,10)}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:8px;margin-top:4px;font-size:13px;color:var(--text);"></div>
+          <input type="date" id="b-date" value="${new Date().toISOString().slice(0,10)}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin-top:4px;font-size:16px;color:var(--text);"></div>
         ${fieldSm("b-weight",`Weight (${wUnit()})`,wUnit()==='lb'?'220':'101.0',"var(--accent)")}
         ${fieldSm("b-sleep","Sleep (hrs)","7.5","var(--steel)")}
         ${fieldSm("b-hrv","HRV (ms)","91","var(--steel)")}
@@ -5089,13 +5110,16 @@ function renderBodyTab(){
     ${delta!==null?`<div class="field" style="margin-top:12px;"><label>Total weight change</label>
       <span class="mono" style="font-weight:900;color:${delta<=0?'var(--mint)':'var(--accent)'};">${delta>0?'+':''}${displayW(delta)} ${wUnit()}</span></div>`:''}
 
-    <div class="eyebrow-label">History</div>
+    <div class="row-between">
+      <span class="eyebrow-label">Body History</span>
+      ${entries.length>5?`<button class="btn btn-ghost" data-action="toggle-body-history" style="padding:4px 10px;font-size:12px;">${state.showAllBodyHistory?'Show Less':'View All ('+entries.length+')'}</button>`:''}
+    </div>
     ${entries.length===0?`<div class="empty-note">No entries yet.</div>`:
-      entries.map(e=>`<div class="history-row">
-        <span class="mono" style="font-size:11px;color:var(--muted);">${e.date}</span>
-        <span class="mono" style="font-size:12px;color:var(--accent);">${displayW(e.weight)}${wUnit()}</span>
-        <span class="mono" style="font-size:12px;color:var(--steel);">${e.sleep||'–'}h</span>
-        <span class="mono" style="font-size:12px;color:var(--steel);">${e.hrv||'–'}ms</span>
+      (state.showAllBodyHistory ? entries : entries.slice(0,5)).map(e=>`<div class="history-row">
+        <span class="mono" style="font-size:13px;color:var(--muted);">${e.date}</span>
+        <span class="mono" style="font-size:14px;color:var(--accent);">${displayW(e.weight)}${wUnit()}</span>
+        <span class="mono" style="font-size:13px;color:var(--steel);">${e.sleep||'–'}h</span>
+        <span class="mono" style="font-size:13px;color:var(--steel);">${e.hrv||'–'}ms</span>
         <button class="del" data-del-body="${e.id}" aria-label="Delete body log entry">${svg('x',12)}</button>
       </div>`).join("")}
 
@@ -5849,8 +5873,18 @@ function closeSwipe(wrap){
   if(_openSwipeEl===wrap) _openSwipeEl = null;
 }
 
+let _swipeOutsideCloserAdded = false;
+
 function attachSwipeToDelete(){
   _openSwipeEl = null; // fresh DOM after render — nothing is open
+  if(!_swipeOutsideCloserAdded){
+    // ONE document-level listener for the app's lifetime (never re-added per render — no
+    // accumulation): tapping anywhere outside the open row snaps it closed.
+    _swipeOutsideCloserAdded = true;
+    document.addEventListener("pointerdown", (e)=>{
+      if(_openSwipeEl && !_openSwipeEl.contains(e.target)) closeSwipe(_openSwipeEl);
+    }, true);
+  }
   document.querySelectorAll(".set-row-wrap").forEach(wrap=>{
     const row = wrap.querySelector(".set-row");
     if(!row) return;
@@ -5981,7 +6015,7 @@ function renderWorkoutTab(){
         const showRPE = state.settings.rpeTracking;
         const isBarbell = (LIBRARY["Barbell"]||[]).some(i=>i[0]===ex.name);
         const showPlates = state.settings.plateCalc && isBarbell;
-        const gridCols = showRPE ? "34px 1fr 58px 54px 48px 40px" : "34px 1fr 66px 66px 40px";
+        const gridCols = showRPE ? "40px minmax(0,1fr) 58px 54px 46px 44px" : "40px minmax(0,1fr) 72px 72px 44px";
         const menuOpen = state.exerciseMenuOpen===exi;
         return `
         <div class="ex-log-card">
@@ -6001,6 +6035,7 @@ function renderWorkoutTab(){
                 ${exi<s.exercises.length-1 ? `<button class="ex-menu-item" data-toggle-superset="${exi}">${svg('link',15)} ${ex.supersetWithNext?'Remove Superset':'Add to Superset'}</button>` : ''}
                 <button class="ex-menu-item" data-view-history="${encodeURIComponent(ex.name)}">${svg('progress',15)} View History</button>
                 <button class="ex-menu-item" data-view-instructions="${encodeURIComponent(ex.name)}">${svg('book',15)} View Instructions</button>
+                ${ex.sets.length>1?`<button class="ex-menu-item" data-remove-last-set="${exi}">${svg('x',15)} Remove Last Set</button>`:''}
                 <button class="ex-menu-item" data-del-exercise="${exi}" style="color:#ff6b6b;">${svg('x',15)} Remove Exercise</button>
               </div>
             ` : ''}
@@ -6017,10 +6052,8 @@ function renderWorkoutTab(){
           </div>
           ${ex.sets.map((set,si)=>{
             const prev = getPreviousSet(ex.name, si);
-            const prevLabel = prev ? `${prev.weight?displayW(prev.weight):'–'}${wUnit()} × ${prev.reps||'–'}` : "–";
+            const prevLabel = prev ? `${prev.weight?displayW(prev.weight):'–'}${wUnit()}×${prev.reps||'–'}` : "–";
             const typeMeta = SET_TYPE_META[set.type||"working"];
-            const isEmpty = !set.weight && !set.reps;
-            const canDelete = ex.sets.length>1;
             return `<div class="set-row-wrap" data-swipe-row="${exi}|${si}">
               <button class="swipe-del-btn" data-del-set="${exi}|${si}" aria-label="Delete set ${si+1}" tabindex="-1">Delete</button>
               <div class="set-row ${set.done?'done':''}" style="grid-template-columns:${gridCols};">
@@ -6029,9 +6062,7 @@ function renderWorkoutTab(){
                 <input type="number" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–">
                 <input type="text" class="mono set-input" value="${set.reps}" data-set-field="${exi}|${si}|reps" placeholder="–">
                 ${showRPE?`<button class="rpe-btn" data-rpe="${exi}|${si}">${set.rpe||'RPE'}</button>`:""}
-                ${isEmpty && canDelete
-                  ? `<button class="set-check" data-del-set="${exi}|${si}" title="Delete unused set" style="color:#ff6b6b;">${svg('x',13)}</button>`
-                  : `<button class="set-check ${set.done?'done':''}" data-set-done="${exi}|${si}" aria-label="${set.done?'Mark set incomplete':'Mark set complete'}">${set.done?svg('check',13):''}</button>`}
+                <button class="set-check ${set.done?'done':''}" data-set-done="${exi}|${si}" aria-label="${set.done?'Mark set incomplete':'Mark set complete'}">${set.done?svg('check',13):''}</button>
               </div>
             </div>`;
           }).join("")}
@@ -6896,9 +6927,24 @@ function attachHandlers(){
   document.querySelectorAll("[data-del-set]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const [exi,si] = el.dataset.delSet.split("|").map(Number);
-      const ex = state.session.exercises[exi];
-      if(!ex || ex.sets.length<=1) return; // never delete the exercise's last remaining set
+      const ex = state.session && state.session.exercises[exi];
+      if(!ex) return;
+      if(ex.sets.length<=1){
+        // Never leave an exercise with zero sets — explain instead of silently ignoring.
+        showToast("Each exercise keeps at least one set — remove the whole exercise from its ⋮ menu instead.", "info", render);
+        return;
+      }
       ex.sets.splice(si,1); // remaining sets renumber automatically -- their "Set N" label is just their array index+1
+      render();
+    });
+  });
+  // Accessible non-swipe fallback (inside the existing ⋮ menu — no permanent delete button on rows).
+  document.querySelectorAll("[data-remove-last-set]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const ex = state.session && state.session.exercises[Number(el.dataset.removeLastSet)];
+      if(!ex || ex.sets.length<=1) return;
+      ex.sets.pop();
+      state.exerciseMenuOpen = null;
       render();
     });
   });
@@ -7140,6 +7186,11 @@ function attachHandlers(){
     });
   });
 
+  const toggleBodyHistBtn = document.querySelector('[data-action="toggle-body-history"]');
+  if(toggleBodyHistBtn) toggleBodyHistBtn.addEventListener("click", ()=>{
+    state.showAllBodyHistory = !state.showAllBodyHistory;
+    render();
+  });
   const logBodyBtn = document.querySelector('[data-action="log-body"]');
   if(logBodyBtn) logBodyBtn.addEventListener("click", ()=>{
     const rawWeight = document.getElementById("b-weight").value;
