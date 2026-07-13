@@ -15,14 +15,12 @@
   padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; min-width:56px; min-height:28px;
   display:flex; align-items:center; justify-content:center;}
 .hc-sync-btn:disabled{opacity:.6; cursor:default;}
-.hc-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;}
-.hc-tile{background:var(--surface-alt); border-radius:10px; padding:10px 8px; text-align:center;}
-.hc-tile-value{font-family:'SF Mono', monospace; font-size:17px; font-weight:800; color:var(--text);}
-.hc-tile-unit{font-size:11px; font-weight:600; color:var(--muted); margin-left:2px;}
-.hc-tile-label{font-size:10px; font-weight:700; text-transform:uppercase; color:var(--muted); margin-top:3px;}
 .hc-empty{font-size:13px; color:var(--muted); text-align:center; padding:10px 4px;}
 .hc-error{color:var(--accent);}
-.hc-synced-at{font-size:10px; color:var(--muted); text-align:right; margin-top:10px;}
-.hc-spinner{width:15px; height:15px; border:2px solid var(--muted); border-top-color:var(--accent);
-  border-radius:50%; animation:hc-spin .7s linear infinite;}
-@keyframes hc-spin{ to{ transform:rotate(360deg); } }
+
+/* Home health feed cards are rendered as native <button> elements, which do NOT
+   inherit `color` (the UA stylesheet forces ButtonText — black on Android WebView),
+   so titles and metric values were unreadable on the dark card background. Inherit
+   the theme text color and app font instead; the muted/secondary elements inside the
+   card set var(--muted) explicitly, so hierarchy is preserved in both themes. */
+.hc-home-card{color:var(--text); font-family:inherit;}

@@ -7,8 +7,12 @@ import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.ActivityCallback
 import com.getcapacitor.annotation.CapacitorPlugin
+import android.util.Log
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import java.time.Instant
@@ -27,10 +31,25 @@ import java.time.Instant
 class HealthConnectPlugin : com.getcapacitor.Plugin() {
 
     private lateinit var manager: HealthConnectManager
-    private val pluginScope = CoroutineScope(Dispatchers.Main)
+
+    // SupervisorJob so one failing launch{} (e.g. an unguarded suspend call throwing) can't
+    // cancel this scope's Job and silently no-op every subsequent plugin call for the rest of
+    // the Activity's life. The handler is a last-resort net: every launch{} body below already
+    // wraps its own work in try/catch and resolves the PluginCall with an error, so this only
+    // fires for something that slips past that -- log it, don't let it reach the platform's
+    // default uncaught-exception handler and crash the app.
+    private val pluginScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Main + CoroutineExceptionHandler { _, e ->
+            Log.e("IgnytHealthConnect", "Unhandled coroutine exception in HealthConnectPlugin", e)
+        }
+    )
 
     override fun load() {
         manager = HealthConnectManager(context)
+    }
+
+    override fun handleOnDestroy() {
+        pluginScope.cancel()
     }
 
     @PluginMethod
@@ -99,7 +118,8 @@ class HealthConnectPlugin : com.getcapacitor.Plugin() {
             try {
                 val granted = manager.grantedPermissions()
                 val data = JSObject().apply {
-                    put("granted", granted.containsAll(manager.allPermissions))
+                    put("granted", granted.any { manager.readPermissions.contains(it) })
+                    put("partial", !granted.containsAll(manager.allPermissions))
                     put("grantedPermissions", JSONArray(granted.toList()))
                 }
                 resolveSuccess(call, data)
@@ -120,7 +140,8 @@ class HealthConnectPlugin : com.getcapacitor.Plugin() {
                 val granted = manager.grantedPermissions()
                 resolveSuccess(call, JSObject().apply {
                     put("available", true)
-                    put("granted", granted.containsAll(manager.allPermissions))
+                    put("granted", granted.any { manager.readPermissions.contains(it) })
+                    put("partial", !granted.containsAll(manager.allPermissions))
                     put("grantedPermissions", JSONArray(granted.toList()))
                 })
             } catch (e: Exception) {
@@ -238,35 +259,48 @@ class HealthConnectPlugin : com.getcapacitor.Plugin() {
     @PluginMethod
     fun syncNow(call: PluginCall) {
         pluginScope.launch {
-            if (!ensurePermissions(call)) return@launch
-            val data = JSObject()
-            // Every field is independently wrapped in safeOrNull -- one metric failing
-            // (missing permission for a newly-added type, a transient read error, etc.)
-            // never prevents the others from returning. No single bad read blanks the screen.
-            data.put("steps", safeOrNull { manager.getTodaySteps() }?.let { JSObject.fromJSONObject(it) })
-            data.put("heartRate", safeOrNull { manager.getHeartRate() }?.let { JSObject.fromJSONObject(it) })
-            data.put("weight", safeOrNull { manager.getLatestWeight() }?.let { JSObject.fromJSONObject(it) })
-            data.put("activeCalories", safeOrNull { manager.getTodayActiveCalories() }?.let { JSObject.fromJSONObject(it) })
-            data.put("distance", safeOrNull { manager.getTodayDistance() }?.let { JSObject.fromJSONObject(it) })
-            data.put("workouts", safeOrNull { manager.getTodayExerciseSessionCount() }?.let { JSObject.fromJSONObject(it) })
-            data.put("sleep", safeOrNull { manager.getLatestSleepSession() }?.let { JSObject.fromJSONObject(it) }) // ADDED
-            data.put("steps7Days", safeOrNull { manager.getStepsHistory7Days() }) // ADDED
-            data.put("heartRateSeries", safeOrNull { manager.getHeartRateRecentSeries() }) // ADDED
-            data.put("weightHistory", safeOrNull { manager.getWeightHistory(90) }) // ADDED
-            // ADDED -- the 10 newly requested metrics, each independently wrapped so one
-            // missing permission or empty result never affects any other field
-            data.put("respiratoryRate", safeOrNull { manager.getLatestRespiratoryRate() }?.let { JSObject.fromJSONObject(it) })
-            data.put("oxygenSaturation", safeOrNull { manager.getLatestOxygenSaturation() }?.let { JSObject.fromJSONObject(it) })
-            data.put("bloodPressure", safeOrNull { manager.getLatestBloodPressure() }?.let { JSObject.fromJSONObject(it) })
-            data.put("bodyTemperature", safeOrNull { manager.getLatestBodyTemperature() }?.let { JSObject.fromJSONObject(it) })
-            data.put("bodyFat", safeOrNull { manager.getLatestBodyFat() }?.let { JSObject.fromJSONObject(it) })
-            data.put("height", safeOrNull { manager.getLatestHeight() }?.let { JSObject.fromJSONObject(it) })
-            data.put("leanBodyMass", safeOrNull { manager.getLatestLeanBodyMass() }?.let { JSObject.fromJSONObject(it) })
-            data.put("basalMetabolicRate", safeOrNull { manager.getLatestBasalMetabolicRate() }?.let { JSObject.fromJSONObject(it) })
-            data.put("hydration", safeOrNull { manager.getTodayHydration() }?.let { JSObject.fromJSONObject(it) })
-            data.put("nutrition", safeOrNull { manager.getTodayNutrition() }?.let { JSObject.fromJSONObject(it) })
-            data.put("syncedAt", System.currentTimeMillis())
-            resolveSuccess(call, data)
+            if (!manager.isAvailable()) {
+                resolveError(call, "Health Connect is not available on this device.")
+                return@launch
+            }
+            // Wrapped like every other method here: grantedPermissions() is the one call in
+            // this function not already isolated by safeOrNull, so an exception here (Health
+            // Connect service killed, a permission revoked mid-call, IPC error) previously left
+            // this PluginCall permanently unresolved instead of failing cleanly.
+            try {
+                val data = JSObject()
+                val granted = manager.grantedPermissions()
+                data.put("partialPermissions", !granted.containsAll(manager.readPermissions))
+                data.put("grantedPermissions", JSONArray(granted.toList()))
+                // Every field is independently wrapped in safeOrNull -- one metric failing
+                // (missing permission for a newly-added type, a transient read error, etc.)
+                // never prevents the others from returning. No single bad read blanks the screen.
+                data.put("heartRate", safeOrNull { manager.getHeartRate() }?.let { JSObject.fromJSONObject(it) })
+                data.put("weight", safeOrNull { manager.getLatestWeight() }?.let { JSObject.fromJSONObject(it) })
+                data.put("activeCalories", safeOrNull { manager.getTodayActiveCalories() }?.let { JSObject.fromJSONObject(it) })
+                data.put("distance", safeOrNull { manager.getTodayDistance() }?.let { JSObject.fromJSONObject(it) })
+                data.put("workouts", safeOrNull { manager.getTodayExerciseSessionCount() }?.let { JSObject.fromJSONObject(it) })
+                data.put("sleep", safeOrNull { manager.getLatestSleepSession() }?.let { JSObject.fromJSONObject(it) }) // ADDED
+                data.put("steps7Days", safeOrNull { manager.getStepsHistory7Days() }) // ADDED
+                data.put("heartRateSeries", safeOrNull { manager.getHeartRateRecentSeries() }) // ADDED
+                data.put("weightHistory", safeOrNull { manager.getWeightHistory(90) }) // ADDED
+                // ADDED -- the 10 newly requested metrics, each independently wrapped so one
+                // missing permission or empty result never affects any other field
+                data.put("respiratoryRate", safeOrNull { manager.getLatestRespiratoryRate() }?.let { JSObject.fromJSONObject(it) })
+                data.put("oxygenSaturation", safeOrNull { manager.getLatestOxygenSaturation() }?.let { JSObject.fromJSONObject(it) })
+                data.put("bloodPressure", safeOrNull { manager.getLatestBloodPressure() }?.let { JSObject.fromJSONObject(it) })
+                data.put("bodyTemperature", safeOrNull { manager.getLatestBodyTemperature() }?.let { JSObject.fromJSONObject(it) })
+                data.put("bodyFat", safeOrNull { manager.getLatestBodyFat() }?.let { JSObject.fromJSONObject(it) })
+                data.put("height", safeOrNull { manager.getLatestHeight() }?.let { JSObject.fromJSONObject(it) })
+                data.put("leanBodyMass", safeOrNull { manager.getLatestLeanBodyMass() }?.let { JSObject.fromJSONObject(it) })
+                data.put("basalMetabolicRate", safeOrNull { manager.getLatestBasalMetabolicRate() }?.let { JSObject.fromJSONObject(it) })
+                data.put("hydration", safeOrNull { manager.getTodayHydration() }?.let { JSObject.fromJSONObject(it) })
+                data.put("nutrition", safeOrNull { manager.getTodayNutrition() }?.let { JSObject.fromJSONObject(it) })
+                data.put("syncedAt", System.currentTimeMillis())
+                resolveSuccess(call, data)
+            } catch (e: Exception) {
+                resolveError(call, "Sync failed: ${e.message}")
+            }
         }
     }
 
