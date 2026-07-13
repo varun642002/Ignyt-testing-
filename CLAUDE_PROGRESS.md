@@ -78,20 +78,31 @@ androidx.credentials:credentials-play-services-auth:1.3.0, googleid:1.1.1,
 kotlinx-coroutines-play-services:1.7.3. No npm dependencies added.
 
 ## Firebase configuration status
-NOT configured (no google-services.json in repo — must come from user's Firebase Console).
-App builds and runs without it; sign-in returns a clean "not configured" error.
+CONFIGURED by user (2026-07-13): Firebase project created, Android app com.varun.ignyt
+registered, debug SHA-1 + SHA-256 added, Google provider enabled, google-services.json placed
+at android/app/google-services.json. File validated (without printing secrets): project_id
+present, client for com.varun.ignyt found, 1 web OAuth client (type 3 → generates
+default_web_client_id consumed by AuthPlugin), 1 Android OAuth client (type 1, SHA-backed),
+api_key present. It is public client config (no private keys) and android/.gitignore's
+google-services.json line is commented out (trackable by design) — being committed.
 
 ## Google Sign-In configuration status
-Code complete; requires Firebase Console + SHA fingerprints to function on device.
+Code complete (commit c1372d5) + Firebase config now present. Rebuilding so the conditional
+google-services gradle plugin activates and generates default_web_client_id. No code changes
+required — AuthPlugin looks the resource up dynamically at runtime.
 
 ## Build attempts
 1. `npx cap sync android` — succeeded.
-2. `cd android; .\gradlew.bat clean assembleDebug` — **BUILD SUCCESSFUL in 2m 36s**
-   (100 actionable tasks: 90 executed, 10 up-to-date). No new compiler warnings from
-   AuthPlugin.kt; only the two pre-existing HealthConnectPlugin warnings remain.
+2. `cd android; .\gradlew.bat clean assembleDebug` (pre-Firebase-config) — **BUILD SUCCESSFUL
+   in 2m 36s** (100 tasks). No new compiler warnings from AuthPlugin.kt.
+3. After user added google-services.json: `npx cap sync android` + clean assembleDebug —
+   **BUILD SUCCESSFUL in 1m** (101 tasks — :app:processDebugGoogleServices now runs).
+   Verified default_web_client_id was generated into
+   app/build/generated/res/processDebugGoogleServices/values/values.xml.
 
 ## Build result
-BUILD SUCCESSFUL. APK at android/app/build/outputs/apk/debug/app-debug.apk.
+BUILD SUCCESSFUL with Firebase config active. APK at
+android/app/build/outputs/apk/debug/app-debug.apk.
 
 ## Errors encountered
 None yet this task.
@@ -106,10 +117,9 @@ Not committed (waiting for BUILD SUCCESSFUL).
 Not pushed.
 
 ## Exact next action
-Committed and pushing feature/google-signin-auth to origin; then final report to user (incl.
-Firebase Console / Google Cloud / SHA fingerprint setup steps + real-device test checklist).
-Secret scan of staged diff: clean (no keys/tokens/credentials — no google-services.json in
-repo at all).
+Commit android/app/google-services.json + this file, push feature/google-signin-auth, final
+report. Everything after that is REAL-DEVICE TESTING by the user (sign-in flow, session
+restore after restart, offline behavior, cancel flow, sign out) — code is build-verified only.
 
 ---
 
