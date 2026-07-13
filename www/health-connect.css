@@ -17,3 +17,10 @@
 .hc-sync-btn:disabled{opacity:.6; cursor:default;}
 .hc-empty{font-size:13px; color:var(--muted); text-align:center; padding:10px 4px;}
 .hc-error{color:var(--accent);}
+
+/* Home health feed cards are rendered as native <button> elements, which do NOT
+   inherit `color` (the UA stylesheet forces ButtonText — black on Android WebView),
+   so titles and metric values were unreadable on the dark card background. Inherit
+   the theme text color and app font instead; the muted/secondary elements inside the
+   card set var(--muted) explicitly, so hierarchy is preserved in both themes. */
+.hc-home-card{color:var(--text); font-family:inherit;}
