@@ -1,11 +1,55 @@
 # CLAUDE_PROGRESS.md
 
 ## Current task
-Premium UI modular redesign — continuing incrementally. Pass 4 (this session): redesigned
-Home's "Today's Progress" card to match a user-provided reference screenshot (ring + stacked
-calorie/protein/step rows) using a documented real-data-only formula, and introduced a blue
-accent token used for data/progress visuals while keeping IGNYT orange as the primary brand/
-CTA color. Clean Android build succeeded; commit and push are next.
+Premium UI modular redesign — continuing incrementally. Pass 5 (this session): prepared the
+Home hero card for a right-side athlete image per the reference design. The required asset
+(`www/assets/images/athletes/home-athlete.webp`) does not exist anywhere in the repo — root
+cause is that it was never created, not a bug — so no image was fabricated; the hero was
+restructured into a text-left/image-right layout with a graceful onerror fallback that
+collapses to the exact prior text-only hero when the file is missing. Clean Android build
+succeeded; commit and push are next.
+
+## Premium UI pass 5 — what was done (this session)
+1. Re-verified branch/clean tree; confirmed `AGENTS.md` still does not exist (full-tree
+   search). Root-caused the missing athlete image before writing any code: grepped the
+   entire `www/` tree for any existing reference to an athlete/hero image (none found — no
+   broken `<img>`, no `background-image`, nothing) and globbed every image file in the repo
+   (`www/icon-192.png`, `www/icon-512.png`, and Android launcher/splash assets only — no
+   `www/assets/` directory exists at all, no fitness photography or muscle-anatomy imagery
+   anywhere in the project). Conclusion: this is not a path/CSS/CSP/service-worker/WebView
+   bug — the asset was simply never added to the project. Checked for a CSP meta tag in
+   `www/index.html` that could block image loads — none exists, ruled out.
+2. Restructured the Home hero (`www/js/pages/home.js`) into `.home-hero__row` (flex,
+   text left / image right): greeting, name, streak, and the achievement/PR celebration
+   banners are unchanged and untouched inside `.home-hero__text`. Added
+   `.home-hero__image-wrap` containing a scrim div and an `<img>` pointed at the exact
+   required path `assets/images/athletes/home-athlete.webp` (relative, matching this
+   project's existing convention for `icon-192.png`/`css/tokens.css` etc.), with an inline
+   `onerror` that sets the wrap's `display:none` — so when the file is missing (today) the
+   layout is pixel-identical to the pre-existing text-only hero, and once a real file is
+   placed at that exact path it will appear automatically with no further code change.
+   No broken-image icon, no orphaned gradient, nothing fabricated.
+3. CSS (`www/css/pages/home.css`): `.home-hero__athlete` uses `object-fit:contain` (never
+   stretches) with `object-position:bottom right` (preserves upper body/face in frame if the
+   source photo is taller than the card slot). `.home-hero__scrim` is a left-to-right
+   gradient using the existing `--color-surface-elevated` token, sitting between text and
+   image for legibility once an image exists. Image slot is a fixed 118×150px box (92×128px
+   under 375px, matching this app's existing `max-width:374px` narrow-device convention) so
+   it can never collide with or push out hero text; `.home-hero__text` keeps `min-width:0`
+   for the same overflow-root-cause protection used elsewhere in this codebase.
+4. Deliberately did NOT add the asset path to `www/sw.js`'s precache list: the service
+   worker's install handler calls `caches.addAll(ASSETS)`, which fails atomically if any
+   single URL 404s -- adding a path that doesn't exist yet would break the *entire* service
+   worker install and take down offline support app-wide, not just the missing image. This
+   will be added (with a `CACHE` version bump, same pattern as prior passes) in the same
+   commit that actually adds the real image file.
+5. Browser-driven verification (this is a visual-fidelity change, so build success alone
+   isn't enough): served `www/` statically, loaded fresh, confirmed via
+   `read_network_requests` a genuine `404 Not Found` for
+   `assets/images/athletes/home-athlete.webp` (correct relative path resolution, not a typo
+   or case mismatch), confirmed `.home-hero__image-wrap` computed `display:none` after the
+   `onerror` fired, confirmed hero text renders unchanged, and confirmed no horizontal
+   overflow at both 375px and 320px (narrowest target width).
 
 ## Premium UI pass 4 — what was done (this session)
 1. Re-verified branch/clean tree; confirmed neither `AGENTS.md` nor the referenced

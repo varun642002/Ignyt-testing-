@@ -46,11 +46,20 @@
 
     return `
       <section class="premium-card premium-card--elevated home-hero">
-        <div class="home-greeting">${greeting()}</div>
-        <div class="home-name">${state.profile.name || 'Athlete'}</div>
-        <div class="mono" style="margin-top:2px;color:var(--color-primary);font-weight:800;font-size:var(--font-size-sm);">🔥 ${streak} day streak</div>
-        ${renderAchievementCelebration ? (state.lastUnlockedAchievements?.length ? renderAchievementCelebration() : '') : ''}
-        ${renderPRCelebration ? (state.lastSessionPRs?.length ? renderPRCelebration() : '') : ''}
+        <div class="home-hero__row">
+          <div class="home-hero__text">
+            <div class="home-greeting">${greeting()}</div>
+            <div class="home-name">${state.profile.name || 'Athlete'}</div>
+            <div class="mono" style="margin-top:2px;color:var(--color-primary);font-weight:800;font-size:var(--font-size-sm);">🔥 ${streak} day streak</div>
+            ${renderAchievementCelebration ? (state.lastUnlockedAchievements?.length ? renderAchievementCelebration() : '') : ''}
+            ${renderPRCelebration ? (state.lastSessionPRs?.length ? renderPRCelebration() : '') : ''}
+          </div>
+          <div class="home-hero__image-wrap">
+            <div class="home-hero__scrim"></div>
+            <img class="home-hero__athlete" src="assets/images/athletes/home-athlete.webp" alt=""
+              onerror="this.parentElement.style.display='none';">
+          </div>
+        </div>
       </section>
 
       <div class="section-heading"><span class="section-heading__label">Today’s Progress</span><span style="color:var(--color-text-secondary);font-size:var(--font-size-xs);">Week ${week.week} of 8 · ${week.phaseLabel.split(' — ')[0]}</span></div>
