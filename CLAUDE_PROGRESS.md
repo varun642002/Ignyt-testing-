@@ -41,9 +41,14 @@ feature/premium-ui-modular-redesign (branched from feature/mobile-ui-refinements
 2. `npx cap sync android` — succeeded.
 3. `android\\gradlew.bat clean assembleDebug` — **BUILD SUCCESSFUL** (101 tasks).
 
+## Commit status / push status
+- Commit: `43f96cf Modernize premium UI foundation and navigation`
+- Push: `origin/feature/premium-ui-modular-redesign` — successful.
+
 ## Exact next action
-Review/stage only redesign source files, commit, push `feature/premium-ui-modular-redesign`,
-then provide the real-device checklist. No Android native or data-storage migration is needed.
+Real-device UI and integration verification: test 320–430px layouts, all primary/Tools
+navigation, active-workout set entry/swipes, Health Connect connect/sync/exports, Firebase
+sign-in/cloud sync, and offline reload. No Android native or data-storage migration is needed.
 
 ## Current branch
 feature/mobile-ui-refinements (from feature/progress-page-restructure tip a178d0f).
