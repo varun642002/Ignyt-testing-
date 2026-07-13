@@ -3038,10 +3038,71 @@ function settingToggle(key, label, desc){
    ONBOARDING — shown once, only for genuinely new installs
 ========================================================= */
 
+/** IGNYT Account (Phase 2A): Google Sign-In identity only — logically separate from the
+ *  fitness profile (hx_profile) and every other hx_* key, none of which it reads or writes.
+ *  Renders from IgnytAuth's cached snapshot (instant + offline); auth.js reconciles that
+ *  snapshot against the real persisted Firebase session once per launch. */
+function renderAccountSection(){
+  const esc = v => String(v == null ? "" : v)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  const auth = window.IgnytAuth;
+  const header = `<div class="eyebrow-label" style="margin-top:4px;">IGNYT Account</div>`;
+
+  if(!auth) return ""; // auth.js failed to load — never break the rest of Settings over it
+
+  if(!auth.isNativeAndroid()){
+    return `${header}
+      <div class="info-box" style="padding:14px;">
+        <div style="font-size:13px;color:var(--muted);">Sign-in is available in the IGNYT Android app.</div>
+      </div>`;
+  }
+
+  const busy = auth.isBusy();
+  const errorMsg = auth.getError();
+  const account = auth.getAccount();
+  const errorHtml = errorMsg ? `<div style="font-size:12px;color:var(--accent);margin-bottom:10px;">${esc(errorMsg)}</div>` : "";
+
+  if(!account){
+    return `${header}
+      <div class="info-box" style="padding:14px;">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Sign in to securely back up your fitness data and enable future multi-device sync.</div>
+        ${errorHtml}
+        <button class="btn btn-accent btn-block" data-action="account-signin" ${busy?'disabled':''}>${busy?'Signing in…':'Continue with Google'}</button>
+      </div>`;
+  }
+
+  const initial = esc((account.displayName || account.email || "?").trim().charAt(0).toUpperCase() || "?");
+  // Initials avatar always rendered underneath; the photo covers it when it loads and
+  // removes itself if it can't (offline, revoked URL, no photo) — no broken-image icon ever.
+  const avatar = `
+    <div style="position:relative;width:44px;height:44px;flex-shrink:0;">
+      <div style="width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;">${initial}</div>
+      ${account.photoUrl ? `<img src="${esc(account.photoUrl)}" alt="" referrerpolicy="no-referrer" style="position:absolute;top:0;left:0;width:44px;height:44px;border-radius:50%;" onerror="this.remove()">` : ""}
+    </div>`;
+
+  return `${header}
+    <div class="info-box" style="padding:14px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        ${avatar}
+        <div style="min-width:0;flex:1;">
+          <div style="font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(account.displayName) || "Google Account"}</div>
+          <div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(account.email)}</div>
+        </div>
+      </div>
+      <div class="row-between" style="margin-bottom:12px;">
+        <span style="font-size:12px;color:var(--muted);">Status</span>
+        <span style="font-size:12px;font-weight:700;color:var(--mint);">Signed in with Google</span>
+      </div>
+      ${errorHtml}
+      <button class="btn btn-ghost btn-block" data-action="account-signout" ${busy?'disabled':''}>${busy?'Signing out…':'Sign Out'}</button>
+    </div>`;
+}
+
 function renderSettingsTab(){
   const s = state.settings;
   return `
-    <div class="eyebrow-label" style="margin-top:4px;">Export Data</div>
+    ${renderAccountSection()}
+    <div class="eyebrow-label">Export Data</div>
     <div class="info-box" style="padding:14px;">
       <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export your entire workout and measurement history. The JSON backup can be imported back; CSVs are for spreadsheets.</div>
       <button class="btn btn-accent btn-block" data-action="export-json" style="margin-bottom:8px;">Full Backup (JSON)</button>
@@ -5521,6 +5582,11 @@ function attachHandlers(){
       render();
     });
   });
+  // IGNYT Account: IgnytAuth handles busy/error state and re-renders Settings itself.
+  const accountSigninBtn = document.querySelector('[data-action="account-signin"]');
+  if(accountSigninBtn) accountSigninBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signIn(); });
+  const accountSignoutBtn = document.querySelector('[data-action="account-signout"]');
+  if(accountSignoutBtn) accountSignoutBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signOut(); });
   const testNotifBtn = document.querySelector('[data-action="test-notification"]');
   if(testNotifBtn) testNotifBtn.addEventListener("click", ()=>{
     if(typeof Notification==='undefined'){

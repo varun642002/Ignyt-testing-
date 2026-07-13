@@ -1,91 +1,124 @@
 # CLAUDE_PROGRESS.md
 
 ## Current feature request
-Fix dark-mode contrast bug on the Home Health Connect dashboard cards: card titles ("Heart
-Rate", "Sleep", "Weight", …) and primary metric values ("62 bpm", "6h 28m", "100.8 kg",
-"No data", …) rendered black/dark on the dark card background. Requirements: titles and
-primary values near-white in dark mode, secondary text stays muted gray, preserve hierarchy,
-do not break light mode, no broad `body *` rules, no theme-system rewrite.
+Phase 2A: Google Sign-In and user account foundation. "Continue with Google", persistent
+session restored across app restarts, signed-in account UI (photo/name/email/status/sign out),
+graceful offline behavior, app fully usable signed out. NO cloud sync yet, NO AI coach, no
+redesign, no localStorage resets, Health Connect untouched.
 
 ## Current branch
-feature/phase1-stabilization (continued — this is a UI stabilization fix of the same kind as
-the Phase 1 pass, found while the user was testing this branch's build; the branch is unmerged
-so continuing here keeps one coherent stabilization deliverable).
+feature/google-signin-auth (created from feature/phase1-stabilization tip 5649d7b, which
+includes Phase 1 stabilization + the dark-mode card contrast fix — both unmerged to main).
 
-## Root cause (verified, not assumed)
-`hcCard()` in `www/app.js` (~line 3532) renders every Home health card as a native
-`<button class="hc-home-card">`. Native buttons do NOT inherit CSS `color` — the UA stylesheet
-forces `color: ButtonText` (black on Android WebView). The app resets color for
-`input,select,textarea` (`www/index.html` line 146) and every other button class in the app
-(`.btn-ghost`, `.cat-chip`, `.nav-btn`, `.week-chip`, `.more-sheet-card`, …) sets its own
-color — but `.hc-home-card` had NO color rule anywhere. The card title span and primary value
-div carry no inline color (they were written to inherit), so they fell back to UA black.
-In light mode this coincidentally looked correct (black on white), which is why only dark
-mode was broken.
+## Architecture selected (and why)
+Hand-rolled Capacitor plugin `IgnytAuth` (AuthPlugin.kt) mirroring the project's proven
+HealthConnectPlugin pattern, built on:
+- **Firebase Authentication** (native Android SDK, BOM 33.7.0) — persistent session storage,
+  offline session restore, future-proof identity for later cloud-sync phases.
+- **androidx Credential Manager 1.3.0 + googleid 1.1.1** — the current, non-deprecated Google
+  Sign-In API (legacy GoogleSignIn API is deprecated).
+Why not @capacitor-firebase/authentication (Capawesome): repo has zero third-party Capacitor
+plugins today; a hand-rolled plugin guarantees the "never rejects / never crashes" contract
+even with NO google-services.json present (which is this repo's current state — the plugin
+lazily checks FirebaseApp initialization and the default_web_client_id resource at runtime and
+returns a clean error instead of throwing at startup).
+Version pinning rationale: project pins kotlin_version 1.9.24; newer androidx.credentials
+(1.5+/1.6) and Firebase BOM 34.x ship Kotlin 2.x metadata that the 1.9 compiler cannot read.
+firebase-bom 33.7.0 / credentials 1.3.0 / googleid 1.1.1 is the Firebase-docs-blessed Kotlin
+1.9-era set. Verified all versions exist on Google Maven before use.
+No changes to: Capacitor 8.4.1, Health Connect 1.1.0, minSdk 26, compileSdk 36, targetSdk 36,
+AGP 8.13.0, Gradle 8.14.3, Java/Kotlin target 21, package com.varun.ignyt.
 
-## Fix applied
-One targeted rule appended to `www/health-connect.css`:
-`.hc-home-card{color:var(--text); font-family:inherit;}`
-- `color:var(--text)` → titles/values are #F2F1ED (near-white) in dark mode and #16161A in
-  light mode, automatically via the existing theme variables. No `!important` needed: author
-  rules beat UA rules, and the button's inline style does not set `color`.
-- `font-family:inherit` → buttons also don't inherit font-family (UA serves Arial); this makes
-  card text match the app font. No layout risk: sizes/weights are all set inline per element.
-- Everything secondary inside the card (range label, source, unit, timestamp, "No data",
-  chevron) already sets `color:var(--muted)` inline, so hierarchy is preserved unchanged.
+## Completed work
+1. NEW android/app/src/main/java/com/varun/ignyt/auth/AuthPlugin.kt — methods: isConfigured,
+   getCurrentUser (offline session restore), signIn (Credential Manager → Google ID token →
+   Firebase session; token never logged/stored/returned to JS), signOut (Firebase signOut +
+   clearCredentialState). Every method resolves {success, data|error}; SupervisorJob +
+   CoroutineExceptionHandler; per-exception-type user-readable errors (cancelled, no Google
+   account, Play Services unavailable, interrupted, 30s timeout on the network exchange only).
+2. MOD MainActivity.java — registerPlugin(AuthPlugin.class).
+3. MOD android/app/build.gradle — firebase-bom 33.7.0, firebase-auth, credentials 1.3.0,
+   credentials-play-services-auth 1.3.0, googleid 1.1.1, kotlinx-coroutines-play-services 1.7.3.
+   The template's existing conditional google-services apply (only when google-services.json
+   exists) was already present — build stays green without the file.
+4. NEW www/auth.js — IgnytAuth JS module (same dual-env pattern as health-connect.js): cached
+   account snapshot in NEW localStorage key hx_auth_account (uid/name/email/photo only — never
+   tokens), busy/error state, signIn/signOut, one reconciliation pass per launch
+   (refreshFromNative — no polling/retry loops), re-renders Settings when visible.
+5. MOD www/index.html — <script src="auth.js"> added after existing scripts.
+6. MOD www/app.js — renderAccountSection() (signed-out: "IGNYT Account" pitch + Continue with
+   Google; signed-in: initials-fallback avatar + photo, name, email, status, Sign Out; web
+   build: "available in Android app" note; HTML-escapes all Google-supplied strings) inserted
+   at top of renderSettingsTab; click bindings for account-signin/account-signout.
 
-## Scope audit (all other Health Connect surfaces checked — no other instance of the bug)
-- Health dashboard detail view (`renderHealthDashboard`): all divs/spans with explicit
-  var(--text)/var(--muted)/var(--mint) colors — unaffected.
-- Insights tiles (`hcInsightTile` / `renderHealthInsightMetrics`): `.stat-card` divs with
-  explicit colors — unaffected.
-- Food Log Health Connect calorie budget line (app.js ~4756): div with explicit
-  var(--muted) — unaffected.
-- Settings Health Connect card (`health-settings-integration.js`, `.hc-card` classes): divs,
-  colors from health-connect.css vars — unaffected.
-- Charts (`svgLineChart`, `svgBarChart`, `svgSleepStages`): stroke/fill via theme vars —
-  untouched.
-- Grepped all `<button` usages in app.js: every other button gets color from its class;
-  `.hc-home-card` was the only offender.
+## Data safety
+No existing hx_* key read, written, renamed, or migrated. Only NEW key: hx_auth_account.
+Google identity kept fully separate from fitness profile (hx_profile). Nothing auto-uploads.
+
+## Pending work
+- Gradle build verification (in progress).
+- Commit + push after BUILD SUCCESSFUL.
+- User-side setup (cannot be done from this machine): Firebase Console project with Android
+  app com.varun.ignyt + SHA-1/SHA-256 fingerprints, download google-services.json into
+  android/app/, enable Google provider in Firebase Auth. Sign-in cleanly reports "not
+  configured" until then.
 
 ## Files changed
-- www/health-connect.css (added `.hc-home-card` color/font rule + explanatory comment)
-- CLAUDE_PROGRESS.md (this file)
+- android/app/src/main/java/com/varun/ignyt/auth/AuthPlugin.kt (NEW)
+- android/app/src/main/java/com/varun/ignyt/MainActivity.java
+- android/app/build.gradle
+- www/auth.js (NEW)
+- www/index.html
+- www/app.js
+- CLAUDE_PROGRESS.md
+
+## Dependencies added
+firebase-bom:33.7.0 (→ firebase-auth 23.1.0), androidx.credentials:credentials:1.3.0,
+androidx.credentials:credentials-play-services-auth:1.3.0, googleid:1.1.1,
+kotlinx-coroutines-play-services:1.7.3. No npm dependencies added.
+
+## Firebase configuration status
+NOT configured (no google-services.json in repo — must come from user's Firebase Console).
+App builds and runs without it; sign-in returns a clean "not configured" error.
+
+## Google Sign-In configuration status
+Code complete; requires Firebase Console + SHA fingerprints to function on device.
 
 ## Build attempts
 1. `npx cap sync android` — succeeded.
-2. `cd android; .\gradlew.bat clean assembleDebug` — **BUILD SUCCESSFUL in 1m 53s**
-   (100 actionable tasks: 90 executed, 10 up-to-date).
+2. `cd android; .\gradlew.bat clean assembleDebug` — **BUILD SUCCESSFUL in 2m 36s**
+   (100 actionable tasks: 90 executed, 10 up-to-date). No new compiler warnings from
+   AuthPlugin.kt; only the two pre-existing HealthConnectPlugin warnings remain.
 
-## Current build result
+## Build result
 BUILD SUCCESSFUL. APK at android/app/build/outputs/apk/debug/app-debug.apk.
 
 ## Errors encountered
-None so far this session.
+None yet this task.
 
 ## Fixes applied
-See "Fix applied" above.
+None needed yet.
 
-## Commit status
-Not yet committed (waiting for BUILD SUCCESSFUL per CLAUDE.md).
+## Git commit status
+Not committed (waiting for BUILD SUCCESSFUL).
 
-## Push status
-Not yet pushed.
+## Git push status
+Not pushed.
 
 ## Exact next action
-Commit www/health-connect.css + CLAUDE_PROGRESS.md on feature/phase1-stabilization, push to
-origin, report to user. Then begin the newly requested Phase 2A task (Google Sign-In / user
-account foundation) on a fresh branch feature/google-signin-auth.
+Committed and pushing feature/google-signin-auth to origin; then final report to user (incl.
+Firebase Console / Google Cloud / SHA fingerprint setup steps + real-device test checklist).
+Secret scan of staged diff: clean (no keys/tokens/credentials — no google-services.json in
+repo at all).
 
 ---
 
-## Previous completed task (Phase 1 stabilization) — for history
-Full Phase 1 stabilization audit completed, built (BUILD SUCCESSFUL), committed (f8a6d79) and
-pushed to origin/feature/phase1-stabilization in the prior session. Fixed: Health Connect
-native crash risk (unguarded grantedPermissions, no SupervisorJob), missing manifest
-`<queries>` block, Insights "No data" vs "Permission required" distinction, Week/Month/Year
-mislabeled snapshot data, pluginScope leak, 32px tap targets, sw offline fallback, 0-calorie
-food rejection, food-row overflow, dead CSS removal. Out-of-scope items documented there:
-average sleeping heart rate (feature, not bug), Food Log date navigation/edit-in-place
-(missing features). Root-level `app.js`/`index.html` are a separate GitHub Pages PWA
-deployment — out of scope; the Android app uses `www/`.
+## Previous completed tasks — history
+- Dark-mode Health Connect card contrast fix: root cause was native <button> not inheriting
+  color (UA ButtonText black); fixed with .hc-home-card{color:var(--text);font-family:inherit}
+  in www/health-connect.css. Commit 5649d7b on feature/phase1-stabilization, pushed, BUILD
+  SUCCESSFUL.
+- Phase 1 stabilization: committed f8a6d79, pushed. Fixed HC native crash risk, manifest
+  <queries>, Insights honesty (No data vs Permission required; Week/Month/Year), tap targets,
+  sw offline fallback, 0-kcal food entries, dead CSS. Root-level app.js/index.html are a
+  separate GitHub Pages PWA — out of scope; Android app uses www/.
