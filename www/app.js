@@ -3374,7 +3374,26 @@ function renderConfirmDialog(){
    PR/achievement celebration banners, and the contextual reminder logic.
 ========================================================= */
 
+/* Incremental migration boundary: Home presentation now lives in js/pages/home.js.
+   Keep this adapter small so business/data logic remains stable while page UI evolves. */
 function renderHomeTab(){
+  maybeShowReminders();
+  const week = WEEKS[state.activeWeek-1];
+  const plannedDay = todaysPlannedDay();
+  let dayDone = 0, dayTotal = 0;
+  if(plannedDay){
+    dayTotal = plannedDay.exercises.length;
+    dayDone = plannedDay.exercises.filter(ex=>state.completed[`${week.week}|${plannedDay.day}|${ex.name}`]).length;
+  }
+  if(window.IgnytPages && typeof window.IgnytPages.renderHome === 'function') return window.IgnytPages.renderHome({
+    state, week, plannedDay, planPct: overallPlanProgress(), streak: computeStreak(), targets: macroTargets(),
+    eaten: Math.round(todayEaten()), proteinToday: Math.round(todayMacros().protein), latestWeight: state.bodylog[0],
+    dayDone, dayTotal, greeting, displayW, wUnit, svg, renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed
+  });
+  return renderLegacyHomeTab();
+}
+
+function renderLegacyHomeTab(){
   maybeShowReminders();
   const week = WEEKS[state.activeWeek-1];
   const plannedDay = todaysPlannedDay();
@@ -3510,12 +3529,12 @@ function renderApp(){
   const MORE_TABS = ["library","body","nutrition","settings","health"];
   const isMoreActive = MORE_TABS.includes(state.tab) || state.tab==="more";
   root.innerHTML = `
-    <header class="app-header" style="display:flex;align-items:flex-end;justify-content:space-between;">
+    <header class="app-header page-title-row">
       <div>
-        <div class="eyebrow-row"><div class="eyebrow-dash"></div><span class="eyebrow">Full Training System</span></div>
+        <div class="eyebrow-row"><div class="eyebrow-dash"></div><span class="eyebrow">Train with intent</span></div>
         <h1 class="title">IGNYT</h1>
       </div>
-      <button data-nav="settings" aria-label="Settings" style="background:${state.tab==='settings'?'var(--surface-alt)':'none'};border:none;color:${state.tab==='settings'?'var(--accent)':'var(--muted)'};padding:8px;border-radius:10px;cursor:pointer;">${svg('gear',22)}</button>
+      <button class="page-tools-btn" data-nav="more" aria-label="Open profile, settings, and tools">${svg('gear',22)}</button>
     </header>
     <main id="main"></main>
     ${renderTimerOverlay()}
@@ -3524,10 +3543,10 @@ function renderApp(){
     ${state.tab==="more" ? renderMoreSheet() : ""}
     <nav class="bottom-nav">
       ${navBtn("home","Home")}
-      ${navBtn("plan","Plan")}
       ${navBtn("workout","Workout")}
+      ${navBtn("nutrition","Nutrition")}
       ${navBtn("progress","Progress")}
-      <button class="nav-btn ${isMoreActive?'active':''}" data-nav="more">${svg('more')}<span>More</span></button>
+      <button class="nav-btn ${state.tab==='ai-coach'?'active':''}" data-nav="ai-coach">${svg('more')}<span>AI Coach</span></button>
     </nav>
   `;
   const main = document.getElementById("main");
@@ -3538,6 +3557,7 @@ function renderApp(){
   if(state.tab==="body") main.innerHTML = renderBodyTab();
   if(state.tab==="nutrition") main.innerHTML = renderNutritionTab();
   if(state.tab==="progress") main.innerHTML = renderProgressTab();
+  if(state.tab==="ai-coach") main.innerHTML = renderAiCoachTab();
   if(state.tab==="settings") main.innerHTML = renderSettingsTab();
   if(state.tab==="health") main.innerHTML = renderHealthDashboard();
   if(state.tab==="more") main.innerHTML = ""; // sheet covers it
@@ -3550,6 +3570,7 @@ function renderApp(){
 
 function renderMoreSheet(){
   const items = [
+    {id:"plan", label:"Training Plan", desc:"HYROX schedule & routines", color:"var(--steel)", icon:"plan"},
     {id:"library", label:"Library", desc:"Exercises & equipment", color:"var(--steel)", icon:"library"},
     {id:"body", label:"Your Profile", desc:"Profile, body log & measurements", color:"var(--accent)", icon:"body"},
     {id:"nutrition", label:"Fuel", desc:"Meals, calories, macros", color:"var(--mint)", icon:"nutrition"},
@@ -3569,6 +3590,17 @@ function renderMoreSheet(){
       </div>
     </div>
   </div>`;
+}
+
+/* Honest navigation shell: AI assistance is not implemented in this repository, so this
+   screen never implies that prompts, plans, or data analysis are being generated. */
+function renderAiCoachTab(){
+  return `<section class="premium-card premium-card--elevated coach-empty">
+    <div class="coach-empty__icon">${svg('more',28)}</div>
+    <div style="font-size:24px;font-weight:900;">AI Coach</div>
+    <p style="margin:8px auto 18px;max-width:300px;color:var(--color-text-secondary);line-height:1.5;">AI coaching is not configured in this version of IGNYT. Your workout, nutrition, progress, and Health Connect data remain available in their existing screens.</p>
+    <button class="btn btn-secondary" data-nav="progress">Explore your progress</button>
+  </section>`;
 }
 
 /** Format a Health Connect metric value for display. Returns the literal string

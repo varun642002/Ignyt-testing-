@@ -1,0 +1,4 @@
+html, body { background: var(--color-bg); color: var(--color-text-primary); }
+body { font-size: var(--font-size-md); }
+main { padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--space-lg)); }
+button, input, textarea, select { font: inherit; }

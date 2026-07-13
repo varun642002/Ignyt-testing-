@@ -1,0 +1,7 @@
+#app { max-width: 480px; background: var(--color-bg); }
+header.app-header { padding: calc(var(--safe-top) + var(--space-sm)) var(--space-md) var(--space-sm); }
+.page-title-row { display:flex; align-items:center; justify-content:space-between; gap:var(--space-sm); }
+.page-tools-btn { min-height:44px; min-width:44px; border:1px solid var(--color-border); border-radius:var(--radius-sm); color:var(--color-text-primary); background:var(--color-surface); }
+nav.bottom-nav { min-height:var(--nav-height); background:rgba(18,20,24,.95); border-color:var(--color-border); }
+.nav-btn { min-height:52px; }
+.nav-btn span { font-size:10px; }

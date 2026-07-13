@@ -425,10 +425,24 @@ main{overflow-x:hidden;}
     *{animation-duration:0.001s !important; animation-iteration-count:1 !important; transition-duration:0.001s !important;}
   }
 </style>
+<!-- New modular stylesheet layers intentionally follow legacy inline CSS so migrated
+     design tokens and components take precedence without changing legacy screens. -->
+<link rel="stylesheet" href="css/tokens.css" />
+<link rel="stylesheet" href="css/base.css" />
+<link rel="stylesheet" href="css/layout.css" />
+<link rel="stylesheet" href="css/components.css" />
+<link rel="stylesheet" href="css/responsive.css" />
+<link rel="stylesheet" href="css/pages/home.css" />
+<link rel="stylesheet" href="css/pages/workout.css" />
+<link rel="stylesheet" href="css/pages/nutrition.css" />
+<link rel="stylesheet" href="css/pages/progress.css" />
+<link rel="stylesheet" href="css/pages/profile.css" />
+<link rel="stylesheet" href="css/pages/ai-coach.css" />
 <link rel="stylesheet" href="health-connect.css">
 </head>
 <body>
 <div id="app"></div>
+<script src="js/pages/home.js"></script>
 <script src="app.js"></script>
 <script src="health-connect.js"></script>
 <script src="health-settings-integration.js"></script>

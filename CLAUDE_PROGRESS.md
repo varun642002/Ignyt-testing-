@@ -1,10 +1,49 @@
 # CLAUDE_PROGRESS.md
 
 ## Current task
-Mobile UI refinement pass (4 tasks): set-row readability, swipe-only set deletion,
-Log Weight folded into Your Profile, Progress horizontal-overflow fix. Implementation
-complete; build running. (Earlier this session: workout upgrade cc8e209 and Progress
-restructure a178d0f, both BUILD SUCCESSFUL and pushed.)
+Premium UI modular redesign — implementation complete for the safe first incremental pass:
+central CSS design system, Home-page extraction, premium Home dashboard, primary navigation
+reorganization, and honest AI Coach shell. Native/data layers are unchanged. Clean Android
+build succeeded; commit and push are next.
+
+## Current branch
+feature/premium-ui-modular-redesign (branched from feature/mobile-ui-refinements).
+
+## Premium UI modular redesign — what was done
+1. Added modular CSS layers under `www/css/`: tokens, base, layout, shared components,
+   responsive guards, plus page-owned Home/Workout/Nutrition/Progress/Profile/AI styles.
+   Tokens centralize premium dark surfaces, IGNYT orange, typography, spacing, radii,
+   shadows, safe areas and nav height; light-theme token values are retained.
+2. Extracted the redesigned Home presentation into `www/js/pages/home.js`. The new
+   `renderHomeTab()` is an adapter that passes existing state/calculation/Health Connect
+   renderers into the module; the old Home renderer remains as `renderLegacyHomeTab()` only
+   as a safe fallback. No storage keys, calculations, or Health Connect reads changed.
+3. Home is now structured as greeting/profile, genuine goal progress, calorie/protein/steps/
+   sleep metric cards, next workout, quick actions and an expandable existing Health Connect
+   detail feed. Missing Health Connect values truthfully read `Not synced`.
+4. Primary navigation is now Home / Workout / Nutrition / Progress / AI Coach. The header
+   opens Tools (the existing More sheet), which retains Training Plan, Library, Profile,
+   Fuel, Settings and Health Connect; no existing destination was removed. AI Coach is an
+   explicit unavailable shell, not fabricated functionality.
+5. Updated service-worker cache version/assets so the modular CSS and Home script work
+   offline and are network-first refreshed alongside the app shell.
+
+## Files changed
+- `www/app.js`, `www/index.html`, `www/sw.js`
+- New: `www/js/pages/home.js`
+- New: `www/css/tokens.css`, `base.css`, `layout.css`, `components.css`, `responsive.css`
+- New: `www/css/pages/home.css`, `workout.css`, `nutrition.css`, `progress.css`,
+  `profile.css`, `ai-coach.css`
+- `CLAUDE_PROGRESS.md`
+
+## Build attempts
+1. `node --check www/app.js` and `node --check www/js/pages/home.js` — passed.
+2. `npx cap sync android` — succeeded.
+3. `android\\gradlew.bat clean assembleDebug` — **BUILD SUCCESSFUL** (101 tasks).
+
+## Exact next action
+Review/stage only redesign source files, commit, push `feature/premium-ui-modular-redesign`,
+then provide the real-device checklist. No Android native or data-storage migration is needed.
 
 ## Current branch
 feature/mobile-ui-refinements (from feature/progress-page-restructure tip a178d0f).

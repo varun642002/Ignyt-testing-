@@ -1,0 +1,10 @@
+.premium-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); box-shadow:var(--shadow-card); }
+.premium-card--elevated { background:var(--color-surface-elevated); }
+.section-heading { display:flex; align-items:center; justify-content:space-between; gap:var(--space-sm); margin:var(--space-lg) 0 var(--space-xs); }
+.section-heading__label { font-size:var(--font-size-xs); letter-spacing:.14em; text-transform:uppercase; color:var(--color-text-secondary); font-weight:800; }
+.metric-card { min-width:0; padding:var(--space-sm); }
+.metric-card__label { color:var(--color-text-secondary); font-size:var(--font-size-xs); font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+.metric-card__value { margin-top:var(--space-2xs); font-size:22px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.metric-card__detail { margin-top:2px; color:var(--color-text-secondary); font-size:var(--font-size-xs); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.btn-primary { background:var(--color-primary); color:#17110e; }
+.btn-secondary { background:var(--color-surface-elevated); border:1px solid var(--color-border); color:var(--color-text-primary); }

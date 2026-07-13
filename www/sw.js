@@ -1,5 +1,6 @@
-const CACHE = "ignyt-v9";
-const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./app.js"];
+const CACHE = "ignyt-v10";
+const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./app.js",
+  "./css/tokens.css", "./css/base.css", "./css/layout.css", "./css/components.css", "./css/responsive.css", "./css/pages/home.css", "./css/pages/workout.css", "./css/pages/nutrition.css", "./css/pages/progress.css", "./css/pages/profile.css", "./css/pages/ai-coach.css", "./js/pages/home.js"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
@@ -19,7 +20,7 @@ self.addEventListener("activate", (e) => {
 // on the very next load instead of staying frozen on whatever was precached at install
 // time. Falls back to cache only when offline. Other assets (icons, manifest) stay
 // cache-first since they rarely change.
-const NETWORK_FIRST = [/index\.html$/, /app\.js$/, /health-connect\.js$/, /health-settings-integration\.js$/, /health-connect\.css$/];
+const NETWORK_FIRST = [/index\.html$/, /app\.js$/, /health-connect\.js$/, /health-settings-integration\.js$/, /health-connect\.css$/, /\/css\//, /\/js\/pages\//];
 
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
