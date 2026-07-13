@@ -3388,6 +3388,7 @@ function renderHomeTab(){
   if(window.IgnytPages && typeof window.IgnytPages.renderHome === 'function') return window.IgnytPages.renderHome({
     state, week, plannedDay, planPct: overallPlanProgress(), streak: computeStreak(), targets: macroTargets(),
     eaten: Math.round(todayEaten()), proteinToday: Math.round(todayMacros().protein), latestWeight: state.bodylog[0],
+    water: Math.round(todayWater()), waterTarget: state.settings.waterTargetMl || 2500,
     dayDone, dayTotal, greeting, displayW, wUnit, svg, renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed
   });
   return renderLegacyHomeTab();

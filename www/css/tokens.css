@@ -1,17 +1,19 @@
 /* IGNYT design tokens: the single source of visual values for new and migrated UI. */
 :root {
-  --color-bg: #090a0c;
-  --color-surface: #121418;
-  --color-surface-elevated: #191c22;
-  --color-surface-pressed: #22262e;
+  --color-bg: #08090d;
+  --color-surface: #10131a;
+  --color-surface-elevated: #171b24;
+  --color-surface-pressed: #21262f;
   --color-primary: #ff5a1f;
   --color-primary-strong: #ff6a2b;
+  --color-accent-blue: #32b8f4;
+  --color-accent-cyan: #55d8ff;
   --color-text-primary: #f7f4ef;
   --color-text-secondary: #aaa9b0;
   --color-success: #45d294;
   --color-warning: #f5bb45;
   --color-error: #ff6b6b;
-  --color-border: #292d35;
+  --color-border: #262b35;
   --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px;
   --space-lg: 24px; --space-xl: 32px;
   --radius-sm: 10px; --radius-md: 14px; --radius-card: 18px; --radius-pill: 999px;

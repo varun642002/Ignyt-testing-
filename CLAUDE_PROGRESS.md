@@ -1,12 +1,70 @@
 # CLAUDE_PROGRESS.md
 
 ## Current task
-Premium UI modular redesign — continuing incrementally. Pass 3 (this session): removed a
-redundant Tools-sheet nav entry, and extracted the Workout tab's session-list view into
-`www/js/pages/workout.js` following the exact adapter pattern proven by Home. Clean Android
-build succeeded; commit and push are next.
+Premium UI modular redesign — continuing incrementally. Pass 4 (this session): redesigned
+Home's "Today's Progress" card to match a user-provided reference screenshot (ring + stacked
+calorie/protein/step rows) using a documented real-data-only formula, and introduced a blue
+accent token used for data/progress visuals while keeping IGNYT orange as the primary brand/
+CTA color. Clean Android build succeeded; commit and push are next.
 
-## Premium UI pass 3 — what was done (this session)
+## Premium UI pass 4 — what was done (this session)
+1. Re-verified branch/clean tree; confirmed neither `AGENTS.md` nor the referenced
+   `ignyt-premium-ui-redesign.json` exist anywhere in this repo (full-tree search) — proceeded
+   on CLAUDE.md. The requested reference redesign is a very large scope (full navy/blue
+   palette swap, athlete/muscle-anatomy imagery, Workout/Nutrition/Progress sub-tab
+   reorganization into Overview/Performance/Body/Health etc.) — scoped this session to the
+   most concretely specified, verifiable, safe piece: Home's "Today's Progress" card, plus a
+   design-token evolution usable by later passes. Sub-tab reorganization of Workout/Nutrition/
+   Progress and any athlete/anatomy imagery were deliberately NOT attempted this session (see
+   Known limitations in the final report) — they need real licensed/generated image assets
+   this environment cannot produce, and each sub-tab regroup is its own significant, testable
+   change per the established incremental methodology.
+2. Design tokens (`www/css/tokens.css`): added `--color-accent-blue` (#32b8f4) and
+   `--color-accent-cyan` (#55d8ff) alongside the existing orange `--color-primary` (kept as
+   the primary brand/CTA color, matching both the pre-existing "preserve IGNYT orange
+   identity" instruction and the reference image itself, which uses orange for its Start
+   button/streak accent and blue only for data/progress visuals). Nudged `--color-bg`/
+   `--color-surface*`/`--color-border` a few hex steps toward a navy-black tone (e.g.
+   `--color-surface` `#121418`→`#10131a`) — a small, reversible value shift, not a palette
+   replacement, since a full swap can't be verified without a real device this session.
+3. Home "Today's Progress" (`www/js/pages/home.js`, `www/css/pages/home.css`): replaced the
+   old weekly-plan-percentage ring with a circular ring (CSS conic-gradient, no images/canvas)
+   showing a genuinely computed "today" blend, plus stacked Calories/Protein/Steps rows to its
+   right — matching the reference layout. Documented formula in code: average of whichever of
+   {calorie adherence = eaten/target, protein progress = protein/target, step progress =
+   steps/10,000} are genuinely available today, each capped at 100%; calorie/protein are
+   always includable (macroTargets() always has profile-based defaults); steps is included
+   only when Health Connect has actually synced a value today, otherwise omitted from the
+   average entirely (never assumed/fabricated) and the row itself reads "Not synced". The
+   10,000 steps denominator is a documented fixed convention default (matches the reference
+   image's own 9,823/10,000 and common fitness-app practice) — no configurable step goal
+   exists in Settings today; only the denominator is a constant, the step count shown is
+   always real Health Connect data. Weekly plan progress (`Week N of 8 · Phase`) was not
+   deleted — moved to the section-heading subtitle next to "Today's Progress" instead of
+   being the ring's value.
+4. Added a "Recovery & hydration" row (Sleep, HRV, Water) below Next Workout, replacing the
+   old 2×2 metrics grid that mixed calorie/protein/steps/sleep. Sleep reuses the existing
+   Health Connect cache read; HRV reads `latestWeight.hrv` (the field already recorded by the
+   existing body-log entry model, per the mobile-UI-pass HRV/Sleep decision — no new field);
+   Water reuses the existing `todayWater()`/`waterTargetMl` (same values Nutrition already
+   shows). No "Recovery score" was added — the JSON explicitly required documenting any
+   recovery-score formula, and no such computation exists anywhere in the current codebase;
+   inventing one would be fabricated data, so it was left out rather than guessed at.
+   `renderHomeTab`'s ctx builder in app.js was extended with `water`/`waterTarget` only (two
+   new, already-existing-elsewhere values passed through) — no new storage keys, no changed
+   calculations to any existing screen.
+5. Visual/behavioral verification: since this is a visual-fidelity task, served `www/` as a
+   plain static site (`npx serve`) and drove it in the Browser pane rather than relying on
+   build success alone. Confirmed: fresh install renders the new card with correct honest
+   empty states (`0% Goal`, `Not synced` for steps/sleep, `No data` for HRV — no placeholder
+   numbers); computed styles confirmed the ring is a true circle using the new blue token via
+   `conic-gradient`; no horizontal overflow at both 375px and 320px viewport widths (the
+   narrowest target width) before or after populating stat values. Screenshot capture itself
+   was unavailable in this environment (consistently timed out) — verification used the DOM/
+   accessibility tree and computed styles instead of a rendered image; this does not replace
+   an actual visual/real-device check, called out as such in the final report.
+
+## Premium UI pass 3 — what was done
 1. Re-verified branch (`feature/premium-ui-modular-redesign`), clean working tree, and
    confirmed AGENTS.md does not exist anywhere in this repo (searched full tree excluding
    node_modules/.git) — proceeded on CLAUDE.md, the project's actual rules file.
@@ -108,6 +166,30 @@ feature/premium-ui-modular-redesign (branched from feature/mobile-ui-refinements
 3. `android\gradlew.bat clean assembleDebug` — **BUILD SUCCESSFUL in 36s** (101 tasks; only
    the 2 pre-existing HealthConnectPlugin.kt deprecation warnings, unchanged from prior runs).
 4. Committed `642f883`, pushed to `origin/feature/premium-ui-modular-redesign`.
+
+## Build attempts (pass 4, this session)
+1. `node --check` on `www/app.js` and `www/js/pages/home.js` — passed.
+2. Browser-driven visual/behavioral verification (see pass 4 notes above) — passed: correct
+   honest empty states, blue conic-gradient ring rendering, no horizontal overflow at 375px
+   or 320px.
+3. `npx cap sync android` — succeeded.
+4. `android\gradlew.bat clean assembleDebug` — **BUILD SUCCESSFUL in 59s** (101 tasks; only
+   the 2 pre-existing HealthConnectPlugin.kt deprecation warnings).
+5. Full diff reviewed before staging — exactly `www/app.js`, `www/css/tokens.css`,
+   `www/css/pages/home.css`, `www/js/pages/home.js` — no accidental/unrelated content, no
+   secrets.
+
+## Exact next action (pass 4)
+1. Real-device UI verification (see checklist in the final report): confirm the ring/stat
+   layout renders correctly on an actual phone (this session's verification used browser DOM/
+   computed-style checks, not a rendered screenshot or a real device); confirm the small
+   background/border token shift doesn't look off in either theme; confirm the Recovery &
+   hydration row (Sleep/HRV/Water) shows genuine data once Health Connect + a body-log entry
+   exist.
+2. Not attempted this session, still open: Workout/Nutrition/Progress sub-tab reorganization
+   (Overview/Performance/Body/Health etc.) requested in the reference-redesign spec, and any
+   athlete/muscle-anatomy imagery (no licensed/generated assets available in this
+   environment — would need to be supplied by the user).
 
 ## Build attempts (pass 3, this session)
 1. `node --check` on `www/app.js`, `www/js/pages/home.js`, `www/js/pages/workout.js` — all
