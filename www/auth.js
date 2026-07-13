@@ -66,9 +66,19 @@ const IgnytAuth = (() => {
         signedInAt: Date.now()
       }));
     } catch (e) { /* storage full/unavailable — non-fatal, UI just re-checks native next time */ }
+    notifyAuthChanged(true);
   }
   function clearAccount() {
     try { localStorage.removeItem(ACCOUNT_KEY); } catch (e) { /* non-fatal */ }
+    notifyAuthChanged(false);
+  }
+
+  /** Fired on sign-in, per-launch session restore, and sign-out. Cloud sync (cloud-sync.js)
+   *  keys its triggers off this — auth.js itself stays sync-agnostic. */
+  function notifyAuthChanged(signedIn) {
+    try {
+      window.dispatchEvent(new CustomEvent("ignyt:auth-changed", { detail: { signedIn: signedIn } }));
+    } catch (e) { /* never let an event listener error break auth */ }
   }
 
   /** Re-render the Settings tab if it's on screen (same pattern as

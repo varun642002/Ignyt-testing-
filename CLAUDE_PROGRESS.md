@@ -1,134 +1,110 @@
 # CLAUDE_PROGRESS.md
 
-## Current feature request
-Phase 2A: Google Sign-In and user account foundation. "Continue with Google", persistent
-session restored across app restarts, signed-in account UI (photo/name/email/status/sign out),
-graceful offline behavior, app fully usable signed out. NO cloud sync yet, NO AI coach, no
-redesign, no localStorage resets, Health Connect untouched.
+## Current task
+Phase 2B (Firestore profile/settings sync foundation) — implementation COMPLETE and BUILD
+SUCCESSFUL; committing and pushing now. Immediately after: Phase 2C (cloud backup +
+multi-device sync for workout/progress data) on a new branch feature/cloud-workout-progress-sync.
+Phase 2C was requested mid-2B; per its own gating rule it starts only after the 2B foundation
+is complete, which is now.
 
 ## Current branch
-feature/google-signin-auth (created from feature/phase1-stabilization tip 5649d7b, which
-includes Phase 1 stabilization + the dark-mode card contrast fix — both unmerged to main).
+feature/firestore-profile-settings-sync (from feature/google-signin-auth tip 1a0e58d).
 
-## Architecture selected (and why)
-Hand-rolled Capacitor plugin `IgnytAuth` (AuthPlugin.kt) mirroring the project's proven
-HealthConnectPlugin pattern, built on:
-- **Firebase Authentication** (native Android SDK, BOM 33.7.0) — persistent session storage,
-  offline session restore, future-proof identity for later cloud-sync phases.
-- **androidx Credential Manager 1.3.0 + googleid 1.1.1** — the current, non-deprecated Google
-  Sign-In API (legacy GoogleSignIn API is deprecated).
-Why not @capacitor-firebase/authentication (Capawesome): repo has zero third-party Capacitor
-plugins today; a hand-rolled plugin guarantees the "never rejects / never crashes" contract
-even with NO google-services.json present (which is this repo's current state — the plugin
-lazily checks FirebaseApp initialization and the default_web_client_id resource at runtime and
-returns a clean error instead of throwing at startup).
-Version pinning rationale: project pins kotlin_version 1.9.24; newer androidx.credentials
-(1.5+/1.6) and Firebase BOM 34.x ship Kotlin 2.x metadata that the 1.9 compiler cannot read.
-firebase-bom 33.7.0 / credentials 1.3.0 / googleid 1.1.1 is the Firebase-docs-blessed Kotlin
-1.9-era set. Verified all versions exist on Google Maven before use.
-No changes to: Capacitor 8.4.1, Health Connect 1.1.0, minSdk 26, compileSdk 36, targetSdk 36,
-AGP 8.13.0, Gradle 8.14.3, Java/Kotlin target 21, package com.varun.ignyt.
+## Phase 2B — audit findings
+- Local schema: SCHEMA_VERSION=1 (hx_schema_version), runMigrations() hook at boot.
+- hx_profile: weight,height,age,gender,activityMultiplier,goalDelta,name,hyroxExperience,
+  trainingDays,equipment[] (defaults merged at boot).
+- hx_nutrition: proteinPct,carbPct,fatPct,fibreTarget (macro targets — profile-scope).
+- hx_settings: 14 syncable preference fields + 3 device-local reminder bookkeeping fields
+  (lastWorkoutReminderDate,lastHydrationReminderDate,lastWeeklyReportAt — EXCLUDED).
+- No per-field timestamps exist locally → conflict policy cannot be naive last-write-wins.
 
-## Completed work
-1. NEW android/app/src/main/java/com/varun/ignyt/auth/AuthPlugin.kt — methods: isConfigured,
-   getCurrentUser (offline session restore), signIn (Credential Manager → Google ID token →
-   Firebase session; token never logged/stored/returned to JS), signOut (Firebase signOut +
-   clearCredentialState). Every method resolves {success, data|error}; SupervisorJob +
-   CoroutineExceptionHandler; per-exception-type user-readable errors (cancelled, no Google
-   account, Play Services unavailable, interrupted, 30s timeout on the network exchange only).
-2. MOD MainActivity.java — registerPlugin(AuthPlugin.class).
-3. MOD android/app/build.gradle — firebase-bom 33.7.0, firebase-auth, credentials 1.3.0,
-   credentials-play-services-auth 1.3.0, googleid 1.1.1, kotlinx-coroutines-play-services 1.7.3.
-   The template's existing conditional google-services apply (only when google-services.json
-   exists) was already present — build stays green without the file.
-4. NEW www/auth.js — IgnytAuth JS module (same dual-env pattern as health-connect.js): cached
-   account snapshot in NEW localStorage key hx_auth_account (uid/name/email/photo only — never
-   tokens), busy/error state, signIn/signOut, one reconciliation pass per launch
-   (refreshFromNative — no polling/retry loops), re-renders Settings when visible.
-5. MOD www/index.html — <script src="auth.js"> added after existing scripts.
-6. MOD www/app.js — renderAccountSection() (signed-out: "IGNYT Account" pitch + Continue with
-   Google; signed-in: initials-fallback avatar + photo, name, email, status, Sign Out; web
-   build: "available in Android app" note; HTML-escapes all Google-supplied strings) inserted
-   at top of renderSettingsTab; click bindings for account-signin/account-signout.
+## Phase 2B — what was built
+- Cloud schema: SINGLE doc users/{uid} = {schemaVersion:1, updatedAt, profile+profileUpdatedAt,
+  nutrition+nutritionUpdatedAt, settings+settingsUpdatedAt}. No fragmentation; 1 read + 1
+  merge-write per sync.
+- NEW android/.../cloudsync/CloudSyncPlugin.kt — dumb safe pipe: getUserDoc (20s timeout,
+  fromCache flag), setUserDoc (SetOptions.merge() — structurally cannot delete unsent fields;
+  12s timeout → {queued:true} = Firestore's durable offline queue). Machine-readable error
+  prefixes (offline:/permission-denied:/unauthenticated:/not-found:/failed-precondition:).
+  Never rejects; same SupervisorJob pattern as other plugins.
+- MOD MainActivity.java (registerPlugin), MOD android/app/build.gradle (+firebase-firestore
+  via existing BOM 33.7.0 — no other dependency changes).
+- NEW www/cloud-sync.js — the whole sync policy: explicit per-section field ALLOWLISTS with
+  type validation applied to BOTH local and cloud data; 3-way sync per section using
+  last-synced serialized snapshots stored in NEW localStorage key hx_cloud_sync_state (keyed
+  to uid, cleared on sign-out); only the changed side propagates; both-changed / first-sync
+  conflict → non-destructive union merge with LOCAL winning per-field, applied AND pushed.
+  Populated local data is never overwritten by empty cloud data (empty cloud → Case A upload).
+  Cloud schemaVersion > 1 → read nothing, push-only. Triggers: ignyt:auth-changed event
+  (from auth.js sign-in/restore/sign-out), foreground resume (≥5 min throttle), single 90s
+  change-watcher interval (visible tab only, serialize-compare), manual Sync Now. One _busy
+  guard = no concurrent syncs; no retry loops (failures wait for next natural trigger).
+- MOD www/auth.js — dispatches ignyt:auth-changed on sign-in, per-launch session restore,
+  sign-out. MOD www/index.html — <script src="cloud-sync.js">.
+- MOD www/app.js — renderCloudSyncRow() in the signed-in account card: Synced·time /
+  Syncing… / Saved—will upload when online / Offline / Sync failed (friendly text only,
+  never raw Firebase errors) + Sync Now button; binding for data-action="cloud-sync-now".
+- NEW firestore.rules — owner-only: users/{userId} and all subcollections require
+  request.auth != null && request.auth.uid == userId; everything else default-deny.
+  NOT DEPLOYED (no Firebase CLI auth on this machine) — manual step below.
 
-## Data safety
-No existing hx_* key read, written, renamed, or migrated. Only NEW key: hx_auth_account.
-Google identity kept fully separate from fitness profile (hx_profile). Nothing auto-uploads.
+## Phase 2B — excluded from sync (deliberate)
+Workout history/plans/routines, food log, water log, favorite foods, body log, PRs,
+achievements, race log, calc inputs, active session, Health Connect state/cache/records,
+auth tokens (never stored anywhere), UI state, reminder bookkeeping dates.
 
-## Pending work
-- Gradle build verification (in progress).
-- Commit + push after BUILD SUCCESSFUL.
-- User-side setup (cannot be done from this machine): Firebase Console project with Android
-  app com.varun.ignyt + SHA-1/SHA-256 fingerprints, download google-services.json into
-  android/app/, enable Google provider in Firebase Auth. Sign-in cleanly reports "not
-  configured" until then.
+## Firebase Console actions REQUIRED (user, manual)
+1. Create the Firestore database: Console → Firestore Database → Create database →
+   production mode → pick region (then it exists; until then sync shows "Cloud database not
+   set up yet").
+2. Deploy firestore.rules: Console → Firestore → Rules → paste repo file → Publish.
+Both are REQUIRED before sync can succeed on a device.
 
-## Files changed
-- android/app/src/main/java/com/varun/ignyt/auth/AuthPlugin.kt (NEW)
-- android/app/src/main/java/com/varun/ignyt/MainActivity.java
-- android/app/build.gradle
-- www/auth.js (NEW)
-- www/index.html
-- www/app.js
-- CLAUDE_PROGRESS.md
-
-## Dependencies added
-firebase-bom:33.7.0 (→ firebase-auth 23.1.0), androidx.credentials:credentials:1.3.0,
-androidx.credentials:credentials-play-services-auth:1.3.0, googleid:1.1.1,
-kotlinx-coroutines-play-services:1.7.3. No npm dependencies added.
-
-## Firebase configuration status
-CONFIGURED by user (2026-07-13): Firebase project created, Android app com.varun.ignyt
-registered, debug SHA-1 + SHA-256 added, Google provider enabled, google-services.json placed
-at android/app/google-services.json. File validated (without printing secrets): project_id
-present, client for com.varun.ignyt found, 1 web OAuth client (type 3 → generates
-default_web_client_id consumed by AuthPlugin), 1 Android OAuth client (type 1, SHA-backed),
-api_key present. It is public client config (no private keys) and android/.gitignore's
-google-services.json line is commented out (trackable by design) — being committed.
-
-## Google Sign-In configuration status
-Code complete (commit c1372d5) + Firebase config now present. Rebuilding so the conditional
-google-services gradle plugin activates and generates default_web_client_id. No code changes
-required — AuthPlugin looks the resource up dynamically at runtime.
-
-## Build attempts
-1. `npx cap sync android` — succeeded.
-2. `cd android; .\gradlew.bat clean assembleDebug` (pre-Firebase-config) — **BUILD SUCCESSFUL
-   in 2m 36s** (100 tasks). No new compiler warnings from AuthPlugin.kt.
-3. After user added google-services.json: `npx cap sync android` + clean assembleDebug —
-   **BUILD SUCCESSFUL in 1m** (101 tasks — :app:processDebugGoogleServices now runs).
-   Verified default_web_client_id was generated into
-   app/build/generated/res/processDebugGoogleServices/values/values.xml.
+## Phase 2B — build attempts
+1. npx cap sync android + gradlew clean assembleDebug — BUILD SUCCESSFUL in 2m 14s
+   (101 tasks; only the 2 pre-existing HealthConnectPlugin warnings; CloudSyncPlugin.kt clean).
 
 ## Build result
-BUILD SUCCESSFUL with Firebase config active. APK at
-android/app/build/outputs/apk/debug/app-debug.apk.
+BUILD SUCCESSFUL. APK: android/app/build/outputs/apk/debug/app-debug.apk.
 
-## Errors encountered
-None yet this task.
+## Verification classification
+Statically verified + build verified ONLY. NOT Firebase-verified (needs the two console
+actions), NOT device-tested, NOT multi-device-tested.
 
-## Fixes applied
-None needed yet.
-
-## Git commit status
-Not committed (waiting for BUILD SUCCESSFUL).
-
-## Git push status
-Not pushed.
+## Git commit status / push status
+About to commit the 8 Phase 2B files and push feature/firestore-profile-settings-sync.
 
 ## Exact next action
-Commit android/app/google-services.json + this file, push feature/google-signin-auth, final
-report. Everything after that is REAL-DEVICE TESTING by the user (sign-in flow, session
-restore after restart, offline behavior, cancel flow, sign out) — code is build-verified only.
+1. Commit + push Phase 2B (this step).
+2. Phase 2C on feature/cloud-workout-progress-sync. Audit ALREADY DONE:
+   - workoutLog: {id:Date.now() number, date, startedAt, finishedAt, durationMin, volume,
+     exercises[{name,sets[{weight,reps,done,rpe,type}],...}], notes, title} — stable ids;
+     EDITABLE IN PLACE with no timestamp bump → change detection must be content-hash based.
+   - routines: {id:Date.now(), name, exercises[]} — stable ids.
+   - prs: {id: base36+random string, exerciseName,type,value,previousValue,improvementPct,
+     workoutId,achievedAt,weightContext} — stable ids.
+   - bodylog: {id:Date.now(), date, weight, sleep, hrv, ...} — stable ids.
+   - raceLog: {id:Date.now(), date, totalMs, segments[]} — stable ids.
+   - customExercises: {name,cat,presc,unit,muscle} — NO id; name IS the app's natural key →
+     use slug(name) as doc id, no local migration needed.
+   - completed (plan progress): flat map "week|day|exerciseName" → Date.now(); syncs as a
+     section via the 2B doc engine (custom validator), union-merge caveat documented.
+   - EXCLUDE: foodLog + waterLog + favoriteFoods (food domain, per spec), achievements
+     (derived, recomputable), session/restDuration (device state), HC everything.
+   Plan: extend CloudSyncPlugin with listCollection(name, sinceMs)/writeRecords(name, records)
+   restricted to an allowlist of subcollection names {workouts,routines,prs,bodylog,races,
+   customExercises} under users/{uid}; extend cloud-sync.js with a per-record engine:
+   doc = {id, schemaVersion, updatedAt, deleted?, deletedAt?, data:{record}}; per-record
+   content hashes in sync state for 3-way logic; tombstone soft-deletes; incremental pull via
+   updatedAt > (lastPulledAt - 10min overlap); batched writes; same triggers/_busy guard.
+   Then build, commit, push, full 2B+2C final report.
 
 ---
 
-## Previous completed tasks — history
-- Dark-mode Health Connect card contrast fix: root cause was native <button> not inheriting
-  color (UA ButtonText black); fixed with .hc-home-card{color:var(--text);font-family:inherit}
-  in www/health-connect.css. Commit 5649d7b on feature/phase1-stabilization, pushed, BUILD
-  SUCCESSFUL.
-- Phase 1 stabilization: committed f8a6d79, pushed. Fixed HC native crash risk, manifest
-  <queries>, Insights honesty (No data vs Permission required; Week/Month/Year), tap targets,
-  sw offline fallback, 0-kcal food entries, dead CSS. Root-level app.js/index.html are a
-  separate GitHub Pages PWA — out of scope; Android app uses www/.
+## Completed history
+- Phase 2A Google Sign-In + Firebase config: commits c1372d5 + 1a0e58d on
+  feature/google-signin-auth, pushed, BUILD SUCCESSFUL, default_web_client_id verified
+  generated. Real-device sign-in test still pending on user.
+- Dark-mode HC card contrast fix: 5649d7b on feature/phase1-stabilization, pushed.
+- Phase 1 stabilization: f8a6d79, pushed.

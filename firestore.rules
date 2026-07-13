@@ -1,0 +1,27 @@
+rules_version = '2';
+
+// IGNYT Firestore security rules.
+//
+// Deployment (NOT automated from this repo — do one of the following):
+//   Firebase Console: Firestore Database -> Rules tab -> paste this file -> Publish.
+//   Firebase CLI:     firebase deploy --only firestore:rules
+//                     (requires `firebase login` + a firebase.json pointing at this file)
+//
+// Model: all private user data lives under users/{uid}. The signed-in user can read and
+// write ONLY their own subtree. Everything else in the database is denied by default
+// (Firestore denies any path no rule matches; the explicit users match below is the only
+// grant in the file).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Future subcollections under the user's own document (e.g. workout history in a
+      // later phase) inherit the same owner-only requirement.
+      match /{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}

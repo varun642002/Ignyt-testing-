@@ -3093,8 +3093,43 @@ function renderAccountSection(){
         <span style="font-size:12px;color:var(--muted);">Status</span>
         <span style="font-size:12px;font-weight:700;color:var(--mint);">Signed in with Google</span>
       </div>
+      ${renderCloudSyncRow()}
       ${errorHtml}
       <button class="btn btn-ghost btn-block" data-action="account-signout" ${busy?'disabled':''}>${busy?'Signing out…':'Sign Out'}</button>
+    </div>`;
+}
+
+/** Small cloud-sync status row inside the signed-in account card (Phase 2B). Reads
+ *  IgnytCloudSync's state; shows nothing if cloud-sync.js isn't loaded. Raw Firebase
+ *  errors are never shown — cloud-sync.js maps them to short friendly strings. */
+function renderCloudSyncRow(){
+  const cs = window.IgnytCloudSync;
+  if(!cs) return "";
+  const s = cs.getStatus();
+  const lastLabel = s.lastSyncAt
+    ? new Date(s.lastSyncAt).toLocaleString([], { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" })
+    : null;
+  const view = {
+    "syncing":    { text:"Syncing…",                          color:"var(--muted)" },
+    "synced":     { text: lastLabel ? "Synced · "+lastLabel : "Synced", color:"var(--mint)" },
+    "queued":     { text:"Saved — will upload when online",   color:"var(--muted)" },
+    "offline":    { text:"Offline — saved on this device",    color:"var(--muted)" },
+    "failed":     { text:"Sync failed",                       color:"var(--accent)" },
+    "signed-out": { text:"Sign in to sync",                   color:"var(--muted)" },
+    "idle":       { text: lastLabel ? "Synced · "+lastLabel : "Not synced yet", color:"var(--muted)" }
+  }[s.status] || { text:"—", color:"var(--muted)" };
+  const detail = (s.status==="failed" || s.status==="offline") && s.detail
+    ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">${s.detail}</div>` : "";
+  return `
+    <div style="margin-bottom:12px;">
+      <div class="row-between">
+        <span style="font-size:12px;color:var(--muted);">Cloud sync</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:12px;font-weight:700;color:${view.color};">${view.text}</span>
+          <button class="cat-chip" data-action="cloud-sync-now" ${cs.isBusy()?'disabled':''} style="margin:0;">Sync Now</button>
+        </span>
+      </div>
+      ${detail}
     </div>`;
 }
 
@@ -5587,6 +5622,8 @@ function attachHandlers(){
   if(accountSigninBtn) accountSigninBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signIn(); });
   const accountSignoutBtn = document.querySelector('[data-action="account-signout"]');
   if(accountSignoutBtn) accountSignoutBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signOut(); });
+  const cloudSyncNowBtn = document.querySelector('[data-action="cloud-sync-now"]');
+  if(cloudSyncNowBtn) cloudSyncNowBtn.addEventListener("click", ()=>{ if(window.IgnytCloudSync) IgnytCloudSync.syncNow(); });
   const testNotifBtn = document.querySelector('[data-action="test-notification"]');
   if(testNotifBtn) testNotifBtn.addEventListener("click", ()=>{
     if(typeof Notification==='undefined'){
