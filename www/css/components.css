@@ -8,6 +8,13 @@
 .metric-card__detail { margin-top:2px; color:var(--color-text-secondary); font-size:var(--font-size-xs); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .btn-primary { background:var(--color-primary); color:#17110e; }
 .btn-secondary { background:var(--color-surface-elevated); border:1px solid var(--color-border); color:var(--color-text-primary); }
+/* Reference: "bright blue primary interactive accent" for primary CTAs (e.g. "+ Start Empty
+   Workout"). .btn-accent is the app's one shared primary-action button class (Start Empty
+   Workout, Finish, Log Entry, Get Started, etc.) -- overriding it here applies the reference's
+   primary-action color consistently everywhere that class is already used, with no markup
+   changes anywhere. .btn-steel (secondary/informational actions) is left on its existing
+   color intentionally, so primary vs secondary actions stay visually distinct. */
+.btn-accent { background: var(--color-interactive); color: #ffffff; }
 
 /* Shared premium treatment for legacy components reused across every remaining tab
    (Workout, Nutrition, Progress, Plan, Library, Profile, Settings, Health, Tools sheet).

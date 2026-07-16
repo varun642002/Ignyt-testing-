@@ -3388,7 +3388,7 @@ function renderHomeTab(){
   if(window.IgnytPages && typeof window.IgnytPages.renderHome === 'function') return window.IgnytPages.renderHome({
     state, week, plannedDay, planPct: overallPlanProgress(), streak: computeStreak(), targets: macroTargets(),
     eaten: Math.round(todayEaten()), proteinToday: Math.round(todayMacros().protein), latestWeight: state.bodylog[0],
-    water: Math.round(todayWater()), waterTarget: state.settings.waterTargetMl || 2500,
+    burned: todayBurned(), water: Math.round(todayWater()), waterTarget: state.settings.waterTargetMl || 2500,
     dayDone, dayTotal, greeting, displayW, wUnit, svg, renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed
   });
   return renderLegacyHomeTab();
@@ -5118,7 +5118,7 @@ function renderBodyTab(){
         <div class="stat-card"><div class="stat-label">Est. Muscle Mass</div><div class="stat-value" style="color:var(--mint);">${displayW(muscleMass)}<span class="stat-unit">${wUnit()}</span></div></div>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-top:8px;">Fat/lean/muscle computed from your body-fat %${latestBF?' (from your latest log)':' (estimated from waist + neck via US Navy method)'}. Muscle mass is a lean-mass-based estimate, not a scan.</div>`
-      : `<div style="font-size:13px;color:var(--muted);">Log a <b style="color:var(--text);">Body Fat %</b> below — or a waist measurement (with neck set in the Body Fat calculator) — to see fat mass, lean mass, and estimated muscle mass here.</div>
+      : `<div style="font-size:13px;color:var(--muted);">Log a <b style="color:var(--text);">waist measurement</b> below and set your neck in the <b style="color:var(--text);">Body Fat calculator</b> to see an estimated fat mass, lean mass, and muscle mass here.</div>
       <div class="stat-card" style="margin-top:10px;"><div class="stat-label">Lean Body Mass (Boer estimate)</div><div class="stat-value" style="color:var(--steel);">${displayW(lbmBoer)}<span class="stat-unit">${wUnit()}</span></div></div>`}
     </div>
 
@@ -5133,7 +5133,6 @@ function renderBodyTab(){
         ${fieldSm("b-waist","Waist (cm)","","var(--text)")}
         ${fieldSm("b-chest","Chest (cm)","","var(--text)")}
         ${fieldSm("b-arms","Arms (cm)","","var(--text)")}
-        ${fieldSm("b-bodyfat","Body Fat (%)","","var(--text)")}
       </div>
       <div style="font-size:11px;color:var(--muted);margin:8px 0;">Logging a weight here updates your profile weight and recalculates calories & macros everywhere.</div>
       <button class="btn btn-accent btn-block" data-action="log-body">Log Entry</button>
@@ -7207,7 +7206,6 @@ function attachHandlers(){
     const rawWeight = document.getElementById("b-weight").value;
     if(!rawWeight) return;
     const weight = parseInputW(rawWeight); // convert from displayed unit to canonical kg for storage
-    const bf = document.getElementById("b-bodyfat").value;
     state.bodylog.unshift({
       id: Date.now(),
       date: document.getElementById("b-date").value,
@@ -7216,8 +7214,7 @@ function attachHandlers(){
       hrv: document.getElementById("b-hrv").value,
       waist: document.getElementById("b-waist").value,
       chest: document.getElementById("b-chest").value,
-      arms: document.getElementById("b-arms").value,
-      bodyfat: bf
+      arms: document.getElementById("b-arms").value
     });
     // Weight logged here becomes the single source of truth -> recalcs calories/macros everywhere
     state.profile.weight = Number(weight) || state.profile.weight;

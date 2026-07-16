@@ -1,4 +1,10 @@
-/* IGNYT design tokens: the single source of visual values for new and migrated UI. */
+/* IGNYT design tokens: the single source of visual values for new and migrated UI.
+   --color-interactive is the reference image's bright-blue primary interactive accent
+   (nav active state, primary buttons, progress rings, links) -- used across BOTH themes
+   per the master reference. --color-primary (IGNYT orange) is kept as a distinct brand/
+   highlight token (streak flame, achievement/PR celebration accents) rather than deleted,
+   since it's still used in several places that aren't "primary interactive" in the
+   reference's sense; nothing that currently reads --color-primary was silently repointed. */
 :root {
   --color-bg: #08090d;
   --color-surface: #10131a;
@@ -8,6 +14,9 @@
   --color-primary-strong: #ff6a2b;
   --color-accent-blue: #32b8f4;
   --color-accent-cyan: #55d8ff;
+  --color-interactive: #3e82f7;
+  --color-interactive-strong: #5a94f9;
+  --color-interactive-soft: rgba(62,130,247,.14);
   --color-text-primary: #f7f4ef;
   --color-text-secondary: #aaa9b0;
   --color-success: #45d294;
@@ -24,8 +33,11 @@
   --font-size-xs: 11px; --font-size-sm: 13px; --font-size-md: 15px;
   --font-size-lg: 18px; --font-size-xl: 24px; --font-size-2xl: 30px;
 }
+/* Light theme: primary reference target -- cool blue-gray background, white elevated
+   cards, dark navy text, bright blue interactive accent. */
 [data-theme="light"] {
-  --color-bg:#f5f5f7; --color-surface:#fff; --color-surface-elevated:#fff;
-  --color-surface-pressed:#ececf1; --color-text-primary:#16161a;
-  --color-text-secondary:#666671; --color-border:#dedee4; --shadow-card:0 8px 24px rgba(24,24,30,.08);
+  --color-bg:#f4f6fa; --color-surface:#ffffff; --color-surface-elevated:#ffffff;
+  --color-surface-pressed:#eef1f7; --color-text-primary:#12172b;
+  --color-text-secondary:#5b6478; --color-border:#e3e7ef; --shadow-card:0 8px 24px rgba(20,30,60,.06);
+  --color-interactive: #2f6fed; --color-interactive-strong: #1f5adf; --color-interactive-soft: rgba(47,111,237,.12);
 }

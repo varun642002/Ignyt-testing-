@@ -1,0 +1,53 @@
+{
+  "task_id": "IGNYT-MASTER-REDESIGN-001",
+  "implementationStatus": "IN_PROGRESS",
+  "phasesCompletedThisSession": [
+    {
+      "phase": 1,
+      "name": "Design foundation: light theme (blue primary) + dark theme adaptation",
+      "status": "COMPLETED",
+      "details": "www/css/tokens.css: added --color-interactive (#3e82f7 dark / #2f6fed light) as the reference's primary interactive accent, kept --color-primary (orange) as a distinct brand-highlight token. Redefined [data-theme=\"light\"] to the reference's cool blue-gray bg (#f4f6fa) / white cards / blue accent. www/css/layout.css: .nav-btn.active now uses --color-interactive (overrides the legacy orange active-nav color for the primary bottom nav). www/css/components.css: .btn-accent (the app's one shared primary-action button class) now uses --color-interactive. Deliberately did NOT do a blanket redefinition of the legacy --accent token: it is double-duty as both primary/highlight AND error/warning color throughout app.js (verified via grep -- error messages, sync-failed states, plate-calculator warnings all read var(--accent)); a global flip would have made error text blue, a real regression, not a style match."
+    },
+    {
+      "phase": 2,
+      "name": "Home: Today's Progress simplification",
+      "status": "COMPLETED",
+      "details": "www/js/pages/home.js: removed the diet-metric blended-progress calculation added in an earlier session; ring reverts to the genuine planPct (weekly plan completion %, already computed by the existing overallPlanProgress()) -- matches both REQUEST.md Section J ('do not calculate misleading combined progress percentages from unrelated metrics') and the reference screenshot's own ring subtitle ('Week 1 of 8 - BASE', which only makes sense for plan completion). Stat rows reduced to exactly Steps and Total Calories Burned (reusing the existing todayBurned(), already used by the Nutrition tab's own 'BURNED (EST.)' card -- no new calculation invented). Removed the Calories-eaten and Protein rows from this card entirely. www/app.js: added burned: todayBurned() to the ctx object passed into renderHome; planPct was already being passed but unused since the earlier session, now reconnected."
+    },
+    {
+      "phase": "4-partial",
+      "name": "Remove Body Fat % from Log Weight UI",
+      "status": "COMPLETED",
+      "details": "www/app.js renderBodyTab: removed the 'Body Fat (%)' input from the Log Entry form grid, and the corresponding read (document.getElementById('b-bodyfat').value) and bodyfat: bf field from the log-body click handler -- an atomic pair, since removing only the markup would have left a null-reference crash on every future Log Entry submit. Fixed a companion copy bug this created: the Body Composition section's empty-state text said 'Log a Body Fat % below', which would have pointed at a field that no longer exists -- reworded to correctly describe the remaining path (waist measurement + neck in the Body Fat calculator). Historical bodylog entries with an existing .bodyfat value are completely untouched (the field is simply absent on new entries going forward, and all reads already treat it as optional/falsy-safe). The standalone Body Fat calculator and the waist+neck Navy-method estimate fallback are both fully intact. Confirmed via grep that no standalone 'Log Weight' destination exists separately from the body/Profile tab -- that part of Section N was already satisfied by the existing architecture, no change needed."
+    }
+  ],
+  "filesModified": [
+    "www/css/tokens.css",
+    "www/css/layout.css",
+    "www/css/components.css",
+    "www/js/pages/home.js",
+    "www/app.js",
+    "ai-workflow/REQUEST.md",
+    "ai-workflow/PLAN.json"
+  ],
+  "filesCreated": [],
+  "commandsExecuted": [
+    "git status / git branch --show-current",
+    "node --check www/app.js (x3, after each app.js edit)",
+    "node --check www/js/pages/home.js",
+    "npx --yes serve -l 4175 . (local static preview)",
+    "browser-driven DOM/computed-style verification (see testsPerformed)",
+    "npx cap sync android",
+    "android\\gradlew.bat clean assembleDebug"
+  ],
+  "knownLimitations": [
+    "Phases 3 (Workout restructuring), 4-rest (PR/Achievement Profile entry points, body-progress photo storage), 5 (Habit Tracker, redundant Nutrition Progress removal), and 6 (remaining visual-consistency pass across Workout/Plan/Library/Nutrition/AI Coach/Settings screens) are NOT started -- see PLAN.json phase list.",
+    "The new --color-interactive blue accent has only been verified on the bottom nav and .btn-accent buttons this session; most of the app's remaining chrome (chips, links, secondary buttons, settings toggles) still visually reads as the prior orange/steel palette until later phases extend coverage.",
+    "Screenshot capture is unavailable in this environment (consistently times out); all visual verification this session used DOM structure, computed CSS values, and getBoundingClientRect() math via a real headless-browser session, not a rendered image."
+  ],
+  "testsNotYetPerformed": [
+    "Real Android device visual review of the theme/color changes.",
+    "Full regression pass across Workout active-session, Nutrition, Progress, Plan, Library, Settings, Health Connect screens (only Home, Workout tab entry, and Profile/Log Entry were exercised this session).",
+    "Playwright-based independent testing (this session's browser verification was performed directly by the Coder, not by an independent tester, consistent with AGENTS.md's 'at most ONE initial verification pass')."
+  ]
+}

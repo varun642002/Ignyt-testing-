@@ -1,0 +1,49 @@
+{
+  "task_id": "IGNYT-MASTER-REDESIGN-001",
+  "tester": "Claude Code (self-verification -- AGENTS.md permits 'at most ONE initial verification pass' by the Coder; no separate Playwright MCP independent-testing pass was run this session, so this is NOT independent testing and is labeled accordingly)",
+  "verificationMethod": "Served www/ as a static site (npx serve) and drove it in a real headless-browser session (navigation, clicks, localStorage inspection, computed-style/getBoundingClientRect checks, network-request inspection). Screenshot capture is unavailable in this environment (consistently times out) -- no rendered image was captured or reviewed.",
+  "testsExecuted": [
+    "App boot + onboarding skip -> Home renders with no console errors",
+    "Home 'Today's Progress' card shows exactly Steps and Calories Burned rows (no Calories-eaten, no Protein)",
+    "Home ring value matches genuine plan-completion % (0% on a fresh profile with no plan exercises checked off, consistent with overallPlanProgress() logic)",
+    "Bottom nav active-tab color is the new blue interactive token (#3e82f7) via getComputedStyle, both confirmed on Home",
+    "Workout tab 'Start Empty Workout' button background is the new blue token (#3e82f7) with white text via getComputedStyle",
+    "Light theme (data-theme=light): body background is the reference's cool blue-gray (#f4f6fa) and primary button is the light-theme blue (#2f6fed) via getComputedStyle",
+    "Profile ('Your Profile') tab: Body Fat (%) input no longer present in the Log Entry form; Waist input still present; stale 'Log a Body Fat % below' copy no longer present; replacement waist/calculator guidance copy present; Calculators section still present",
+    "Log Entry submit (weight only, no bodyfat field) completes with no thrown error and produces a correct history row -- verifies the atomic markup+handler removal did not leave a null-reference crash",
+    "No horizontal overflow (document.body.scrollWidth <= clientWidth) on any of the above screens at the default browser viewport"
+  ],
+  "passedTests": [
+    "App boot + onboarding skip",
+    "Home Today's Progress metric set (Steps + Calories Burned only)",
+    "Home ring value = genuine plan %",
+    "Bottom nav active color = blue interactive token",
+    "Start Empty Workout button color = blue interactive token",
+    "Light theme background/accent tokens",
+    "Body Fat % field removed from Log Entry; Waist field preserved; copy corrected",
+    "Log Entry submit succeeds with no error after handler fix",
+    "No horizontal overflow on tested screens"
+  ],
+  "failedTests": [],
+  "skippedTests": [
+    "Real Android device visual review",
+    "Dark-theme-specific screenshot comparison (screenshot tool unavailable)",
+    "Full regression across Workout active-session, Nutrition, Progress, Plan, Library, Settings, Health Connect, AI Coach (not touched this session, not re-tested)",
+    "Independent Playwright MCP testing pass"
+  ],
+  "consoleErrors": [],
+  "networkErrors": [],
+  "screenshots": [],
+  "exactFailureDetails": null,
+  "anotherFixIterationRequired": false,
+  "androidBuild": {
+    "syncCommand": "npx cap sync android",
+    "syncResult": "SUCCEEDED",
+    "buildCommand": "cd android && .\\gradlew.bat clean assembleDebug",
+    "buildResult": "BUILD SUCCESSFUL in 16m 53s (101 actionable tasks: 91 executed, 10 up-to-date)",
+    "warnings": "Only the 2 pre-existing HealthConnectPlugin.kt deprecation warnings, unchanged from every prior build on this branch.",
+    "apkPath": "android/app/build/outputs/apk/debug/app-debug.apk",
+    "apkVerifiedToExist": true,
+    "note": "A successful Android build proves BUILD VERIFIED only -- it does not prove real Health Connect sync, Android runtime permissions, native lifecycle behavior, or any other real-device-only capability. None of those were touched or claimed as tested this session."
+  }
+}

@@ -14,23 +14,8 @@
     catch (_) { return fallback; }
   }
 
-  /* Today's Progress ring: the average of whichever of {calorie adherence, protein progress,
-     step progress} are genuinely available today, each capped at 100%. Calorie/protein targets
-     always exist (macroTargets() falls back to profile defaults), so those two are always
-     included; steps is included only when Health Connect has actually synced a value today.
-     Nothing here is fabricated -- an unsynced metric is simply left out of the average rather
-     than assumed. */
-  function computeTodayProgress(eaten, proteinToday, targets, steps) {
-    const parts = [];
-    if (targets.kcal > 0) parts.push(Math.min(100, Math.round((eaten / targets.kcal) * 100)));
-    if (targets.protein > 0) parts.push(Math.min(100, Math.round((proteinToday / targets.protein) * 100)));
-    if (steps != null) parts.push(Math.min(100, Math.round((steps / DEFAULT_STEPS_GOAL) * 100)));
-    if (!parts.length) return null;
-    return Math.round(parts.reduce((a, b) => a + b, 0) / parts.length);
-  }
-
   window.IgnytPages.renderHome = function renderHome(ctx) {
-    const { state, week, plannedDay, streak, targets, eaten, proteinToday,
+    const { state, week, plannedDay, planPct, streak, burned,
       latestWeight, water, waterTarget, dayDone, dayTotal, greeting, displayW, wUnit, svg,
       renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed } = ctx;
     let health = null;
@@ -39,7 +24,6 @@
     const sleepMinutes = healthValue(health, 'sleep.totalMinutes', null);
     const sleep = sleepMinutes == null ? 'Not synced' : `${Math.floor(sleepMinutes / 60)}h ${sleepMinutes % 60}m`;
     const hrv = latestWeight && latestWeight.hrv != null ? `${latestWeight.hrv} ms` : 'No data';
-    const todayProgress = computeTodayProgress(eaten, proteinToday, targets, steps);
     const workoutName = plannedDay ? plannedDay.session : 'Recovery day';
     const workoutDetail = plannedDay ? `${plannedDay.exercises.length} exercises · ${dayDone}/${dayTotal} complete` : 'Mobility, an easy walk, or complete rest.';
     const workoutAction = plannedDay ? (dayDone > 0 && dayDone < dayTotal ? 'Continue workout' : dayDone === dayTotal ? 'View completed day' : 'Start today’s workout') : 'View plan';
@@ -64,16 +48,15 @@
 
       <div class="section-heading"><span class="section-heading__label">Today’s Progress</span><span style="color:var(--color-text-secondary);font-size:var(--font-size-xs);">Week ${week.week} of 8 · ${week.phaseLabel.split(' — ')[0]}</span></div>
       <section class="premium-card home-progress-card">
-        <div class="home-progress-ring" style="--pct:${todayProgress == null ? 0 : todayProgress};">
+        <div class="home-progress-ring" style="--pct:${planPct};">
           <div class="home-progress-ring__inner">
-            <div class="home-progress-ring__value">${todayProgress == null ? '–' : todayProgress + '%'}</div>
+            <div class="home-progress-ring__value">${planPct}%</div>
             <div class="home-progress-ring__label">Goal</div>
           </div>
         </div>
         <div class="home-progress-stats">
-          <div class="home-progress-stat"><span class="home-progress-stat__icon">${svg('nutrition',15)}</span><div><div class="home-progress-stat__value">${eaten} <span>/ ${targets.kcal} kcal</span></div><div class="home-progress-stat__label">Calories</div></div></div>
-          <div class="home-progress-stat"><span class="home-progress-stat__icon">${svg('body',15)}</span><div><div class="home-progress-stat__value">${proteinToday} <span>/ ${Math.round(targets.protein)} g</span></div><div class="home-progress-stat__label">Protein</div></div></div>
           <div class="home-progress-stat"><span class="home-progress-stat__icon">${svg('progress',15)}</span><div><div class="home-progress-stat__value">${steps == null ? 'Not synced' : `${Number(steps).toLocaleString()} <span>/ ${DEFAULT_STEPS_GOAL.toLocaleString()}</span>`}</div><div class="home-progress-stat__label">Steps</div></div></div>
+          <div class="home-progress-stat"><span class="home-progress-stat__icon">${svg('nutrition',15)}</span><div><div class="home-progress-stat__value">${burned.toLocaleString()} <span>kcal</span></div><div class="home-progress-stat__label">Calories burned</div></div></div>
         </div>
       </section>
 

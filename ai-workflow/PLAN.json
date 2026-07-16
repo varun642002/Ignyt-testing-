@@ -1,0 +1,100 @@
+{
+  "task_id": "IGNYT-MASTER-REDESIGN-001",
+  "planner": "Claude Code (self-planned; no separate ChatGPT planner session was active — the master prompt explicitly authorizes updating ai-workflow files per repo convention when this happens)",
+  "objective": "Bring every IGNYT screen into one coherent premium design system matching the supplied light-theme reference (cool blue-gray bg, white cards, blue primary accent) with an adapted dark theme, plus the explicit functional restructuring requirements in REQUEST.md, without losing any existing feature or data.",
+  "current_branch": "feature/premium-ui-modular-redesign",
+  "current_git_status_at_plan_time": "Clean tracked tree; untracked: AGENTS.md, ai-workflow/, exercise-image-generator/, ignyt-image-generator-input.zip, ignyt-references.zip.",
+  "superseded_task": {
+    "id": "IGNYT-EXERCISE-IMAGES-001",
+    "status": "PAUSED, not discarded",
+    "note": "Approved (PLAN.json implementation_authorized:true) but not yet implemented (only ai-workflow scaffolding existed). Its own PLAN.json content is preserved in git history (this commit's parent) and can be restored/resumed after this task."
+  },
+  "reference_image_findings": {
+    "global": "Light bg ~near-white cool blue-gray, white elevated cards (radius ~16-20px), thin light border, subtle shadow, bright blue (~#2F6FED-class) primary accent for active nav/buttons/rings, dark navy/near-black text, gray secondary text, small blue accent line + uppercase 'TRAIN WITH INTENT' + bold 'IGNYT' wordmark header, circular theme-toggle button top-right.",
+    "bottom_nav": "Home / Workout / Nutrition / Progress / AI Coach, white bg, active = filled blue icon + blue label, inactive = muted gray.",
+    "home": "Greeting + name + streak (existing dynamic logic, reuse verbatim) with athlete image top-right (already implemented in a prior session). 'TODAY'S PROGRESS' section: ring showing '33% GOAL' with subtitle 'Week 1 of 8 · BASE' + two stat rows: Calories (bolt icon) and Steps (chart icon) -- see resolved_conflicts.home_progress_metrics below for why Protein was NOT carried over from this screenshot.",
+    "workout": "Full-width blue 'Start Empty Workout' button, then 'Recent Sessions' + 'Show All (N)' link, session cards with muscle-diagram avatar, title, exercise count/duration, muscle chips, date, PR badge, delete icon. NOTE: this screenshot's own subtext ('Looking for your routines? They've moved to the Plan tab') describes CURRENT app copy being redesigned away, not a target -- REQUEST.md Section K/Y explicitly require routines to live ON the Workout page, which is the opposite. Written requirement wins (see resolved_conflicts.routines_location). Screenshot also shows 5 recent sessions; written requirement explicitly caps this at exactly 2 (Section X) -- written requirement wins on the count, screenshot wins on the per-card visual design.",
+    "progress": "'Progress' title + subtitle 'Your training, body and performance insights'. 'THIS WEEK' card (Workouts, Training Time, Weekly Volume, Current Streak rows). 'EXPLORE' section: Personal Records / Achievements / Workout Analytics / Exercise Progress row cards (icon badge, title, subtitle, chevron).",
+    "workout_analytics_detail": "Range chips (7D/4W/12W/6M/1Y), 'Training Volume' + %-change badge, blue line chart with light fill, 4-stat grid (Workouts/Avg Duration/Calories Burned/PRs) each with a %-change badge.",
+    "nutrition_overview": "EATEN vs BURNED (EST.) cards, Calories Remaining row, big 'DEFICIT CREATED' card, Macronutrients Today (Protein/Carbs/Fat/Fibre bars), Water bar + quick-add pill buttons.",
+    "nutrition_meals": "Overview/Meals/Insights segmented tabs; 3 macro rings; Breakfast/Lunch/Dinner/Snacks rows with icon badges and + Add Meal.",
+    "start_workout": "Contextual header, 'Start Workout' title, selected routine card (muscle diagram, chest/shoulders/triceps, 5 exercises · ~60 min, Change Workout), prominent Start button, numbered exercise rows with icon + sets/reps + drag handle.",
+    "ai_coach_empty": "Rounded blue icon badge with '•••', 'AI Coach' title, honest 'AI coaching is not configured...' copy (already matches the app's existing honest empty-state philosophy), 'Explore your progress' secondary button.",
+    "ai_coach_chat": "Robot avatar, greeting bubble, 4 suggested-prompt rows with icon + chevron, bottom input bar with send button -- only relevant if/when a real backend exists; otherwise the existing empty state already satisfies this page's intent."
+  },
+  "resolved_conflicts": [
+    {
+      "topic": "Home 'Today's Progress' metrics",
+      "screenshot_shows": "Ring (33% GOAL) + Calories + Protein + Steps (3 stat rows including a diet-intake metric).",
+      "written_requirement_says": "Section J: 'Keep ONLY: Steps. Total Calories Burned. Remove from this specific Home progress card: Protein... Do not calculate misleading combined progress percentages from unrelated metrics.'",
+      "resolution": "Written functional requirement wins (AJ priority order scopes the screenshot's priority to *visual* decisions; metric inclusion is a functional/data decision). Ring reverts to the single genuine 'planPct' (weekly plan completion %) it used before an earlier session's pass blended it with diet metrics -- this also happens to match the screenshot's own ring subtitle 'Week 1 of 8 · BASE', which only makes sense for plan-completion, not a diet/activity blend. Stat rows become exactly two: Steps (existing Health Connect read) and Total Calories Burned (reuse existing todayBurned(), which already correctly sources HC active calories + maintenance estimate -- same function Nutrition's 'BURNED (EST.)' card already uses). Calories-eaten and Protein rows removed from this card entirely (not fabricated as 0, genuinely removed)."
+    },
+    {
+      "topic": "Workout routines location",
+      "screenshot_shows": "Copy reading 'Looking for your routines? They've moved to the Plan tab.'",
+      "written_requirement_says": "Section K: 'Move workout routines to the Workout page.' Section Y: 'Workout routines must be primarily accessible from the Workout page. Do not keep routines primarily hidden inside Plan.'",
+      "resolution": "Written requirement wins -- the screenshot is documenting the CURRENT (pre-redesign) copy that Section K/Y explicitly instruct reversing. Plan tab keeps whatever distinct purpose it serves (HYROX schedule structure) per 'Preserve existing Plan functionality that serves a distinct purpose'; routine start/create/edit/delete moves onto the main Workout page."
+    }
+  ],
+  "phases": [
+    {
+      "phase": 1,
+      "name": "Design foundation: light theme (blue primary) + dark theme adaptation",
+      "status": "COMPLETED",
+      "scope": "Extend www/css/tokens.css: promote a blue primary accent for interactive elements matching the reference (new --color-interactive / reuse --color-accent-blue as the primary interactive color), redefine [data-theme=\"light\"] to the reference's cool blue-gray bg / white cards / blue accent, keep dark theme conceptually aligned (same tokens, dark values) without breaking the current dark aesthetic users already have. CSS-only, additive, no HTML/JS changes.",
+      "files": ["www/css/tokens.css"]
+    },
+    {
+      "phase": 2,
+      "name": "Home: Today's Progress simplification",
+      "status": "COMPLETED",
+      "scope": "www/js/pages/home.js: ring reverts to planPct (with documented rationale in code comment), stat rows reduce to Steps + Total Calories Burned (reuse todayBurned()), remove Calories-eaten/Protein from this card. www/app.js: pass burned (todayBurned()) into the Home ctx.",
+      "files": ["www/js/pages/home.js", "www/app.js"]
+    },
+    {
+      "phase": "4-partial",
+      "name": "Remove Body Fat % from Log Weight UI",
+      "status": "COMPLETED",
+      "scope": "www/app.js renderBodyTab: remove the 'Body Fat (%)' input from the Log Entry form grid and the corresponding read/write in the log-body click handler. Historical bodyfat data, the standalone Body Fat calculator, and the waist-based Navy-method estimate fallback are all left completely intact. No standalone 'Log Weight' destination exists separately from the body/Profile tab today, so that part of Section N is already satisfied by the existing architecture.",
+      "files": ["www/app.js"]
+    },
+    {
+      "phase": 3,
+      "name": "Workout restructuring (routines on Workout page, 2-session cap + Show All, rest timer default 0, Start Workout visual redesign)",
+      "status": "NOT_STARTED",
+      "scope": "Largest remaining phase. Requires moving/duplicating routine start/create/edit/delete UI from renderPlanTab into the Workout tab's idle view (www/js/pages/workout.js), capping the already-extracted session list to 2 with a Show All toggle, changing state.settings.defaultRest initial value from 90 to 0 without touching already-created exercises' explicit restDuration values, and restyling Start Workout per the reference."
+    },
+    {
+      "phase": "4-rest",
+      "name": "Profile consolidation: Personal Records + Achievements entry points, body-progress photo storage",
+      "status": "NOT_STARTED",
+      "scope": "Add PR/Achievement entry cards to renderBodyTab (Profile) routing to the existing Progress detail views (no logic duplication). New body-progress-photo feature: date, optional note, category (Front/Side/Back/Other), view, delete. Needs a real storage decision for Capacitor/Android -- Filesystem API (not base64 in localStorage) is the leading candidate; requires checking whether @capacitor/filesystem is already a dependency (a prior session found it conflicts with the pinned Kotlin 1.9.24 toolchain and was deliberately removed -- this needs re-verification before choosing an approach)."
+    },
+    {
+      "phase": 5,
+      "name": "Progress: Habit Tracker (new feature) + remove redundant Nutrition Progress content",
+      "status": "NOT_STARTED",
+      "scope": "New habit CRUD, daily completion toggle, streak calc (local-timezone consistent), weekly/monthly view, new localStorage key with schema-version-aware migration. Identify and remove only the Progress page's redundant nutrition-duplicate section (Progress already has a 'Nutrition' category view per an earlier session's restructuring -- needs inspection to confirm what, if anything, duplicates the real Nutrition tab)."
+    },
+    {
+      "phase": 6,
+      "name": "Calculator consolidation review + remaining page visual consistency (Nutrition tabs, AI Coach, Workout/Plan/Library/Settings visual pass)",
+      "status": "NOT_STARTED",
+      "scope": "Calculators are ALREADY consolidated into one location (renderCalculators() embedded in the Profile/body tab) as of the current codebase -- this phase is mostly a verification + the reference's visual pass across remaining screens rather than net-new consolidation work. 'Lock section' ambiguity: no locked calculator section currently exists in the codebase; interpretation will be documented when reached."
+    },
+    {
+      "phase": 7,
+      "name": "Regression validation, Android build, final report",
+      "status": "NOT_STARTED",
+      "scope": "Full requirement checklist pass, browser-driven verification of changed surfaces, npx cap sync android + gradlew clean assembleDebug, final structured report."
+    }
+  ],
+  "git_requirements": [
+    "Work stays on feature/premium-ui-modular-redesign.",
+    "Commit locally after each safely-verified phase (git safety baseline already established across this branch's history).",
+    "Do NOT push without explicit user authorization -- AGENTS.md Section 9 ('Always: Do not commit or push unless explicitly authorized by the workflow') is stricter than WORKFLOW.md's blanket allowance and governs.",
+    "Never stage node_modules/, android build outputs, APKs, or secrets."
+  ],
+  "implementation_authorized": true,
+  "note_on_pacing": "This is an exceptionally large multi-phase request (7 phases, several genuinely new features). Consistent with this branch's established history (one safely-verified increment per session) and with the master prompt's own 'prefer incremental, testable implementation' instruction, phases are being implemented and verified in order across multiple work sessions rather than as one unverified batch. Phase status above reflects true current progress, updated honestly as work proceeds."
+}
