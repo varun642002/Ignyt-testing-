@@ -1,48 +1,38 @@
 {
   "task_id": "IGNYT-MASTER-REDESIGN-001",
-  "tester": "Claude Code (self-verification -- AGENTS.md permits 'at most ONE initial verification pass' by the Coder; no independent Playwright MCP pass was run)",
-  "verificationMethod": "Served www/ as a static site and drove it in a real headless-browser session across all phases this session (navigation, clicks, file-input simulation with a real synthetic image blob, localStorage/IndexedDB inspection, computed-style/getBoundingClientRect checks, network-request inspection, console-error checks). Screenshot capture is unavailable in this environment throughout -- no rendered image was ever captured.",
-  "testsExecuted": [
-    "Phase 3: full routine lifecycle (create -> add exercise via picker -> save -> appears on Workout tab, not Plan -> Start Workout -> new exercise shows 'Rest Timer: OFF' -> hx_settings.defaultRest confirmed 0)",
-    "Phase 3: Plan tab confirmed to no longer show routines, shows pointer note + HYROX Schedule + Race Simulation",
-    "Phase 4: Profile PR/Achievement entry cards found and navigate correctly to the real Progress detail views",
-    "Phase 4: Body Fat field absence + successful Log Entry submit with no error (from the earlier checkpoint, re-confirmed still working)",
-    "Phase 4: body-progress photo full lifecycle with a real synthetic image blob -- add (simulated file input + change event) -> IndexedDB write confirmed -> grid re-renders with a genuine lazy-loaded blob: URL thumbnail -> lightbox open -> delete -> confirm dialog appears on top of the still-open lightbox and is clickable (bug found and fixed: z-index/class collision) -> confirmed via the real data-dialog-action=confirm selector -> photo removed, empty state returns",
-    "Phase 5: Habit Tracker full lifecycle -- add habit -> toggle complete (streak 0->1, week 0/7->1/7, month 0->1, correct local-date key persisted) -> toggle off (streak reverts) -> inline rename -> delete via confirmDialog (correct message, confirmed, habit + history removed)",
-    "Cross-phase regression spot-check: Nutrition tab renders correctly (Eaten/Burned/Deficit/Macros/Water all present, unaffected by Home's metric changes)",
-    "Cross-phase regression spot-check: AI Coach tab renders correctly (unchanged honest empty state)",
-    "No horizontal overflow at 320px on any screen touched this session",
-    "No console errors at any point across the entire session's browser testing"
-  ],
-  "passedTests": [
-    "Routine creation/start lifecycle on Workout tab",
-    "Rest timer default = 0 for new installs, confirmed via settings + new exercise",
-    "Plan tab routines removal + pointer note",
-    "Profile PR/Achievement navigation",
-    "Body-progress photo add/view/delete lifecycle (after z-index fix)",
-    "Habit Tracker add/toggle/streak-math/rename/delete lifecycle",
-    "Nutrition tab regression check",
-    "AI Coach tab regression check",
-    "No overflow, no console errors throughout"
-  ],
+  "tester": "Claude Code (self-verification; no independent Playwright MCP pass and no real-device testing)",
+  "verificationMethod": "Static www/ served locally and driven in a real headless-browser session across the whole task (navigation, clicks, real synthetic file-input, localStorage/IndexedDB inspection, computed-style + getBoundingClientRect checks, network + console-error inspection). Screenshot capture unavailable in this environment throughout.",
+  "finalRegressionSweep_phase7": {
+    "homeTab": "PASS - Today's Progress shows only Steps + Calories Burned; ring = genuine plan %; streak orange (brand preserved); athlete image slot intact.",
+    "workoutTab": "PASS - Start Empty Workout (blue), My Routines (create/add-exercise/save/start full lifecycle), Recent Sessions capped at 2 + Show All, active session starts with Rest Timer: OFF.",
+    "planTab": "PASS - routines removed, pointer note present, HYROX Schedule week-chips now blue when active, Race Simulation intact.",
+    "nutritionTab": "PASS - Eaten/Burned/Deficit/Macros/Water all render.",
+    "progressTab": "PASS - all 9 Explore detail views (PRs, Achievements, Habit Tracker, Analytics, Exercise, Body, Nutrition, Calendar, Plan) render without error, back-nav works for each.",
+    "profileTab": "PASS - Body Fat % gone from Log Entry, Log Entry submits cleanly, PR/Achievement entry cards navigate correctly, body-progress photos add/view/delete lifecycle works, calculators present.",
+    "habitTracker": "PASS - add/toggle(streak math)/rename/delete lifecycle, local-date-correct persistence.",
+    "bodyPhotos": "PASS - add real image blob -> IndexedDB -> lazy thumbnail -> lightbox -> delete (confirm dialog stacks correctly after z-index fix).",
+    "library": "PASS - renders, category chips.",
+    "settings": "PASS - renders, account/export/theme controls; Light theme applies reference cool blue-gray bg (#f4f6fa).",
+    "healthConnect": "PASS - renders honest 'not available on this device' web fallback (native-only feature).",
+    "aiCoach": "PASS - honest 'not configured' empty state unchanged.",
+    "themes": "PASS - dark + light both render, interactive chips blue in both, no overflow.",
+    "persistenceAfterReload": "PASS - habit, defaultRest:0, and onboarding state all survive a full reload.",
+    "responsive": "PASS - no horizontal overflow at 320px on every screen exercised.",
+    "consoleErrors": "None observed at any point across the entire session."
+  },
   "failedTests": [],
-  "bugsFoundAndFixedDuringThisSession": [
-    "Body-progress photo lightbox reused the app's shared .dialog-backdrop/.dialog-box/.dialog-actions classes, colliding with the real confirm dialog when both were open simultaneously (deleting from the lightbox) -- fixed with a z-index ordering fix and de-duplicated button-row markup, re-verified with the confirm dialog's real selector."
+  "bugsFoundAndFixedDuringTask": [
+    "Body-photo lightbox reused the shared confirm-dialog CSS classes, colliding with the real confirm dialog on delete -- fixed via z-index ordering + de-duplicated button-row markup, re-verified.",
+    "New showToast() calls for body photos initially omitted the required renderFn 3rd argument (toast would silently never appear) -- fixed to pass render.",
+    "Body Composition empty-state copy referenced the now-removed 'Body Fat %' field -- reworded to the correct remaining path."
   ],
   "skippedTests": [
-    "Real Android device visual/functional review",
-    "Health Connect dashboard, Settings, Library, Plan (HYROX schedule/Race Simulation) regression re-check (not touched this session, not re-exercised)",
-    "Independent Playwright MCP testing pass"
+    "Real Android device visual/functional/native testing",
+    "Independent Playwright MCP pass"
   ],
   "consoleErrors": [],
   "networkErrors": [],
   "screenshots": [],
-  "exactFailureDetails": null,
   "anotherFixIterationRequired": false,
-  "androidBuilds": [
-    { "phase": "3 + PR/Achievement entries", "syncResult": "SUCCEEDED", "buildResult": "BUILD SUCCESSFUL in 56s", "apkPath": "android/app/build/outputs/apk/debug/app-debug.apk" },
-    { "phase": "5 (Habit Tracker)", "syncResult": "SUCCEEDED", "buildResult": "BUILD SUCCESSFUL in 20s", "apkPath": "android/app/build/outputs/apk/debug/app-debug.apk" },
-    { "phase": "4-rest (body photos)", "syncResult": "SUCCEEDED", "buildResult": "BUILD SUCCESSFUL in 16s", "apkPath": "android/app/build/outputs/apk/debug/app-debug.apk" }
-  ],
-  "note": "A successful Android build proves BUILD VERIFIED only -- it does not prove real Health Connect sync, Android runtime permissions, native lifecycle behavior, native file-picker/camera behavior for body photos, or any other real-device-only capability. None of those were touched or claimed as tested this session."
+  "note": "BUILD VERIFIED means the debug APK compiled -- it does not prove real Health Connect sync, Android runtime permissions, native camera/file-picker for body photos, or native lifecycle. Those remain real-device-only and were not claimed as tested."
 }

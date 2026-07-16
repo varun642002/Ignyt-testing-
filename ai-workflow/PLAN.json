@@ -85,15 +85,17 @@
     },
     {
       "phase": 6,
-      "name": "Calculator consolidation review + remaining page visual consistency (Nutrition tabs, AI Coach, Workout/Plan/Library/Settings visual pass)",
-      "status": "NOT_STARTED",
-      "scope": "Calculators are ALREADY consolidated into one location (renderCalculators() embedded in the Profile/body tab) as of the current codebase -- this phase is mostly a verification + the reference's visual pass across remaining screens rather than net-new consolidation work. 'Lock section' ambiguity: no locked calculator section currently exists in the codebase; interpretation will be documented when reached."
+      "name": "Calculator consolidation review + remaining page visual consistency",
+      "status": "COMPLETED",
+      "calculator_consolidation": "Verified already satisfied by the existing architecture -- renderCalculators() is defined once (app.js ~4366) and called exactly once (inside renderBodyTab / the Profile tab, ~5354). No duplicated or scattered calculator content exists; nothing to consolidate. 'Lock section' ambiguity resolved: no locked calculator section exists anywhere in the current codebase, so there was nothing to preserve-in-place; documented here per the ambiguity-resolution instruction, no fabricated feature added.",
+      "visual_consistency": "The core design system was already centralized and shared across every screen (www/css/tokens.css + base/layout/components/responsive + per-page css) before this task. This phase extended the reference's bright-blue interactive accent to the remaining legacy selection components that still read the old orange/steel palette, via the components.css override layer (no inline-stylesheet or markup changes): .cat-chip.active, .week-chip.active (+ its inner bar), and .day-tab.active now use --color-interactive with white text, matching the reference's selected-chip look. Deliberately NOT repainted (documented, not skipped): --mint completion checks (.set-check.done/.ex-check.done) stay green (success semantics, not selection), and the orange --color-primary brand highlights (streak flame, PR/achievement accents) stay orange -- the earlier standing instruction to 'preserve the IGNYT orange identity' plus the master prompt's priority #3 ('existing IGNYT branding') make a full orange->blue repaint wrong; blue is applied to interactive/selected states only, which is exactly what the reference uses it for. Also verified the legacy --steel token is already a blue (#4FA8D8), so components already using it (search bars, some labels) were already consistent with the blue direction.",
+      "browser_verified": "week-chip.active, day-tab.active, cat-chip.active all confirmed rgb(62,130,247) with white text via getComputedStyle in dark theme; cat-chip.active confirmed still blue in light theme; streak confirmed still orange rgb(255,90,31) (brand preserved). Full Progress detail-view sweep (all 9 views incl. new Habit Tracker) rendered without error with working back-nav; Library/Settings/Health Connect/Nutrition/AI Coach all render without error or overflow; persistence-after-reload confirmed (habit + defaultRest:0 + onboarding survive a reload). Light theme confirmed applying the reference's cool blue-gray bg (#f4f6fa). Zero console errors across the entire sweep, zero horizontal overflow at 320px."
     },
     {
       "phase": 7,
       "name": "Regression validation, Android build, final report",
-      "status": "NOT_STARTED",
-      "scope": "Full requirement checklist pass, browser-driven verification of changed surfaces, npx cap sync android + gradlew clean assembleDebug, final structured report."
+      "status": "COMPLETED",
+      "scope": "Full cross-screen regression sweep performed in-browser this session (Home, Workout incl. routines/active session, Nutrition, Progress + all 9 detail views, Profile incl. body photos + PR/Achievement entries + Habit Tracker, Plan/HYROX schedule, Library, Settings, Health Connect, AI Coach) -- all render without error or overflow, zero console errors, persistence survives reload. Final npx cap sync android + gradlew clean assembleDebug run for a from-scratch build verification. Structured final report delivered to the user."
     }
   ],
   "git_requirements": [

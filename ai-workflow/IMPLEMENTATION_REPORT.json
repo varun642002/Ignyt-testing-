@@ -1,38 +1,39 @@
 {
   "task_id": "IGNYT-MASTER-REDESIGN-001",
-  "implementationStatus": "IN_PROGRESS",
-  "phasesCompletedThisContinuationSession": [
-    { "phase": 3, "name": "Workout restructuring (routines moved to Workout page, 2-session cap, rest timer default 0)", "status": "COMPLETED" },
-    { "phase": "4-rest", "name": "Profile PR/Achievement entry points + body-progress photo storage (IndexedDB)", "status": "COMPLETED" },
-    { "phase": 5, "name": "Habit Tracker + Nutrition Progress redundancy investigation", "status": "COMPLETED" }
+  "implementationStatus": "ALL_PLANNED_PHASES_COMPLETE (Coder-side; pending independent/real-device review)",
+  "phaseSummary": [
+    { "phase": 1, "name": "Design foundation: blue interactive accent token + reference light theme", "status": "COMPLETED" },
+    { "phase": 2, "name": "Home Today's Progress -> Steps + Total Calories Burned only, ring = genuine plan %", "status": "COMPLETED" },
+    { "phase": 3, "name": "Workout: routines moved onto Workout page, 2 recent sessions + Show All, rest-timer default 0", "status": "COMPLETED" },
+    { "phase": 4, "name": "Profile: Body Fat % removed from Log Weight, PR + Achievement entry points, body-progress photos (IndexedDB)", "status": "COMPLETED" },
+    { "phase": 5, "name": "Progress: Habit Tracker (new feature); redundant Nutrition Progress investigated (not actually redundant, documented)", "status": "COMPLETED" },
+    { "phase": 6, "name": "Calculator consolidation verified already-done; blue interactive accent extended to legacy selection chips/tabs", "status": "COMPLETED" },
+    { "phase": 7, "name": "Full regression sweep + final clean Android build + report", "status": "COMPLETED" }
   ],
-  "cumulativeStatus": "Phases 1, 2, 3, 4, 5 are all COMPLETED as of this session. Phase 6 (calculator consolidation review + remaining visual-consistency pass across Nutrition tabs/AI Coach/Settings/Plan/Library) and Phase 7 (final full regression + report) remain.",
-  "filesModifiedThisSession": [
+  "filesCreated": [
+    "www/js/body-photos-db.js",
+    "AGENTS.md (pre-existing untracked, first committed this task)",
+    "ai-workflow/* (workflow artifacts + reference image)"
+  ],
+  "filesModified": [
     "www/app.js",
     "www/index.html",
     "www/sw.js",
-    "ai-workflow/PLAN.json"
+    "www/js/pages/home.js",
+    "www/js/pages/workout.js",
+    "www/css/tokens.css",
+    "www/css/layout.css",
+    "www/css/components.css"
   ],
-  "filesCreatedThisSession": [
-    "www/js/body-photos-db.js"
-  ],
-  "commandsExecuted": [
-    "git status / git branch --show-current (repeated before each phase)",
-    "node --check www/app.js (after every app.js edit)",
-    "node --check www/js/body-photos-db.js",
-    "browser-driven verification for every phase (see TEST_RESULTS.json)",
-    "npx cap sync android (x4, once per phase checkpoint)",
-    "android\\gradlew.bat assembleDebug / clean assembleDebug (x4, all BUILD SUCCESSFUL)"
-  ],
+  "dataAndStorageChanges": {
+    "newKeys": ["hx_habits", "hx_habit_completions", "IndexedDB database 'ignyt-body-photos'"],
+    "migrations": "None required. Habit keys are brand-new (default to []/{}). defaultRest change 90->0 needs no migration (existing installs already persist their own value). No existing key was renamed, deleted, or reshaped.",
+    "removed": "The bodyfat field is no longer WRITTEN by new Log Entry submissions, but historical bodylog entries that already have a .bodyfat value keep it (all readers treat it as optional), and the standalone Body Fat calculator + waist/neck Navy estimate remain."
+  },
   "knownLimitations": [
-    "Phase 6 not started: calculator consolidation was verified as already satisfied by the existing architecture (renderCalculators() already embedded in one place, Profile) but the broader 'remaining visual-consistency pass' (extending the light-theme/blue-accent treatment beyond Home/Workout's primary buttons and nav to the rest of the app's chrome -- chips, secondary buttons, forms, Settings, Library, Plan) has not been done.",
-    "Start Workout screen's own visual redesign (per the reference's numbered exercise rows with drag handle) was not attempted -- it lives inside the still-un-extracted ~1,600-line active-session renderer in app.js.",
-    "Screenshot capture is unavailable in this environment throughout this entire session -- all visual verification used DOM structure, computed CSS, getBoundingClientRect(), and network-request inspection in a real browser session, never a rendered image.",
-    "No independent Playwright testing pass was run (AGENTS.md permits at most one Coder self-verification pass); no real Android device testing was performed."
-  ],
-  "testsNotYetPerformed": [
-    "Real Android device visual/functional review of every change this session.",
-    "Full cross-screen regression beyond the spot-checks already done (Nutrition, AI Coach confirmed intact; Health Connect dashboard, Settings, Library, Plan HYROX schedule, and Race Simulation were not re-exercised this session).",
-    "Independent Playwright MCP pass."
+    "Start Workout's own per-reference visual redesign (numbered exercise rows with drag handle, muscle-diagram header) was not done -- it lives inside the still-un-extracted ~1,600-line active-session renderer in app.js; flagged for a future dedicated pass.",
+    "The reference's header theme-toggle button was not added (theme is still changed via Settings); this is an additive UI element, its absence breaks nothing.",
+    "Screenshot capture was unavailable in this environment for the entire task -- all visual verification used DOM structure, computed CSS, getBoundingClientRect(), and network/console inspection in a real browser session, never a rendered image.",
+    "No independent Playwright MCP pass and no real Android device testing were performed -- everything is STATICALLY VERIFIED + BROWSER VERIFIED + BUILD VERIFIED only."
   ]
 }

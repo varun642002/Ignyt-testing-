@@ -25,6 +25,21 @@
 .more-sheet-card { border:1px solid var(--color-border); border-radius:var(--radius-md); box-shadow:var(--shadow-card); }
 .cat-chip, .muscle-chip { border-radius:var(--radius-pill); }
 .day-tab, .week-chip { border-radius:var(--radius-sm); }
+
+/* Reference: selected chips/tabs read as the bright-blue interactive accent (e.g. the 4W
+   analytics range chip). These override the legacy inline active states so the whole app's
+   "selected" signal is one consistent blue, instead of a mix of orange (--accent) and steel.
+   Loaded after the inline <style>, so equal-specificity selectors win here. Semantic
+   non-interactive accents are deliberately NOT touched: --mint completion checks
+   (.set-check.done / .ex-check.done) stay green, and the orange brand highlights for streak/
+   PR/achievement stay orange -- those aren't "selected/interactive" states. */
+.cat-chip.active { background: var(--color-interactive); color: #ffffff; }
+.week-chip.active { background: var(--color-interactive); color: #ffffff; box-shadow: 0 0 0 2px rgba(62,130,247,.35); }
+.week-chip.active .week-bar { background: rgba(0,0,0,.25); }
+.week-chip.active .week-bar-fill { background: #ffffff; }
+.day-tab.active { border-color: var(--color-interactive); }
+.day-tab.active .dtop { color: var(--color-interactive); }
+[data-theme="light"] .week-chip.active { color: #ffffff; }
 .dialog-box { border-radius:var(--radius-card); }
 .toast { border-radius:var(--radius-md); }
 .ex-picker-avatar { border-radius:var(--radius-pill); }
