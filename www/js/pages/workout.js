@@ -7,19 +7,36 @@
   window.IgnytPages = window.IgnytPages || {};
 
   window.IgnytPages.renderWorkoutList = function renderWorkoutList(ctx) {
-    const { state, svg, renderPRCelebration, sessionMuscles, sessionTitle,
+    const { state, svg, renderPRCelebration, renderRoutineBuilder, sessionMuscles, sessionTitle,
       workoutDurationLabel, displayW, wUnit } = ctx;
     const showAll = state.showAllSessions;
-    const recent = showAll ? state.workoutLog : state.workoutLog.slice(0, 5);
+    // Section X: exactly the two most recent sessions by default, "Show All" opens the
+    // complete history (existing toggle already renders the full stored array -- nothing is
+    // ever deleted or capped in storage, only in this default view).
+    const recent = showAll ? state.workoutLog : state.workoutLog.slice(0, 2);
 
     return `
       ${state.lastSessionPRs && state.lastSessionPRs.length ? renderPRCelebration() : ""}
       <button class="btn btn-accent btn-block" data-action="start-session" style="margin-top:4px;">${svg('plus',16)} Start Empty Workout</button>
-      <div style="font-size:11px;color:var(--muted);margin:8px 0 0;text-align:center;">Looking for your routines? They've moved to the <b style="color:var(--text);">Plan</b> tab.</div>
+
+      <div class="row-between" style="margin-top:20px;">
+        <span class="section-heading__label" style="margin:0;">My Routines</span>
+        <button class="btn btn-ghost" data-action="toggle-routine-builder" style="padding:6px 12px;font-size:12px;">${state.routineBuilder ? 'Cancel' : svg('plus',13) + ' New Routine'}</button>
+      </div>
+      ${state.routineBuilder ? renderRoutineBuilder() : ""}
+      ${state.routines.length === 0 && !state.routineBuilder ? `<div class="empty-note">No routines saved yet — build one to start logging faster.</div>` :
+        state.routines.map(r => `<div class="routine-card">
+          <div class="row-between">
+            <span style="font-weight:800;font-size:15px;">${r.name}</span>
+            <button class="del" data-del-routine="${r.id}" aria-label="Delete routine">${svg('x',14)}</button>
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin:4px 0 12px;">${r.exercises.length} exercise${r.exercises.length !== 1 ? 's' : ''}</div>
+          <button class="btn btn-steel btn-block" data-start-routine="${r.id}">Start Workout</button>
+        </div>`).join("")}
 
       <div class="section-heading">
         <span class="section-heading__label">Recent Sessions</span>
-        ${state.workoutLog.length>5 ? `<button class="btn btn-ghost" data-action="toggle-show-all-sessions" style="padding:4px 10px;font-size:11px;">${showAll?'Show Less':'Show All ('+state.workoutLog.length+')'}</button>` : ""}
+        ${state.workoutLog.length>2 ? `<button class="btn btn-ghost" data-action="toggle-show-all-sessions" style="padding:4px 10px;font-size:11px;">${showAll?'Show Less':'Show All ('+state.workoutLog.length+')'}</button>` : ""}
       </div>
       ${recent.length===0?`<div class="empty-note">No sessions logged yet.</div>`:
         recent.map(s=>{

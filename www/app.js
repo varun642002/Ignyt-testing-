@@ -1545,7 +1545,7 @@ const state = {
     bust:90, bwaist:75, highHip:85, bhip:95
   }),
   settings: Object.assign({
-    sounds:true, vibration:true, defaultRest:90, keepAwake:false,
+    sounds:true, vibration:true, defaultRest:0, keepAwake:false,
     plateCalc:true, rpeTracking:true, autoStartRest:true, waterTargetMl:2500,
     workoutReminders:false, hydrationReminders:false, weeklyReports:false,
     lastWorkoutReminderDate:null, lastHydrationReminderDate:null, lastWeeklyReportAt:null,
@@ -5154,6 +5154,22 @@ function renderBodyTab(){
         <button class="del" data-del-body="${e.id}" aria-label="Delete body log entry">${svg('x',12)}</button>
       </div>`).join("")}
 
+    <div class="eyebrow-label">Records &amp; Achievements</div>
+    <button class="prog-cat-card" data-open-progress-view="prs" aria-label="Open Personal Records">
+      <span class="prog-cat-icon">${PROGRESS_VIEWS.prs.icon}</span>
+      <span style="flex:1;min-width:0;text-align:left;">
+        <span style="display:block;font-size:16px;font-weight:800;color:var(--text);">Personal Records</span>
+        <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">${state.prs.length} record${state.prs.length!==1?'s':''}</span>
+      </span>
+    </button>
+    <button class="prog-cat-card" data-open-progress-view="achievements" aria-label="Open Achievements">
+      <span class="prog-cat-icon">${PROGRESS_VIEWS.achievements.icon}</span>
+      <span style="flex:1;min-width:0;text-align:left;">
+        <span style="display:block;font-size:16px;font-weight:800;color:var(--text);">Achievements</span>
+        <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">${state.achievements.length} of ${ACHIEVEMENT_DEFS.length} unlocked</span>
+      </span>
+    </button>
+
     <div class="eyebrow-label">Calculators</div>
     <div class="info-box" style="padding:14px;">
       ${renderCalculators()}
@@ -5395,26 +5411,11 @@ function renderErrorScreen(err){
 }
 
 function renderPlanTab(){
-  if(state.showExercisePicker && state.exercisePickerContext==="routine") return renderExercisePicker();
   if(state.viewingHyroxSchedule) return renderHyroxSchedule();
   if(state.viewingRaceMode) return renderRaceMode();
   return `
-    <div class="row-between" style="margin:4px 0 8px;">
-      <span class="eyebrow-label" style="margin:0;">My Routines</span>
-      <button class="btn btn-ghost" data-action="toggle-routine-builder" style="padding:6px 12px;font-size:12px;">${state.routineBuilder? 'Cancel' : svg('plus',13)+' New Routine'}</button>
-    </div>
-    ${state.routineBuilder ? renderRoutineBuilder() : ""}
-    ${state.routines.length===0 && !state.routineBuilder ? `<div class="empty-note">No routines saved yet — build one to start logging faster.</div>` :
-      state.routines.map(r=>`<div class="routine-card">
-        <div class="row-between">
-          <span style="font-weight:800;font-size:15px;">${r.name}</span>
-          <button class="del" data-del-routine="${r.id}" aria-label="Delete routine">${svg('x',14)}</button>
-        </div>
-        <div style="font-size:12px;color:var(--muted);margin:4px 0 12px;">${r.exercises.length} exercise${r.exercises.length!==1?'s':''}</div>
-        <button class="btn btn-steel btn-block" data-start-routine="${r.id}">Start Workout</button>
-      </div>`).join("")}
-
-    <div class="eyebrow-label" style="margin-top:24px;">HYROX Training Schedule</div>
+    <div class="info-box" style="font-size:12px;margin-bottom:14px;">Looking for your routines? They've moved to the <b style="color:var(--text);">Workout</b> tab.</div>
+    <div class="eyebrow-label" style="margin-top:4px;">HYROX Training Schedule</div>
     <div class="info-box" style="padding:18px;">
       <div style="font-weight:900;font-size:17px;margin-bottom:4px;">HYROX Training Schedule</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">8-Week Structured HYROX Program</div>
@@ -5962,6 +5963,7 @@ function attachSwipeToDelete(){
 
 function renderWorkoutTab(){
   if(state.session && state.showExercisePicker) return renderExercisePicker();
+  if(state.routineBuilder && state.showExercisePicker && state.exercisePickerContext==="routine") return renderExercisePicker();
   if(!state.session){
     if(state.workoutCompleteId){
       const done = state.workoutLog.find(x=>x.id===state.workoutCompleteId);
@@ -5974,7 +5976,7 @@ function renderWorkoutTab(){
       state.viewingSessionId = null; // stale id (e.g. deleted) — fall through to list
     }
     return window.IgnytPages.renderWorkoutList({
-      state, svg, renderPRCelebration, sessionMuscles, sessionTitle,
+      state, svg, renderPRCelebration, renderRoutineBuilder, sessionMuscles, sessionTitle,
       workoutDurationLabel, displayW, wUnit
     });
   }
@@ -7312,6 +7314,17 @@ function attachHandlers(){
   if(progExSelect) progExSelect.addEventListener("change", ()=>{
     state.progressExercise = progExSelect.value;
     render();
+  });
+
+  // Profile entry points into the existing Progress detail views (Personal Records,
+  // Achievements) -- reuses the exact same render/detection/storage logic as the Progress
+  // tab's own Explore grid, just a second navigation path to the same screen.
+  document.querySelectorAll("[data-open-progress-view]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.tab = "progress";
+      state.progressView = el.dataset.openProgressView;
+      render();
+    });
   });
 
   // Progress home <-> detail navigation. Bound per-render like every other handler here
