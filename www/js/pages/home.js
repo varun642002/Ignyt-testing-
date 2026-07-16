@@ -17,7 +17,7 @@
   window.IgnytPages.renderHome = function renderHome(ctx) {
     const { state, week, plannedDay, planPct, streak, burned,
       latestWeight, water, waterTarget, dayDone, dayTotal, greeting, displayW, wUnit, svg,
-      renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed } = ctx;
+      renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed, renderHomeHabits } = ctx;
     let health = null;
     try { health = JSON.parse(localStorage.getItem('hx_hc_dashboard_cache') || 'null'); } catch (_) {}
     const steps = healthValue(health, 'steps.steps', null);
@@ -47,23 +47,21 @@
       </section>
 
       <div class="section-heading"><span class="section-heading__label">Today’s Progress</span><span style="color:var(--color-text-secondary);font-size:var(--font-size-xs);">Week ${week.week} of 8 · ${week.phaseLabel.split(' — ')[0]}</span></div>
-      <section class="premium-card home-progress-card">
-        <div class="home-progress-ring" style="--pct:${planPct};">
-          <div class="home-progress-ring__inner">
-            <div class="home-progress-ring__value">${planPct}%</div>
-            <div class="home-progress-ring__label">Goal</div>
-          </div>
-        </div>
-        <div class="home-progress-stats">
-          <div class="home-progress-stat"><span class="home-progress-stat__icon">${svg('progress',15)}</span><div><div class="home-progress-stat__value">${steps == null ? 'Not synced' : `${Number(steps).toLocaleString()} <span>/ ${DEFAULT_STEPS_GOAL.toLocaleString()}</span>`}</div><div class="home-progress-stat__label">Steps</div></div></div>
-          <div class="home-progress-stat"><span class="home-progress-stat__icon">${svg('nutrition',15)}</span><div><div class="home-progress-stat__value">${burned.toLocaleString()} <span>kcal</span></div><div class="home-progress-stat__label">Calories burned</div></div></div>
+      <section class="premium-card home-steps-card">
+        <span class="home-steps-card__icon">${svg('progress',22)}</span>
+        <div class="home-steps-card__body">
+          <div class="home-steps-card__value">${steps == null ? 'Not synced' : `${Number(steps).toLocaleString()}<span class="home-steps-card__goal"> / ${DEFAULT_STEPS_GOAL.toLocaleString()}</span>`}</div>
+          <div class="home-steps-card__label">Steps${steps == null ? '' : ' today'}</div>
+          ${steps == null ? '' : `<div class="home-steps-card__bar"><span style="width:${Math.min(100, Math.round(Number(steps) / DEFAULT_STEPS_GOAL * 100))}%;"></span></div>`}
         </div>
       </section>
+
+      ${renderHomeHabits ? renderHomeHabits() : ''}
 
       <div class="section-heading"><span class="section-heading__label">Next workout</span><button class="btn btn-ghost" data-nav="plan" style="padding:5px 8px;font-size:12px;">Plan</button></div>
       <button class="premium-card home-next-workout" data-home-day="${plannedDay ? week.days.indexOf(plannedDay) : 0}" style="width:100%;border:none;color:var(--color-text-primary);text-align:left;">
         <span class="home-next-workout__icon">${svg('workout', 20)}</span><span class="home-next-workout__copy"><span class="home-next-workout__title">${workoutName}</span><span class="home-next-workout__detail">${workoutDetail}</span></span>
-        <span style="margin-left:auto;color:var(--color-primary);font-size:var(--font-size-sm);font-weight:800;">${workoutAction}</span>
+        <span style="margin-left:auto;color:var(--color-interactive);font-size:var(--font-size-sm);font-weight:800;">${workoutAction}</span>
       </button>
 
       <div class="section-heading"><span class="section-heading__label">Recovery &amp; hydration</span></div>

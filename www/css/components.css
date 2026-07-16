@@ -40,7 +40,14 @@
 .day-tab.active { border-color: var(--color-interactive); }
 .day-tab.active .dtop { color: var(--color-interactive); }
 [data-theme="light"] .week-chip.active { color: #ffffff; }
+/* Bottom-nav active tab + the "TRAIN WITH INTENT" eyebrow dash read as the blue interactive
+   accent per the reference (legacy inline <style> had them on orange --accent; these equal-
+   specificity rules load after and win). Streak/PR/muscle highlights stay orange. */
+.nav-btn.active { color: var(--color-interactive); }
+.eyebrow-dash { background: var(--color-interactive); }
 .dialog-box { border-radius:var(--radius-card); }
+.dialog-title { font-size:var(--font-size-lg); font-weight:900; margin-bottom:var(--space-xs); color:var(--color-text-primary); }
+.btn-danger { background:#e5484d; color:#ffffff; }
 .toast { border-radius:var(--radius-md); }
 .ex-picker-avatar { border-radius:var(--radius-pill); }
 .timer-overlay .timer-ring { text-shadow:0 4px 18px rgba(255,90,31,.25); }

@@ -1325,6 +1325,7 @@ const ICONS = {
   body:'<circle cx="12" cy="5" r="2.2" fill="currentColor"/><path d="M12 8v7M8 11h8M9 20l3-5 3 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
   nutrition:'<path d="M12 21c-4 0-7-4-7-9a6 6 0 0 1 7-6 6 6 0 0 1 7 6c0 5-3 9-7 9z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 6c0-2 1.5-3.5 3-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
   progress:'<path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+  calc:'<rect x="5" y="3" width="14" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 7h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 11h.5M12 11h.5M16 11h.5M8 14h.5M12 14h.5M16 14h.5M8 17h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   check:'<path d="M4 12l5 5L20 6" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   x:'<path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
   plus:'<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
@@ -1634,6 +1635,21 @@ function persist(){
 /* ---------- Migration: runs once on boot if stored schema is older than current ---------- */
 
 function runMigrations(){
+  // One-time rest-timer default migration (independent of schema version so it also reaches
+  // pre-versioning installs, which return early below). The app's default rest timer changed
+  // from 90s to 0s (OFF); existing installs still have the old 90 persisted as their GLOBAL
+  // default in hx_settings, so their new exercises would keep defaulting to 90. Move only that
+  // stale global default to 0. It is flag-guarded (runs exactly once), only rewrites the exact
+  // old default value 90 — never a non-90 duration the user explicitly picked — and never
+  // touches any per-exercise, per-session, routine, or workout-history rest value. Fully
+  // reversible from Settings ▸ Default rest timer.
+  if(!LS.get("hx_rest_default_migrated_v1", false)){
+    if(state.settings.defaultRest === 90){
+      state.settings.defaultRest = 0;
+      LS.set("hx_settings", state.settings);
+    }
+    LS.set("hx_rest_default_migrated_v1", true);
+  }
   const stored = LS.get("hx_schema_version", null);
   if(stored===null){
     // Pre-versioning install (or brand new) — just stamp current version, no data shape to migrate
@@ -2398,8 +2414,22 @@ function recentExerciseNames(limit=10){
 function allLibraryExercises(){
   const custom = LS.get("hx_custom_exercises", []);
   const list = [];
-  Object.entries(LIBRARY).forEach(([cat, items])=> items.forEach(([name,presc,unit,muscle])=> list.push({name,cat,presc,unit,muscle,custom:false})));
-  custom.forEach(ex=> list.push({...ex, custom:true}));
+  // Dedupe by case-insensitive name. Built-ins are canonical and added first; a custom
+  // exercise whose name collides with a built-in (e.g. an accidentally re-created
+  // "Shoulder Press Machine") or with an earlier custom is skipped for DISPLAY only — the
+  // stored hx_custom_exercises record is never mutated here, so this is non-destructive and
+  // fixes the duplicate-row bug on load without touching user data.
+  const seen = new Set();
+  Object.entries(LIBRARY).forEach(([cat, items])=> items.forEach(([name,presc,unit,muscle])=>{
+    list.push({name,cat,presc,unit,muscle,custom:false});
+    seen.add((name||"").trim().toLowerCase());
+  }));
+  custom.forEach(ex=>{
+    const key = (ex.name||"").trim().toLowerCase();
+    if(!key || seen.has(key)) return;
+    seen.add(key);
+    list.push({...ex, custom:true});
+  });
   return list;
 }
 
@@ -3420,10 +3450,11 @@ function renderToast(){
 ========================================================= */
 let _resolver = null;
 
-function confirmDialog(message, renderFn){
+function confirmDialog(message, renderFn, opts){
   return new Promise(resolve=>{
     _resolver = resolve;
-    state.confirmDialog = { message };
+    // opts (all optional, backward-compatible): { title, confirmLabel, cancelLabel, danger }
+    state.confirmDialog = Object.assign({ message }, opts||{});
     if(renderFn) renderFn();
   });
 }
@@ -3438,13 +3469,15 @@ function resolveConfirmDialog(result, renderFn){
 
 function renderConfirmDialog(){
   if(!state.confirmDialog) return "";
+  const d = state.confirmDialog;
   return `
     <div class="dialog-backdrop" data-dialog-action="cancel"></div>
     <div class="dialog-box">
-      <div class="dialog-message">${state.confirmDialog.message}</div>
+      ${d.title?`<div class="dialog-title">${d.title}</div>`:''}
+      <div class="dialog-message">${d.message}</div>
       <div class="dialog-actions">
-        <button class="btn btn-ghost" data-dialog-action="cancel">Cancel</button>
-        <button class="btn btn-accent" data-dialog-action="confirm">Confirm</button>
+        <button class="btn btn-ghost" data-dialog-action="cancel">${d.cancelLabel||'Cancel'}</button>
+        <button class="btn ${d.danger?'btn-danger':'btn-accent'}" data-dialog-action="confirm">${d.confirmLabel||'Confirm'}</button>
       </div>
     </div>
   `;
@@ -3470,7 +3503,7 @@ function renderHomeTab(){
     state, week, plannedDay, planPct: overallPlanProgress(), streak: computeStreak(), targets: macroTargets(),
     eaten: Math.round(todayEaten()), proteinToday: Math.round(todayMacros().protein), latestWeight: state.bodylog[0],
     burned: todayBurned(), water: Math.round(todayWater()), waterTarget: state.settings.waterTargetMl || 2500,
-    dayDone, dayTotal, greeting, displayW, wUnit, svg, renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed
+    dayDone, dayTotal, greeting, displayW, wUnit, svg, renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed, renderHomeHabits
   });
   return renderLegacyHomeTab();
 }
@@ -3654,7 +3687,8 @@ function renderMoreSheet(){
   const items = [
     {id:"plan", label:"Training Plan", desc:"HYROX schedule & routines", color:"var(--steel)", icon:"plan"},
     {id:"library", label:"Library", desc:"Exercises & equipment", color:"var(--steel)", icon:"library"},
-    {id:"body", label:"Your Profile", desc:"Profile, body log & measurements", color:"var(--accent)", icon:"body"},
+    {id:"body", label:"Log Weight", desc:"Weight, trend & history", color:"var(--color-interactive)", icon:"body"},
+    {id:"calculators", label:"Calculator", desc:"BMI, BMR, TDEE & macros", color:"var(--steel)", icon:"calc"},
     {id:"settings", label:"Settings", desc:"Backups & preferences", color:"var(--muted)", icon:"gear"},
     {id:"health", label:"Health Connect", desc:"Steps, heart rate, calories, weight, workouts", color:"var(--mint)", icon:"progress"}
   ];
@@ -3813,6 +3847,41 @@ function hcCard(opts) {
  *  HealthConnectIntegration's in-memory _syncData if that's more recent (e.g. user just hit
  *  Sync elsewhere). Never calls into Health Connect itself, never requests permissions --
  *  purely a display of whatever's already been synced. */
+/* Compact Home habit card: today's completion state only — a quick-complete toggle and the
+   current streak per habit. It reuses the exact same hx_habit_completions store, the
+   data-toggle-habit handler, and habitStreak()/habitDateStr() as the full Habit Tracker on
+   Progress (single source of truth — no duplicated state). "View all" opens Progress > Habits
+   via data-open-progress-view, which already sets tab+progressView. */
+function renderHomeHabits(){
+  const today = habitDateStr();
+  const habits = state.habits || [];
+  const header = `<div class="section-heading"><span class="section-heading__label">Habits Today</span>${habits.length?`<button class="btn btn-ghost" data-open-progress-view="habits" style="padding:5px 8px;font-size:12px;">View all</button>`:''}</div>`;
+  if(!habits.length){
+    return header + `<button class="premium-card home-habits__empty" data-open-progress-view="habits">
+      <div class="home-habits__empty-title">Build a daily habit</div>
+      <div class="home-habits__empty-sub">Track water, steps, sleep and more — tap to add your first habit.</div>
+    </button>`;
+  }
+  const MAX = 4;
+  const shown = habits.slice(0, MAX);
+  const doneToday = habits.filter(h=> state.habitCompletions[h.id] && state.habitCompletions[h.id][today]).length;
+  return header + `<section class="premium-card home-habits">
+    <div class="home-habits__meta">${doneToday} of ${habits.length} done today</div>
+    ${shown.map(h=>{
+      const done = !!(state.habitCompletions[h.id] && state.habitCompletions[h.id][today]);
+      const streak = habitStreak(h.id);
+      return `<div class="home-habit-row">
+        <button class="set-check ${done?'done':''}" data-toggle-habit="${h.id}" aria-label="Mark ${h.name} complete for today">${done?svg('check',16):''}</button>
+        <div class="home-habit-row__body">
+          <div class="home-habit-row__name ${done?'is-done':''}">${h.name}</div>
+          <div class="home-habit-row__streak">🔥 ${streak} day streak</div>
+        </div>
+      </div>`;
+    }).join("")}
+    ${habits.length>MAX?`<button class="btn btn-secondary btn-block" data-open-progress-view="habits" style="margin-top:10px;">View all ${habits.length} habits</button>`:''}
+  </section>`;
+}
+
 function renderHomeHealthFeed() {
   if (!window.HealthConnect || !HealthConnect.isNativeAndroid()) return ""; // web version: omit entirely, not a broken card
 
@@ -4106,7 +4175,7 @@ function renderExercisePicker(){
       <div class="row-between" style="margin-bottom:14px;">
         <button class="ex-picker-textbtn" data-action="close-exercise-picker">Cancel</button>
         <span style="font-weight:800;font-size:16px;">New Exercise</span>
-        <button class="ex-picker-textbtn" data-action="save-custom-from-picker" style="color:var(--accent);">Create</button>
+        <button class="ex-picker-textbtn" data-action="save-custom-from-picker" style="color:var(--color-interactive);">Create</button>
       </div>
       ${customExerciseForm(true)}
     `;
@@ -4124,7 +4193,7 @@ function renderExercisePicker(){
     <div class="row-between" style="margin-bottom:14px;">
       <button class="ex-picker-textbtn" data-action="close-exercise-picker">Cancel</button>
       <span style="font-weight:800;font-size:16px;">${state.exercisePickerContext==="routine"?"Add to Routine":state.exercisePickerContext==="replace"?"Replace Exercise":"Add Exercise"}</span>
-      <button class="ex-picker-textbtn" data-action="show-create-in-picker" style="color:var(--accent);">Create</button>
+      <button class="ex-picker-textbtn" data-action="show-create-in-picker" style="color:var(--color-interactive);">Create</button>
     </div>
 
     <div class="search-bar" style="margin-bottom:10px;">
@@ -5320,14 +5389,6 @@ function renderBodyTab(){
     `;
   }
 
-  const calcCards = [
-    {key:"bmi",     label:"BMI",            sub:"Body mass index"},
-    {key:"bmr",     label:"BMR",            sub:"Basal metabolic rate"},
-    {key:"calorie", label:"TDEE",           sub:"Total daily energy"},
-    {key:"calorie", label:"Daily Calories", sub:"Goal-adjusted target"},
-    {key:"protein", label:"Macros",         sub:"Protein, carbs & fat"}
-  ];
-
   return `
     <div class="section-heading"><span class="section-heading__label">Log Weight</span></div>
     <section class="premium-card" style="padding:var(--space-md);">
@@ -5347,31 +5408,6 @@ function renderBodyTab(){
       </div>
       <button class="btn btn-secondary btn-block" data-action="view-weight-history" style="margin-top:12px;">View Weight History</button>
     </section>
-
-    <div class="section-heading"><span class="section-heading__label">Calculators</span><button class="btn btn-ghost" data-action="view-all-calculators" style="padding:5px 8px;font-size:12px;">View All</button></div>
-    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">
-      ${calcCards.map(cc=>`<button class="premium-card" data-calc-open="${cc.key}" style="text-align:left;border:1px solid var(--color-border);padding:14px;color:var(--color-text-primary);">
-        <div style="font-size:16px;font-weight:800;">${cc.label}</div>
-        <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">${cc.sub}</div>
-      </button>`).join("")}
-      <button class="premium-card" data-action="view-all-calculators" style="text-align:left;border:1px solid var(--color-border);padding:14px;color:var(--color-interactive);">
-        <div style="font-size:16px;font-weight:800;">View All Calculators →</div>
-        <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">LBM, ideal weight, HR zones &amp; more</div>
-      </button>
-    </div>
-
-    <div class="eyebrow-label">Body Composition</div>
-    <div class="info-box" style="padding:14px;">
-      ${bfPct!=null ? `<div class="grid2">
-        <div class="stat-card"><div class="stat-label">Body Fat</div><div class="stat-value" style="color:var(--accent);">${bfPct.toFixed(1)}<span class="stat-unit">%</span></div></div>
-        <div class="stat-card"><div class="stat-label">Fat Mass</div><div class="stat-value" style="color:var(--text);">${displayW(fatMass)}<span class="stat-unit">${wUnit()}</span></div></div>
-        <div class="stat-card"><div class="stat-label">Lean Body Mass</div><div class="stat-value" style="color:var(--steel);">${displayW(leanMass)}<span class="stat-unit">${wUnit()}</span></div></div>
-        <div class="stat-card"><div class="stat-label">Est. Muscle Mass</div><div class="stat-value" style="color:var(--mint);">${displayW(muscleMass)}<span class="stat-unit">${wUnit()}</span></div></div>
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:8px;">Fat/lean/muscle computed from your body-fat %${latestBF?' (from your latest log)':' (estimated from waist + neck via US Navy method)'}. Muscle mass is a lean-mass-based estimate, not a scan.</div>`
-      : `<div style="font-size:13px;color:var(--muted);">Log a <b style="color:var(--text);">waist measurement</b> below and set your neck in the <b style="color:var(--text);">Body Fat calculator</b> to see an estimated fat mass, lean mass, and muscle mass here.</div>
-      <div class="stat-card" style="margin-top:10px;"><div class="stat-label">Lean Body Mass (Boer estimate)</div><div class="stat-value" style="color:var(--steel);">${displayW(lbmBoer)}<span class="stat-unit">${wUnit()}</span></div></div>`}
-    </div>
 
     <div class="eyebrow-label" id="body-log-entry">Log Entry</div>
     <div class="info-box" style="padding:14px;">
@@ -5810,7 +5846,7 @@ function renderHyroxSchedule(){
     <div class="level-rail" style="display:flex;gap:6px;margin-bottom:12px;">
       ${Object.entries(LEVELS).map(([key,lv])=>`
         <button class="level-chip ${state.activeLevel===key?'active':''}" data-level="${key}"
-          style="flex:1;padding:9px 6px;border-radius:10px;border:1.5px solid ${state.activeLevel===key?'var(--accent)':'var(--border)'};background:${state.activeLevel===key?'rgba(255,90,31,.12)':'var(--surface)'};color:${state.activeLevel===key?'var(--accent)':'var(--muted)'};font-weight:800;font-size:12px;cursor:pointer;">
+          style="flex:1;padding:9px 6px;border-radius:10px;border:1.5px solid ${state.activeLevel===key?'var(--color-interactive)':'var(--border)'};background:${state.activeLevel===key?'var(--color-interactive-soft)':'var(--surface)'};color:${state.activeLevel===key?'var(--color-interactive)':'var(--muted)'};font-weight:800;font-size:12px;cursor:pointer;">
           ${lv.label}
         </button>`).join("")}
     </div>
@@ -6340,7 +6376,7 @@ function renderWorkoutTab(){
           <input type="text" class="notes-inline" placeholder="Add notes here…" value="${ex.notes||''}" data-notes-exercise="${exi}">
           <div class="row-between">
             <button class="rest-toggle" data-rest-toggle="${exi}">${svg('workout',13)} Rest Timer: ${restLabel}</button>
-            ${showPlates?`<button class="rest-toggle" data-plate-calc="${exi}" style="color:var(--accent);">Plates</button>`:""}
+            ${showPlates?`<button class="rest-toggle" data-plate-calc="${exi}" style="color:var(--color-interactive);">Plates</button>`:""}
           </div>
           ${state.plateCalcOpen===String(exi) ? renderPlatePopover(exi) : ""}
 
@@ -6510,8 +6546,9 @@ function renderLibraryTab(){
     <button class="btn btn-accent btn-block" data-action="show-add-custom" style="margin-bottom:16px;">${svg('plus',16)} Add Custom Exercise</button>
     <div id="custom-form-slot">${state.showCustomForm ? customExerciseForm() : ""}</div>
     ${items.map(ex=>`<div class="lib-item" data-view-exercise="${ex.name}" style="cursor:pointer;">
-      <div><div class="lib-item-name">${ex.name}${ex.custom?' <span style="color:var(--accent);font-size:10px;">CUSTOM</span>':''}${EXERCISE_DETAILS[ex.name]?' <span style="color:var(--mint);font-size:10px;">GUIDE</span>':''}</div>
+      <div style="min-width:0;"><div class="lib-item-name">${ex.name}${ex.custom?' <span style="color:var(--accent);font-size:10px;">CUSTOM</span>':''}${EXERCISE_DETAILS[ex.name]?' <span style="color:var(--mint);font-size:10px;">GUIDE</span>':''}</div>
       <div class="lib-item-cat">${ex.cat} · ${ex.presc}</div></div>
+      ${ex.custom?`<button class="del" data-del-custom-exercise="${ex.name}" title="Remove custom exercise" aria-label="Remove custom exercise ${ex.name}" style="flex-shrink:0;">${svg('x',15)}</button>`:''}
     </div>`).join("")}
     ${items.length===0?`<div class="empty-note">No exercises match.</div>`:""}
   `;
@@ -6557,8 +6594,15 @@ function renderCsvImportPreview(){
 function attachHandlers(){
   document.querySelectorAll("[data-nav]").forEach(el=>{
     el.addEventListener("click", ()=>{
-      state.tab = el.dataset.nav;
-      state.bodyView = null; // always land on the Log Weight page, not a stale calculator view
+      const dest = el.dataset.nav;
+      if(dest === "calculators"){
+        // Calculator is its own destination; it renders inside the body tab's calculator view.
+        state.tab = "body";
+        state.bodyView = "calculators";
+      } else {
+        state.tab = dest;
+        state.bodyView = null; // always land on the Log Weight page, not a stale calculator view
+      }
       render();
       if (["home", "health", "nutrition"].includes(state.tab)) window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
     });
@@ -6942,9 +6986,23 @@ function attachHandlers(){
     // Validate completed work before finishing a live (non-edit) session. Finishing with
     // nothing checked off is allowed after explicit confirmation (maybe cardio-only /
     // forgot to tick) — but never silently.
-    if(!state.editingSessionId && state.session.exercises.length && computeCompletedSets(state.session.exercises)===0){
-      const ok = await confirmDialog("No sets are marked complete. Finish this workout anyway?", render);
-      if(!ok) return;
+    // Empty workout = no completed exercises. Per spec it is DISCARDED, never saved: it must
+    // not create a history entry or touch analytics, streaks, achievements, or PRs. (Editing
+    // an existing session is a correction, not a new empty workout, so it's exempt.)
+    if(!state.editingSessionId && computeCompletedSets(state.session.exercises)===0){
+      const discard = await confirmDialog(
+        "This workout has no completed exercises. Discard this workout?",
+        render,
+        { title:"Discard Empty Workout", confirmLabel:"Discard Workout", cancelLabel:"Continue Workout", danger:true }
+      );
+      if(!discard) return; // "Continue Workout" — keep the live session open, save nothing.
+      // "Discard Workout" — clear the live session with no save side-effects.
+      state.session = null;
+      state.editingSessionId = null;
+      state.workoutCompleteId = null;
+      applyWakeLock();
+      render();
+      return;
     }
     if(_finishingSession || !state.session) return; // re-check after the await
     _finishingSession = true;
@@ -7399,9 +7457,31 @@ function attachHandlers(){
     const muscle = document.getElementById("custom-muscle").value;
     const presc = document.getElementById("custom-presc").value.trim() || "—";
     if(!name) return;
+    // Prevent duplicate exercises: reject a name that already exists (case-insensitive) in the
+    // built-in library or among existing custom exercises. Root cause of the reported
+    // "Shoulder Press Machine" duplicate was that this check did not exist.
+    const key = name.toLowerCase();
+    if(allLibraryExercises().some(e=>(e.name||"").trim().toLowerCase()===key)){
+      showToast(`“${name}” already exists in the exercise library.`, 'error', render);
+      return;
+    }
     state.customExercises.push({ name, cat, presc, unit:"reps", muscle });
     state.showCustomForm = false;
     render();
+  });
+  // Delete a custom exercise from the library. Built-in exercises have no delete button
+  // (they're base data); only user-created custom exercises are removable. This is the
+  // previously-missing delete path that left accidental duplicates unremovable.
+  document.querySelectorAll("[data-del-custom-exercise]").forEach(el=>{
+    el.addEventListener("click", async (ev)=>{
+      ev.stopPropagation();
+      const name = el.dataset.delCustomExercise;
+      if(!(await confirmDialog(`Remove the custom exercise “${name}”? This does not affect any workout you've already logged.`, render))) return;
+      const key = (name||"").trim().toLowerCase();
+      state.customExercises = state.customExercises.filter(x=>(x.name||"").trim().toLowerCase() !== key);
+      persist();
+      render();
+    });
   });
 
   // Exercise picker (full-screen Add Exercise flow)
