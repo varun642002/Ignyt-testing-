@@ -1539,6 +1539,10 @@ const state = {
   foodLog: LS.get("hx_food_log",[]),
   routines: LS.get("hx_routines",[]),
   routineBuilder: null,
+  habits: LS.get("hx_habits",[]),
+  habitCompletions: LS.get("hx_habit_completions",{}),
+  habitBuilderName: "",
+  editingHabitId: null,
   calc: LS.get("hx_calc", {
     activeCalc:"bmr", result:null,
     neck:38, waist:90, hip:95, restingHR:60,
@@ -1609,6 +1613,8 @@ function persist(){
   LS.set("hx_workout_log", state.workoutLog);
   LS.set("hx_food_log", state.foodLog);
   LS.set("hx_routines", state.routines);
+  LS.set("hx_habits", state.habits);
+  LS.set("hx_habit_completions", state.habitCompletions);
   LS.set("hx_calc", state.calc);
   LS.set("hx_settings", state.settings);
   LS.set("hx_rest_duration", state.restDuration);
@@ -2642,6 +2648,71 @@ function computeStreak(){
     cursor.setDate(cursor.getDate()-1);
   }
   return streak;
+}
+
+/* =========================================================
+   HABIT TRACKER — genuinely new feature (Progress page). Deliberately does NOT reuse
+   todayStr()/computeStreak()'s date pattern (new Date().toISOString().slice(0,10) on a
+   local-midnight Date): that pattern converts to UTC before formatting, which is off by one
+   day for any user whose local timezone offset is non-zero at midnight (e.g. a fixed +5:30
+   offset always maps local midnight to the previous UTC day). It's a pre-existing quirk in
+   the rest of the app's date handling that's out of scope to change here (it would touch
+   historical data keys across food/body/workout logging), but the master request explicitly
+   asks to avoid exactly this class of bug for the new Habit Tracker, so habitDateStr() below
+   corrects for local timezone offset before formatting.
+========================================================= */
+
+function habitDateStr(d){
+  d = d || new Date();
+  const tzCorrected = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+  return tzCorrected.toISOString().slice(0,10);
+}
+
+function habitStreak(habitId){
+  const done = state.habitCompletions[habitId] || {};
+  let streak = 0;
+  let cursor = new Date();
+  cursor.setHours(0,0,0,0);
+  if(!done[habitDateStr(cursor)]) cursor.setDate(cursor.getDate()-1); // today not done yet -> still counts from yesterday
+  while(done[habitDateStr(cursor)]){
+    streak++;
+    cursor.setDate(cursor.getDate()-1);
+  }
+  return streak;
+}
+
+function habitBestStreak(habitId){
+  const done = state.habitCompletions[habitId] || {};
+  const dates = Object.keys(done).filter(k=>done[k]).sort();
+  if(!dates.length) return 0;
+  let best = 1, run = 1;
+  for(let i=1;i<dates.length;i++){
+    const prev = new Date(dates[i-1]+"T00:00:00");
+    const cur = new Date(dates[i]+"T00:00:00");
+    const diffDays = Math.round((cur-prev)/86400000);
+    run = diffDays===1 ? run+1 : 1;
+    if(run>best) best = run;
+  }
+  return best;
+}
+
+function habitWeekCompletion(habitId){
+  const done = state.habitCompletions[habitId] || {};
+  let count = 0;
+  const cursor = new Date();
+  cursor.setHours(0,0,0,0);
+  for(let i=0;i<7;i++){
+    if(done[habitDateStr(cursor)]) count++;
+    cursor.setDate(cursor.getDate()-1);
+  }
+  return count;
+}
+
+function habitMonthCompletion(habitId){
+  const done = state.habitCompletions[habitId] || {};
+  const now = new Date();
+  const prefix = habitDateStr(now).slice(0,7); // YYYY-MM
+  return Object.keys(done).filter(k=>done[k] && k.startsWith(prefix)).length;
 }
 
 function computeMuscleDistribution(daysBack, offsetDays){
@@ -4591,6 +4662,7 @@ function renderExerciseDetailHistory(history){
 const PROGRESS_VIEWS = {
   prs:          { icon:"🏆", title:"Personal Records",   sub:"Track your best lifts and performance records." },
   achievements: { icon:"🎖️", title:"Achievements",       sub:"View milestones, streaks, and unlocked achievements." },
+  habits:       { icon:"🔁", title:"Habit Tracker",      sub:"Daily habits, streaks, and completion history." },
   analytics:    { icon:"📊", title:"Workout Analytics",  sub:"Training frequency, volume, duration, and muscle distribution." },
   exercise:     { icon:"📈", title:"Exercise Progress",  sub:"Weight and estimated 1RM trends for individual exercises." },
   body:         { icon:"⚖️", title:"Body Progress",      sub:"Body weight and measurement trends." },
@@ -4621,7 +4693,7 @@ function renderProgressTab(){
   const view = state.progressView;
   if(view && PROGRESS_VIEWS[view]){
     const detailFns = {
-      prs: renderProgressPRs, achievements: renderProgressAchievements,
+      prs: renderProgressPRs, achievements: renderProgressAchievements, habits: renderProgressHabits,
       analytics: renderProgressAnalytics, exercise: renderProgressExercise,
       body: renderProgressBody, nutrition: renderProgressNutrition,
       calendar: renderProgressCalendar, plan: renderProgressPlan
@@ -4734,6 +4806,47 @@ function renderProgressAchievements(){
       </div>`).join("")}
     </div>`:""}
     <div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5;">Dates show when each achievement was unlocked in IGNYT. For imported workout history, that's the day of the import — the counts themselves are always genuine.</div>
+  `;
+}
+
+/* ---------- Habit Tracker ---------- */
+
+function renderProgressHabits(){
+  const today = habitDateStr();
+  return `
+    <div class="info-box" style="padding:14px;margin-bottom:14px;">
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="habit-new-name" placeholder="New habit (e.g. Drink 3L water)" value="${state.habitBuilderName||''}"
+          style="flex:1;background:var(--surface-alt);border-radius:8px;padding:10px;font-size:14px;color:var(--text);min-width:0;">
+        <button class="btn btn-accent" data-action="add-habit" style="flex-shrink:0;padding:10px 16px;">${svg('plus',14)} Add</button>
+      </div>
+    </div>
+    ${state.habits.length===0 ? `<div class="empty-note">No habits yet — add one above to start tracking daily streaks.</div>` :
+      state.habits.map(h=>{
+        const done = !!(state.habitCompletions[h.id] && state.habitCompletions[h.id][today]);
+        const streak = habitStreak(h.id);
+        const best = habitBestStreak(h.id);
+        const week = habitWeekCompletion(h.id);
+        const month = habitMonthCompletion(h.id);
+        const isEditing = state.editingHabitId === h.id;
+        return `<div class="ex-log-card" style="margin-bottom:10px;">
+          <div class="row-between" style="align-items:flex-start;">
+            ${isEditing ? `
+              <input type="text" id="habit-rename-${h.id}" value="${h.name}" style="flex:1;min-width:0;background:var(--surface-alt);border-radius:8px;padding:8px 10px;font-size:15px;font-weight:700;color:var(--text);margin-right:8px;">
+            ` : `
+              <div style="min-width:0;flex:1;cursor:pointer;" data-rename-habit="${h.id}">
+                <div style="font-weight:800;font-size:16px;">${h.name}</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:2px;">🔥 ${streak} day streak · best ${best} · ${week}/7 this week · ${month} this month</div>
+              </div>
+            `}
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              ${isEditing ? `<button class="btn btn-ghost" data-action="save-habit-name" data-habit-id="${h.id}" style="padding:8px 10px;font-size:12px;">Save</button>`
+                : `<button class="set-check ${done?'done':''}" data-toggle-habit="${h.id}" aria-label="Mark ${h.name} complete for today">${done?svg('check',16):''}</button>
+                   <button class="del" data-del-habit="${h.id}" aria-label="Delete habit">${svg('x',14)}</button>`}
+            </div>
+          </div>
+        </div>`;
+      }).join("")}
   `;
 }
 
@@ -6602,6 +6715,53 @@ function attachHandlers(){
       render();
     });
   });
+
+  // Habit Tracker (Progress page)
+  const addHabitBtn = document.querySelector('[data-action="add-habit"]');
+  if(addHabitBtn) addHabitBtn.addEventListener("click", ()=>{
+    const nameEl = document.getElementById("habit-new-name");
+    const name = nameEl ? nameEl.value.trim() : "";
+    if(!name) return;
+    state.habits.unshift({ id: Date.now(), name, createdAt: Date.now() });
+    state.habitBuilderName = "";
+    render();
+  });
+  document.querySelectorAll("[data-toggle-habit]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = Number(el.dataset.toggleHabit);
+      const today = habitDateStr();
+      if(!state.habitCompletions[id]) state.habitCompletions[id] = {};
+      if(state.habitCompletions[id][today]) delete state.habitCompletions[id][today];
+      else state.habitCompletions[id][today] = Date.now();
+      render();
+    });
+  });
+  document.querySelectorAll("[data-del-habit]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const id = Number(el.dataset.delHabit);
+      if(!(await confirmDialog("Delete this habit and its completion history? This can't be undone.", render))) return;
+      state.habits = state.habits.filter(h=>h.id !== id);
+      delete state.habitCompletions[id];
+      render();
+    });
+  });
+  document.querySelectorAll("[data-rename-habit]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.editingHabitId = Number(el.dataset.renameHabit);
+      render();
+    });
+  });
+  const saveHabitNameBtn = document.querySelector('[data-action="save-habit-name"]');
+  if(saveHabitNameBtn) saveHabitNameBtn.addEventListener("click", ()=>{
+    const id = Number(saveHabitNameBtn.dataset.habitId);
+    const input = document.getElementById(`habit-rename-${id}`);
+    const name = input ? input.value.trim() : "";
+    const habit = state.habits.find(h=>h.id===id);
+    if(habit && name) habit.name = name;
+    state.editingHabitId = null;
+    render();
+  });
+
   const finishBtn = document.querySelector('[data-action="finish-session"]');
   if(finishBtn) finishBtn.addEventListener("click", async ()=>{
     if(_finishingSession) return; // double-tap guard: one workout, one save
