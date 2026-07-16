@@ -1,39 +1,63 @@
 {
-  "task_id": "IGNYT-MASTER-REDESIGN-001",
-  "implementationStatus": "ALL_PLANNED_PHASES_COMPLETE (Coder-side; pending independent/real-device review)",
-  "phaseSummary": [
-    { "phase": 1, "name": "Design foundation: blue interactive accent token + reference light theme", "status": "COMPLETED" },
-    { "phase": 2, "name": "Home Today's Progress -> Steps + Total Calories Burned only, ring = genuine plan %", "status": "COMPLETED" },
-    { "phase": 3, "name": "Workout: routines moved onto Workout page, 2 recent sessions + Show All, rest-timer default 0", "status": "COMPLETED" },
-    { "phase": 4, "name": "Profile: Body Fat % removed from Log Weight, PR + Achievement entry points, body-progress photos (IndexedDB)", "status": "COMPLETED" },
-    { "phase": 5, "name": "Progress: Habit Tracker (new feature); redundant Nutrition Progress investigated (not actually redundant, documented)", "status": "COMPLETED" },
-    { "phase": 6, "name": "Calculator consolidation verified already-done; blue interactive accent extended to legacy selection chips/tabs", "status": "COMPLETED" },
-    { "phase": 7, "name": "Full regression sweep + final clean Android build + report", "status": "COMPLETED" }
+  "task_id": "IGNYT-UX-IMPROVEMENTS-002",
+  "implementationStatus": "COMPLETED (Coder-side; pending independent/real-device review)",
+  "items": [
+    {
+      "item": 1,
+      "name": "Remove Your Profile form from Log Weight page",
+      "status": "COMPLETED",
+      "detail": "The long profile form (name/height/age/gender/activity/goal/hyrox/training-days/equipment + Maintenance/Daily-Calorie-Goal display) was extracted into a new renderProfileForm() and MOVED to the Settings tab (new 'Profile' section, right under Account). It was moved, not deleted, because those fields drive the app-wide calorie/macro math. All input IDs/data-attrs are unchanged so the existing profile handlers bind identically on Settings. Verified: editing height in Settings persists to hx_profile and re-renders."
+    },
+    {
+      "item": 2,
+      "name": "Premium Log Weight card",
+      "status": "COMPLETED",
+      "detail": "New card at the top of the Profile (body) tab: Current Weight (large mono), last-updated date, Add Weight button (scrolls to + focuses the existing Log Entry weight field), weight trend graph (reuses sparklineChart with the blue --color-interactive accent), and a 3-stat row Highest / Lowest / 7-Day change. View Weight History button expands the full history and scrolls to it. No body-fat/height/gender/age/goal/activity/equipment/hyrox on this page. Empty state handled (no weigh-ins => 'from your profile' + 'log two weigh-ins to see your trend')."
+    },
+    {
+      "item": 3,
+      "name": "Calculator section + BMI calculator",
+      "status": "COMPLETED",
+      "detail": "Card grid below Log Weight: BMI, BMR, TDEE, Daily Calories, Macros + a 'View All Calculators' card, all master-UI premium-card style. Tapping a card (or View All) opens a dedicated in-tab calculator view (state.bodyView='calculators', back button) using the existing renderCalculators() engine. Added a REAL BMI calculator (it was genuinely missing): new CALCULATORS entry, a render block, and a run-calculator branch computing weight/(height/100)^2 with standard category bands. TDEE and Daily Calories both open the existing 'calorie' calc (which computes both maintenance TDEE and the goal-adjusted target); Macros opens the 'protein' calc; View All exposes the full 10-calculator picker (carbs/fat/lbm/ideal/bodyfat/bodytype/hr). No existing formula changed."
+    },
+    {
+      "item": 4,
+      "name": "My Routines readability",
+      "status": "COMPLETED",
+      "detail": "Routine name is now 19px, font-weight 700 (semi-bold), line-height 1.3, flex:1 min-width:0 with overflow-wrap:anywhere so a long name wraps to a second line instead of truncating; card padding increased to 18px, delete button aligned top and shrink-locked. Verified a 44-char name wraps to 2 lines at 360px with no truncation and no page overflow."
+    },
+    {
+      "item": 5,
+      "name": "Workout search keyboard bug (root-cause fix)",
+      "status": "COMPLETED",
+      "rootCause": "The exercise-picker search input's handler called the global render() on every keystroke. render() rebuilds the ENTIRE app via #app.innerHTML = ..., which DESTROYS and recreates the <input> element. Android (and mobile WebViews generally) dismiss the soft keyboard the instant the focused element is removed from the DOM; the old setTimeout(0) that re-focused the freshly-created input then reopened the keyboard -> the observed dismiss-then-reopen flicker on every character. Not a React key/remount issue (the app is vanilla JS with full-innerHTML rendering) but the same class of bug: focus lost because the focused node is replaced.",
+      "solution": "Split the picker so the header + search <input> + filters render ONCE per full render, and only the results list lives in a stable #ex-picker-results container. The input handler now updates ONLY that container's innerHTML (via a small 120ms debounce), never touching the <input>. Because the input element is never destroyed, focus/keyboard/caret are preserved automatically with zero re-focus tricks. Row clicks were switched to a single delegated listener on the stable container so they keep working after each in-place results refresh. Removed the old render()+setTimeout re-focus hack entirely.",
+      "verified": "Tagged the input element with a custom property, focused it, dispatched 5 real input events ('bench'): the tag survived (same element, never recreated), document.activeElement stayed the input the whole time, value became 'bench', results filtered to 11 matches, and picking a filtered result still added the exercise. Zero console errors."
+    },
+    {
+      "item": 6,
+      "name": "Search performance",
+      "status": "COMPLETED",
+      "detail": "Input value updates instantly (native), only the results list rebuilds and only after a 120ms debounce, so a fast typist doesn't rebuild the ~478-row list on every keystroke. No full-app re-render per keystroke anymore. Added autocomplete/autocorrect/autocapitalize/spellcheck=off on the search input for cleaner mobile typing."
+    },
+    {
+      "item": 7,
+      "name": "UI consistency",
+      "status": "COMPLETED",
+      "detail": "Log Weight + Calculator sections use .premium-card, .section-heading, --color-interactive (blue) accents, --color-border, --color-text-secondary, radius/shadow tokens, and the shared button classes -- identical to the master design system, responsive, and theme-aware (light + dark)."
+    },
+    {
+      "item": 8,
+      "name": "Preserve existing functionality",
+      "status": "COMPLETED",
+      "detail": "Body Composition, Log Entry (weight+sleep+hrv+measurements), Body History, Body Progress Photos, Records & Achievements all remain on the body tab. Calculator formulas unchanged (only BMI added). No storage keys renamed/removed (bodyView is transient, not persisted). Health Connect / nutrition / AI Coach / progress untouched. Regression spot-checks all clean."
+    }
   ],
-  "filesCreated": [
-    "www/js/body-photos-db.js",
-    "AGENTS.md (pre-existing untracked, first committed this task)",
-    "ai-workflow/* (workflow artifacts + reference image)"
-  ],
-  "filesModified": [
-    "www/app.js",
-    "www/index.html",
-    "www/sw.js",
-    "www/js/pages/home.js",
-    "www/js/pages/workout.js",
-    "www/css/tokens.css",
-    "www/css/layout.css",
-    "www/css/components.css"
-  ],
-  "dataAndStorageChanges": {
-    "newKeys": ["hx_habits", "hx_habit_completions", "IndexedDB database 'ignyt-body-photos'"],
-    "migrations": "None required. Habit keys are brand-new (default to []/{}). defaultRest change 90->0 needs no migration (existing installs already persist their own value). No existing key was renamed, deleted, or reshaped.",
-    "removed": "The bodyfat field is no longer WRITTEN by new Log Entry submissions, but historical bodylog entries that already have a .bodyfat value keep it (all readers treat it as optional), and the standalone Body Fat calculator + waist/neck Navy estimate remain."
-  },
+  "filesModified": ["www/app.js", "www/js/pages/workout.js"],
+  "filesCreated": [],
   "knownLimitations": [
-    "Start Workout's own per-reference visual redesign (numbered exercise rows with drag handle, muscle-diagram header) was not done -- it lives inside the still-un-extracted ~1,600-line active-session renderer in app.js; flagged for a future dedicated pass.",
-    "The reference's header theme-toggle button was not added (theme is still changed via Settings); this is an additive UI element, its absence breaks nothing.",
-    "Screenshot capture was unavailable in this environment for the entire task -- all visual verification used DOM structure, computed CSS, getBoundingClientRect(), and network/console inspection in a real browser session, never a rendered image.",
-    "No independent Playwright MCP pass and no real Android device testing were performed -- everything is STATICALLY VERIFIED + BROWSER VERIFIED + BUILD VERIFIED only."
+    "The actual on-device soft-keyboard behavior was proven by the DOM-level root-cause fix (input element persists + focus retained), not by observing a physical Android keyboard -- that remains a real-device confirmation.",
+    "TDEE and Daily Calories cards both open the same underlying 'calorie' calculator (which genuinely outputs both maintenance and the goal-adjusted target); this is intentional given the existing calculator set.",
+    "Screenshot capture unavailable in this environment; verification is DOM/computed-style/behavioral, not rendered images."
   ]
 }

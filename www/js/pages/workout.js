@@ -25,12 +25,12 @@
       </div>
       ${state.routineBuilder ? renderRoutineBuilder() : ""}
       ${state.routines.length === 0 && !state.routineBuilder ? `<div class="empty-note">No routines saved yet — build one to start logging faster.</div>` :
-        state.routines.map(r => `<div class="routine-card">
-          <div class="row-between">
-            <span style="font-weight:800;font-size:15px;">${r.name}</span>
-            <button class="del" data-del-routine="${r.id}" aria-label="Delete routine">${svg('x',14)}</button>
+        state.routines.map(r => `<div class="routine-card" style="padding:18px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+            <span style="font-weight:700;font-size:19px;line-height:1.3;flex:1;min-width:0;overflow-wrap:anywhere;">${r.name}</span>
+            <button class="del" data-del-routine="${r.id}" aria-label="Delete routine" style="flex-shrink:0;margin-top:-4px;">${svg('x',16)}</button>
           </div>
-          <div style="font-size:12px;color:var(--muted);margin:4px 0 12px;">${r.exercises.length} exercise${r.exercises.length !== 1 ? 's' : ''}</div>
+          <div style="font-size:13px;color:var(--muted);margin:6px 0 14px;">${r.exercises.length} exercise${r.exercises.length !== 1 ? 's' : ''}</div>
           <button class="btn btn-steel btn-block" data-start-routine="${r.id}">Start Workout</button>
         </div>`).join("")}
 

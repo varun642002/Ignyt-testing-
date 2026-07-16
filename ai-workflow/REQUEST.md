@@ -1,33 +1,16 @@
 # Original Feature Request
 
-**Task ID:** IGNYT-MASTER-REDESIGN-001
-**Planner:** User-supplied master prompt (`C:\Users\varun\Downloads\REQUEST.md`), adopted verbatim as the active request per its own instruction to "update and follow [ai-workflow files] according to the repository's established rules."
-**Supersedes / pauses:** `IGNYT-EXERCISE-IMAGES-001` (see `PLAN.json` history below) — that plan was approved but not yet implemented (only the `ai-workflow/` scaffolding itself had been created). It is paused, not discarded, and can resume after this task.
-**Primary visual reference:** `ai-workflow/references/ignyt-master-ui-reference.jpeg` (10-panel light-theme screenshot set: AI Coach empty state, Progress, Nutrition Overview, Workout list, Home, Workout Analytics, Nutrition Meals, Start Workout, AI Coach chat).
+**Task ID:** IGNYT-UX-IMPROVEMENTS-002
+**Supersedes active request:** the master redesign (IGNYT-MASTER-REDESIGN-001) is implementation-complete through Phase 7; this is a follow-up UX/bug-fix batch.
 
-## User Request
+## User Request (verbatim summary)
 
-Full verbatim master prompt received from the user — see conversation history. Summary: redesign and restructure the existing IGNYT fitness application into one coherent premium light/dark design system (light-theme primary reference: cool blue-gray background, white elevated cards, bright blue primary accent) applied across every existing screen, plus a set of explicit functional restructuring requirements:
-
-- Global design system (centralized tokens, light theme primary + adapted dark theme, blue primary accent).
-- Home: simplify "Today's Progress" to Steps + Total Calories Burned only (remove Protein/nutrition metrics from that specific card).
-- Workout: routines move onto the Workout page itself (not hidden in Plan); main page shows only the 2 most recent sessions + "Show All" for full history; Start Workout screen redesign.
-- Default rest timer for new exercise configs changes to 0s; existing custom rest durations preserved.
-- Profile consolidation: personal info, body & fitness info, log weight, weight history, body-progress photos, Personal Records, Achievements all reachable from Profile.
-- Remove Body Fat % from the Log Weight UI (historical data preserved).
-- Body-progress photo storage (date, optional note, category, view, delete) using appropriate device storage (not base64 in localStorage).
-- Progress page restructuring + Habit Tracker (create/edit/delete habits, mark complete, streaks, history) added to Progress; redundant Nutrition Progress content removed from Progress (core Nutrition page untouched).
-- Nutrition: Overview/Meals/Insights structure, preserve all existing calorie/macro/water functionality.
-- AI Coach: visual consistency with the rest of the app; no fabricated AI responses without a real backend.
-- Calculator consolidation into one clear location; avoid duplication.
-- Full mobile responsiveness (320-430px), no overflow/clipping/collision.
-- Zero data loss; safe migrations only; no fabricated data anywhere.
-
-## Non-Negotiable Requirements (carried over from the master prompt and AGENTS.md)
-
-- Preserve every existing IGNYT feature; do not remove, hide, disable, rename, or make inaccessible.
-- Preserve all existing user data (workout history, routines, plans, HYROX schedules, nutrition/food log, progress/insights, AI Coach, profile, settings, Firebase auth/cloud sync, Health Connect, localStorage, service worker/offline behavior).
-- Do not fabricate health, workout, nutrition, or progress data.
-- Do not fabricate AI responses without a real backend.
-- Any storage schema change requires a safe, backward-compatible migration; never clear user storage to solve a migration problem.
-- Reference image governs *visual* decisions; explicit written functional requirements in the master prompt govern *functional/data* decisions when the two conflict (see PLAN.json "resolved conflicts" for the two cases found).
+1. Remove the long "Your Profile" form from the Profile/Log-Weight page; replace with two premium sections: Log Weight + Calculator.
+2. Log Weight card: current weight, last updated, Add Weight button, weight trend graph, last-7-days summary, highest, lowest, View Weight History. NO body fat %, height, gender, age, goal, activity, equipment, hyrox (those move to Settings/Profile).
+3. Calculator section below Log Weight: cards for BMI, BMR, TDEE, Daily Calories, Macro + "View All Calculators" opening the dedicated calculator page; master-UI card style.
+4. My Routines: larger, semi-bold, better spacing/padding, prevent truncation, wrap to a second line, responsive.
+5. Workout search keyboard bug: keyboard dismisses+reopens on every keystroke. Find and fix the ROOT CAUSE (no hacks). Keyboard must stay open, input never loses focus, results update without closing keyboard, no flicker/focus jumps.
+6. Search performance: instant filtering, debounce only if necessary, no unnecessary renders, preserve focus.
+7. UI consistency: new sections follow the global design system (cards, blue accent, rounded, shadows, spacing, typography, responsive, light+dark).
+8. Preserve everything: workout history, routines, Health Connect, nutrition, AI Coach, progress, achievements, PRs, body photos, weight history, calculator formulas.
+9. Validate + report: files modified, root cause of keyboard bug, solution, test results, remaining issues.

@@ -1280,6 +1280,7 @@ const ACTIVITY_MULTIPLIERS = [
 ];
 
 const CALCULATORS = [
+  {key:"bmi", label:"BMI"},
   {key:"bmr", label:"BMR"},
   {key:"calorie", label:"Calories / TDEE (with goal)"},
   {key:"protein", label:"Protein Intake"},
@@ -1549,6 +1550,7 @@ const state = {
   bodyPhotos: [],
   bodyPhotoCategory: "Front",
   viewingBodyPhotoId: null,
+  bodyView: null, // null = Log Weight page; 'calculators' = dedicated calculator view (transient, not persisted)
   calc: LS.get("hx_calc", {
     activeCalc:"bmr", result:null,
     neck:38, waist:90, hip:95, restingHR:60,
@@ -3266,6 +3268,8 @@ function renderSettingsTab(){
   const s = state.settings;
   return `
     ${renderAccountSection()}
+    <div class="eyebrow-label">Profile</div>
+    ${renderProfileForm()}
     <div class="eyebrow-label">Export Data</div>
     <div class="info-box" style="padding:14px;">
       <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export your entire workout and measurement history. The JSON backup can be imported back; CSVs are for spreadsheets.</div>
@@ -4108,21 +4112,14 @@ function renderExercisePicker(){
     `;
   }
 
-  const search = state.exercisePickerSearch.trim().toLowerCase();
   const equip = state.exercisePickerEquipment;
   const muscleFilter = state.exercisePickerMuscle;
-  let items = allLibraryExercises();
-  if(equip!=="All") items = items.filter(i=>i.cat===equip);
-  if(muscleFilter!=="All") items = items.filter(i=>i.muscle===muscleFilter);
-  if(search) items = items.filter(i=>i.name.toLowerCase().includes(search));
-
-  const isFiltering = !!search || equip!=="All" || muscleFilter!=="All";
-  const recentNames = isFiltering ? [] : recentExerciseNames(8);
-  const recentItems = recentNames.map(n=> items.find(i=>i.name===n)).filter(Boolean);
-
   const equipOptions = ["All", ...Object.keys(LIBRARY)];
   const muscleOptions = ["All", ...BODY_MUSCLES, "Cardio", "Mobility"];
 
+  // The header + search input + filters are rendered ONCE per full render and never rebuilt
+  // while typing. Only #ex-picker-results is updated live (see updateExercisePickerResults),
+  // so the <input> element — and therefore keyboard focus — is never destroyed mid-typing.
   return `
     <div class="row-between" style="margin-bottom:14px;">
       <button class="ex-picker-textbtn" data-action="close-exercise-picker">Cancel</button>
@@ -4131,7 +4128,7 @@ function renderExercisePicker(){
     </div>
 
     <div class="search-bar" style="margin-bottom:10px;">
-      <input type="text" id="ex-picker-search" placeholder="Search exercise" value="${state.exercisePickerSearch}">
+      <input type="text" id="ex-picker-search" placeholder="Search exercise" value="${state.exercisePickerSearch}" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
     </div>
 
     <div class="grid2" style="margin-bottom:${state.exercisePickerContext==='routine'?'10px':'14px'};">
@@ -4149,14 +4146,42 @@ function renderExercisePicker(){
       </div>
     ` : ""}
 
+    <div id="ex-picker-results">${exercisePickerResultsHtml()}</div>
+  `;
+}
+
+/* Builds ONLY the filtered results list (recent + all matches). Called both by the full
+   picker render and — crucially — by the live search handler to refresh results in place
+   without a full re-render, so the search input never loses focus. */
+function exercisePickerResultsHtml(){
+  const search = state.exercisePickerSearch.trim().toLowerCase();
+  const equip = state.exercisePickerEquipment;
+  const muscleFilter = state.exercisePickerMuscle;
+  let items = allLibraryExercises();
+  if(equip!=="All") items = items.filter(i=>i.cat===equip);
+  if(muscleFilter!=="All") items = items.filter(i=>i.muscle===muscleFilter);
+  if(search) items = items.filter(i=>i.name.toLowerCase().includes(search));
+
+  const isFiltering = !!search || equip!=="All" || muscleFilter!=="All";
+  const recentNames = isFiltering ? [] : recentExerciseNames(8);
+  const recentItems = recentNames.map(n=> items.find(i=>i.name===n)).filter(Boolean);
+
+  return `
     ${!isFiltering && recentItems.length ? `
       <div class="eyebrow-label" style="margin-top:4px;">Recent Exercises</div>
       ${recentItems.map(exercisePickerRow).join("")}
       <div class="eyebrow-label">All Exercises</div>
     ` : ""}
-
     ${items.length===0 ? `<div class="empty-note">No exercises match.</div>` : items.map(exercisePickerRow).join("")}
   `;
+}
+
+/* Live results refresh used by the search input: swaps only the results container's HTML.
+   The input element is untouched, so focus/keyboard/caret are all preserved automatically —
+   no programmatic re-focus (which on Android doesn't reliably re-open the soft keyboard). */
+function updateExercisePickerResults(){
+  const el = document.getElementById("ex-picker-results");
+  if(el) el.innerHTML = exercisePickerResultsHtml();
 }
 
 /* =========================================================
@@ -4372,6 +4397,23 @@ function renderCalculators(){
   if(c.goalDelta==null) c.goalDelta = state.profile.goalDelta;
   const active = c.activeCalc;
   let fields = "", result = "";
+
+  if(active==="bmi"){
+    fields = `<div class="grid2">
+      ${calcInputRow("calc-height","Height",c.height,"cm")}
+      ${calcInputRow("calc-weight","Weight",c.weight,"kg")}
+    </div>`;
+    if(c.result && c.result.type==="bmi"){
+      const cat = c.result.bmi<18.5?"Underweight":c.result.bmi<25?"Healthy weight":c.result.bmi<30?"Overweight":"Obese";
+      const col = c.result.bmi<18.5?"var(--steel)":c.result.bmi<25?"var(--mint)":c.result.bmi<30?"var(--accent)":"#ff6b6b";
+      result = `<div class="info-box" style="text-align:center;padding:16px;margin-top:10px;">
+        <div class="stat-label">Body Mass Index</div>
+        <div class="mono" style="font-weight:900;font-size:28px;color:${col};">${c.result.bmi.toFixed(1)}</div>
+        <div style="font-size:13px;color:${col};font-weight:700;margin-top:2px;">${cat}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">BMI = weight (kg) ÷ height (m)². A general screening number, not a body-composition or health diagnosis.</div>
+      </div>`;
+    }
+  }
 
   if(active==="bmr"){
     fields = `<div class="grid2">
@@ -5175,36 +5217,15 @@ function photoThumbUrl(id){
    SETTINGS TAB — export/import + workout settings
 ========================================================= */
 
-function renderBodyTab(){
-  const entries = state.bodylog;
-  const first = entries[entries.length-1];
-  const latest = entries[0];
-  const delta = (first && latest) ? (Number(latest.weight)-Number(first.weight)) : null;
-  const fieldSm = (id,label,ph,color) => `<div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">${label}</label>
-    <input type="number" id="${id}" placeholder="${ph}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin-top:4px;font-size:16px;color:${color};"></div>`;
-
+/* Profile editing form. Lives in Settings now (moved off the Log Weight page). These fields
+   drive the calorie/macro math app-wide, so the form was relocated, NOT removed. All input
+   IDs / data-attrs are unchanged, so the existing profile handlers bind to them exactly as
+   before regardless of which tab renders the form. */
+function renderProfileForm(){
   const p = state.profile;
   const maint = profileMaintenance();
   const target = profileCalorieTarget();
-
-  // Body composition: prefer latest logged body fat %, else estimate via Navy from latest measurements
-  let bfPct = null;
-  const latestBF = entries.find(e=>e.bodyfat);
-  const latestWaist = entries.find(e=>e.waist);
-  if(latestBF) bfPct = Number(latestBF.bodyfat);
-  else if(latestWaist && state.calc.neck){
-    bfPct = calcBodyFatNavy(p.gender, p.height, state.calc.neck, Number(latestWaist.waist), state.calc.hip);
-  }
-  const lbmBoer = calcLBM(p.gender, p.height, p.weight).boer;
-  let fatMass = null, leanMass = null, muscleMass = null;
-  if(bfPct!=null && bfPct>0){
-    fatMass = p.weight * bfPct/100;
-    leanMass = p.weight - fatMass;
-    muscleMass = leanMass * 0.535; // skeletal muscle ≈ 53.5% of lean mass (Lee et al. estimate)
-  }
-
   return `
-    <div class="eyebrow-label" style="margin-top:4px;">Your Profile</div>
     <div class="info-box" style="padding:14px;">
       <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Name</label>
       <input type="text" id="p-name" value="${p.name||''}" placeholder="Optional" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin:4px 0 12px;font-size:16px;color:var(--text);">
@@ -5248,6 +5269,96 @@ function renderBodyTab(){
       <div class="stat-card"><div class="stat-label">Daily Calorie Goal</div><div class="stat-value" style="color:var(--accent);">${target}<span class="stat-unit">kcal</span></div></div>
     </div>
     <div class="info-box" style="font-size:12px;">These numbers, plus your protein/carb/fat targets in the Nutrition tab, recalculate automatically whenever you change your weight or goal here.</div>
+  `;
+}
+
+function renderBodyTab(){
+  const entries = state.bodylog;
+  const first = entries[entries.length-1];
+  const latest = entries[0];
+  const delta = (first && latest) ? (Number(latest.weight)-Number(first.weight)) : null;
+  const fieldSm = (id,label,ph,color) => `<div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">${label}</label>
+    <input type="number" id="${id}" placeholder="${ph}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin-top:4px;font-size:16px;color:${color};"></div>`;
+
+  const p = state.profile;
+  const maint = profileMaintenance();
+  const target = profileCalorieTarget();
+
+  // Body composition: prefer latest logged body fat %, else estimate via Navy from latest measurements
+  let bfPct = null;
+  const latestBF = entries.find(e=>e.bodyfat);
+  const latestWaist = entries.find(e=>e.waist);
+  if(latestBF) bfPct = Number(latestBF.bodyfat);
+  else if(latestWaist && state.calc.neck){
+    bfPct = calcBodyFatNavy(p.gender, p.height, state.calc.neck, Number(latestWaist.waist), state.calc.hip);
+  }
+  const lbmBoer = calcLBM(p.gender, p.height, p.weight).boer;
+  let fatMass = null, leanMass = null, muscleMass = null;
+  if(bfPct!=null && bfPct>0){
+    fatMass = p.weight * bfPct/100;
+    leanMass = p.weight - fatMass;
+    muscleMass = leanMass * 0.535; // skeletal muscle ≈ 53.5% of lean mass (Lee et al. estimate)
+  }
+
+  // Log Weight card data (weight-only entries, newest-first from state.bodylog)
+  const wLog = entries.filter(e=> e.weight!==undefined && e.weight!==null && e.weight!=="" && !isNaN(Number(e.weight)));
+  const latestW = wLog[0];
+  const weightsKg = wLog.map(e=>Number(e.weight));
+  const highKg = weightsKg.length ? Math.max(...weightsKg) : null;
+  const lowKg  = weightsKg.length ? Math.min(...weightsKg) : null;
+  const nowMs = Date.now();
+  const in7 = wLog.filter(e=> (nowMs - new Date(e.date+"T12:00:00").getTime()) <= 7*86400000);
+  const sevenChangeKg = in7.length>=2 ? (Number(in7[0].weight) - Number(in7[in7.length-1].weight)) : null;
+  const trend = wLog.slice().reverse().map(e=>({date:e.date, value: Number(displayW(Number(e.weight)))}));
+
+  // Dedicated calculator view (opened by a calculator card or "View All Calculators")
+  if(state.bodyView==='calculators'){
+    return `
+      <button class="btn btn-ghost" data-action="body-calc-back" style="padding:8px 14px;font-size:14px;margin:4px 0 10px;">← Back</button>
+      <div style="font-size:25px;font-weight:900;margin-bottom:12px;">🧮 Calculators</div>
+      <div class="info-box" style="padding:14px;">${renderCalculators()}</div>
+    `;
+  }
+
+  const calcCards = [
+    {key:"bmi",     label:"BMI",            sub:"Body mass index"},
+    {key:"bmr",     label:"BMR",            sub:"Basal metabolic rate"},
+    {key:"calorie", label:"TDEE",           sub:"Total daily energy"},
+    {key:"calorie", label:"Daily Calories", sub:"Goal-adjusted target"},
+    {key:"protein", label:"Macros",         sub:"Protein, carbs & fat"}
+  ];
+
+  return `
+    <div class="section-heading"><span class="section-heading__label">Log Weight</span></div>
+    <section class="premium-card" style="padding:var(--space-md);">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;">
+        <div style="min-width:0;">
+          <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-secondary);">Current Weight</div>
+          <div class="mono" style="font-size:34px;font-weight:900;line-height:1.05;">${latestW?displayW(Number(latestW.weight)):displayW(p.weight)}<span style="font-size:15px;font-weight:700;color:var(--color-text-secondary);margin-left:4px;">${wUnit()}</span></div>
+          <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">${latestW?('Last updated '+latestW.date):'From your profile — not yet logged'}</div>
+        </div>
+        <button class="btn btn-accent" data-action="add-weight-focus" style="flex-shrink:0;padding:11px 16px;">${svg('plus',15)} Add Weight</button>
+      </div>
+      ${trend.length>=2 ? `<div style="margin-top:14px;">${sparklineChart(trend, {color:"var(--color-interactive)", unit:wUnit()})}</div>` : `<div style="margin-top:12px;font-size:12px;color:var(--color-text-secondary);">Log at least two weigh-ins to see your trend graph.</div>`}
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px;">
+        <div class="stat-card"><div class="stat-label">Highest</div><div class="stat-value" style="font-size:18px;">${highKg!=null?displayW(highKg):'—'}<span class="stat-unit">${wUnit()}</span></div></div>
+        <div class="stat-card"><div class="stat-label">Lowest</div><div class="stat-value" style="font-size:18px;">${lowKg!=null?displayW(lowKg):'—'}<span class="stat-unit">${wUnit()}</span></div></div>
+        <div class="stat-card"><div class="stat-label">7-Day</div><div class="stat-value" style="font-size:18px;color:${sevenChangeKg==null?'var(--text)':sevenChangeKg<=0?'var(--mint)':'var(--accent)'};">${sevenChangeKg==null?'—':(sevenChangeKg>0?'+':'')+displayW(sevenChangeKg)}<span class="stat-unit">${wUnit()}</span></div></div>
+      </div>
+      <button class="btn btn-secondary btn-block" data-action="view-weight-history" style="margin-top:12px;">View Weight History</button>
+    </section>
+
+    <div class="section-heading"><span class="section-heading__label">Calculators</span><button class="btn btn-ghost" data-action="view-all-calculators" style="padding:5px 8px;font-size:12px;">View All</button></div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">
+      ${calcCards.map(cc=>`<button class="premium-card" data-calc-open="${cc.key}" style="text-align:left;border:1px solid var(--color-border);padding:14px;color:var(--color-text-primary);">
+        <div style="font-size:16px;font-weight:800;">${cc.label}</div>
+        <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">${cc.sub}</div>
+      </button>`).join("")}
+      <button class="premium-card" data-action="view-all-calculators" style="text-align:left;border:1px solid var(--color-border);padding:14px;color:var(--color-interactive);">
+        <div style="font-size:16px;font-weight:800;">View All Calculators →</div>
+        <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">LBM, ideal weight, HR zones &amp; more</div>
+      </button>
+    </div>
 
     <div class="eyebrow-label">Body Composition</div>
     <div class="info-box" style="padding:14px;">
@@ -5262,7 +5373,7 @@ function renderBodyTab(){
       <div class="stat-card" style="margin-top:10px;"><div class="stat-label">Lean Body Mass (Boer estimate)</div><div class="stat-value" style="color:var(--steel);">${displayW(lbmBoer)}<span class="stat-unit">${wUnit()}</span></div></div>`}
     </div>
 
-    <div class="eyebrow-label">Log Entry</div>
+    <div class="eyebrow-label" id="body-log-entry">Log Entry</div>
     <div class="info-box" style="padding:14px;">
       <div class="grid2">
         <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Date</label>
@@ -5281,7 +5392,7 @@ function renderBodyTab(){
     ${delta!==null?`<div class="field" style="margin-top:12px;"><label>Total weight change</label>
       <span class="mono" style="font-weight:900;color:${delta<=0?'var(--mint)':'var(--accent)'};">${delta>0?'+':''}${displayW(delta)} ${wUnit()}</span></div>`:''}
 
-    <div class="row-between">
+    <div class="row-between" id="body-history">
       <span class="eyebrow-label">Body History</span>
       ${entries.length>5?`<button class="btn btn-ghost" data-action="toggle-body-history" style="padding:4px 10px;font-size:12px;">${state.showAllBodyHistory?'Show Less':'View All ('+entries.length+')'}</button>`:''}
     </div>
@@ -5348,11 +5459,6 @@ function renderBodyTab(){
         <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">${state.achievements.length} of ${ACHIEVEMENT_DEFS.length} unlocked</span>
       </span>
     </button>
-
-    <div class="eyebrow-label">Calculators</div>
-    <div class="info-box" style="padding:14px;">
-      ${renderCalculators()}
-    </div>
   `;
 }
 
@@ -6452,6 +6558,7 @@ function attachHandlers(){
   document.querySelectorAll("[data-nav]").forEach(el=>{
     el.addEventListener("click", ()=>{
       state.tab = el.dataset.nav;
+      state.bodyView = null; // always land on the Log Weight page, not a stale calculator view
       render();
       if (["home", "health", "nutrition"].includes(state.tab)) window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
     });
@@ -7317,11 +7424,11 @@ function attachHandlers(){
   });
   const pickerSearchEl = document.getElementById("ex-picker-search");
   if(pickerSearchEl) pickerSearchEl.addEventListener("input", ()=>{
-    state.exercisePickerSearch = pickerSearchEl.value;
-    debounce("ex-picker-search", ()=>{
-      render();
-      setTimeout(()=>{ const s=document.getElementById("ex-picker-search"); if(s){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
-    }, 150);
+    state.exercisePickerSearch = pickerSearchEl.value; // native input already shows the char instantly
+    // Refresh ONLY the results list, debounced so a fast typist doesn't rebuild the full list
+    // on every keystroke. The input element is never re-created, so the keyboard stays open,
+    // focus stays put, and the caret position is preserved with zero re-focus tricks.
+    debounce("ex-picker-search", updateExercisePickerResults, 120);
   });
   const pickerEquipEl = document.getElementById("ex-picker-equip");
   if(pickerEquipEl) pickerEquipEl.addEventListener("change", ()=>{
@@ -7333,10 +7440,25 @@ function attachHandlers(){
     state.exercisePickerMuscle = pickerMuscleEl.value;
     render();
   });
-  document.querySelectorAll("[data-pick-exercise]").forEach(el=>{
-    el.addEventListener("click", (e)=>{
-      if(e.target.closest("[data-view-exercise-from-picker]")) return; // let the info button handle its own click
-      const name = el.dataset.pickExercise;
+  // Row clicks are delegated to the stable #ex-picker-results container (rather than bound
+  // per-row) so they keep working after the live search refreshes the container's innerHTML
+  // without a full render. Falls back to document if the container isn't present.
+  const pickerResultsEl = document.getElementById("ex-picker-results") || document;
+  if(pickerResultsEl._ignytPickBound !== true){
+    pickerResultsEl.addEventListener("click", (e)=>{
+      const viewBtn = e.target.closest("[data-view-exercise-from-picker]");
+      if(viewBtn){
+        e.stopPropagation();
+        state.viewingExerciseDetail = viewBtn.dataset.viewExerciseFromPicker;
+        state.exerciseDetailTab = "summary";
+        state.showExercisePicker = false;
+        state.tab = "library";
+        render();
+        return;
+      }
+      const row = e.target.closest("[data-pick-exercise]");
+      if(!row) return;
+      const name = row.dataset.pickExercise;
       if(state.exercisePickerContext==="routine"){
         state.routineBuilder.exercises.push({ name, sets: state.routineBuilderSets });
       } else if(state.exercisePickerContext==="replace"){
@@ -7355,17 +7477,8 @@ function attachHandlers(){
       state.showExercisePicker = false;
       render();
     });
-  });
-  document.querySelectorAll("[data-view-exercise-from-picker]").forEach(el=>{
-    el.addEventListener("click", (e)=>{
-      e.stopPropagation();
-      state.viewingExerciseDetail = el.dataset.viewExerciseFromPicker;
-      state.exerciseDetailTab = "summary";
-      state.showExercisePicker = false;
-      state.tab = "library";
-      render();
-    });
-  });
+    if(pickerResultsEl !== document) pickerResultsEl._ignytPickBound = true;
+  }
   const showCreateBtn = document.querySelector('[data-action="show-create-in-picker"]');
   if(showCreateBtn) showCreateBtn.addEventListener("click", ()=>{
     state.exercisePickerShowCreate = true;
@@ -7506,6 +7619,36 @@ function attachHandlers(){
     });
   });
 
+  // Log Weight card actions
+  const addWeightBtn = document.querySelector('[data-action="add-weight-focus"]');
+  if(addWeightBtn) addWeightBtn.addEventListener("click", ()=>{
+    const entry = document.getElementById("body-log-entry");
+    if(entry) entry.scrollIntoView({behavior:"smooth", block:"start"});
+    const w = document.getElementById("b-weight");
+    if(w) setTimeout(()=>w.focus(), 250);
+  });
+  const viewWeightHistBtn = document.querySelector('[data-action="view-weight-history"]');
+  if(viewWeightHistBtn) viewWeightHistBtn.addEventListener("click", ()=>{
+    state.showAllBodyHistory = true;
+    render();
+    setTimeout(()=>{ const h=document.getElementById("body-history"); if(h) h.scrollIntoView({behavior:"smooth", block:"start"}); }, 0);
+  });
+
+  // Calculator cards -> dedicated calculator view
+  document.querySelectorAll("[data-calc-open]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.calc.activeCalc = el.dataset.calcOpen;
+      state.calc.result = null;
+      state.bodyView = "calculators";
+      render();
+    });
+  });
+  document.querySelectorAll('[data-action="view-all-calculators"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.bodyView = "calculators"; render(); });
+  });
+  const bodyCalcBackBtn = document.querySelector('[data-action="body-calc-back"]');
+  if(bodyCalcBackBtn) bodyCalcBackBtn.addEventListener("click", ()=>{ state.bodyView = null; render(); });
+
   // Calculators
   const calcPicker = document.getElementById("calc-picker");
   if(calcPicker) calcPicker.addEventListener("change", ()=>{
@@ -7540,7 +7683,10 @@ function attachHandlers(){
     const goalEl = document.getElementById("calc-goal");
     if(goalEl) c.goalDelta = Number(goalEl.value);
 
-    if(c.activeCalc==="bmr"){
+    if(c.activeCalc==="bmi"){
+      const h = Number(c.height)/100;
+      c.result = { type:"bmi", bmi: (h>0 ? Number(c.weight)/(h*h) : 0) };
+    } else if(c.activeCalc==="bmr"){
       const bmr = calcBMR(c.age, c.gender, c.height, c.weight);
       c.result = { type:"bmr", bmr };
     } else if(c.activeCalc==="calorie"){
