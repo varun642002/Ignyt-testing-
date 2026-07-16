@@ -7,5 +7,5 @@
   "testResultsVerification": "N/A -- see above.",
   "androidBuildVerification": "BUILD SUCCESSFUL (see TEST_RESULTS.json) -- this is a build-verification fact, not a final-review approval.",
   "reviewStatus": "PENDING_REVIEW",
-  "note": "This master redesign is a large, multi-phase task (see PLAN.json). Phases 1, 2, and 4-partial are implementation-complete and self-verified by the Coder this session; phases 3, 4-rest, 5, and 6 are not started. Final review status will remain PENDING_REVIEW until an independent reviewer (or the user) evaluates the work, consistent with AGENTS.md's role separation. This file will be updated again as further phases complete, not marked APPROVED by the Coder at any point."
+  "note": "This master redesign is a large, multi-phase task (see PLAN.json). Phases 1 through 5 are now implementation-complete and self-verified by the Coder across two sessions; Phase 6 (calculator consolidation review + remaining visual-consistency pass) and Phase 7 (final full regression + report) remain. Final review status will remain PENDING_REVIEW until an independent reviewer (or the user) evaluates the work, consistent with AGENTS.md's role separation. This file will be updated again as further phases complete, not marked APPROVED by the Coder at any point."
 }

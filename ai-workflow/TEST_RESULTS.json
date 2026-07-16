@@ -1,34 +1,37 @@
 {
   "task_id": "IGNYT-MASTER-REDESIGN-001",
-  "tester": "Claude Code (self-verification -- AGENTS.md permits 'at most ONE initial verification pass' by the Coder; no separate Playwright MCP independent-testing pass was run this session, so this is NOT independent testing and is labeled accordingly)",
-  "verificationMethod": "Served www/ as a static site (npx serve) and drove it in a real headless-browser session (navigation, clicks, localStorage inspection, computed-style/getBoundingClientRect checks, network-request inspection). Screenshot capture is unavailable in this environment (consistently times out) -- no rendered image was captured or reviewed.",
+  "tester": "Claude Code (self-verification -- AGENTS.md permits 'at most ONE initial verification pass' by the Coder; no independent Playwright MCP pass was run)",
+  "verificationMethod": "Served www/ as a static site and drove it in a real headless-browser session across all phases this session (navigation, clicks, file-input simulation with a real synthetic image blob, localStorage/IndexedDB inspection, computed-style/getBoundingClientRect checks, network-request inspection, console-error checks). Screenshot capture is unavailable in this environment throughout -- no rendered image was ever captured.",
   "testsExecuted": [
-    "App boot + onboarding skip -> Home renders with no console errors",
-    "Home 'Today's Progress' card shows exactly Steps and Calories Burned rows (no Calories-eaten, no Protein)",
-    "Home ring value matches genuine plan-completion % (0% on a fresh profile with no plan exercises checked off, consistent with overallPlanProgress() logic)",
-    "Bottom nav active-tab color is the new blue interactive token (#3e82f7) via getComputedStyle, both confirmed on Home",
-    "Workout tab 'Start Empty Workout' button background is the new blue token (#3e82f7) with white text via getComputedStyle",
-    "Light theme (data-theme=light): body background is the reference's cool blue-gray (#f4f6fa) and primary button is the light-theme blue (#2f6fed) via getComputedStyle",
-    "Profile ('Your Profile') tab: Body Fat (%) input no longer present in the Log Entry form; Waist input still present; stale 'Log a Body Fat % below' copy no longer present; replacement waist/calculator guidance copy present; Calculators section still present",
-    "Log Entry submit (weight only, no bodyfat field) completes with no thrown error and produces a correct history row -- verifies the atomic markup+handler removal did not leave a null-reference crash",
-    "No horizontal overflow (document.body.scrollWidth <= clientWidth) on any of the above screens at the default browser viewport"
+    "Phase 3: full routine lifecycle (create -> add exercise via picker -> save -> appears on Workout tab, not Plan -> Start Workout -> new exercise shows 'Rest Timer: OFF' -> hx_settings.defaultRest confirmed 0)",
+    "Phase 3: Plan tab confirmed to no longer show routines, shows pointer note + HYROX Schedule + Race Simulation",
+    "Phase 4: Profile PR/Achievement entry cards found and navigate correctly to the real Progress detail views",
+    "Phase 4: Body Fat field absence + successful Log Entry submit with no error (from the earlier checkpoint, re-confirmed still working)",
+    "Phase 4: body-progress photo full lifecycle with a real synthetic image blob -- add (simulated file input + change event) -> IndexedDB write confirmed -> grid re-renders with a genuine lazy-loaded blob: URL thumbnail -> lightbox open -> delete -> confirm dialog appears on top of the still-open lightbox and is clickable (bug found and fixed: z-index/class collision) -> confirmed via the real data-dialog-action=confirm selector -> photo removed, empty state returns",
+    "Phase 5: Habit Tracker full lifecycle -- add habit -> toggle complete (streak 0->1, week 0/7->1/7, month 0->1, correct local-date key persisted) -> toggle off (streak reverts) -> inline rename -> delete via confirmDialog (correct message, confirmed, habit + history removed)",
+    "Cross-phase regression spot-check: Nutrition tab renders correctly (Eaten/Burned/Deficit/Macros/Water all present, unaffected by Home's metric changes)",
+    "Cross-phase regression spot-check: AI Coach tab renders correctly (unchanged honest empty state)",
+    "No horizontal overflow at 320px on any screen touched this session",
+    "No console errors at any point across the entire session's browser testing"
   ],
   "passedTests": [
-    "App boot + onboarding skip",
-    "Home Today's Progress metric set (Steps + Calories Burned only)",
-    "Home ring value = genuine plan %",
-    "Bottom nav active color = blue interactive token",
-    "Start Empty Workout button color = blue interactive token",
-    "Light theme background/accent tokens",
-    "Body Fat % field removed from Log Entry; Waist field preserved; copy corrected",
-    "Log Entry submit succeeds with no error after handler fix",
-    "No horizontal overflow on tested screens"
+    "Routine creation/start lifecycle on Workout tab",
+    "Rest timer default = 0 for new installs, confirmed via settings + new exercise",
+    "Plan tab routines removal + pointer note",
+    "Profile PR/Achievement navigation",
+    "Body-progress photo add/view/delete lifecycle (after z-index fix)",
+    "Habit Tracker add/toggle/streak-math/rename/delete lifecycle",
+    "Nutrition tab regression check",
+    "AI Coach tab regression check",
+    "No overflow, no console errors throughout"
   ],
   "failedTests": [],
+  "bugsFoundAndFixedDuringThisSession": [
+    "Body-progress photo lightbox reused the app's shared .dialog-backdrop/.dialog-box/.dialog-actions classes, colliding with the real confirm dialog when both were open simultaneously (deleting from the lightbox) -- fixed with a z-index ordering fix and de-duplicated button-row markup, re-verified with the confirm dialog's real selector."
+  ],
   "skippedTests": [
-    "Real Android device visual review",
-    "Dark-theme-specific screenshot comparison (screenshot tool unavailable)",
-    "Full regression across Workout active-session, Nutrition, Progress, Plan, Library, Settings, Health Connect, AI Coach (not touched this session, not re-tested)",
+    "Real Android device visual/functional review",
+    "Health Connect dashboard, Settings, Library, Plan (HYROX schedule/Race Simulation) regression re-check (not touched this session, not re-exercised)",
     "Independent Playwright MCP testing pass"
   ],
   "consoleErrors": [],
@@ -36,14 +39,10 @@
   "screenshots": [],
   "exactFailureDetails": null,
   "anotherFixIterationRequired": false,
-  "androidBuild": {
-    "syncCommand": "npx cap sync android",
-    "syncResult": "SUCCEEDED",
-    "buildCommand": "cd android && .\\gradlew.bat clean assembleDebug",
-    "buildResult": "BUILD SUCCESSFUL in 16m 53s (101 actionable tasks: 91 executed, 10 up-to-date)",
-    "warnings": "Only the 2 pre-existing HealthConnectPlugin.kt deprecation warnings, unchanged from every prior build on this branch.",
-    "apkPath": "android/app/build/outputs/apk/debug/app-debug.apk",
-    "apkVerifiedToExist": true,
-    "note": "A successful Android build proves BUILD VERIFIED only -- it does not prove real Health Connect sync, Android runtime permissions, native lifecycle behavior, or any other real-device-only capability. None of those were touched or claimed as tested this session."
-  }
+  "androidBuilds": [
+    { "phase": "3 + PR/Achievement entries", "syncResult": "SUCCEEDED", "buildResult": "BUILD SUCCESSFUL in 56s", "apkPath": "android/app/build/outputs/apk/debug/app-debug.apk" },
+    { "phase": "5 (Habit Tracker)", "syncResult": "SUCCEEDED", "buildResult": "BUILD SUCCESSFUL in 20s", "apkPath": "android/app/build/outputs/apk/debug/app-debug.apk" },
+    { "phase": "4-rest (body photos)", "syncResult": "SUCCEEDED", "buildResult": "BUILD SUCCESSFUL in 16s", "apkPath": "android/app/build/outputs/apk/debug/app-debug.apk" }
+  ],
+  "note": "A successful Android build proves BUILD VERIFIED only -- it does not prove real Health Connect sync, Android runtime permissions, native lifecycle behavior, native file-picker/camera behavior for body photos, or any other real-device-only capability. None of those were touched or claimed as tested this session."
 }
