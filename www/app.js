@@ -1543,6 +1543,12 @@ const state = {
   habitCompletions: LS.get("hx_habit_completions",{}),
   habitBuilderName: "",
   editingHabitId: null,
+  // Body-progress photos live in IndexedDB (window.IgnytBodyPhotosDB), not localStorage --
+  // bodyPhotos here is just an in-memory metadata cache (no blobs), populated asynchronously
+  // after boot (see the IgnytBodyPhotosDB.getAllMeta() call near the bottom of this file).
+  bodyPhotos: [],
+  bodyPhotoCategory: "Front",
+  viewingBodyPhotoId: null,
   calc: LS.get("hx_calc", {
     activeCalc:"bmr", result:null,
     neck:38, waist:90, hip:95, restingHR:60,
@@ -5145,6 +5151,27 @@ function renderProgressPlan(){
 }
 
 /* =========================================================
+   BODY-PROGRESS PHOTOS — metadata lives in state.bodyPhotos (in-memory only, loaded from
+   IndexedDB at boot); actual image blobs are fetched on demand and cached here as object
+   URLs, never held all-in-memory at once for accounts with many photos.
+========================================================= */
+
+const _photoUrlCache = {};
+const _photoUrlLoading = new Set();
+
+function photoThumbUrl(id){
+  if(_photoUrlCache[id]) return _photoUrlCache[id];
+  if(!_photoUrlLoading.has(id) && window.IgnytBodyPhotosDB){
+    _photoUrlLoading.add(id);
+    window.IgnytBodyPhotosDB.getBlob(id).then(blob=>{
+      _photoUrlLoading.delete(id);
+      if(blob){ _photoUrlCache[id] = URL.createObjectURL(blob); render(); }
+    }).catch(()=>{ _photoUrlLoading.delete(id); });
+  }
+  return null;
+}
+
+/* =========================================================
    SETTINGS TAB — export/import + workout settings
 ========================================================= */
 
@@ -5266,6 +5293,45 @@ function renderBodyTab(){
         <span class="mono" style="font-size:13px;color:var(--steel);">${e.hrv||'–'}ms</span>
         <button class="del" data-del-body="${e.id}" aria-label="Delete body log entry">${svg('x',12)}</button>
       </div>`).join("")}
+
+    <div class="eyebrow-label">Body Progress Photos</div>
+    <div class="info-box" style="padding:14px;">
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        ${["Front","Side","Back","Other"].map(c=>`<button class="cat-chip ${state.bodyPhotoCategory===c?'active':''}" data-body-photo-category="${c}" style="flex:1;text-align:center;">${c}</button>`).join("")}
+      </div>
+      <input type="text" id="body-photo-note" placeholder="Optional note" style="width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;font-size:14px;color:var(--text);margin-bottom:10px;">
+      <label class="btn btn-accent btn-block" style="display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;">
+        ${svg('plus',16)} Add Photo
+        <input type="file" id="body-photo-file" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
+      </label>
+    </div>
+    ${state.bodyPhotos.length===0 ? `<div class="empty-note">No progress photos yet.</div>` : `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;">
+      ${state.bodyPhotos.map(ph=>{
+        const url = photoThumbUrl(ph.id);
+        return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;border:none;padding:0;background:var(--surface-alt);cursor:pointer;">
+          ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;">Loading…</div>`}
+          <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;padding:2px 4px;text-align:center;">${ph.category}</span>
+        </button>`;
+      }).join("")}
+    </div>`}
+    ${state.viewingBodyPhotoId!=null ? (()=>{
+      const ph = state.bodyPhotos.find(p2=>p2.id===state.viewingBodyPhotoId);
+      if(!ph) return "";
+      const url = photoThumbUrl(ph.id);
+      return `<div class="dialog-backdrop" data-close-body-photo style="z-index:190;"></div>
+      <div class="dialog-box" style="max-width:400px;padding:14px;z-index:191;">
+        <!-- z-index kept below the shared confirm-dialog component's (210/211) so that when
+             "Delete" opens a confirm prompt on top of this still-open lightbox, the confirm
+             prompt is genuinely visible and clickable, not obscured underneath. -->
+        ${url ? `<img src="${url}" alt="" style="width:100%;max-height:60vh;object-fit:contain;border-radius:10px;display:block;">` : ""}
+        <div style="margin-top:10px;font-size:13px;color:var(--muted);">${ph.date} · ${ph.category}${ph.note?` · ${ph.note}`:''}</div>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <button class="btn btn-ghost" data-close-body-photo style="flex:1;">Close</button>
+          <button class="btn btn-ghost" data-del-body-photo="${ph.id}" style="flex:1;color:#ff6b6b;">Delete</button>
+        </div>
+      </div>`;
+    })() : ""}
 
     <div class="eyebrow-label">Records &amp; Achievements</div>
     <button class="prog-cat-card" data-open-progress-view="prs" aria-label="Open Personal Records">
@@ -7390,6 +7456,56 @@ function attachHandlers(){
     });
   });
 
+  // Body-progress photos (IndexedDB-backed, see www/js/body-photos-db.js)
+  document.querySelectorAll("[data-body-photo-category]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.bodyPhotoCategory = el.dataset.bodyPhotoCategory;
+      render();
+    });
+  });
+  const bodyPhotoFileInput = document.getElementById("body-photo-file");
+  if(bodyPhotoFileInput) bodyPhotoFileInput.addEventListener("change", ()=>{
+    const file = bodyPhotoFileInput.files && bodyPhotoFileInput.files[0];
+    if(!file) return; // selection cancelled -- nothing to do
+    if(!file.type || !file.type.startsWith("image/")){
+      showToast("That file isn't a supported image format.", "error", render);
+      return;
+    }
+    if(!window.IgnytBodyPhotosDB){
+      showToast("Photo storage isn't available on this device.", "error", render);
+      return;
+    }
+    const noteEl = document.getElementById("body-photo-note");
+    const note = noteEl ? noteEl.value.trim() : "";
+    window.IgnytBodyPhotosDB.addPhoto({ date: todayStr(), category: state.bodyPhotoCategory, note, blob: file })
+      .then(()=> window.IgnytBodyPhotosDB.getAllMeta())
+      .then(list=>{ state.bodyPhotos = list; render(); })
+      .catch(()=>{ showToast("Couldn't save that photo. Please try again.", "error", render); });
+  });
+  document.querySelectorAll("[data-view-body-photo]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.viewingBodyPhotoId = Number(el.dataset.viewBodyPhoto);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-close-body-photo]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.viewingBodyPhotoId = null;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-del-body-photo]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const id = Number(el.dataset.delBodyPhoto);
+      if(!(await confirmDialog("Delete this progress photo? This can't be undone.", render))) return;
+      if(window.IgnytBodyPhotosDB) await window.IgnytBodyPhotosDB.deletePhoto(id).catch(()=>{});
+      if(_photoUrlCache[id]){ URL.revokeObjectURL(_photoUrlCache[id]); delete _photoUrlCache[id]; }
+      state.bodyPhotos = state.bodyPhotos.filter(p=>p.id!==id);
+      state.viewingBodyPhotoId = null;
+      render();
+    });
+  });
+
   // Calculators
   const calcPicker = document.getElementById("calc-picker");
   if(calcPicker) calcPicker.addEventListener("change", ()=>{
@@ -7727,6 +7843,17 @@ try{
 }catch(err){
   console.error("Ignyt failed to boot:", err);
   renderErrorScreen(err);
+}
+
+// Body-progress photo metadata loads asynchronously from IndexedDB and re-renders once
+// ready, so first paint never waits on it. A missing/broken IndexedDB (some embedded
+// WebViews, private browsing) just leaves state.bodyPhotos empty -- the UI already has an
+// honest empty state, nothing crashes.
+if(window.IgnytBodyPhotosDB){
+  window.IgnytBodyPhotosDB.getAllMeta().then(list=>{
+    state.bodyPhotos = list;
+    render();
+  }).catch(()=>{});
 }
 
 if("serviceWorker" in navigator){
