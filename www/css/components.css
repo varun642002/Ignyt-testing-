@@ -51,3 +51,21 @@
 .toast { border-radius:var(--radius-md); }
 .ex-picker-avatar { border-radius:var(--radius-pill); }
 .timer-overlay .timer-ring { text-shadow:0 4px 18px rgba(255,90,31,.25); }
+
+/* ---- Blood Work (bloodwork.js) ---- */
+.bw-disclaimer { font-size:12px; line-height:1.5; color:var(--color-text-secondary); background:var(--color-surface); border:1px solid var(--color-border); border-left:3px solid #e5484d; border-radius:var(--radius-md); padding:10px 12px; margin:8px 0; }
+.bw-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:var(--space-md); margin-bottom:10px; box-shadow:var(--shadow-card); }
+.bw-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-bottom:6px; }
+.bw-metric { text-align:left; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px; cursor:pointer; color:var(--color-text-primary); min-width:0; }
+.bw-metric:active { background:var(--color-surface-pressed); }
+.bw-metric__name { font-size:12px; font-weight:700; color:var(--color-text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bw-metric__val { font-size:20px; font-weight:900; margin-top:3px; }
+.bw-metric__unit { font-size:11px; font-weight:600; color:var(--color-text-secondary); }
+.bw-metric__range { font-size:11px; color:var(--color-text-secondary); margin-top:2px; }
+.bw-row { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; text-align:left; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:6px; cursor:pointer; color:var(--color-text-primary); }
+.bw-row:active { background:var(--color-surface-pressed); }
+.bw-label { display:block; font-size:12px; font-weight:700; color:var(--color-text-secondary); margin:10px 0 4px; }
+.bw-input { width:100%; background:var(--color-surface-secondary,var(--color-surface-pressed)); border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:10px 12px; font-size:15px; color:var(--color-text-primary); }
+.bw-mini { width:90px; font-family:monospace; font-weight:700; }
+.bw-review { display:flex; gap:10px; align-items:flex-start; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px; margin-bottom:8px; }
+.bw-check input { width:20px; height:20px; }
