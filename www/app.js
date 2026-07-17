@@ -1650,6 +1650,40 @@ function runMigrations(){
     }
     LS.set("hx_rest_default_migrated_v1", true);
   }
+  // One-time cleanup of duplicate workouts left by any earlier double-save. HIGH-CONFIDENCE
+  // ONLY: two entries are treated as duplicates iff they share a full content signature —
+  // same startedAt, volume, title, exercise names, exercise count AND total set count. That is
+  // an identical copy (what a double-insert produces), never merely two distinct same-day
+  // sessions. Entries lacking a startedAt are never merged. Keeps the first occurrence, drops
+  // the rest, records the count in hx_workout_dedupe_removed_v1, and is idempotent (flag-guarded).
+  if(!LS.get("hx_workout_dedupe_v1", false)){
+    try{
+      const log = Array.isArray(state.workoutLog) ? state.workoutLog : [];
+      const sig = (w)=>{
+        const ex = Array.isArray(w.exercises) ? w.exercises : [];
+        const setCount = ex.reduce((n,e)=> n + ((e && Array.isArray(e.sets)) ? e.sets.length : 0), 0);
+        return [w.startedAt, w.volume, (w.title||""), ex.length, setCount, ex.map(e=>e&&e.name).join(",")].join("|");
+      };
+      const seen = new Set();
+      const deduped = [];
+      let removed = 0;
+      for(let i=0;i<log.length;i++){
+        const w = log[i];
+        // Only entries that carry a real startedAt participate in dedupe; anything else is kept as-is.
+        const key = (w && w.startedAt != null) ? sig(w) : ("__keep__"+i);
+        if(seen.has(key)){ removed++; continue; }
+        seen.add(key);
+        deduped.push(w);
+      }
+      if(removed > 0){
+        state.workoutLog = deduped;
+        LS.set("hx_workout_log", state.workoutLog);
+        LS.set("hx_workout_dedupe_removed_v1", removed);
+        console.warn("[IGNYT] One-time cleanup removed "+removed+" duplicate workout(s) from history.");
+      }
+    }catch(e){ /* cleanup must never break boot */ }
+    LS.set("hx_workout_dedupe_v1", true);
+  }
   const stored = LS.get("hx_schema_version", null);
   if(stored===null){
     // Pre-versioning install (or brand new) — just stamp current version, no data shape to migrate
@@ -7006,10 +7040,15 @@ function attachHandlers(){
     }
     if(_finishingSession || !state.session) return; // re-check after the await
     _finishingSession = true;
+    // UI protection: lock the button the instant work starts so a slow device / laggy tap can't
+    // queue a second submit. render() rebuilds the tab (button replaced) on completion, so no
+    // explicit re-enable is needed on the success path.
+    finishBtn.disabled = true; finishBtn.textContent = "Saving…";
     try{
       let completedId = null;
       if(state.session.exercises.length){
         const volume = computeSessionVolume(state.session.exercises); // completed sets only
+        let mutated = false;
 
         if(state.editingSessionId){
           // Patch the existing history entry in place — no new PR detection (this is a correction,
@@ -7022,8 +7061,19 @@ function attachHandlers(){
               title: state.session.title || "",
               volume
             });
+            mutated = true;
           }
           state.editingSessionId = null;
+        } else if(state.workoutLog.some(w => w.startedAt != null && w.startedAt === state.session.startedAt)){
+          // IDEMPOTENCY GUARD (data-level, the real fix): a live session's startedAt is unique —
+          // you cannot start two workouts at the same instant. If a history entry with this exact
+          // startedAt already exists, this is a DUPLICATE finish (handler re-entry, a native
+          // double-invoke, or a persisted session that was restored and finished again). Insert
+          // NOTHING, run no PR/achievement, and just surface the already-saved workout. This makes
+          // saving idempotent regardless of how the finish was re-triggered.
+          const existing = state.workoutLog.find(w => w.startedAt === state.session.startedAt);
+          completedId = existing ? existing.id : null;
+          console.warn("[IGNYT] Duplicate finish ignored — session already saved (startedAt " + state.session.startedAt + ").");
         } else {
           const finishedAt = Date.now();
           const durationMin = Math.max(1, Math.round((finishedAt - state.session.startedAt)/60000));
@@ -7043,9 +7093,13 @@ function attachHandlers(){
             state.lastSessionPRs = newPRs;
           }
           completedId = workoutId;
+          mutated = true;
         }
-        const newlyUnlocked = checkAchievements();
-        if(newlyUnlocked.length) state.lastUnlockedAchievements = newlyUnlocked;
+        // PR/achievement checks run ONLY when history actually changed — never on a duplicate skip.
+        if(mutated){
+          const newlyUnlocked = checkAchievements();
+          if(newlyUnlocked.length) state.lastUnlockedAchievements = newlyUnlocked;
+        }
       }
       state.session = null;
       // Dedicated Workout Complete screen (summary + share cards) for real finishes with
@@ -8070,6 +8124,16 @@ try{
   console.error("Ignyt failed to boot:", err);
   renderErrorScreen(err);
 }
+
+// Report the one-time duplicate-workout cleanup to the user, exactly once. showToast needs the
+// app to have rendered, so it runs here (after boot render) rather than inside runMigrations().
+try{
+  const dupRemoved = LS.get("hx_workout_dedupe_removed_v1", 0);
+  if(dupRemoved > 0 && !LS.get("hx_workout_dedupe_notified_v1", false)){
+    LS.set("hx_workout_dedupe_notified_v1", true);
+    setTimeout(()=> showToast("Cleaned up "+dupRemoved+" duplicate workout"+(dupRemoved!==1?"s":"")+" from your history.", 'info', render), 600);
+  }
+}catch(e){ /* non-fatal */ }
 
 // Body-progress photo metadata loads asynchronously from IndexedDB and re-renders once
 // ready, so first paint never waits on it. A missing/broken IndexedDB (some embedded
