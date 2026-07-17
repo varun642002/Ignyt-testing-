@@ -10,7 +10,7 @@ const SCHEMA_VERSION = 1; // bump when localStorage shape changes; add a migrate
 /* ---------- Storage ---------- */
 
 const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_profile","hx_nutrition","hx_bodylog","hx_custom_exercises",
-  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_achievements","hx_favorite_foods","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version"];
+  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version"];
 
 const SET_TYPE_IMPORT_MAP = { normal:"working", warmup:"warmup", dropset:"drop", failure:"failure" };
 
@@ -1338,7 +1338,12 @@ const ICONS = {
   link:'<path d="M9 15l6-6M8 13l-2 2a3 3 0 004 4l2-2M16 11l2-2a3 3 0 00-4-4l-2 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   swap:'<path d="M4 8h13M13 4l4 4-4 4M20 16H7M11 20l-4-4 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   book:'<path d="M4 4.5A2.5 2.5 0 016.5 2H20v17H6.5A2.5 2.5 0 004 16.5v-12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 16.5A2.5 2.5 0 016.5 19H20" fill="none" stroke="currentColor" stroke-width="2"/>',
-  trend:'<path d="M4 15l5-5 4 4 7-8" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h5v5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+  trend:'<path d="M4 15l5-5 4 4 7-8" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h5v5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+  drag:'<circle cx="9" cy="6" r="1.6" fill="currentColor"/><circle cx="15" cy="6" r="1.6" fill="currentColor"/><circle cx="9" cy="12" r="1.6" fill="currentColor"/><circle cx="15" cy="12" r="1.6" fill="currentColor"/><circle cx="9" cy="18" r="1.6" fill="currentColor"/><circle cx="15" cy="18" r="1.6" fill="currentColor"/>',
+  copy:'<rect x="9" y="9" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 5.5A1.5 1.5 0 0013.5 4h-8A1.5 1.5 0 004 5.5v8A1.5 1.5 0 005.5 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  pencil:'<path d="M4 16.5V20h3.5L18 9.5 14.5 6 4 16.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13.2 7.3l3.5 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  star:'<path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.9l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>',
+  starFilled:'<path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.9l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85z" fill="currentColor" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>'
 };
 
 /* =========================================================
@@ -1348,6 +1353,15 @@ const ICONS = {
 ========================================================= */
 
 function csvEscape(s){ s = String(s==null?"":s); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+
+// Escapes user text for interpolation into innerHTML — as element content OR inside a quoted
+// attribute. Needed anywhere a user-authored string (routine/exercise name, notes) is rendered:
+// an apostrophe or quote in a name would otherwise terminate an attribute and break the markup.
+function escHtml(s){
+  return String(s == null ? "" : s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
 
 function downloadFile(filename, content, mime){
   const blob = new Blob([content], {type:mime});
@@ -1540,7 +1554,10 @@ const state = {
   workoutLog: LS.get("hx_workout_log",[]),
   foodLog: LS.get("hx_food_log",[]),
   routines: LS.get("hx_routines",[]),
-  routineBuilder: null,
+  routineBuilder: null,      // { id?, name, description, notes, exercises:[normalized] } when the editor is open
+  editingRoutineId: null,    // set => the editor is PATCHING this routine in place; null => creating a new one
+  routineExerciseOpen: null, // id of the one exercise expanded for editing (one at a time — small screens)
+  replacingRoutineExerciseId: null, // id of the routine exercise awaiting a replacement pick
   habits: LS.get("hx_habits",[]),
   habitCompletions: LS.get("hx_habit_completions",{}),
   habitBuilderName: "",
@@ -1585,8 +1602,11 @@ const state = {
   exercisePickerEquipment: "All",
   exercisePickerMuscle: "All",
   exercisePickerShowCreate: false,
-  exercisePickerContext: "session", // "session" adds to the active workout; "routine" adds to the routine builder
+  // "session" adds to the active workout, "replace" swaps one of its exercises; "routine" adds
+  // to the routine editor, "routine-replace" swaps one of the routine's exercises.
+  exercisePickerContext: "session",
   routineBuilderSets: 3,
+  favoriteExercises: LS.get("hx_favorite_exercises", []), // array of exercise NAMES (mirrors hx_favorite_foods)
   viewingHyroxSchedule: false,
   csvImportPreview: null,
   exerciseMenuOpen: null,
@@ -1616,6 +1636,7 @@ function persist(){
   LS.set("hx_custom_exercises", state.customExercises);
   LS.set("hx_achievements", state.achievements);
   LS.set("hx_favorite_foods", state.favoriteFoods);
+  LS.set("hx_favorite_exercises", state.favoriteExercises);
   LS.set("hx_water_log", state.waterLog);
   LS.set("hx_race_log", state.raceLog);
   LS.set("hx_race_active", state.raceActive);
@@ -1692,6 +1713,169 @@ function enforceWorkoutLogIntegrity(log){
     out.push(w);
   }
   return out;
+}
+
+/* ---- Routine model: additive normalization (legacy + cross-version safe) ----
+   A stored routine is `{ id, name, exercises:[{ name, sets:Number }] }`, where `sets` is a
+   COUNT, not a list. The editor needs real per-set prescriptions, so `setDetails[]` is added
+   ALONGSIDE `sets` and `sets === setDetails.length` is re-established on every write. Nothing
+   is renamed or removed, which matters beyond this device: cloud-sync mirrors routines
+   per-record (users/{uid}/routines/{id}), so an install still running an older app version can
+   receive a routine written here and must keep reading the count it expects. Old code reads
+   `sets`; new code reads `setDetails` when present. Legacy routines are normalized lazily (on
+   open/duplicate/start) — stored data is never rewritten in bulk behind the user's back. */
+
+const ROUTINE_SET_TYPES = ["working", "warmup", "drop", "failure"];
+const ROUTINE_MAX_SETS = 30; // guardrail for a legacy `sets` count that's absurd/corrupt
+
+// Prescription for one planned set. Blank strings mean "not prescribed" and map to the same
+// empty inputs a freestyle session starts with, so an un-prescribed routine behaves exactly
+// like today's routines do.
+function newRoutineSet(seed){
+  const s = seed || {};
+  const w = Number(s.weight);
+  return {
+    id: s.id != null ? s.id : nextId(),
+    // Deliberately mirrors the LIVE SESSION's set shape field-for-field (weight = number in kg
+    // or "", reps/rpe = strings or ""), so starting a routine can copy a prescription straight
+    // across without a conversion step that could quietly drift out of sync.
+    weight: (s.weight === "" || s.weight == null || !Number.isFinite(w)) ? "" : w,
+    reps: s.reps == null ? "" : String(s.reps),
+    rpe:  s.rpe  == null ? "" : String(s.rpe),
+    type: ROUTINE_SET_TYPES.includes(s.type) ? s.type : "working"
+  };
+}
+
+function normalizeRoutineExercise(e){
+  if(!e || typeof e !== "object") return null;
+  const name = String(e.name || "").trim();
+  if(!name) return null; // a nameless exercise can't be rendered or started — drop it
+  let details = Array.isArray(e.setDetails) ? e.setDetails.filter(Boolean).map(newRoutineSet) : null;
+  if(!details || !details.length){
+    // Legacy shape: expand the `sets` COUNT into that many blank prescriptions.
+    const count = Math.max(1, Math.min(ROUTINE_MAX_SETS, Number(e.sets) || 1));
+    details = Array.from({length: count}, ()=> newRoutineSet());
+  }
+  const rest = Number(e.restDuration);
+  return {
+    ...e,
+    id: e.id != null ? e.id : nextId(),
+    name,
+    sets: details.length,   // the legacy COUNT — kept in lockstep for older readers
+    setDetails: details,
+    restDuration: Number.isFinite(rest) && rest >= 0 ? rest : (Number(state.settings.defaultRest) || 0),
+    notes: typeof e.notes === "string" ? e.notes : ""
+  };
+}
+
+// Spread `...r` first so fields this code doesn't know about (anything cloud-sync or a future
+// version attaches) survive an edit round-trip instead of being silently dropped.
+function normalizeRoutine(r){
+  if(!r || typeof r !== "object") return null;
+  return {
+    ...r,
+    id: r.id != null ? r.id : nextId(),
+    name: String(r.name || "").trim(),
+    description: typeof r.description === "string" ? r.description : "",
+    notes: typeof r.notes === "string" ? r.notes : "",
+    exercises: (Array.isArray(r.exercises) ? r.exercises : []).map(normalizeRoutineExercise).filter(Boolean)
+  };
+}
+
+// Deep copy with FRESH ids at every level, so a duplicate can never alias or overwrite the
+// record it came from (the original and copy share no id).
+function cloneRoutineExercise(e){
+  const n = normalizeRoutineExercise(e);
+  if(!n) return null;
+  return { ...n, id: nextId(), setDetails: n.setDetails.map(s=>({ ...s, id: nextId() })) };
+}
+function cloneRoutine(r, name){
+  const n = normalizeRoutine(r);
+  if(!n) return null;
+  return { ...n, id: nextId(), name: name != null ? name : n.name,
+    exercises: n.exercises.map(cloneRoutineExercise).filter(Boolean) };
+}
+
+/* Write-time uniqueness invariant for routines — the routine-side counterpart to
+   enforceWorkoutLogIntegrity(). Difference in policy: a colliding routine is RE-IDed rather
+   than dropped. A duplicate finished workout is noise and gets collapsed, but a routine is
+   user-authored intent, so the safe failure mode is "keep both, give one a new id", never
+   "silently delete one". Order preserved; idempotent. */
+function enforceRoutineIntegrity(routines){
+  if(!Array.isArray(routines)) return [];
+  const seenRoutineIds = new Set();
+  return routines.filter(Boolean).map(r=>{
+    const out = { ...r };
+    if(out.id == null || seenRoutineIds.has(String(out.id))) out.id = nextId();
+    seenRoutineIds.add(String(out.id));
+    if(Array.isArray(out.exercises)){
+      const seenExIds = new Set();
+      out.exercises = out.exercises.filter(Boolean).map(e=>{
+        const ex = { ...e };
+        if(ex.id == null || seenExIds.has(String(ex.id))) ex.id = nextId();
+        seenExIds.add(String(ex.id));
+        if(Array.isArray(ex.setDetails)){
+          const seenSetIds = new Set();
+          ex.setDetails = ex.setDetails.filter(Boolean).map(s=>{
+            const st = { ...s };
+            if(st.id == null || seenSetIds.has(String(st.id))) st.id = nextId();
+            seenSetIds.add(String(st.id));
+            return st;
+          });
+          ex.sets = ex.setDetails.length; // never let the legacy count drift from reality
+        }
+        return ex;
+      });
+    }
+    return out;
+  });
+}
+
+/* Content-only signature of a routine, used to answer "are there unsaved edits?". IDs are
+   deliberately excluded: normalizing a legacy routine mints ids for its exercises/sets, and
+   that is an internal upgrade the user never made — it must not register as a pending change. */
+function routineFingerprint(r){
+  if(!r) return "";
+  return JSON.stringify([
+    String(r.name||"").trim(), String(r.description||"").trim(), String(r.notes||"").trim(),
+    (Array.isArray(r.exercises)?r.exercises:[]).map(e=>[
+      String(e.name||""), Number(e.restDuration)||0, String(e.notes||"").trim(),
+      (Array.isArray(e.setDetails)?e.setDetails:[]).map(s=>[
+        String(s.weight??""), String(s.reps??""), String(s.rpe??""), String(s.type||"working")
+      ])
+    ])
+  ]);
+}
+
+// "Leg Day" -> "Leg Day (copy)" -> "Leg Day (copy 2)". Only a naming convenience: uniqueness of
+// the RECORD is guaranteed by its id, never by its name (two routines may legitimately share one).
+function uniqueRoutineName(base){
+  const taken = new Set(state.routines.map(r=>String(r.name||"").trim().toLowerCase()));
+  let candidate = `${base} (copy)`;
+  for(let n=2; taken.has(candidate.trim().toLowerCase()); n++) candidate = `${base} (copy ${n})`;
+  return candidate;
+}
+
+/* Estimated duration shown on a routine card. Derived only from the routine's own real data —
+   its set count and its own configured rest — with one nominal constant for working time.
+   It is an approximation and is always labelled "est" in the UI; it is never presented as, or
+   written into, recorded workout history. */
+const EST_SECONDS_PER_SET = 45;
+function routineSetCount(e){
+  if(!e) return 0;
+  return Array.isArray(e.setDetails) ? e.setDetails.length : (Math.max(0, Number(e.sets)) || 0);
+}
+function routineEstimatedMinutes(r){
+  const exercises = Array.isArray(r && r.exercises) ? r.exercises : [];
+  let seconds = 0;
+  for(const e of exercises){
+    if(!e) continue;
+    const n = routineSetCount(e);
+    const rest = Number(e.restDuration);
+    const restSec = Number.isFinite(rest) && rest >= 0 ? rest : (Number(state.settings.defaultRest) || 0);
+    seconds += n * EST_SECONDS_PER_SET + Math.max(0, n - 1) * restSec;
+  }
+  return Math.round(seconds / 60);
 }
 
 /* ---- Centralized save coordinator: the SINGLE writer for a finished workout ----
@@ -4416,7 +4600,7 @@ function renderExercisePicker(){
   return `
     <div class="row-between" style="margin-bottom:14px;">
       <button class="ex-picker-textbtn" data-action="close-exercise-picker">Cancel</button>
-      <span style="font-weight:800;font-size:16px;">${state.exercisePickerContext==="routine"?"Add to Routine":state.exercisePickerContext==="replace"?"Replace Exercise":"Add Exercise"}</span>
+      <span style="font-weight:800;font-size:16px;">${state.exercisePickerContext==="routine"?"Add to Routine":(state.exercisePickerContext==="replace"||state.exercisePickerContext==="routine-replace")?"Replace Exercise":"Add Exercise"}</span>
       <button class="ex-picker-textbtn" data-action="show-create-in-picker" style="color:var(--color-interactive);">Create</button>
     </div>
 
@@ -4456,15 +4640,23 @@ function exercisePickerResultsHtml(){
   if(search) items = items.filter(i=>i.name.toLowerCase().includes(search));
 
   const isFiltering = !!search || equip!=="All" || muscleFilter!=="All";
+  // While filtering, the user is hunting for one specific exercise — the shortcut sections are
+  // noise there, so only the matches are shown (unchanged behaviour for Recent).
+  const favItems = isFiltering ? [] : items.filter(i=>isFavoriteExercise(i.name));
   const recentNames = isFiltering ? [] : recentExerciseNames(8);
   const recentItems = recentNames.map(n=> items.find(i=>i.name===n)).filter(Boolean);
+  const hasShortcuts = favItems.length || recentItems.length;
 
   return `
-    ${!isFiltering && recentItems.length ? `
-      <div class="eyebrow-label" style="margin-top:4px;">Recent Exercises</div>
-      ${recentItems.map(exercisePickerRow).join("")}
-      <div class="eyebrow-label">All Exercises</div>
+    ${favItems.length ? `
+      <div class="eyebrow-label" style="margin-top:4px;">Favorites</div>
+      ${favItems.map(exercisePickerRow).join("")}
     ` : ""}
+    ${recentItems.length ? `
+      <div class="eyebrow-label"${favItems.length ? "" : ' style="margin-top:4px;"'}>Recent Exercises</div>
+      ${recentItems.map(exercisePickerRow).join("")}
+    ` : ""}
+    ${hasShortcuts ? `<div class="eyebrow-label">All Exercises</div>` : ""}
     ${items.length===0 ? `<div class="empty-note">No exercises match.</div>` : items.map(exercisePickerRow).join("")}
   `;
 }
@@ -4481,17 +4673,35 @@ function updateExercisePickerResults(){
    WORKOUT TAB — freestyle logger, set-table style
 ========================================================= */
 
+// Favorites are stored as exercise NAMES (the same way hx_favorite_foods works) rather than ids,
+// because the library is a static catalog keyed by name and custom exercises have no id either.
+function isFavoriteExercise(name){
+  const k = String(name||"").trim().toLowerCase();
+  return state.favoriteExercises.some(n=>String(n).trim().toLowerCase() === k);
+}
+function toggleFavoriteExercise(name){
+  const clean = String(name||"").trim();
+  if(!clean) return;
+  const k = clean.toLowerCase();
+  const i = state.favoriteExercises.findIndex(n=>String(n).trim().toLowerCase() === k);
+  if(i >= 0) state.favoriteExercises.splice(i, 1);
+  else state.favoriteExercises.push(clean);
+}
+
 function exercisePickerRow(ex){
   const initial = ex.name.trim().charAt(0).toUpperCase();
   const color = avatarColorFor(ex.muscle);
   const equipSuffix = ex.cat && !["Custom"].includes(ex.cat) ? ` (${ex.cat})` : "";
-  return `<div class="ex-picker-row" data-pick-exercise="${ex.name}">
+  const fav = isFavoriteExercise(ex.name);
+  const safeName = escHtml(ex.name); // custom exercise names are user input and reach these attributes
+  return `<div class="ex-picker-row" data-pick-exercise="${safeName}">
     <div class="ex-picker-avatar" style="background:${color}22;color:${color};">${initial}</div>
     <div style="flex:1;min-width:0;">
-      <div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ex.name}${equipSuffix}</div>
+      <div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${safeName}${equipSuffix}</div>
       <div style="font-size:12px;color:var(--muted);margin-top:1px;">${ex.muscle}</div>
     </div>
-    <button class="ex-picker-info" data-view-exercise-from-picker="${ex.name}" title="View exercise guide" aria-label="View exercise guide">${svg('progress',16)}</button>
+    <button class="ex-picker-fav${fav?' is-fav':''}" data-fav-exercise="${safeName}" aria-pressed="${fav?'true':'false'}" title="${fav?'Remove from favorites':'Add to favorites'}" aria-label="${fav?'Remove':'Add'} ${safeName} ${fav?'from':'to'} favorites">${svg(fav?'starFilled':'star',15)}</button>
+    <button class="ex-picker-info" data-view-exercise-from-picker="${safeName}" title="View exercise guide" aria-label="View exercise guide">${svg('progress',16)}</button>
   </div>`;
 }
 
@@ -4575,26 +4785,103 @@ function genderToggle(id, current){
     </div></div>`;
 }
 
+/* ---- Routine editor (creates a new routine OR patches an existing one) ----
+   Every input here is UNCONTROLLED: typing never re-renders, and values are read back out of
+   the DOM by syncRoutineBuilderFromDOM() before any action that rebuilds the screen. Same
+   reason the exercise picker refreshes only its results list — a re-render per keystroke
+   destroys the focused <input>, and on Android takes the soft keyboard down with it.
+   Weights follow the app-wide convention: stored in kg, shown via displayW() in the user's
+   unit, read back through parseInputW(). */
 function renderRoutineBuilder(){
   const b = state.routineBuilder;
+  const isEditing = state.editingRoutineId != null;
+  const est = routineEstimatedMinutes({ exercises: b.exercises });
+  const fieldStyle = "width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;font-size:14px;color:var(--text);border:none;";
   return `<div class="info-box" style="padding:14px;margin-bottom:12px;">
-    <input type="text" id="routine-name" placeholder="Routine name (e.g. Leg Day 2)" value="${b.name}"
-      style="width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;font-size:14px;color:var(--text);margin-bottom:10px;">
+    <div class="row-between" style="margin-bottom:10px;">
+      <span class="eyebrow-label" style="margin:0;">${isEditing ? "Edit Routine" : "New Routine"}</span>
+      ${b.exercises.length ? `<span class="mono" style="font-size:11px;color:var(--muted);">${b.exercises.length} exercise${b.exercises.length!==1?'s':''} · ~${est} min est</span>` : ""}
+    </div>
 
-    ${b.exercises.length? b.exercises.map((e,i)=>`<div class="history-row" style="margin-bottom:4px;">
-      <span style="font-size:13px;font-weight:600;">${e.name}</span>
-      <span class="mono" style="font-size:12px;color:var(--steel);">${e.sets} sets</span>
-      <button class="del" data-remove-builder-ex="${i}" aria-label="Remove exercise">${svg('x',12)}</button>
-    </div>`).join("") : ""}
+    <input type="text" id="routine-name" placeholder="Routine name (e.g. Leg Day 2)" value="${escHtml(b.name)}"
+      style="${fieldStyle}margin-bottom:8px;">
+    <input type="text" id="routine-desc" placeholder="Description (optional)" value="${escHtml(b.description)}"
+      style="${fieldStyle}margin-bottom:8px;">
+    <textarea id="routine-notes" placeholder="Notes (optional)" rows="2"
+      style="${fieldStyle}margin-bottom:10px;resize:vertical;font-family:inherit;line-height:1.45;">${escHtml(b.notes)}</textarea>
+
+    ${b.exercises.length
+      ? `<div id="routine-ex-list">${b.exercises.map((e,i)=>renderRoutineExerciseRow(e,i,b.exercises.length)).join("")}</div>`
+      : `<div class="empty-note" style="padding:20px 0;">No exercises yet — add your first one below.</div>`}
 
     <div style="display:flex;gap:6px;align-items:center;margin-top:${b.exercises.length?'10px':'0'};">
-      <button class="btn btn-ghost" style="flex:1;text-align:left;display:flex;align-items:center;gap:8px;" data-action="open-exercise-picker-for-routine">${svg('plus',14)} Choose Exercise…</button>
+      <button class="btn btn-ghost" style="flex:1;text-align:left;display:flex;align-items:center;gap:8px;" data-action="open-exercise-picker-for-routine">${svg('plus',14)} Add Exercise…</button>
       <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
         <span style="font-size:11px;color:var(--muted);">sets</span>
-        <input type="number" id="routine-ex-sets" value="${state.routineBuilderSets}" min="1" style="width:44px;background:var(--surface-alt);border-radius:8px;padding:9px 4px;text-align:center;color:var(--accent);font-family:'SF Mono',monospace;font-weight:700;border:none;">
+        <input type="number" id="routine-ex-sets" value="${state.routineBuilderSets}" min="1" max="${ROUTINE_MAX_SETS}" style="width:44px;background:var(--surface-alt);border-radius:8px;padding:9px 4px;text-align:center;color:var(--accent);font-family:'SF Mono',monospace;font-weight:700;border:none;">
       </div>
     </div>
-    <button class="btn btn-accent btn-block" data-action="save-routine" style="margin-top:10px;">Save Routine</button>
+
+    <button class="btn btn-accent btn-block" data-action="save-routine" style="margin-top:10px;">${isEditing ? "Save Changes" : "Save Routine"}</button>
+    <button class="btn btn-ghost btn-block" data-action="cancel-routine-edit" style="margin-top:6px;">Cancel</button>
+  </div>`;
+}
+
+function renderRoutineExerciseRow(ex, i, total){
+  const open = state.routineExerciseOpen === ex.id;
+  const n = ex.setDetails.length;
+  const meta = [
+    `${n} set${n!==1?'s':''}`,
+    ex.restDuration > 0 ? `${ex.restDuration}s rest` : null,
+    ex.notes.trim() ? "note" : null
+  ].filter(Boolean).join(" · ");
+  return `<div class="rt-ex${open?' rt-ex--open':''}" data-rt-ex-id="${ex.id}">
+    <div class="rt-ex__head">
+      <button class="rt-drag" data-rt-drag="${ex.id}" aria-label="Reorder ${escHtml(ex.name)}" title="Drag to reorder">${svg('drag',16)}</button>
+      <button class="rt-ex__title" data-rt-toggle="${ex.id}" aria-expanded="${open?'true':'false'}">
+        <span class="rt-ex__name">${escHtml(ex.name)}</span>
+        <span class="rt-ex__meta mono">${meta}</span>
+      </button>
+      <span class="rt-ex__chev">${svg(open?'chevronUp':'chevronDown',15)}</span>
+    </div>
+    ${open ? renderRoutineExerciseEditor(ex, i, total) : ""}
+  </div>`;
+}
+
+function renderRoutineExerciseEditor(ex, i, total){
+  return `<div class="rt-ex__body">
+    <div class="rt-sets">
+      <div class="rt-set-row rt-set-row--head">
+        <span>Set</span><span>${wUnit()}</span><span>Reps</span><span>RPE</span><span></span>
+      </div>
+      ${ex.setDetails.map((s,si)=>`<div class="rt-set-row">
+        <span class="rt-set-idx mono">${si+1}</span>
+        <input class="rt-input mono" id="rt-w-${s.id}" type="number" inputmode="decimal" step="any" min="0" value="${escHtml(displayW(s.weight))}" placeholder="–" aria-label="Set ${si+1} weight in ${wUnit()}">
+        <input class="rt-input mono" id="rt-r-${s.id}" type="number" inputmode="numeric" min="0" value="${escHtml(s.reps)}" placeholder="–" aria-label="Set ${si+1} reps">
+        <input class="rt-input mono" id="rt-rpe-${s.id}" type="number" inputmode="decimal" step="any" min="0" max="10" value="${escHtml(s.rpe)}" placeholder="–" aria-label="Set ${si+1} RPE">
+        <button class="del rt-set-del" data-rt-del-set="${s.id}" aria-label="Remove set ${si+1}" ${ex.setDetails.length<=1?'disabled':''}>${svg('x',12)}</button>
+      </div>`).join("")}
+    </div>
+    <button class="btn btn-ghost rt-addset" data-rt-add-set="${ex.id}">${svg('plus',13)} Add Set</button>
+
+    <div class="rt-field-row">
+      <label class="rt-label" for="rt-rest-${ex.id}">Rest timer</label>
+      <div class="rt-rest-wrap">
+        <input class="rt-input mono" id="rt-rest-${ex.id}" type="number" inputmode="numeric" min="0" step="5" value="${ex.restDuration}" aria-label="Rest seconds for ${escHtml(ex.name)}">
+        <span class="rt-unit">sec</span>
+      </div>
+    </div>
+
+    <label class="rt-label" for="rt-notes-${ex.id}">Exercise notes</label>
+    <textarea class="rt-textarea" id="rt-notes-${ex.id}" rows="2" placeholder="Cues, setup, tempo…">${escHtml(ex.notes)}</textarea>
+
+    <div class="rt-actions">
+      <button class="rt-act" data-rt-move-up="${ex.id}" ${i===0?'disabled':''}>${svg('chevronUp',13)} Up</button>
+      <button class="rt-act" data-rt-move-down="${ex.id}" ${i===total-1?'disabled':''}>${svg('chevronDown',13)} Down</button>
+      <button class="rt-act" data-rt-replace="${ex.id}">${svg('swap',13)} Replace</button>
+      <button class="rt-act" data-rt-dup-ex="${ex.id}">${svg('copy',13)} Duplicate</button>
+      <button class="rt-act rt-act--danger" data-rt-del-ex="${ex.id}">${svg('x',13)} Delete</button>
+    </div>
   </div>`;
 }
 
@@ -6508,7 +6795,7 @@ function attachSwipeToDelete(){
 
 function renderWorkoutTab(){
   if(state.session && state.showExercisePicker) return renderExercisePicker();
-  if(state.routineBuilder && state.showExercisePicker && state.exercisePickerContext==="routine") return renderExercisePicker();
+  if(state.routineBuilder && state.showExercisePicker && isRoutinePickerContext()) return renderExercisePicker();
   if(!state.session){
     if(state.workoutCompleteId){
       const done = state.workoutLog.find(x=>x.id===state.workoutCompleteId);
@@ -6522,7 +6809,7 @@ function renderWorkoutTab(){
     }
     return window.IgnytPages.renderWorkoutList({
       state, svg, renderPRCelebration, renderRoutineBuilder, sessionMuscles, sessionTitle,
-      workoutDurationLabel, displayW, wUnit
+      workoutDurationLabel, displayW, wUnit, routineEstimatedMinutes, escHtml
     });
   }
   const s = state.session;
@@ -6815,6 +7102,238 @@ function renderCsvImportPreview(){
   `;
 }
 
+/* =========================================================
+   ROUTINE EDITOR LIFECYCLE — open/close/read-back for the routine builder.
+
+   Two rules hold this together:
+     1. openRoutineEditor()/closeRoutineEditor() are the ONLY places editingRoutineId moves. A
+        stale editingRoutineId is the one bug that would make "save" clobber a different
+        routine, so it is always set and cleared in lockstep with routineBuilder.
+     2. syncRoutineBuilderFromDOM() runs before EVERY action that re-renders. The editor's
+        inputs are uncontrolled (see renderRoutineBuilder), so anything typed but not yet read
+        back is destroyed by the next render if this is skipped.
+========================================================= */
+
+function clampRoutineSets(v){
+  return Math.max(1, Math.min(ROUTINE_MAX_SETS, Math.floor(Number(v)) || 3));
+}
+
+function openExercisePicker(context){
+  state.showExercisePicker = true;
+  state.exercisePickerContext = context;
+  state.exercisePickerSearch = "";
+  state.exercisePickerEquipment = "All";
+  state.exercisePickerMuscle = "All";
+  state.exercisePickerShowCreate = false;
+}
+
+function isRoutinePickerContext(){
+  return state.exercisePickerContext === "routine" || state.exercisePickerContext === "routine-replace";
+}
+
+/* Single write path for both routine picker contexts (picking from the library and creating a
+   custom exercise both land here), so "add" and "replace" can't drift apart. */
+function applyRoutineExercisePick(name){
+  const b = state.routineBuilder;
+  if(!b) return;
+  if(state.exercisePickerContext === "routine-replace"){
+    const i = b.exercises.findIndex(e=>String(e.id) === String(state.replacingRoutineExerciseId));
+    if(i >= 0){
+      const old = b.exercises[i];
+      // Keep the planned STRUCTURE (same slot, same set count, same rest) but drop the numbers:
+      // weights/reps/cues belonged to the movement being replaced, and carrying a Squat's 120kg
+      // onto a Lateral Raise is worse than starting that exercise clean.
+      b.exercises[i] = normalizeRoutineExercise({
+        name, sets: old.setDetails.length, restDuration: old.restDuration, notes: ""
+      });
+      state.routineExerciseOpen = b.exercises[i].id;
+    }
+    state.replacingRoutineExerciseId = null;
+  } else {
+    b.exercises.push(normalizeRoutineExercise({ name, sets: state.routineBuilderSets }));
+  }
+}
+
+// routineId == null -> create; otherwise edit that record. Returns false if the id is unknown
+// (e.g. deleted in another tab) so the caller can skip a pointless render.
+function openRoutineEditor(routineId){
+  if(routineId == null){
+    state.routineBuilder = { name:"", description:"", notes:"", exercises:[] };
+    state.editingRoutineId = null;
+  } else {
+    const r = state.routines.find(x=>String(x.id) === String(routineId));
+    if(!r) return false;
+    // Lazy normalization: a legacy {name, sets:3} routine gains ids + setDetails HERE, on open,
+    // rather than through a bulk rewrite of stored data. A routine never opened stays untouched.
+    const n = normalizeRoutine(r);
+    state.routineBuilder = { name:n.name, description:n.description, notes:n.notes, exercises:n.exercises };
+    state.editingRoutineId = r.id;
+  }
+  state.routineExerciseOpen = null;
+  state.replacingRoutineExerciseId = null;
+  return true;
+}
+
+function closeRoutineEditor(){
+  state.routineBuilder = null;
+  state.editingRoutineId = null;
+  state.routineExerciseOpen = null;
+  state.replacingRoutineExerciseId = null;
+}
+
+function findBuilderExercise(id){
+  const b = state.routineBuilder;
+  return b ? (b.exercises.find(e=>String(e.id) === String(id)) || null) : null;
+}
+
+function moveBuilderExercise(id, dir){
+  const b = state.routineBuilder;
+  if(!b) return;
+  const i = b.exercises.findIndex(e=>String(e.id) === String(id));
+  const j = i + dir;
+  if(i < 0 || j < 0 || j >= b.exercises.length) return;
+  b.exercises.splice(j, 0, b.exercises.splice(i, 1)[0]);
+}
+
+// Reads every uncontrolled input in the open editor back into state. Only the ONE expanded
+// exercise has set/rest/notes inputs in the DOM; collapsed ones keep their state values, which
+// is why each lookup is guarded rather than assumed.
+function syncRoutineBuilderFromDOM(){
+  const b = state.routineBuilder;
+  if(!b) return;
+  const nameEl = document.getElementById("routine-name");
+  if(nameEl) b.name = nameEl.value;
+  const descEl = document.getElementById("routine-desc");
+  if(descEl) b.description = descEl.value;
+  const notesEl = document.getElementById("routine-notes");
+  if(notesEl) b.notes = notesEl.value;
+  const setsEl = document.getElementById("routine-ex-sets");
+  if(setsEl) state.routineBuilderSets = clampRoutineSets(setsEl.value);
+
+  b.exercises.forEach(ex=>{
+    const restEl = document.getElementById(`rt-rest-${ex.id}`);
+    if(restEl) ex.restDuration = Math.max(0, Math.floor(Number(restEl.value)) || 0);
+    const exNotesEl = document.getElementById(`rt-notes-${ex.id}`);
+    if(exNotesEl) ex.notes = exNotesEl.value;
+    ex.setDetails.forEach(s=>{
+      const w = document.getElementById(`rt-w-${s.id}`);
+      if(w) s.weight = parseInputW(w.value.trim()); // typed in the user's unit, stored as kg
+      const r = document.getElementById(`rt-r-${s.id}`);
+      if(r) s.reps = r.value.trim();
+      const p = document.getElementById(`rt-rpe-${s.id}`);
+      if(p) s.rpe = p.value.trim();
+    });
+    ex.sets = ex.setDetails.length; // the legacy count never drifts from the real set list
+  });
+}
+
+function routineEditorIsDirty(){
+  const b = state.routineBuilder;
+  if(!b) return false;
+  syncRoutineBuilderFromDOM();
+  if(state.editingRoutineId == null) return !!((b.name||"").trim() || b.exercises.length);
+  const orig = state.routines.find(r=>String(r.id) === String(state.editingRoutineId));
+  if(!orig) return true; // record vanished under us — treat as unsaved rather than discard silently
+  return routineFingerprint({ name:b.name, description:b.description, notes:b.notes, exercises:b.exercises })
+      !== routineFingerprint(normalizeRoutine(orig));
+}
+
+// Closes the editor, asking first only if there is real work to lose. Returns whether it closed.
+async function discardRoutineEditIfConfirmed(){
+  if(routineEditorIsDirty() && !(await confirmDialog("Discard your unsaved changes to this routine?", render,
+    { title:"Discard changes", confirmLabel:"Discard", danger:true }))) return false;
+  closeRoutineEditor();
+  return true;
+}
+
+/* =========================================================
+   DRAG REORDER (pointer events)
+
+   HTML5 drag-and-drop is not an option here: dragstart/dragover never fire for touch input in
+   an Android WebView, which is this app's primary target. Pointer events cover mouse and touch
+   through one code path — the same reason the swipe-to-delete gesture above uses them.
+
+   Dragging starts ONLY from a handle (the sole element with touch-action:none), so ordinary
+   scrolling everywhere else is unaffected. The dragged node is re-inserted in the live DOM as
+   the pointer crosses each neighbour's midpoint — which handles rows of different heights (an
+   expanded exercise is much taller) without any height math — and the resulting DOM order is
+   committed to state exactly once, on release. Move up/down buttons do the same job for
+   keyboard/assistive users and anyone who'd rather not drag.
+========================================================= */
+
+function attachDragReorder({ listSelector, itemSelector, handleSelector, idOf, onCommit }){
+  const list = document.querySelector(listSelector);
+  if(!list) return;
+  list.querySelectorAll(handleSelector).forEach(handle=>{
+    const item = handle.closest(itemSelector);
+    if(!item) return;
+    let pointerId = null, moved = false, startY = 0;
+
+    handle.addEventListener("pointerdown", (e)=>{
+      if(e.pointerType === "mouse" && e.button !== 0) return;
+      e.preventDefault(); // no text selection / native drag image from the handle
+      pointerId = e.pointerId; moved = false; startY = e.clientY;
+      item.classList.add("rt-dragging");
+      try{ handle.setPointerCapture(e.pointerId); }catch(_){ /* non-fatal */ }
+    });
+
+    handle.addEventListener("pointermove", (e)=>{
+      if(pointerId === null || e.pointerId !== pointerId) return;
+      if(!moved && Math.abs(e.clientY - startY) < 4) return; // ignore finger jitter on a tap
+      const under = document.elementFromPoint(e.clientX, e.clientY);
+      const target = under && under.closest ? under.closest(itemSelector) : null;
+      // Only reorder within this list, and never against the dragged node itself.
+      if(!target || target === item || target.parentElement !== list) return;
+      const r = target.getBoundingClientRect();
+      list.insertBefore(item, (e.clientY > r.top + r.height/2) ? target.nextSibling : target);
+      moved = true;
+    });
+
+    const finish = (e)=>{
+      if(pointerId === null || (e && e.pointerId !== pointerId)) return;
+      pointerId = null;
+      item.classList.remove("rt-dragging");
+      if(!moved) return; // a plain tap on the handle is not a reorder — don't churn a render
+      onCommit(Array.from(list.querySelectorAll(itemSelector)).map(idOf));
+    };
+    handle.addEventListener("pointerup", finish);
+    handle.addEventListener("pointercancel", finish);
+  });
+}
+
+// Reorders `arr` to match `order` (a list of ids from the DOM). Anything the DOM didn't report
+// is appended rather than dropped — an ordering gesture must never delete a record.
+function reorderById(arr, order){
+  const byId = new Map(arr.map(x=>[String(x.id), x]));
+  const next = order.map(id=>byId.get(String(id))).filter(Boolean);
+  const placed = new Set(next.map(x=>String(x.id)));
+  arr.forEach(x=>{ if(!placed.has(String(x.id))) next.push(x); });
+  return next;
+}
+
+function attachRoutineDragReorder(){
+  attachDragReorder({
+    listSelector: "#routine-card-list",
+    itemSelector: "[data-routine-card]",
+    handleSelector: "[data-routine-drag]",
+    idOf: el => el.dataset.routineCard,
+    onCommit: (order)=>{ state.routines = reorderById(state.routines, order); render(); }
+  });
+  attachDragReorder({
+    listSelector: "#routine-ex-list",
+    itemSelector: "[data-rt-ex-id]",
+    handleSelector: "[data-rt-drag]",
+    idOf: el => el.dataset.rtExId,
+    onCommit: (order)=>{
+      const b = state.routineBuilder;
+      if(!b) return;
+      syncRoutineBuilderFromDOM(); // reads by element id, so the reordered DOM is still correct
+      b.exercises = reorderById(b.exercises, order);
+      render();
+    }
+  });
+}
+
 function attachHandlers(){
   document.querySelectorAll("[data-nav]").forEach(el=>{
     el.addEventListener("click", ()=>{
@@ -7084,75 +7603,186 @@ function attachHandlers(){
     render();
   });
 
-  // Routines
-  const toggleBuilderBtn = document.querySelector('[data-action="toggle-routine-builder"]');
-  if(toggleBuilderBtn) toggleBuilderBtn.addEventListener("click", ()=>{
-    state.routineBuilder = state.routineBuilder ? null : { name:"", exercises:[] };
-    render();
-  });
-  const openPickerForRoutineBtn = document.querySelector('[data-action="open-exercise-picker-for-routine"]');
-  if(openPickerForRoutineBtn) openPickerForRoutineBtn.addEventListener("click", ()=>{
-    const nameEl = document.getElementById("routine-name");
-    if(nameEl) state.routineBuilder.name = nameEl.value;
-    const setsEl = document.getElementById("routine-ex-sets");
-    if(setsEl) state.routineBuilderSets = Math.max(1, Number(setsEl.value)||3);
-    state.showExercisePicker = true;
-    state.exercisePickerContext = "routine";
-    state.exercisePickerSearch = "";
-    state.exercisePickerEquipment = "All";
-    state.exercisePickerMuscle = "All";
-    state.exercisePickerShowCreate = false;
-    render();
-  });
-  const routineSetsEl = document.getElementById("routine-ex-sets");
-  if(routineSetsEl) routineSetsEl.addEventListener("change", ()=>{
-    state.routineBuilderSets = Math.max(1, Number(routineSetsEl.value)||3);
-    persist();
-  });
-  const pickerRoutineSetsEl = document.getElementById("ex-picker-routine-sets");
-  if(pickerRoutineSetsEl) pickerRoutineSetsEl.addEventListener("change", ()=>{
-    state.routineBuilderSets = Math.max(1, Number(pickerRoutineSetsEl.value)||3);
-    persist();
-  });
-  document.querySelectorAll("[data-remove-builder-ex]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      const nameEl = document.getElementById("routine-name");
-      if(nameEl) state.routineBuilder.name = nameEl.value;
-      state.routineBuilder.exercises.splice(Number(el.dataset.removeBuilderEx),1);
+  // Routines — every routine write goes through the editor lifecycle helpers above, so
+  // `editingRoutineId` can never be left pointing at a stale record (which is exactly what
+  // would make a later save overwrite the wrong routine).
+  // querySelectorAll, not querySelector: the header button AND the floating + button both carry
+  // this action, and binding only the first would leave the FAB dead.
+  document.querySelectorAll('[data-action="toggle-routine-builder"]').forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      if(state.routineBuilder){
+        if(!(await discardRoutineEditIfConfirmed())) return; // header button doubles as Cancel
+      } else {
+        openRoutineEditor(null);
+      }
       render();
     });
   });
-  const saveRoutineBtn = document.querySelector('[data-action="save-routine"]');
-  if(saveRoutineBtn) saveRoutineBtn.addEventListener("click", ()=>{
-    const nameEl = document.getElementById("routine-name");
-    const name = nameEl ? nameEl.value.trim() : "";
-    if(!name || !state.routineBuilder.exercises.length) return;
-    state.routines.unshift({ id: nextId(), name, exercises: state.routineBuilder.exercises });
-    state.routineBuilder = null;
+  const openPickerForRoutineBtn = document.querySelector('[data-action="open-exercise-picker-for-routine"]');
+  if(openPickerForRoutineBtn) openPickerForRoutineBtn.addEventListener("click", ()=>{
+    syncRoutineBuilderFromDOM();
+    openExercisePicker("routine");
     render();
   });
-  document.querySelectorAll("[data-del-routine]").forEach(el=>{
+  const pickerRoutineSetsEl = document.getElementById("ex-picker-routine-sets");
+  if(pickerRoutineSetsEl) pickerRoutineSetsEl.addEventListener("change", ()=>{
+    state.routineBuilderSets = clampRoutineSets(pickerRoutineSetsEl.value);
+    persist();
+  });
+  const cancelRoutineBtn = document.querySelector('[data-action="cancel-routine-edit"]');
+  if(cancelRoutineBtn) cancelRoutineBtn.addEventListener("click", async ()=>{
+    if(!(await discardRoutineEditIfConfirmed())) return;
+    render();
+  });
+
+  const saveRoutineBtn = document.querySelector('[data-action="save-routine"]');
+  if(saveRoutineBtn) saveRoutineBtn.addEventListener("click", ()=>{
+    // Exactly-once, the same shape of guard commitFinishedWorkout() uses: the builder is torn
+    // down before render(), so a double-tap's second event finds no builder and no-ops. Without
+    // it, two clicks in one tick would insert the new routine twice.
+    const b = state.routineBuilder;
+    if(!b) return;
+    syncRoutineBuilderFromDOM();
+    const name = (b.name||"").trim();
+    if(!name){ showToast("Give the routine a name first.", "error", render); return; }
+    if(!b.exercises.length){ showToast("Add at least one exercise first.", "error", render); return; }
+
+    const existing = state.editingRoutineId != null
+      ? state.routines.find(r=>String(r.id) === String(state.editingRoutineId)) : null;
+    const record = normalizeRoutine({
+      ...(existing || {}),           // keep fields this code doesn't own (e.g. sync metadata)
+      id: existing ? existing.id : nextId(),
+      name, description: b.description, notes: b.notes, exercises: b.exercises
+    });
+
+    if(existing) state.routines[state.routines.indexOf(existing)] = record; // patch in place: same id, same slot
+    else state.routines.unshift(record);
+    state.routines = enforceRoutineIntegrity(state.routines);
+
+    const wasEditing = !!existing;
+    closeRoutineEditor();
+    showToast(wasEditing ? "Routine updated." : "Routine saved.", "success", render);
+  });
+
+  document.querySelectorAll("[data-edit-routine]").forEach(el=>{
+    el.addEventListener("click", ()=>{ if(openRoutineEditor(el.dataset.editRoutine)) render(); });
+  });
+  document.querySelectorAll("[data-dup-routine]").forEach(el=>{
     el.addEventListener("click", ()=>{
-      state.routines = state.routines.filter(r=>r.id !== Number(el.dataset.delRoutine));
-      render();
+      const src = state.routines.find(r=>String(r.id) === String(el.dataset.dupRoutine));
+      if(!src) return;
+      const copy = cloneRoutine(src, uniqueRoutineName(src.name));
+      if(!copy) return;
+      state.routines.splice(state.routines.indexOf(src)+1, 0, copy); // sits right below the original
+      state.routines = enforceRoutineIntegrity(state.routines);
+      showToast(`Duplicated as “${copy.name}”.`, "success", render);
+    });
+  });
+  document.querySelectorAll("[data-del-routine]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const id = el.dataset.delRoutine;
+      const r = state.routines.find(x=>String(x.id) === String(id));
+      if(!r) return;
+      if(!(await confirmDialog(`Delete “${r.name}”? This can't be undone.`, render,
+        { title:"Delete routine", confirmLabel:"Delete", danger:true }))) return;
+      state.routines = state.routines.filter(x=>String(x.id) !== String(id)); // only this record
+      if(String(state.editingRoutineId) === String(id)) closeRoutineEditor(); // never leave the editor on a deleted routine
+      showToast("Routine deleted.", "info", render);
     });
   });
   document.querySelectorAll("[data-start-routine]").forEach(el=>{
     el.addEventListener("click", ()=>{
-      const routine = state.routines.find(r=>r.id === Number(el.dataset.startRoutine));
+      const routine = state.routines.find(r=>String(r.id) === String(el.dataset.startRoutine));
       if(!routine) return;
+      const n = normalizeRoutine(routine); // legacy {name,sets} routines expand to blank prescriptions here
       state.session = {
         startedAt: Date.now(),
-        notes: "",
-        title: routine.name,
-        exercises: routine.exercises.map(e=>({
-          name: e.name, notes:"", restDuration:state.settings.defaultRest,
-          sets: Array.from({length:e.sets}, ()=>({weight:"",reps:"",rpe:"",done:false,type:"working"}))
+        notes: n.notes || "",
+        title: n.name,
+        exercises: n.exercises.map(e=>({
+          name: e.name, notes: e.notes || "", restDuration: e.restDuration,
+          // A prescription seeds the set's starting values but never marks it done — planning a
+          // set is not logging it. An un-prescribed set is blank, exactly as before.
+          sets: e.setDetails.map(s=>({ weight:s.weight, reps:s.reps, rpe:s.rpe, done:false, type:s.type||"working" }))
         }))
       };
       state.editingSessionId = null;
       state.tab = "workout";
       applyWakeLock();
+      render();
+    });
+  });
+
+  // Routine editor — per-exercise controls
+  document.querySelectorAll("[data-rt-toggle]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      syncRoutineBuilderFromDOM();
+      const ex = findBuilderExercise(el.dataset.rtToggle);
+      state.routineExerciseOpen = (ex && state.routineExerciseOpen !== ex.id) ? ex.id : null;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-rt-add-set]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      syncRoutineBuilderFromDOM();
+      const ex = findBuilderExercise(el.dataset.rtAddSet);
+      if(!ex) return;
+      if(ex.setDetails.length >= ROUTINE_MAX_SETS){ showToast(`Max ${ROUTINE_MAX_SETS} sets per exercise.`, "error", render); return; }
+      // Seeded from the last set (another set of "100kg x 5" is the overwhelmingly common intent,
+      // and it's one tap to change) but with a FRESH id, so it's a new record and not an alias.
+      const last = ex.setDetails[ex.setDetails.length-1];
+      ex.setDetails.push(newRoutineSet({ ...(last||{}), id:null }));
+      ex.sets = ex.setDetails.length;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-rt-del-set]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      syncRoutineBuilderFromDOM();
+      const id = el.dataset.rtDelSet;
+      const ex = (state.routineBuilder.exercises||[]).find(e=>e.setDetails.some(s=>String(s.id)===String(id)));
+      if(!ex || ex.setDetails.length <= 1) return; // an exercise with zero sets can't be started
+      ex.setDetails = ex.setDetails.filter(s=>String(s.id) !== String(id));
+      ex.sets = ex.setDetails.length;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-rt-move-up]").forEach(el=>{
+    el.addEventListener("click", ()=>{ syncRoutineBuilderFromDOM(); moveBuilderExercise(el.dataset.rtMoveUp, -1); render(); });
+  });
+  document.querySelectorAll("[data-rt-move-down]").forEach(el=>{
+    el.addEventListener("click", ()=>{ syncRoutineBuilderFromDOM(); moveBuilderExercise(el.dataset.rtMoveDown, 1); render(); });
+  });
+  document.querySelectorAll("[data-rt-dup-ex]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      syncRoutineBuilderFromDOM();
+      const b = state.routineBuilder;
+      const i = b.exercises.findIndex(e=>String(e.id) === String(el.dataset.rtDupEx));
+      if(i < 0) return;
+      const copy = cloneRoutineExercise(b.exercises[i]); // fresh ids at every level
+      if(!copy) return;
+      b.exercises.splice(i+1, 0, copy);
+      state.routineExerciseOpen = copy.id;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-rt-del-ex]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      syncRoutineBuilderFromDOM();
+      const b = state.routineBuilder;
+      const id = el.dataset.rtDelEx;
+      b.exercises = b.exercises.filter(e=>String(e.id) !== String(id));
+      if(String(state.routineExerciseOpen) === String(id)) state.routineExerciseOpen = null;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-rt-replace]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      syncRoutineBuilderFromDOM();
+      const ex = findBuilderExercise(el.dataset.rtReplace);
+      if(!ex) return;
+      state.replacingRoutineExerciseId = ex.id;
+      openExercisePicker("routine-replace");
       render();
     });
   });
@@ -7307,6 +7937,7 @@ function attachHandlers(){
   }
 
   attachSwipeToDelete();
+  attachRoutineDragReorder();
   const editWorkoutBtn = document.querySelector('[data-action="edit-workout"]');
   if(editWorkoutBtn) editWorkoutBtn.addEventListener("click", ()=>{
     const s = state.workoutLog.find(x=>x.id===Number(editWorkoutBtn.dataset.sessionId));
@@ -7373,10 +8004,14 @@ function attachHandlers(){
   if(saveAsRoutineBtn) saveAsRoutineBtn.addEventListener("click", ()=>{
     const s = state.workoutLog.find(x=>x.id===Number(saveAsRoutineBtn.dataset.sessionId));
     if(!s) return;
-    state.routineBuilder = {
-      name: "",
-      exercises: s.exercises.map(e=>({ name: e.name, sets: e.sets.length || 1 }))
-    };
+    openRoutineEditor(null); // CREATE mode — must never inherit editingRoutineId from a prior edit
+    state.routineBuilder.name = s.title || "";
+    state.routineBuilder.exercises = (s.exercises||[]).map(e=>normalizeRoutineExercise({
+      name: e.name, restDuration: e.restDuration, notes: e.notes || "",
+      // Carry what was actually logged as the prescription — reusing a session you just finished
+      // is the whole point of "Save as Routine", and the numbers are the useful part.
+      setDetails: (e.sets||[]).map(set=>({ weight:set.weight, reps:set.reps, rpe:set.rpe, type:set.type }))
+    })).filter(Boolean);
     state.viewingSessionId = null;
     render();
   });
@@ -7756,11 +8391,21 @@ function attachHandlers(){
         render();
         return;
       }
+      const favBtn = e.target.closest("[data-fav-exercise]");
+      if(favBtn){
+        e.stopPropagation(); // the star sits inside the row — starring must not also pick it
+        toggleFavoriteExercise(favBtn.dataset.favExercise);
+        persist();
+        // Refresh the results in place instead of render(): a full re-render would destroy the
+        // focused search input (and the Android soft keyboard with it) mid-search.
+        updateExercisePickerResults();
+        return;
+      }
       const row = e.target.closest("[data-pick-exercise]");
       if(!row) return;
       const name = row.dataset.pickExercise;
-      if(state.exercisePickerContext==="routine"){
-        state.routineBuilder.exercises.push({ name, sets: state.routineBuilderSets });
+      if(isRoutinePickerContext()){
+        applyRoutineExercisePick(name);
       } else if(state.exercisePickerContext==="replace"){
         const idx = state.replacingExerciseIndex;
         if(idx!=null && state.session.exercises[idx]){
@@ -7791,8 +8436,8 @@ function attachHandlers(){
     const presc = document.getElementById("custom-presc").value.trim() || "—";
     if(!name) return;
     state.customExercises.push({ name, cat, presc, unit:"reps", muscle });
-    if(state.exercisePickerContext==="routine"){
-      state.routineBuilder.exercises.push({ name, sets: state.routineBuilderSets });
+    if(isRoutinePickerContext()){
+      applyRoutineExercisePick(name);
     } else if(state.exercisePickerContext==="replace"){
       const idx = state.replacingExerciseIndex;
       if(idx!=null && state.session.exercises[idx]){
@@ -8296,10 +8941,13 @@ window.addEventListener("storage", (e)=>{
     hx_prs:         ()=>{ state.prs = LS.get("hx_prs", []); },
     hx_achievements:()=>{ state.achievements = LS.get("hx_achievements", []); },
     hx_routines:    ()=>{ state.routines = LS.get("hx_routines", []); },
+    hx_favorite_exercises: ()=>{ state.favoriteExercises = LS.get("hx_favorite_exercises", []); },
     hx_bodylog:     ()=>{ state.bodylog = LS.get("hx_bodylog", []); }
   };
   if(reload[e.key]){
-    try{ reload[e.key](); if(typeof render === "function" && !state.session) render(); }
+    // Re-rendering mid-edit would discard the editor's uncontrolled inputs, so the open routine
+    // editor is protected the same way a live session already is.
+    try{ reload[e.key](); if(typeof render === "function" && !state.session && !state.routineBuilder) render(); }
     catch(_){ /* reconciliation is best-effort, never fatal */ }
   }
 });

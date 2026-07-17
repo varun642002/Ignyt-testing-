@@ -1,6 +1,89 @@
 # CLAUDE_PROGRESS.md
 
-## Current task
+## Current task (LATEST — routine workout management)
+Feature request: "Add & Edit Workouts in My Routines". Branch `feature/routine-workout-management`.
+Status: implemented, browser-verified, `npx cap sync android` OK, `gradlew clean assembleDebug`
+returned BUILD SUCCESSFUL, committed and pushed. See the next section for the scope decision that
+shaped this — it matters for anyone picking the request back up.
+
+### The spec/architecture mismatch (user decided this — do not silently re-interpret)
+The request described a **Routine → Workout → Exercise** hierarchy. IGNYT has **Routine →
+Exercise**: a routine is `{id, name, exercises:[{name, sets:Number}]}` where `sets` is a COUNT,
+and "Start Workout" turns one routine into one session. There is no workout layer inside a
+routine, so "add/delete/duplicate/reorder workouts inside a routine" had no referent.
+Three options were put to the user; they chose **"Make routines fully editable"** — treat the
+existing routine AS the workout (it already is one), and add full edit/duplicate/reorder/delete
+plus exercise management, with **no nesting, no schema migration, and no cloud-sync shape break**.
+The other two options (real nested workouts, or nested + a compatibility shim) were declined.
+
+Also decided by the user:
+- **Field scope: only fields with real support** — sets, reps, weight, rest, RPE, exercise notes.
+  Verified as NOT existing anywhere in the app and therefore deliberately NOT built: `tempo`
+  (appears only inside coaching `formTips` prose), `distance` (only exercise-catalog metadata like
+  `["Sled Push","4x25m","distance",…]`, never a logged field), per-exercise `duration` (only a
+  session-level computed stat). Adding those needs new fields in the live logger, history, PR
+  logic and CSV/JSON export first — otherwise they'd be set on a template and read by nothing.
+- **Reorder: pointer-based drag handles + up/down fallback.** HTML5 DnD is unusable here (it
+  never fires for touch in an Android WebView).
+
+### What was built
+- `www/app.js`
+  - Routine model helpers (additive, legacy-safe): `newRoutineSet`, `normalizeRoutineExercise`,
+    `normalizeRoutine`, `cloneRoutineExercise`, `cloneRoutine`, `enforceRoutineIntegrity`,
+    `routineFingerprint`, `uniqueRoutineName`, `routineSetCount`, `routineEstimatedMinutes`.
+    **`sets` stays a Number equal to `setDetails.length` on every write** — old installs (and any
+    device syncing routines via Firestore `users/{uid}/routines/{id}`) keep reading the count they
+    expect. Legacy routines are normalized LAZILY on open/duplicate/start; stored data is never
+    bulk-rewritten.
+  - Editor lifecycle: `openRoutineEditor` / `closeRoutineEditor` (the only places
+    `editingRoutineId` moves), `syncRoutineBuilderFromDOM` (inputs are uncontrolled — a re-render
+    per keystroke would destroy the focused input and the Android soft keyboard),
+    `routineEditorIsDirty`, `discardRoutineEditIfConfirmed`, `moveBuilderExercise`.
+  - `renderRoutineBuilder` rebuilt into a full editor + `renderRoutineExerciseRow` /
+    `renderRoutineExerciseEditor`.
+  - Save patches in place when `editingRoutineId` is set (no duplicate, id + slot preserved) and
+    is guarded exactly-once against double-tap.
+  - Exercise favorites (`hx_favorite_exercises`, mirrors `hx_favorite_foods`); added to
+    `ALL_DATA_KEYS`, `persist()` and the cross-tab storage reload map.
+  - `escHtml` util; routine/exercise names are now escaped (they previously rendered raw).
+  - Pointer drag reorder: `attachDragReorder` / `reorderById` / `attachRoutineDragReorder`.
+  - `data-start-routine` now prefills sets from `setDetails` (falls back to the legacy count).
+  - "Save as Routine" from history now carries the logged weights/reps as the prescription.
+  - New ICONS: drag, copy, pencil, star, starFilled.
+- `www/js/pages/workout.js` — routine cards: drag handle, name, description, exercise count,
+  estimated duration, Start Workout, Edit / Duplicate / Delete; floating "New Routine" button.
+- `www/css/pages/workout.css` — routine card/editor/set-grid/FAB/star styles. `touch-action:none`
+  is scoped to the drag handle ONLY, so normal scrolling is untouched.
+
+### Verified in a real browser (not just a build)
+Legacy-shaped routines seeded first, then: legacy routine opens + normalizes lazily while stored
+data stays legacy; edit saves in place (count 2→2, same id, same slot); triple-tap Save creates
+exactly ONE record; duplicate mints fresh ids at every level with the original untouched; delete
+prompts, cancel deletes nothing, confirm removes only the target; drag reorder persists and loses
+no records; move up/down, add/remove set, duplicate/replace exercise all correct; replace keeps
+slot/set-count/rest and clears the old movement's numbers; search + filters + favorites work and
+KEEP INPUT FOCUS (soft-keyboard safe); favorites persist and are case-insensitive; prescriptions
+prefill a started session with `done:false`; a never-normalized legacy routine still starts with
+blank sets exactly as before; kg↔lb round-trips (100kg→220.5lb→type 225lb→102.06kg); no
+horizontal overflow at a real 320px viewport; FAB clears the bottom nav by 14px (z-index 35 < nav
+40); all 10 tabs render; the shared session picker path is intact.
+Screenshot capture is still unavailable in this environment — verification used the DOM,
+computed styles and `getBoundingClientRect()`, not a rendered image. Not a substitute for a real
+device check.
+
+### Known limitations / follow-ups
+- Redundancy: the section-header "New Routine" button and the new floating button do the same
+  thing (the spec asked for a FAB; the header button was pre-existing and also acts as Cancel).
+- `enforceRoutineIntegrity` mints exercise ids for routines that were never opened. Additive only
+  (`sets` preserved, old readers unaffected), but it does mean an un-opened legacy routine gains
+  `id` fields on the next save of ANY routine.
+- Exercise-level actions (replace/duplicate/delete/up/down) live inside the expanded exercise
+  panel, not on the collapsed row — a deliberate call for 320px screens.
+- duration/distance/tempo remain unbuilt (see field scope above).
+
+---
+
+## Previous task
 Premium UI modular redesign — continuing incrementally. Pass 6 (this session): the athlete
 image was manually placed by the user at `www/assets/images/athletes/home-athlete.png`
 (1024x1536 PNG, 2.52MB) — verified it genuinely exists before touching any code. Updated the
