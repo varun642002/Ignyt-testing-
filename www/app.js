@@ -1694,10 +1694,79 @@ function enforceWorkoutLogIntegrity(log){
   return out;
 }
 
+/* ---- Centralized save coordinator: the SINGLE writer for a finished workout ----
+   Every new finished workout is committed through commitFinishedWorkout() and nowhere else, so
+   the exactly-once guarantee lives at the TOP of the pipeline, not just at the button. It holds
+   even when the UI or native runtime fires the save more than once, via three layers:
+     (1) the caller holds the synchronous _finishingSession lock (blocks same-tick re-entry),
+     (2) startedAt identity — the same live session is already in history, and
+     (3) a CONTENT signature + short time window. Layer 3 is the important one here: it catches
+         duplicate commits whose startedAt/id DIFFER (a native double-invoke can stamp a fresh
+         timestamp), which a startedAt-only check cannot see — that is exactly the residual "5"
+         after the earlier fix.
+   Every attempt (committed OR suppressed) is recorded with a caller stack in a ring buffer
+   exposed as window.IgnytIntegrity.saveLog(), so a real-device duplicate trigger is identifiable
+   from evidence rather than guesswork. */
+const COMMIT_DEDUPE_MS = 15000; // two byte-identical full workouts finished <15s apart is a duplicate save, never a real second workout
+let _recentCommit = null;        // { key, at, id }
+const _saveAttemptLog = [];      // ring buffer of recent finish attempts
+
+// Timestamp/id-INDEPENDENT identity of a workout's real content — what makes two save attempts
+// "the same workout" even when their startedAt/finishedAt/id differ.
+function workoutContentKey(session){
+  const ex = Array.isArray(session && session.exercises) ? session.exercises : [];
+  return ex.map(e => ((e && e.name) || "") + "#" + (((e && e.sets) || []).map(s => (s.weight||"")+"x"+(s.reps||"")+(s.done?"1":"0")+(s.type||"")).join(","))).join("|");
+}
+function _logSaveAttempt(entry){ _saveAttemptLog.push(entry); if(_saveAttemptLog.length > 60) _saveAttemptLog.shift(); }
+
+function commitFinishedWorkout(session){
+  const now = Date.now();
+  const txId = nextId(); // unique transaction id for THIS attempt
+  const contentKey = workoutContentKey(session);
+  const stackHint = (new Error().stack || "").split("\n").slice(2, 5).map(s => s.trim()).join("  <-  ");
+
+  // Layer 3 — identical content committed within the dedupe window => duplicate save from any
+  // trigger (differing startedAt/id included). Suppress; surface the already-saved id.
+  if(_recentCommit && _recentCommit.key === contentKey && (now - _recentCommit.at) < COMMIT_DEDUPE_MS){
+    _logSaveAttempt({ txId, at: now, result: "suppressed:recent-content", sinceMs: now - _recentCommit.at, id: _recentCommit.id, stackHint });
+    console.warn("[IGNYT][save] duplicate suppressed — identical workout committed " + (now - _recentCommit.at) + "ms ago (tx " + txId + "). caller: " + stackHint);
+    return { id: _recentCommit.id, duplicate: true };
+  }
+  // Layer 2 — same live session (unique startedAt) already saved.
+  const bySession = state.workoutLog.find(w => w.startedAt != null && w.startedAt === session.startedAt);
+  if(bySession){
+    _recentCommit = { key: contentKey, at: now, id: bySession.id };
+    _logSaveAttempt({ txId, at: now, result: "suppressed:startedAt", id: bySession.id, stackHint });
+    console.warn("[IGNYT][save] duplicate suppressed — session already saved (tx " + txId + ").");
+    return { id: bySession.id, duplicate: true };
+  }
+
+  // Commit exactly one record.
+  const finishedAt = now;
+  const durationMin = Math.max(1, Math.round((finishedAt - session.startedAt) / 60000));
+  const volume = computeSessionVolume(session.exercises);
+  const workoutId = nextId();
+  const newPRs = detectPRs(session, workoutId, finishedAt, volume);
+  state.workoutLog.unshift({
+    id: workoutId, date: new Date().toISOString().slice(0, 10),
+    startedAt: session.startedAt, finishedAt, durationMin, volume,
+    exercises: session.exercises, notes: session.notes || "", title: session.title || ""
+  });
+  state.workoutLog = enforceWorkoutLogIntegrity(state.workoutLog); // write-time invariant, belt-and-braces
+  if(newPRs.length){ state.prs = newPRs.concat(state.prs); state.lastSessionPRs = newPRs; }
+  const newlyUnlocked = checkAchievements();
+  if(newlyUnlocked.length) state.lastUnlockedAchievements = newlyUnlocked;
+
+  _recentCommit = { key: contentKey, at: now, id: workoutId };
+  _logSaveAttempt({ txId, at: now, result: "committed", id: workoutId, prs: newPRs.length, stackHint });
+  return { id: workoutId, duplicate: false, prs: newPRs.length };
+}
+
 // On-demand duplicate tooling. scan() only REPORTS (groups + counts, never deletes). cleanup()
 // removes only high-confidence duplicates (identical content-signature / duplicate id) from
 // workouts, and de-dupes PRs & achievements by id; it never removes an uncertain record.
 window.IgnytIntegrity = {
+  saveLog: () => _saveAttemptLog.slice(),   // recent finish attempts (evidence for duplicate triggers)
   scan(){
     const log = Array.isArray(state.workoutLog) ? state.workoutLog : [];
     const groups = new Map();
@@ -7135,18 +7204,15 @@ function attachHandlers(){
     if(_finishingSession || !state.session) return; // re-check after the await
     _finishingSession = true;
     // UI protection: lock the button the instant work starts so a slow device / laggy tap can't
-    // queue a second submit. render() rebuilds the tab (button replaced) on completion, so no
-    // explicit re-enable is needed on the success path.
+    // queue a second submit. render() rebuilds the tab (button replaced) on completion.
     finishBtn.disabled = true; finishBtn.textContent = "Saving…";
     try{
       let completedId = null;
       if(state.session.exercises.length){
-        const volume = computeSessionVolume(state.session.exercises); // completed sets only
-        let mutated = false;
-
         if(state.editingSessionId){
-          // Patch the existing history entry in place — no new PR detection (this is a correction,
-          // not a new performance) and no duplicate log entry.
+          // Editing an existing history entry is a CORRECTION, not a new commit: patch in place,
+          // no new PR detection, no duplicate log entry, does not go through the save coordinator.
+          const volume = computeSessionVolume(state.session.exercises);
           const idx = state.workoutLog.findIndex(s=>s.id===state.editingSessionId);
           if(idx!==-1){
             state.workoutLog[idx] = Object.assign({}, state.workoutLog[idx], {
@@ -7155,52 +7221,20 @@ function attachHandlers(){
               title: state.session.title || "",
               volume
             });
-            mutated = true;
+            const newlyUnlocked = checkAchievements();
+            if(newlyUnlocked.length) state.lastUnlockedAchievements = newlyUnlocked;
           }
           state.editingSessionId = null;
-        } else if(state.workoutLog.some(w => w.startedAt != null && w.startedAt === state.session.startedAt)){
-          // IDEMPOTENCY GUARD (data-level, the real fix): a live session's startedAt is unique —
-          // you cannot start two workouts at the same instant. If a history entry with this exact
-          // startedAt already exists, this is a DUPLICATE finish (handler re-entry, a native
-          // double-invoke, or a persisted session that was restored and finished again). Insert
-          // NOTHING, run no PR/achievement, and just surface the already-saved workout. This makes
-          // saving idempotent regardless of how the finish was re-triggered.
-          const existing = state.workoutLog.find(w => w.startedAt === state.session.startedAt);
-          completedId = existing ? existing.id : null;
-          console.warn("[IGNYT] Duplicate finish ignored — session already saved (startedAt " + state.session.startedAt + ").");
         } else {
-          const finishedAt = Date.now();
-          const durationMin = Math.max(1, Math.round((finishedAt - state.session.startedAt)/60000));
-          const workoutId = nextId(); // collision-proof, never reused
-          const newPRs = detectPRs(state.session, workoutId, finishedAt, volume);
-          state.workoutLog.unshift({
-            id: workoutId,
-            date: new Date().toISOString().slice(0,10),
-            startedAt: state.session.startedAt,
-            finishedAt, durationMin, volume,
-            exercises: state.session.exercises,
-            notes: state.session.notes || "",
-            title: state.session.title || ""
-          });
-          // Write-time uniqueness invariant (the "unique constraint"): even if some future path
-          // ever re-entered this insert, the log can never hold a duplicate id or content-sig.
-          state.workoutLog = enforceWorkoutLogIntegrity(state.workoutLog);
-          if(newPRs.length){
-            state.prs = newPRs.concat(state.prs);
-            state.lastSessionPRs = newPRs;
-          }
-          completedId = workoutId;
-          mutated = true;
-        }
-        // PR/achievement checks run ONLY when history actually changed — never on a duplicate skip.
-        if(mutated){
-          const newlyUnlocked = checkAchievements();
-          if(newlyUnlocked.length) state.lastUnlockedAchievements = newlyUnlocked;
+          // ALL new finishes go through the single, idempotent, instrumented save coordinator.
+          // It is the only writer of a finished workout, so exactly-once holds no matter how many
+          // times (or from where) this handler is triggered.
+          completedId = commitFinishedWorkout(state.session).id;
         }
       }
       state.session = null;
-      // Dedicated Workout Complete screen (summary + share cards) for real finishes with
-      // content; edits and empty sessions go back to the list as before.
+      // Dedicated Workout Complete screen (summary + share cards) for real finishes with content;
+      // edits and empty sessions go back to the list as before.
       state.workoutCompleteId = completedId;
       state.shareCardIndex = 0;
       applyWakeLock();
