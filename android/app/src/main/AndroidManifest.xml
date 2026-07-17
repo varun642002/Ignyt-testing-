@@ -53,6 +53,14 @@
         </activity-alias>
     </application>
 
+    <!-- Health Connect's own AAR does not declare this. Without it, Android 11+ package
+         visibility filtering can make isAvailable()'s PackageManager lookup for
+         com.google.android.apps.healthdata fail even when Health Connect is genuinely
+         installed, on some devices/OEM skins. -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
+
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />

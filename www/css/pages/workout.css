@@ -1,0 +1,6 @@
+/* Workout presentation overrides only; interaction and set-row sizing remain in app.js/legacy CSS. */
+.ex-log-card, .history-row, .live-stats-bar { border:1px solid var(--color-border); border-radius:var(--radius-card); box-shadow:var(--shadow-card); }
+.ex-log-card { background:var(--color-surface); }
+.live-stats-bar { background:var(--color-surface-elevated); }
+.set-row-wrap { border-radius:var(--radius-sm); }
+.set-input { font-variant-numeric:tabular-nums; }

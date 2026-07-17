@@ -1,0 +1,53 @@
+.premium-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); box-shadow:var(--shadow-card); }
+.premium-card--elevated { background:var(--color-surface-elevated); }
+.section-heading { display:flex; align-items:center; justify-content:space-between; gap:var(--space-sm); margin:var(--space-lg) 0 var(--space-xs); }
+.section-heading__label { font-size:var(--font-size-xs); letter-spacing:.14em; text-transform:uppercase; color:var(--color-text-secondary); font-weight:800; }
+.metric-card { min-width:0; padding:var(--space-sm); }
+.metric-card__label { color:var(--color-text-secondary); font-size:var(--font-size-xs); font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+.metric-card__value { margin-top:var(--space-2xs); font-size:22px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.metric-card__detail { margin-top:2px; color:var(--color-text-secondary); font-size:var(--font-size-xs); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.btn-primary { background:var(--color-primary); color:#17110e; }
+.btn-secondary { background:var(--color-surface-elevated); border:1px solid var(--color-border); color:var(--color-text-primary); }
+/* Reference: "bright blue primary interactive accent" for primary CTAs (e.g. "+ Start Empty
+   Workout"). .btn-accent is the app's one shared primary-action button class (Start Empty
+   Workout, Finish, Log Entry, Get Started, etc.) -- overriding it here applies the reference's
+   primary-action color consistently everywhere that class is already used, with no markup
+   changes anywhere. .btn-steel (secondary/informational actions) is left on its existing
+   color intentionally, so primary vs secondary actions stay visually distinct. */
+.btn-accent { background: var(--color-interactive); color: #ffffff; }
+
+/* Shared premium treatment for legacy components reused across every remaining tab
+   (Workout, Nutrition, Progress, Plan, Library, Profile, Settings, Health, Tools sheet).
+   CSS-only: no class names, markup, or app.js logic change, so behavior is unaffected. */
+.btn-accent, .btn-steel { box-shadow:0 6px 16px rgba(0,0,0,.18); }
+.search-bar, .lib-item, .routine-card { border:1px solid var(--color-border); border-radius:var(--radius-card); box-shadow:var(--shadow-card); }
+.more-sheet { border-radius:var(--radius-card) var(--radius-card) 0 0; }
+.more-sheet-card { border:1px solid var(--color-border); border-radius:var(--radius-md); box-shadow:var(--shadow-card); }
+.cat-chip, .muscle-chip { border-radius:var(--radius-pill); }
+.day-tab, .week-chip { border-radius:var(--radius-sm); }
+
+/* Reference: selected chips/tabs read as the bright-blue interactive accent (e.g. the 4W
+   analytics range chip). These override the legacy inline active states so the whole app's
+   "selected" signal is one consistent blue, instead of a mix of orange (--accent) and steel.
+   Loaded after the inline <style>, so equal-specificity selectors win here. Semantic
+   non-interactive accents are deliberately NOT touched: --mint completion checks
+   (.set-check.done / .ex-check.done) stay green, and the orange brand highlights for streak/
+   PR/achievement stay orange -- those aren't "selected/interactive" states. */
+.cat-chip.active { background: var(--color-interactive); color: #ffffff; }
+.week-chip.active { background: var(--color-interactive); color: #ffffff; box-shadow: 0 0 0 2px rgba(62,130,247,.35); }
+.week-chip.active .week-bar { background: rgba(0,0,0,.25); }
+.week-chip.active .week-bar-fill { background: #ffffff; }
+.day-tab.active { border-color: var(--color-interactive); }
+.day-tab.active .dtop { color: var(--color-interactive); }
+[data-theme="light"] .week-chip.active { color: #ffffff; }
+/* Bottom-nav active tab + the "TRAIN WITH INTENT" eyebrow dash read as the blue interactive
+   accent per the reference (legacy inline <style> had them on orange --accent; these equal-
+   specificity rules load after and win). Streak/PR/muscle highlights stay orange. */
+.nav-btn.active { color: var(--color-interactive); }
+.eyebrow-dash { background: var(--color-interactive); }
+.dialog-box { border-radius:var(--radius-card); }
+.dialog-title { font-size:var(--font-size-lg); font-weight:900; margin-bottom:var(--space-xs); color:var(--color-text-primary); }
+.btn-danger { background:#e5484d; color:#ffffff; }
+.toast { border-radius:var(--radius-md); }
+.ex-picker-avatar { border-radius:var(--radius-pill); }
+.timer-overlay .timer-ring { text-shadow:0 4px 18px rgba(255,90,31,.25); }

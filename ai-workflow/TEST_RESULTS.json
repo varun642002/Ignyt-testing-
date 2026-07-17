@@ -1,0 +1,22 @@
+{
+  "task_id": "IGNYT-UX-IMPROVEMENTS-002",
+  "tester": "Claude Code (self-verification; no independent Playwright pass, no real-device test)",
+  "verificationMethod": "Static www/ served locally, driven in a real headless browser (clicks, real input events, element-identity tagging, computed styles, localStorage inspection, console-error checks). Screenshots unavailable in this environment.",
+  "results": {
+    "logWeightSection": "PASS - Current Weight (82kg) + last-updated date, trend SVG renders, Highest/Lowest/7-Day stat row, Add Weight + View Weight History buttons present; profile form absent from this page; no overflow.",
+    "calculatorNavigation": "PASS - BMI/BMR/TDEE/Daily Calories/Macros cards + View All render; tapping BMI opens dedicated view with picker preset to 'bmi'; Calculate returns BMI 25.9 ('Overweight') for 82kg/178cm (formula correct); back button returns to Log Weight page.",
+    "profileMovedToSettings": "PASS - Settings shows a Profile section with height input, equipment, Maintenance/Daily Calorie Goal; editing height persists to hx_profile (190) and re-renders (recalculates targets).",
+    "myRoutines": "PASS - routine name 19px / weight 700; a 44-char name wraps to 2 lines (measured height 49px at 24.7px line-height) with no truncation and no overflow at 360px.",
+    "exerciseSearchKeyboard": "PASS (root cause fixed) - tagged the search input, focused it, dispatched 5 real input events ('bench'): the tag survived (SAME element, never recreated), document.activeElement stayed the input throughout, value='bench', results filtered to 11 matches. Because the input node is never destroyed, the soft keyboard cannot be dismissed by the search on a device.",
+    "searchResultSelection": "PASS - clicking a filtered result (delegated handler on the stable container) adds the exercise and closes the picker.",
+    "searchPerformance": "PASS - only #ex-picker-results rebuilds, debounced 120ms; no full-app render per keystroke.",
+    "regression": "PASS - Body Composition, Log Entry, Body History, Body Photos, Records & Achievements all present; Workout/Nutrition/AI Coach unaffected; zero console errors across the whole session; no horizontal overflow at 360/390px.",
+    "androidBuild": "npx cap sync android succeeded; gradlew assembleDebug -> BUILD SUCCESSFUL in 22s."
+  },
+  "failedTests": [],
+  "bugsFoundAndFixedDuringTask": [],
+  "consoleErrors": [],
+  "screenshots": [],
+  "anotherFixIterationRequired": false,
+  "note": "The keyboard fix is proven at the DOM level (input element persists, focus retained). Confirming the physical Android soft keyboard stays open is a real-device check. BUILD VERIFIED only for native aspects."
+}

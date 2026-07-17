@@ -1,0 +1,3 @@
+/* Genuine intrinsic-size protections; do not use this as a substitute for fixing widths. */
+.premium-card, .metric-card, .home-next-workout__copy { min-width:0; }
+@media (max-width:374px) { .metric-card__value { font-size:19px; } .home-metrics { gap:6px; } }

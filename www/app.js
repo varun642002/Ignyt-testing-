@@ -1280,6 +1280,7 @@ const ACTIVITY_MULTIPLIERS = [
 ];
 
 const CALCULATORS = [
+  {key:"bmi", label:"BMI"},
   {key:"bmr", label:"BMR"},
   {key:"calorie", label:"Calories / TDEE (with goal)"},
   {key:"protein", label:"Protein Intake"},
@@ -1324,6 +1325,7 @@ const ICONS = {
   body:'<circle cx="12" cy="5" r="2.2" fill="currentColor"/><path d="M12 8v7M8 11h8M9 20l3-5 3 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
   nutrition:'<path d="M12 21c-4 0-7-4-7-9a6 6 0 0 1 7-6 6 6 0 0 1 7 6c0 5-3 9-7 9z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 6c0-2 1.5-3.5 3-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
   progress:'<path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+  calc:'<rect x="5" y="3" width="14" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 7h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 11h.5M12 11h.5M16 11h.5M8 14h.5M12 14h.5M16 14h.5M8 17h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   check:'<path d="M4 12l5 5L20 6" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   x:'<path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
   plus:'<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
@@ -1434,6 +1436,12 @@ function muscleGroupColor(muscle){
 
 const _debounceTimers = {};
 
+/* Workout Complete screen + share-card transient state (never persisted). */
+let _finishingSession = false;   // double-tap guard for the Finish button
+const SWIPE_OPEN = 84;           // px the set row slides to reveal Delete
+let _openSwipeEl = null;         // the one currently-open swiped row (never more than one)
+let _progressScrollPos = 0;      // Progress home scroll position, restored on back-from-detail
+
 function debounce(key, fn, ms){
   clearTimeout(_debounceTimers[key]);
   _debounceTimers[key] = setTimeout(fn, ms);
@@ -1533,17 +1541,28 @@ const state = {
   foodLog: LS.get("hx_food_log",[]),
   routines: LS.get("hx_routines",[]),
   routineBuilder: null,
+  habits: LS.get("hx_habits",[]),
+  habitCompletions: LS.get("hx_habit_completions",{}),
+  habitBuilderName: "",
+  editingHabitId: null,
+  // Body-progress photos live in IndexedDB (window.IgnytBodyPhotosDB), not localStorage --
+  // bodyPhotos here is just an in-memory metadata cache (no blobs), populated asynchronously
+  // after boot (see the IgnytBodyPhotosDB.getAllMeta() call near the bottom of this file).
+  bodyPhotos: [],
+  bodyPhotoCategory: "Front",
+  viewingBodyPhotoId: null,
+  bodyView: null, // null = Log Weight page; 'calculators' = dedicated calculator view (transient, not persisted)
   calc: LS.get("hx_calc", {
     activeCalc:"bmr", result:null,
     neck:38, waist:90, hip:95, restingHR:60,
     bust:90, bwaist:75, highHip:85, bhip:95
   }),
   settings: Object.assign({
-    sounds:true, vibration:true, defaultRest:90, keepAwake:false,
+    sounds:true, vibration:true, defaultRest:0, keepAwake:false,
     plateCalc:true, rpeTracking:true, autoStartRest:true, waterTargetMl:2500,
     workoutReminders:false, hydrationReminders:false, weeklyReports:false,
     lastWorkoutReminderDate:null, lastHydrationReminderDate:null, lastWeeklyReportAt:null,
-    theme:"dark", weightUnit:"kg"
+    theme:"dark", weightUnit:"kg", exerciseCalorieBudget:false
   }, LS.get("hx_settings", {})),
   plateCalcOpen: null, // element id string when plate calc popover open
   restDuration: LS.get("hx_rest_duration",90),
@@ -1603,6 +1622,8 @@ function persist(){
   LS.set("hx_workout_log", state.workoutLog);
   LS.set("hx_food_log", state.foodLog);
   LS.set("hx_routines", state.routines);
+  LS.set("hx_habits", state.habits);
+  LS.set("hx_habit_completions", state.habitCompletions);
   LS.set("hx_calc", state.calc);
   LS.set("hx_settings", state.settings);
   LS.set("hx_rest_duration", state.restDuration);
@@ -1613,7 +1634,219 @@ function persist(){
 
 /* ---------- Migration: runs once on boot if stored schema is older than current ---------- */
 
+/* =========================================================
+   DATA INTEGRITY
+
+   This app persists to localStorage as arrays of self-contained DOCUMENTS: a workout object
+   CONTAINS its exercises, and each exercise CONTAINS its sets. There are no separate tables,
+   no foreign keys, and therefore no way to create an orphan exercise/set or a cross-table
+   partial write — a set cannot exist without the exercise/workout it lives inside. Each write
+   is a single localStorage.setItem, which is atomic per key. So the classic relational
+   failure modes (orphan rows, half-committed transactions, FK violations) are prevented by
+   construction, not by locks.
+
+   What a document store DOES still need, and what these helpers add:
+     1. nextId() — collision-proof, strictly-increasing unique IDs (Date.now() can repeat
+        within a millisecond).
+     2. enforceWorkoutLogIntegrity() — one write-time uniqueness invariant (the "unique
+        constraint"): no duplicate id, no duplicate content-signature.
+     3. window.IgnytIntegrity — an on-demand duplicate scanner (reports, never deletes) and a
+        high-confidence cleanup.
+========================================================= */
+
+// Strictly-increasing, collision-proof id. Persists a high-water mark so ids never repeat or
+// regress across reloads, even when two records are created in the same millisecond. Ordering
+// by id stays newest-last-issued (monotonic), so existing newest-first sorts are unaffected.
+let _lastIssuedId = Number(LS.get("hx_last_id", 0)) || 0;
+function nextId(){
+  const now = Date.now();
+  _lastIssuedId = Math.max(now, _lastIssuedId + 1);
+  LS.set("hx_last_id", _lastIssuedId);
+  return _lastIssuedId;
+}
+
+// High-confidence content signature. Two workouts match ONLY if effectively identical (same
+// start instant, volume, title, exercises, and total set count) — never merely two distinct
+// same-day sessions. Entries without a startedAt are never treated as duplicates.
+function workoutSignature(w){
+  if(!w || w.startedAt == null) return null;
+  const ex = Array.isArray(w.exercises) ? w.exercises : [];
+  const setCount = ex.reduce((n,e)=> n + ((e && Array.isArray(e.sets)) ? e.sets.length : 0), 0);
+  return [w.startedAt, w.volume, (w.title||""), ex.length, setCount, ex.map(e=>e&&e.name).join(",")].join("|");
+}
+
+// The write-time invariant. Returns a copy of the log with duplicate IDs and duplicate content
+// signatures collapsed to their FIRST occurrence. Order is preserved (never silently reorders
+// the user's history). Idempotent — running it twice changes nothing.
+function enforceWorkoutLogIntegrity(log){
+  if(!Array.isArray(log)) return [];
+  const seenIds = new Set(), seenSigs = new Set(), out = [];
+  for(const w of log){
+    if(!w) continue;
+    const id = w.id != null ? String(w.id) : null;
+    if(id != null && seenIds.has(id)) continue;
+    const sig = workoutSignature(w);
+    if(sig != null && seenSigs.has(sig)) continue;
+    if(id != null) seenIds.add(id);
+    if(sig != null) seenSigs.add(sig);
+    out.push(w);
+  }
+  return out;
+}
+
+/* ---- Centralized save coordinator: the SINGLE writer for a finished workout ----
+   Every new finished workout is committed through commitFinishedWorkout() and nowhere else, so
+   the exactly-once guarantee lives at the TOP of the pipeline, not just at the button. It holds
+   even when the UI or native runtime fires the save more than once, via three layers:
+     (1) the caller holds the synchronous _finishingSession lock (blocks same-tick re-entry),
+     (2) startedAt identity — the same live session is already in history, and
+     (3) a CONTENT signature + short time window. Layer 3 is the important one here: it catches
+         duplicate commits whose startedAt/id DIFFER (a native double-invoke can stamp a fresh
+         timestamp), which a startedAt-only check cannot see — that is exactly the residual "5"
+         after the earlier fix.
+   Every attempt (committed OR suppressed) is recorded with a caller stack in a ring buffer
+   exposed as window.IgnytIntegrity.saveLog(), so a real-device duplicate trigger is identifiable
+   from evidence rather than guesswork. */
+const COMMIT_DEDUPE_MS = 15000; // two byte-identical full workouts finished <15s apart is a duplicate save, never a real second workout
+let _recentCommit = null;        // { key, at, id }
+const _saveAttemptLog = [];      // ring buffer of recent finish attempts
+
+// Timestamp/id-INDEPENDENT identity of a workout's real content — what makes two save attempts
+// "the same workout" even when their startedAt/finishedAt/id differ.
+function workoutContentKey(session){
+  const ex = Array.isArray(session && session.exercises) ? session.exercises : [];
+  return ex.map(e => ((e && e.name) || "") + "#" + (((e && e.sets) || []).map(s => (s.weight||"")+"x"+(s.reps||"")+(s.done?"1":"0")+(s.type||"")).join(","))).join("|");
+}
+function _logSaveAttempt(entry){ _saveAttemptLog.push(entry); if(_saveAttemptLog.length > 60) _saveAttemptLog.shift(); }
+
+function commitFinishedWorkout(session){
+  const now = Date.now();
+  const txId = nextId(); // unique transaction id for THIS attempt
+  const contentKey = workoutContentKey(session);
+  const stackHint = (new Error().stack || "").split("\n").slice(2, 5).map(s => s.trim()).join("  <-  ");
+
+  // Layer 3 — identical content committed within the dedupe window => duplicate save from any
+  // trigger (differing startedAt/id included). Suppress; surface the already-saved id.
+  if(_recentCommit && _recentCommit.key === contentKey && (now - _recentCommit.at) < COMMIT_DEDUPE_MS){
+    _logSaveAttempt({ txId, at: now, result: "suppressed:recent-content", sinceMs: now - _recentCommit.at, id: _recentCommit.id, stackHint });
+    console.warn("[IGNYT][save] duplicate suppressed — identical workout committed " + (now - _recentCommit.at) + "ms ago (tx " + txId + "). caller: " + stackHint);
+    return { id: _recentCommit.id, duplicate: true };
+  }
+  // Layer 2 — same live session (unique startedAt) already saved.
+  const bySession = state.workoutLog.find(w => w.startedAt != null && w.startedAt === session.startedAt);
+  if(bySession){
+    _recentCommit = { key: contentKey, at: now, id: bySession.id };
+    _logSaveAttempt({ txId, at: now, result: "suppressed:startedAt", id: bySession.id, stackHint });
+    console.warn("[IGNYT][save] duplicate suppressed — session already saved (tx " + txId + ").");
+    return { id: bySession.id, duplicate: true };
+  }
+
+  // Commit exactly one record.
+  const finishedAt = now;
+  const durationMin = Math.max(1, Math.round((finishedAt - session.startedAt) / 60000));
+  const volume = computeSessionVolume(session.exercises);
+  const workoutId = nextId();
+  const newPRs = detectPRs(session, workoutId, finishedAt, volume);
+  state.workoutLog.unshift({
+    id: workoutId, date: new Date().toISOString().slice(0, 10),
+    startedAt: session.startedAt, finishedAt, durationMin, volume,
+    exercises: session.exercises, notes: session.notes || "", title: session.title || ""
+  });
+  state.workoutLog = enforceWorkoutLogIntegrity(state.workoutLog); // write-time invariant, belt-and-braces
+  if(newPRs.length){ state.prs = newPRs.concat(state.prs); state.lastSessionPRs = newPRs; }
+  const newlyUnlocked = checkAchievements();
+  if(newlyUnlocked.length) state.lastUnlockedAchievements = newlyUnlocked;
+
+  _recentCommit = { key: contentKey, at: now, id: workoutId };
+  _logSaveAttempt({ txId, at: now, result: "committed", id: workoutId, prs: newPRs.length, stackHint });
+  return { id: workoutId, duplicate: false, prs: newPRs.length };
+}
+
+// On-demand duplicate tooling. scan() only REPORTS (groups + counts, never deletes). cleanup()
+// removes only high-confidence duplicates (identical content-signature / duplicate id) from
+// workouts, and de-dupes PRs & achievements by id; it never removes an uncertain record.
+window.IgnytIntegrity = {
+  saveLog: () => _saveAttemptLog.slice(),   // recent finish attempts (evidence for duplicate triggers)
+  scan(){
+    const log = Array.isArray(state.workoutLog) ? state.workoutLog : [];
+    const groups = new Map();
+    for(const w of log){
+      const sig = workoutSignature(w);
+      if(sig == null) continue;
+      if(!groups.has(sig)) groups.set(sig, []);
+      groups.get(sig).push(w);
+    }
+    const dupGroups = [...groups.values()].filter(g => g.length > 1);
+    const idCounts = {};
+    for(const w of log){ if(w && w.id != null){ const k = String(w.id); idCounts[k] = (idCounts[k]||0) + 1; } }
+    return {
+      workouts: {
+        total: log.length,
+        duplicateGroups: dupGroups.length,
+        duplicateRecords: dupGroups.reduce((n,g)=> n + (g.length - 1), 0),
+        duplicateIds: Object.keys(idCounts).filter(k => idCounts[k] > 1),
+        groups: dupGroups.map(g => ({ count: g.length, ids: g.map(w => w.id), startedAt: g[0].startedAt, title: g[0].title }))
+      }
+    };
+  },
+  cleanup(){
+    const wBefore = (state.workoutLog || []).length;
+    state.workoutLog = enforceWorkoutLogIntegrity(state.workoutLog || []);
+    const wRemoved = wBefore - state.workoutLog.length;
+    // PRs & achievements: keep first per id (belt-and-braces; achievements are already unique
+    // by id at creation, PRs are protected by the finish idempotency guard).
+    const dedupeById = (arr) => {
+      if(!Array.isArray(arr)) return { arr: [], removed: 0 };
+      const seen = new Set(), out = [];
+      for(const r of arr){ const k = r && r.id != null ? String(r.id) : Symbol(); if(seen.has(k)) continue; seen.add(k); out.push(r); }
+      return { arr: out, removed: arr.length - out.length };
+    };
+    const prRes = dedupeById(state.prs); state.prs = prRes.arr;
+    const achRes = dedupeById(state.achievements); state.achievements = achRes.arr;
+    if(wRemoved || prRes.removed || achRes.removed){
+      LS.set("hx_workout_log", state.workoutLog); LS.set("hx_prs", state.prs); LS.set("hx_achievements", state.achievements);
+      if(typeof render === "function") render();
+    }
+    return { workoutsRemoved: wRemoved, prsRemoved: prRes.removed, achievementsRemoved: achRes.removed, workoutsRemaining: state.workoutLog.length };
+  }
+};
+
 function runMigrations(){
+  // One-time rest-timer default migration (independent of schema version so it also reaches
+  // pre-versioning installs, which return early below). The app's default rest timer changed
+  // from 90s to 0s (OFF); existing installs still have the old 90 persisted as their GLOBAL
+  // default in hx_settings, so their new exercises would keep defaulting to 90. Move only that
+  // stale global default to 0. It is flag-guarded (runs exactly once), only rewrites the exact
+  // old default value 90 — never a non-90 duration the user explicitly picked — and never
+  // touches any per-exercise, per-session, routine, or workout-history rest value. Fully
+  // reversible from Settings ▸ Default rest timer.
+  if(!LS.get("hx_rest_default_migrated_v1", false)){
+    if(state.settings.defaultRest === 90){
+      state.settings.defaultRest = 0;
+      LS.set("hx_settings", state.settings);
+    }
+    LS.set("hx_rest_default_migrated_v1", true);
+  }
+  // One-time cleanup of duplicate workouts left by any earlier double-save. HIGH-CONFIDENCE
+  // ONLY: two entries are treated as duplicates iff they share a full content signature —
+  // same startedAt, volume, title, exercise names, exercise count AND total set count. That is
+  // an identical copy (what a double-insert produces), never merely two distinct same-day
+  // sessions. Entries lacking a startedAt are never merged. Keeps the first occurrence, drops
+  // the rest, records the count in hx_workout_dedupe_removed_v1, and is idempotent (flag-guarded).
+  if(!LS.get("hx_workout_dedupe_v1", false)){
+    try{
+      const before = Array.isArray(state.workoutLog) ? state.workoutLog.length : 0;
+      // Same write-time invariant used on every live save — applied once to existing history.
+      state.workoutLog = enforceWorkoutLogIntegrity(state.workoutLog || []);
+      const removed = before - state.workoutLog.length;
+      if(removed > 0){
+        LS.set("hx_workout_log", state.workoutLog);
+        LS.set("hx_workout_dedupe_removed_v1", removed);
+        console.warn("[IGNYT] One-time cleanup removed "+removed+" duplicate workout(s) from history.");
+      }
+    }catch(e){ /* cleanup must never break boot */ }
+    LS.set("hx_workout_dedupe_v1", true);
+  }
   const stored = LS.get("hx_schema_version", null);
   if(stored===null){
     // Pre-versioning install (or brand new) — just stamp current version, no data shape to migrate
@@ -1992,25 +2225,41 @@ function stopElapsedTimer(){
   if(elapsedTimerHandle){ clearInterval(elapsedTimerHandle); elapsedTimerHandle = null; }
 }
 
+/* Rest timer, TIMESTAMP-BASED: endsAt is the source of truth, the interval only
+   repaints. Android aggressively throttles WebView intervals in the background, so a
+   decrementing counter drifts — deriving remaining time from Date.now() means the timer
+   is always correct the moment the app comes back, and syncTimerAfterResume() below
+   settles an expiry that happened while backgrounded (beep fires once, via the fired flag). */
 function startTimer(seconds){
-  if(state.timer && state.timer.handle) clearInterval(state.timer.handle);
-  state.timer = {remaining:seconds, total:seconds, handle:null};
+  if(state.timer && state.timer.handle) clearInterval(state.timer.handle); // never two timers
+  const now = Date.now();
+  state.timer = {endsAt: now + seconds*1000, total:seconds, remaining:seconds, fired:false, handle:null};
   render();
-  const handle = setInterval(()=>{
-    if(!state.timer){ clearInterval(handle); return; } // safety net: never crash on a stray tick after external cleanup
-    state.timer.remaining--;
-    if(state.timer.remaining<=0){
-      clearInterval(state.timer.handle);
-      playBeep(); vibrate();
-      state.timer = null;
-      render();
-      return;
-    }
-    if(state.timer.remaining<=3){ vibrate(80); }
-    const ring = document.querySelector(".timer-ring");
-    if(ring) ring.textContent = formatTime(state.timer.remaining);
-  },1000);
+  const handle = setInterval(()=>{ tickRestTimer(); }, 500);
   state.timer.handle = handle;
+}
+
+function tickRestTimer(){
+  const t = state.timer;
+  if(!t){ return; } // safety net: never crash on a stray tick after external cleanup
+  const remaining = Math.ceil((t.endsAt - Date.now())/1000);
+  if(remaining <= 0){
+    clearInterval(t.handle);
+    if(!t.fired){ t.fired = true; playBeep(); vibrate(); }
+    state.timer = null;
+    render();
+    return;
+  }
+  if(remaining <= 3 && remaining !== t.remaining){ vibrate(80); }
+  t.remaining = remaining;
+  const ring = document.querySelector(".timer-ring");
+  if(ring) ring.textContent = formatTime(remaining);
+}
+
+/* Called on visibilitychange -> visible: recompute from the timestamp immediately so the
+   overlay shows the true remaining time (or completes) without waiting for a throttled tick. */
+function syncTimerAfterResume(){
+  if(state.timer) tickRestTimer();
 }
 
 function playBeep(){
@@ -2047,7 +2296,11 @@ async function applyWakeLock(){
     }
   }catch{ wakeLockHandle = null; }
 }
-document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") applyWakeLock(); });
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState!=="visible") return;
+  applyWakeLock();
+  syncTimerAfterResume(); // rest timer catches up from its endsAt timestamp after background
+});
 
 /* =========================================================
    LIBRARY TAB
@@ -2156,17 +2409,23 @@ function weeklyBarChart(buckets, metric){
   const max = Math.max(1, ...vals);
   const fmt = (v)=>{
     if(metric==="volume") return v>0 ? displayW(v,0).toLocaleString() : "";
-    if(metric==="duration") return v>0 ? v+"m" : "";
+    if(metric==="duration") return v>0 ? fmtMinutes(v) : "";
     return v>0 ? String(v) : "";
   };
-  return `<div style="height:130px;display:flex;align-items:flex-end;gap:5px;">
+  // Value labels have real intrinsic width, and flex children default to min-width:auto —
+  // with many buckets that forced this row (and the whole page) wider than the viewport.
+  // min-width:0 lets bars shrink, and labels only render when there's genuinely room
+  // (otherwise just the latest bar's value).
+  const showAllLabels = buckets.length <= 9;
+  return `<div style="height:130px;display:flex;align-items:flex-end;gap:${buckets.length>20?2:5}px;min-width:0;max-width:100%;">
     ${buckets.map((b,i)=>{
       const val = b[metric];
       const isLast = i===buckets.length-1;
       const bh = Math.max(val>0?4:0, Math.round((val/max)*90));
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;">
-        <span class="mono" style="font-size:10px;font-weight:700;color:${isLast?'var(--accent)':'var(--steel)'};min-height:12px;">${fmt(val)}</span>
-        <div style="width:65%;border-radius:4px 4px 0 0;background:${isLast?'#FF5A1F':'#4FA8D8'};height:${bh}px;"></div>
+      const label = (showAllLabels || isLast) ? fmt(val) : "";
+      return `<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;overflow:hidden;">
+        <span class="mono" style="font-size:10px;font-weight:700;color:${isLast?'var(--accent)':'var(--steel)'};min-height:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</span>
+        <div style="width:${buckets.length>20?'85%':'65%'};border-radius:4px 4px 0 0;background:${isLast?'#FF5A1F':'#4FA8D8'};height:${bh}px;"></div>
       </div>`;
     }).join("")}
   </div>`;
@@ -2191,10 +2450,13 @@ function renderCalendarMonth(monthOffset){
     const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const active = dates.has(dateStr);
     const isToday = dateStr === new Date().toISOString().slice(0,10);
-    cells += `<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;
-      font-size:12px;font-weight:700;font-family:'SF Mono',monospace;
+    const selected = state.calendarSelectedDate === dateStr;
+    // Only genuinely-active days are tappable (data-cal-day) — empty days never highlight.
+    cells += `<div ${active?`data-cal-day="${dateStr}"`:''} style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;
+      font-size:13px;font-weight:700;font-family:'SF Mono',monospace;${active?'cursor:pointer;':''}
       background:${active?'#FF5A1F':'transparent'};
       color:${active?'#151515':'var(--muted)'};
+      ${selected ? 'box-shadow:0 0 0 2px var(--steel);':''}
       ${isToday && !active ? 'box-shadow:inset 0 0 0 1.5px var(--steel);color:var(--steel);':''}">${d}</div>`;
   }
   return `
@@ -2349,8 +2611,22 @@ function recentExerciseNames(limit=10){
 function allLibraryExercises(){
   const custom = LS.get("hx_custom_exercises", []);
   const list = [];
-  Object.entries(LIBRARY).forEach(([cat, items])=> items.forEach(([name,presc,unit,muscle])=> list.push({name,cat,presc,unit,muscle,custom:false})));
-  custom.forEach(ex=> list.push({...ex, custom:true}));
+  // Dedupe by case-insensitive name. Built-ins are canonical and added first; a custom
+  // exercise whose name collides with a built-in (e.g. an accidentally re-created
+  // "Shoulder Press Machine") or with an earlier custom is skipped for DISPLAY only — the
+  // stored hx_custom_exercises record is never mutated here, so this is non-destructive and
+  // fixes the duplicate-row bug on load without touching user data.
+  const seen = new Set();
+  Object.entries(LIBRARY).forEach(([cat, items])=> items.forEach(([name,presc,unit,muscle])=>{
+    list.push({name,cat,presc,unit,muscle,custom:false});
+    seen.add((name||"").trim().toLowerCase());
+  }));
+  custom.forEach(ex=>{
+    const key = (ex.name||"").trim().toLowerCase();
+    if(!key || seen.has(key)) return;
+    seen.add(key);
+    list.push({...ex, custom:true});
+  });
   return list;
 }
 
@@ -2522,22 +2798,39 @@ function nextSetType(t){
 
 function isCountingSet(set){ return (set.type||"working") !== "warmup"; }
 
+/* Volume counts ONLY genuinely completed (checked-off) working sets: weight × reps.
+   Warm-ups stay excluded (pre-existing intentional behavior), incomplete/empty sets never
+   count, cardio has no weight×reps so it naturally contributes nothing. */
 function computeSessionVolume(exercises){
   let v = 0;
   (exercises||[]).forEach(ex=> (ex.sets||[]).forEach(s=>{
-    if(!isCountingSet(s)) return;
+    if(!s.done || !isCountingSet(s)) return;
     const w = parseFloat(s.weight), r = parseFloat(s.reps);
     if(!isNaN(w) && !isNaN(r)) v += w*r;
   }));
   return v;
 }
 
+/* Completed-set count for the live header and final stats — done sets only, warm-ups
+   excluded to match the volume definition. */
+function computeCompletedSets(exercises){
+  let n = 0;
+  (exercises||[]).forEach(ex=> (ex.sets||[]).forEach(s=>{ if(s.done && isCountingSet(s)) n++; }));
+  return n;
+}
+
+/* PREVIOUS column: genuine history only, preferring sets that were actually completed.
+   Old imported history may predate the done flag — those sets fall back to "has values".
+   Returns null (rendered as "–") when no real previous performance exists. */
 function getPreviousSet(exerciseName, setIndex){
   for(const sess of state.workoutLog){
     const ex = sess.exercises.find(e=>e.name===exerciseName);
     if(ex && ex.sets.length){
-      const set = ex.sets[setIndex] || ex.sets[ex.sets.length-1];
-      if(set && (set.weight||set.reps)) return set;
+      const usable = ex.sets.filter(s=> s && (s.weight||s.reps) && (s.done || s.done===undefined));
+      const pool = usable.length ? usable : ex.sets.filter(s=> s && (s.weight||s.reps));
+      if(pool.length){
+        return pool[setIndex] || pool[pool.length-1];
+      }
     }
   }
   return null;
@@ -2590,6 +2883,71 @@ function computeStreak(){
     cursor.setDate(cursor.getDate()-1);
   }
   return streak;
+}
+
+/* =========================================================
+   HABIT TRACKER — genuinely new feature (Progress page). Deliberately does NOT reuse
+   todayStr()/computeStreak()'s date pattern (new Date().toISOString().slice(0,10) on a
+   local-midnight Date): that pattern converts to UTC before formatting, which is off by one
+   day for any user whose local timezone offset is non-zero at midnight (e.g. a fixed +5:30
+   offset always maps local midnight to the previous UTC day). It's a pre-existing quirk in
+   the rest of the app's date handling that's out of scope to change here (it would touch
+   historical data keys across food/body/workout logging), but the master request explicitly
+   asks to avoid exactly this class of bug for the new Habit Tracker, so habitDateStr() below
+   corrects for local timezone offset before formatting.
+========================================================= */
+
+function habitDateStr(d){
+  d = d || new Date();
+  const tzCorrected = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+  return tzCorrected.toISOString().slice(0,10);
+}
+
+function habitStreak(habitId){
+  const done = state.habitCompletions[habitId] || {};
+  let streak = 0;
+  let cursor = new Date();
+  cursor.setHours(0,0,0,0);
+  if(!done[habitDateStr(cursor)]) cursor.setDate(cursor.getDate()-1); // today not done yet -> still counts from yesterday
+  while(done[habitDateStr(cursor)]){
+    streak++;
+    cursor.setDate(cursor.getDate()-1);
+  }
+  return streak;
+}
+
+function habitBestStreak(habitId){
+  const done = state.habitCompletions[habitId] || {};
+  const dates = Object.keys(done).filter(k=>done[k]).sort();
+  if(!dates.length) return 0;
+  let best = 1, run = 1;
+  for(let i=1;i<dates.length;i++){
+    const prev = new Date(dates[i-1]+"T00:00:00");
+    const cur = new Date(dates[i]+"T00:00:00");
+    const diffDays = Math.round((cur-prev)/86400000);
+    run = diffDays===1 ? run+1 : 1;
+    if(run>best) best = run;
+  }
+  return best;
+}
+
+function habitWeekCompletion(habitId){
+  const done = state.habitCompletions[habitId] || {};
+  let count = 0;
+  const cursor = new Date();
+  cursor.setHours(0,0,0,0);
+  for(let i=0;i<7;i++){
+    if(done[habitDateStr(cursor)]) count++;
+    cursor.setDate(cursor.getDate()-1);
+  }
+  return count;
+}
+
+function habitMonthCompletion(habitId){
+  const done = state.habitCompletions[habitId] || {};
+  const now = new Date();
+  const prefix = habitDateStr(now).slice(0,7); // YYYY-MM
+  return Object.keys(done).filter(k=>done[k] && k.startsWith(prefix)).length;
 }
 
 function computeMuscleDistribution(daysBack, offsetDays){
@@ -3038,10 +3396,108 @@ function settingToggle(key, label, desc){
    ONBOARDING — shown once, only for genuinely new installs
 ========================================================= */
 
+/** IGNYT Account (Phase 2A): Google Sign-In identity only — logically separate from the
+ *  fitness profile (hx_profile) and every other hx_* key, none of which it reads or writes.
+ *  Renders from IgnytAuth's cached snapshot (instant + offline); auth.js reconciles that
+ *  snapshot against the real persisted Firebase session once per launch. */
+function renderAccountSection(){
+  const esc = v => String(v == null ? "" : v)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  const auth = window.IgnytAuth;
+  const header = `<div class="eyebrow-label" style="margin-top:4px;">IGNYT Account</div>`;
+
+  if(!auth) return ""; // auth.js failed to load — never break the rest of Settings over it
+
+  if(!auth.isNativeAndroid()){
+    return `${header}
+      <div class="info-box" style="padding:14px;">
+        <div style="font-size:13px;color:var(--muted);">Sign-in is available in the IGNYT Android app.</div>
+      </div>`;
+  }
+
+  const busy = auth.isBusy();
+  const errorMsg = auth.getError();
+  const account = auth.getAccount();
+  const errorHtml = errorMsg ? `<div style="font-size:12px;color:var(--accent);margin-bottom:10px;">${esc(errorMsg)}</div>` : "";
+
+  if(!account){
+    return `${header}
+      <div class="info-box" style="padding:14px;">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Sign in to securely back up your fitness data and enable future multi-device sync.</div>
+        ${errorHtml}
+        <button class="btn btn-accent btn-block" data-action="account-signin" ${busy?'disabled':''}>${busy?'Signing in…':'Continue with Google'}</button>
+      </div>`;
+  }
+
+  const initial = esc((account.displayName || account.email || "?").trim().charAt(0).toUpperCase() || "?");
+  // Initials avatar always rendered underneath; the photo covers it when it loads and
+  // removes itself if it can't (offline, revoked URL, no photo) — no broken-image icon ever.
+  const avatar = `
+    <div style="position:relative;width:44px;height:44px;flex-shrink:0;">
+      <div style="width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;">${initial}</div>
+      ${account.photoUrl ? `<img src="${esc(account.photoUrl)}" alt="" referrerpolicy="no-referrer" style="position:absolute;top:0;left:0;width:44px;height:44px;border-radius:50%;" onerror="this.remove()">` : ""}
+    </div>`;
+
+  return `${header}
+    <div class="info-box" style="padding:14px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        ${avatar}
+        <div style="min-width:0;flex:1;">
+          <div style="font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(account.displayName) || "Google Account"}</div>
+          <div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(account.email)}</div>
+        </div>
+      </div>
+      <div class="row-between" style="margin-bottom:12px;">
+        <span style="font-size:12px;color:var(--muted);">Status</span>
+        <span style="font-size:12px;font-weight:700;color:var(--mint);">Signed in with Google</span>
+      </div>
+      ${renderCloudSyncRow()}
+      ${errorHtml}
+      <button class="btn btn-ghost btn-block" data-action="account-signout" ${busy?'disabled':''}>${busy?'Signing out…':'Sign Out'}</button>
+    </div>`;
+}
+
+/** Small cloud-sync status row inside the signed-in account card (Phase 2B). Reads
+ *  IgnytCloudSync's state; shows nothing if cloud-sync.js isn't loaded. Raw Firebase
+ *  errors are never shown — cloud-sync.js maps them to short friendly strings. */
+function renderCloudSyncRow(){
+  const cs = window.IgnytCloudSync;
+  if(!cs) return "";
+  const s = cs.getStatus();
+  const lastLabel = s.lastSyncAt
+    ? new Date(s.lastSyncAt).toLocaleString([], { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" })
+    : null;
+  const view = {
+    "syncing":    { text:"Syncing…",                          color:"var(--muted)" },
+    "synced":     { text: lastLabel ? "Synced · "+lastLabel : "Synced", color:"var(--mint)" },
+    "queued":     { text:"Saved — will upload when online",   color:"var(--muted)" },
+    "offline":    { text:"Offline — saved on this device",    color:"var(--muted)" },
+    "failed":     { text:"Sync failed",                       color:"var(--accent)" },
+    "signed-out": { text:"Sign in to sync",                   color:"var(--muted)" },
+    "idle":       { text: lastLabel ? "Synced · "+lastLabel : "Not synced yet", color:"var(--muted)" }
+  }[s.status] || { text:"—", color:"var(--muted)" };
+  const detail = (s.status==="failed" || s.status==="offline") && s.detail
+    ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">${s.detail}</div>` : "";
+  return `
+    <div style="margin-bottom:12px;">
+      <div class="row-between">
+        <span style="font-size:12px;color:var(--muted);">Cloud sync</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:12px;font-weight:700;color:${view.color};">${view.text}</span>
+          <button class="cat-chip" data-action="cloud-sync-now" ${cs.isBusy()?'disabled':''} style="margin:0;">Sync Now</button>
+        </span>
+      </div>
+      ${detail}
+    </div>`;
+}
+
 function renderSettingsTab(){
   const s = state.settings;
   return `
-    <div class="eyebrow-label" style="margin-top:4px;">Export Data</div>
+    ${renderAccountSection()}
+    <div class="eyebrow-label">Profile</div>
+    ${renderProfileForm()}
+    <div class="eyebrow-label">Export Data</div>
     <div class="info-box" style="padding:14px;">
       <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export your entire workout and measurement history. The JSON backup can be imported back; CSVs are for spreadsheets.</div>
       <button class="btn btn-accent btn-block" data-action="export-json" style="margin-bottom:8px;">Full Backup (JSON)</button>
@@ -3078,6 +3534,7 @@ function renderSettingsTab(){
       ${settingToggle("keepAwake","Keep Awake During Workout","Prevents your phone screen from sleeping while a session is in progress.")}
       ${settingToggle("plateCalc","Plate Calculator","Shows a plates button next to weight inputs for barbell exercises.")}
       ${settingToggle("rpeTracking","RPE Tracking","Show the RPE column in the workout logger.")}
+      ${settingToggle("exerciseCalorieBudget","Exercise Calorie Budget","Add today’s real Health Connect active calories to your Food Log calorie budget.")}
       <div style="padding:14px 0;">
         <div class="row-between">
           <span style="font-weight:700;font-size:15px;">Default Rest Timer</span>
@@ -3190,10 +3647,11 @@ function renderToast(){
 ========================================================= */
 let _resolver = null;
 
-function confirmDialog(message, renderFn){
+function confirmDialog(message, renderFn, opts){
   return new Promise(resolve=>{
     _resolver = resolve;
-    state.confirmDialog = { message };
+    // opts (all optional, backward-compatible): { title, confirmLabel, cancelLabel, danger }
+    state.confirmDialog = Object.assign({ message }, opts||{});
     if(renderFn) renderFn();
   });
 }
@@ -3208,13 +3666,15 @@ function resolveConfirmDialog(result, renderFn){
 
 function renderConfirmDialog(){
   if(!state.confirmDialog) return "";
+  const d = state.confirmDialog;
   return `
     <div class="dialog-backdrop" data-dialog-action="cancel"></div>
     <div class="dialog-box">
-      <div class="dialog-message">${state.confirmDialog.message}</div>
+      ${d.title?`<div class="dialog-title">${d.title}</div>`:''}
+      <div class="dialog-message">${d.message}</div>
       <div class="dialog-actions">
-        <button class="btn btn-ghost" data-dialog-action="cancel">Cancel</button>
-        <button class="btn btn-accent" data-dialog-action="confirm">Confirm</button>
+        <button class="btn btn-ghost" data-dialog-action="cancel">${d.cancelLabel||'Cancel'}</button>
+        <button class="btn ${d.danger?'btn-danger':'btn-accent'}" data-dialog-action="confirm">${d.confirmLabel||'Confirm'}</button>
       </div>
     </div>
   `;
@@ -3225,7 +3685,27 @@ function renderConfirmDialog(){
    PR/achievement celebration banners, and the contextual reminder logic.
 ========================================================= */
 
+/* Incremental migration boundary: Home presentation now lives in js/pages/home.js.
+   Keep this adapter small so business/data logic remains stable while page UI evolves. */
 function renderHomeTab(){
+  maybeShowReminders();
+  const week = WEEKS[state.activeWeek-1];
+  const plannedDay = todaysPlannedDay();
+  let dayDone = 0, dayTotal = 0;
+  if(plannedDay){
+    dayTotal = plannedDay.exercises.length;
+    dayDone = plannedDay.exercises.filter(ex=>state.completed[`${week.week}|${plannedDay.day}|${ex.name}`]).length;
+  }
+  if(window.IgnytPages && typeof window.IgnytPages.renderHome === 'function') return window.IgnytPages.renderHome({
+    state, week, plannedDay, planPct: overallPlanProgress(), streak: computeStreak(), targets: macroTargets(),
+    eaten: Math.round(todayEaten()), proteinToday: Math.round(todayMacros().protein), latestWeight: state.bodylog[0],
+    burned: todayBurned(), water: Math.round(todayWater()), waterTarget: state.settings.waterTargetMl || 2500,
+    dayDone, dayTotal, greeting, displayW, wUnit, svg, renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed, renderHomeHabits
+  });
+  return renderLegacyHomeTab();
+}
+
+function renderLegacyHomeTab(){
   maybeShowReminders();
   const week = WEEKS[state.activeWeek-1];
   const plannedDay = todaysPlannedDay();
@@ -3358,15 +3838,15 @@ function maybeShowReminders(){
 
 function renderApp(){
   const root = document.getElementById("app");
-  const MORE_TABS = ["library","body","nutrition","settings","health"];
+  const MORE_TABS = ["library","body","settings","health"];
   const isMoreActive = MORE_TABS.includes(state.tab) || state.tab==="more";
   root.innerHTML = `
-    <header class="app-header" style="display:flex;align-items:flex-end;justify-content:space-between;">
+    <header class="app-header page-title-row">
       <div>
-        <div class="eyebrow-row"><div class="eyebrow-dash"></div><span class="eyebrow">Full Training System</span></div>
+        <div class="eyebrow-row"><div class="eyebrow-dash"></div><span class="eyebrow">Train with intent</span></div>
         <h1 class="title">IGNYT</h1>
       </div>
-      <button data-nav="settings" aria-label="Settings" style="background:${state.tab==='settings'?'var(--surface-alt)':'none'};border:none;color:${state.tab==='settings'?'var(--accent)':'var(--muted)'};padding:8px;border-radius:10px;cursor:pointer;">${svg('gear',22)}</button>
+      <button class="page-tools-btn" data-nav="more" aria-label="Open profile, settings, and tools">${svg('gear',22)}</button>
     </header>
     <main id="main"></main>
     ${renderTimerOverlay()}
@@ -3375,10 +3855,10 @@ function renderApp(){
     ${state.tab==="more" ? renderMoreSheet() : ""}
     <nav class="bottom-nav">
       ${navBtn("home","Home")}
-      ${navBtn("plan","Plan")}
       ${navBtn("workout","Workout")}
+      ${navBtn("nutrition","Nutrition")}
       ${navBtn("progress","Progress")}
-      <button class="nav-btn ${isMoreActive?'active':''}" data-nav="more">${svg('more')}<span>More</span></button>
+      <button class="nav-btn ${state.tab==='ai-coach'?'active':''}" data-nav="ai-coach">${svg('more')}<span>AI Coach</span></button>
     </nav>
   `;
   const main = document.getElementById("main");
@@ -3389,6 +3869,7 @@ function renderApp(){
   if(state.tab==="body") main.innerHTML = renderBodyTab();
   if(state.tab==="nutrition") main.innerHTML = renderNutritionTab();
   if(state.tab==="progress") main.innerHTML = renderProgressTab();
+  if(state.tab==="ai-coach") main.innerHTML = renderAiCoachTab();
   if(state.tab==="settings") main.innerHTML = renderSettingsTab();
   if(state.tab==="health") main.innerHTML = renderHealthDashboard();
   if(state.tab==="more") main.innerHTML = ""; // sheet covers it
@@ -3401,9 +3882,10 @@ function renderApp(){
 
 function renderMoreSheet(){
   const items = [
+    {id:"plan", label:"Training Plan", desc:"HYROX schedule & routines", color:"var(--steel)", icon:"plan"},
     {id:"library", label:"Library", desc:"Exercises & equipment", color:"var(--steel)", icon:"library"},
-    {id:"body", label:"Body", desc:"Weight & measurements", color:"var(--accent)", icon:"body"},
-    {id:"nutrition", label:"Fuel", desc:"Meals, calories, macros", color:"var(--mint)", icon:"nutrition"},
+    {id:"body", label:"Log Weight", desc:"Weight, trend & history", color:"var(--color-interactive)", icon:"body"},
+    {id:"calculators", label:"Calculator", desc:"BMI, BMR, TDEE & macros", color:"var(--steel)", icon:"calc"},
     {id:"settings", label:"Settings", desc:"Backups & preferences", color:"var(--muted)", icon:"gear"},
     {id:"health", label:"Health Connect", desc:"Steps, heart rate, calories, weight, workouts", color:"var(--mint)", icon:"progress"}
   ];
@@ -3422,6 +3904,17 @@ function renderMoreSheet(){
   </div>`;
 }
 
+/* Honest navigation shell: AI assistance is not implemented in this repository, so this
+   screen never implies that prompts, plans, or data analysis are being generated. */
+function renderAiCoachTab(){
+  return `<section class="premium-card premium-card--elevated coach-empty">
+    <div class="coach-empty__icon">${svg('more',28)}</div>
+    <div style="font-size:24px;font-weight:900;">AI Coach</div>
+    <p style="margin:8px auto 18px;max-width:300px;color:var(--color-text-secondary);line-height:1.5;">AI coaching is not configured in this version of IGNYT. Your workout, nutrition, progress, and Health Connect data remain available in their existing screens.</p>
+    <button class="btn btn-secondary" data-nav="progress">Explore your progress</button>
+  </section>`;
+}
+
 /** Format a Health Connect metric value for display. Returns the literal string
  *  "No data available" only when the field itself is missing/null (native read failed
  *  or no permission) -- a genuine 0 from Health Connect is shown as "0", never swapped
@@ -3430,6 +3923,41 @@ function hcFmt(value, unit, decimals) {
   if (value === null || value === undefined) return "No data available";
   const num = decimals != null ? Number(value).toFixed(decimals) : value;
   return `${num}${unit ? " " + unit : ""}`;
+}
+
+/** Maps each Health Connect insight tile to the exact native permission string it reads
+ *  (must match HealthConnectManager.kt's allPermissions). Used to tell "no data yet" apart
+ *  from "permission never granted" -- two different situations that used to render as the
+ *  same generic "No data"/"No data available" text. */
+const HC_METRIC_PERMISSION = {
+  "Steps": "android.permission.health.READ_STEPS",
+  "Heart Rate": "android.permission.health.READ_HEART_RATE",
+  "Sleep": "android.permission.health.READ_SLEEP",
+  "Active Calories": "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+  "Distance": "android.permission.health.READ_DISTANCE",
+  "Weight": "android.permission.health.READ_WEIGHT",
+  "Workouts": "android.permission.health.READ_EXERCISE",
+  "Exercise": "android.permission.health.READ_EXERCISE",
+  "Respiratory Rate": "android.permission.health.READ_RESPIRATORY_RATE",
+  "Oxygen Saturation": "android.permission.health.READ_OXYGEN_SATURATION",
+  "Blood Pressure": "android.permission.health.READ_BLOOD_PRESSURE",
+  "Body Temperature": "android.permission.health.READ_BODY_TEMPERATURE",
+  "Body Fat": "android.permission.health.READ_BODY_FAT",
+  "Height": "android.permission.health.READ_HEIGHT",
+  "Lean Body Mass": "android.permission.health.READ_LEAN_BODY_MASS",
+  "BMR": "android.permission.health.READ_BASAL_METABOLIC_RATE",
+  "Hydration": "android.permission.health.READ_HYDRATION",
+  "Nutrition": "android.permission.health.READ_NUTRITION"
+};
+
+/** true only when we positively know the permission was denied (a real grantedPermissions
+ *  list came back from a fresh sync and this metric's permission isn't in it). Older cached
+ *  payloads from before this field existed have no grantedPermissions array -- those fall
+ *  back to the plain "no data" reading rather than a false "permission required" claim. */
+function hcPermissionMissing(d, label) {
+  if (!d || !Array.isArray(d.grantedPermissions)) return false;
+  const perm = HC_METRIC_PERMISSION[label];
+  return !!perm && !d.grantedPermissions.includes(perm);
 }
 
 /* =========================================================
@@ -3495,15 +4023,15 @@ function hcCard(opts) {
   return `
     <button class="hc-home-card" data-nav="health" style="width:100%;text-align:left;background:var(--surface);border:none;border-radius:16px;padding:16px;margin-bottom:12px;cursor:pointer;display:block;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <span style="font-size:15px;font-weight:800;">${label}</span>
-        <span style="color:var(--muted);font-size:16px;line-height:1;">\u203a</span>
+        <span style="font-size:17px;font-weight:800;">${label}</span>
+        <span style="color:var(--muted);font-size:18px;line-height:1;">\u203a</span>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px;">${rangeLabel}${rangeLabel && sourceLabel ? ' &middot; ' : ''}${sourceLabel}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">${rangeLabel}${rangeLabel && sourceLabel ? ' &middot; ' : ''}${sourceLabel}</div>
       <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-top:10px;">
         <div style="flex:1;min-width:0;">
           ${hasData ? `
-            <div style="font-size:26px;font-weight:900;">${value}<span style="font-size:13px;font-weight:600;color:var(--muted);margin-left:4px;">${unit||''}</span></div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${timeLabel}</div>
+            <div style="font-size:28px;font-weight:900;">${value}<span style="font-size:14px;font-weight:600;color:var(--muted);margin-left:4px;">${unit||''}</span></div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px;">${timeLabel}</div>
           ` : `<div style="font-size:14px;color:var(--muted);">No data</div>`}
         </div>
         ${hasData && chartHtml ? `<div style="flex-shrink:0;">${chartHtml}</div>` : ''}
@@ -3516,6 +4044,41 @@ function hcCard(opts) {
  *  HealthConnectIntegration's in-memory _syncData if that's more recent (e.g. user just hit
  *  Sync elsewhere). Never calls into Health Connect itself, never requests permissions --
  *  purely a display of whatever's already been synced. */
+/* Compact Home habit card: today's completion state only — a quick-complete toggle and the
+   current streak per habit. It reuses the exact same hx_habit_completions store, the
+   data-toggle-habit handler, and habitStreak()/habitDateStr() as the full Habit Tracker on
+   Progress (single source of truth — no duplicated state). "View all" opens Progress > Habits
+   via data-open-progress-view, which already sets tab+progressView. */
+function renderHomeHabits(){
+  const today = habitDateStr();
+  const habits = state.habits || [];
+  const header = `<div class="section-heading"><span class="section-heading__label">Habits Today</span>${habits.length?`<button class="btn btn-ghost" data-open-progress-view="habits" style="padding:5px 8px;font-size:12px;">View all</button>`:''}</div>`;
+  if(!habits.length){
+    return header + `<button class="premium-card home-habits__empty" data-open-progress-view="habits">
+      <div class="home-habits__empty-title">Build a daily habit</div>
+      <div class="home-habits__empty-sub">Track water, steps, sleep and more — tap to add your first habit.</div>
+    </button>`;
+  }
+  const MAX = 4;
+  const shown = habits.slice(0, MAX);
+  const doneToday = habits.filter(h=> state.habitCompletions[h.id] && state.habitCompletions[h.id][today]).length;
+  return header + `<section class="premium-card home-habits">
+    <div class="home-habits__meta">${doneToday} of ${habits.length} done today</div>
+    ${shown.map(h=>{
+      const done = !!(state.habitCompletions[h.id] && state.habitCompletions[h.id][today]);
+      const streak = habitStreak(h.id);
+      return `<div class="home-habit-row">
+        <button class="set-check ${done?'done':''}" data-toggle-habit="${h.id}" aria-label="Mark ${h.name} complete for today">${done?svg('check',16):''}</button>
+        <div class="home-habit-row__body">
+          <div class="home-habit-row__name ${done?'is-done':''}">${h.name}</div>
+          <div class="home-habit-row__streak">🔥 ${streak} day streak</div>
+        </div>
+      </div>`;
+    }).join("")}
+    ${habits.length>MAX?`<button class="btn btn-secondary btn-block" data-open-progress-view="habits" style="margin-top:10px;">View all ${habits.length} habits</button>`:''}
+  </section>`;
+}
+
 function renderHomeHealthFeed() {
   if (!window.HealthConnect || !HealthConnect.isNativeAndroid()) return ""; // web version: omit entirely, not a broken card
 
@@ -3645,6 +4208,55 @@ function renderHomeHealthFeed() {
   return `<div class="eyebrow-label">Health Connect</div>${cards.join("")}`;
 }
 
+function hcInsightTile(label, value, unit, period, permissionMissing) {
+  const text = permissionMissing ? "Permission required" : (value == null ? "No data" : `${value}${unit ? ` <span class="stat-unit">${unit}</span>` : ""}`);
+  const dim = permissionMissing || value == null;
+  return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value" style="font-size:${dim ? '13px' : '20px'};color:${dim ? 'var(--muted)' : 'var(--text)'};">${text}</div><div style="font-size:10px;color:var(--muted);margin-top:2px;font-weight:700;text-transform:uppercase;">${period}</div></div>`;
+}
+
+/** Day shows today's/latest real reading for every metric, same as before. Week/Month/Year
+ *  used to just relabel that exact same today/latest snapshot as if it were a period total --
+ *  a real bug (audited: tapping through all four tabs showed identical numbers). Point-in-time
+ *  vitals (weight, height, body fat, lean body mass, BMR, respiratory rate, oxygen saturation,
+ *  blood pressure, body temperature, latest heart rate) are genuinely "latest known reading"
+ *  regardless of range, so those stay visible on every tab -- that's not a period total, so
+ *  showing the same value isn't misleading. True period-cumulative metrics (Steps, Active
+ *  Calories, Distance, Exercise count, Sleep, Hydration, Nutrition) only have a real "today"
+ *  figure from the native sync, plus a genuine 7-day history for Steps -- so Week shows the
+ *  real weekly Steps sum, and everything else without real period-scoped data honestly shows
+ *  "No data" (or "Permission required") under Week/Month/Year rather than a mislabeled Day value. */
+function renderHealthInsightMetrics(d, period) {
+  const isDay = period === "Day";
+  const weeklySteps = period === "Week" && Array.isArray(d.steps7Days) && d.steps7Days.length
+    ? d.steps7Days.reduce((sum, p) => sum + (Number(p.value) || 0), 0)
+    : null;
+  const stepsValue = isDay
+    ? (d.steps?.steps != null ? Number(d.steps.steps).toLocaleString() : null)
+    : (weeklySteps != null ? weeklySteps.toLocaleString() : null);
+  const sleep = isDay && d.sleep && d.sleep.totalMinutes != null ? `${Math.floor(d.sleep.totalMinutes / 60)}h ${d.sleep.totalMinutes % 60}m` : null;
+  const n = isDay ? d.nutrition : null;
+  const metrics = [
+    ["Steps", stepsValue, ""],
+    ["Heart Rate", d.heartRate?.latestBpm != null ? Math.round(d.heartRate.latestBpm) : null, "bpm"],
+    ["Sleep", sleep, ""],
+    ["Active Calories", isDay && d.activeCalories?.kcal != null ? Math.round(d.activeCalories.kcal) : null, "kcal"],
+    ["Distance", isDay && d.distance?.km != null ? d.distance.km.toFixed(2) : null, "km"],
+    ["Weight", d.weight?.weightKg != null ? displayW(d.weight.weightKg) : null, wUnit()],
+    ["Exercise", isDay && d.workouts?.count != null ? d.workouts.count : null, "sessions"],
+    ["Respiratory Rate", d.respiratoryRate?.rpm != null ? Math.round(d.respiratoryRate.rpm) : null, "rpm"],
+    ["Oxygen Saturation", d.oxygenSaturation?.percentage != null ? Math.round(d.oxygenSaturation.percentage) : null, "%"],
+    ["Blood Pressure", d.bloodPressure?.systolic != null ? `${Math.round(d.bloodPressure.systolic)}/${Math.round(d.bloodPressure.diastolic)}` : null, "mmHg"],
+    ["Body Temperature", d.bodyTemperature?.celsius != null ? d.bodyTemperature.celsius.toFixed(1) : null, "°C"],
+    ["Body Fat", d.bodyFat?.percentage != null ? d.bodyFat.percentage.toFixed(1) : null, "%"],
+    ["Height", d.height?.meters != null ? Math.round(d.height.meters * 100) : null, "cm"],
+    ["Lean Body Mass", d.leanBodyMass?.kg != null ? displayW(d.leanBodyMass.kg) : null, wUnit()],
+    ["BMR", d.basalMetabolicRate?.kcalPerDay != null ? Math.round(d.basalMetabolicRate.kcalPerDay) : null, "kcal/day"],
+    ["Hydration", isDay && d.hydration?.liters != null ? d.hydration.liters.toFixed(2) : null, "L"],
+    ["Nutrition", n?.kcal != null ? Math.round(n.kcal) : null, "kcal"]
+  ];
+  return `<div class="grid2" style="margin-bottom:16px;">${metrics.map(([label, value, unit]) => hcInsightTile(label, value, unit, period, hcPermissionMissing(d, label))).join("")}</div>`;
+}
+
 function renderHealthDashboard() {
   const isNative = window.HealthConnect && HealthConnect.isNativeAndroid();
   const integ = window.HealthConnectIntegration;
@@ -3688,7 +4300,10 @@ function renderHealthDashboard() {
     ? new Date(hcState.lastSyncAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
     : "Never";
 
-  const d = syncData || {};
+  let cachedData = null;
+  try { cachedData = JSON.parse(localStorage.getItem("hx_hc_dashboard_cache") || "null"); } catch (e) {}
+  const d = syncData || cachedData || {};
+  const range = state.healthInsightsRange || "Day";
   const tiles = [
     ["Steps", d.steps ? hcFmt(d.steps.steps) : hcFmt(null), "Today"],
     ["Distance", d.distance ? hcFmt(d.distance.km, "km", 1) : hcFmt(null), "Today"],
@@ -3707,14 +4322,24 @@ function renderHealthDashboard() {
 
     <div class="eyebrow-label">Today's Health</div>
     <div class="grid2" style="margin-bottom:16px;">
-      ${tiles.map(([label, value, sub]) => `
+      ${tiles.map(([label, value, sub]) => {
+        const permMissing = hcPermissionMissing(d, label);
+        const displayValue = permMissing ? "Permission required" : value;
+        const dim = permMissing || value === "No data available";
+        return `
         <div class="stat-card">
           <div class="stat-label">${label}</div>
-          <div class="stat-value" style="font-size:${value === "No data available" ? "13px" : "20px"};color:${value === "No data available" ? "var(--muted)" : "var(--text)"};">${value}</div>
+          <div class="stat-value" style="font-size:${dim ? "13px" : "20px"};color:${dim ? "var(--muted)" : "var(--text)"};">${displayValue}</div>
           <div style="font-size:10px;color:var(--muted);margin-top:2px;font-weight:700;text-transform:uppercase;">${sub}</div>
         </div>
-      `).join("")}
+      `;}).join("")}
     </div>
+
+    <div class="eyebrow-label">Insights</div>
+    <div style="display:flex;gap:6px;margin:0 0 10px;">
+      ${["Day", "Week", "Month", "Year"].map(value => `<button class="cat-chip ${range === value ? 'active' : ''}" data-health-range="${value}">${value}</button>`).join("")}
+    </div>
+    ${renderHealthInsightMetrics(d, range)}
 
     ${errorMsg ? `<div class="info-box" style="padding:12px;margin-bottom:12px;font-size:12px;color:var(--accent);">${errorMsg}</div>` : ""}
 
@@ -3747,36 +4372,29 @@ function renderExercisePicker(){
       <div class="row-between" style="margin-bottom:14px;">
         <button class="ex-picker-textbtn" data-action="close-exercise-picker">Cancel</button>
         <span style="font-weight:800;font-size:16px;">New Exercise</span>
-        <button class="ex-picker-textbtn" data-action="save-custom-from-picker" style="color:var(--accent);">Create</button>
+        <button class="ex-picker-textbtn" data-action="save-custom-from-picker" style="color:var(--color-interactive);">Create</button>
       </div>
       ${customExerciseForm(true)}
     `;
   }
 
-  const search = state.exercisePickerSearch.trim().toLowerCase();
   const equip = state.exercisePickerEquipment;
   const muscleFilter = state.exercisePickerMuscle;
-  let items = allLibraryExercises();
-  if(equip!=="All") items = items.filter(i=>i.cat===equip);
-  if(muscleFilter!=="All") items = items.filter(i=>i.muscle===muscleFilter);
-  if(search) items = items.filter(i=>i.name.toLowerCase().includes(search));
-
-  const isFiltering = !!search || equip!=="All" || muscleFilter!=="All";
-  const recentNames = isFiltering ? [] : recentExerciseNames(8);
-  const recentItems = recentNames.map(n=> items.find(i=>i.name===n)).filter(Boolean);
-
   const equipOptions = ["All", ...Object.keys(LIBRARY)];
   const muscleOptions = ["All", ...BODY_MUSCLES, "Cardio", "Mobility"];
 
+  // The header + search input + filters are rendered ONCE per full render and never rebuilt
+  // while typing. Only #ex-picker-results is updated live (see updateExercisePickerResults),
+  // so the <input> element — and therefore keyboard focus — is never destroyed mid-typing.
   return `
     <div class="row-between" style="margin-bottom:14px;">
       <button class="ex-picker-textbtn" data-action="close-exercise-picker">Cancel</button>
       <span style="font-weight:800;font-size:16px;">${state.exercisePickerContext==="routine"?"Add to Routine":state.exercisePickerContext==="replace"?"Replace Exercise":"Add Exercise"}</span>
-      <button class="ex-picker-textbtn" data-action="show-create-in-picker" style="color:var(--accent);">Create</button>
+      <button class="ex-picker-textbtn" data-action="show-create-in-picker" style="color:var(--color-interactive);">Create</button>
     </div>
 
     <div class="search-bar" style="margin-bottom:10px;">
-      <input type="text" id="ex-picker-search" placeholder="Search exercise" value="${state.exercisePickerSearch}">
+      <input type="text" id="ex-picker-search" placeholder="Search exercise" value="${state.exercisePickerSearch}" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
     </div>
 
     <div class="grid2" style="margin-bottom:${state.exercisePickerContext==='routine'?'10px':'14px'};">
@@ -3794,14 +4412,42 @@ function renderExercisePicker(){
       </div>
     ` : ""}
 
+    <div id="ex-picker-results">${exercisePickerResultsHtml()}</div>
+  `;
+}
+
+/* Builds ONLY the filtered results list (recent + all matches). Called both by the full
+   picker render and — crucially — by the live search handler to refresh results in place
+   without a full re-render, so the search input never loses focus. */
+function exercisePickerResultsHtml(){
+  const search = state.exercisePickerSearch.trim().toLowerCase();
+  const equip = state.exercisePickerEquipment;
+  const muscleFilter = state.exercisePickerMuscle;
+  let items = allLibraryExercises();
+  if(equip!=="All") items = items.filter(i=>i.cat===equip);
+  if(muscleFilter!=="All") items = items.filter(i=>i.muscle===muscleFilter);
+  if(search) items = items.filter(i=>i.name.toLowerCase().includes(search));
+
+  const isFiltering = !!search || equip!=="All" || muscleFilter!=="All";
+  const recentNames = isFiltering ? [] : recentExerciseNames(8);
+  const recentItems = recentNames.map(n=> items.find(i=>i.name===n)).filter(Boolean);
+
+  return `
     ${!isFiltering && recentItems.length ? `
       <div class="eyebrow-label" style="margin-top:4px;">Recent Exercises</div>
       ${recentItems.map(exercisePickerRow).join("")}
       <div class="eyebrow-label">All Exercises</div>
     ` : ""}
-
     ${items.length===0 ? `<div class="empty-note">No exercises match.</div>` : items.map(exercisePickerRow).join("")}
   `;
+}
+
+/* Live results refresh used by the search input: swaps only the results container's HTML.
+   The input element is untouched, so focus/keyboard/caret are all preserved automatically —
+   no programmatic re-focus (which on Android doesn't reliably re-open the soft keyboard). */
+function updateExercisePickerResults(){
+  const el = document.getElementById("ex-picker-results");
+  if(el) el.innerHTML = exercisePickerResultsHtml();
 }
 
 /* =========================================================
@@ -4017,6 +4663,23 @@ function renderCalculators(){
   if(c.goalDelta==null) c.goalDelta = state.profile.goalDelta;
   const active = c.activeCalc;
   let fields = "", result = "";
+
+  if(active==="bmi"){
+    fields = `<div class="grid2">
+      ${calcInputRow("calc-height","Height",c.height,"cm")}
+      ${calcInputRow("calc-weight","Weight",c.weight,"kg")}
+    </div>`;
+    if(c.result && c.result.type==="bmi"){
+      const cat = c.result.bmi<18.5?"Underweight":c.result.bmi<25?"Healthy weight":c.result.bmi<30?"Overweight":"Obese";
+      const col = c.result.bmi<18.5?"var(--steel)":c.result.bmi<25?"var(--mint)":c.result.bmi<30?"var(--accent)":"#ff6b6b";
+      result = `<div class="info-box" style="text-align:center;padding:16px;margin-top:10px;">
+        <div class="stat-label">Body Mass Index</div>
+        <div class="mono" style="font-weight:900;font-size:28px;color:${col};">${c.result.bmi.toFixed(1)}</div>
+        <div style="font-size:13px;color:${col};font-weight:700;margin-top:2px;">${cat}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">BMI = weight (kg) ÷ height (m)². A general screening number, not a body-composition or health diagnosis.</div>
+      </div>`;
+    }
+  }
 
   if(active==="bmr"){
     fields = `<div class="grid2">
@@ -4297,91 +4960,281 @@ function renderExerciseDetailHistory(history){
    and Nutrition (macro bars included, since they're chart-shaped too).
 ========================================================= */
 
+/* =========================================================
+   PROGRESS TAB — restructured into a short home screen (This Week
+   summary + category cards) with one detail view per category.
+   Pure reorganization: every calculation and chart helper is the
+   pre-existing one (thisWeekStats, computeWeeklyActivity,
+   computeMuscleDistribution, exerciseProgressTrend, bodyWeightTrend,
+   calorieProteinTrend, renderBodyDistribution, renderCalendarMonth,
+   weeklyBarChart, radarChart, sparklineChart) — sections were moved,
+   not rewritten, and nothing was removed. Detail content renders
+   lazily: only the open view's template (and its inline-SVG charts)
+   is generated at all; there are no chart instances to destroy.
+========================================================= */
+
+const PROGRESS_VIEWS = {
+  prs:          { icon:"🏆", title:"Personal Records",   sub:"Track your best lifts and performance records." },
+  achievements: { icon:"🎖️", title:"Achievements",       sub:"View milestones, streaks, and unlocked achievements." },
+  habits:       { icon:"🔁", title:"Habit Tracker",      sub:"Daily habits, streaks, and completion history." },
+  analytics:    { icon:"📊", title:"Workout Analytics",  sub:"Training frequency, volume, duration, and muscle distribution." },
+  exercise:     { icon:"📈", title:"Exercise Progress",  sub:"Weight and estimated 1RM trends for individual exercises." },
+  body:         { icon:"⚖️", title:"Body Progress",      sub:"Body weight and measurement trends." },
+  nutrition:    { icon:"🍎", title:"Nutrition Progress", sub:"Calorie and protein trends." },
+  calendar:     { icon:"📅", title:"Training Calendar",  sub:"See your workout activity by date." },
+  plan:         { icon:"✅", title:"Plan Progress",      sub:"Phase and weekly training-plan completion." }
+};
+
+function fmtMinutes(min){
+  const m = Math.max(0, Math.round(Number(min)||0));
+  const h = Math.floor(m/60);
+  return h>0 ? `${h}h ${m%60}m` : `${m}m`;
+}
+
+/* Comparison label that can never show NaN/Infinity: previous>0 → real percentage;
+   previous=0 & current>0 → "New"; both zero → "No change". */
+function comparisonLabel(current, previous){
+  const cur = Number(current)||0, prev = Number(previous)||0;
+  if(prev>0){
+    const pct = Math.round((cur-prev)/prev*100);
+    return { text:`${pct>=0?'+':''}${pct}%`, positive: pct>=0 };
+  }
+  if(cur>0) return { text:"New", positive:true };
+  return { text:"No change", positive:true };
+}
+
 function renderProgressTab(){
-  let total=0, done=0;
-  const perWeek = WEEKS.map(w=>{
-    let wt=0, wd=0;
-    w.days.forEach(d=>d.exercises.forEach(ex=>{ wt++; total++; if(state.completed[`${w.week}|${d.day}|${ex.name}`]){wd++; done++;} }));
-    return {week:w.week, pct: wt?Math.round(wd/wt*100):0, phase:w.phase};
-  });
-  const overall = total? Math.round(done/total*100):0;
-  const phaseColor = {base:'var(--steel)',build:'var(--steel)',load:'var(--accent)',peak:'var(--accent)',deload:'var(--mint)'};
-  const sessions = state.workoutLog.length;
-  const streak = computeStreak();
+  const view = state.progressView;
+  if(view && PROGRESS_VIEWS[view]){
+    const detailFns = {
+      prs: renderProgressPRs, achievements: renderProgressAchievements, habits: renderProgressHabits,
+      analytics: renderProgressAnalytics, exercise: renderProgressExercise,
+      body: renderProgressBody, nutrition: renderProgressNutrition,
+      calendar: renderProgressCalendar, plan: renderProgressPlan
+    };
+    let body;
+    try{ body = detailFns[view](); }
+    catch(e){
+      // One broken section must never blank the whole tab.
+      console.warn("Progress detail render failed:", view, e);
+      body = `<div class="empty-note">This section hit an error and couldn't load. Your data is untouched — try again or reopen the app.</div>`;
+    }
+    return `
+      <button class="btn btn-ghost" data-action="progress-back" style="padding:8px 14px;font-size:14px;margin:4px 0 10px;">← Progress</button>
+      <div style="font-size:25px;font-weight:900;margin-bottom:12px;">${PROGRESS_VIEWS[view].icon} ${PROGRESS_VIEWS[view].title}</div>
+      ${body}
+    `;
+  }
+  return renderProgressHome();
+}
+
+function renderProgressHome(){
+  const w = thisWeekStats();
+  const safeNum = v => (typeof v==="number" && isFinite(v)) ? v : null;
+  const workouts = safeNum(w.workoutsCompleted), minutes = safeNum(w.trainingMinutes),
+        volume = safeNum(w.weeklyVolume), streak = safeNum(w.currentStreak);
+  const row = (label, value) => `<div class="row-between" style="padding:10px 0;border-top:1px solid var(--border);">
+    <span style="font-size:15px;font-weight:700;">${label}</span>
+    <span class="mono" style="font-size:16px;font-weight:800;">${value}</span>
+  </div>`;
+  return `
+    <div style="margin:4px 0 14px;">
+      <div style="font-size:28px;font-weight:900;">Progress</div>
+      <div style="font-size:14px;color:var(--muted);margin-top:2px;">Your training, body and performance insights</div>
+    </div>
+
+    <div class="eyebrow-label" style="margin-top:0;">This Week</div>
+    <div class="info-box" style="padding:4px 14px;margin-bottom:14px;">
+      ${row("Workouts", workouts==null ? "No data" : (w.workoutsGoal ? `${workouts} / ${w.workoutsGoal}` : `${workouts}`))}
+      ${row("Training Time", minutes==null ? "No data" : fmtMinutes(minutes))}
+      ${row("Weekly Volume", volume==null ? "No data" : `${displayW(volume,0).toLocaleString()} ${wUnit()}`)}
+      ${row("Current Streak", streak==null ? "No data" : `${streak} day${streak!==1?'s':''}`)}
+    </div>
+
+    <div class="eyebrow-label">Explore</div>
+    ${Object.entries(PROGRESS_VIEWS).map(([key,v])=>`
+      <button class="prog-cat-card" data-progress-view="${key}" aria-label="Open ${v.title}">
+        <span class="prog-cat-icon">${v.icon}</span>
+        <span style="flex:1;min-width:0;text-align:left;">
+          <span style="display:block;font-size:18px;font-weight:800;color:var(--text);">${v.title}</span>
+          <span style="display:block;font-size:13px;color:var(--muted);margin-top:2px;line-height:1.35;">${v.sub}</span>
+        </span>
+        <span style="color:var(--muted);font-size:20px;flex-shrink:0;">›</span>
+      </button>
+    `).join("")}
+  `;
+}
+
+/* ---------- Personal Records ---------- */
+
+function renderProgressPRs(){
+  if(state.prs.length===0) return `<div class="empty-note">No PRs yet — finish a freestyle workout to start tracking heaviest weight, estimated 1RM, rep records, and session volume.</div>`;
+  const q = (state.prSearch||"").trim().toLowerCase();
+  const all = q ? state.prs.filter(pr=> (pr.exerciseName||"Session Volume").toLowerCase().includes(q)) : state.prs;
+  const showCount = state.prShowCount || 10;
+  const shown = all.slice(0, showCount);
+  const remaining = all.length - shown.length;
+  return `
+    <div style="font-size:14px;color:var(--muted);margin-bottom:10px;">${state.prs.length} record${state.prs.length!==1?'s':''} total${q?` · ${all.length} matching`:''}</div>
+    <div class="search-bar"><input type="text" id="pr-search" placeholder="Search by exercise…" value="${(state.prSearch||'').replace(/"/g,'&quot;')}" aria-label="Search personal records"></div>
+    ${all.length===0 ? `<div class="empty-note">No records match your search.</div>` : `
+    <div class="info-box" style="padding:4px 14px;">
+      ${shown.map(pr=>`<div class="history-row" style="background:none;padding:12px 0;margin:0;border-bottom:1px solid var(--border);">
+        <div style="min-width:0;">
+          <div style="font-size:15px;font-weight:700;">${pr.exerciseName||'Session Volume'}</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:1px;">${prTypeLabel(pr)} · ${new Date(pr.achievedAt).toLocaleDateString('default',{month:'short',day:'numeric',year:'numeric'})}</div>
+        </div>
+        <span class="mono" style="font-size:15px;color:var(--accent);font-weight:800;flex-shrink:0;">${prValueLabel(pr)}</span>
+      </div>`).join("")}
+    </div>
+    ${remaining>0?`<button class="btn btn-ghost btn-block" data-action="pr-show-more" style="margin-top:8px;">Show ${Math.min(10,remaining)} More (${remaining} remaining)</button>`:""}`}
+  `;
+}
+
+/* ---------- Achievements ---------- */
+
+function renderProgressAchievements(){
+  const unlockedIds = new Set(state.achievements.map(a=>a.id));
+  const unlocked = state.achievements.slice().sort((a,b)=>b.achievedAt-a.achievedAt);
+  const locked = ACHIEVEMENT_DEFS.filter(d=>!unlockedIds.has(d.id));
+  return `
+    <div style="font-size:14px;color:var(--muted);margin-bottom:10px;">${unlocked.length} of ${ACHIEVEMENT_DEFS.length} unlocked</div>
+    ${unlocked.length===0 ? `<div class="empty-note" style="margin-bottom:14px;">No achievements unlocked yet — your first workout is the first one.</div>` : `
+    <div class="info-box" style="padding:4px 14px;margin-bottom:14px;">
+      ${unlocked.map(a=>`<div class="history-row" style="background:none;padding:12px 0;margin:0;border-bottom:1px solid var(--border);">
+        <div style="min-width:0;">
+          <div style="font-size:15px;font-weight:700;">🎖️ ${a.name}</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:1px;">${a.desc}</div>
+        </div>
+        <span class="mono" style="font-size:12px;color:var(--muted);flex-shrink:0;">${new Date(a.achievedAt).toLocaleDateString('default',{month:'short',day:'numeric',year:'numeric'})}</span>
+      </div>`).join("")}
+    </div>`}
+    ${locked.length ? `
+    <div class="eyebrow-label">Locked</div>
+    <div class="info-box" style="padding:4px 14px;">
+      ${locked.map(d=>`<div class="history-row" style="background:none;padding:12px 0;margin:0;border-bottom:1px solid var(--border);opacity:.55;">
+        <div style="min-width:0;">
+          <div style="font-size:15px;font-weight:700;">🔒 ${d.name}</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:1px;">${d.desc}</div>
+        </div>
+      </div>`).join("")}
+    </div>`:""}
+    <div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5;">Dates show when each achievement was unlocked in IGNYT. For imported workout history, that's the day of the import — the counts themselves are always genuine.</div>
+  `;
+}
+
+/* ---------- Habit Tracker ---------- */
+
+function renderProgressHabits(){
+  const today = habitDateStr();
+  return `
+    <div class="info-box" style="padding:14px;margin-bottom:14px;">
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="habit-new-name" placeholder="New habit (e.g. Drink 3L water)" value="${state.habitBuilderName||''}"
+          style="flex:1;background:var(--surface-alt);border-radius:8px;padding:10px;font-size:14px;color:var(--text);min-width:0;">
+        <button class="btn btn-accent" data-action="add-habit" style="flex-shrink:0;padding:10px 16px;">${svg('plus',14)} Add</button>
+      </div>
+    </div>
+    ${state.habits.length===0 ? `<div class="empty-note">No habits yet — add one above to start tracking daily streaks.</div>` :
+      state.habits.map(h=>{
+        const done = !!(state.habitCompletions[h.id] && state.habitCompletions[h.id][today]);
+        const streak = habitStreak(h.id);
+        const best = habitBestStreak(h.id);
+        const week = habitWeekCompletion(h.id);
+        const month = habitMonthCompletion(h.id);
+        const isEditing = state.editingHabitId === h.id;
+        return `<div class="ex-log-card" style="margin-bottom:10px;">
+          <div class="row-between" style="align-items:flex-start;">
+            ${isEditing ? `
+              <input type="text" id="habit-rename-${h.id}" value="${h.name}" style="flex:1;min-width:0;background:var(--surface-alt);border-radius:8px;padding:8px 10px;font-size:15px;font-weight:700;color:var(--text);margin-right:8px;">
+            ` : `
+              <div style="min-width:0;flex:1;cursor:pointer;" data-rename-habit="${h.id}">
+                <div style="font-weight:800;font-size:16px;">${h.name}</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:2px;">🔥 ${streak} day streak · best ${best} · ${week}/7 this week · ${month} this month</div>
+              </div>
+            `}
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              ${isEditing ? `<button class="btn btn-ghost" data-action="save-habit-name" data-habit-id="${h.id}" style="padding:8px 10px;font-size:12px;">Save</button>`
+                : `<button class="set-check ${done?'done':''}" data-toggle-habit="${h.id}" aria-label="Mark ${h.name} complete for today">${done?svg('check',16):''}</button>
+                   <button class="del" data-del-habit="${h.id}" aria-label="Delete habit">${svg('x',14)}</button>`}
+            </div>
+          </div>
+        </div>`;
+      }).join("")}
+  `;
+}
+
+/* ---------- Workout Analytics ---------- */
+
+const ANALYTICS_RANGES = {
+  "7D":{days:7, weeks:4}, "4W":{days:28, weeks:4}, "8W":{days:56, weeks:8},
+  "3M":{days:91, weeks:13}, "6M":{days:182, weeks:26}, "1Y":{days:365, weeks:52},
+  "All":{days:null, weeks:null}
+};
+
+function renderProgressAnalytics(){
+  const rangeKey = ANALYTICS_RANGES[state.analyticsRange] ? state.analyticsRange : "8W";
+  const range = ANALYTICS_RANGES[rangeKey];
+  const cutoff = range.days ? Date.now() - range.days*86400000 : 0;
+  const sessions = state.workoutLog.filter(s=> new Date(s.date).getTime() >= cutoff);
+  const minutes = sessions.reduce((a,s)=>a+(s.durationMin||0),0);
+  const volume = Math.round(sessions.reduce((a,s)=>a+(s.volume||0),0));
+  const doneSets = sessions.reduce((a,s)=>a+computeCompletedSets(s.exercises),0);
+  const estKcal = Math.round(minutes * ACTIVITY_KCAL_PER_MIN);
+
+  let chartWeeks = range.weeks;
+  if(!chartWeeks){
+    const oldest = state.workoutLog.length ? new Date(state.workoutLog[state.workoutLog.length-1].date).getTime() : Date.now();
+    chartWeeks = Math.min(104, Math.max(4, Math.ceil((Date.now()-oldest)/(7*86400000))+1));
+  }
   const metric = state.chartMetric || "sets";
-  const buckets = computeWeeklyActivity(8);
+  let buckets = computeWeeklyActivity(Math.max(4, chartWeeks));
+  // Long ranges: aggregate consecutive weekly buckets (genuine sums, no invention) so the
+  // chart stays readable and can never demand more width than the phone has.
+  if(buckets.length > 16){
+    const groupSize = Math.ceil(buckets.length / 13);
+    const merged = [];
+    for(let i=0; i<buckets.length; i+=groupSize){
+      const group = buckets.slice(i, i+groupSize);
+      merged.push({
+        duration: group.reduce((a,b)=>a+b.duration,0),
+        volume: group.reduce((a,b)=>a+b.volume,0),
+        sets: group.reduce((a,b)=>a+b.sets,0)
+      });
+    }
+    buckets = merged;
+  }
   const currentMuscles = computeMuscleDistribution(30,0);
   const prevMuscles = computeMuscleDistribution(30,30);
+  const mc = monthlyComparison();
   const totalVolume = state.workoutLog.reduce((a,s)=>a+(s.volume||0),0);
   const totalSets = state.workoutLog.reduce((a,s)=>a+s.exercises.reduce((x,e)=>x+e.sets.length,0),0);
-  const longestStreak = computeLongestStreak();
-  const trainingHours = Math.floor(totalTrainingTimeMin()/60);
-  const trainingMinsRem = totalTrainingTimeMin()%60;
-  const freqAvg = workoutsPerWeekAvg();
+
+  const cmpRow = (label, curDisplay, cur, prev) => {
+    const c = comparisonLabel(cur, prev);
+    return `<div class="row-between" style="padding:9px 0;border-top:1px solid var(--border);">
+      <span style="font-size:14px;font-weight:700;">${label}</span>
+      <span style="display:flex;gap:10px;align-items:center;">
+        <span class="mono" style="font-size:14px;">${curDisplay}</span>
+        <span class="mono" style="font-size:12px;color:${c.positive?'var(--mint)':'var(--accent)'};font-weight:800;">${c.text}</span>
+      </span>
+    </div>`;
+  };
 
   return `
-    <div class="eyebrow-label" style="margin-top:4px;">Overview</div>
-    <div class="grid2" style="margin-bottom:16px;">
-      <div class="stat-card"><div class="stat-label">Current Streak</div><div class="stat-value" style="color:var(--accent);">🔥 ${streak}<span class="stat-unit">days</span></div></div>
-      <div class="stat-card"><div class="stat-label">Longest Streak</div><div class="stat-value" style="color:var(--steel);">${longestStreak}<span class="stat-unit">days</span></div></div>
-      <div class="stat-card"><div class="stat-label">Freestyle Sessions</div><div class="stat-value">${sessions}</div></div>
-      <div class="stat-card"><div class="stat-label">Avg Frequency</div><div class="stat-value">${freqAvg}<span class="stat-unit">/wk</span></div></div>
-      <div class="stat-card"><div class="stat-label">Total Volume</div><div class="stat-value">${displayW(totalVolume,0).toLocaleString()}<span class="stat-unit">${wUnit()}</span></div></div>
-      <div class="stat-card"><div class="stat-label">Total Training Time</div><div class="stat-value">${trainingHours}<span class="stat-unit">h ${trainingMinsRem}m</span></div></div>
-      <div class="stat-card"><div class="stat-label">Total Sets Logged</div><div class="stat-value">${totalSets}</div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+      ${Object.keys(ANALYTICS_RANGES).map(k=>`<button class="cat-chip ${rangeKey===k?'active':''}" data-analytics-range="${k}">${k}</button>`).join("")}
+    </div>
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="stat-card"><div class="stat-label">Workouts</div><div class="stat-value">${sessions.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Training Time</div><div class="stat-value" style="font-size:20px;">${fmtMinutes(minutes)}</div></div>
+      <div class="stat-card"><div class="stat-label">Volume</div><div class="stat-value" style="font-size:20px;">${displayW(volume,0).toLocaleString()}<span class="stat-unit">${wUnit()}</span></div></div>
+      <div class="stat-card"><div class="stat-label">Completed Sets</div><div class="stat-value">${doneSets}</div></div>
+      <div class="stat-card"><div class="stat-label">Est. Calories</div><div class="stat-value" style="font-size:20px;">${estKcal.toLocaleString()}<span class="stat-unit">kcal</span></div></div>
+      <div class="stat-card"><div class="stat-label">Avg Frequency</div><div class="stat-value">${workoutsPerWeekAvg()}<span class="stat-unit">/wk</span></div></div>
     </div>
 
-    <div class="eyebrow-label">Personal Records</div>
-    ${state.prs.length===0 ? `<div class="empty-note" style="margin-bottom:16px;">No PRs yet — finish a freestyle workout to start tracking heaviest weight, estimated 1RM, rep records, and session volume.</div>` : `
-    <div class="info-box" style="padding:4px 14px;margin-bottom:16px;">
-      ${state.prs.slice(0,10).map(pr=>`<div class="history-row" style="background:none;padding:10px 0;margin:0;border-bottom:1px solid var(--border);">
-        <div>
-          <div style="font-size:13px;font-weight:700;">${pr.exerciseName||'Session Volume'}</div>
-          <div style="font-size:11px;color:var(--muted);">${prTypeLabel(pr)} · ${new Date(pr.achievedAt).toLocaleDateString('default',{month:'short',day:'numeric'})}</div>
-        </div>
-        <span class="mono" style="font-size:13px;color:var(--accent);font-weight:800;">${prValueLabel(pr)}</span>
-      </div>`).join("")}
-      ${state.prs.length>10?`<div style="font-size:11px;color:var(--muted);padding:8px 0;text-align:center;">+ ${state.prs.length-10} more in your export</div>`:""}
-    </div>`}
-
-    <div class="row-between">
-      <span class="eyebrow-label" style="margin:18px 0 8px;">Achievements</span>
-      <span class="mono" style="font-size:11px;color:var(--muted);">${state.achievements.length} / ${ACHIEVEMENT_DEFS.length}</span>
-    </div>
-    ${state.achievements.length===0 ? `<div class="empty-note" style="margin-bottom:16px;">No achievements unlocked yet — your first workout is the first one.</div>` : `
-    <div class="info-box" style="padding:4px 14px;margin-bottom:16px;">
-      ${state.achievements.slice().sort((a,b)=>b.achievedAt-a.achievedAt).slice(0,10).map(a=>`<div class="history-row" style="background:none;padding:10px 0;margin:0;border-bottom:1px solid var(--border);">
-        <div>
-          <div style="font-size:13px;font-weight:700;">🎖️ ${a.name}</div>
-          <div style="font-size:11px;color:var(--muted);">${a.desc}</div>
-        </div>
-        <span class="mono" style="font-size:11px;color:var(--muted);">${new Date(a.achievedAt).toLocaleDateString('default',{month:'short',day:'numeric'})}</span>
-      </div>`).join("")}
-      ${state.achievements.length>10?`<div style="font-size:11px;color:var(--muted);padding:8px 0;text-align:center;">+ ${state.achievements.length-10} more</div>`:""}
-    </div>`}
-
-    <div class="eyebrow-label">This Week — Actual Values</div>
-    <div class="info-box" style="padding:14px;">
-      ${(()=>{
-        const w = thisWeekStats();
-        const th = Math.floor(w.trainingMinutes/60), tm = w.trainingMinutes%60;
-        const row = (label, valueHtml) => `<div class="row-between" style="padding:8px 0;border-top:1px solid var(--border);">
-          <span style="font-size:13px;font-weight:700;">${label}</span>
-          <span class="mono" style="font-size:13px;font-weight:800;color:var(--text);">${valueHtml}</span>
-        </div>`;
-        return `
-          ${row("Workouts", w.workoutsGoal ? `${w.workoutsCompleted} / ${w.workoutsGoal} completed` : `${w.workoutsCompleted} completed`)}
-          ${row("Training Time", `${th}h ${tm}m`)}
-          ${row("Weekly Volume", `${displayW(w.weeklyVolume,0).toLocaleString()} ${wUnit()}`)}
-          ${row("Calories Burned (est.)", `${w.caloriesBurned.toLocaleString()} kcal`)}
-          ${row("Current Streak", `${w.currentStreak} day${w.currentStreak!==1?'s':''}`)}
-          ${row("HYROX Sessions", `${w.hyroxSessions} completed`)}
-        `;
-      })()}
-      ${!state.profile.trainingDays ? `<div style="font-size:11px;color:var(--muted);margin-top:8px;">Set a weekly training-days target in Body → Your Profile to see a goal here.</div>` : ''}
-    </div>
-
-    <div class="eyebrow-label">Weekly Activity — Last 8 Weeks</div>
+    <div class="eyebrow-label">Weekly Activity</div>
     <div class="info-box" style="padding:14px;">
       <div style="display:flex;gap:6px;margin-bottom:10px;">
         ${["sets","duration","volume"].map(m=>`<button class="cat-chip ${metric===m?'active':''}" data-metric="${m}">${m.charAt(0).toUpperCase()+m.slice(1)}</button>`).join("")}
@@ -4393,146 +5246,262 @@ function renderProgressTab(){
     <div class="info-box" style="display:flex; flex-direction:column; align-items:center; padding:16px;">
       ${radarChart(currentMuscles, prevMuscles)}
       <div style="display:flex; gap:16px; margin-top:6px;">
-        <span style="font-size:11px;color:var(--muted);"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:5px;"></span>Current</span>
-        <span style="font-size:11px;color:var(--muted);"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);margin-right:5px;"></span>Previous 30d</span>
+        <span style="font-size:12px;color:var(--muted);"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:5px;"></span>Current</span>
+        <span style="font-size:12px;color:var(--muted);"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);margin-right:5px;"></span>Previous 30d</span>
       </div>
     </div>
 
+    <div class="eyebrow-label">This Month vs Last Month</div>
+    <div class="info-box" style="padding:6px 14px;">
+      ${cmpRow("Sessions", mc.thisMonth.sessions, mc.thisMonth.sessions, mc.lastMonth.sessions)}
+      ${cmpRow("Volume", `${displayW(mc.thisMonth.volume,0).toLocaleString()} ${wUnit()}`, mc.thisMonth.volume, mc.lastMonth.volume)}
+      ${cmpRow("Training Time", fmtMinutes(mc.thisMonth.minutes), mc.thisMonth.minutes, mc.lastMonth.minutes)}
+    </div>
+
+    <div class="eyebrow-label">All Time</div>
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="stat-card"><div class="stat-label">Current Streak</div><div class="stat-value" style="color:var(--accent);">🔥 ${computeStreak()}<span class="stat-unit">days</span></div></div>
+      <div class="stat-card"><div class="stat-label">Longest Streak</div><div class="stat-value" style="color:var(--steel);">${computeLongestStreak()}<span class="stat-unit">days</span></div></div>
+      <div class="stat-card"><div class="stat-label">Total Workouts</div><div class="stat-value">${state.workoutLog.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Volume</div><div class="stat-value" style="font-size:20px;">${displayW(totalVolume,0).toLocaleString()}<span class="stat-unit">${wUnit()}</span></div></div>
+      <div class="stat-card"><div class="stat-label">Total Training Time</div><div class="stat-value" style="font-size:20px;">${fmtMinutes(totalTrainingTimeMin())}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Sets Logged</div><div class="stat-value">${totalSets}</div></div>
+    </div>
+  `;
+}
+
+/* ---------- Exercise Progress ---------- */
+
+function renderProgressExercise(){
+  const names = exercisesWithHistory();
+  if(names.length===0) return `<div class="empty-note">Log the same exercise across a few workouts to see its strength trend here.</div>`;
+  const q = (state.exProgressSearch||"").trim().toLowerCase();
+  const filtered = q ? names.filter(n=>n.toLowerCase().includes(q)) : names;
+  const exName = (state.progressExercise && names.includes(state.progressExercise)) ? state.progressExercise : (filtered[0] || names[0]);
+  const trend = exerciseProgressTrend(exName, 20);
+  const weightPoints = trend.map(t=>({date:t.date, value:displayW(t.weight)}));
+  const ormPoints = trend.map(t=>({date:t.date, value:displayW(t.oneRM)}));
+
+  // Bests from the FULL genuine history (not just the charted window).
+  let bestW=0, best1RM=0, bestReps=0;
+  state.workoutLog.forEach(s=>{
+    const ex = s.exercises.find(e=>e.name===exName);
+    if(!ex) return;
+    ex.sets.forEach(st=>{
+      const w = parseFloat(st.weight), r = parseFloat(st.reps);
+      if(!isNaN(w) && w>bestW) bestW = w;
+      if(!isNaN(w) && !isNaN(r) && r>0){ const orm = w*(1+r/30); if(orm>best1RM) best1RM = orm; }
+      if(!isNaN(r) && r>bestReps) bestReps = r;
+    });
+  });
+  const recent = state.workoutLog.filter(s=>s.exercises.some(e=>e.name===exName)).slice(0,5);
+
+  return `
+    <div class="search-bar"><input type="text" id="ex-progress-search" placeholder="Search exercises…" value="${(state.exProgressSearch||'').replace(/"/g,'&quot;')}" aria-label="Search exercises"></div>
+    ${filtered.length===0 ? `<div class="empty-note">No tracked exercise matches your search.</div>` : `
+    <select class="select-input" id="progress-exercise-select" style="margin-bottom:12px;">
+      ${filtered.map(n=>`<option value="${n}" ${exName===n?'selected':''}>${n}</option>`).join("")}
+    </select>
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="stat-card"><div class="stat-label">Best Weight</div><div class="stat-value" style="font-size:20px;">${bestW>0?`${displayW(bestW)}<span class="stat-unit">${wUnit()}</span>`:'—'}</div></div>
+      <div class="stat-card"><div class="stat-label">Best Est. 1RM</div><div class="stat-value" style="font-size:20px;">${best1RM>0?`${displayW(best1RM,1)}<span class="stat-unit">${wUnit()}</span>`:'—'}</div></div>
+      <div class="stat-card"><div class="stat-label">Best Reps</div><div class="stat-value">${bestReps>0?bestReps:'—'}</div></div>
+      <div class="stat-card"><div class="stat-label">Sessions</div><div class="stat-value">${recent.length===5?'5+':recent.length}</div></div>
+    </div>
+    <div class="info-box" style="padding:14px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Top Set Weight</div>
+      ${sparklineChart(weightPoints, {color:"var(--accent)", unit:wUnit()})}
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;">Estimated 1RM</div>
+      ${sparklineChart(ormPoints, {color:"var(--mint)", unit:wUnit()})}
+    </div>
+    <div class="eyebrow-label">Recent History</div>
+    <div class="info-box" style="padding:4px 14px;">
+      ${recent.map(s=>{
+        const ex = s.exercises.find(e=>e.name===exName);
+        const top = ex.sets.reduce((best,st)=>{
+          const w = parseFloat(st.weight);
+          return (!isNaN(w) && w>(best.w||0)) ? {w, r:st.reps} : best;
+        }, {});
+        return `<div class="row-between" style="padding:11px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:14px;color:var(--muted);" class="mono">${s.date}</span>
+          <span class="mono" style="font-size:15px;font-weight:800;">${top.w?`${displayW(top.w)}${wUnit()} × ${top.r||'–'}`:'—'}</span>
+        </div>`;
+      }).join("")}
+    </div>`}
+  `;
+}
+
+/* ---------- Body Progress ---------- */
+
+function renderProgressBody(){
+  const entries = state.bodylog;
+  const latest = entries[0], first = entries[entries.length-1];
+  const delta = (first && latest && latest!==first) ? (Number(latest.weight)-Number(first.weight)) : null;
+  const MEASUREMENT_FIELDS = [["bodyfat","Body Fat","%"],["waist","Waist","cm"],["chest","Chest","cm"],["arms","Arms","cm"],["hips","Hips","cm"],["thighs","Thighs","cm"],["neck","Neck","cm"]];
+  const latestOf = f => entries.find(e=> e[f]!==undefined && e[f]!==null && e[f]!=="");
+  const measurements = MEASUREMENT_FIELDS.map(([f,label,unit])=>{
+    const e = latestOf(f);
+    return e ? {label, unit, value:Number(e[f]), date:e.date} : null;
+  }).filter(m=> m && isFinite(m.value));
+
+  return `
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="stat-card"><div class="stat-label">Latest Weight</div><div class="stat-value" style="font-size:20px;">${latest&&latest.weight?`${displayW(latest.weight)}<span class="stat-unit">${wUnit()}</span>`:'No data'}</div></div>
+      <div class="stat-card"><div class="stat-label">Change (all time)</div><div class="stat-value" style="font-size:20px;color:${delta==null?'var(--muted)':(delta<=0?'var(--mint)':'var(--accent)')};">${delta==null?'No data':`${delta>0?'+':''}${displayW(delta,1)}<span class="stat-unit">${wUnit()}</span>`}</div></div>
+    </div>
+
     <div class="eyebrow-label">Body Weight Trend</div>
-    <div class="info-box" style="padding:14px;">
+    <div class="info-box" style="padding:14px;margin-bottom:14px;">
       ${sparklineChart(bodyWeightTrend(20).map(p=>({date:p.date, value:displayW(p.value)})), {color:"var(--steel)", unit:wUnit()})}
     </div>
 
-    <div class="eyebrow-label">Exercise Progress</div>
-    <div class="info-box" style="padding:14px;">
-      ${exercisesWithHistory().length===0 ? `<div class="empty-note">Log the same exercise across a few workouts to see its strength trend here.</div>` : `
-        <select class="select-input" id="progress-exercise-select" style="margin-bottom:12px;">
-          ${exercisesWithHistory().map(n=>`<option value="${n}" ${state.progressExercise===n?'selected':''}>${n}</option>`).join("")}
-        </select>
-        ${(() => {
-          const exName = state.progressExercise && exercisesWithHistory().includes(state.progressExercise) ? state.progressExercise : exercisesWithHistory()[0];
-          const trend = exerciseProgressTrend(exName, 20);
-          const weightPoints = trend.map(t=>({date:t.date, value:displayW(t.weight)}));
-          const ormPoints = trend.map(t=>({date:t.date, value:displayW(t.oneRM)}));
-          return `
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Top Set Weight</div>
-            ${sparklineChart(weightPoints, {color:"var(--accent)", unit:wUnit()})}
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;">Estimated 1RM</div>
-            ${sparklineChart(ormPoints, {color:"var(--mint)", unit:wUnit()})}
-          `;
-        })()}
-      `}
-    </div>
-
-    <div class="eyebrow-label">This Month vs Last Month</div>
-    <div class="info-box" style="padding:14px;">
-      ${(() => {
-        const mc = monthlyComparison();
-        const row = (label, a, b, unit) => {
-          const delta = a-b;
-          const pct = b>0 ? Math.round(delta/b*100) : (a>0?100:0);
-          return `<div class="row-between" style="padding:8px 0;border-top:1px solid var(--border);">
-            <span style="font-size:13px;font-weight:700;">${label}</span>
-            <span style="display:flex;gap:10px;align-items:center;">
-              <span class="mono" style="font-size:13px;">${a}${unit}</span>
-              <span class="mono" style="font-size:11px;color:${delta>=0?'var(--mint)':'var(--accent)'};font-weight:800;">${delta>=0?'+':''}${pct}%</span>
-            </span>
-          </div>`;
-        };
-        return `
-          <div class="row-between" style="margin-bottom:4px;">
-            <span style="font-size:11px;color:var(--muted);font-weight:700;">THIS MONTH</span>
-            <span style="font-size:11px;color:var(--muted);font-weight:700;">VS LAST MONTH</span>
-          </div>
-          ${row("Sessions", mc.thisMonth.sessions, mc.lastMonth.sessions, "")}
-          ${row("Volume", displayW(mc.thisMonth.volume,0).toLocaleString(), displayW(mc.lastMonth.volume,0), wUnit())}
-          ${row("Training Time", mc.thisMonth.minutes, mc.lastMonth.minutes, "m")}
-        `;
-      })()}
-    </div>
-
-    <div class="eyebrow-label">Calories & Protein — Last 30 Days</div>
-    <div class="info-box" style="padding:14px;">
-      ${(() => {
-        const ct = calorieProteinTrend(30).filter(d=>d.kcal>0 || d.protein>0);
-        if(ct.length<2) return `<div class="empty-note">Log food across a few more days to see calorie and protein trends here.</div>`;
-        return `
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Calories</div>
-          ${sparklineChart(ct.map(d=>({date:d.date,value:Math.round(d.kcal)})), {color:"var(--accent)", unit:"kcal"})}
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;">Protein</div>
-          ${sparklineChart(ct.map(d=>({date:d.date,value:Math.round(d.protein)})), {color:"var(--steel)", unit:"g"})}
-        `;
-      })()}
-    </div>
+    ${measurements.length ? `
+    <div class="eyebrow-label">Latest Measurements</div>
+    <div class="grid2" style="margin-bottom:14px;">
+      ${measurements.map(m=>`<div class="stat-card"><div class="stat-label">${m.label}</div><div class="stat-value" style="font-size:20px;">${m.value}<span class="stat-unit">${m.unit}</span></div><div style="font-size:11px;color:var(--muted);margin-top:2px;">${m.date}</div></div>`).join("")}
+    </div>`:""}
 
     <div class="eyebrow-label">Body Distribution</div>
     <div class="info-box" style="padding:14px;">
       ${renderBodyDistribution(state.bodyDistWeekOffset||0)}
     </div>
+  `;
+}
 
-    <div class="eyebrow-label">Calendar</div>
-    <div class="info-box" style="padding:14px;">
-      ${renderCalendarMonth(state.calendarMonthOffset||0)}
+/* ---------- Nutrition Progress ---------- */
+
+function renderProgressNutrition(){
+  const days = [30,60,90].includes(state.nutritionRange) ? state.nutritionRange : 30;
+  const ct = calorieProteinTrend(days).filter(d=>d.kcal>0 || d.protein>0);
+  const chips = `<div style="display:flex;gap:6px;margin-bottom:12px;">
+    ${[30,60,90].map(d=>`<button class="cat-chip ${days===d?'active':''}" data-nutrition-range="${d}">${d}d</button>`).join("")}
+  </div>`;
+  if(ct.length<2) return `${chips}<div class="empty-note">Log food for a few more days to see calorie and protein trends.</div>`;
+  const avgK = Math.round(ct.reduce((a,d)=>a+d.kcal,0)/ct.length);
+  const avgP = Math.round(ct.reduce((a,d)=>a+d.protein,0)/ct.length);
+  return `
+    ${chips}
+    <div class="grid2" style="margin-bottom:14px;">
+      <div class="stat-card"><div class="stat-label">Avg Calories / logged day</div><div class="stat-value" style="font-size:20px;">${avgK.toLocaleString()}<span class="stat-unit">kcal</span></div></div>
+      <div class="stat-card"><div class="stat-label">Avg Protein / logged day</div><div class="stat-value" style="font-size:20px;">${avgP}<span class="stat-unit">g</span></div></div>
     </div>
+    <div class="info-box" style="padding:14px;">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Calories</div>
+      ${sparklineChart(ct.map(d=>({date:d.date,value:Math.round(d.kcal)})), {color:"var(--accent)", unit:"kcal"})}
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;">Protein</div>
+      ${sparklineChart(ct.map(d=>({date:d.date,value:Math.round(d.protein)})), {color:"var(--steel)", unit:"g"})}
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px;">Averages cover only days with logged food (${ct.length} of the last ${days}).</div>
+  `;
+}
 
-    <div class="eyebrow-label">Phase 1 Completion</div>
-    <div class="info-box" style="text-align:center;padding:20px;margin-bottom:16px;">
-      <div class="mono" style="font-weight:900;font-size:36px;color:var(--accent);">${overall}%</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:4px;">${done} of ${total} plan sessions logged</div>
+/* ---------- Training Calendar ---------- */
+
+function renderProgressCalendar(){
+  const sel = state.calendarSelectedDate;
+  let selHtml = "";
+  if(sel){
+    const sessions = state.workoutLog.filter(s=>s.date===sel);
+    const planCount = Object.values(state.completed).filter(ts=> new Date(ts).toISOString().slice(0,10)===sel).length;
+    const dayLabel = new Date(sel+"T12:00:00").toLocaleDateString('default',{weekday:'long', month:'long', day:'numeric'});
+    selHtml = `
+      <div class="eyebrow-label">${dayLabel}</div>
+      ${sessions.length===0 && planCount===0 ? `<div class="empty-note">No workout on this day.</div>` : `
+      ${sessions.map(s=>{
+        const doneSets = computeCompletedSets(s.exercises);
+        return `<div class="info-box" style="padding:14px;margin-bottom:10px;cursor:pointer;" data-view-session="${s.id}">
+          <div style="font-size:16px;font-weight:800;">${sessionTitle(s)}</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:3px;">${workoutDurationLabel(s)} · ${displayW(s.volume||0,0).toLocaleString()} ${wUnit()} · ${s.exercises.length} exercise${s.exercises.length!==1?'s':''} · ${doneSets} set${doneSets!==1?'s':''}</div>
+        </div>`;
+      }).join("")}
+      ${planCount ? `<div class="info-box" style="padding:12px 14px;font-size:14px;">✅ ${planCount} plan exercise${planCount!==1?'s':''} checked off</div>`:""}`}
+    `;
+  }
+  return `
+    <div class="info-box" style="padding:14px;margin-bottom:14px;">
+      ${renderCalendarMonth(state.calendarMonthOffset||0)}
+      <div style="font-size:12px;color:var(--muted);margin-top:8px;">Tap a highlighted day to see that day's training.</div>
+    </div>
+    ${selHtml}
+  `;
+}
+
+/* ---------- Plan Progress ---------- */
+
+function renderProgressPlan(){
+  let total=0, done=0;
+  const perWeek = WEEKS.map(w=>{
+    let wt=0, wd=0;
+    w.days.forEach(d=>d.exercises.forEach(ex=>{ wt++; total++; if(state.completed[`${w.week}|${d.day}|${ex.name}`]){wd++; done++;} }));
+    return {week:w.week, pct: wt?Math.round(wd/wt*100):0, phase:w.phase};
+  });
+  const overall = total? Math.round(done/total*100):0;
+  const phaseColor = {base:'var(--steel)',build:'var(--steel)',load:'var(--accent)',peak:'var(--accent)',deload:'var(--mint)'};
+  const w = thisWeekStats();
+  return `
+    <div class="info-box" style="text-align:center;padding:20px;margin-bottom:14px;">
+      <div class="mono" style="font-weight:900;font-size:38px;color:var(--accent);">${overall}%</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px;">${done} of ${total} plan exercises checked off</div>
+    </div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:14px;">
+      <div class="row-between">
+        <span style="font-size:14px;font-weight:700;">HYROX sessions this week</span>
+        <span class="mono" style="font-size:15px;font-weight:800;">${w.hyroxSessions}</span>
+      </div>
     </div>
     <div class="eyebrow-label">By Week</div>
-    ${perWeek.map(w=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-      <div class="mono" style="width:50px;font-size:11px;font-weight:700;color:var(--muted);">WK ${w.week}</div>
-      <div class="progress-track"><div class="progress-fill" style="width:${w.pct}%;background:${phaseColor[w.phase]};"></div></div>
-      <div class="mono" style="width:36px;text-align:right;font-size:11px;">${w.pct}%</div>
+    ${perWeek.map(pw=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">
+      <div class="mono" style="width:52px;font-size:12px;font-weight:700;color:var(--muted);">WK ${pw.week}</div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pw.pct}%;background:${phaseColor[pw.phase]};"></div></div>
+      <div class="mono" style="width:40px;text-align:right;font-size:12px;">${pw.pct}%</div>
     </div>`).join("")}
   `;
+}
+
+/* =========================================================
+   BODY-PROGRESS PHOTOS — metadata lives in state.bodyPhotos (in-memory only, loaded from
+   IndexedDB at boot); actual image blobs are fetched on demand and cached here as object
+   URLs, never held all-in-memory at once for accounts with many photos.
+========================================================= */
+
+const _photoUrlCache = {};
+const _photoUrlLoading = new Set();
+
+function photoThumbUrl(id){
+  if(_photoUrlCache[id]) return _photoUrlCache[id];
+  if(!_photoUrlLoading.has(id) && window.IgnytBodyPhotosDB){
+    _photoUrlLoading.add(id);
+    window.IgnytBodyPhotosDB.getBlob(id).then(blob=>{
+      _photoUrlLoading.delete(id);
+      if(blob){ _photoUrlCache[id] = URL.createObjectURL(blob); render(); }
+    }).catch(()=>{ _photoUrlLoading.delete(id); });
+  }
+  return null;
 }
 
 /* =========================================================
    SETTINGS TAB — export/import + workout settings
 ========================================================= */
 
-function renderBodyTab(){
-  const entries = state.bodylog;
-  const first = entries[entries.length-1];
-  const latest = entries[0];
-  const delta = (first && latest) ? (Number(latest.weight)-Number(first.weight)) : null;
-  const fieldSm = (id,label,ph,color) => `<div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">${label}</label>
-    <input type="number" id="${id}" placeholder="${ph}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:8px;margin-top:4px;font-size:13px;color:${color};"></div>`;
-
+/* Profile editing form. Lives in Settings now (moved off the Log Weight page). These fields
+   drive the calorie/macro math app-wide, so the form was relocated, NOT removed. All input
+   IDs / data-attrs are unchanged, so the existing profile handlers bind to them exactly as
+   before regardless of which tab renders the form. */
+function renderProfileForm(){
   const p = state.profile;
   const maint = profileMaintenance();
   const target = profileCalorieTarget();
-
-  // Body composition: prefer latest logged body fat %, else estimate via Navy from latest measurements
-  let bfPct = null;
-  const latestBF = entries.find(e=>e.bodyfat);
-  const latestWaist = entries.find(e=>e.waist);
-  if(latestBF) bfPct = Number(latestBF.bodyfat);
-  else if(latestWaist && state.calc.neck){
-    bfPct = calcBodyFatNavy(p.gender, p.height, state.calc.neck, Number(latestWaist.waist), state.calc.hip);
-  }
-  const lbmBoer = calcLBM(p.gender, p.height, p.weight).boer;
-  let fatMass = null, leanMass = null, muscleMass = null;
-  if(bfPct!=null && bfPct>0){
-    fatMass = p.weight * bfPct/100;
-    leanMass = p.weight - fatMass;
-    muscleMass = leanMass * 0.535; // skeletal muscle ≈ 53.5% of lean mass (Lee et al. estimate)
-  }
-
   return `
-    <div class="eyebrow-label" style="margin-top:4px;">Your Profile</div>
     <div class="info-box" style="padding:14px;">
       <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Name</label>
-      <input type="text" id="p-name" value="${p.name||''}" placeholder="Optional" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:8px;margin:4px 0 12px;font-size:13px;color:var(--text);">
+      <input type="text" id="p-name" value="${p.name||''}" placeholder="Optional" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin:4px 0 12px;font-size:16px;color:var(--text);">
       <div class="grid2">
         <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Weight (${wUnit()})</label>
           <div style="padding:8px;margin-top:4px;font-size:13px;color:var(--accent);font-weight:700;">${displayW(p.weight)} <span style="font-size:10px;color:var(--muted);font-weight:400;">(from log)</span></div></div>
         <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Height (cm)</label>
-          <input type="number" id="p-height" value="${p.height}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:8px;margin-top:4px;font-size:13px;color:var(--text);"></div>
+          <input type="number" id="p-height" value="${p.height}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin-top:4px;font-size:16px;color:var(--text);"></div>
         <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Age</label>
-          <input type="number" id="p-age" value="${p.age}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:8px;margin-top:4px;font-size:13px;color:var(--text);"></div>
+          <input type="number" id="p-age" value="${p.age}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin-top:4px;font-size:16px;color:var(--text);"></div>
         <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Gender</label>
           <div style="display:flex;gap:6px;margin-top:4px;">
             <button class="cat-chip ${p.gender==='male'?'active':''}" data-profile-gender="male" style="flex:1;text-align:center;">Male</button>
@@ -4565,33 +5534,89 @@ function renderBodyTab(){
       <div class="stat-card"><div class="stat-label">Maintenance</div><div class="stat-value" style="color:var(--steel);">${maint}<span class="stat-unit">kcal</span></div></div>
       <div class="stat-card"><div class="stat-label">Daily Calorie Goal</div><div class="stat-value" style="color:var(--accent);">${target}<span class="stat-unit">kcal</span></div></div>
     </div>
-    <div class="info-box" style="font-size:12px;">These numbers, plus your protein/carb/fat targets in the Fuel tab, recalculate automatically whenever you change your weight or goal here.</div>
+    <div class="info-box" style="font-size:12px;">These numbers, plus your protein/carb/fat targets in the Nutrition tab, recalculate automatically whenever you change your weight or goal here.</div>
+  `;
+}
 
-    <div class="eyebrow-label">Body Composition</div>
-    <div class="info-box" style="padding:14px;">
-      ${bfPct!=null ? `<div class="grid2">
-        <div class="stat-card"><div class="stat-label">Body Fat</div><div class="stat-value" style="color:var(--accent);">${bfPct.toFixed(1)}<span class="stat-unit">%</span></div></div>
-        <div class="stat-card"><div class="stat-label">Fat Mass</div><div class="stat-value" style="color:var(--text);">${displayW(fatMass)}<span class="stat-unit">${wUnit()}</span></div></div>
-        <div class="stat-card"><div class="stat-label">Lean Body Mass</div><div class="stat-value" style="color:var(--steel);">${displayW(leanMass)}<span class="stat-unit">${wUnit()}</span></div></div>
-        <div class="stat-card"><div class="stat-label">Est. Muscle Mass</div><div class="stat-value" style="color:var(--mint);">${displayW(muscleMass)}<span class="stat-unit">${wUnit()}</span></div></div>
+function renderBodyTab(){
+  const entries = state.bodylog;
+  const first = entries[entries.length-1];
+  const latest = entries[0];
+  const delta = (first && latest) ? (Number(latest.weight)-Number(first.weight)) : null;
+  const fieldSm = (id,label,ph,color) => `<div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">${label}</label>
+    <input type="number" id="${id}" placeholder="${ph}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin-top:4px;font-size:16px;color:${color};"></div>`;
+
+  const p = state.profile;
+  const maint = profileMaintenance();
+  const target = profileCalorieTarget();
+
+  // Body composition: prefer latest logged body fat %, else estimate via Navy from latest measurements
+  let bfPct = null;
+  const latestBF = entries.find(e=>e.bodyfat);
+  const latestWaist = entries.find(e=>e.waist);
+  if(latestBF) bfPct = Number(latestBF.bodyfat);
+  else if(latestWaist && state.calc.neck){
+    bfPct = calcBodyFatNavy(p.gender, p.height, state.calc.neck, Number(latestWaist.waist), state.calc.hip);
+  }
+  const lbmBoer = calcLBM(p.gender, p.height, p.weight).boer;
+  let fatMass = null, leanMass = null, muscleMass = null;
+  if(bfPct!=null && bfPct>0){
+    fatMass = p.weight * bfPct/100;
+    leanMass = p.weight - fatMass;
+    muscleMass = leanMass * 0.535; // skeletal muscle ≈ 53.5% of lean mass (Lee et al. estimate)
+  }
+
+  // Log Weight card data (weight-only entries, newest-first from state.bodylog)
+  const wLog = entries.filter(e=> e.weight!==undefined && e.weight!==null && e.weight!=="" && !isNaN(Number(e.weight)));
+  const latestW = wLog[0];
+  const weightsKg = wLog.map(e=>Number(e.weight));
+  const highKg = weightsKg.length ? Math.max(...weightsKg) : null;
+  const lowKg  = weightsKg.length ? Math.min(...weightsKg) : null;
+  const nowMs = Date.now();
+  const in7 = wLog.filter(e=> (nowMs - new Date(e.date+"T12:00:00").getTime()) <= 7*86400000);
+  const sevenChangeKg = in7.length>=2 ? (Number(in7[0].weight) - Number(in7[in7.length-1].weight)) : null;
+  const trend = wLog.slice().reverse().map(e=>({date:e.date, value: Number(displayW(Number(e.weight)))}));
+
+  // Dedicated calculator view (opened by a calculator card or "View All Calculators")
+  if(state.bodyView==='calculators'){
+    return `
+      <button class="btn btn-ghost" data-action="body-calc-back" style="padding:8px 14px;font-size:14px;margin:4px 0 10px;">← Back</button>
+      <div style="font-size:25px;font-weight:900;margin-bottom:12px;">🧮 Calculators</div>
+      <div class="info-box" style="padding:14px;">${renderCalculators()}</div>
+    `;
+  }
+
+  return `
+    <div class="section-heading"><span class="section-heading__label">Log Weight</span></div>
+    <section class="premium-card" style="padding:var(--space-md);">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;">
+        <div style="min-width:0;">
+          <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-secondary);">Current Weight</div>
+          <div class="mono" style="font-size:34px;font-weight:900;line-height:1.05;">${latestW?displayW(Number(latestW.weight)):displayW(p.weight)}<span style="font-size:15px;font-weight:700;color:var(--color-text-secondary);margin-left:4px;">${wUnit()}</span></div>
+          <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">${latestW?('Last updated '+latestW.date):'From your profile — not yet logged'}</div>
+        </div>
+        <button class="btn btn-accent" data-action="add-weight-focus" style="flex-shrink:0;padding:11px 16px;">${svg('plus',15)} Add Weight</button>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:8px;">Fat/lean/muscle computed from your body-fat %${latestBF?' (from your latest log)':' (estimated from waist + neck via US Navy method)'}. Muscle mass is a lean-mass-based estimate, not a scan.</div>`
-      : `<div style="font-size:13px;color:var(--muted);">Log a <b style="color:var(--text);">Body Fat %</b> below — or a waist measurement (with neck set in the Body Fat calculator) — to see fat mass, lean mass, and estimated muscle mass here.</div>
-      <div class="stat-card" style="margin-top:10px;"><div class="stat-label">Lean Body Mass (Boer estimate)</div><div class="stat-value" style="color:var(--steel);">${displayW(lbmBoer)}<span class="stat-unit">${wUnit()}</span></div></div>`}
-    </div>
+      ${trend.length>=2 ? `<div style="margin-top:14px;">${sparklineChart(trend, {color:"var(--color-interactive)", unit:wUnit()})}</div>` : `<div style="margin-top:12px;font-size:12px;color:var(--color-text-secondary);">Log at least two weigh-ins to see your trend graph.</div>`}
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px;">
+        <div class="stat-card"><div class="stat-label">Highest</div><div class="stat-value" style="font-size:18px;">${highKg!=null?displayW(highKg):'—'}<span class="stat-unit">${wUnit()}</span></div></div>
+        <div class="stat-card"><div class="stat-label">Lowest</div><div class="stat-value" style="font-size:18px;">${lowKg!=null?displayW(lowKg):'—'}<span class="stat-unit">${wUnit()}</span></div></div>
+        <div class="stat-card"><div class="stat-label">7-Day</div><div class="stat-value" style="font-size:18px;color:${sevenChangeKg==null?'var(--text)':sevenChangeKg<=0?'var(--mint)':'var(--accent)'};">${sevenChangeKg==null?'—':(sevenChangeKg>0?'+':'')+displayW(sevenChangeKg)}<span class="stat-unit">${wUnit()}</span></div></div>
+      </div>
+      <button class="btn btn-secondary btn-block" data-action="view-weight-history" style="margin-top:12px;">View Weight History</button>
+    </section>
 
-    <div class="eyebrow-label">Log Entry</div>
+    <div class="eyebrow-label" id="body-log-entry">Log Entry</div>
     <div class="info-box" style="padding:14px;">
       <div class="grid2">
         <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Date</label>
-          <input type="date" id="b-date" value="${new Date().toISOString().slice(0,10)}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:8px;margin-top:4px;font-size:13px;color:var(--text);"></div>
+          <input type="date" id="b-date" value="${new Date().toISOString().slice(0,10)}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin-top:4px;font-size:16px;color:var(--text);"></div>
         ${fieldSm("b-weight",`Weight (${wUnit()})`,wUnit()==='lb'?'220':'101.0',"var(--accent)")}
         ${fieldSm("b-sleep","Sleep (hrs)","7.5","var(--steel)")}
         ${fieldSm("b-hrv","HRV (ms)","91","var(--steel)")}
         ${fieldSm("b-waist","Waist (cm)","","var(--text)")}
         ${fieldSm("b-chest","Chest (cm)","","var(--text)")}
         ${fieldSm("b-arms","Arms (cm)","","var(--text)")}
-        ${fieldSm("b-bodyfat","Body Fat (%)","","var(--text)")}
       </div>
       <div style="font-size:11px;color:var(--muted);margin:8px 0;">Logging a weight here updates your profile weight and recalculates calories & macros everywhere.</div>
       <button class="btn btn-accent btn-block" data-action="log-body">Log Entry</button>
@@ -4600,20 +5625,73 @@ function renderBodyTab(){
     ${delta!==null?`<div class="field" style="margin-top:12px;"><label>Total weight change</label>
       <span class="mono" style="font-weight:900;color:${delta<=0?'var(--mint)':'var(--accent)'};">${delta>0?'+':''}${displayW(delta)} ${wUnit()}</span></div>`:''}
 
-    <div class="eyebrow-label">History</div>
+    <div class="row-between" id="body-history">
+      <span class="eyebrow-label">Body History</span>
+      ${entries.length>5?`<button class="btn btn-ghost" data-action="toggle-body-history" style="padding:4px 10px;font-size:12px;">${state.showAllBodyHistory?'Show Less':'View All ('+entries.length+')'}</button>`:''}
+    </div>
     ${entries.length===0?`<div class="empty-note">No entries yet.</div>`:
-      entries.map(e=>`<div class="history-row">
-        <span class="mono" style="font-size:11px;color:var(--muted);">${e.date}</span>
-        <span class="mono" style="font-size:12px;color:var(--accent);">${displayW(e.weight)}${wUnit()}</span>
-        <span class="mono" style="font-size:12px;color:var(--steel);">${e.sleep||'–'}h</span>
-        <span class="mono" style="font-size:12px;color:var(--steel);">${e.hrv||'–'}ms</span>
+      (state.showAllBodyHistory ? entries : entries.slice(0,5)).map(e=>`<div class="history-row">
+        <span class="mono" style="font-size:13px;color:var(--muted);">${e.date}</span>
+        <span class="mono" style="font-size:14px;color:var(--accent);">${displayW(e.weight)}${wUnit()}</span>
+        <span class="mono" style="font-size:13px;color:var(--steel);">${e.sleep||'–'}h</span>
+        <span class="mono" style="font-size:13px;color:var(--steel);">${e.hrv||'–'}ms</span>
         <button class="del" data-del-body="${e.id}" aria-label="Delete body log entry">${svg('x',12)}</button>
       </div>`).join("")}
 
-    <div class="eyebrow-label">Calculators</div>
+    <div class="eyebrow-label">Body Progress Photos</div>
     <div class="info-box" style="padding:14px;">
-      ${renderCalculators()}
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        ${["Front","Side","Back","Other"].map(c=>`<button class="cat-chip ${state.bodyPhotoCategory===c?'active':''}" data-body-photo-category="${c}" style="flex:1;text-align:center;">${c}</button>`).join("")}
+      </div>
+      <input type="text" id="body-photo-note" placeholder="Optional note" style="width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;font-size:14px;color:var(--text);margin-bottom:10px;">
+      <label class="btn btn-accent btn-block" style="display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;">
+        ${svg('plus',16)} Add Photo
+        <input type="file" id="body-photo-file" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
+      </label>
     </div>
+    ${state.bodyPhotos.length===0 ? `<div class="empty-note">No progress photos yet.</div>` : `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;">
+      ${state.bodyPhotos.map(ph=>{
+        const url = photoThumbUrl(ph.id);
+        return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;border:none;padding:0;background:var(--surface-alt);cursor:pointer;">
+          ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;">Loading…</div>`}
+          <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;padding:2px 4px;text-align:center;">${ph.category}</span>
+        </button>`;
+      }).join("")}
+    </div>`}
+    ${state.viewingBodyPhotoId!=null ? (()=>{
+      const ph = state.bodyPhotos.find(p2=>p2.id===state.viewingBodyPhotoId);
+      if(!ph) return "";
+      const url = photoThumbUrl(ph.id);
+      return `<div class="dialog-backdrop" data-close-body-photo style="z-index:190;"></div>
+      <div class="dialog-box" style="max-width:400px;padding:14px;z-index:191;">
+        <!-- z-index kept below the shared confirm-dialog component's (210/211) so that when
+             "Delete" opens a confirm prompt on top of this still-open lightbox, the confirm
+             prompt is genuinely visible and clickable, not obscured underneath. -->
+        ${url ? `<img src="${url}" alt="" style="width:100%;max-height:60vh;object-fit:contain;border-radius:10px;display:block;">` : ""}
+        <div style="margin-top:10px;font-size:13px;color:var(--muted);">${ph.date} · ${ph.category}${ph.note?` · ${ph.note}`:''}</div>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <button class="btn btn-ghost" data-close-body-photo style="flex:1;">Close</button>
+          <button class="btn btn-ghost" data-del-body-photo="${ph.id}" style="flex:1;color:#ff6b6b;">Delete</button>
+        </div>
+      </div>`;
+    })() : ""}
+
+    <div class="eyebrow-label">Records &amp; Achievements</div>
+    <button class="prog-cat-card" data-open-progress-view="prs" aria-label="Open Personal Records">
+      <span class="prog-cat-icon">${PROGRESS_VIEWS.prs.icon}</span>
+      <span style="flex:1;min-width:0;text-align:left;">
+        <span style="display:block;font-size:16px;font-weight:800;color:var(--text);">Personal Records</span>
+        <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">${state.prs.length} record${state.prs.length!==1?'s':''}</span>
+      </span>
+    </button>
+    <button class="prog-cat-card" data-open-progress-view="achievements" aria-label="Open Achievements">
+      <span class="prog-cat-icon">${PROGRESS_VIEWS.achievements.icon}</span>
+      <span style="flex:1;min-width:0;text-align:left;">
+        <span style="display:block;font-size:16px;font-weight:800;color:var(--text);">Achievements</span>
+        <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">${state.achievements.length} of ${ACHIEVEMENT_DEFS.length} unlocked</span>
+      </span>
+    </button>
   `;
 }
 
@@ -4627,6 +5705,15 @@ function renderNutritionTab(){
   const weeklyLoss = (Math.abs(state.profile.goalDelta)*7)/7700;
 
   const eaten = todayEaten();
+  const hcData = window.HealthConnectIntegration ? window.HealthConnectIntegration.getSyncData() : null;
+  let cachedHcData = null;
+  try { cachedHcData = JSON.parse(localStorage.getItem("hx_hc_dashboard_cache") || "null"); } catch (e) {}
+  const activeCalories = (hcData || cachedHcData)?.activeCalories?.kcal;
+  let hcConnected = false;
+  try { hcConnected = !!JSON.parse(localStorage.getItem("hx_hc_state") || "{}").connected; } catch (e) {}
+  const useExerciseBudget = !!state.settings.exerciseCalorieBudget;
+  const calorieBudget = targets.kcal + (useExerciseBudget && activeCalories != null ? Math.round(activeCalories) : 0);
+  const remainingCalories = calorieBudget - Math.round(eaten);
   const burned = todayBurned();
   const netDeficit = burned - eaten;
   const activityKcal = Math.round(todayActivityKcal());
@@ -4641,8 +5728,12 @@ function renderNutritionTab(){
   return `
     <div class="eyebrow-label" style="margin-top:4px;">Today</div>
     <div class="grid2" style="margin-bottom:8px;">
-      <div class="stat-card"><div class="stat-label">Eaten</div><div class="stat-value" style="color:var(--text);">${Math.round(eaten)}<span class="stat-unit">/ ${targets.kcal} kcal</span></div></div>
+      <div class="stat-card"><div class="stat-label">Eaten</div><div class="stat-value" style="color:var(--text);">${Math.round(eaten)}<span class="stat-unit">/ ${calorieBudget} kcal</span></div></div>
       <div class="stat-card"><div class="stat-label">Burned (est.)</div><div class="stat-value" style="color:var(--steel);">${burned}<span class="stat-unit">kcal</span></div></div>
+    </div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:16px;">
+      <div class="row-between"><span style="font-size:13px;font-weight:700;">Calories Remaining</span><span class="mono" style="font-weight:900;color:${remainingCalories >= 0 ? 'var(--mint)' : 'var(--accent)'};">${remainingCalories} kcal</span></div>
+      ${useExerciseBudget ? `<div style="font-size:11px;color:var(--muted);margin-top:5px;">${activeCalories == null ? `Health Connect active calories: ${hcConnected ? 'No data' : 'Permission required'}` : `Includes ${Math.round(activeCalories)} kcal from Health Connect today.`}</div>` : ''}
     </div>
     <div class="info-box" style="text-align:center;padding:14px;margin-bottom:16px;background:${netDeficit>=0?'rgba(62,207,142,.08)':'rgba(255,90,31,.08)'};">
       <div class="stat-label">${netDeficit>=0?'Deficit Created':'Surplus (over target)'}</div>
@@ -4683,9 +5774,9 @@ function renderNutritionTab(){
           <span class="mono" style="font-size:12px;color:${mealKcal>budget?'var(--accent)':'var(--muted)'};">${mealKcal} of ${budget} Cal <span style="color:var(--accent);font-weight:900;margin-left:6px;">${isOpen?'−':'+'}</span></span>
         </div>
         ${mealFoods.map(f=>`<div class="history-row" style="margin-top:8px;">
-          <div><div style="font-size:13px;font-weight:600;">${f.name}</div>
+          <div style="min-width:0;flex:1;margin-right:8px;"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.name}</div>
           ${(f.protein||f.carbs||f.fat)?`<div class="mono" style="font-size:10px;color:var(--muted);">P${f.protein||0} C${f.carbs||0} F${f.fat||0}</div>`:""}</div>
-          <span class="mono" style="font-size:12px;color:var(--accent);">${f.calories} kcal</span>
+          <span class="mono" style="font-size:12px;color:var(--accent);flex-shrink:0;">${f.calories} kcal</span>
           <button class="del" data-del-food="${f.id}" aria-label="Delete food entry">${svg('x',12)}</button>
         </div>`).join("")}
         ${isOpen?`<div style="margin-top:10px;">
@@ -4838,26 +5929,11 @@ function renderErrorScreen(err){
 }
 
 function renderPlanTab(){
-  if(state.showExercisePicker && state.exercisePickerContext==="routine") return renderExercisePicker();
   if(state.viewingHyroxSchedule) return renderHyroxSchedule();
   if(state.viewingRaceMode) return renderRaceMode();
   return `
-    <div class="row-between" style="margin:4px 0 8px;">
-      <span class="eyebrow-label" style="margin:0;">My Routines</span>
-      <button class="btn btn-ghost" data-action="toggle-routine-builder" style="padding:6px 12px;font-size:12px;">${state.routineBuilder? 'Cancel' : svg('plus',13)+' New Routine'}</button>
-    </div>
-    ${state.routineBuilder ? renderRoutineBuilder() : ""}
-    ${state.routines.length===0 && !state.routineBuilder ? `<div class="empty-note">No routines saved yet — build one to start logging faster.</div>` :
-      state.routines.map(r=>`<div class="routine-card">
-        <div class="row-between">
-          <span style="font-weight:800;font-size:15px;">${r.name}</span>
-          <button class="del" data-del-routine="${r.id}" aria-label="Delete routine">${svg('x',14)}</button>
-        </div>
-        <div style="font-size:12px;color:var(--muted);margin:4px 0 12px;">${r.exercises.length} exercise${r.exercises.length!==1?'s':''}</div>
-        <button class="btn btn-steel btn-block" data-start-routine="${r.id}">Start Workout</button>
-      </div>`).join("")}
-
-    <div class="eyebrow-label" style="margin-top:24px;">HYROX Training Schedule</div>
+    <div class="info-box" style="font-size:12px;margin-bottom:14px;">Looking for your routines? They've moved to the <b style="color:var(--text);">Workout</b> tab.</div>
+    <div class="eyebrow-label" style="margin-top:4px;">HYROX Training Schedule</div>
     <div class="info-box" style="padding:18px;">
       <div style="font-weight:900;font-size:17px;margin-bottom:4px;">HYROX Training Schedule</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">8-Week Structured HYROX Program</div>
@@ -4967,7 +6043,7 @@ function renderHyroxSchedule(){
     <div class="level-rail" style="display:flex;gap:6px;margin-bottom:12px;">
       ${Object.entries(LEVELS).map(([key,lv])=>`
         <button class="level-chip ${state.activeLevel===key?'active':''}" data-level="${key}"
-          style="flex:1;padding:9px 6px;border-radius:10px;border:1.5px solid ${state.activeLevel===key?'var(--accent)':'var(--border)'};background:${state.activeLevel===key?'rgba(255,90,31,.12)':'var(--surface)'};color:${state.activeLevel===key?'var(--accent)':'var(--muted)'};font-weight:800;font-size:12px;cursor:pointer;">
+          style="flex:1;padding:9px 6px;border-radius:10px;border:1.5px solid ${state.activeLevel===key?'var(--color-interactive)':'var(--border)'};background:${state.activeLevel===key?'var(--color-interactive-soft)':'var(--surface)'};color:${state.activeLevel===key?'var(--color-interactive)':'var(--muted)'};font-weight:800;font-size:12px;cursor:pointer;">
           ${lv.label}
         </button>`).join("")}
     </div>
@@ -5040,60 +6116,421 @@ function renderAchievementCelebration(){
   </div>`;
 }
 
+/* =========================================================
+   WORKOUT COMPLETE — post-workout summary + swipeable share cards.
+   Every number on screen and in the generated images comes from the
+   just-saved workoutLog entry: no synthetic stats, ever.
+========================================================= */
+
+const SHARE_THEMES = {
+  dark:  { label:"Dark",  bg0:"#121216", bg1:"#121216", text:"#F2F1ED", muted:"#8B8B94", accent:"#FF5A1F" },
+  ember: { label:"Ember", bg0:"#31150a", bg1:"#121216", text:"#F2F1ED", muted:"#B79F92", accent:"#FF5A1F" },
+  steel: { label:"Steel", bg0:"#0E1B26", bg1:"#121216", text:"#F2F1ED", muted:"#8FA7B5", accent:"#4FA8D8" }
+};
+
+function workoutDurationLabel(s){
+  const min = s.durationMin || 0;
+  const h = Math.floor(min/60), m = min%60;
+  return h>0 ? `${h}h ${m}m` : `${m} min`;
+}
+
+/* Per-exercise completed-set breakdown ("4× Lat Pulldown"), completed sets only. */
+function workoutBreakdown(s){
+  return (s.exercises||[]).map(ex=>({
+    name: ex.name,
+    sets: (ex.sets||[]).filter(x=>x.done && isCountingSet(x)).length
+  }));
+}
+
+/* Muscles actually associated with exercises that have >=1 completed set. getMuscle()
+   returns real library/custom metadata; exercises without known metadata are skipped
+   rather than guessed. */
+function workoutMusclesTrained(s){
+  const set = new Set();
+  workoutBreakdown(s).forEach(b=>{
+    if(b.sets>0){
+      const m = getMuscle(b.name);
+      if(m && m!=="Other") set.add(m);
+    }
+  });
+  return Array.from(set);
+}
+
+function workoutShareName(){
+  const auth = window.IgnytAuth && IgnytAuth.getAccount();
+  return (state.profile.name && state.profile.name.trim())
+    || (auth && auth.displayName) || "";
+}
+
+function buildWorkoutSummaryText(s){
+  const b = workoutBreakdown(s).filter(x=>x.sets>0);
+  const lines = [
+    `${sessionTitle(s)} — IGNYT`,
+    `${s.date} · ${workoutDurationLabel(s)}`,
+    `Volume: ${displayW(s.volume||0,0).toLocaleString()} ${wUnit()} · Sets: ${computeCompletedSets(s.exercises)} · Exercises: ${s.exercises.length}`
+  ];
+  if(b.length) lines.push("", ...b.map(x=>`${x.sets}× ${x.name}`));
+  const prs = state.prs.filter(p=>p.workoutId===s.id);
+  if(prs.length) lines.push("", `🏆 ${prs.length} PR${prs.length>1?'s':''}`);
+  return lines.join("\n");
+}
+
+function renderWorkoutComplete(s){
+  const completedSets = computeCompletedSets(s.exercises);
+  const breakdown = workoutBreakdown(s);
+  const muscles = workoutMusclesTrained(s);
+  const prs = state.prs.filter(p=>p.workoutId===s.id);
+  const theme = SHARE_THEMES[state.shareCardTheme] ? state.shareCardTheme : "dark";
+  const name = workoutShareName();
+  const timeLabel = s.startedAt ? new Date(s.startedAt).toLocaleString([], {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"}) : s.date;
+
+  const statTile = (label,value,unit)=>`
+    <div class="stat-card" style="text-align:center;">
+      <div class="stat-label">${label}</div>
+      <div class="stat-value">${value}${unit?`<span class="stat-unit">${unit}</span>`:''}</div>
+    </div>`;
+
+  const cardShell = (inner)=>`
+    <div class="share-card share-theme-${theme}">
+      <div class="share-card-brand">IGNYT</div>
+      ${inner}
+      <div class="share-card-footer">${name ? `${name} · ` : ""}${s.date}</div>
+    </div>`;
+
+  const card1 = cardShell(`
+    <div class="share-card-title">${sessionTitle(s)}</div>
+    <div class="share-big-stat">${workoutDurationLabel(s)}</div>
+    <div class="share-stat-grid">
+      <div><span>${displayW(s.volume||0,0).toLocaleString()}${wUnit()}</span>Volume</div>
+      <div><span>${completedSets}</span>Sets</div>
+      <div><span>${s.exercises.length}</span>Exercises</div>
+    </div>`);
+
+  const card2 = cardShell(`
+    <div class="share-card-title">${sessionTitle(s)}</div>
+    <div class="share-mini-stats">${workoutDurationLabel(s)} · ${displayW(s.volume||0,0).toLocaleString()}${wUnit()} · ${completedSets} sets</div>
+    <div class="share-ex-list">
+      ${breakdown.slice(0,8).map(b=>`<div><b>${b.sets}×</b> ${b.name}</div>`).join("")}
+      ${breakdown.length>8?`<div style="color:inherit;opacity:.6;">+ ${breakdown.length-8} more</div>`:""}
+    </div>`);
+
+  const card3 = cardShell(`
+    <div class="share-card-title">${sessionTitle(s)}</div>
+    <div class="share-mini-stats">Muscles Trained</div>
+    ${muscles.length
+      ? `<div class="share-muscle-chips">${muscles.map(m=>`<span>${m}</span>`).join("")}</div>`
+      : `<div class="share-mini-stats" style="margin-top:14px;">No muscle data for these exercises</div>`}
+    <div class="share-ex-list" style="margin-top:12px;">
+      ${breakdown.filter(b=>b.sets>0).slice(0,6).map(b=>`<div>${b.name}</div>`).join("")}
+    </div>`);
+
+  return `
+    <div style="text-align:center;margin:8px 0 4px;">
+      <div style="font-size:26px;font-weight:900;">Workout Complete 🎉</div>
+      <div style="font-size:14px;color:var(--muted);margin-top:4px;">${timeLabel}</div>
+    </div>
+
+    ${prs.length ? `<div class="info-box" style="padding:12px;margin:10px 0;border:1px solid rgba(255,90,31,.35);">
+      <div style="font-weight:900;font-size:15px;color:var(--accent);margin-bottom:4px;">🏆 ${prs.length} Personal Record${prs.length>1?'s':''}</div>
+      ${prs.slice(0,4).map(p=>`<div style="font-size:13px;color:var(--muted);">${p.exerciseName} — ${p.type==='1rm'?'est. 1RM':p.type} ${displayW(p.value,1)}${p.type==='volume'?wUnit():wUnit()}</div>`).join("")}
+    </div>`:""}
+
+    <div class="grid2" style="margin:12px 0;">
+      ${statTile("Duration", workoutDurationLabel(s))}
+      ${statTile("Volume", displayW(s.volume||0,0).toLocaleString(), wUnit())}
+      ${statTile("Completed Sets", completedSets)}
+      ${statTile("Exercises", s.exercises.length)}
+    </div>
+
+    <div class="eyebrow-label">Exercise Breakdown</div>
+    <div class="info-box" style="padding:12px 14px;">
+      ${breakdown.length ? breakdown.map(b=>`<div class="row-between" style="padding:5px 0;">
+        <span style="font-size:15px;">${b.name}</span>
+        <span class="mono" style="font-size:14px;color:${b.sets>0?'var(--text)':'var(--muted)'};">${b.sets} set${b.sets!==1?'s':''}</span>
+      </div>`).join("") : `<div style="color:var(--muted);font-size:14px;">No exercises</div>`}
+    </div>
+
+    ${muscles.length?`<div class="eyebrow-label">Muscles Trained</div>
+    <div style="margin-bottom:12px;">${muscles.map(m=>`<span class="muscle-chip active">${m}</span>`).join("")}</div>`:""}
+
+    <div class="eyebrow-label">Share</div>
+    <div class="share-carousel" id="share-carousel" aria-label="Share cards, swipe to browse">
+      ${card1}${card2}${card3}
+    </div>
+    <div class="share-dots" id="share-dots">
+      ${[0,1,2].map(i=>`<span class="share-dot ${i===(state.shareCardIndex||0)?'active':''}"></span>`).join("")}
+    </div>
+    <div style="display:flex;gap:6px;margin:8px 0 12px;justify-content:center;">
+      ${Object.entries(SHARE_THEMES).map(([key,t])=>`<button class="cat-chip ${theme===key?'active':''}" data-share-theme="${key}">${t.label}</button>`).join("")}
+    </div>
+    <div class="grid2" style="gap:8px;">
+      <button class="btn btn-accent" data-action="share-workout-image" aria-label="Share workout card image">Share Image</button>
+      <button class="btn btn-steel" data-action="save-workout-image" aria-label="Save workout card image">Save Image</button>
+    </div>
+    <button class="btn btn-ghost btn-block" data-action="copy-workout-summary" style="margin-top:8px;" aria-label="Copy workout summary text">Copy Summary Text</button>
+    <button class="btn btn-ghost btn-block" data-action="close-workout-complete" style="margin-top:8px;">Done</button>
+  `;
+}
+
+/* Draws one share card onto a 1080×1350 canvas — same real data as the DOM cards.
+   All text/shapes are drawn by hand (no external assets, nothing fabricated). */
+function drawShareCard(canvas, s, cardIndex, themeKey){
+  const t = SHARE_THEMES[themeKey] || SHARE_THEMES.dark;
+  const W = canvas.width = 1080, H = canvas.height = 1350;
+  const ctx = canvas.getContext("2d");
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,t.bg0); grad.addColorStop(1,t.bg1);
+  ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+
+  const F = (weight,px)=>`${weight} ${px}px -apple-system, Roboto, 'Segoe UI', sans-serif`;
+  // Brand
+  ctx.fillStyle = t.accent; ctx.font = F(900,64);
+  ctx.textBaseline = "top"; ctx.fillText("IGNYT", 72, 72);
+  ctx.fillStyle = t.muted; ctx.font = F(700,34);
+  const name = workoutShareName();
+  const footer = `${name ? name+" · " : ""}${s.date}`;
+  ctx.fillText(footer, 72, H-110);
+
+  const title = sessionTitle(s);
+  const completedSets = computeCompletedSets(s.exercises);
+  const volumeLabel = `${displayW(s.volume||0,0).toLocaleString()} ${wUnit()}`;
+  const breakdown = workoutBreakdown(s);
+
+  if(cardIndex===0){
+    ctx.fillStyle = t.text; ctx.font = F(900,84);
+    ctx.fillText(clipText(ctx, title, W-144), 72, 260);
+    ctx.fillStyle = t.accent; ctx.font = F(900,180);
+    ctx.fillText(workoutDurationLabel(s), 72, 430);
+    const stats = [[volumeLabel,"VOLUME"],[String(completedSets),"SETS"],[String(s.exercises.length),"EXERCISES"]];
+    stats.forEach((st,i)=>{
+      const y = 760 + i*160;
+      ctx.fillStyle = t.text; ctx.font = F(900,84); ctx.fillText(st[0], 72, y);
+      ctx.fillStyle = t.muted; ctx.font = F(800,34); ctx.fillText(st[1], 72, y+96);
+    });
+  } else if(cardIndex===1){
+    ctx.fillStyle = t.text; ctx.font = F(900,72);
+    ctx.fillText(clipText(ctx, title, W-144), 72, 240);
+    ctx.fillStyle = t.muted; ctx.font = F(700,40);
+    ctx.fillText(`${workoutDurationLabel(s)} · ${volumeLabel} · ${completedSets} sets`, 72, 350);
+    ctx.font = F(700,48);
+    breakdown.slice(0,10).forEach((b,i)=>{
+      const y = 470 + i*76;
+      ctx.fillStyle = t.accent; ctx.font = F(900,48); ctx.fillText(`${b.sets}×`, 72, y);
+      ctx.fillStyle = t.text; ctx.font = F(700,48); ctx.fillText(clipText(ctx, b.name, W-320), 200, y);
+    });
+    if(breakdown.length>10){ ctx.fillStyle = t.muted; ctx.font = F(700,40); ctx.fillText(`+ ${breakdown.length-10} more`, 72, 470+10*76); }
+  } else {
+    ctx.fillStyle = t.text; ctx.font = F(900,72);
+    ctx.fillText(clipText(ctx, title, W-144), 72, 240);
+    ctx.fillStyle = t.muted; ctx.font = F(800,40);
+    ctx.fillText("MUSCLES TRAINED", 72, 350);
+    const muscles = workoutMusclesTrained(s);
+    let x = 72, y = 440;
+    ctx.font = F(800,44);
+    muscles.forEach(m=>{
+      const w = ctx.measureText(m).width + 64;
+      if(x + w > W-72){ x = 72; y += 110; }
+      ctx.fillStyle = t.accent; roundRect(ctx, x, y, w, 84, 42); ctx.fill();
+      ctx.fillStyle = "#121216"; ctx.fillText(m, x+32, y+22);
+      x += w + 24;
+    });
+    if(!muscles.length){ ctx.fillStyle = t.muted; ctx.font = F(700,44); ctx.fillText("No muscle data for these exercises", 72, 440); y = 440; }
+    ctx.fillStyle = t.muted; ctx.font = F(700,44);
+    breakdown.filter(b=>b.sets>0).slice(0,7).forEach((b,i)=> ctx.fillText(clipText(ctx, b.name, W-144), 72, y+170+i*70));
+  }
+  return canvas;
+}
+
+function clipText(ctx, text, maxWidth){
+  if(ctx.measureText(text).width <= maxWidth) return text;
+  let s = text;
+  while(s.length>1 && ctx.measureText(s+"…").width > maxWidth) s = s.slice(0,-1);
+  return s+"…";
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+
+/* Share/save/copy — every path is failure-tolerant: any error surfaces as a toast, never
+   a blank screen, and never touches the saved workout itself. */
+async function generateShareImageBase64(s){
+  const canvas = document.createElement("canvas");
+  drawShareCard(canvas, s, state.shareCardIndex||0, state.shareCardTheme||"dark");
+  return canvas.toDataURL("image/png").split(",")[1];
+}
+
+async function shareWorkoutImage(s){
+  try{
+    const base64 = await generateShareImageBase64(s);
+    const share = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytShare;
+    if(share){
+      const result = await share.shareImage({ base64, fileName:`ignyt-workout-${s.id}.png`, text: buildWorkoutSummaryText(s) });
+      if(!result || !result.success) showToast("Sharing isn't available on this device.", "error", render);
+      return;
+    }
+    if(navigator.share){ await navigator.share({ title:"IGNYT Workout", text: buildWorkoutSummaryText(s) }); return; }
+    await copyWorkoutSummary(s);
+  }catch(e){
+    if(String(e).toLowerCase().includes("cancel") || String(e).toLowerCase().includes("abort")) return; // user closed the sheet — not an error
+    showToast("Sharing isn't available — summary copied instead.", "error", render);
+    try{ await navigator.clipboard.writeText(buildWorkoutSummaryText(s)); }catch(e2){}
+  }
+}
+
+async function saveWorkoutImage(s){
+  try{
+    const base64 = await generateShareImageBase64(s);
+    const share = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytShare;
+    if(share){
+      const result = await share.saveImage({ base64, fileName:`ignyt-workout-${s.id}.png` });
+      if(result && result.success) showToast(`Image saved to ${result.data && result.data.location ? result.data.location : "your device"}.`, "success", render);
+      else showToast("Couldn't save the image on this device.", "error", render);
+      return;
+    }
+    const a = document.createElement("a");
+    a.href = "data:image/png;base64,"+base64; a.download = `ignyt-workout-${s.id}.png`; a.click();
+  }catch(e){
+    showToast("Couldn't save the image on this device.", "error", render);
+  }
+}
+
+async function copyWorkoutSummary(s){
+  try{
+    await navigator.clipboard.writeText(buildWorkoutSummaryText(s));
+    showToast("Workout summary copied.", "success", render);
+  }catch(e){
+    showToast("Couldn't copy on this device.", "error", render);
+  }
+}
+
+/* =========================================================
+   SWIPE-TO-DELETE for workout set rows. Pointer-event based (works for
+   touch AND mouse, so the revealed Delete button is reachable without a
+   touchscreen too). Vertical scrolling stays native: .set-row declares
+   touch-action:pan-y, so the browser handles vertical pans itself and
+   cancels our gesture (pointercancel) when scrolling wins. A deliberate
+   horizontal move (>14px and clearly more horizontal than vertical) is
+   required before anything shifts; at most one row is ever open.
+========================================================= */
+function closeSwipe(wrap){
+  if(!wrap) return;
+  const row = wrap.querySelector(".set-row");
+  wrap.classList.remove("swiped");
+  if(row) row.style.transform = "";
+  if(_openSwipeEl===wrap) _openSwipeEl = null;
+}
+
+let _swipeOutsideCloserAdded = false;
+
+function attachSwipeToDelete(){
+  _openSwipeEl = null; // fresh DOM after render — nothing is open
+  if(!_swipeOutsideCloserAdded){
+    // ONE document-level listener for the app's lifetime (never re-added per render — no
+    // accumulation): tapping anywhere outside the open row snaps it closed.
+    _swipeOutsideCloserAdded = true;
+    document.addEventListener("pointerdown", (e)=>{
+      if(_openSwipeEl && !_openSwipeEl.contains(e.target)) closeSwipe(_openSwipeEl);
+    }, true);
+  }
+  document.querySelectorAll(".set-row-wrap").forEach(wrap=>{
+    const row = wrap.querySelector(".set-row");
+    if(!row) return;
+    let startX=0, startY=0, swiping=false, dead=false, startOffset=0;
+    row.addEventListener("pointerdown", (e)=>{
+      if(e.pointerType==="mouse" && e.button!==0) return;
+      startX=e.clientX; startY=e.clientY; swiping=false; dead=false;
+      startOffset = wrap.classList.contains("swiped") ? -SWIPE_OPEN : 0;
+    });
+    row.addEventListener("pointermove", (e)=>{
+      if(dead || (e.pointerType==="mouse" && e.buttons===0)) return;
+      const dx = e.clientX-startX, dy = e.clientY-startY;
+      if(!swiping){
+        if(Math.abs(dy)>12 && Math.abs(dy)>Math.abs(dx)){ dead=true; return; } // vertical scroll wins
+        if(Math.abs(dx)>14 && Math.abs(dx)>Math.abs(dy)*1.4){
+          swiping = true;
+          if(_openSwipeEl && _openSwipeEl!==wrap) closeSwipe(_openSwipeEl); // never two open rows
+          try{ row.setPointerCapture(e.pointerId); }catch(err){ /* non-fatal */ }
+        }
+      }
+      if(swiping){
+        const off = Math.max(-SWIPE_OPEN-14, Math.min(0, startOffset+dx));
+        row.style.transition = "none";
+        row.style.transform = `translateX(${off}px)`;
+      }
+    });
+    const finish = (e)=>{
+      if(!swiping){ return; }
+      swiping = false;
+      row.style.transition = "";
+      const off = startOffset + (e.clientX-startX);
+      if(off < -SWIPE_OPEN/2){
+        wrap.classList.add("swiped");
+        row.style.transform = `translateX(-${SWIPE_OPEN}px)`;
+        _openSwipeEl = wrap;
+      } else {
+        closeSwipe(wrap);
+      }
+    };
+    row.addEventListener("pointerup", finish);
+    row.addEventListener("pointercancel", ()=>{ swiping=false; row.style.transition=""; closeSwipe(wrap); });
+  });
+}
+
 function renderWorkoutTab(){
   if(state.session && state.showExercisePicker) return renderExercisePicker();
+  if(state.routineBuilder && state.showExercisePicker && state.exercisePickerContext==="routine") return renderExercisePicker();
   if(!state.session){
+    if(state.workoutCompleteId){
+      const done = state.workoutLog.find(x=>x.id===state.workoutCompleteId);
+      if(done) return renderWorkoutComplete(done);
+      state.workoutCompleteId = null; // stale — fall through to list
+    }
     if(state.viewingSessionId){
       const s = state.workoutLog.find(x=>x.id===state.viewingSessionId);
       if(s) return renderSessionDetail(s);
       state.viewingSessionId = null; // stale id (e.g. deleted) — fall through to list
     }
-    const showAll = state.showAllSessions;
-    const recent = showAll ? state.workoutLog : state.workoutLog.slice(0,5);
-    return `
-      ${state.lastSessionPRs && state.lastSessionPRs.length ? renderPRCelebration() : ""}
-      <button class="btn btn-accent btn-block" data-action="start-session" style="margin-top:4px;">${svg('plus',16)} Start Empty Workout</button>
-      <div style="font-size:11px;color:var(--muted);margin:8px 0 0;text-align:center;">Looking for your routines? They've moved to the <b style="color:var(--text);">Plan</b> tab.</div>
-
-      <div class="row-between" style="margin-top:20px;">
-        <span class="eyebrow-label" style="margin:0;">Recent Sessions</span>
-        ${state.workoutLog.length>5 ? `<button class="btn btn-ghost" data-action="toggle-show-all-sessions" style="padding:4px 10px;font-size:11px;">${showAll?'Show Less':'Show All ('+state.workoutLog.length+')'}</button>` : ""}
-      </div>
-      ${recent.length===0?`<div class="empty-note">No sessions logged yet.</div>`:
-        recent.map(s=>{
-          const muscles = sessionMuscles(s.exercises);
-          const prCount = state.prs.filter(p=>p.workoutId===s.id).length;
-          return `<div class="history-row" style="align-items:flex-start;cursor:pointer;" data-view-session="${s.id}">
-          <div>
-            <div style="font-weight:800;font-size:14px;">${sessionTitle(s)}</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:1px;">${s.exercises.length} exercise${s.exercises.length!==1?'s':''}${s.durationMin?` · ${s.durationMin} min`:''}${prCount?` · 🏆 ${prCount} PR${prCount>1?'s':''}`:''}</div>
-            <div class="mono" style="font-size:11px;color:var(--muted);margin-top:2px;">${s.date}${s.volume?` · ${displayW(s.volume,0)}${wUnit()} vol`:''}</div>
-            <div style="margin-top:5px;">${muscles.map(m=>`<span class="muscle-chip">${m}</span>`).join("")}</div>
-          </div>
-          <button class="del" data-del-session="${s.id}" aria-label="Delete workout">${svg('x',14)}</button>
-        </div>`;}).join("")}
-    `;
+    return window.IgnytPages.renderWorkoutList({
+      state, svg, renderPRCelebration, renderRoutineBuilder, sessionMuscles, sessionTitle,
+      workoutDurationLabel, displayW, wUnit
+    });
   }
   const s = state.session;
   const muscles = sessionMuscles(s.exercises);
   const isEditing = !!state.editingSessionId;
   const liveVolume = Math.round(computeSessionVolume(s.exercises));
+  const liveSets = computeCompletedSets(s.exercises);
   return `
     <div class="row-between" style="margin-bottom:4px;">
       <div style="flex:1;min-width:0;">
         <div class="eyebrow-label" style="margin:0 0 2px;">${isEditing ? 'Editing Workout' : 'In Progress'}</div>
-        <div class="mono" style="font-size:12px;color:var(--muted);">
-          ${isEditing ? s.date : `Started ${new Date(s.startedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} · <span id="session-elapsed">${formatDuration(Date.now()-s.startedAt)}</span>`}
-          ${liveVolume>0?` · ${displayW(liveVolume,0).toLocaleString()}${wUnit()} vol`:''}
-        </div>
+        ${isEditing ? `<div class="mono" style="font-size:13px;color:var(--muted);">${s.date}</div>` : ''}
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0;">
         ${isEditing?`<button class="btn btn-ghost" style="padding:10px 14px;" data-action="cancel-edit-session">Cancel</button>`:''}
         <button class="btn btn-accent" style="padding:10px 18px;" data-action="finish-session">${isEditing?'Save':'Finish'}</button>
       </div>
     </div>
+    ${isEditing ? '' : `
+    <div class="live-stats-bar">
+      <div class="live-stat">
+        <div class="live-stat-label">Duration</div>
+        <div class="live-stat-value mono" id="session-elapsed">${formatDuration(Date.now()-s.startedAt)}</div>
+      </div>
+      <div class="live-stat">
+        <div class="live-stat-label">Volume</div>
+        <div class="live-stat-value">${displayW(liveVolume,0).toLocaleString()}<span class="live-stat-unit">${wUnit()}</span></div>
+      </div>
+      <div class="live-stat">
+        <div class="live-stat-label">Sets</div>
+        <div class="live-stat-value">${liveSets}</div>
+      </div>
+    </div>`}
     <input type="text" id="session-title" placeholder="Workout title (e.g. Push Day)" value="${(s.title||'').replace(/"/g,'&quot;')}"
-      style="width:100%;background:none;border:none;border-bottom:2px solid var(--border);padding:8px 2px;font-size:20px;font-weight:900;color:var(--text);margin:10px 0 8px;font-family:inherit;">
+      style="width:100%;background:none;border:none;border-bottom:2px solid var(--border);padding:8px 2px;font-size:22px;font-weight:900;color:var(--text);margin:10px 0 8px;font-family:inherit;">
     ${muscles.length? `<div style="margin:2px 0 4px;">${muscles.map(m=>`<span class="muscle-chip active">${m}</span>`).join("")}</div>`:""}
     <textarea id="session-notes" placeholder="Workout notes (how it felt, conditions, anything worth remembering)…"
       style="width:100%;background:var(--surface-alt);border-radius:8px;padding:9px 10px;font-size:12px;color:var(--text);margin:6px 0 14px;resize:vertical;min-height:36px;border:none;font-family:inherit;">${s.notes||''}</textarea>
@@ -5108,14 +6545,14 @@ function renderWorkoutTab(){
         const showRPE = state.settings.rpeTracking;
         const isBarbell = (LIBRARY["Barbell"]||[]).some(i=>i[0]===ex.name);
         const showPlates = state.settings.plateCalc && isBarbell;
-        const gridCols = showRPE ? "30px 1fr 52px 52px 44px 32px" : "30px 1fr 62px 62px 32px";
+        const gridCols = showRPE ? "40px minmax(0,1fr) 58px 54px 46px 44px" : "40px minmax(0,1fr) 72px 72px 44px";
         const menuOpen = state.exerciseMenuOpen===exi;
         return `
         <div class="ex-log-card">
           ${ex.supersetWithNext ? `<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:var(--accent);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">${svg('link',12)} Superset with next exercise</div>` : ''}
           <div class="row-between" style="margin-bottom:4px;position:relative;">
-            <div>
-              <div style="font-weight:800;color:var(--steel);font-size:15px;">${ex.name}</div>
+            <div style="min-width:0;flex:1;">
+              <div style="font-weight:800;color:var(--steel);font-size:19px;line-height:1.25;">${ex.name}</div>
               <span class="muscle-chip">${muscle}</span>
             </div>
             <button class="del" data-toggle-ex-menu="${exi}" aria-label="Exercise options">${svg('moreVert',17)}</button>
@@ -5128,6 +6565,7 @@ function renderWorkoutTab(){
                 ${exi<s.exercises.length-1 ? `<button class="ex-menu-item" data-toggle-superset="${exi}">${svg('link',15)} ${ex.supersetWithNext?'Remove Superset':'Add to Superset'}</button>` : ''}
                 <button class="ex-menu-item" data-view-history="${encodeURIComponent(ex.name)}">${svg('progress',15)} View History</button>
                 <button class="ex-menu-item" data-view-instructions="${encodeURIComponent(ex.name)}">${svg('book',15)} View Instructions</button>
+                ${ex.sets.length>1?`<button class="ex-menu-item" data-remove-last-set="${exi}">${svg('x',15)} Remove Last Set</button>`:''}
                 <button class="ex-menu-item" data-del-exercise="${exi}" style="color:#ff6b6b;">${svg('x',15)} Remove Exercise</button>
               </div>
             ` : ''}
@@ -5135,7 +6573,7 @@ function renderWorkoutTab(){
           <input type="text" class="notes-inline" placeholder="Add notes here…" value="${ex.notes||''}" data-notes-exercise="${exi}">
           <div class="row-between">
             <button class="rest-toggle" data-rest-toggle="${exi}">${svg('workout',13)} Rest Timer: ${restLabel}</button>
-            ${showPlates?`<button class="rest-toggle" data-plate-calc="${exi}" style="color:var(--accent);">Plates</button>`:""}
+            ${showPlates?`<button class="rest-toggle" data-plate-calc="${exi}" style="color:var(--color-interactive);">Plates</button>`:""}
           </div>
           ${state.plateCalcOpen===String(exi) ? renderPlatePopover(exi) : ""}
 
@@ -5144,19 +6582,18 @@ function renderWorkoutTab(){
           </div>
           ${ex.sets.map((set,si)=>{
             const prev = getPreviousSet(ex.name, si);
-            const prevLabel = prev ? `${prev.weight?displayW(prev.weight):'–'}${wUnit()} × ${prev.reps||'–'}` : "–";
+            const prevLabel = prev ? `${prev.weight?displayW(prev.weight):'–'}${wUnit()}×${prev.reps||'–'}` : "–";
             const typeMeta = SET_TYPE_META[set.type||"working"];
-            const isEmpty = !set.weight && !set.reps;
-            const canDelete = ex.sets.length>1;
-            return `<div class="set-row ${set.done?'done':''}" style="grid-template-columns:${gridCols};">
-              <button class="mono set-num" data-cycle-set-type="${exi}|${si}" style="color:${typeMeta.color};background:none;border:none;cursor:pointer;font-weight:800;" title="Tap to mark warm-up / drop / failure set">${typeMeta.badge}${si+1}</button>
-              <span class="mono set-prev">${prevLabel}</span>
-              <input type="number" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–">
-              <input type="text" class="mono set-input" value="${set.reps}" data-set-field="${exi}|${si}|reps" placeholder="–">
-              ${showRPE?`<button class="rpe-btn" data-rpe="${exi}|${si}">${set.rpe||'RPE'}</button>`:""}
-              ${isEmpty && canDelete
-                ? `<button class="set-check" data-del-set="${exi}|${si}" title="Delete unused set" style="color:#ff6b6b;">${svg('x',13)}</button>`
-                : `<button class="set-check ${set.done?'done':''}" data-set-done="${exi}|${si}" aria-label="${set.done?'Mark set incomplete':'Mark set complete'}">${set.done?svg('check',13):''}</button>`}
+            return `<div class="set-row-wrap" data-swipe-row="${exi}|${si}">
+              <button class="swipe-del-btn" data-del-set="${exi}|${si}" aria-label="Delete set ${si+1}" tabindex="-1">Delete</button>
+              <div class="set-row ${set.done?'done':''}" style="grid-template-columns:${gridCols};">
+                <button class="mono set-num" data-cycle-set-type="${exi}|${si}" style="color:${typeMeta.color};background:none;border:none;cursor:pointer;font-weight:800;" title="Tap to mark warm-up / drop / failure set">${typeMeta.badge}${si+1}</button>
+                <span class="mono set-prev">${prevLabel}</span>
+                <input type="number" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–">
+                <input type="text" class="mono set-input" value="${set.reps}" data-set-field="${exi}|${si}|reps" placeholder="–">
+                ${showRPE?`<button class="rpe-btn" data-rpe="${exi}|${si}">${set.rpe||'RPE'}</button>`:""}
+                <button class="set-check ${set.done?'done':''}" data-set-done="${exi}|${si}" aria-label="${set.done?'Mark set incomplete':'Mark set complete'}">${set.done?svg('check',13):''}</button>
+              </div>
             </div>`;
           }).join("")}
           <button class="add-set-btn" data-add-set="${exi}">${svg('plus',14)} Add Set</button>
@@ -5306,8 +6743,9 @@ function renderLibraryTab(){
     <button class="btn btn-accent btn-block" data-action="show-add-custom" style="margin-bottom:16px;">${svg('plus',16)} Add Custom Exercise</button>
     <div id="custom-form-slot">${state.showCustomForm ? customExerciseForm() : ""}</div>
     ${items.map(ex=>`<div class="lib-item" data-view-exercise="${ex.name}" style="cursor:pointer;">
-      <div><div class="lib-item-name">${ex.name}${ex.custom?' <span style="color:var(--accent);font-size:10px;">CUSTOM</span>':''}${EXERCISE_DETAILS[ex.name]?' <span style="color:var(--mint);font-size:10px;">GUIDE</span>':''}</div>
+      <div style="min-width:0;"><div class="lib-item-name">${ex.name}${ex.custom?' <span style="color:var(--accent);font-size:10px;">CUSTOM</span>':''}${EXERCISE_DETAILS[ex.name]?' <span style="color:var(--mint);font-size:10px;">GUIDE</span>':''}</div>
       <div class="lib-item-cat">${ex.cat} · ${ex.presc}</div></div>
+      ${ex.custom?`<button class="del" data-del-custom-exercise="${ex.name}" title="Remove custom exercise" aria-label="Remove custom exercise ${ex.name}" style="flex-shrink:0;">${svg('x',15)}</button>`:''}
     </div>`).join("")}
     ${items.length===0?`<div class="empty-note">No exercises match.</div>`:""}
   `;
@@ -5352,7 +6790,19 @@ function renderCsvImportPreview(){
 
 function attachHandlers(){
   document.querySelectorAll("[data-nav]").forEach(el=>{
-    el.addEventListener("click", ()=>{ state.tab = el.dataset.nav; render(); });
+    el.addEventListener("click", ()=>{
+      const dest = el.dataset.nav;
+      if(dest === "calculators"){
+        // Calculator is its own destination; it renders inside the body tab's calculator view.
+        state.tab = "body";
+        state.bodyView = "calculators";
+      } else {
+        state.tab = dest;
+        state.bodyView = null; // always land on the Log Weight page, not a stale calculator view
+      }
+      render();
+      if (["home", "health", "nutrition"].includes(state.tab)) window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
+    });
   });
   document.querySelectorAll("[data-close-more]").forEach(el=>{
     el.addEventListener("click", (e)=>{
@@ -5406,6 +6856,13 @@ function attachHandlers(){
       render();
     });
   });
+  // IGNYT Account: IgnytAuth handles busy/error state and re-renders Settings itself.
+  const accountSigninBtn = document.querySelector('[data-action="account-signin"]');
+  if(accountSigninBtn) accountSigninBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signIn(); });
+  const accountSignoutBtn = document.querySelector('[data-action="account-signout"]');
+  if(accountSignoutBtn) accountSignoutBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signOut(); });
+  const cloudSyncNowBtn = document.querySelector('[data-action="cloud-sync-now"]');
+  if(cloudSyncNowBtn) cloudSyncNowBtn.addEventListener("click", ()=>{ if(window.IgnytCloudSync) IgnytCloudSync.syncNow(); });
   const testNotifBtn = document.querySelector('[data-action="test-notification"]');
   if(testNotifBtn) testNotifBtn.addEventListener("click", ()=>{
     if(typeof Notification==='undefined'){
@@ -5643,7 +7100,7 @@ function attachHandlers(){
     const nameEl = document.getElementById("routine-name");
     const name = nameEl ? nameEl.value.trim() : "";
     if(!name || !state.routineBuilder.exercises.length) return;
-    state.routines.unshift({ id: Date.now(), name, exercises: state.routineBuilder.exercises });
+    state.routines.unshift({ id: nextId(), name, exercises: state.routineBuilder.exercises });
     state.routineBuilder = null;
     render();
   });
@@ -5672,49 +7129,119 @@ function attachHandlers(){
       render();
     });
   });
-  const finishBtn = document.querySelector('[data-action="finish-session"]');
-  if(finishBtn) finishBtn.addEventListener("click", ()=>{
-    if(state.session.exercises.length){
-      const volume = computeSessionVolume(state.session.exercises);
 
-      if(state.editingSessionId){
-        // Patch the existing history entry in place — no new PR detection (this is a correction,
-        // not a new performance) and no duplicate log entry.
-        const idx = state.workoutLog.findIndex(s=>s.id===state.editingSessionId);
-        if(idx!==-1){
-          state.workoutLog[idx] = Object.assign({}, state.workoutLog[idx], {
-            exercises: state.session.exercises,
-            notes: state.session.notes || "",
-            title: state.session.title || "",
-            volume
-          });
-        }
-        state.editingSessionId = null;
-      } else {
-        const finishedAt = Date.now();
-        const durationMin = Math.max(1, Math.round((finishedAt - state.session.startedAt)/60000));
-        const workoutId = Date.now();
-        const newPRs = detectPRs(state.session, workoutId, finishedAt, volume);
-        state.workoutLog.unshift({
-          id: workoutId,
-          date: new Date().toISOString().slice(0,10),
-          startedAt: state.session.startedAt,
-          finishedAt, durationMin, volume,
-          exercises: state.session.exercises,
-          notes: state.session.notes || "",
-          title: state.session.title || ""
-        });
-        if(newPRs.length){
-          state.prs = newPRs.concat(state.prs);
-          state.lastSessionPRs = newPRs;
+  // Habit Tracker (Progress page)
+  const addHabitBtn = document.querySelector('[data-action="add-habit"]');
+  if(addHabitBtn) addHabitBtn.addEventListener("click", ()=>{
+    const nameEl = document.getElementById("habit-new-name");
+    const name = nameEl ? nameEl.value.trim() : "";
+    if(!name) return;
+    state.habits.unshift({ id: nextId(), name, createdAt: Date.now() });
+    state.habitBuilderName = "";
+    render();
+  });
+  document.querySelectorAll("[data-toggle-habit]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = Number(el.dataset.toggleHabit);
+      const today = habitDateStr();
+      if(!state.habitCompletions[id]) state.habitCompletions[id] = {};
+      if(state.habitCompletions[id][today]) delete state.habitCompletions[id][today];
+      else state.habitCompletions[id][today] = Date.now();
+      render();
+    });
+  });
+  document.querySelectorAll("[data-del-habit]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const id = Number(el.dataset.delHabit);
+      if(!(await confirmDialog("Delete this habit and its completion history? This can't be undone.", render))) return;
+      state.habits = state.habits.filter(h=>h.id !== id);
+      delete state.habitCompletions[id];
+      render();
+    });
+  });
+  document.querySelectorAll("[data-rename-habit]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.editingHabitId = Number(el.dataset.renameHabit);
+      render();
+    });
+  });
+  const saveHabitNameBtn = document.querySelector('[data-action="save-habit-name"]');
+  if(saveHabitNameBtn) saveHabitNameBtn.addEventListener("click", ()=>{
+    const id = Number(saveHabitNameBtn.dataset.habitId);
+    const input = document.getElementById(`habit-rename-${id}`);
+    const name = input ? input.value.trim() : "";
+    const habit = state.habits.find(h=>h.id===id);
+    if(habit && name) habit.name = name;
+    state.editingHabitId = null;
+    render();
+  });
+
+  const finishBtn = document.querySelector('[data-action="finish-session"]');
+  if(finishBtn) finishBtn.addEventListener("click", async ()=>{
+    if(_finishingSession) return; // double-tap guard: one workout, one save
+    if(!state.session) return;
+    // Validate completed work before finishing a live (non-edit) session. Finishing with
+    // nothing checked off is allowed after explicit confirmation (maybe cardio-only /
+    // forgot to tick) — but never silently.
+    // Empty workout = no completed exercises. Per spec it is DISCARDED, never saved: it must
+    // not create a history entry or touch analytics, streaks, achievements, or PRs. (Editing
+    // an existing session is a correction, not a new empty workout, so it's exempt.)
+    if(!state.editingSessionId && computeCompletedSets(state.session.exercises)===0){
+      const discard = await confirmDialog(
+        "This workout has no completed exercises. Discard this workout?",
+        render,
+        { title:"Discard Empty Workout", confirmLabel:"Discard Workout", cancelLabel:"Continue Workout", danger:true }
+      );
+      if(!discard) return; // "Continue Workout" — keep the live session open, save nothing.
+      // "Discard Workout" — clear the live session with no save side-effects.
+      state.session = null;
+      state.editingSessionId = null;
+      state.workoutCompleteId = null;
+      applyWakeLock();
+      render();
+      return;
+    }
+    if(_finishingSession || !state.session) return; // re-check after the await
+    _finishingSession = true;
+    // UI protection: lock the button the instant work starts so a slow device / laggy tap can't
+    // queue a second submit. render() rebuilds the tab (button replaced) on completion.
+    finishBtn.disabled = true; finishBtn.textContent = "Saving…";
+    try{
+      let completedId = null;
+      if(state.session.exercises.length){
+        if(state.editingSessionId){
+          // Editing an existing history entry is a CORRECTION, not a new commit: patch in place,
+          // no new PR detection, no duplicate log entry, does not go through the save coordinator.
+          const volume = computeSessionVolume(state.session.exercises);
+          const idx = state.workoutLog.findIndex(s=>s.id===state.editingSessionId);
+          if(idx!==-1){
+            state.workoutLog[idx] = Object.assign({}, state.workoutLog[idx], {
+              exercises: state.session.exercises,
+              notes: state.session.notes || "",
+              title: state.session.title || "",
+              volume
+            });
+            const newlyUnlocked = checkAchievements();
+            if(newlyUnlocked.length) state.lastUnlockedAchievements = newlyUnlocked;
+          }
+          state.editingSessionId = null;
+        } else {
+          // ALL new finishes go through the single, idempotent, instrumented save coordinator.
+          // It is the only writer of a finished workout, so exactly-once holds no matter how many
+          // times (or from where) this handler is triggered.
+          completedId = commitFinishedWorkout(state.session).id;
         }
       }
-      const newlyUnlocked = checkAchievements();
-      if(newlyUnlocked.length) state.lastUnlockedAchievements = newlyUnlocked;
+      state.session = null;
+      // Dedicated Workout Complete screen (summary + share cards) for real finishes with content;
+      // edits and empty sessions go back to the list as before.
+      state.workoutCompleteId = completedId;
+      state.shareCardIndex = 0;
+      applyWakeLock();
+      render(); // renderApp() persists — the workout is durably saved before anything else runs
+    } finally {
+      _finishingSession = false; // released after save+render; the null session blocks re-entry anyway
     }
-    state.session = null;
-    applyWakeLock();
-    render();
   });
   const cancelEditBtn = document.querySelector('[data-action="cancel-edit-session"]');
   if(cancelEditBtn) cancelEditBtn.addEventListener("click", ()=>{
@@ -5723,6 +7250,36 @@ function attachHandlers(){
     applyWakeLock();
     render();
   });
+
+  // ---- Workout Complete screen ----
+  const completeWorkout = state.workoutCompleteId ? state.workoutLog.find(x=>x.id===state.workoutCompleteId) : null;
+  const closeCompleteBtn = document.querySelector('[data-action="close-workout-complete"]');
+  if(closeCompleteBtn) closeCompleteBtn.addEventListener("click", ()=>{ state.workoutCompleteId = null; render(); });
+  if(completeWorkout){
+    const shareBtn = document.querySelector('[data-action="share-workout-image"]');
+    if(shareBtn) shareBtn.addEventListener("click", ()=> shareWorkoutImage(completeWorkout));
+    const saveBtn = document.querySelector('[data-action="save-workout-image"]');
+    if(saveBtn) saveBtn.addEventListener("click", ()=> saveWorkoutImage(completeWorkout));
+    const copyBtn = document.querySelector('[data-action="copy-workout-summary"]');
+    if(copyBtn) copyBtn.addEventListener("click", ()=> copyWorkoutSummary(completeWorkout));
+    document.querySelectorAll("[data-share-theme]").forEach(el=>{
+      el.addEventListener("click", ()=>{ state.shareCardTheme = el.dataset.shareTheme; render(); });
+    });
+    const carousel = document.getElementById("share-carousel");
+    if(carousel){
+      // Dot indicator follows the scroll-snap position; direct DOM update, no re-render.
+      carousel.addEventListener("scroll", ()=>{
+        const cardWidth = carousel.firstElementChild ? carousel.firstElementChild.offsetWidth + 12 : 1;
+        const idx = Math.max(0, Math.min(2, Math.round(carousel.scrollLeft / cardWidth)));
+        if(idx !== state.shareCardIndex){
+          state.shareCardIndex = idx;
+          document.querySelectorAll("#share-dots .share-dot").forEach((d,i)=> d.classList.toggle("active", i===idx));
+        }
+      }, {passive:true});
+    }
+  }
+
+  attachSwipeToDelete();
   const editWorkoutBtn = document.querySelector('[data-action="edit-workout"]');
   if(editWorkoutBtn) editWorkoutBtn.addEventListener("click", ()=>{
     const s = state.workoutLog.find(x=>x.id===Number(editWorkoutBtn.dataset.sessionId));
@@ -5753,6 +7310,7 @@ function attachHandlers(){
   document.querySelectorAll("[data-view-session]").forEach(el=>{
     el.addEventListener("click", (e)=>{
       state.viewingSessionId = Number(el.dataset.viewSession);
+      state.tab = "workout"; // no-op on the Workout tab; lets the Progress calendar open a workout's detail
       render();
     });
   });
@@ -5957,9 +7515,24 @@ function attachHandlers(){
   document.querySelectorAll("[data-del-set]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const [exi,si] = el.dataset.delSet.split("|").map(Number);
-      const ex = state.session.exercises[exi];
-      if(!ex || ex.sets.length<=1) return; // never delete the exercise's last remaining set
+      const ex = state.session && state.session.exercises[exi];
+      if(!ex) return;
+      if(ex.sets.length<=1){
+        // Never leave an exercise with zero sets — explain instead of silently ignoring.
+        showToast("Each exercise keeps at least one set — remove the whole exercise from its ⋮ menu instead.", "info", render);
+        return;
+      }
       ex.sets.splice(si,1); // remaining sets renumber automatically -- their "Set N" label is just their array index+1
+      render();
+    });
+  });
+  // Accessible non-swipe fallback (inside the existing ⋮ menu — no permanent delete button on rows).
+  document.querySelectorAll("[data-remove-last-set]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const ex = state.session && state.session.exercises[Number(el.dataset.removeLastSet)];
+      if(!ex || ex.sets.length<=1) return;
+      ex.sets.pop();
+      state.exerciseMenuOpen = null;
       render();
     });
   });
@@ -6069,9 +7642,31 @@ function attachHandlers(){
     const muscle = document.getElementById("custom-muscle").value;
     const presc = document.getElementById("custom-presc").value.trim() || "—";
     if(!name) return;
+    // Prevent duplicate exercises: reject a name that already exists (case-insensitive) in the
+    // built-in library or among existing custom exercises. Root cause of the reported
+    // "Shoulder Press Machine" duplicate was that this check did not exist.
+    const key = name.toLowerCase();
+    if(allLibraryExercises().some(e=>(e.name||"").trim().toLowerCase()===key)){
+      showToast(`“${name}” already exists in the exercise library.`, 'error', render);
+      return;
+    }
     state.customExercises.push({ name, cat, presc, unit:"reps", muscle });
     state.showCustomForm = false;
     render();
+  });
+  // Delete a custom exercise from the library. Built-in exercises have no delete button
+  // (they're base data); only user-created custom exercises are removable. This is the
+  // previously-missing delete path that left accidental duplicates unremovable.
+  document.querySelectorAll("[data-del-custom-exercise]").forEach(el=>{
+    el.addEventListener("click", async (ev)=>{
+      ev.stopPropagation();
+      const name = el.dataset.delCustomExercise;
+      if(!(await confirmDialog(`Remove the custom exercise “${name}”? This does not affect any workout you've already logged.`, render))) return;
+      const key = (name||"").trim().toLowerCase();
+      state.customExercises = state.customExercises.filter(x=>(x.name||"").trim().toLowerCase() !== key);
+      persist();
+      render();
+    });
   });
 
   // Exercise picker (full-screen Add Exercise flow)
@@ -6094,11 +7689,11 @@ function attachHandlers(){
   });
   const pickerSearchEl = document.getElementById("ex-picker-search");
   if(pickerSearchEl) pickerSearchEl.addEventListener("input", ()=>{
-    state.exercisePickerSearch = pickerSearchEl.value;
-    debounce("ex-picker-search", ()=>{
-      render();
-      setTimeout(()=>{ const s=document.getElementById("ex-picker-search"); if(s){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
-    }, 150);
+    state.exercisePickerSearch = pickerSearchEl.value; // native input already shows the char instantly
+    // Refresh ONLY the results list, debounced so a fast typist doesn't rebuild the full list
+    // on every keystroke. The input element is never re-created, so the keyboard stays open,
+    // focus stays put, and the caret position is preserved with zero re-focus tricks.
+    debounce("ex-picker-search", updateExercisePickerResults, 120);
   });
   const pickerEquipEl = document.getElementById("ex-picker-equip");
   if(pickerEquipEl) pickerEquipEl.addEventListener("change", ()=>{
@@ -6110,10 +7705,25 @@ function attachHandlers(){
     state.exercisePickerMuscle = pickerMuscleEl.value;
     render();
   });
-  document.querySelectorAll("[data-pick-exercise]").forEach(el=>{
-    el.addEventListener("click", (e)=>{
-      if(e.target.closest("[data-view-exercise-from-picker]")) return; // let the info button handle its own click
-      const name = el.dataset.pickExercise;
+  // Row clicks are delegated to the stable #ex-picker-results container (rather than bound
+  // per-row) so they keep working after the live search refreshes the container's innerHTML
+  // without a full render. Falls back to document if the container isn't present.
+  const pickerResultsEl = document.getElementById("ex-picker-results") || document;
+  if(pickerResultsEl._ignytPickBound !== true){
+    pickerResultsEl.addEventListener("click", (e)=>{
+      const viewBtn = e.target.closest("[data-view-exercise-from-picker]");
+      if(viewBtn){
+        e.stopPropagation();
+        state.viewingExerciseDetail = viewBtn.dataset.viewExerciseFromPicker;
+        state.exerciseDetailTab = "summary";
+        state.showExercisePicker = false;
+        state.tab = "library";
+        render();
+        return;
+      }
+      const row = e.target.closest("[data-pick-exercise]");
+      if(!row) return;
+      const name = row.dataset.pickExercise;
       if(state.exercisePickerContext==="routine"){
         state.routineBuilder.exercises.push({ name, sets: state.routineBuilderSets });
       } else if(state.exercisePickerContext==="replace"){
@@ -6132,17 +7742,8 @@ function attachHandlers(){
       state.showExercisePicker = false;
       render();
     });
-  });
-  document.querySelectorAll("[data-view-exercise-from-picker]").forEach(el=>{
-    el.addEventListener("click", (e)=>{
-      e.stopPropagation();
-      state.viewingExerciseDetail = el.dataset.viewExerciseFromPicker;
-      state.exerciseDetailTab = "summary";
-      state.showExercisePicker = false;
-      state.tab = "library";
-      render();
-    });
-  });
+    if(pickerResultsEl !== document) pickerResultsEl._ignytPickBound = true;
+  }
   const showCreateBtn = document.querySelector('[data-action="show-create-in-picker"]');
   if(showCreateBtn) showCreateBtn.addEventListener("click", ()=>{
     state.exercisePickerShowCreate = true;
@@ -6201,22 +7802,25 @@ function attachHandlers(){
     });
   });
 
+  const toggleBodyHistBtn = document.querySelector('[data-action="toggle-body-history"]');
+  if(toggleBodyHistBtn) toggleBodyHistBtn.addEventListener("click", ()=>{
+    state.showAllBodyHistory = !state.showAllBodyHistory;
+    render();
+  });
   const logBodyBtn = document.querySelector('[data-action="log-body"]');
   if(logBodyBtn) logBodyBtn.addEventListener("click", ()=>{
     const rawWeight = document.getElementById("b-weight").value;
     if(!rawWeight) return;
     const weight = parseInputW(rawWeight); // convert from displayed unit to canonical kg for storage
-    const bf = document.getElementById("b-bodyfat").value;
     state.bodylog.unshift({
-      id: Date.now(),
+      id: nextId(),
       date: document.getElementById("b-date").value,
       weight,
       sleep: document.getElementById("b-sleep").value,
       hrv: document.getElementById("b-hrv").value,
       waist: document.getElementById("b-waist").value,
       chest: document.getElementById("b-chest").value,
-      arms: document.getElementById("b-arms").value,
-      bodyfat: bf
+      arms: document.getElementById("b-arms").value
     });
     // Weight logged here becomes the single source of truth -> recalcs calories/macros everywhere
     state.profile.weight = Number(weight) || state.profile.weight;
@@ -6229,6 +7833,86 @@ function attachHandlers(){
       render();
     });
   });
+
+  // Body-progress photos (IndexedDB-backed, see www/js/body-photos-db.js)
+  document.querySelectorAll("[data-body-photo-category]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.bodyPhotoCategory = el.dataset.bodyPhotoCategory;
+      render();
+    });
+  });
+  const bodyPhotoFileInput = document.getElementById("body-photo-file");
+  if(bodyPhotoFileInput) bodyPhotoFileInput.addEventListener("change", ()=>{
+    const file = bodyPhotoFileInput.files && bodyPhotoFileInput.files[0];
+    if(!file) return; // selection cancelled -- nothing to do
+    if(!file.type || !file.type.startsWith("image/")){
+      showToast("That file isn't a supported image format.", "error", render);
+      return;
+    }
+    if(!window.IgnytBodyPhotosDB){
+      showToast("Photo storage isn't available on this device.", "error", render);
+      return;
+    }
+    const noteEl = document.getElementById("body-photo-note");
+    const note = noteEl ? noteEl.value.trim() : "";
+    window.IgnytBodyPhotosDB.addPhoto({ date: todayStr(), category: state.bodyPhotoCategory, note, blob: file })
+      .then(()=> window.IgnytBodyPhotosDB.getAllMeta())
+      .then(list=>{ state.bodyPhotos = list; render(); })
+      .catch(()=>{ showToast("Couldn't save that photo. Please try again.", "error", render); });
+  });
+  document.querySelectorAll("[data-view-body-photo]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.viewingBodyPhotoId = Number(el.dataset.viewBodyPhoto);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-close-body-photo]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.viewingBodyPhotoId = null;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-del-body-photo]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const id = Number(el.dataset.delBodyPhoto);
+      if(!(await confirmDialog("Delete this progress photo? This can't be undone.", render))) return;
+      if(window.IgnytBodyPhotosDB) await window.IgnytBodyPhotosDB.deletePhoto(id).catch(()=>{});
+      if(_photoUrlCache[id]){ URL.revokeObjectURL(_photoUrlCache[id]); delete _photoUrlCache[id]; }
+      state.bodyPhotos = state.bodyPhotos.filter(p=>p.id!==id);
+      state.viewingBodyPhotoId = null;
+      render();
+    });
+  });
+
+  // Log Weight card actions
+  const addWeightBtn = document.querySelector('[data-action="add-weight-focus"]');
+  if(addWeightBtn) addWeightBtn.addEventListener("click", ()=>{
+    const entry = document.getElementById("body-log-entry");
+    if(entry) entry.scrollIntoView({behavior:"smooth", block:"start"});
+    const w = document.getElementById("b-weight");
+    if(w) setTimeout(()=>w.focus(), 250);
+  });
+  const viewWeightHistBtn = document.querySelector('[data-action="view-weight-history"]');
+  if(viewWeightHistBtn) viewWeightHistBtn.addEventListener("click", ()=>{
+    state.showAllBodyHistory = true;
+    render();
+    setTimeout(()=>{ const h=document.getElementById("body-history"); if(h) h.scrollIntoView({behavior:"smooth", block:"start"}); }, 0);
+  });
+
+  // Calculator cards -> dedicated calculator view
+  document.querySelectorAll("[data-calc-open]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.calc.activeCalc = el.dataset.calcOpen;
+      state.calc.result = null;
+      state.bodyView = "calculators";
+      render();
+    });
+  });
+  document.querySelectorAll('[data-action="view-all-calculators"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.bodyView = "calculators"; render(); });
+  });
+  const bodyCalcBackBtn = document.querySelector('[data-action="body-calc-back"]');
+  if(bodyCalcBackBtn) bodyCalcBackBtn.addEventListener("click", ()=>{ state.bodyView = null; render(); });
 
   // Calculators
   const calcPicker = document.getElementById("calc-picker");
@@ -6264,7 +7948,10 @@ function attachHandlers(){
     const goalEl = document.getElementById("calc-goal");
     if(goalEl) c.goalDelta = Number(goalEl.value);
 
-    if(c.activeCalc==="bmr"){
+    if(c.activeCalc==="bmi"){
+      const h = Number(c.height)/100;
+      c.result = { type:"bmi", bmi: (h>0 ? Number(c.weight)/(h*h) : 0) };
+    } else if(c.activeCalc==="bmr"){
       const bmr = calcBMR(c.age, c.gender, c.height, c.weight);
       c.result = { type:"bmr", bmr };
     } else if(c.activeCalc==="calorie"){
@@ -6315,6 +8002,69 @@ function attachHandlers(){
     state.progressExercise = progExSelect.value;
     render();
   });
+
+  // Profile entry points into the existing Progress detail views (Personal Records,
+  // Achievements) -- reuses the exact same render/detection/storage logic as the Progress
+  // tab's own Explore grid, just a second navigation path to the same screen.
+  document.querySelectorAll("[data-open-progress-view]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.tab = "progress";
+      state.progressView = el.dataset.openProgressView;
+      render();
+    });
+  });
+
+  // Progress home <-> detail navigation. Bound per-render like every other handler here
+  // (the DOM is rebuilt each render, so listeners never accumulate).
+  document.querySelectorAll("[data-progress-view]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const main = document.getElementById("main");
+      _progressScrollPos = main ? main.scrollTop : 0;
+      state.progressView = el.dataset.progressView;
+      render();
+      if(main) main.scrollTop = 0; // details start at the top
+    });
+  });
+  const progBackBtn = document.querySelector('[data-action="progress-back"]');
+  if(progBackBtn) progBackBtn.addEventListener("click", ()=>{
+    state.progressView = null;
+    state.prShowCount = 10; state.prSearch = ""; state.exProgressSearch = "";
+    state.calendarSelectedDate = null;
+    render();
+    const main = document.getElementById("main");
+    if(main) main.scrollTop = _progressScrollPos || 0; // restore where the user left off
+  });
+  const prMoreBtn = document.querySelector('[data-action="pr-show-more"]');
+  if(prMoreBtn) prMoreBtn.addEventListener("click", ()=>{ state.prShowCount = (state.prShowCount||10)+10; render(); });
+  const prSearchInput = document.getElementById("pr-search");
+  if(prSearchInput) prSearchInput.addEventListener("input", (e)=>{
+    state.prSearch = e.target.value;
+    state.prShowCount = 10;
+    debounce("pr-search", ()=>{
+      render();
+      setTimeout(()=>{ const s=document.getElementById("pr-search"); if(s){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
+    }, 250);
+  });
+  const exProgSearchInput = document.getElementById("ex-progress-search");
+  if(exProgSearchInput) exProgSearchInput.addEventListener("input", (e)=>{
+    state.exProgressSearch = e.target.value;
+    debounce("ex-progress-search", ()=>{
+      render();
+      setTimeout(()=>{ const s=document.getElementById("ex-progress-search"); if(s){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
+    }, 250);
+  });
+  document.querySelectorAll("[data-analytics-range]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.analyticsRange = el.dataset.analyticsRange; render(); });
+  });
+  document.querySelectorAll("[data-nutrition-range]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.nutritionRange = Number(el.dataset.nutritionRange); render(); });
+  });
+  document.querySelectorAll("[data-cal-day]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.calendarSelectedDate = state.calendarSelectedDate===el.dataset.calDay ? null : el.dataset.calDay;
+      render();
+    });
+  });
   document.querySelectorAll("[data-cal-nav]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const delta = Number(el.dataset.calNav);
@@ -6344,9 +8094,13 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{
       const meal = el.dataset.logMealFood;
       const name = document.getElementById("food-name").value.trim();
-      const cal = Number(document.getElementById("food-cal").value);
-      if(!name || !cal) return;
-      state.foodLog.unshift({ id: Date.now(), date: todayStr(), name, calories: cal, meal,
+      // A blank calorie field also reads as "0" through Number(), same as a deliberately
+      // logged 0-calorie item (black coffee, water) -- checking the raw string for blank/NaN
+      // instead of falsy-0 lets a genuine 0 through without also accepting an empty field.
+      const calStr = document.getElementById("food-cal").value.trim();
+      const cal = Number(calStr);
+      if(!name || calStr === "" || isNaN(cal) || cal < 0) return;
+      state.foodLog.unshift({ id: nextId(), date: todayStr(), name, calories: cal, meal,
         protein: Number(document.getElementById("food-protein").value)||0,
         carbs: Number(document.getElementById("food-carbs").value)||0,
         fat: Number(document.getElementById("food-fat").value)||0,
@@ -6359,7 +8113,7 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{
       const meal = el.dataset.quickAddFood;
       state.foodLog.unshift({
-        id: Date.now(), date: todayStr(), meal,
+        id: nextId(), date: todayStr(), meal,
         name: el.dataset.foodName,
         calories: Number(el.dataset.foodCal)||0,
         protein: Number(el.dataset.foodProtein)||0,
@@ -6373,8 +8127,9 @@ function attachHandlers(){
   const saveFavBtn = document.querySelector('[data-action="save-as-favorite"]');
   if(saveFavBtn) saveFavBtn.addEventListener("click", ()=>{
     const name = document.getElementById("food-name").value.trim();
-    const cal = Number(document.getElementById("food-cal").value);
-    if(!name || !cal) return;
+    const calStr = document.getElementById("food-cal").value.trim();
+    const cal = Number(calStr);
+    if(!name || calStr === "" || isNaN(cal) || cal < 0) return;
     const fav = {
       name, calories: cal,
       protein: Number(document.getElementById("food-protein").value)||0,
@@ -6389,7 +8144,7 @@ function attachHandlers(){
   });
   document.querySelectorAll("[data-add-water]").forEach(el=>{
     el.addEventListener("click", ()=>{
-      state.waterLog.unshift({ id: Date.now(), date: todayStr(), ml: Number(el.dataset.addWater) });
+      state.waterLog.unshift({ id: nextId(), date: todayStr(), ml: Number(el.dataset.addWater) });
       render();
     });
   });
@@ -6437,6 +8192,13 @@ function attachHandlers(){
   if(healthDisconnectBtn) healthDisconnectBtn.addEventListener("click", ()=>{
     if(window.HealthConnectIntegration) window.HealthConnectIntegration.disconnect();
   });
+  // Day/Week/Month/Year is a purely client-side display filter over data already synced --
+  // it doesn't need (and previously wastefully triggered) a full native Health Connect sync
+  // on every tap.
+  document.querySelectorAll("[data-health-range]").forEach(el=>el.addEventListener("click", ()=>{
+    state.healthInsightsRange = el.dataset.healthRange;
+    render();
+  }));
 
   // Toast / confirm dialog
   const toastEl = document.querySelector('[data-action="dismiss-toast"]');
@@ -6487,11 +8249,53 @@ window.addEventListener("beforeunload", (e)=>{
   }
 });
 
+// Multi-tab concurrency safety. The `storage` event fires only in OTHER tabs/windows of the
+// same origin. Without this, tab B could hold a stale copy of a shared record array and later
+// persist() it over tab A's newly-saved workout. So when another tab writes one of these
+// append-mostly arrays, reload it from disk into state (workouts go through the same uniqueness
+// invariant). The live active session is deliberately NOT reconciled — it belongs to whichever
+// tab is running the workout — and we skip while this tab is mid-save.
+window.addEventListener("storage", (e)=>{
+  if(!e.key || _finishingSession) return;
+  const reload = {
+    hx_workout_log: ()=>{ state.workoutLog = enforceWorkoutLogIntegrity(LS.get("hx_workout_log", [])); },
+    hx_prs:         ()=>{ state.prs = LS.get("hx_prs", []); },
+    hx_achievements:()=>{ state.achievements = LS.get("hx_achievements", []); },
+    hx_routines:    ()=>{ state.routines = LS.get("hx_routines", []); },
+    hx_bodylog:     ()=>{ state.bodylog = LS.get("hx_bodylog", []); }
+  };
+  if(reload[e.key]){
+    try{ reload[e.key](); if(typeof render === "function" && !state.session) render(); }
+    catch(_){ /* reconciliation is best-effort, never fatal */ }
+  }
+});
+
 try{
   render();
 }catch(err){
   console.error("Ignyt failed to boot:", err);
   renderErrorScreen(err);
+}
+
+// Report the one-time duplicate-workout cleanup to the user, exactly once. showToast needs the
+// app to have rendered, so it runs here (after boot render) rather than inside runMigrations().
+try{
+  const dupRemoved = LS.get("hx_workout_dedupe_removed_v1", 0);
+  if(dupRemoved > 0 && !LS.get("hx_workout_dedupe_notified_v1", false)){
+    LS.set("hx_workout_dedupe_notified_v1", true);
+    setTimeout(()=> showToast("Cleaned up "+dupRemoved+" duplicate workout"+(dupRemoved!==1?"s":"")+" from your history.", 'info', render), 600);
+  }
+}catch(e){ /* non-fatal */ }
+
+// Body-progress photo metadata loads asynchronously from IndexedDB and re-renders once
+// ready, so first paint never waits on it. A missing/broken IndexedDB (some embedded
+// WebViews, private browsing) just leaves state.bodyPhotos empty -- the UI already has an
+// honest empty state, nothing crashes.
+if(window.IgnytBodyPhotosDB){
+  window.IgnytBodyPhotosDB.getAllMeta().then(list=>{
+    state.bodyPhotos = list;
+    render();
+  }).catch(()=>{});
 }
 
 if("serviceWorker" in navigator){

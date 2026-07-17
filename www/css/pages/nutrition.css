@@ -1,0 +1,2 @@
+.meal-card, .food-log-card { border-radius:var(--radius-card); }
+.macro-ring, .nutrition-summary { min-width:0; }
