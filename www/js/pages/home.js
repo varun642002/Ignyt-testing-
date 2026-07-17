@@ -15,8 +15,8 @@
   }
 
   window.IgnytPages.renderHome = function renderHome(ctx) {
-    const { state, week, plannedDay, planPct, streak, burned,
-      latestWeight, water, waterTarget, dayDone, dayTotal, greeting, displayW, wUnit, svg,
+    const { state, week, streak, burned,
+      latestWeight, water, waterTarget, greeting, displayW, wUnit, svg,
       renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed, renderHomeHabits } = ctx;
     let health = null;
     try { health = JSON.parse(localStorage.getItem('hx_hc_dashboard_cache') || 'null'); } catch (_) {}
@@ -24,9 +24,6 @@
     const sleepMinutes = healthValue(health, 'sleep.totalMinutes', null);
     const sleep = sleepMinutes == null ? 'Not synced' : `${Math.floor(sleepMinutes / 60)}h ${sleepMinutes % 60}m`;
     const hrv = latestWeight && latestWeight.hrv != null ? `${latestWeight.hrv} ms` : 'No data';
-    const workoutName = plannedDay ? plannedDay.session : 'Recovery day';
-    const workoutDetail = plannedDay ? `${plannedDay.exercises.length} exercises · ${dayDone}/${dayTotal} complete` : 'Mobility, an easy walk, or complete rest.';
-    const workoutAction = plannedDay ? (dayDone > 0 && dayDone < dayTotal ? 'Continue workout' : dayDone === dayTotal ? 'View completed day' : 'Start today’s workout') : 'View plan';
 
     return `
       <section class="premium-card premium-card--elevated home-hero">
@@ -57,12 +54,6 @@
       </section>
 
       ${renderHomeHabits ? renderHomeHabits() : ''}
-
-      <div class="section-heading"><span class="section-heading__label">Next workout</span><button class="btn btn-ghost" data-nav="plan" style="padding:5px 8px;font-size:12px;">Plan</button></div>
-      <button class="premium-card home-next-workout" data-home-day="${plannedDay ? week.days.indexOf(plannedDay) : 0}" style="width:100%;border:none;color:var(--color-text-primary);text-align:left;">
-        <span class="home-next-workout__icon">${svg('workout', 20)}</span><span class="home-next-workout__copy"><span class="home-next-workout__title">${workoutName}</span><span class="home-next-workout__detail">${workoutDetail}</span></span>
-        <span style="margin-left:auto;color:var(--color-interactive);font-size:var(--font-size-sm);font-weight:800;">${workoutAction}</span>
-      </button>
 
       <div class="section-heading"><span class="section-heading__label">Recovery &amp; hydration</span></div>
       <section class="home-metrics">
