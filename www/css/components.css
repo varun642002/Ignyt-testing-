@@ -69,3 +69,17 @@
 .bw-mini { width:90px; font-family:monospace; font-weight:700; }
 .bw-review { display:flex; gap:10px; align-items:flex-start; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px; margin-bottom:8px; }
 .bw-check input { width:20px; height:20px; }
+
+/* ---- Smart Goal Engine (goals.js) ---- */
+.goal-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:var(--space-md); margin-bottom:10px; box-shadow:var(--shadow-card); }
+.goal-label { display:block; font-size:12px; font-weight:700; color:var(--color-text-secondary); margin:10px 0 4px; }
+.goal-input { width:100%; background:var(--color-surface-pressed); border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:10px 12px; font-size:15px; color:var(--color-text-primary); }
+.goal-two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.goal-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-bottom:6px; }
+.goal-metric { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px; min-width:0; }
+.goal-metric__l { font-size:12px; font-weight:700; color:var(--color-text-secondary); }
+.goal-metric__v { font-size:20px; font-weight:900; margin-top:3px; }
+.goal-metric__u { font-size:11px; font-weight:600; color:var(--color-text-secondary); margin-left:3px; }
+.goal-bar { margin-top:10px; height:8px; border-radius:4px; background:var(--color-surface-pressed); overflow:hidden; }
+.goal-bar span { display:block; height:100%; border-radius:4px; background:var(--color-interactive); }
+.goal-row { display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:6px; }

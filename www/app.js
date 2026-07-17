@@ -3900,6 +3900,7 @@ function renderApp(){
   if(state.tab==="settings") main.innerHTML = renderSettingsTab();
   if(state.tab==="health") main.innerHTML = renderHealthDashboard();
   if(state.tab==="bloodwork") main.innerHTML = window.IgnytBloodwork ? window.IgnytBloodwork.render() : "";
+  if(state.tab==="goals") main.innerHTML = window.IgnytGoals ? window.IgnytGoals.render() : "";
   if(state.tab==="more") main.innerHTML = ""; // sheet covers it
   attachHandlers();
   persist();
@@ -3913,6 +3914,7 @@ function renderMoreSheet(){
     {id:"plan", label:"Training Plan", desc:"HYROX schedule & routines", color:"var(--steel)", icon:"plan"},
     {id:"library", label:"Library", desc:"Exercises & equipment", color:"var(--steel)", icon:"library"},
     {id:"body", label:"Log Weight", desc:"Weight, trend & history", color:"var(--color-interactive)", icon:"body"},
+    {id:"goals", label:"Goals", desc:"Smart goal engine & targets", color:"var(--color-interactive)", icon:"progress"},
     {id:"bloodwork", label:"Blood Work", desc:"Lab reports, biomarkers & trends", color:"#e5484d", icon:"progress"},
     {id:"calculators", label:"Calculator", desc:"BMI, BMR, TDEE & macros", color:"var(--steel)", icon:"calc"},
     {id:"settings", label:"Settings", desc:"Backups & preferences", color:"var(--muted)", icon:"gear"},
@@ -6819,6 +6821,7 @@ function renderCsvImportPreview(){
 
 function attachHandlers(){
   if(window.IgnytBloodwork) window.IgnytBloodwork.attach(); // self-guarded, binds once
+  if(window.IgnytGoals) window.IgnytGoals.attach();
   document.querySelectorAll("[data-nav]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const dest = el.dataset.nav;
