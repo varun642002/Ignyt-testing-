@@ -89,3 +89,10 @@
 .hu-row:active { background:var(--color-surface-pressed); }
 .hu-thumb { font-size:22px; flex:none; width:36px; text-align:center; }
 .hu-preview { display:flex; align-items:center; justify-content:center; min-height:120px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:12px; margin-bottom:10px; }
+
+/* ---- Adaptive AI Coach (ai-coach.js) ---- */
+.coach-rec { display:flex; gap:10px; align-items:flex-start; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:8px; }
+.coach-rec__dot { width:8px; height:8px; border-radius:50%; margin-top:6px; flex:none; }
+.coach-chip { font-size:11px; font-weight:700; color:var(--color-text-secondary); background:var(--color-surface-pressed); border-radius:var(--radius-pill); padding:3px 9px; }
+.coach-q { display:block; width:100%; text-align:left; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:11px 14px; margin-bottom:6px; font-size:14px; font-weight:600; color:var(--color-text-primary); cursor:pointer; }
+.coach-q:active { background:var(--color-surface-pressed); }

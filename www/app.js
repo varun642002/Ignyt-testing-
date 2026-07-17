@@ -3940,10 +3940,13 @@ function renderMoreSheet(){
 /* Honest navigation shell: AI assistance is not implemented in this repository, so this
    screen never implies that prompts, plans, or data analysis are being generated. */
 function renderAiCoachTab(){
+  // Rule-based, data-driven coach (offline, no LLM). Falls back to the honest empty state only
+  // if the module failed to load.
+  if(window.IgnytCoach) return window.IgnytCoach.render();
   return `<section class="premium-card premium-card--elevated coach-empty">
     <div class="coach-empty__icon">${svg('more',28)}</div>
     <div style="font-size:24px;font-weight:900;">AI Coach</div>
-    <p style="margin:8px auto 18px;max-width:300px;color:var(--color-text-secondary);line-height:1.5;">AI coaching is not configured in this version of IGNYT. Your workout, nutrition, progress, and Health Connect data remain available in their existing screens.</p>
+    <p style="margin:8px auto 18px;max-width:300px;color:var(--color-text-secondary);line-height:1.5;">Coach is unavailable right now. Your workout, nutrition, progress, and Health Connect data remain available in their existing screens.</p>
     <button class="btn btn-secondary" data-nav="progress">Explore your progress</button>
   </section>`;
 }
@@ -6825,6 +6828,7 @@ function attachHandlers(){
   if(window.IgnytBloodwork) window.IgnytBloodwork.attach(); // self-guarded, binds once
   if(window.IgnytGoals) window.IgnytGoals.attach();
   if(window.IgnytHealthUploads) window.IgnytHealthUploads.attach();
+  if(window.IgnytCoach) window.IgnytCoach.attach();
   document.querySelectorAll("[data-nav]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const dest = el.dataset.nav;
