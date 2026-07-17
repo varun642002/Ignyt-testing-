@@ -1634,6 +1634,114 @@ function persist(){
 
 /* ---------- Migration: runs once on boot if stored schema is older than current ---------- */
 
+/* =========================================================
+   DATA INTEGRITY
+
+   This app persists to localStorage as arrays of self-contained DOCUMENTS: a workout object
+   CONTAINS its exercises, and each exercise CONTAINS its sets. There are no separate tables,
+   no foreign keys, and therefore no way to create an orphan exercise/set or a cross-table
+   partial write — a set cannot exist without the exercise/workout it lives inside. Each write
+   is a single localStorage.setItem, which is atomic per key. So the classic relational
+   failure modes (orphan rows, half-committed transactions, FK violations) are prevented by
+   construction, not by locks.
+
+   What a document store DOES still need, and what these helpers add:
+     1. nextId() — collision-proof, strictly-increasing unique IDs (Date.now() can repeat
+        within a millisecond).
+     2. enforceWorkoutLogIntegrity() — one write-time uniqueness invariant (the "unique
+        constraint"): no duplicate id, no duplicate content-signature.
+     3. window.IgnytIntegrity — an on-demand duplicate scanner (reports, never deletes) and a
+        high-confidence cleanup.
+========================================================= */
+
+// Strictly-increasing, collision-proof id. Persists a high-water mark so ids never repeat or
+// regress across reloads, even when two records are created in the same millisecond. Ordering
+// by id stays newest-last-issued (monotonic), so existing newest-first sorts are unaffected.
+let _lastIssuedId = Number(LS.get("hx_last_id", 0)) || 0;
+function nextId(){
+  const now = Date.now();
+  _lastIssuedId = Math.max(now, _lastIssuedId + 1);
+  LS.set("hx_last_id", _lastIssuedId);
+  return _lastIssuedId;
+}
+
+// High-confidence content signature. Two workouts match ONLY if effectively identical (same
+// start instant, volume, title, exercises, and total set count) — never merely two distinct
+// same-day sessions. Entries without a startedAt are never treated as duplicates.
+function workoutSignature(w){
+  if(!w || w.startedAt == null) return null;
+  const ex = Array.isArray(w.exercises) ? w.exercises : [];
+  const setCount = ex.reduce((n,e)=> n + ((e && Array.isArray(e.sets)) ? e.sets.length : 0), 0);
+  return [w.startedAt, w.volume, (w.title||""), ex.length, setCount, ex.map(e=>e&&e.name).join(",")].join("|");
+}
+
+// The write-time invariant. Returns a copy of the log with duplicate IDs and duplicate content
+// signatures collapsed to their FIRST occurrence. Order is preserved (never silently reorders
+// the user's history). Idempotent — running it twice changes nothing.
+function enforceWorkoutLogIntegrity(log){
+  if(!Array.isArray(log)) return [];
+  const seenIds = new Set(), seenSigs = new Set(), out = [];
+  for(const w of log){
+    if(!w) continue;
+    const id = w.id != null ? String(w.id) : null;
+    if(id != null && seenIds.has(id)) continue;
+    const sig = workoutSignature(w);
+    if(sig != null && seenSigs.has(sig)) continue;
+    if(id != null) seenIds.add(id);
+    if(sig != null) seenSigs.add(sig);
+    out.push(w);
+  }
+  return out;
+}
+
+// On-demand duplicate tooling. scan() only REPORTS (groups + counts, never deletes). cleanup()
+// removes only high-confidence duplicates (identical content-signature / duplicate id) from
+// workouts, and de-dupes PRs & achievements by id; it never removes an uncertain record.
+window.IgnytIntegrity = {
+  scan(){
+    const log = Array.isArray(state.workoutLog) ? state.workoutLog : [];
+    const groups = new Map();
+    for(const w of log){
+      const sig = workoutSignature(w);
+      if(sig == null) continue;
+      if(!groups.has(sig)) groups.set(sig, []);
+      groups.get(sig).push(w);
+    }
+    const dupGroups = [...groups.values()].filter(g => g.length > 1);
+    const idCounts = {};
+    for(const w of log){ if(w && w.id != null){ const k = String(w.id); idCounts[k] = (idCounts[k]||0) + 1; } }
+    return {
+      workouts: {
+        total: log.length,
+        duplicateGroups: dupGroups.length,
+        duplicateRecords: dupGroups.reduce((n,g)=> n + (g.length - 1), 0),
+        duplicateIds: Object.keys(idCounts).filter(k => idCounts[k] > 1),
+        groups: dupGroups.map(g => ({ count: g.length, ids: g.map(w => w.id), startedAt: g[0].startedAt, title: g[0].title }))
+      }
+    };
+  },
+  cleanup(){
+    const wBefore = (state.workoutLog || []).length;
+    state.workoutLog = enforceWorkoutLogIntegrity(state.workoutLog || []);
+    const wRemoved = wBefore - state.workoutLog.length;
+    // PRs & achievements: keep first per id (belt-and-braces; achievements are already unique
+    // by id at creation, PRs are protected by the finish idempotency guard).
+    const dedupeById = (arr) => {
+      if(!Array.isArray(arr)) return { arr: [], removed: 0 };
+      const seen = new Set(), out = [];
+      for(const r of arr){ const k = r && r.id != null ? String(r.id) : Symbol(); if(seen.has(k)) continue; seen.add(k); out.push(r); }
+      return { arr: out, removed: arr.length - out.length };
+    };
+    const prRes = dedupeById(state.prs); state.prs = prRes.arr;
+    const achRes = dedupeById(state.achievements); state.achievements = achRes.arr;
+    if(wRemoved || prRes.removed || achRes.removed){
+      LS.set("hx_workout_log", state.workoutLog); LS.set("hx_prs", state.prs); LS.set("hx_achievements", state.achievements);
+      if(typeof render === "function") render();
+    }
+    return { workoutsRemoved: wRemoved, prsRemoved: prRes.removed, achievementsRemoved: achRes.removed, workoutsRemaining: state.workoutLog.length };
+  }
+};
+
 function runMigrations(){
   // One-time rest-timer default migration (independent of schema version so it also reaches
   // pre-versioning installs, which return early below). The app's default rest timer changed
@@ -1658,25 +1766,11 @@ function runMigrations(){
   // the rest, records the count in hx_workout_dedupe_removed_v1, and is idempotent (flag-guarded).
   if(!LS.get("hx_workout_dedupe_v1", false)){
     try{
-      const log = Array.isArray(state.workoutLog) ? state.workoutLog : [];
-      const sig = (w)=>{
-        const ex = Array.isArray(w.exercises) ? w.exercises : [];
-        const setCount = ex.reduce((n,e)=> n + ((e && Array.isArray(e.sets)) ? e.sets.length : 0), 0);
-        return [w.startedAt, w.volume, (w.title||""), ex.length, setCount, ex.map(e=>e&&e.name).join(",")].join("|");
-      };
-      const seen = new Set();
-      const deduped = [];
-      let removed = 0;
-      for(let i=0;i<log.length;i++){
-        const w = log[i];
-        // Only entries that carry a real startedAt participate in dedupe; anything else is kept as-is.
-        const key = (w && w.startedAt != null) ? sig(w) : ("__keep__"+i);
-        if(seen.has(key)){ removed++; continue; }
-        seen.add(key);
-        deduped.push(w);
-      }
+      const before = Array.isArray(state.workoutLog) ? state.workoutLog.length : 0;
+      // Same write-time invariant used on every live save — applied once to existing history.
+      state.workoutLog = enforceWorkoutLogIntegrity(state.workoutLog || []);
+      const removed = before - state.workoutLog.length;
       if(removed > 0){
-        state.workoutLog = deduped;
         LS.set("hx_workout_log", state.workoutLog);
         LS.set("hx_workout_dedupe_removed_v1", removed);
         console.warn("[IGNYT] One-time cleanup removed "+removed+" duplicate workout(s) from history.");
@@ -6937,7 +7031,7 @@ function attachHandlers(){
     const nameEl = document.getElementById("routine-name");
     const name = nameEl ? nameEl.value.trim() : "";
     if(!name || !state.routineBuilder.exercises.length) return;
-    state.routines.unshift({ id: Date.now(), name, exercises: state.routineBuilder.exercises });
+    state.routines.unshift({ id: nextId(), name, exercises: state.routineBuilder.exercises });
     state.routineBuilder = null;
     render();
   });
@@ -6973,7 +7067,7 @@ function attachHandlers(){
     const nameEl = document.getElementById("habit-new-name");
     const name = nameEl ? nameEl.value.trim() : "";
     if(!name) return;
-    state.habits.unshift({ id: Date.now(), name, createdAt: Date.now() });
+    state.habits.unshift({ id: nextId(), name, createdAt: Date.now() });
     state.habitBuilderName = "";
     render();
   });
@@ -7077,7 +7171,7 @@ function attachHandlers(){
         } else {
           const finishedAt = Date.now();
           const durationMin = Math.max(1, Math.round((finishedAt - state.session.startedAt)/60000));
-          const workoutId = Date.now();
+          const workoutId = nextId(); // collision-proof, never reused
           const newPRs = detectPRs(state.session, workoutId, finishedAt, volume);
           state.workoutLog.unshift({
             id: workoutId,
@@ -7088,6 +7182,9 @@ function attachHandlers(){
             notes: state.session.notes || "",
             title: state.session.title || ""
           });
+          // Write-time uniqueness invariant (the "unique constraint"): even if some future path
+          // ever re-entered this insert, the log can never hold a duplicate id or content-sig.
+          state.workoutLog = enforceWorkoutLogIntegrity(state.workoutLog);
           if(newPRs.length){
             state.prs = newPRs.concat(state.prs);
             state.lastSessionPRs = newPRs;
@@ -7682,7 +7779,7 @@ function attachHandlers(){
     if(!rawWeight) return;
     const weight = parseInputW(rawWeight); // convert from displayed unit to canonical kg for storage
     state.bodylog.unshift({
-      id: Date.now(),
+      id: nextId(),
       date: document.getElementById("b-date").value,
       weight,
       sleep: document.getElementById("b-sleep").value,
@@ -7969,7 +8066,7 @@ function attachHandlers(){
       const calStr = document.getElementById("food-cal").value.trim();
       const cal = Number(calStr);
       if(!name || calStr === "" || isNaN(cal) || cal < 0) return;
-      state.foodLog.unshift({ id: Date.now(), date: todayStr(), name, calories: cal, meal,
+      state.foodLog.unshift({ id: nextId(), date: todayStr(), name, calories: cal, meal,
         protein: Number(document.getElementById("food-protein").value)||0,
         carbs: Number(document.getElementById("food-carbs").value)||0,
         fat: Number(document.getElementById("food-fat").value)||0,
@@ -7982,7 +8079,7 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{
       const meal = el.dataset.quickAddFood;
       state.foodLog.unshift({
-        id: Date.now(), date: todayStr(), meal,
+        id: nextId(), date: todayStr(), meal,
         name: el.dataset.foodName,
         calories: Number(el.dataset.foodCal)||0,
         protein: Number(el.dataset.foodProtein)||0,
@@ -8013,7 +8110,7 @@ function attachHandlers(){
   });
   document.querySelectorAll("[data-add-water]").forEach(el=>{
     el.addEventListener("click", ()=>{
-      state.waterLog.unshift({ id: Date.now(), date: todayStr(), ml: Number(el.dataset.addWater) });
+      state.waterLog.unshift({ id: nextId(), date: todayStr(), ml: Number(el.dataset.addWater) });
       render();
     });
   });
@@ -8115,6 +8212,27 @@ window.addEventListener("beforeunload", (e)=>{
   if(hasData){
     e.preventDefault();
     e.returnValue = "";
+  }
+});
+
+// Multi-tab concurrency safety. The `storage` event fires only in OTHER tabs/windows of the
+// same origin. Without this, tab B could hold a stale copy of a shared record array and later
+// persist() it over tab A's newly-saved workout. So when another tab writes one of these
+// append-mostly arrays, reload it from disk into state (workouts go through the same uniqueness
+// invariant). The live active session is deliberately NOT reconciled — it belongs to whichever
+// tab is running the workout — and we skip while this tab is mid-save.
+window.addEventListener("storage", (e)=>{
+  if(!e.key || _finishingSession) return;
+  const reload = {
+    hx_workout_log: ()=>{ state.workoutLog = enforceWorkoutLogIntegrity(LS.get("hx_workout_log", [])); },
+    hx_prs:         ()=>{ state.prs = LS.get("hx_prs", []); },
+    hx_achievements:()=>{ state.achievements = LS.get("hx_achievements", []); },
+    hx_routines:    ()=>{ state.routines = LS.get("hx_routines", []); },
+    hx_bodylog:     ()=>{ state.bodylog = LS.get("hx_bodylog", []); }
+  };
+  if(reload[e.key]){
+    try{ reload[e.key](); if(typeof render === "function" && !state.session) render(); }
+    catch(_){ /* reconciliation is best-effort, never fatal */ }
   }
 });
 
