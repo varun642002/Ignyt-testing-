@@ -1708,7 +1708,8 @@ function enforceWorkoutLogIntegrity(log){
    exposed as window.IgnytIntegrity.saveLog(), so a real-device duplicate trigger is identifiable
    from evidence rather than guesswork. */
 const COMMIT_DEDUPE_MS = 15000; // two byte-identical full workouts finished <15s apart is a duplicate save, never a real second workout
-let _recentCommit = null;        // { key, at, id }
+const RECENT_COMMITS_KEY = "hx_recent_commits"; // PERSISTED dedupe ledger (see below)
+let _recentCommit = null;        // { key, at, id } — fast in-memory copy
 const _saveAttemptLog = [];      // ring buffer of recent finish attempts
 
 // Timestamp/id-INDEPENDENT identity of a workout's real content — what makes two save attempts
@@ -1719,23 +1720,44 @@ function workoutContentKey(session){
 }
 function _logSaveAttempt(entry){ _saveAttemptLog.push(entry); if(_saveAttemptLog.length > 60) _saveAttemptLog.shift(); }
 
+// PERSISTED commit ledger. The in-memory _recentCommit / _finishingSession guards are LOST if the
+// Android WebView reloads or the JS context is recreated between two duplicate saves (a real
+// device failure mode that an in-memory-only coordinator cannot catch). This localStorage ledger
+// makes the content+window dedupe survive a reload, closing that last cross-context hole.
+function _loadCommitLedger(){
+  try{ const a = JSON.parse(localStorage.getItem(RECENT_COMMITS_KEY) || "[]"); return Array.isArray(a) ? a : []; }
+  catch(e){ return []; }
+}
+function _pushCommitLedger(entry){
+  const cutoff = Date.now() - COMMIT_DEDUPE_MS;
+  const pruned = _loadCommitLedger().filter(e => e && typeof e.at === "number" && e.at >= cutoff).concat([entry]).slice(-40);
+  try{ localStorage.setItem(RECENT_COMMITS_KEY, JSON.stringify(pruned)); }catch(e){ /* storage full/unavailable — non-fatal */ }
+}
+function _findRecentCommit(contentKey, now){
+  if(_recentCommit && _recentCommit.key === contentKey && (now - _recentCommit.at) < COMMIT_DEDUPE_MS) return _recentCommit;
+  return _loadCommitLedger().find(e => e && e.key === contentKey && (now - e.at) < COMMIT_DEDUPE_MS) || null;
+}
+
 function commitFinishedWorkout(session){
   const now = Date.now();
   const txId = nextId(); // unique transaction id for THIS attempt
   const contentKey = workoutContentKey(session);
   const stackHint = (new Error().stack || "").split("\n").slice(2, 5).map(s => s.trim()).join("  <-  ");
 
-  // Layer 3 — identical content committed within the dedupe window => duplicate save from any
-  // trigger (differing startedAt/id included). Suppress; surface the already-saved id.
-  if(_recentCommit && _recentCommit.key === contentKey && (now - _recentCommit.at) < COMMIT_DEDUPE_MS){
-    _logSaveAttempt({ txId, at: now, result: "suppressed:recent-content", sinceMs: now - _recentCommit.at, id: _recentCommit.id, stackHint });
-    console.warn("[IGNYT][save] duplicate suppressed — identical workout committed " + (now - _recentCommit.at) + "ms ago (tx " + txId + "). caller: " + stackHint);
-    return { id: _recentCommit.id, duplicate: true };
+  // Layer 3 — identical content within the window, from EITHER the in-memory guard OR the
+  // persisted ledger (the ledger is what survives a WebView reload between duplicate saves).
+  const recent = _findRecentCommit(contentKey, now);
+  if(recent){
+    _recentCommit = recent;
+    _logSaveAttempt({ txId, at: now, result: "suppressed:recent-content", sinceMs: now - recent.at, id: recent.id, stackHint });
+    console.warn("[IGNYT][save] duplicate suppressed — identical workout committed " + (now - recent.at) + "ms ago (tx " + txId + "). caller: " + stackHint);
+    return { id: recent.id, duplicate: true };
   }
   // Layer 2 — same live session (unique startedAt) already saved.
   const bySession = state.workoutLog.find(w => w.startedAt != null && w.startedAt === session.startedAt);
   if(bySession){
     _recentCommit = { key: contentKey, at: now, id: bySession.id };
+    _pushCommitLedger(_recentCommit);
     _logSaveAttempt({ txId, at: now, result: "suppressed:startedAt", id: bySession.id, stackHint });
     console.warn("[IGNYT][save] duplicate suppressed — session already saved (tx " + txId + ").");
     return { id: bySession.id, duplicate: true };
@@ -1758,6 +1780,11 @@ function commitFinishedWorkout(session){
   if(newlyUnlocked.length) state.lastUnlockedAchievements = newlyUnlocked;
 
   _recentCommit = { key: contentKey, at: now, id: workoutId };
+  _pushCommitLedger(_recentCommit); // durable dedupe BEFORE anything can reload
+  // Durable-on-commit: persist the workout + PRs + achievements synchronously right now (an atomic
+  // save), so a reload/kill immediately after can neither lose the workout nor let it re-save
+  // (the ledger already blocks a repeat). hx_active_session is left to the caller's render().
+  try{ LS.set("hx_workout_log", state.workoutLog); LS.set("hx_prs", state.prs); LS.set("hx_achievements", state.achievements); }catch(e){}
   _logSaveAttempt({ txId, at: now, result: "committed", id: workoutId, prs: newPRs.length, stackHint });
   return { id: workoutId, duplicate: false, prs: newPRs.length };
 }
@@ -7705,12 +7732,20 @@ function attachHandlers(){
     state.exercisePickerMuscle = pickerMuscleEl.value;
     render();
   });
-  // Row clicks are delegated to the stable #ex-picker-results container (rather than bound
-  // per-row) so they keep working after the live search refreshes the container's innerHTML
-  // without a full render. Falls back to document if the container isn't present.
-  const pickerResultsEl = document.getElementById("ex-picker-results") || document;
-  if(pickerResultsEl._ignytPickBound !== true){
-    pickerResultsEl.addEventListener("click", (e)=>{
+  // Exercise-pick row clicks are delegated to ONE permanent document-level listener, bound once
+  // for the app's lifetime (never per render). It is gated on state.showExercisePicker so it only
+  // acts while the picker is open, and delegating from document survives the live-search innerHTML
+  // refresh (the reason a container binding existed before).
+  //
+  // ROOT-CAUSE FIX (duplicate exercise on add): the previous version bound to
+  // `#ex-picker-results || document` and only recorded its guard flag when the target was NOT
+  // document — so every render where the container was absent (virtually every render, since the
+  // picker is usually closed) stacked ANOTHER document click listener. One later tap on an
+  // exercise then fired on all of the accumulated listeners and pushed the exercise many times.
+  if(!window._ignytPickHandlerBound){
+    window._ignytPickHandlerBound = true;
+    document.addEventListener("click", (e)=>{
+      if(!state.showExercisePicker) return; // inert unless the exercise picker is actually open
       const viewBtn = e.target.closest("[data-view-exercise-from-picker]");
       if(viewBtn){
         e.stopPropagation();
@@ -7742,7 +7777,6 @@ function attachHandlers(){
       state.showExercisePicker = false;
       render();
     });
-    if(pickerResultsEl !== document) pickerResultsEl._ignytPickBound = true;
   }
   const showCreateBtn = document.querySelector('[data-action="show-create-in-picker"]');
   if(showCreateBtn) showCreateBtn.addEventListener("click", ()=>{
