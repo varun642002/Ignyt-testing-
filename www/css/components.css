@@ -83,3 +83,9 @@
 .goal-bar { margin-top:10px; height:8px; border-radius:4px; background:var(--color-surface-pressed); overflow:hidden; }
 .goal-bar span { display:block; height:100%; border-radius:4px; background:var(--color-interactive); }
 .goal-row { display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:6px; }
+
+/* ---- Health Report Upload Center (health-uploads.js) ---- */
+.hu-row { display:flex; align-items:center; gap:12px; width:100%; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:6px; cursor:pointer; color:var(--color-text-primary); }
+.hu-row:active { background:var(--color-surface-pressed); }
+.hu-thumb { font-size:22px; flex:none; width:36px; text-align:center; }
+.hu-preview { display:flex; align-items:center; justify-content:center; min-height:120px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:12px; margin-bottom:10px; }

@@ -419,5 +419,19 @@
     });
   }
 
-  window.IgnytBloodwork = { render: render, attach: attach, CATALOG: CATALOG, _parse: parse, _load: load };
+  // Public API for the Health Report Upload Center to route Blood Work results in. Accepts a
+  // meta {date,lab,reportId,fileId} and an array of results (already keyed to the catalog);
+  // reuses the same store, id and duplicate hash as the in-app flow. Returns the saved report.
+  function importReport(meta, results) {
+    meta = meta || {};
+    var clean = (results || []).filter(function (r) { return r && r.key; }).map(function (r) {
+      var cat = byKey[r.key];
+      return { key: r.key, name: (cat ? cat.name : r.name || r.key), value: Number(r.value), unit: r.unit || (cat ? cat.unit : ""), low: r.low != null ? Number(r.low) : (cat ? cat.low : null), high: r.high != null ? Number(r.high) : (cat ? cat.high : null) };
+    });
+    var rep = { id: uid(), date: meta.date || new Date().toISOString().slice(0, 10), lab: meta.lab || "", reportId: meta.reportId || "", fileId: meta.fileId || null, hash: meta.hash || hash(JSON.stringify(clean) + (meta.date || "")), createdAt: Date.now(), results: clean };
+    var list = load(); list.unshift(rep); save(list);
+    return rep;
+  }
+
+  window.IgnytBloodwork = { render: render, attach: attach, CATALOG: CATALOG, _parse: parse, _load: load, importReport: importReport };
 })();

@@ -3901,6 +3901,7 @@ function renderApp(){
   if(state.tab==="health") main.innerHTML = renderHealthDashboard();
   if(state.tab==="bloodwork") main.innerHTML = window.IgnytBloodwork ? window.IgnytBloodwork.render() : "";
   if(state.tab==="goals") main.innerHTML = window.IgnytGoals ? window.IgnytGoals.render() : "";
+  if(state.tab==="uploads") main.innerHTML = window.IgnytHealthUploads ? window.IgnytHealthUploads.render() : "";
   if(state.tab==="more") main.innerHTML = ""; // sheet covers it
   attachHandlers();
   persist();
@@ -3916,6 +3917,7 @@ function renderMoreSheet(){
     {id:"body", label:"Log Weight", desc:"Weight, trend & history", color:"var(--color-interactive)", icon:"body"},
     {id:"goals", label:"Goals", desc:"Smart goal engine & targets", color:"var(--color-interactive)", icon:"progress"},
     {id:"bloodwork", label:"Blood Work", desc:"Lab reports, biomarkers & trends", color:"#e5484d", icon:"progress"},
+    {id:"uploads", label:"Medical Reports", desc:"Upload lab/InBody/DEXA files", color:"#e5484d", icon:"progress"},
     {id:"calculators", label:"Calculator", desc:"BMI, BMR, TDEE & macros", color:"var(--steel)", icon:"calc"},
     {id:"settings", label:"Settings", desc:"Backups & preferences", color:"var(--muted)", icon:"gear"},
     {id:"health", label:"Health Connect", desc:"Steps, heart rate, calories, weight, workouts", color:"var(--mint)", icon:"progress"}
@@ -6822,6 +6824,7 @@ function renderCsvImportPreview(){
 function attachHandlers(){
   if(window.IgnytBloodwork) window.IgnytBloodwork.attach(); // self-guarded, binds once
   if(window.IgnytGoals) window.IgnytGoals.attach();
+  if(window.IgnytHealthUploads) window.IgnytHealthUploads.attach();
   document.querySelectorAll("[data-nav]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const dest = el.dataset.nav;
