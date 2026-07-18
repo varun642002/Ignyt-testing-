@@ -6669,41 +6669,40 @@ function renderWorkoutTab(){
   const liveVolume = Math.round(computeSessionVolume(s.exercises));
   const liveSets = computeCompletedSets(s.exercises);
   return `
+    <div class="wk-light">
     <div class="row-between" style="margin-bottom:4px;">
       <div style="flex:1;min-width:0;">
-        <div class="eyebrow-label" style="margin:0 0 2px;">${isEditing ? 'Editing Workout' : 'In Progress'}</div>
-        ${isEditing ? `<div class="mono" style="font-size:13px;color:var(--muted);">${s.date}</div>` : ''}
+        <div class="wk-session__status">${isEditing ? 'EDITING WORKOUT' : 'IN PROGRESS'}</div>
+        ${isEditing ? `<div class="mono" style="font-size:13px;color:var(--rh-muted);">${s.date}</div>` : ''}
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0;">
-        ${isEditing?`<button class="btn btn-ghost" style="padding:10px 14px;" data-action="cancel-edit-session">Cancel</button>`:''}
-        <button class="btn btn-accent" style="padding:10px 18px;" data-action="finish-session">${isEditing?'Save':'Finish'}</button>
+        ${isEditing?`<button class="rh-btn rh-btn--ghost" style="flex:none;padding:10px 14px;" data-action="cancel-edit-session">Cancel</button>`:''}
+        <button class="rh-btn rh-btn--primary" style="flex:none;padding:10px 18px;" data-action="finish-session">${isEditing?'Save':'Finish Workout'}</button>
       </div>
     </div>
     ${isEditing ? '' : `
     <div class="live-stats-bar">
-      <div class="live-stat">
+      <div class="live-stat"><span class="wk-session__stat-icon">${svg('timer',18)}</span>
         <div class="live-stat-label">Duration</div>
         <div class="live-stat-value mono" id="session-elapsed">${formatDuration(Date.now()-s.startedAt)}</div>
       </div>
-      <div class="live-stat">
+      <div class="live-stat"><span class="wk-session__stat-icon">${svg('progress',18)}</span>
         <div class="live-stat-label">Volume</div>
         <div class="live-stat-value">${displayW(liveVolume,0).toLocaleString()}<span class="live-stat-unit">${wUnit()}</span></div>
       </div>
-      <div class="live-stat">
+      <div class="live-stat"><span class="wk-session__stat-icon">${svg('plan',18)}</span>
         <div class="live-stat-label">Sets</div>
         <div class="live-stat-value">${liveSets}</div>
       </div>
     </div>`}
-    <input type="text" id="session-title" placeholder="Workout title (e.g. Push Day)" value="${(s.title||'').replace(/"/g,'&quot;')}"
-      style="width:100%;background:none;border:none;border-bottom:2px solid var(--border);padding:8px 2px;font-size:22px;font-weight:900;color:var(--text);margin:10px 0 8px;font-family:inherit;">
+    <input type="text" id="session-title" class="wk-session__title-input" placeholder="Workout title (e.g. Push Day)" value="${(s.title||'').replace(/"/g,'&quot;')}">
     ${muscles.length? `<div style="margin:2px 0 4px;">${muscles.map(m=>`<span class="muscle-chip active">${m}</span>`).join("")}</div>`:""}
-    <textarea id="session-notes" placeholder="Workout notes (how it felt, conditions, anything worth remembering)…"
-      style="width:100%;background:var(--surface-alt);border-radius:8px;padding:9px 10px;font-size:12px;color:var(--text);margin:6px 0 14px;resize:vertical;min-height:36px;border:none;font-family:inherit;">${s.notes||''}</textarea>
+    <div class="wk-session__notes-wrap">${svg('book',16)}<textarea id="session-notes" placeholder="Workout notes (how it felt, conditions, anything worth remembering)…">${s.notes||''}</textarea></div>
 
-    <div class="eyebrow-label">Add Exercise</div>
-    <button class="btn btn-ghost btn-block" data-action="open-exercise-picker" style="margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px;">${svg('plus',16)} Add Exercise</button>
+    <div class="rh-section-head" style="margin-top:18px;"><span>Add Exercise</span></div>
+    <button class="wk-add-exercise-btn" data-action="open-exercise-picker">${svg('plus',18)} Add Exercise</button>
 
-    ${s.exercises.length===0?`<div class="empty-note">No exercises added yet.</div>`:
+    ${s.exercises.length===0?`<div class="rh-card wk-empty" style="margin-top:10px;">No exercises added yet.</div>`:
       s.exercises.map((ex,exi)=>{
         const muscle = getMuscle(ex.name);
         const restLabel = ex.restDuration ? `${ex.restDuration}s` : "OFF";
@@ -6713,11 +6712,11 @@ function renderWorkoutTab(){
         const gridCols = showRPE ? "40px minmax(0,1fr) 58px 54px 46px 44px" : "40px minmax(0,1fr) 72px 72px 44px";
         const menuOpen = state.exerciseMenuOpen===exi;
         return `
-        <div class="ex-log-card">
-          ${ex.supersetWithNext ? `<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:var(--accent);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">${svg('link',12)} Superset with next exercise</div>` : ''}
+        <div class="ex-log-card wk-ex-card">
+          ${ex.supersetWithNext ? `<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:var(--rh-blue);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">${svg('link',12)} Superset with next exercise</div>` : ''}
           <div class="row-between" style="margin-bottom:4px;position:relative;">
             <div style="min-width:0;flex:1;">
-              <div style="font-weight:800;color:var(--steel);font-size:19px;line-height:1.25;">${ex.name}</div>
+              <div class="wk-ex-card__name">${ex.name}</div>
               <span class="muscle-chip">${muscle}</span>
             </div>
             <button class="del" data-toggle-ex-menu="${exi}" aria-label="Exercise options">${svg('moreVert',17)}</button>
@@ -6737,8 +6736,8 @@ function renderWorkoutTab(){
           </div>
           <input type="text" class="notes-inline" placeholder="Add notes here…" value="${ex.notes||''}" data-notes-exercise="${exi}">
           <div class="row-between">
-            <button class="rest-toggle" data-rest-toggle="${exi}">${svg('workout',13)} Rest Timer: ${restLabel}</button>
-            ${showPlates?`<button class="rest-toggle" data-plate-calc="${exi}" style="color:var(--color-interactive);">Plates</button>`:""}
+            <button class="rest-toggle" data-rest-toggle="${exi}">${svg('timer',13)} Rest Timer: ${restLabel}</button>
+            ${showPlates?`<button class="rest-toggle" data-plate-calc="${exi}" style="color:var(--rh-blue);">Plates</button>`:""}
           </div>
           ${state.plateCalcOpen===String(exi) ? renderPlatePopover(exi) : ""}
 
@@ -6764,6 +6763,7 @@ function renderWorkoutTab(){
           <button class="add-set-btn" data-add-set="${exi}">${svg('plus',14)} Add Set</button>
         </div>
       `;}).join("")}
+    </div>
   `;
 }
 
