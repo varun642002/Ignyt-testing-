@@ -1,70 +1,114 @@
-.home-hero { padding:var(--space-md); margin-top:var(--space-xs); overflow:hidden; position:relative; }
-.home-hero::after { content:""; position:absolute; width:180px; height:180px; right:-82px; top:-102px; border-radius:50%; background:radial-gradient(circle,rgba(62,130,247,.16),transparent 68%); pointer-events:none; }
+/* =========================================================
+   HOME — light "premium reference" redesign. Scoped entirely to `.home-light`
+   (Home's own render root) plus two header/nav modifier classes that app.js
+   only applies while state.tab==="home" -- every other screen is completely
+   unaffected, and the modifier disappears the instant you navigate away.
+========================================================= */
 
-/* Hero row: text on the left, an athlete image slot on the right. The image wrap is hidden
-   entirely (via inline onerror in home.js) if the asset at the required path ever fails to
-   load, so the layout falls back to the text-only hero -- no broken-image icon, no orphaned
-   gradient. object-fit:contain preserves the source image's proportions (no stretching);
-   bottom-right object-position keeps the upper body/face in frame. The wrap's box is sized
-   to the source photo's real 2:3 aspect ratio (1024x1536) so contain fills it edge-to-edge
-   with minimal letterboxing, keeping the athlete visually prominent rather than shrunk into
-   empty space. */
-.home-hero__row { display:flex; align-items:flex-end; justify-content:space-between; gap:var(--space-sm); min-width:0; position:relative; z-index:1; }
-.home-hero__text { min-width:0; flex:1; overflow-wrap:anywhere; }
-.home-hero__image-wrap { position:relative; flex:none; width:126px; height:189px; margin:-18px -6px -14px 0; align-self:flex-end; }
-.home-hero__scrim { position:absolute; inset:0; z-index:1; background:linear-gradient(90deg, var(--color-surface-elevated) 0%, transparent 55%); pointer-events:none; }
-.home-hero__athlete { position:relative; width:100%; height:100%; object-fit:contain; object-position:bottom right; display:block; pointer-events:none; }
-@media (max-width:374px) { .home-hero__image-wrap { width:98px; height:147px; margin:-14px -4px -10px 0; } }
-.home-greeting { font-size:var(--font-size-sm); color:var(--color-text-secondary); font-weight:700; }
-.home-name { font-size:var(--font-size-2xl); font-weight:900; letter-spacing:-.04em; margin-top:2px; }
-.home-goal { display:flex; align-items:center; gap:var(--space-md); margin-top:var(--space-lg); position:relative; }
-.home-goal__ring { width:62px; height:62px; display:grid; place-items:center; border:4px solid var(--color-primary); border-radius:50%; font-size:16px; font-weight:900; flex:none; }
-.home-goal__title { font-size:var(--font-size-lg); font-weight:900; }
-.home-goal__detail { color:var(--color-text-secondary); font-size:var(--font-size-sm); margin-top:2px; }
-.home-metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-xs); }
-.home-health-summary { margin-top:var(--space-sm); }
-.home-health-summary summary { cursor:pointer; color:var(--color-text-secondary); font-size:var(--font-size-sm); font-weight:800; }
-.coach-empty { padding:var(--space-xl) var(--space-md); text-align:center; }
-.coach-empty__icon { display:grid; place-items:center; margin:0 auto var(--space-md); width:60px; height:60px; border-radius:20px; color:var(--color-interactive); background:var(--color-interactive-soft); }
+.home-light {
+  --rh-bg:#F7F9FC; --rh-card:#FFFFFF; --rh-blue:#2563EB; --rh-text:#0F172A; --rh-muted:#64748B;
+  --rh-border:#E9EDF3; --rh-purple:#7C3AED; --rh-green:#16A34A; --rh-red:#EF4444;
+  background:var(--rh-bg); color:var(--rh-text);
+  margin:0 -16px -100px; padding:12px 16px 100px;
+  min-height:calc(100% + 100px);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
 
-/* Today's Progress — Steps only (per spec: keep_only Steps; calories/goal% removed). */
-.home-steps-card { display:flex; align-items:center; gap:var(--space-md); padding:var(--space-md); }
-.home-steps-card__icon { width:52px; height:52px; flex:none; border-radius:16px; display:grid; place-items:center; background:var(--color-interactive-soft); color:var(--color-interactive); }
-.home-steps-card__body { min-width:0; flex:1; }
-.home-steps-card__value { font-size:26px; font-weight:900; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.home-steps-card__goal { font-size:14px; font-weight:700; color:var(--color-text-secondary); }
-.home-steps-card__label { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--color-text-secondary); margin-top:2px; }
-.home-steps-card__bar { margin-top:10px; height:6px; border-radius:3px; background:var(--color-surface-pressed); overflow:hidden; }
-.home-steps-card__bar span { display:block; height:100%; border-radius:3px; background:var(--color-interactive); }
+/* Header + bottom nav: same light skin, applied only while Home is the active tab. */
+.app-header--home-light { background:#F7F9FC; }
+.app-header--home-light .eyebrow { color:var(--rh-blue,#2563EB); }
+.app-header--home-light .eyebrow-dash { background:#2563EB; }
+.app-header--home-light .title { color:#0F172A; }
+.app-header--home-light .page-tools-btn { background:#FFFFFF; border-color:#E9EDF3; color:#2563EB; box-shadow:0 1px 3px rgba(15,23,42,.08); }
+nav.bottom-nav--home-light { background:#FFFFFF !important; border-top:1px solid #E9EDF3; }
+nav.bottom-nav--home-light .nav-btn { color:#94A3B8; }
+nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 
-/* Compact Home habit card (today only). Toggle reuses the shared .set-check styling. */
-.home-habits { padding:var(--space-md); }
-.home-habits__meta { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--color-text-secondary); margin-bottom:var(--space-sm); }
-.home-habit-row { display:flex; align-items:center; gap:var(--space-sm); padding:8px 0; }
-.home-habit-row + .home-habit-row { border-top:1px solid var(--color-border); }
-.home-habit-row__body { min-width:0; flex:1; }
-.home-habit-row__name { font-size:15px; font-weight:700; overflow-wrap:anywhere; }
-.home-habit-row__name.is-done { color:var(--color-text-secondary); text-decoration:line-through; }
-.home-habit-row__streak { font-size:12px; color:var(--color-text-secondary); margin-top:1px; }
-.home-habits__empty { display:block; width:100%; text-align:left; border:none; cursor:pointer; padding:var(--space-md);
-  background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); box-shadow:var(--shadow-card); color:var(--color-text-primary); }
-.home-habits__empty-title { font-size:15px; font-weight:800; }
-.home-habits__empty-sub { font-size:12px; color:var(--color-text-secondary); margin-top:3px; line-height:1.4; }
+/* ---------- Hero card ---------- */
+.rh-hero { background:var(--rh-card); border-radius:20px; padding:20px; margin-top:4px; box-shadow:0 2px 10px rgba(15,23,42,.06); overflow:hidden; }
+.rh-hero__row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; min-width:0; }
+.rh-hero__text { min-width:0; flex:1; }
+.rh-hero__greeting { font-size:15px; color:var(--rh-muted); font-weight:500; }
+.rh-hero__name { font-size:26px; font-weight:800; letter-spacing:-.02em; margin-top:2px; }
+.rh-hero__streak { margin-top:8px; font-size:13px; font-weight:700; color:var(--rh-blue); }
+.rh-hero__divider { height:1px; background:var(--rh-border); margin:14px 0; }
+.rh-hero__mid { display:flex; align-items:center; justify-content:space-between; gap:14px; }
+.rh-hero__eyebrow { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--rh-muted); }
+.rh-hero__workout-title { font-size:18px; font-weight:800; margin-top:3px; }
+.rh-hero__workout-sub { font-size:12px; color:var(--rh-muted); margin-top:2px; }
+.rh-hero__recovery { flex:none; display:flex; flex-direction:column; align-items:center; }
+.rh-hero__recovery-value { font-size:14px; font-weight:800; margin-top:6px; }
+.rh-hero__recovery-label { font-size:10px; color:var(--rh-blue); font-weight:700; margin-top:1px; white-space:nowrap; }
+.rh-hero__actions { display:flex; gap:10px; margin-top:16px; }
+.rh-btn { border:none; border-radius:12px; font-weight:700; font-size:14px; padding:13px 16px; cursor:pointer; flex:1; text-align:center; }
+.rh-btn--primary { background:var(--rh-blue); color:#fff; }
+.rh-btn--ghost { background:#fff; color:var(--rh-text); border:1px solid var(--rh-border); }
+.rh-hero__image-wrap { flex:none; width:130px; align-self:flex-end; margin:-20px -20px -20px 0; position:relative; }
+.rh-hero__athlete { width:100%; display:block; object-fit:contain; object-position:bottom right; pointer-events:none; }
+@media (max-width:374px) { .rh-hero__image-wrap { width:104px; } .rh-hero__name { font-size:22px; } }
 
-/* Today's Progress card: circular ring (conic-gradient, real blended % via --pct custom
-   property) + stacked calorie/protein/step rows. min-width:0 throughout is the same
-   overflow-root-cause fix already established for other flex/grid rows in this app. */
-.home-progress-card { display:flex; align-items:center; gap:var(--space-md); padding:var(--space-md); }
-.home-progress-ring { position:relative; width:84px; height:84px; border-radius:50%; flex:none;
-  background:conic-gradient(var(--color-accent-blue) calc(var(--pct) * 1%), var(--color-surface-pressed) 0); display:grid; place-items:center; }
-.home-progress-ring__inner { width:66px; height:66px; border-radius:50%; background:var(--color-surface); display:flex; flex-direction:column; align-items:center; justify-content:center; }
-.home-progress-ring__value { font-size:18px; font-weight:900; }
-.home-progress-ring__label { font-size:10px; color:var(--color-text-secondary); font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin-top:1px; }
-.home-progress-stats { flex:1; min-width:0; display:flex; flex-direction:column; gap:10px; }
-.home-progress-stat { display:flex; align-items:center; gap:10px; min-width:0; }
-.home-progress-stat > div { min-width:0; }
-.home-progress-stat__icon { width:30px; height:30px; border-radius:9px; background:rgba(50,184,244,.14); color:var(--color-accent-blue); display:grid; place-items:center; flex:none; }
-.home-progress-stat__value { font-size:14px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.home-progress-stat__value span { font-size:11px; font-weight:600; color:var(--color-text-secondary); }
-.home-progress-stat__label { font-size:10px; color:var(--color-text-secondary); font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
-@media (max-width:374px) { .home-progress-card { gap:var(--space-sm); } .home-progress-ring { width:72px; height:72px; } .home-progress-ring__inner { width:56px; height:56px; } .home-progress-ring__value { font-size:16px; } }
+/* ---------- Section heading ---------- */
+.rh-section-head { display:flex; align-items:center; justify-content:space-between; margin:22px 2px 10px; }
+.rh-section-head span { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--rh-muted); }
+.rh-view-all { font-size:13px; font-weight:700; color:var(--rh-blue); text-decoration:none; }
+
+/* ---------- Quick actions ---------- */
+.rh-quick-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:16px; }
+.rh-quick-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px 6px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; color:var(--rh-blue); box-shadow:0 1px 4px rgba(15,23,42,.05); }
+.rh-quick-card span { font-size:11px; font-weight:700; color:var(--rh-text); text-align:center; line-height:1.2; }
+
+/* ---------- Today's Overview (horizontal scroll) ---------- */
+.rh-overview-scroll { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; }
+.rh-overview-scroll::-webkit-scrollbar { display:none; }
+.ov-tile { scroll-snap-align:start; flex:none; width:104px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px 12px; }
+.ov-tile__icon { display:inline-flex; width:36px; height:36px; border-radius:10px; align-items:center; justify-content:center; background:rgba(37,99,235,.1); color:var(--rh-blue); }
+.ov-tile__value { font-size:19px; font-weight:800; margin-top:10px; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ov-tile__unit { font-size:11px; font-weight:600; color:var(--rh-muted); margin-left:2px; }
+.ov-tile__label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:2px; }
+.ov-tile__goal { font-size:10px; color:#B6BEC9; font-weight:600; margin-top:1px; }
+.ov-tile__trend { font-size:10px; font-weight:700; margin-top:6px; }
+.ov-tile__trend.is-up { color:var(--rh-green); }
+.ov-tile__trend.is-down { color:var(--rh-red); }
+
+/* ---------- Shared card + progress bar ---------- */
+.rh-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:16px; }
+.rh-progress-track { height:8px; border-radius:4px; background:#EEF1F6; overflow:hidden; margin-top:12px; }
+.rh-progress-track--sm { height:5px; margin-top:8px; }
+.rh-progress-fill { height:100%; border-radius:4px; background:var(--rh-blue); }
+
+/* ---------- Weekly goal ---------- */
+.rh-weekly-goal__row { display:flex; align-items:flex-start; justify-content:space-between; }
+.rh-weekly-goal__label { font-size:12px; color:var(--rh-muted); font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+.rh-weekly-goal__count { font-size:30px; font-weight:800; margin-top:4px; }
+.rh-weekly-goal__count span { font-size:16px; color:var(--rh-muted); font-weight:700; }
+.rh-weekly-goal__sub { font-size:12px; color:var(--rh-muted); margin-top:2px; }
+.rh-weekly-goal__badge { width:44px; height:44px; border-radius:12px; background:rgba(37,99,235,.1); color:var(--rh-blue); display:flex; align-items:center; justify-content:center; flex:none; }
+.rh-weekly-goal__pct { font-size:13px; font-weight:800; color:var(--rh-blue); margin-top:6px; }
+
+/* ---------- Habits ---------- */
+.rh-habit-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.rh-habit-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:12px 10px; text-align:left; cursor:pointer; }
+.rh-habit-card__icon { display:flex; width:30px; height:30px; border-radius:50%; align-items:center; justify-content:center; background:#EEF1F6; color:var(--rh-muted); }
+.rh-habit-card__icon.is-done { background:rgba(22,163,74,.12); color:var(--rh-green); }
+.rh-habit-card__name { font-size:13px; font-weight:700; margin-top:8px; overflow-wrap:anywhere; }
+.rh-habit-card__streak { font-size:10px; color:var(--rh-muted); margin-top:2px; }
+.rh-habit-card__state { font-size:10px; font-weight:700; color:var(--rh-muted); margin-top:6px; }
+.rh-habits-empty { display:block; width:100%; text-align:left; border:1px solid var(--rh-border); cursor:pointer; }
+.rh-habits-empty__title { font-size:14px; font-weight:800; }
+.rh-habits-empty__sub { font-size:12px; color:var(--rh-muted); margin-top:3px; line-height:1.4; }
+
+/* ---------- Recovery & Health gauges ---------- */
+.rh-recovery-scroll { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
+.rh-recovery-scroll::-webkit-scrollbar { display:none; }
+.rh-gauge-card { scroll-snap-align:start; flex:none; width:96px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px 10px; display:flex; flex-direction:column; align-items:center; text-align:center; }
+.rh-gauge-card__value { font-size:14px; font-weight:800; margin-top:8px; }
+.rh-gauge-card__label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:1px; }
+.rh-gauge-card__sub { font-size:10px; font-weight:700; margin-top:2px; }
+
+/* Ring gauge: conic-gradient donut, --pct (0-100) and --gauge-color set inline per instance. */
+.rh-gauge { width:44px; height:44px; border-radius:50%; flex:none; display:grid; place-items:center;
+  background:conic-gradient(var(--gauge-color,#2563EB) calc(var(--pct,0) * 1%), #EEF1F6 0); }
+.rh-gauge__inner { width:34px; height:34px; border-radius:50%; background:var(--rh-card); }
+
+.rh-health-summary { margin-top:20px; }
+.rh-health-summary summary { cursor:pointer; color:var(--rh-muted); font-size:13px; font-weight:700; }
