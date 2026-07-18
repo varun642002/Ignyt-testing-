@@ -18,6 +18,11 @@ const SET_TYPE_IMPORT_MAP = { normal:"working", warmup:"warmup", dropset:"drop",
 
 const PHASE_LABEL = {base:"BASE — FORM FIRST", build:"BUILD — ADD LOAD", load:"LOAD — RAISE INTENSITY", peak:"PEAK — HEAVIEST WEEK", deload:"DELOAD — BACK OFF"};
 
+// Optional routine tag, set by the user in the routine builder. Existing routines saved
+// before this field existed simply have no category (shown as "Other"/unfiltered) --
+// nothing is renamed or migrated, this is a purely additive field.
+const ROUTINE_CATEGORIES = ["Push","Pull","Legs","Upper","Lower"];
+
 const LEVELS = {
   beginner:    { label:"Beginner",    note:"Lighter volume, more technique focus, longer rest.", vol:"lower" },
   intermediate:{ label:"Intermediate",note:"Balanced strength + conditioning (your current plan).", vol:"standard" },
@@ -1348,7 +1353,12 @@ const ICONS = {
   trophy:'<path d="M7 4h10v4a5 5 0 0 1-10 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3M10 15v3h4v-3M9 21h6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   heart:'<path d="M12 20s-7-4.4-9.2-8.3C1.3 8.8 2.7 5 6 5c2 0 3.2 1.3 4 2.4C10.8 6.3 12 5 14 5c3.3 0 4.7 3.8 3.2 6.7C19 15.6 12 20 12 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   bolt:'<path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>',
-  sun:'<circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v3M12 18.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+  sun:'<circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v3M12 18.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  star:'<path d="M12 3.5l2.6 5.5 6 .7-4.4 4.1 1.2 5.9L12 16.9l-5.4 2.8 1.2-5.9-4.4-4.1 6-.7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
+  starFilled:'<path d="M12 3.5l2.6 5.5 6 .7-4.4 4.1 1.2 5.9L12 16.9l-5.4 2.8 1.2-5.9-4.4-4.1 6-.7z" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
+  search:'<circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4.8-4.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  upload:'<path d="M12 15V4M8 8l4-4 4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  dumbbell:'<path d="M4 9v6M2.5 10.5v3M20 9v6M21.5 10.5v3M7 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="4" y="8" width="3" height="8" rx="1" fill="currentColor"/><rect x="17" y="8" width="3" height="8" rx="1" fill="currentColor"/>'
 };
 
 /* =========================================================
@@ -3881,24 +3891,25 @@ function renderApp(){
   if(state.tab==="ai-coach") state.tab = "home";
   const MORE_TABS = ["library","body","settings","health","insights","nutrition"];
   const isMoreActive = MORE_TABS.includes(state.tab) || state.tab==="more";
-  // Home gets a dedicated light "premium reference" look (see home.css); the header/nav shell
-  // is shared across every tab, so this modifier class is only added while Home is the active
-  // tab and disappears the moment you navigate away -- every other screen is unaffected.
-  const isHomeLight = state.tab==="home";
+  // Home and Workout share a dedicated light "premium reference" look (see home.css/
+  // workout.css); the header/nav shell is shared across every tab, so this modifier class is
+  // only added while one of those is the active tab and disappears the moment you navigate
+  // away -- every other screen (Progress/Health/Profile) is unaffected.
+  const isLightTab = state.tab==="home" || state.tab==="workout";
   root.innerHTML = `
-    <header class="app-header page-title-row ${isHomeLight?'app-header--home-light':''}">
+    <header class="app-header page-title-row ${isLightTab?'app-header--home-light':''}">
       <div>
         <div class="eyebrow-row"><div class="eyebrow-dash"></div><span class="eyebrow">Train with intent</span></div>
         <h1 class="title">IGNYT</h1>
       </div>
-      <button class="page-tools-btn" data-nav="more" aria-label="Open profile, settings, and tools">${svg(isHomeLight?'sun':'gear',22)}</button>
+      <button class="page-tools-btn" data-nav="more" aria-label="Open profile, settings, and tools">${svg(isLightTab?'sun':'gear',22)}</button>
     </header>
     <main id="main"></main>
     ${renderTimerOverlay()}
     ${renderToast()}
     ${renderConfirmDialog()}
     ${state.tab==="more" ? renderMoreSheet() : ""}
-    <nav class="bottom-nav ${isHomeLight?'bottom-nav--home-light':''}">
+    <nav class="bottom-nav ${isLightTab?'bottom-nav--home-light':''}">
       ${navBtn("home","Home")}
       ${navBtn("workout","Workout")}
       ${navBtn("progress","Progress")}
@@ -4705,6 +4716,10 @@ function renderRoutineBuilder(){
     <div style="font-weight:800;font-size:15px;margin-bottom:8px;">${editing?'Edit routine':'New routine'}</div>
     <input type="text" id="routine-name" placeholder="Routine name (e.g. Leg Day 2)" value="${b.name}"
       style="width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;font-size:14px;color:var(--text);margin-bottom:10px;">
+
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+      ${ROUTINE_CATEGORIES.map(c=>`<button class="cat-chip ${b.category===c?'active':''}" data-builder-category="${c}">${c}</button>`).join("")}
+    </div>
 
     ${b.exercises.length? b.exercises.map((e,i)=>`<div class="history-row" style="margin-bottom:4px;gap:8px;">
       <span style="font-size:13px;font-weight:600;flex:1;min-width:0;overflow-wrap:anywhere;">${e.name}</span>
@@ -6634,9 +6649,18 @@ function renderWorkoutTab(){
       if(s) return renderSessionDetail(s);
       state.viewingSessionId = null; // stale id (e.g. deleted) — fall through to list
     }
+    const week = WEEKS[state.activeWeek-1];
+    const plannedDay = todaysPlannedDay();
+    const weekStats = thisWeekStats();
+    const now = Date.now();
+    const prsThisWeek = state.prs.filter(p=>p.achievedAt>=now-7*86400000).length;
+    const prevWeekVolume = state.workoutLog.filter(s=>{ const t=new Date(s.date).getTime(); return t>=now-14*86400000 && t<now-7*86400000; }).reduce((a,s)=>a+(s.volume||0),0);
     return window.IgnytPages.renderWorkoutList({
       state, svg, renderPRCelebration, renderRoutineBuilder, sessionMuscles, sessionTitle,
-      workoutDurationLabel, displayW, wUnit
+      workoutDurationLabel, displayW, wUnit, week, plannedDay, weekStats, prsThisWeek,
+      volumeTrend: comparisonLabel(weekStats.weeklyVolume, prevWeekVolume),
+      todayMuscles: plannedDay ? Array.from(new Set(plannedDay.exercises.map(ex=>getMuscle(ex.name)))).filter(m=>m && m!=="Other").slice(0,3) : [],
+      getMuscle, ROUTINE_CATEGORIES
     });
   }
   const s = state.session;
@@ -7206,7 +7230,7 @@ function attachHandlers(){
   const toggleBuilderBtn = document.querySelector('[data-action="toggle-routine-builder"]');
   if(toggleBuilderBtn) toggleBuilderBtn.addEventListener("click", ()=>{
     state.editingRoutineId = null;
-    state.routineBuilder = state.routineBuilder ? null : { name:"", exercises:[] };
+    state.routineBuilder = state.routineBuilder ? null : { name:"", exercises:[], category:null };
     render();
   });
   const openPickerForRoutineBtn = document.querySelector('[data-action="open-exercise-picker-for-routine"]');
@@ -7249,24 +7273,45 @@ function attachHandlers(){
     if(state.editingRoutineId != null){
       // Update in place — no duplicate routine, id/reference preserved.
       const idx = state.routines.findIndex(r=>r.id===state.editingRoutineId);
-      if(idx!==-1) state.routines[idx] = Object.assign({}, state.routines[idx], { name, exercises: state.routineBuilder.exercises });
+      if(idx!==-1) state.routines[idx] = Object.assign({}, state.routines[idx], { name, exercises: state.routineBuilder.exercises, category: state.routineBuilder.category||null });
       state.editingRoutineId = null;
     } else {
-      state.routines.unshift({ id: nextId(), name, exercises: state.routineBuilder.exercises });
+      state.routines.unshift({ id: nextId(), name, exercises: state.routineBuilder.exercises, category: state.routineBuilder.category||null, favorite:false });
     }
     state.routineBuilder = null;
     render();
   });
   const cancelRoutineBtn = document.querySelector('[data-action="cancel-routine"]');
   if(cancelRoutineBtn) cancelRoutineBtn.addEventListener("click", ()=>{ state.routineBuilder=null; state.editingRoutineId=null; render(); });
+  document.querySelectorAll("[data-builder-category]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const nm=document.getElementById("routine-name"); if(nm && state.routineBuilder) state.routineBuilder.name = nm.value;
+      const cat = el.dataset.builderCategory;
+      state.routineBuilder.category = state.routineBuilder.category===cat ? null : cat;
+      render();
+    });
+  });
   document.querySelectorAll("[data-edit-routine]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const r = state.routines.find(x=>x.id===Number(el.dataset.editRoutine)); if(!r) return;
       state.editingRoutineId = r.id;
-      state.routineBuilder = { name: r.name, exercises: r.exercises.map(e=>({ name:e.name, sets:e.sets })) };
+      state.routineBuilder = { name: r.name, exercises: r.exercises.map(e=>({ name:e.name, sets:e.sets })), category: r.category||null };
       render();
     });
   });
+  document.querySelectorAll("[data-toggle-favorite-routine]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const r = state.routines.find(x=>x.id===Number(el.dataset.toggleFavoriteRoutine)); if(!r) return;
+      r.favorite = !r.favorite;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-workout-filter]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.workoutRoutineFilter = el.dataset.workoutFilter; render(); });
+  });
+  const workoutSortEl = document.getElementById("workout-routine-sort");
+  if(workoutSortEl) workoutSortEl.addEventListener("change", ()=>{ state.workoutRoutineSort = workoutSortEl.value; render(); });
   document.querySelectorAll("[data-builder-ex-sets]").forEach(el=>{
     el.addEventListener("input", ()=>{ const i=Number(el.dataset.builderExSets); if(state.routineBuilder && state.routineBuilder.exercises[i]) state.routineBuilder.exercises[i].sets = Math.max(1, Number(el.value)||1); });
   });
