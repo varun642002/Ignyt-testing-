@@ -1564,7 +1564,7 @@ const state = {
     plateCalc:true, rpeTracking:true, autoStartRest:true, waterTargetMl:2500,
     workoutReminders:false, hydrationReminders:false, weeklyReports:false,
     lastWorkoutReminderDate:null, lastHydrationReminderDate:null, lastWeeklyReportAt:null,
-    theme:"dark", weightUnit:"kg", exerciseCalorieBudget:false
+    theme:"dark", weightUnit:"kg", exerciseCalorieBudget:true
   }, LS.get("hx_settings", {})),
   plateCalcOpen: null, // element id string when plate calc popover open
   restDuration: LS.get("hx_rest_duration",90),
@@ -3868,7 +3868,7 @@ function renderApp(){
   // Phase 2: AI Coach is temporarily removed. Redirect any lingering/persisted ai-coach tab
   // (e.g. saved hx_tab) to Home so it's fully unreachable. Its data stays intact.
   if(state.tab==="ai-coach") state.tab = "home";
-  const MORE_TABS = ["library","body","settings","health"];
+  const MORE_TABS = ["library","body","settings","health","insights","nutrition"];
   const isMoreActive = MORE_TABS.includes(state.tab) || state.tab==="more";
   root.innerHTML = `
     <header class="app-header page-title-row">
@@ -3901,6 +3901,7 @@ function renderApp(){
   if(state.tab==="ai-coach") main.innerHTML = renderAiCoachTab();
   if(state.tab==="settings") main.innerHTML = renderSettingsTab();
   if(state.tab==="health") main.innerHTML = renderHealthDashboard();
+  if(state.tab==="insights") main.innerHTML = renderInsightsTab();
   if(state.tab==="bloodwork") main.innerHTML = window.IgnytBloodwork ? window.IgnytBloodwork.render() : "";
   if(state.tab==="goals") main.innerHTML = window.IgnytGoals ? window.IgnytGoals.render() : "";
   if(state.tab==="uploads") main.innerHTML = window.IgnytHealthUploads ? window.IgnytHealthUploads.render() : "";
@@ -3920,8 +3921,10 @@ function renderMoreSheet(){
     {id:"goals", label:"Goals", desc:"Smart goal engine & targets", color:"var(--color-interactive)", icon:"progress"},
     {id:"uploads", label:"Medical Reports", desc:"Blood work, InBody, DEXA & more", color:"#e5484d", icon:"progress"},
     {id:"calculators", label:"Calculator", desc:"BMI, BMR, TDEE & macros", color:"var(--steel)", icon:"calc"},
+    {id:"nutrition", label:"Food Log", desc:"Meals, macros & calorie budget", color:"#FFB020", icon:"nutrition"},
     {id:"settings", label:"Settings", desc:"Backups & preferences", color:"var(--muted)", icon:"gear"},
-    {id:"health", label:"Health Connect", desc:"Steps, heart rate, calories, weight, workouts", color:"var(--mint)", icon:"progress"}
+    {id:"health", label:"Health Connect", desc:"Steps, heart rate, calories, weight, workouts", color:"var(--mint)", icon:"progress"},
+    {id:"insights", label:"Insights", desc:"Day, Week, Month & Year health trends", color:"var(--mint)", icon:"trend"}
   ];
   return `<div class="more-sheet-backdrop" data-close-more>
     <div class="more-sheet">
@@ -4388,6 +4391,100 @@ function renderHealthDashboard() {
       <button class="btn btn-accent btn-block" data-action="health-sync" ${busy ? "disabled" : ""} style="margin-bottom:8px;">${busy ? "Syncing\u2026" : "Sync Now"}</button>
       <button class="btn btn-ghost btn-block" data-action="health-disconnect" ${busy ? "disabled" : ""} style="font-size:12px;color:var(--muted);">Disconnect</button>
     </div>`;
+}
+
+/* =========================================================
+   INSIGHTS TAB — real Day/Week/Month/Year Health Connect aggregates.
+   Distinct from renderHealthDashboard()'s compact "Insights" preview above:
+   this is the full page, backed by HealthConnect.getInsights(period) (a
+   genuine native aggregate per range, not the same "today" snapshot
+   relabeled four times). Reachable from Tools > Insights, and auto-synced
+   on open/foreground/launch/5-min interval via health-settings-integration.js.
+========================================================= */
+
+const INSIGHTS_RANGES = [["day","Day"],["week","Week"],["month","Month"],["year","Year"]];
+const INSIGHTS_RANGE_LABEL = { day:"Today", week:"Last 7 days", month:"Last 30 days", year:"Last 365 days" };
+
+function renderInsightsTab(){
+  const backBtn = `<button class="btn btn-ghost" data-action="close-insights" style="padding:6px 12px;font-size:12px;margin-bottom:12px;">← Back</button>`;
+  const isNative = window.HealthConnect && HealthConnect.isNativeAndroid();
+
+  if (!isNative) {
+    return `
+      ${backBtn}
+      <div class="row-between" style="margin-bottom:16px;"><span style="font-size:20px;font-weight:900;">Insights</span></div>
+      <div class="info-box" style="padding:16px;">
+        <div style="font-size:13px;color:var(--muted);">Health Connect Insights are only available in the IGNYT Android app.</div>
+      </div>`;
+  }
+
+  const integ = window.HealthConnectIntegration;
+  const hcState = integ ? integ.loadState() : { connected: false };
+
+  if (!hcState.connected) {
+    return `
+      ${backBtn}
+      <div class="row-between" style="margin-bottom:16px;"><span style="font-size:20px;font-weight:900;">Insights</span></div>
+      <div class="info-box" style="padding:16px;">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Connect Health Connect to see your real Day, Week, Month and Year health trends.</div>
+        <button class="btn btn-accent btn-block" data-nav="health">Go to Health Connect</button>
+      </div>`;
+  }
+
+  const range = INSIGHTS_RANGES.some(([v])=>v===state.insightsRange) ? state.insightsRange : "day";
+  const d = (integ ? integ.getInsightsData(range) : null) || {};
+  const busy = integ ? integ.isInsightsBusy(range) : false;
+  const rangeLabel = INSIGHTS_RANGE_LABEL[range];
+  const hasData = !!d.period;
+
+  const cumulativeTiles = [
+    ["Steps", d.steps && d.steps.steps != null ? Number(d.steps.steps).toLocaleString() : null, "", "Steps"],
+    ["Active Calories", d.activeCalories && d.activeCalories.kcal != null ? Math.round(d.activeCalories.kcal).toLocaleString() : null, "kcal", "Active Calories"],
+    ["Distance", d.distance && d.distance.km != null ? d.distance.km.toFixed(2) : null, "km", "Distance"],
+    ["Workouts", d.workouts && d.workouts.count != null ? d.workouts.count : null, "sessions", "Workouts"],
+    ["Avg Heart Rate", d.heartRate && d.heartRate.averageBpm != null ? Math.round(d.heartRate.averageBpm) : null, "bpm", "Heart Rate"],
+    ["Sleep", d.sleep && d.sleep.totalMinutes != null ? `${Math.floor(d.sleep.totalMinutes/60)}h ${d.sleep.totalMinutes%60}m` : null, "", "Sleep"],
+    ["Hydration", d.hydration && d.hydration.liters != null ? d.hydration.liters.toFixed(2) : null, "L", "Hydration"],
+    ["Nutrition", d.nutrition && d.nutrition.kcal != null ? Math.round(d.nutrition.kcal).toLocaleString() : null, "kcal", "Nutrition"],
+    ["Weight Change", d.weight && d.weight.changeKg != null ? `${d.weight.changeKg>=0?'+':''}${displayW(d.weight.changeKg,1)}` : null, wUnit(), "Weight"]
+  ];
+
+  const vitalsTiles = [
+    ["Respiratory Rate", d.respiratoryRate && d.respiratoryRate.rpm != null ? Math.round(d.respiratoryRate.rpm) : null, "rpm", "Respiratory Rate"],
+    ["Oxygen Saturation", d.oxygenSaturation && d.oxygenSaturation.percentage != null ? Math.round(d.oxygenSaturation.percentage) : null, "%", "Oxygen Saturation"],
+    ["Blood Pressure", d.bloodPressure && d.bloodPressure.systolic != null ? `${Math.round(d.bloodPressure.systolic)}/${Math.round(d.bloodPressure.diastolic)}` : null, "mmHg", "Blood Pressure"],
+    ["Body Temperature", d.bodyTemperature && d.bodyTemperature.celsius != null ? d.bodyTemperature.celsius.toFixed(1) : null, "°C", "Body Temperature"],
+    ["Body Fat", d.bodyFat && d.bodyFat.percentage != null ? d.bodyFat.percentage.toFixed(1) : null, "%", "Body Fat"],
+    ["Height", d.height && d.height.meters != null ? Math.round(d.height.meters * 100) : null, "cm", "Height"],
+    ["Lean Body Mass", d.leanBodyMass && d.leanBodyMass.kg != null ? displayW(d.leanBodyMass.kg) : null, wUnit(), "Lean Body Mass"],
+    ["BMR", d.basalMetabolicRate && d.basalMetabolicRate.kcalPerDay != null ? Math.round(d.basalMetabolicRate.kcalPerDay).toLocaleString() : null, "kcal/day", "BMR"]
+  ];
+
+  return `
+    ${backBtn}
+    <div class="row-between" style="margin-bottom:16px;">
+      <span style="font-size:20px;font-weight:900;">Insights</span>
+      ${d.fetchedAt ? `<span style="font-size:11px;color:var(--muted);">Synced ${hcTimeAgo(new Date(d.fetchedAt).toISOString())}</span>` : ""}
+    </div>
+
+    <div style="display:flex;gap:6px;margin:0 0 14px;">
+      ${INSIGHTS_RANGES.map(([value,label])=>`<button class="cat-chip ${range===value?'active':''}" data-insights-range="${value}" style="flex:1;text-align:center;">${label}</button>`).join("")}
+    </div>
+
+    ${!hasData ? `<div class="info-box" style="padding:14px;margin-bottom:12px;font-size:13px;color:var(--muted);">${busy ? `Loading ${rangeLabel.toLowerCase()} insights…` : "No data yet for this range — tap Refresh below."}</div>` : ""}
+
+    <div class="eyebrow-label">${rangeLabel}</div>
+    <div class="grid2" style="margin-bottom:16px;">
+      ${cumulativeTiles.map(([label,value,unit,permKey])=>hcInsightTile(label, value, unit, rangeLabel, hcPermissionMissing(d, permKey))).join("")}
+    </div>
+
+    <div class="eyebrow-label">Latest Readings</div>
+    <div class="grid2" style="margin-bottom:16px;">
+      ${vitalsTiles.map(([label,value,unit,permKey])=>hcInsightTile(label, value, unit, "Latest", hcPermissionMissing(d, permKey))).join("")}
+    </div>
+
+    <button class="btn btn-ghost btn-block" data-action="insights-refresh" ${busy ? "disabled" : ""} style="font-size:12px;color:var(--muted);">${busy ? "Syncing…" : "Refresh"}</button>
+  `;
 }
 
 function navBtn(id,label){
@@ -5728,15 +5825,6 @@ function renderBodyTab(){
 ========================================================= */
 
 function renderNutritionTab(){
-  // Nutrition is temporarily disabled (Phase 2). All data (hx_food_log, hx_nutrition, targets)
-  // is preserved untouched — only the UI is hidden behind a Coming Soon placeholder.
-  return `<section class="premium-card premium-card--elevated coach-empty">
-    <div class="coach-empty__icon">${svg('nutrition',28)}</div>
-    <div style="font-size:24px;font-weight:900;">Nutrition</div>
-    <p style="margin:8px auto 18px;max-width:320px;color:var(--color-text-secondary);line-height:1.5;">Coming soon — we're rebuilding nutrition tracking. Your existing food-log data is safe and will be here when it returns.</p>
-    <button class="btn btn-secondary" data-nav="home">Back to Home</button>
-  </section>`;
-  // eslint-disable-next-line no-unreachable
   const n = state.nutrition;
   const targets = macroTargets();
   const weeklyLoss = (Math.abs(state.profile.goalDelta)*7)/7700;
@@ -6842,7 +6930,7 @@ function attachHandlers(){
         state.bodyView = null; // always land on the Log Weight page, not a stale calculator view
       }
       render();
-      if (["home", "health", "nutrition"].includes(state.tab)) window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
+      if (["home", "health", "nutrition", "insights"].includes(state.tab)) window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
     });
   });
   document.querySelectorAll("[data-close-more]").forEach(el=>{
@@ -8275,6 +8363,25 @@ function attachHandlers(){
     state.healthInsightsRange = el.dataset.healthRange;
     render();
   }));
+
+  // Insights page (Day/Week/Month/Year real period aggregates)
+  const closeInsightsBtn = document.querySelector('[data-action="close-insights"]');
+  if(closeInsightsBtn) closeInsightsBtn.addEventListener("click", ()=>{
+    state.tab = "more";
+    render();
+  });
+  // Unlike the Health dashboard's old client-side-only range filter, each Insights range is
+  // a genuinely different native aggregate -- switching tabs fetches real data for that period
+  // (cache-first render happens immediately via getInsightsData; the fetch repaints when done).
+  document.querySelectorAll("[data-insights-range]").forEach(el=>el.addEventListener("click", ()=>{
+    state.insightsRange = el.dataset.insightsRange;
+    render();
+    if(window.HealthConnectIntegration) window.HealthConnectIntegration.refreshInsights(state.insightsRange);
+  }));
+  const insightsRefreshBtn = document.querySelector('[data-action="insights-refresh"]');
+  if(insightsRefreshBtn) insightsRefreshBtn.addEventListener("click", ()=>{
+    if(window.HealthConnectIntegration) window.HealthConnectIntegration.refreshInsights(state.insightsRange || "day").then(render);
+  });
 
   // Toast / confirm dialog
   const toastEl = document.querySelector('[data-action="dismiss-toast"]');
