@@ -1331,6 +1331,7 @@ const ICONS = {
   plus:'<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
   gear:'<circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   home:'<path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  health:'<path d="M12 20s-7-4.4-9.2-8.3C1.3 8.8 2.7 5 6 5c2 0 3.2 1.3 4 2.4C10.8 6.3 12 5 14 5c3.3 0 4.7 3.8 3.2 6.7C19 15.6 12 20 12 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   more:'<circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/>',
   chevronUp:'<path d="M6 15l6-6 6 6" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   chevronDown:'<path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -3801,7 +3802,7 @@ function renderLegacyHomeTab(){
     <div class="grid2" style="margin-bottom:8px;">
       <button class="btn btn-steel" data-nav="workout" style="display:flex;align-items:center;justify-content:center;gap:8px;">${svg('workout',16)} Start Workout</button>
       <button class="btn btn-steel" data-nav="body" style="display:flex;align-items:center;justify-content:center;gap:8px;">${svg('body',16)} Log Weight</button>
-      <button class="btn btn-steel" data-nav="nutrition" style="display:flex;align-items:center;justify-content:center;gap:8px;">${svg('nutrition',16)} Log Food</button>
+      <button class="btn btn-steel" data-nav="uploads" style="display:flex;align-items:center;justify-content:center;gap:8px;">${svg('health',16)} Medical Reports</button>
       <button class="btn btn-steel" data-nav="progress" style="display:flex;align-items:center;justify-content:center;gap:8px;">${svg('progress',16)} View Progress</button>
     </div>
 
@@ -3865,6 +3866,9 @@ function maybeShowReminders(){
 
 function renderApp(){
   const root = document.getElementById("app");
+  // Phase 2: AI Coach is temporarily removed. Redirect any lingering/persisted ai-coach tab
+  // (e.g. saved hx_tab) to Home so it's fully unreachable. Its data stays intact.
+  if(state.tab==="ai-coach") state.tab = "home";
   const MORE_TABS = ["library","body","settings","health"];
   const isMoreActive = MORE_TABS.includes(state.tab) || state.tab==="more";
   root.innerHTML = `
@@ -3883,9 +3887,8 @@ function renderApp(){
     <nav class="bottom-nav">
       ${navBtn("home","Home")}
       ${navBtn("workout","Workout")}
-      ${navBtn("nutrition","Nutrition")}
       ${navBtn("progress","Progress")}
-      <button class="nav-btn ${state.tab==='ai-coach'?'active':''}" data-nav="ai-coach">${svg('more')}<span>AI Coach</span></button>
+      ${navBtn("health","Health")}
     </nav>
   `;
   const main = document.getElementById("main");
@@ -5735,6 +5738,15 @@ function renderBodyTab(){
 ========================================================= */
 
 function renderNutritionTab(){
+  // Nutrition is temporarily disabled (Phase 2). All data (hx_food_log, hx_nutrition, targets)
+  // is preserved untouched — only the UI is hidden behind a Coming Soon placeholder.
+  return `<section class="premium-card premium-card--elevated coach-empty">
+    <div class="coach-empty__icon">${svg('nutrition',28)}</div>
+    <div style="font-size:24px;font-weight:900;">Nutrition</div>
+    <p style="margin:8px auto 18px;max-width:320px;color:var(--color-text-secondary);line-height:1.5;">Coming soon — we're rebuilding nutrition tracking. Your existing food-log data is safe and will be here when it returns.</p>
+    <button class="btn btn-secondary" data-nav="home">Back to Home</button>
+  </section>`;
+  // eslint-disable-next-line no-unreachable
   const n = state.nutrition;
   const targets = macroTargets();
   const weeklyLoss = (Math.abs(state.profile.goalDelta)*7)/7700;

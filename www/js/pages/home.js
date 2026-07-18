@@ -65,7 +65,7 @@
       <div class="section-heading"><span class="section-heading__label">Quick actions</span></div>
       <section class="home-metrics">
         <button class="btn btn-secondary" data-nav="workout">${svg('workout',16)} Start workout</button>
-        <button class="btn btn-secondary" data-nav="nutrition">${svg('nutrition',16)} Log food</button>
+        <button class="btn btn-secondary" data-nav="uploads">${svg('health',16)} Medical reports</button>
         <button class="btn btn-secondary" data-nav="body">${svg('body',16)} Log weight</button>
         <button class="btn btn-secondary" data-nav="progress">${svg('progress',16)} View progress</button>
       </section>
