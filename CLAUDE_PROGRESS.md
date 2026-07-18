@@ -1,13 +1,90 @@
 # CLAUDE_PROGRESS.md
 
-## Current task
-Premium UI modular redesign — continuing incrementally. Pass 6 (this session): the athlete
-image was manually placed by the user at `www/assets/images/athletes/home-athlete.png`
-(1024x1536 PNG, 2.52MB) — verified it genuinely exists before touching any code. Updated the
-Home hero (built in pass 5 to point at a `.webp` path that didn't exist yet) to load the real
-`.png` instead, fixed a real long-username overflow bug found during verification, and added
-the now-real asset to the service worker's precache list. Clean Android build succeeded;
-commit and push are next.
+## Current task (this session) — COMPLETE, commit c47a297, pushed
+Branch: `feature/health-insights-autosync` (from `feature/phase2-refinement` tip e92977b).
+Request: Insights page with real Day/Week/Month/Year Health Connect data; auto-sync on
+launch/foreground/Home-Insights-Food Log open/5-min interval; auto-update HC active calories
+in the Food Log; preserve all 17 HC metrics + the Steps fix; keep connect-client at 1.1.0.
+
+### What was found before writing anything
+- `feature/phase2-refinement` had uncommitted WIP unrelated to this request: a complete
+  "Edit Routine" feature (rename/reorder/edit-sets, `www/app.js` + `www/js/pages/workout.js`)
+  and a `www/sw.js` cache bump to v22. Not discarded — committed first as its own commit
+  (`ac67248`) on the new branch before starting this feature, so nothing was lost and history
+  stays clean.
+- The Health tab (`renderHealthDashboard` in app.js) already had a Day/Week/Month/Year
+  "Insights" mini-section, but its own code comment documented the real bug: Week/Month/Year
+  just relabeled the same "today" snapshot (or showed "No data") because the native side had
+  no period-aggregate call — only `syncNow()` (today/latest only). This session's native work
+  fixes that gap for real, it doesn't just add a new empty page.
+- The Nutrition/Food Log tab was fully implemented in app.js (including the exact "add real
+  HC active calories to the calorie budget" logic now being asked for) but unreachable —
+  hidden behind a hard `return` + "Coming soon" placeholder from Phase 2 Batch A. Asked the
+  user via AskUserQuestion whether to re-enable it (since that reverses a recent deliberate
+  decision); got no reply, proceeded with the recommended option (re-enable) since it's the
+  only way to actually fulfill "auto-update active calories in the Food Log" — flagged clearly
+  in the final report for the user to review.
+
+### What was built
+- **Native** (`HealthConnectManager.kt`, `HealthConnectPlugin.kt`): existing
+  `getTodaySteps/ActiveCalories/Distance/ExerciseSessionCount/HeartRate/Hydration/Nutrition`
+  refactored into range-parameterized private helpers (`stepsFor(range)` etc.) with their
+  public signatures/behavior UNCHANGED (today's fixed range, same callers) — this is how the
+  17 metrics and the Steps `aggregate(COUNT_TOTAL)` fix stay intact, verified by keeping every
+  existing call site as a one-line wrapper around the same original logic. Added
+  `periodRange(period)` (rolling day/7d/30d/365d), new `sleepPeriodFor`/`weightPeriodFor`
+  (period totals/change, distinct from the existing single-latest readers which are untouched),
+  and `getInsights(period)` which assembles all of it (each field independently
+  try/catch-guarded, same pattern as `syncNow`). Point-in-time vitals (BP, SpO2, body temp,
+  body fat, height, lean mass, BMR, respiratory rate) intentionally reuse the existing
+  `getLatestX()` readers unscoped — same "genuine latest known reading on every tab" design
+  the Health dashboard's own code comment already established, not something this session
+  changed. New `HealthConnectPlugin.getInsights` PluginMethod, no `ensurePermissions` gate
+  (matches `syncNow`'s partial-permission-friendly pattern), attaches `grantedPermissions` for
+  the JS "Permission required" tile logic.
+- **JS**: `health-connect.js` gets a `getInsights(period)` wrapper.
+  `health-settings-integration.js` gets an Insights fetch/cache layer (`hx_hc_insights_cache`
+  localStorage key, in-memory `_insightsData`/`_insightsBusy` per period) and
+  `refreshWhenConnected()` now also fetches Insights for the active range when the Insights
+  tab is open — reusing the SAME existing launch/foreground/5-min-interval/nav-event triggers
+  (all of which already existed from a prior session; only extended, not rebuilt). `app.js`
+  adds `renderInsightsTab()` (Tools > Insights; Day/Week/Month/Year chips; honest
+  No-data/Permission-required states; no fabricated charts), adds "insights" to the nav-sync
+  event list and `MORE_TABS`, re-enables `renderNutritionTab()` (deleted the placeholder
+  return), and flips `settings.exerciseCalorieBudget` default `false→true` so the existing
+  (now-reachable) "add real HC active calories to Food Log budget" logic is on by default.
+  Bottom nav stays exactly Home/Workout/Progress/Health (Batch A decision, unchanged);
+  Insights and Food Log are reachable via Tools, same pattern as Health Connect/Body/Settings.
+  `sw.js` CACHE bumped to v23.
+- **Verification**: `node --check` on all 4 changed JS files passed. Browser-driven (web
+  build, `npx http-server www`): Insights honestly shows "only available in the IGNYT Android
+  app" with a working Back button (HealthConnect.isNativeAndroid() is false on web, by
+  design); Food Log now renders its full real UI (was blank/placeholder before) including the
+  "Health Connect active calories: Permission required" line (correct — web has no native HC);
+  no console errors either screen. Native Insights period-aggregate correctness (real device,
+  actual Health Connect data across Day/Week/Month/Year) was NOT verified — no Android device
+  available in this environment; only build-verified.
+
+### Build attempts
+1. `npx cap sync android` — succeeded.
+2. `android\gradlew.bat clean assembleDebug` — **BUILD SUCCESSFUL in 1m 54s** (101 tasks; only
+   the 2 pre-existing `HealthConnectPlugin.kt` deprecation warnings, no new warnings from this
+   session's Kotlin changes).
+
+### Commit / push status
+- `ac67248` — Edit Routine WIP (pre-existing, committed as-is, unrelated to this feature).
+- `c47a297` — Insights + auto-sync + Food Log active-calories feature.
+- Pushed `feature/health-insights-autosync` to `origin`. NOT merged to main (per instructions).
+
+### Known limitations / next action for the user
+1. Real-device verification still needed: connect Health Connect on an actual phone, confirm
+   Day/Week/Month/Year in Insights show genuinely different numbers (not just structurally
+   correct code) and that Food Log's calorie budget picks up real active calories.
+2. Food Log re-enablement was a judgment call (recommended option, no explicit user
+   confirmation received) — review and say if it should go back behind a placeholder instead.
+3. `exerciseCalorieBudget` default flip to `true` only affects NEW installs / users who never
+   touched that setting; anyone who already has `hx_settings` saved with it `false` keeps their
+   existing choice (that's how all the other setting defaults in this app already behave).
 
 ## Premium UI pass 6 — what was done (this session)
 1. Re-verified branch/clean tree; confirmed `AGENTS.md` still does not exist. Verified the
