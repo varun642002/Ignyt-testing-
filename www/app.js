@@ -1542,6 +1542,7 @@ const state = {
   foodLog: LS.get("hx_food_log",[]),
   routines: LS.get("hx_routines",[]),
   routineBuilder: null,
+  editingRoutineId: null,
   habits: LS.get("hx_habits",[]),
   habitCompletions: LS.get("hx_habit_completions",{}),
   habitBuilderName: "",
@@ -4586,13 +4587,18 @@ function genderToggle(id, current){
 
 function renderRoutineBuilder(){
   const b = state.routineBuilder;
+  const editing = state.editingRoutineId != null;
   return `<div class="info-box" style="padding:14px;margin-bottom:12px;">
+    <div style="font-weight:800;font-size:15px;margin-bottom:8px;">${editing?'Edit routine':'New routine'}</div>
     <input type="text" id="routine-name" placeholder="Routine name (e.g. Leg Day 2)" value="${b.name}"
       style="width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;font-size:14px;color:var(--text);margin-bottom:10px;">
 
-    ${b.exercises.length? b.exercises.map((e,i)=>`<div class="history-row" style="margin-bottom:4px;">
-      <span style="font-size:13px;font-weight:600;">${e.name}</span>
-      <span class="mono" style="font-size:12px;color:var(--steel);">${e.sets} sets</span>
+    ${b.exercises.length? b.exercises.map((e,i)=>`<div class="history-row" style="margin-bottom:4px;gap:8px;">
+      <span style="font-size:13px;font-weight:600;flex:1;min-width:0;overflow-wrap:anywhere;">${e.name}</span>
+      <input type="number" min="1" value="${e.sets}" data-builder-ex-sets="${i}" style="width:40px;background:var(--surface-alt);border-radius:6px;padding:5px;text-align:center;color:var(--accent);font-family:'SF Mono',monospace;font-weight:700;border:none;">
+      <span style="font-size:11px;color:var(--muted);">sets</span>
+      <button class="del" data-move-builder-ex-up="${i}" aria-label="Move up" style="min-width:28px;padding:4px;">${i>0?'▲':''}</button>
+      <button class="del" data-move-builder-ex-down="${i}" aria-label="Move down" style="min-width:28px;padding:4px;">${i<b.exercises.length-1?'▼':''}</button>
       <button class="del" data-remove-builder-ex="${i}" aria-label="Remove exercise">${svg('x',12)}</button>
     </div>`).join("") : ""}
 
@@ -4603,7 +4609,10 @@ function renderRoutineBuilder(){
         <input type="number" id="routine-ex-sets" value="${state.routineBuilderSets}" min="1" style="width:44px;background:var(--surface-alt);border-radius:8px;padding:9px 4px;text-align:center;color:var(--accent);font-family:'SF Mono',monospace;font-weight:700;border:none;">
       </div>
     </div>
-    <button class="btn btn-accent btn-block" data-action="save-routine" style="margin-top:10px;">Save Routine</button>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn btn-accent" style="flex:2;" data-action="save-routine">${editing?'Save Changes':'Save Routine'}</button>
+      <button class="btn btn-ghost" style="flex:1;" data-action="cancel-routine">Cancel</button>
+    </div>
   </div>`;
 }
 
@@ -7092,6 +7101,7 @@ function attachHandlers(){
   // Routines
   const toggleBuilderBtn = document.querySelector('[data-action="toggle-routine-builder"]');
   if(toggleBuilderBtn) toggleBuilderBtn.addEventListener("click", ()=>{
+    state.editingRoutineId = null;
     state.routineBuilder = state.routineBuilder ? null : { name:"", exercises:[] };
     render();
   });
@@ -7132,9 +7142,36 @@ function attachHandlers(){
     const nameEl = document.getElementById("routine-name");
     const name = nameEl ? nameEl.value.trim() : "";
     if(!name || !state.routineBuilder.exercises.length) return;
-    state.routines.unshift({ id: nextId(), name, exercises: state.routineBuilder.exercises });
+    if(state.editingRoutineId != null){
+      // Update in place — no duplicate routine, id/reference preserved.
+      const idx = state.routines.findIndex(r=>r.id===state.editingRoutineId);
+      if(idx!==-1) state.routines[idx] = Object.assign({}, state.routines[idx], { name, exercises: state.routineBuilder.exercises });
+      state.editingRoutineId = null;
+    } else {
+      state.routines.unshift({ id: nextId(), name, exercises: state.routineBuilder.exercises });
+    }
     state.routineBuilder = null;
     render();
+  });
+  const cancelRoutineBtn = document.querySelector('[data-action="cancel-routine"]');
+  if(cancelRoutineBtn) cancelRoutineBtn.addEventListener("click", ()=>{ state.routineBuilder=null; state.editingRoutineId=null; render(); });
+  document.querySelectorAll("[data-edit-routine]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const r = state.routines.find(x=>x.id===Number(el.dataset.editRoutine)); if(!r) return;
+      state.editingRoutineId = r.id;
+      state.routineBuilder = { name: r.name, exercises: r.exercises.map(e=>({ name:e.name, sets:e.sets })) };
+      render();
+    });
+  });
+  document.querySelectorAll("[data-builder-ex-sets]").forEach(el=>{
+    el.addEventListener("input", ()=>{ const i=Number(el.dataset.builderExSets); if(state.routineBuilder && state.routineBuilder.exercises[i]) state.routineBuilder.exercises[i].sets = Math.max(1, Number(el.value)||1); });
+  });
+  const captureRoutineName = ()=>{ const nm=document.getElementById("routine-name"); if(nm && state.routineBuilder) state.routineBuilder.name = nm.value; };
+  document.querySelectorAll("[data-move-builder-ex-up]").forEach(el=>{
+    el.addEventListener("click", ()=>{ const i=Number(el.dataset.moveBuilderExUp), ex=state.routineBuilder.exercises; if(i>0){ captureRoutineName(); [ex[i-1],ex[i]]=[ex[i],ex[i-1]]; render(); } });
+  });
+  document.querySelectorAll("[data-move-builder-ex-down]").forEach(el=>{
+    el.addEventListener("click", ()=>{ const i=Number(el.dataset.moveBuilderExDown), ex=state.routineBuilder.exercises; if(i<ex.length-1){ captureRoutineName(); [ex[i+1],ex[i]]=[ex[i],ex[i+1]]; render(); } });
   });
   document.querySelectorAll("[data-del-routine]").forEach(el=>{
     el.addEventListener("click", ()=>{

@@ -31,7 +31,10 @@
             <button class="del" data-del-routine="${r.id}" aria-label="Delete routine" style="flex-shrink:0;margin-top:-4px;">${svg('x',16)}</button>
           </div>
           <div style="font-size:13px;color:var(--muted);margin:6px 0 14px;">${r.exercises.length} exercise${r.exercises.length !== 1 ? 's' : ''}</div>
-          <button class="btn btn-steel btn-block" data-start-routine="${r.id}">Start Workout</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-steel" style="flex:2;" data-start-routine="${r.id}">Start Workout</button>
+            <button class="btn btn-ghost" style="flex:1;" data-edit-routine="${r.id}">Edit</button>
+          </div>
         </div>`).join("")}
 
       <div class="section-heading">
