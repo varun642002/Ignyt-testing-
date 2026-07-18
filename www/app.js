@@ -3523,8 +3523,6 @@ function renderSettingsTab(){
   const s = state.settings;
   return `
     ${renderAccountSection()}
-    <div class="eyebrow-label">Profile</div>
-    ${renderProfileForm()}
     <div class="eyebrow-label">Export Data</div>
     <div class="info-box" style="padding:14px;">
       <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export your entire workout and measurement history. The JSON backup can be imported back; CSVs are for spreadsheets.</div>
@@ -5012,13 +5010,11 @@ function renderExerciseDetailHistory(history){
 ========================================================= */
 
 const PROGRESS_VIEWS = {
-  prs:          { icon:"🏆", title:"Personal Records",   sub:"Track your best lifts and performance records." },
-  achievements: { icon:"🎖️", title:"Achievements",       sub:"View milestones, streaks, and unlocked achievements." },
+  achievements: { icon:"🎖️", title:"Achievements & Records", sub:"Personal records, milestones, streaks and unlocked achievements." },
   habits:       { icon:"🔁", title:"Habit Tracker",      sub:"Daily habits, streaks, and completion history." },
   analytics:    { icon:"📊", title:"Workout Analytics",  sub:"Training frequency, volume, duration, and muscle distribution." },
   exercise:     { icon:"📈", title:"Exercise Progress",  sub:"Weight and estimated 1RM trends for individual exercises." },
   body:         { icon:"⚖️", title:"Body Progress",      sub:"Body weight and measurement trends." },
-  nutrition:    { icon:"🍎", title:"Nutrition Progress", sub:"Calorie and protein trends." },
   calendar:     { icon:"📅", title:"Training Calendar",  sub:"See your workout activity by date." },
   plan:         { icon:"✅", title:"Plan Progress",      sub:"Phase and weekly training-plan completion." }
 };
@@ -5045,9 +5041,9 @@ function renderProgressTab(){
   const view = state.progressView;
   if(view && PROGRESS_VIEWS[view]){
     const detailFns = {
-      prs: renderProgressPRs, achievements: renderProgressAchievements, habits: renderProgressHabits,
+      achievements: ()=> renderProgressAchievements() + renderProgressPRs(), habits: renderProgressHabits,
       analytics: renderProgressAnalytics, exercise: renderProgressExercise,
-      body: renderProgressBody, nutrition: renderProgressNutrition,
+      body: renderProgressBody,
       calendar: renderProgressCalendar, plan: renderProgressPlan
     };
     let body;
@@ -5715,21 +5711,6 @@ function renderBodyTab(){
       </div>`;
     })() : ""}
 
-    <div class="eyebrow-label">Records &amp; Achievements</div>
-    <button class="prog-cat-card" data-open-progress-view="prs" aria-label="Open Personal Records">
-      <span class="prog-cat-icon">${PROGRESS_VIEWS.prs.icon}</span>
-      <span style="flex:1;min-width:0;text-align:left;">
-        <span style="display:block;font-size:16px;font-weight:800;color:var(--text);">Personal Records</span>
-        <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">${state.prs.length} record${state.prs.length!==1?'s':''}</span>
-      </span>
-    </button>
-    <button class="prog-cat-card" data-open-progress-view="achievements" aria-label="Open Achievements">
-      <span class="prog-cat-icon">${PROGRESS_VIEWS.achievements.icon}</span>
-      <span style="flex:1;min-width:0;text-align:left;">
-        <span style="display:block;font-size:16px;font-weight:800;color:var(--text);">Achievements</span>
-        <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">${state.achievements.length} of ${ACHIEVEMENT_DEFS.length} unlocked</span>
-      </span>
-    </button>
   `;
 }
 
