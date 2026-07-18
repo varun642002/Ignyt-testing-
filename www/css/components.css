@@ -96,3 +96,11 @@
 .coach-chip { font-size:11px; font-weight:700; color:var(--color-text-secondary); background:var(--color-surface-pressed); border-radius:var(--radius-pill); padding:3px 9px; }
 .coach-q { display:block; width:100%; text-align:left; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:11px 14px; margin-bottom:6px; font-size:14px; font-weight:600; color:var(--color-text-primary); cursor:pointer; }
 .coach-q:active { background:var(--color-surface-pressed); }
+
+/* ---- Medical Reports summary + source sheet (health-uploads.js) ---- */
+.hu-sum-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-bottom:6px; }
+.hu-sum { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:10px 6px; text-align:center; min-width:0; }
+.hu-sum__v { font-size:22px; font-weight:900; }
+.hu-sum__l { font-size:10px; font-weight:700; color:var(--color-text-secondary); margin-top:2px; }
+.hu-src { display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:var(--color-surface-elevated); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:14px; margin-bottom:8px; font-size:15px; font-weight:600; color:var(--color-text-primary); cursor:pointer; }
+.hu-src:active { background:var(--color-surface-pressed); }

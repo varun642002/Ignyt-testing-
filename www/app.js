@@ -3916,8 +3916,7 @@ function renderMoreSheet(){
     {id:"library", label:"Library", desc:"Exercises & equipment", color:"var(--steel)", icon:"library"},
     {id:"body", label:"Log Weight", desc:"Weight, trend & history", color:"var(--color-interactive)", icon:"body"},
     {id:"goals", label:"Goals", desc:"Smart goal engine & targets", color:"var(--color-interactive)", icon:"progress"},
-    {id:"bloodwork", label:"Blood Work", desc:"Lab reports, biomarkers & trends", color:"#e5484d", icon:"progress"},
-    {id:"uploads", label:"Medical Reports", desc:"Upload lab/InBody/DEXA files", color:"#e5484d", icon:"progress"},
+    {id:"uploads", label:"Medical Reports", desc:"Blood work, InBody, DEXA & more", color:"#e5484d", icon:"progress"},
     {id:"calculators", label:"Calculator", desc:"BMI, BMR, TDEE & macros", color:"var(--steel)", icon:"calc"},
     {id:"settings", label:"Settings", desc:"Backups & preferences", color:"var(--muted)", icon:"gear"},
     {id:"health", label:"Health Connect", desc:"Steps, heart rate, calories, weight, workouts", color:"var(--mint)", icon:"progress"}

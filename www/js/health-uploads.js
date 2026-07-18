@@ -62,8 +62,8 @@
   function detectCategory(name) { var s = (name || "").toLowerCase(); for (var i = 0; i < CATEGORIES.length; i++) { if (CATEGORIES[i].match.some(function (m) { return s.indexOf(m) !== -1; })) return CATEGORIES[i].id; } return "other"; }
 
   /* ---------- view state ---------- */
-  var view = { screen: "list", openId: null, draft: null, progress: null };
-  function reset() { view = { screen: "list", openId: null, draft: null, progress: null }; }
+  var view = { screen: "list", openId: null, draft: null, progress: null, sheet: false };
+  function reset() { view = { screen: "list", openId: null, draft: null, progress: null, sheet: false }; }
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); };
   var svg = function (n, s) { return window.svg ? window.svg(n, s) : ""; };
   var fmtDate = function (d) { try { return new Date(d).toLocaleDateString("default", { year: "numeric", month: "short", day: "numeric" }); } catch (e) { return d || ""; } };
@@ -81,21 +81,49 @@
     return renderList();
   }
 
+  function summary() {
+    var uploads = loadMeta(), records = loadRecords();
+    var blood = window.IgnytBloodwork ? window.IgnytBloodwork._load().length : 0;
+    var c = { inbody: 0, dexa: 0, other: 0 };
+    records.forEach(function (r) { if (r.category === "inbody") c.inbody++; else if (r.category === "dexa") c.dexa++; else c.other++; });
+    var latest = uploads.length ? uploads.reduce(function (a, b) { return a.createdAt > b.createdAt ? a : b; }).createdAt : null;
+    var storage = uploads.reduce(function (a, b) { return a + (b.size || 0); }, 0);
+    return { blood: blood, inbody: c.inbody, dexa: c.dexa, other: c.other, files: uploads.length, latest: latest, storage: storage };
+  }
+
+  // Source bottom sheet — the fix: Upload never launches the camera directly; the user chooses.
+  function renderSheet() {
+    var opt = function (icon, label, src) { return '<button class="hu-src" data-hu="src" data-src="' + src + '"><span style="font-size:20px;width:28px;display:inline-block;">' + icon + '</span> ' + label + '</button>'; };
+    return '<div class="more-sheet-backdrop" data-hu="sheet-close"><div class="more-sheet" data-hu="noop">' +
+      '<div class="more-sheet-handle"></div><div class="eyebrow-label" style="margin:0 0 10px;">Upload from</div>' +
+      opt("📷", "Take Photo", "photo") + opt("🖼️", "Choose Image", "image") + opt("📄", "Upload PDF", "pdf") + opt("📁", "Browse Files", "files") +
+      '<button class="btn btn-ghost btn-block" data-hu="sheet-close" style="margin-top:8px;">Cancel</button>' +
+      '</div></div>';
+  }
+
   function renderList() {
     var m = loadMeta().slice().sort(function (a, b) { return b.createdAt - a.createdAt; });
+    var s = summary();
+    var sumCard = function (l, v) { return '<div class="hu-sum"><div class="hu-sum__v">' + v + '</div><div class="hu-sum__l">' + l + '</div></div>'; };
     var h = head("Medical Reports") +
-      '<div style="font-size:14px;color:var(--muted);margin-bottom:12px;">Upload lab, InBody, DEXA and other reports. Review the values and save them to your health history.</div>' +
+      '<div style="font-size:14px;color:var(--muted);margin-bottom:12px;">One place for every health document — blood work, InBody, DEXA and more.</div>' +
+      '<div class="hu-sum-grid">' + sumCard("Blood Work", s.blood) + sumCard("InBody", s.inbody) + sumCard("DEXA", s.dexa) + sumCard("Other", s.other) + '</div>' +
+      '<div style="font-size:12px;color:var(--muted);margin:2px 2px 10px;">' + (s.files ? s.files + ' file' + (s.files !== 1 ? "s" : "") + ' · ' + kb(s.storage) + ' stored' + (s.latest ? ' · latest ' + fmtDate(s.latest) : "") : "No files uploaded yet") + '</div>' +
       NOTE +
-      '<input type="file" id="hu-file" accept="image/*,application/pdf" multiple capture="environment" style="display:none;">' +
-      '<button class="btn btn-accent btn-block" data-hu="pick" style="margin:12px 0;">' + svg("plus", 16) + ' Upload Report</button>';
-    if (!m.length) return h + '<div class="empty-note">No reports uploaded yet.</div>';
-    m.forEach(function (r) {
-      h += '<button class="hu-row" data-hu="open" data-id="' + r.id + '">' +
-        '<span class="hu-thumb">' + (r.mime && r.mime.indexOf("image") === 0 ? "🖼️" : "📄") + '</span>' +
-        '<span style="min-width:0;flex:1;text-align:left;"><span style="display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(r.name) + '</span>' +
-        '<span style="display:block;font-size:12px;color:var(--muted);">' + esc(catById[r.category] ? catById[r.category].label : r.category) + ' · ' + fmtDate(r.date || r.createdAt) + ' · ' + (r.status || "uploaded") + '</span></span>' +
-        '<span style="color:var(--muted);">' + svg("progress", 16) + '</span></button>';
-    });
+      '<input type="file" id="hu-file" style="display:none;">' +
+      '<button class="btn btn-accent btn-block" data-hu="sheet" style="margin:12px 0;">' + svg("plus", 16) + ' Upload Report</button>';
+    if (s.blood) h += '<button class="hu-row" data-nav="bloodwork"><span class="hu-thumb">🩸</span><span style="min-width:0;flex:1;text-align:left;"><span style="display:block;font-weight:700;">Blood Work</span><span style="display:block;font-size:12px;color:var(--muted);">' + s.blood + ' report' + (s.blood !== 1 ? "s" : "") + ' · trends & biomarkers</span></span><span style="color:var(--muted);">' + svg("progress", 16) + '</span></button>';
+    if (m.length) {
+      h += '<div class="section-heading"><span class="section-heading__label">Recent uploads</span></div>';
+      m.forEach(function (r) {
+        h += '<button class="hu-row" data-hu="open" data-id="' + r.id + '">' +
+          '<span class="hu-thumb">' + (r.mime && r.mime.indexOf("image") === 0 ? "🖼️" : "📄") + '</span>' +
+          '<span style="min-width:0;flex:1;text-align:left;"><span style="display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(r.name) + '</span>' +
+          '<span style="display:block;font-size:12px;color:var(--muted);">' + esc(catById[r.category] ? catById[r.category].label : r.category) + ' · ' + fmtDate(r.date || r.createdAt) + ' · ' + (r.status || "uploaded") + '</span></span>' +
+          '<span style="color:var(--muted);">' + svg("progress", 16) + '</span></button>';
+      });
+    } else if (!s.blood) h += '<div class="empty-note">No reports yet. Tap “Upload Report” to add one.</div>';
+    if (view.sheet) h += renderSheet();
     return h;
   }
 
@@ -218,7 +246,20 @@
       var el = e.target.closest("[data-hu]"); if (!el) return;
       var a = el.getAttribute("data-hu"), id = el.getAttribute("data-id");
       if (a === "list") { reset(); return win(); }
-      if (a === "pick") { var f = document.getElementById("hu-file"); if (f) f.click(); return; }
+      if (a === "sheet") { view.sheet = true; return win(); }
+      if (a === "sheet-close") { view.sheet = false; return win(); }
+      if (a === "src") {
+        // Configure the input per chosen source, then click. Camera opens ONLY for "photo".
+        var src = el.getAttribute("data-src");
+        view.sheet = false; win(); // re-render without the sheet -> fresh #hu-file element
+        var inp = document.getElementById("hu-file"); if (!inp) return;
+        if (src === "photo") { inp.accept = "image/*"; inp.setAttribute("capture", "environment"); inp.multiple = false; }
+        else if (src === "image") { inp.accept = "image/*"; inp.removeAttribute("capture"); inp.multiple = true; }
+        else if (src === "pdf") { inp.accept = "application/pdf"; inp.removeAttribute("capture"); inp.multiple = true; }
+        else { inp.accept = "image/*,application/pdf"; inp.removeAttribute("capture"); inp.multiple = true; }
+        inp.value = ""; inp.click();
+        return;
+      }
       if (a === "open") { view.screen = "detail"; view.openId = id; win(); setTimeout(showPreview, 30); return; }
       if (a === "analyze") {
         // honest staged progress, then a manual/paste review (no fake OCR)
