@@ -1358,7 +1358,8 @@ const ICONS = {
   starFilled:'<path d="M12 3.5l2.6 5.5 6 .7-4.4 4.1 1.2 5.9L12 16.9l-5.4 2.8 1.2-5.9-4.4-4.1 6-.7z" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
   search:'<circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4.8-4.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   upload:'<path d="M12 15V4M8 8l4-4 4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
-  dumbbell:'<path d="M4 9v6M2.5 10.5v3M20 9v6M21.5 10.5v3M7 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="4" y="8" width="3" height="8" rx="1" fill="currentColor"/><rect x="17" y="8" width="3" height="8" rx="1" fill="currentColor"/>'
+  dumbbell:'<path d="M4 9v6M2.5 10.5v3M20 9v6M21.5 10.5v3M7 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="4" y="8" width="3" height="8" rx="1" fill="currentColor"/><rect x="17" y="8" width="3" height="8" rx="1" fill="currentColor"/>',
+  calendar:'<rect x="4" y="5.5" width="16" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 10h16M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="7.5" y="13" width="3" height="3" rx=".5" fill="currentColor"/>'
 };
 
 /* =========================================================
@@ -3891,11 +3892,12 @@ function renderApp(){
   if(state.tab==="ai-coach") state.tab = "home";
   const MORE_TABS = ["library","body","settings","health","insights","nutrition"];
   const isMoreActive = MORE_TABS.includes(state.tab) || state.tab==="more";
-  // Home and Workout share a dedicated light "premium reference" look (see home.css/
-  // workout.css); the header/nav shell is shared across every tab, so this modifier class is
-  // only added while one of those is the active tab and disappears the moment you navigate
-  // away -- every other screen (Progress/Health/Profile) is unaffected.
-  const isLightTab = state.tab==="home" || state.tab==="workout";
+  // Home, Workout, and Progress's own dashboard (not its detail views, which stay dark --
+  // see renderProgressTab) share a dedicated light "premium reference" look (see home.css/
+  // workout.css/progress.css); the header/nav shell is shared across every tab, so this
+  // modifier class is only added while one of those is showing and disappears the moment
+  // you navigate away or open a Progress detail view -- Health/Profile are unaffected.
+  const isLightTab = state.tab==="home" || state.tab==="workout" || (state.tab==="progress" && !state.progressView);
   root.innerHTML = `
     <header class="app-header page-title-row ${isLightTab?'app-header--home-light':''}">
       <div>
@@ -5151,6 +5153,7 @@ const PROGRESS_VIEWS = {
   habits:       { icon:"🔁", title:"Habit Tracker",      sub:"Daily habits, streaks, and completion history." },
   analytics:    { icon:"📊", title:"Workout Analytics",  sub:"Training frequency, volume, duration, and muscle distribution." },
   exercise:     { icon:"📈", title:"Exercise Progress",  sub:"Weight and estimated 1RM trends for individual exercises." },
+  nutrition:    { icon:"🍎", title:"Nutrition Progress", sub:"Average calories and protein per logged day." },
   body:         { icon:"⚖️", title:"Body Progress",      sub:"Body weight and measurement trends." },
   calendar:     { icon:"📅", title:"Training Calendar",  sub:"See your workout activity by date." },
   plan:         { icon:"✅", title:"Plan Progress",      sub:"Phase and weekly training-plan completion." }
@@ -5180,6 +5183,7 @@ function renderProgressTab(){
     const detailFns = {
       achievements: ()=> renderProgressAchievements() + renderProgressPRs(), habits: renderProgressHabits,
       analytics: renderProgressAnalytics, exercise: renderProgressExercise,
+      nutrition: renderProgressNutrition,
       body: renderProgressBody,
       calendar: renderProgressCalendar, plan: renderProgressPlan
     };
@@ -5196,10 +5200,22 @@ function renderProgressTab(){
       ${body}
     `;
   }
-  return renderProgressHome();
+  if(window.IgnytPages && typeof window.IgnytPages.renderProgressHome === 'function'){
+    const weekStats = thisWeekStats();
+    const now = Date.now();
+    const prsThisWeek = state.prs.filter(p=>p.achievedAt>=now-7*86400000).length;
+    const prsLastWeek = state.prs.filter(p=>p.achievedAt>=now-14*86400000 && p.achievedAt<now-7*86400000).length;
+    const prevWeekVolume = state.workoutLog.filter(s=>{ const t=new Date(s.date).getTime(); return t>=now-14*86400000 && t<now-7*86400000; }).reduce((a,s)=>a+(s.volume||0),0);
+    return window.IgnytPages.renderProgressHome({
+      state, svg, displayW, wUnit, weekStats, prsThisWeek, prsLastWeek,
+      volumeTrend: comparisonLabel(weekStats.weeklyVolume, prevWeekVolume),
+      ACHIEVEMENT_DEFS, PROGRESS_VIEWS, calorieProteinTrend, fmtMinutes, comparisonLabel
+    });
+  }
+  return renderLegacyProgressHome();
 }
 
-function renderProgressHome(){
+function renderLegacyProgressHome(){
   const w = thisWeekStats();
   const safeNum = v => (typeof v==="number" && isFinite(v)) ? v : null;
   const workouts = safeNum(w.workoutsCompleted), minutes = safeNum(w.trainingMinutes),
@@ -8235,6 +8251,17 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{
       state.tab = "progress";
       state.progressView = el.dataset.openProgressView;
+      render();
+    });
+  });
+
+  // Progress dashboard chart range selectors (Training Volume / Body Weight / Heatmap).
+  document.querySelectorAll("[data-progress-range]").forEach(el=>{
+    el.addEventListener("change", ()=>{
+      const kind = el.dataset.progressRange;
+      if(kind==="volume") state.pgVolumeRange = el.value;
+      else if(kind==="weight") state.pgWeightRange = Number(el.value);
+      else if(kind==="heatmap") state.pgHeatmapRange = el.value;
       render();
     });
   });
