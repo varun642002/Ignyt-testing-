@@ -4,3 +4,142 @@
 .live-stats-bar { background:var(--color-surface-elevated); }
 .set-row-wrap { border-radius:var(--radius-sm); }
 .set-input { font-variant-numeric:tabular-nums; }
+
+/* =========================================================
+   WORKOUT (idle list) — light "premium reference" redesign, matching Home's design
+   language. Reuses several of Home's shared class names (.rh-btn, .rh-card,
+   .rh-section-head, .rh-view-all, .rh-quick-card) which read their colors from
+   --rh-* custom properties -- redeclared on .wk-light exactly like .home-light does
+   so this module doesn't depend on Home's CSS having loaded/rendered first.
+========================================================= */
+
+.wk-light {
+  --rh-bg:#F7F9FC; --rh-card:#FFFFFF; --rh-blue:#2563EB; --rh-text:#0F172A; --rh-muted:#64748B;
+  --rh-border:#E9EDF3; --rh-purple:#7C3AED; --rh-green:#16A34A; --rh-red:#EF4444;
+  background:var(--rh-bg); color:var(--rh-text);
+  margin:0 -16px -100px; padding:12px 16px 100px;
+  min-height:calc(100% + 100px);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+
+/* ---------- Today's Workout hero ---------- */
+.wk-hero { background:var(--rh-card); border-radius:20px; padding:18px; margin-top:4px; box-shadow:0 2px 10px rgba(15,23,42,.06); }
+.wk-hero__eyebrow { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--rh-blue); }
+.wk-hero__title { font-size:26px; font-weight:800; letter-spacing:-.02em; margin-top:4px; }
+.wk-hero__meta { display:flex; gap:16px; margin-top:10px; font-size:13px; color:var(--rh-muted); font-weight:600; }
+.wk-hero__meta span, .wk-hero__muscles { display:flex; align-items:center; gap:5px; }
+.wk-hero__muscles { font-size:13px; color:var(--rh-muted); font-weight:600; margin-top:6px; }
+.wk-hero__actions { display:flex; gap:10px; margin-top:16px; }
+.wk-hero--rest .wk-hero__title { color:var(--rh-muted); }
+
+/* ---------- This Week stat grid ---------- */
+.wk-stat-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:16px; }
+.wk-stat-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px; }
+.wk-stat-card__icon { display:inline-flex; width:34px; height:34px; border-radius:10px; align-items:center; justify-content:center; }
+.wk-stat-card__value { font-size:20px; font-weight:800; margin-top:10px; letter-spacing:-.02em; }
+.wk-stat-card__unit { font-size:11px; font-weight:600; color:var(--rh-muted); margin-left:2px; }
+.wk-stat-card__label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:2px; }
+.wk-stat-card__sub { font-size:10px; font-weight:700; color:#B6BEC9; margin-top:3px; }
+.wk-stat-card__sub.is-up { color:var(--rh-green); }
+.wk-stat-card__sub.is-down { color:var(--rh-red); }
+
+/* ---------- Quick actions ---------- */
+.wk-quick-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:16px; }
+
+/* ---------- Category filter chips (reskins the shared .cat-chip for this light page) ---------- */
+.wk-filter-row { display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; margin-top:16px; -webkit-overflow-scrolling:touch; }
+.wk-filter-row::-webkit-scrollbar { display:none; }
+.wk-light .cat-chip { flex:none; background:var(--rh-card); color:var(--rh-muted); border:1px solid var(--rh-border); }
+.wk-light .cat-chip.active { background:var(--rh-blue); color:#fff; border-color:var(--rh-blue); }
+
+.wk-sort-select { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:10px; padding:6px 10px; font-size:12px; font-weight:700; color:var(--rh-text); }
+
+/* ---------- Routine cards ---------- */
+.wk-empty { color:var(--rh-muted); font-size:13px; text-align:center; padding:20px 16px; }
+.wk-routine-card { position:relative; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px; margin-bottom:10px; display:flex; gap:12px; }
+.wk-routine-card__badge { flex:none; width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; }
+.wk-routine-card__body { flex:1; min-width:0; padding-right:76px; }
+.wk-routine-card__top { display:flex; align-items:center; gap:8px; }
+.wk-routine-card__name { font-size:16px; font-weight:800; overflow-wrap:anywhere; }
+.wk-badge-today { font-size:10px; font-weight:800; color:var(--rh-blue); background:rgba(37,99,235,.1); border-radius:6px; padding:2px 6px; flex:none; }
+.wk-routine-card__meta { display:flex; gap:12px; flex-wrap:wrap; margin-top:4px; font-size:12px; color:var(--rh-muted); font-weight:600; }
+.wk-routine-card__meta span { display:flex; align-items:center; gap:4px; }
+.wk-routine-card__preview { font-size:12px; color:var(--rh-muted); margin-top:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wk-routine-card__foot { display:flex; align-items:flex-end; justify-content:space-between; margin-top:12px; }
+.wk-routine-card__last-label { font-size:10px; color:var(--rh-muted); font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+.wk-routine-card__last-value { font-size:13px; font-weight:700; margin-top:2px; }
+.wk-routine-card__actions { position:absolute; top:10px; right:10px; display:flex; gap:2px; }
+.wk-routine-card__actions .del { min-width:30px; min-height:30px; padding:4px; color:var(--rh-muted); }
+.wk-routine-card__start { position:absolute; bottom:14px; right:14px; width:36px; height:36px; border-radius:50%; border:none;
+  background:var(--rh-blue); color:#fff; font-size:13px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+
+/* Completion ring (conic-gradient), same technique as Home's Recovery Score ring. */
+.wk-ring { width:40px; height:40px; border-radius:50%; flex:none; display:grid; place-items:center;
+  background:conic-gradient(var(--ring-color,#2563EB) calc(var(--pct,0) * 1%), #EEF1F6 0); }
+.wk-ring__inner { width:31px; height:31px; border-radius:50%; background:var(--rh-card); display:flex; align-items:center; justify-content:center;
+  font-size:9px; font-weight:800; color:var(--rh-text); }
+
+/* ---------- Recent sessions ---------- */
+.wk-session-row { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; cursor:pointer;
+  background:var(--rh-card); border:1px solid var(--rh-border); border-radius:14px; padding:14px; margin-bottom:8px; }
+.wk-session-row__title { font-size:15px; font-weight:800; }
+.wk-session-row__meta { font-size:12px; color:var(--rh-muted); margin-top:2px; }
+.wk-session-row__date { font-size:11px; color:var(--rh-muted); margin-top:2px; font-family:'SF Mono',monospace; }
+
+/* =========================================================
+   ACTIVE WORKOUT SESSION — light redesign of the same in-progress logging
+   screen (app.js's renderWorkoutTab, session branch). Every data-*/id used by
+   the timer, rest-timer, swipe-to-delete engine, RPE picker, plate calculator
+   and exercise menu is completely untouched -- this file only restyles the
+   existing classes those features already render into, it never changes
+   markup structure or JS-facing attributes. */
+
+.wk-session__status { font-size:12px; font-weight:800; letter-spacing:.05em; color:var(--rh-blue); margin-bottom:2px; }
+.wk-session__title-input { width:100%; background:none; border:none; border-bottom:none; padding:8px 2px;
+  font-size:26px; font-weight:800; color:var(--rh-text); margin:14px 0 6px; font-family:inherit; letter-spacing:-.02em; }
+.wk-session__title-input::placeholder { color:var(--rh-muted); }
+.wk-session__notes-wrap { display:flex; align-items:flex-start; gap:8px; background:var(--rh-card); border:1px solid var(--rh-border);
+  border-radius:12px; padding:12px 14px; margin:8px 0 4px; color:var(--rh-blue); }
+.wk-session__notes-wrap textarea { flex:1; min-width:0; background:none; border:none; outline:none; resize:vertical; min-height:38px;
+  font-size:13px; color:var(--rh-text); font-family:inherit; }
+.wk-session__notes-wrap textarea::placeholder { color:var(--rh-muted); }
+.wk-session__stat-icon { display:inline-flex; vertical-align:middle; margin-right:5px; color:var(--rh-blue); }
+
+.wk-add-exercise-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+  border:1.5px dashed var(--rh-blue); border-radius:14px; background:rgba(37,99,235,.05); color:var(--rh-blue);
+  font-weight:800; font-size:15px; padding:16px; cursor:pointer; margin-top:4px; }
+
+.wk-empty { color:var(--rh-muted); font-size:13px; text-align:center; padding:20px 16px; }
+
+/* Exercise log card + its interactive set table -- structure/attributes unchanged, colors only. */
+.wk-light .ex-log-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px; margin-bottom:12px; box-shadow:0 1px 4px rgba(15,23,42,.05); }
+.wk-ex-card__name { font-weight:800; color:var(--rh-text); font-size:18px; line-height:1.25; }
+.wk-light .muscle-chip { background:rgba(37,99,235,.1); color:var(--rh-blue); }
+.wk-light .muscle-chip.active { background:rgba(37,99,235,.14); color:var(--rh-blue); }
+.wk-light .notes-inline { color:var(--rh-muted); border-bottom-color:var(--rh-border); }
+.wk-light .notes-inline:focus { color:var(--rh-text); border-color:var(--rh-blue); }
+.wk-light .rest-toggle { color:var(--rh-blue); }
+.wk-light .ex-menu { background:var(--rh-card); border-color:var(--rh-border); box-shadow:0 4px 16px rgba(15,23,42,.12); }
+.wk-light .ex-menu-item { color:var(--rh-text); }
+.wk-light .ex-menu-item:active { background:var(--rh-bg); }
+
+.wk-light .set-table-header { color:var(--rh-muted); }
+.wk-light .set-row-wrap { border-radius:10px; }
+.wk-light .set-row { background:var(--rh-bg); }
+.wk-light .set-row.done { background:rgba(22,163,74,.1); }
+.wk-light .set-num { color:var(--rh-text); }
+.wk-light .set-prev { color:var(--rh-muted); opacity:1; }
+.wk-light .set-input { background:var(--rh-card); border:1px solid var(--rh-border); color:var(--rh-text); }
+.wk-light .set-input::placeholder { color:#B6BEC9; }
+.wk-light .rpe-btn { background:var(--rh-card); border:1px solid var(--rh-border); color:var(--rh-muted); }
+.wk-light .set-check { border-color:var(--rh-border); }
+.wk-light .set-check.done { background:var(--rh-blue); border-color:var(--rh-blue); }
+.wk-light .add-set-btn { color:var(--rh-blue); background:rgba(37,99,235,.06); border-radius:10px; }
+
+/* Live stats bar: reused as-is (structure), restyled to the light card + icon row + dividers. */
+.wk-light .live-stats-bar { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; box-shadow:0 2px 10px rgba(15,23,42,.06); margin:12px 0 4px; }
+.wk-light .live-stat { display:flex; flex-direction:column; }
+.wk-light .live-stat + .live-stat { border-left:1px solid var(--rh-border); padding-left:14px; }
+.wk-light .live-stat-label { color:var(--rh-muted); font-size:10px; }
+.wk-light .live-stat-value { color:var(--rh-text); }
+.wk-light .live-stat-unit { color:var(--rh-muted); }

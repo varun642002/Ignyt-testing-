@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Ignyt" />
 <link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Ignyt</title>
 <style>
@@ -221,23 +222,6 @@ nav.bottom-nav{position:fixed; bottom:0; left:50%; transform:translateX(-50%); w
 
 .nav-btn span{font-size:9px; font-weight:700;}
 
-.more-sheet-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:60; display:flex; align-items:flex-end; justify-content:center;}
-
-.more-sheet{width:100%; max-width:480px; background:var(--surface); border-radius:20px 20px 0 0; padding:10px 16px calc(20px + env(safe-area-inset-bottom,0px)); animation:sheetUp .2s cubic-bezier(.2,.8,.2,1);}
-
-.more-sheet-handle{width:36px; height:4px; background:var(--border); border-radius:2px; margin:8px auto 14px;}
-
-.more-sheet-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
-
-.more-sheet-card{display:flex; flex-direction:column; align-items:flex-start; background:var(--surface-alt); border:1px solid var(--border);
-    border-radius:14px; padding:16px; cursor:pointer; color:var(--text); text-align:left; min-height:104px;}
-
-.more-sheet-card:active{background:#2e2e38;}
-
-.more-sheet-icon-badge{width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
-
-@keyframes sheetUp{from{transform:translateY(24px); opacity:0;} to{transform:translateY(0); opacity:1;}}
-
 .history-row{background:var(--surface); border-radius:10px; padding:10px 14px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;}
 
 .history-row .del{color:#5c5c66; font-weight:700; font-size:12px; padding:0 4px; background:none; border:none;}
@@ -436,6 +420,7 @@ main{overflow-x:hidden;}
 <link rel="stylesheet" href="css/pages/workout.css" />
 <link rel="stylesheet" href="css/pages/nutrition.css" />
 <link rel="stylesheet" href="css/pages/progress.css" />
+<link rel="stylesheet" href="css/pages/tools.css" />
 <link rel="stylesheet" href="css/pages/profile.css" />
 <link rel="stylesheet" href="css/pages/ai-coach.css" />
 <link rel="stylesheet" href="health-connect.css">
@@ -444,6 +429,7 @@ main{overflow-x:hidden;}
 <div id="app"></div>
 <script src="js/pages/home.js"></script>
 <script src="js/pages/workout.js"></script>
+<script src="js/pages/progress.js"></script>
 <script src="js/body-photos-db.js"></script>
 <script src="js/bloodwork.js"></script>
 <script src="js/goals.js"></script>

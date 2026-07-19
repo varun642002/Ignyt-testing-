@@ -18,6 +18,11 @@ const SET_TYPE_IMPORT_MAP = { normal:"working", warmup:"warmup", dropset:"drop",
 
 const PHASE_LABEL = {base:"BASE — FORM FIRST", build:"BUILD — ADD LOAD", load:"LOAD — RAISE INTENSITY", peak:"PEAK — HEAVIEST WEEK", deload:"DELOAD — BACK OFF"};
 
+// Optional routine tag, set by the user in the routine builder. Existing routines saved
+// before this field existed simply have no category (shown as "Other"/unfiltered) --
+// nothing is renamed or migrated, this is a purely additive field.
+const ROUTINE_CATEGORIES = ["Push","Pull","Legs","Upper","Lower"];
+
 const LEVELS = {
   beginner:    { label:"Beginner",    note:"Lighter volume, more technique focus, longer rest.", vol:"lower" },
   intermediate:{ label:"Intermediate",note:"Balanced strength + conditioning (your current plan).", vol:"standard" },
@@ -1323,6 +1328,7 @@ const ICONS = {
   workout:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 8l6 4-6 4z" fill="currentColor"/>',
   library:'<path d="M5 4h9a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 4h1a2 2 0 0 1 2 2v14h-3" fill="none" stroke="currentColor" stroke-width="2"/>',
   body:'<circle cx="12" cy="5" r="2.2" fill="currentColor"/><path d="M12 8v7M8 11h8M9 20l3-5 3 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  profile:'<circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 20c1.2-4 4-6 7.5-6s6.3 2 7.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   nutrition:'<path d="M12 21c-4 0-7-4-7-9a6 6 0 0 1 7-6 6 6 0 0 1 7 6c0 5-3 9-7 9z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 6c0-2 1.5-3.5 3-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
   progress:'<path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
   calc:'<rect x="5" y="3" width="14" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 7h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 11h.5M12 11h.5M16 11h.5M8 14h.5M12 14h.5M16 14h.5M8 17h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
@@ -1339,7 +1345,30 @@ const ICONS = {
   link:'<path d="M9 15l6-6M8 13l-2 2a3 3 0 004 4l2-2M16 11l2-2a3 3 0 00-4-4l-2 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   swap:'<path d="M4 8h13M13 4l4 4-4 4M20 16H7M11 20l-4-4 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   book:'<path d="M4 4.5A2.5 2.5 0 016.5 2H20v17H6.5A2.5 2.5 0 004 16.5v-12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 16.5A2.5 2.5 0 016.5 19H20" fill="none" stroke="currentColor" stroke-width="2"/>',
-  trend:'<path d="M4 15l5-5 4 4 7-8" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h5v5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+  trend:'<path d="M4 15l5-5 4 4 7-8" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h5v5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+  footprints:'<path d="M9 5.5c1.4 0 2.5 1.4 2.5 3.5S10.4 15 9 15s-2.5-2.2-2.5-4.5S7.6 5.5 9 5.5z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15 11c1.4 0 2.5 1.4 2.5 3.5S16.4 20.5 15 20.5s-2.5-2.2-2.5-4.5S13.6 11 15 11z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6.5 16h5M12.5 21h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  droplet:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  flame:'<path d="M12 3c1 3-3 4-3 7a3 3 0 0 0 6 0c1.5 1 2 2.6 2 4a5 5 0 0 1-10 0c0-4 3-5 3-8 0-1 .5-2 2-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  timer:'<circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l3 2M9 2h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  moon:'<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  trophy:'<path d="M7 4h10v4a5 5 0 0 1-10 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3M10 15v3h4v-3M9 21h6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+  heart:'<path d="M12 20s-7-4.4-9.2-8.3C1.3 8.8 2.7 5 6 5c2 0 3.2 1.3 4 2.4C10.8 6.3 12 5 14 5c3.3 0 4.7 3.8 3.2 6.7C19 15.6 12 20 12 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  bolt:'<path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>',
+  sun:'<circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v3M12 18.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  star:'<path d="M12 3.5l2.6 5.5 6 .7-4.4 4.1 1.2 5.9L12 16.9l-5.4 2.8 1.2-5.9-4.4-4.1 6-.7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
+  starFilled:'<path d="M12 3.5l2.6 5.5 6 .7-4.4 4.1 1.2 5.9L12 16.9l-5.4 2.8 1.2-5.9-4.4-4.1 6-.7z" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
+  search:'<circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4.8-4.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  upload:'<path d="M12 15V4M8 8l4-4 4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  dumbbell:'<path d="M4 9v6M2.5 10.5v3M20 9v6M21.5 10.5v3M7 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="4" y="8" width="3" height="8" rx="1" fill="currentColor"/><rect x="17" y="8" width="3" height="8" rx="1" fill="currentColor"/>',
+  calendar:'<rect x="4" y="5.5" width="16" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 10h16M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="7.5" y="13" width="3" height="3" rx=".5" fill="currentColor"/>',
+  tools:'<rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2" fill="currentColor"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="2" fill="currentColor"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="2" fill="currentColor"/><rect x="13" y="13" width="7.5" height="7.5" rx="2" fill="currentColor"/>',
+  target:'<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
+  flask:'<path d="M9 3h6M10 3v6.5L4.8 18.2A2 2 0 0 0 6.5 21h11a2 2 0 0 0 1.7-2.8L14 9.5V3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M7.5 15h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  bell:'<path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6.5H4c.5-1 2-2.5 2-6.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  pencil:'<path d="M4 20l.9-4L16 4.9a1.5 1.5 0 0 1 2.1 0l1 1a1.5 1.5 0 0 1 0 2.1L8 19 4 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  cloud:'<path d="M7 18h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.1 9.02 4 4 0 0 0 7 18z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 12v6M9.5 15.5 12 13l2.5 2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  lock:'<rect x="5" y="10.5" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="15.2" r="1.4" fill="currentColor"/>',
+  signout:'<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 8l5 4-5 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
 };
 
 /* =========================================================
@@ -1542,6 +1571,7 @@ const state = {
   foodLog: LS.get("hx_food_log",[]),
   routines: LS.get("hx_routines",[]),
   routineBuilder: null,
+  editingRoutineId: null,
   habits: LS.get("hx_habits",[]),
   habitCompletions: LS.get("hx_habit_completions",{}),
   habitBuilderName: "",
@@ -1563,8 +1593,9 @@ const state = {
     plateCalc:true, rpeTracking:true, autoStartRest:true, waterTargetMl:2500,
     workoutReminders:false, hydrationReminders:false, weeklyReports:false,
     lastWorkoutReminderDate:null, lastHydrationReminderDate:null, lastWeeklyReportAt:null,
-    theme:"dark", weightUnit:"kg", exerciseCalorieBudget:false
+    theme:"dark", weightUnit:"kg", exerciseCalorieBudget:true, notificationsSeenAt:0
   }, LS.get("hx_settings", {})),
+  notificationsOpen: false, // transient — not persisted, matches other dropdown/menu UI state
   plateCalcOpen: null, // element id string when plate calc popover open
   restDuration: LS.get("hx_rest_duration",90),
   session: LS.get("hx_active_session", null),
@@ -1606,7 +1637,7 @@ const state = {
 /* ---------- Derived values from shared profile (auto-recalc everywhere) ---------- */
 
 function persist(){
-  LS.set("hx_tab", state.tab==="more" ? (LS.get("hx_tab","home")) : state.tab);
+  LS.set("hx_tab", state.tab);
   LS.set("hx_active_week", state.activeWeek);
   LS.set("hx_active_level", state.activeLevel);
   LS.set("hx_profile", state.profile);
@@ -2913,6 +2944,21 @@ function computeStreak(){
   return streak;
 }
 
+/* Real notification feed for the header bell -- built from genuine app events (achievements
+   unlocked, PRs set) in the last 14 days, newest first. No invented content: if nothing real
+   happened recently, the list is honestly empty rather than padded with placeholder items. */
+function computeNotifications(){
+  const cutoff = Date.now() - 14*86400000;
+  const items = [];
+  state.achievements.filter(a=>a.achievedAt>=cutoff).forEach(a=>{
+    items.push({ ts:a.achievedAt, icon:"trophy", text:`Achievement unlocked: ${a.name}` });
+  });
+  state.prs.filter(p=>p.achievedAt>=cutoff).forEach(p=>{
+    items.push({ ts:p.achievedAt, icon:"trend", text:`New PR: ${p.exerciseName||'Session Volume'} — ${prValueLabel(p)}` });
+  });
+  return items.sort((a,b)=>b.ts-a.ts).slice(0,15);
+}
+
 /* =========================================================
    HABIT TRACKER — genuinely new feature (Progress page). Deliberately does NOT reuse
    todayStr()/computeStreak()'s date pattern (new Date().toISOString().slice(0,10) on a
@@ -3726,7 +3772,9 @@ function renderHomeTab(){
     state, week, plannedDay, planPct: overallPlanProgress(), streak: computeStreak(), targets: macroTargets(),
     eaten: Math.round(todayEaten()), proteinToday: Math.round(todayMacros().protein), latestWeight: state.bodylog[0],
     burned: todayBurned(), water: Math.round(todayWater()), waterTarget: state.settings.waterTargetMl || 2500,
-    dayDone, dayTotal, greeting, displayW, wUnit, svg, renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed, renderHomeHabits
+    dayDone, dayTotal, weekStats: thisWeekStats(),
+    todayMuscles: plannedDay ? Array.from(new Set(plannedDay.exercises.map(ex=>getMuscle(ex.name)))).filter(m=>m && m!=="Other").slice(0,3) : [],
+    greeting, displayW, wUnit, svg, habitStreak, habitDateStr, renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed, renderHomeHabits
   });
   return renderLegacyHomeTab();
 }
@@ -3867,26 +3915,41 @@ function renderApp(){
   // Phase 2: AI Coach is temporarily removed. Redirect any lingering/persisted ai-coach tab
   // (e.g. saved hx_tab) to Home so it's fully unreachable. Its data stays intact.
   if(state.tab==="ai-coach") state.tab = "home";
-  const MORE_TABS = ["library","body","settings","health"];
-  const isMoreActive = MORE_TABS.includes(state.tab) || state.tab==="more";
+  // "more" was the old transient bottom-sheet overlay tab; Tools is now a real permanent
+  // page reachable from the bottom nav, so any persisted "more" value just maps onto it.
+  if(state.tab==="more") state.tab = "tools";
+  // Home, Workout, Progress's own dashboard (not its detail views, which stay dark -- see
+  // renderProgressTab), and Tools share a dedicated light "premium reference" look (see
+  // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
+  // every tab, so this modifier class is only added while one of those is showing and
+  // disappears the moment you navigate away or open a Progress detail view.
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || (state.tab==="progress" && !state.progressView);
+  const notifications = computeNotifications();
+  const unreadCount = notifications.filter(n=>n.ts>(state.settings.notificationsSeenAt||0)).length;
   root.innerHTML = `
-    <header class="app-header page-title-row">
+    <header class="app-header page-title-row ${isLightTab?'app-header--home-light':''}">
       <div>
         <div class="eyebrow-row"><div class="eyebrow-dash"></div><span class="eyebrow">Train with intent</span></div>
         <h1 class="title">IGNYT</h1>
       </div>
-      <button class="page-tools-btn" data-nav="more" aria-label="Open profile, settings, and tools">${svg('gear',22)}</button>
+      <div style="display:flex;gap:8px;position:relative;">
+        <button class="page-tools-btn" data-action="toggle-notifications" aria-label="Notifications${unreadCount?` (${unreadCount} new)`:''}">
+          ${svg('bell',20)}${unreadCount?'<span class="hdr-badge-dot"></span>':''}
+        </button>
+        <button class="page-tools-btn" data-nav="settings" aria-label="Open Settings">${svg('gear',20)}</button>
+        ${state.notificationsOpen ? renderNotificationsPanel(notifications) : ''}
+      </div>
     </header>
     <main id="main"></main>
     ${renderTimerOverlay()}
     ${renderToast()}
     ${renderConfirmDialog()}
-    ${state.tab==="more" ? renderMoreSheet() : ""}
-    <nav class="bottom-nav">
+    <nav class="bottom-nav ${isLightTab?'bottom-nav--home-light':''}">
       ${navBtn("home","Home")}
       ${navBtn("workout","Workout")}
       ${navBtn("progress","Progress")}
-      ${navBtn("health","Health")}
+      ${navBtn("tools","Tools")}
+      ${navBtn("profile","Profile")}
     </nav>
   `;
   const main = document.getElementById("main");
@@ -3900,41 +3963,198 @@ function renderApp(){
   if(state.tab==="ai-coach") main.innerHTML = renderAiCoachTab();
   if(state.tab==="settings") main.innerHTML = renderSettingsTab();
   if(state.tab==="health") main.innerHTML = renderHealthDashboard();
+  if(state.tab==="insights") main.innerHTML = renderInsightsTab();
+  if(state.tab==="tools") main.innerHTML = renderToolsTab();
+  if(state.tab==="profile") main.innerHTML = renderProfileTab();
   if(state.tab==="bloodwork") main.innerHTML = window.IgnytBloodwork ? window.IgnytBloodwork.render() : "";
   if(state.tab==="goals") main.innerHTML = window.IgnytGoals ? window.IgnytGoals.render() : "";
   if(state.tab==="uploads") main.innerHTML = window.IgnytHealthUploads ? window.IgnytHealthUploads.render() : "";
-  if(state.tab==="more") main.innerHTML = ""; // sheet covers it
   attachHandlers();
   persist();
+}
+
+function renderNotificationsPanel(notifications){
+  return `
+    <div class="hdr-notif-backdrop" data-close-notifications></div>
+    <div class="hdr-notif-panel">
+      <div class="hdr-notif-panel__title">Notifications</div>
+      ${notifications.length===0 ? `<div class="hdr-notif-empty">No recent activity yet — achievements and PRs you earn will show up here.</div>` :
+        notifications.map(n=>`<div class="hdr-notif-item">
+          <span class="hdr-notif-item__icon">${svg(n.icon,15)}</span>
+          <div class="hdr-notif-item__body">
+            <div class="hdr-notif-item__text">${n.text}</div>
+            <div class="hdr-notif-item__time">${new Date(n.ts).toLocaleDateString('default',{month:'short',day:'numeric'})}</div>
+          </div>
+        </div>`).join("")}
+    </div>`;
 }
 
 /* Fallback UI so a runtime error never leaves a blank screen. Self-contained —
    doesn't rely on attachHandlers() or any state that may itself be broken. */
 
-function renderMoreSheet(){
-  const items = [
-    {id:"plan", label:"Training Plan", desc:"HYROX schedule & routines", color:"var(--steel)", icon:"plan"},
-    {id:"library", label:"Library", desc:"Exercises & equipment", color:"var(--steel)", icon:"library"},
-    {id:"body", label:"Log Weight", desc:"Weight, trend & history", color:"var(--color-interactive)", icon:"body"},
-    {id:"goals", label:"Goals", desc:"Smart goal engine & targets", color:"var(--color-interactive)", icon:"progress"},
-    {id:"uploads", label:"Medical Reports", desc:"Blood work, InBody, DEXA & more", color:"#e5484d", icon:"progress"},
-    {id:"calculators", label:"Calculator", desc:"BMI, BMR, TDEE & macros", color:"var(--steel)", icon:"calc"},
-    {id:"settings", label:"Settings", desc:"Backups & preferences", color:"var(--muted)", icon:"gear"},
-    {id:"health", label:"Health Connect", desc:"Steps, heart rate, calories, weight, workouts", color:"var(--mint)", icon:"progress"}
+/* Tools — the old transient "More" bottom-sheet is now a real, permanent page (reachable
+   from the bottom nav like any other tab), light-themed to match Home/Workout/Progress.
+   Same 10 real destinations as before, just grouped into sections and restyled -- nothing
+   was added or removed, and every data-nav target below is unchanged. */
+function renderToolsTab(){
+  const SECTIONS = [
+    ["Training", [
+      {id:"plan", label:"Training Plan", desc:"HYROX schedule & routines", icon:"calendar"},
+      {id:"library", label:"Library", desc:"Exercises & equipment", icon:"library"},
+      {id:"goals", label:"Goals", desc:"Smart goal engine & targets", icon:"target"},
+      {id:"body", label:"Log Weight", desc:"Weight, trend & history", icon:"body"}
+    ]],
+    ["Health", [
+      {id:"health", label:"Health Connect", desc:"Sync with apps, track all metrics", icon:"health"},
+      {id:"uploads", label:"Medical Reports", desc:"Blood work & DEXA", icon:"flask"}
+    ]],
+    ["Nutrition", [
+      {id:"nutrition", label:"Food Log", desc:"Meals, macros & calorie budget", icon:"nutrition"},
+      {id:"calculators", label:"Calculator", desc:"BMI, BMR, TDEE & macros", icon:"calc"}
+    ]],
+    ["Insights", [
+      {id:"insights", label:"Insights", desc:"Day, week, month & year trends", icon:"progress"},
+      {id:"settings", label:"Settings", desc:"Backups & preferences", icon:"gear"}
+    ]]
   ];
-  return `<div class="more-sheet-backdrop" data-close-more>
-    <div class="more-sheet">
-      <div class="more-sheet-handle"></div>
-      <div class="eyebrow-label" style="margin-top:0;margin-bottom:14px;">More</div>
-      <div class="more-sheet-grid">
-        ${items.map(it=>`<button class="more-sheet-card" data-nav="${it.id}">
-          <span class="more-sheet-icon-badge" style="background:${it.color}22;color:${it.color};">${svg(it.icon,22)}</span>
-          <div style="font-weight:800;font-size:15px;margin-top:10px;">${it.label}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">${it.desc}</div>
-        </button>`).join("")}
+  let hcConnected = false;
+  try { hcConnected = !!(window.HealthConnectIntegration && window.HealthConnectIntegration.loadState().connected); } catch(e) {}
+  const streak = computeStreak();
+
+  return `
+    <div class="pg-light">
+      <div class="pg-header">
+        <div class="pg-header__title">Tools</div>
+        <div class="pg-header__sub">Everything you need to train smarter</div>
       </div>
-    </div>
-  </div>`;
+
+      <div class="tl-stats-bar">
+        <div class="tl-stat"><span class="tl-stat__icon">${svg('flame',18)}</span><div class="tl-stat__value">${streak}</div><div class="tl-stat__label">Day Streak</div></div>
+        <div class="tl-stat"><span class="tl-stat__icon">${svg('dumbbell',18)}</span><div class="tl-stat__value">${state.workoutLog.length}</div><div class="tl-stat__label">Workouts</div></div>
+        <div class="tl-stat"><span class="tl-stat__icon">${svg('trophy',18)}</span><div class="tl-stat__value">${state.prs.length}</div><div class="tl-stat__label">PRs</div></div>
+      </div>
+
+      ${SECTIONS.map(([title, cards])=>`
+        <div class="rh-section-head"><span>${title}</span></div>
+        <div class="tl-grid">
+          ${cards.map(c=>{
+            const isHealthConnected = c.id==="health" && hcConnected;
+            return `<button class="tl-card ${isHealthConnected?'is-connected':''}" data-nav="${c.id}">
+              <span class="tl-card__icon">${svg(c.icon,22)}</span>
+              <div class="tl-card__body">
+                <div class="tl-card__label">${c.label}</div>
+                <div class="tl-card__desc">${c.desc}</div>
+                ${isHealthConnected?`<span class="tl-card__badge">${svg('check',11)} Connected</span>`:''}
+              </div>
+              <span class="tl-card__chev">›</span>
+            </button>`;
+          }).join("")}
+        </div>
+      `).join("")}
+    </div>`;
+}
+
+/* Profile — a summary dashboard, distinct from the existing full Body/Weight tab (still
+   fully intact at data-nav="body", now reached via "Personal Information"/"View All" below
+   instead of the bottom nav directly -- same pattern as Health Connect moving into Tools).
+   Every stat is real; fields with no genuine historical baseline (Muscle Mass has only ever
+   had a single latest Health Connect reading cached, never a time series) show the current
+   value with no invented trend arrow instead of a fabricated delta. */
+function renderProfileTab(){
+  const auth = window.IgnytAuth;
+  const account = auth && auth.isNativeAndroid() ? auth.getAccount() : null;
+  const initial = (state.profile.name || account?.displayName || "?").trim().charAt(0).toUpperCase() || "?";
+
+  const streak = computeStreak();
+  const totalHours = Math.round(state.workoutLog.reduce((a,s)=>a+(s.durationMin||0),0)/60);
+
+  function fieldDelta30d(field){
+    const cutoff = Date.now() - 30*86400000;
+    const inWindow = state.bodylog.filter(e=>e[field]!=null && e[field]!=="" && new Date(e.date).getTime()>=cutoff)
+      .slice().reverse(); // bodylog is newest-first; reverse to chronological
+    const latest = state.bodylog.find(e=>e[field]!=null && e[field]!=="");
+    if(!latest) return null;
+    if(inWindow.length<2) return { value:Number(latest[field]), delta:null };
+    return { value:Number(inWindow[inWindow.length-1][field]), delta:Number(inWindow[inWindow.length-1][field])-Number(inWindow[0][field]) };
+  }
+  const weight = fieldDelta30d('weight');
+  const bodyFat = fieldDelta30d('bodyfat');
+  const isLossGoal = (state.profile.goalDelta||0) < 0, isGainGoal = (state.profile.goalDelta||0) > 0;
+
+  let hcLeanMass = null;
+  try { hcLeanMass = JSON.parse(localStorage.getItem('hx_hc_dashboard_cache')||'null')?.leanBodyMass?.kg ?? null; } catch(e) {}
+
+  const latestWeightKg = weight ? weight.value : (state.bodylog[0]?.weight || state.profile.weight);
+  const heightM = (state.profile.height||0)/100;
+  const bmi = (latestWeightKg && heightM) ? latestWeightKg/(heightM*heightM) : null;
+  const bmiCat = bmi==null ? null : bmi<18.5?"Underweight":bmi<25?"Healthy":bmi<30?"Overweight":"Obese";
+  const bmiColor = bmi==null ? 'var(--rh-muted)' : bmi<18.5?'#2563EB':bmi<25?'var(--rh-green)':bmi<30?'#D97706':'var(--rh-red)';
+
+  const themeLabel = { dark:"Dark mode", light:"Light mode", system:"Follows system" }[state.settings.theme] || "Dark mode";
+
+  return `
+    <div class="pg-light">
+      <div class="pf-header-row">
+        <div class="pf-avatar">
+          ${account?.photoUrl ? `<img src="${account.photoUrl}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
+          <span class="pf-avatar__initial">${initial}</span>
+          <button class="pf-avatar__edit" data-nav="body" aria-label="Edit personal information">${svg('pencil',13)}</button>
+        </div>
+        <div class="pf-header-row__text">
+          <div class="pf-name">${state.profile.name || 'Athlete'}</div>
+          <div class="pf-tagline">Stronger every day.</div>
+        </div>
+      </div>
+
+      <div class="tl-stats-bar" style="margin-top:16px;">
+        <div class="tl-stat"><span class="tl-stat__icon" style="color:#EA580C;">${svg('flame',18)}</span><div class="tl-stat__value">${streak}</div><div class="tl-stat__label">Day Streak</div></div>
+        <div class="tl-stat"><span class="tl-stat__icon" style="color:var(--rh-green);">${svg('dumbbell',18)}</span><div class="tl-stat__value">${state.workoutLog.length}</div><div class="tl-stat__label">Workouts</div></div>
+        <div class="tl-stat"><span class="tl-stat__icon" style="color:#D97706;">${svg('trophy',18)}</span><div class="tl-stat__value">${state.prs.length}</div><div class="tl-stat__label">PRs</div></div>
+        <div class="tl-stat"><span class="tl-stat__icon" style="color:var(--rh-purple);">${svg('timer',18)}</span><div class="tl-stat__value">${totalHours}<span class="pf-stat-unit">hrs</span></div><div class="tl-stat__label">Total Time</div></div>
+      </div>
+
+      <div class="rh-section-head"><span>Current Progress</span><a href="#" class="rh-view-all" data-open-progress-view="body">View All</a></div>
+      <div class="pg-card">
+        <div class="pf-progress-grid">
+          <div class="pf-progress-item">
+            <div class="pf-progress-item__head"><span class="pf-progress-item__icon" style="color:var(--rh-blue);">${svg('body',16)}</span>Weight</div>
+            <div class="pf-progress-item__value">${weight?displayW(weight.value):'—'}<span class="pf-progress-item__unit">${wUnit()}</span></div>
+            ${weight && weight.delta!=null ? `<div class="pf-progress-item__trend ${(isLossGoal?weight.delta<0:isGainGoal?weight.delta>0:null)===false?'is-down':'is-up'}">${weight.delta>0?'▲':weight.delta<0?'▼':''} ${Math.abs(displayW(weight.delta,1))} ${wUnit()}<span class="pf-progress-item__sub">vs last 30 days</span></div>` : ''}
+          </div>
+          <div class="pf-progress-item">
+            <div class="pf-progress-item__head"><span class="pf-progress-item__icon" style="color:var(--rh-green);">${svg('trend',16)}</span>Body Fat</div>
+            <div class="pf-progress-item__value">${bodyFat?bodyFat.value.toFixed(1):'—'}<span class="pf-progress-item__unit">%</span></div>
+            ${bodyFat && bodyFat.delta!=null ? `<div class="pf-progress-item__trend ${bodyFat.delta<=0?'is-up':'is-down'}">${bodyFat.delta>0?'▲':'▼'} ${Math.abs(bodyFat.delta).toFixed(1)}%<span class="pf-progress-item__sub">vs last 30 days</span></div>` : ''}
+          </div>
+          <div class="pf-progress-item">
+            <div class="pf-progress-item__head"><span class="pf-progress-item__icon" style="color:var(--rh-purple);">${svg('dumbbell',16)}</span>Muscle Mass</div>
+            <div class="pf-progress-item__value">${hcLeanMass!=null?displayW(hcLeanMass):'—'}<span class="pf-progress-item__unit">${wUnit()}</span></div>
+            <div class="pf-progress-item__sub" style="margin-top:6px;">${hcLeanMass!=null?'Latest Health Connect reading':'No data'}</div>
+          </div>
+          <div class="pf-progress-item">
+            <div class="pf-progress-item__head"><span class="pf-progress-item__icon" style="color:#D97706;">${svg('trend',16)}</span>BMI</div>
+            <div class="pf-progress-item__value">${bmi!=null?bmi.toFixed(1):'—'}</div>
+            ${bmiCat?`<div class="pf-progress-item__trend" style="color:${bmiColor};">${bmiCat}</div>`:''}
+          </div>
+        </div>
+      </div>
+
+      <div class="rh-section-head"><span>Account</span></div>
+      <div class="tl-grid" style="grid-template-columns:1fr;">
+        <button class="tl-card" data-nav="body"><span class="tl-card__icon">${svg('body',20)}</span><div class="tl-card__body"><div class="tl-card__label">Personal Information</div><div class="tl-card__desc">Update your profile details</div></div><span class="tl-card__chev">›</span></button>
+        <button class="tl-card" data-nav="goals"><span class="tl-card__icon">${svg('target',20)}</span><div class="tl-card__body"><div class="tl-card__label">Fitness Goals</div><div class="tl-card__desc">View and edit your goals</div></div><span class="tl-card__chev">›</span></button>
+        <button class="tl-card" data-open-progress-view="achievements"><span class="tl-card__icon">${svg('trophy',20)}</span><div class="tl-card__body"><div class="tl-card__label">Achievements</div><div class="tl-card__desc">Badges, milestones &amp; records</div></div><span class="tl-card__chev">›</span></button>
+      </div>
+
+      <div class="rh-section-head"><span>Data &amp; Settings</span></div>
+      <div class="tl-grid" style="grid-template-columns:1fr;">
+        <button class="tl-card" data-nav="settings"><span class="tl-card__icon">${svg('cloud',20)}</span><div class="tl-card__body"><div class="tl-card__label">Data &amp; Backups</div><div class="tl-card__desc">Backup and restore your data</div></div><span class="tl-card__chev">›</span></button>
+        <button class="tl-card" data-nav="settings"><span class="tl-card__icon">${svg('lock',20)}</span><div class="tl-card__body"><div class="tl-card__label">Privacy</div><div class="tl-card__desc">Data storage &amp; reset options</div></div><span class="tl-card__chev">›</span></button>
+        <button class="tl-card" data-nav="settings"><span class="tl-card__icon">${svg('moon',20)}</span><div class="tl-card__body"><div class="tl-card__label">Appearance</div><div class="tl-card__desc">${themeLabel}</div></div><span class="tl-card__chev">›</span></button>
+        ${account ? `<button class="tl-card" data-action="account-signout"><span class="tl-card__icon" style="color:var(--rh-red);background:rgba(239,68,68,.1);">${svg('signout',20)}</span><div class="tl-card__body"><div class="tl-card__label">Sign Out</div><div class="tl-card__desc">Log out from your account</div></div><span class="tl-card__chev">›</span></button>`
+          : auth && auth.isNativeAndroid() ? `<button class="tl-card" data-action="account-signin"><span class="tl-card__icon" style="color:var(--rh-red);background:rgba(239,68,68,.1);">${svg('signout',20)}</span><div class="tl-card__body"><div class="tl-card__label">Sign In</div><div class="tl-card__desc">Sync and back up with Google</div></div><span class="tl-card__chev">›</span></button>` : ''}
+      </div>
+    </div>`;
 }
 
 /* Honest navigation shell: AI assistance is not implemented in this repository, so this
@@ -4389,6 +4609,100 @@ function renderHealthDashboard() {
     </div>`;
 }
 
+/* =========================================================
+   INSIGHTS TAB — real Day/Week/Month/Year Health Connect aggregates.
+   Distinct from renderHealthDashboard()'s compact "Insights" preview above:
+   this is the full page, backed by HealthConnect.getInsights(period) (a
+   genuine native aggregate per range, not the same "today" snapshot
+   relabeled four times). Reachable from Tools > Insights, and auto-synced
+   on open/foreground/launch/5-min interval via health-settings-integration.js.
+========================================================= */
+
+const INSIGHTS_RANGES = [["day","Day"],["week","Week"],["month","Month"],["year","Year"]];
+const INSIGHTS_RANGE_LABEL = { day:"Today", week:"Last 7 days", month:"Last 30 days", year:"Last 365 days" };
+
+function renderInsightsTab(){
+  const backBtn = `<button class="btn btn-ghost" data-action="close-insights" style="padding:6px 12px;font-size:12px;margin-bottom:12px;">← Back</button>`;
+  const isNative = window.HealthConnect && HealthConnect.isNativeAndroid();
+
+  if (!isNative) {
+    return `
+      ${backBtn}
+      <div class="row-between" style="margin-bottom:16px;"><span style="font-size:20px;font-weight:900;">Insights</span></div>
+      <div class="info-box" style="padding:16px;">
+        <div style="font-size:13px;color:var(--muted);">Health Connect Insights are only available in the IGNYT Android app.</div>
+      </div>`;
+  }
+
+  const integ = window.HealthConnectIntegration;
+  const hcState = integ ? integ.loadState() : { connected: false };
+
+  if (!hcState.connected) {
+    return `
+      ${backBtn}
+      <div class="row-between" style="margin-bottom:16px;"><span style="font-size:20px;font-weight:900;">Insights</span></div>
+      <div class="info-box" style="padding:16px;">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Connect Health Connect to see your real Day, Week, Month and Year health trends.</div>
+        <button class="btn btn-accent btn-block" data-nav="health">Go to Health Connect</button>
+      </div>`;
+  }
+
+  const range = INSIGHTS_RANGES.some(([v])=>v===state.insightsRange) ? state.insightsRange : "day";
+  const d = (integ ? integ.getInsightsData(range) : null) || {};
+  const busy = integ ? integ.isInsightsBusy(range) : false;
+  const rangeLabel = INSIGHTS_RANGE_LABEL[range];
+  const hasData = !!d.period;
+
+  const cumulativeTiles = [
+    ["Steps", d.steps && d.steps.steps != null ? Number(d.steps.steps).toLocaleString() : null, "", "Steps"],
+    ["Active Calories", d.activeCalories && d.activeCalories.kcal != null ? Math.round(d.activeCalories.kcal).toLocaleString() : null, "kcal", "Active Calories"],
+    ["Distance", d.distance && d.distance.km != null ? d.distance.km.toFixed(2) : null, "km", "Distance"],
+    ["Workouts", d.workouts && d.workouts.count != null ? d.workouts.count : null, "sessions", "Workouts"],
+    ["Avg Heart Rate", d.heartRate && d.heartRate.averageBpm != null ? Math.round(d.heartRate.averageBpm) : null, "bpm", "Heart Rate"],
+    ["Sleep", d.sleep && d.sleep.totalMinutes != null ? `${Math.floor(d.sleep.totalMinutes/60)}h ${d.sleep.totalMinutes%60}m` : null, "", "Sleep"],
+    ["Hydration", d.hydration && d.hydration.liters != null ? d.hydration.liters.toFixed(2) : null, "L", "Hydration"],
+    ["Nutrition", d.nutrition && d.nutrition.kcal != null ? Math.round(d.nutrition.kcal).toLocaleString() : null, "kcal", "Nutrition"],
+    ["Weight Change", d.weight && d.weight.changeKg != null ? `${d.weight.changeKg>=0?'+':''}${displayW(d.weight.changeKg,1)}` : null, wUnit(), "Weight"]
+  ];
+
+  const vitalsTiles = [
+    ["Respiratory Rate", d.respiratoryRate && d.respiratoryRate.rpm != null ? Math.round(d.respiratoryRate.rpm) : null, "rpm", "Respiratory Rate"],
+    ["Oxygen Saturation", d.oxygenSaturation && d.oxygenSaturation.percentage != null ? Math.round(d.oxygenSaturation.percentage) : null, "%", "Oxygen Saturation"],
+    ["Blood Pressure", d.bloodPressure && d.bloodPressure.systolic != null ? `${Math.round(d.bloodPressure.systolic)}/${Math.round(d.bloodPressure.diastolic)}` : null, "mmHg", "Blood Pressure"],
+    ["Body Temperature", d.bodyTemperature && d.bodyTemperature.celsius != null ? d.bodyTemperature.celsius.toFixed(1) : null, "°C", "Body Temperature"],
+    ["Body Fat", d.bodyFat && d.bodyFat.percentage != null ? d.bodyFat.percentage.toFixed(1) : null, "%", "Body Fat"],
+    ["Height", d.height && d.height.meters != null ? Math.round(d.height.meters * 100) : null, "cm", "Height"],
+    ["Lean Body Mass", d.leanBodyMass && d.leanBodyMass.kg != null ? displayW(d.leanBodyMass.kg) : null, wUnit(), "Lean Body Mass"],
+    ["BMR", d.basalMetabolicRate && d.basalMetabolicRate.kcalPerDay != null ? Math.round(d.basalMetabolicRate.kcalPerDay).toLocaleString() : null, "kcal/day", "BMR"]
+  ];
+
+  return `
+    ${backBtn}
+    <div class="row-between" style="margin-bottom:16px;">
+      <span style="font-size:20px;font-weight:900;">Insights</span>
+      ${d.fetchedAt ? `<span style="font-size:11px;color:var(--muted);">Synced ${hcTimeAgo(new Date(d.fetchedAt).toISOString())}</span>` : ""}
+    </div>
+
+    <div style="display:flex;gap:6px;margin:0 0 14px;">
+      ${INSIGHTS_RANGES.map(([value,label])=>`<button class="cat-chip ${range===value?'active':''}" data-insights-range="${value}" style="flex:1;text-align:center;">${label}</button>`).join("")}
+    </div>
+
+    ${!hasData ? `<div class="info-box" style="padding:14px;margin-bottom:12px;font-size:13px;color:var(--muted);">${busy ? `Loading ${rangeLabel.toLowerCase()} insights…` : "No data yet for this range — tap Refresh below."}</div>` : ""}
+
+    <div class="eyebrow-label">${rangeLabel}</div>
+    <div class="grid2" style="margin-bottom:16px;">
+      ${cumulativeTiles.map(([label,value,unit,permKey])=>hcInsightTile(label, value, unit, rangeLabel, hcPermissionMissing(d, permKey))).join("")}
+    </div>
+
+    <div class="eyebrow-label">Latest Readings</div>
+    <div class="grid2" style="margin-bottom:16px;">
+      ${vitalsTiles.map(([label,value,unit,permKey])=>hcInsightTile(label, value, unit, "Latest", hcPermissionMissing(d, permKey))).join("")}
+    </div>
+
+    <button class="btn btn-ghost btn-block" data-action="insights-refresh" ${busy ? "disabled" : ""} style="font-size:12px;color:var(--muted);">${busy ? "Syncing…" : "Refresh"}</button>
+  `;
+}
+
 function navBtn(id,label){
   return `<button class="nav-btn ${state.tab===id?'active':''}" data-nav="${id}">${svg(id)}<span>${label}</span></button>`;
 }
@@ -4586,13 +4900,22 @@ function genderToggle(id, current){
 
 function renderRoutineBuilder(){
   const b = state.routineBuilder;
+  const editing = state.editingRoutineId != null;
   return `<div class="info-box" style="padding:14px;margin-bottom:12px;">
+    <div style="font-weight:800;font-size:15px;margin-bottom:8px;">${editing?'Edit routine':'New routine'}</div>
     <input type="text" id="routine-name" placeholder="Routine name (e.g. Leg Day 2)" value="${b.name}"
       style="width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;font-size:14px;color:var(--text);margin-bottom:10px;">
 
-    ${b.exercises.length? b.exercises.map((e,i)=>`<div class="history-row" style="margin-bottom:4px;">
-      <span style="font-size:13px;font-weight:600;">${e.name}</span>
-      <span class="mono" style="font-size:12px;color:var(--steel);">${e.sets} sets</span>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+      ${ROUTINE_CATEGORIES.map(c=>`<button class="cat-chip ${b.category===c?'active':''}" data-builder-category="${c}">${c}</button>`).join("")}
+    </div>
+
+    ${b.exercises.length? b.exercises.map((e,i)=>`<div class="history-row" style="margin-bottom:4px;gap:8px;">
+      <span style="font-size:13px;font-weight:600;flex:1;min-width:0;overflow-wrap:anywhere;">${e.name}</span>
+      <input type="number" min="1" value="${e.sets}" data-builder-ex-sets="${i}" style="width:40px;background:var(--surface-alt);border-radius:6px;padding:5px;text-align:center;color:var(--accent);font-family:'SF Mono',monospace;font-weight:700;border:none;">
+      <span style="font-size:11px;color:var(--muted);">sets</span>
+      <button class="del" data-move-builder-ex-up="${i}" aria-label="Move up" style="min-width:28px;padding:4px;">${i>0?'▲':''}</button>
+      <button class="del" data-move-builder-ex-down="${i}" aria-label="Move down" style="min-width:28px;padding:4px;">${i<b.exercises.length-1?'▼':''}</button>
       <button class="del" data-remove-builder-ex="${i}" aria-label="Remove exercise">${svg('x',12)}</button>
     </div>`).join("") : ""}
 
@@ -4603,7 +4926,10 @@ function renderRoutineBuilder(){
         <input type="number" id="routine-ex-sets" value="${state.routineBuilderSets}" min="1" style="width:44px;background:var(--surface-alt);border-radius:8px;padding:9px 4px;text-align:center;color:var(--accent);font-family:'SF Mono',monospace;font-weight:700;border:none;">
       </div>
     </div>
-    <button class="btn btn-accent btn-block" data-action="save-routine" style="margin-top:10px;">Save Routine</button>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn btn-accent" style="flex:2;" data-action="save-routine">${editing?'Save Changes':'Save Routine'}</button>
+      <button class="btn btn-ghost" style="flex:1;" data-action="cancel-routine">Cancel</button>
+    </div>
   </div>`;
 }
 
@@ -5014,6 +5340,7 @@ const PROGRESS_VIEWS = {
   habits:       { icon:"🔁", title:"Habit Tracker",      sub:"Daily habits, streaks, and completion history." },
   analytics:    { icon:"📊", title:"Workout Analytics",  sub:"Training frequency, volume, duration, and muscle distribution." },
   exercise:     { icon:"📈", title:"Exercise Progress",  sub:"Weight and estimated 1RM trends for individual exercises." },
+  nutrition:    { icon:"🍎", title:"Nutrition Progress", sub:"Average calories and protein per logged day." },
   body:         { icon:"⚖️", title:"Body Progress",      sub:"Body weight and measurement trends." },
   calendar:     { icon:"📅", title:"Training Calendar",  sub:"See your workout activity by date." },
   plan:         { icon:"✅", title:"Plan Progress",      sub:"Phase and weekly training-plan completion." }
@@ -5043,6 +5370,7 @@ function renderProgressTab(){
     const detailFns = {
       achievements: ()=> renderProgressAchievements() + renderProgressPRs(), habits: renderProgressHabits,
       analytics: renderProgressAnalytics, exercise: renderProgressExercise,
+      nutrition: renderProgressNutrition,
       body: renderProgressBody,
       calendar: renderProgressCalendar, plan: renderProgressPlan
     };
@@ -5059,10 +5387,22 @@ function renderProgressTab(){
       ${body}
     `;
   }
-  return renderProgressHome();
+  if(window.IgnytPages && typeof window.IgnytPages.renderProgressHome === 'function'){
+    const weekStats = thisWeekStats();
+    const now = Date.now();
+    const prsThisWeek = state.prs.filter(p=>p.achievedAt>=now-7*86400000).length;
+    const prsLastWeek = state.prs.filter(p=>p.achievedAt>=now-14*86400000 && p.achievedAt<now-7*86400000).length;
+    const prevWeekVolume = state.workoutLog.filter(s=>{ const t=new Date(s.date).getTime(); return t>=now-14*86400000 && t<now-7*86400000; }).reduce((a,s)=>a+(s.volume||0),0);
+    return window.IgnytPages.renderProgressHome({
+      state, svg, displayW, wUnit, weekStats, prsThisWeek, prsLastWeek,
+      volumeTrend: comparisonLabel(weekStats.weeklyVolume, prevWeekVolume),
+      ACHIEVEMENT_DEFS, PROGRESS_VIEWS, calorieProteinTrend, fmtMinutes, comparisonLabel
+    });
+  }
+  return renderLegacyProgressHome();
 }
 
-function renderProgressHome(){
+function renderLegacyProgressHome(){
   const w = thisWeekStats();
   const safeNum = v => (typeof v==="number" && isFinite(v)) ? v : null;
   const workouts = safeNum(w.workoutsCompleted), minutes = safeNum(w.trainingMinutes),
@@ -5719,15 +6059,6 @@ function renderBodyTab(){
 ========================================================= */
 
 function renderNutritionTab(){
-  // Nutrition is temporarily disabled (Phase 2). All data (hx_food_log, hx_nutrition, targets)
-  // is preserved untouched — only the UI is hidden behind a Coming Soon placeholder.
-  return `<section class="premium-card premium-card--elevated coach-empty">
-    <div class="coach-empty__icon">${svg('nutrition',28)}</div>
-    <div style="font-size:24px;font-weight:900;">Nutrition</div>
-    <p style="margin:8px auto 18px;max-width:320px;color:var(--color-text-secondary);line-height:1.5;">Coming soon — we're rebuilding nutrition tracking. Your existing food-log data is safe and will be here when it returns.</p>
-    <button class="btn btn-secondary" data-nav="home">Back to Home</button>
-  </section>`;
-  // eslint-disable-next-line no-unreachable
   const n = state.nutrition;
   const targets = macroTargets();
   const weeklyLoss = (Math.abs(state.profile.goalDelta)*7)/7700;
@@ -6521,9 +6852,18 @@ function renderWorkoutTab(){
       if(s) return renderSessionDetail(s);
       state.viewingSessionId = null; // stale id (e.g. deleted) — fall through to list
     }
+    const week = WEEKS[state.activeWeek-1];
+    const plannedDay = todaysPlannedDay();
+    const weekStats = thisWeekStats();
+    const now = Date.now();
+    const prsThisWeek = state.prs.filter(p=>p.achievedAt>=now-7*86400000).length;
+    const prevWeekVolume = state.workoutLog.filter(s=>{ const t=new Date(s.date).getTime(); return t>=now-14*86400000 && t<now-7*86400000; }).reduce((a,s)=>a+(s.volume||0),0);
     return window.IgnytPages.renderWorkoutList({
       state, svg, renderPRCelebration, renderRoutineBuilder, sessionMuscles, sessionTitle,
-      workoutDurationLabel, displayW, wUnit
+      workoutDurationLabel, displayW, wUnit, week, plannedDay, weekStats, prsThisWeek,
+      volumeTrend: comparisonLabel(weekStats.weeklyVolume, prevWeekVolume),
+      todayMuscles: plannedDay ? Array.from(new Set(plannedDay.exercises.map(ex=>getMuscle(ex.name)))).filter(m=>m && m!=="Other").slice(0,3) : [],
+      getMuscle, ROUTINE_CATEGORIES
     });
   }
   const s = state.session;
@@ -6532,41 +6872,40 @@ function renderWorkoutTab(){
   const liveVolume = Math.round(computeSessionVolume(s.exercises));
   const liveSets = computeCompletedSets(s.exercises);
   return `
+    <div class="wk-light">
     <div class="row-between" style="margin-bottom:4px;">
       <div style="flex:1;min-width:0;">
-        <div class="eyebrow-label" style="margin:0 0 2px;">${isEditing ? 'Editing Workout' : 'In Progress'}</div>
-        ${isEditing ? `<div class="mono" style="font-size:13px;color:var(--muted);">${s.date}</div>` : ''}
+        <div class="wk-session__status">${isEditing ? 'EDITING WORKOUT' : 'IN PROGRESS'}</div>
+        ${isEditing ? `<div class="mono" style="font-size:13px;color:var(--rh-muted);">${s.date}</div>` : ''}
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0;">
-        ${isEditing?`<button class="btn btn-ghost" style="padding:10px 14px;" data-action="cancel-edit-session">Cancel</button>`:''}
-        <button class="btn btn-accent" style="padding:10px 18px;" data-action="finish-session">${isEditing?'Save':'Finish'}</button>
+        ${isEditing?`<button class="rh-btn rh-btn--ghost" style="flex:none;padding:10px 14px;" data-action="cancel-edit-session">Cancel</button>`:''}
+        <button class="rh-btn rh-btn--primary" style="flex:none;padding:10px 18px;" data-action="finish-session">${isEditing?'Save':'Finish Workout'}</button>
       </div>
     </div>
     ${isEditing ? '' : `
     <div class="live-stats-bar">
-      <div class="live-stat">
+      <div class="live-stat"><span class="wk-session__stat-icon">${svg('timer',18)}</span>
         <div class="live-stat-label">Duration</div>
         <div class="live-stat-value mono" id="session-elapsed">${formatDuration(Date.now()-s.startedAt)}</div>
       </div>
-      <div class="live-stat">
+      <div class="live-stat"><span class="wk-session__stat-icon">${svg('progress',18)}</span>
         <div class="live-stat-label">Volume</div>
         <div class="live-stat-value">${displayW(liveVolume,0).toLocaleString()}<span class="live-stat-unit">${wUnit()}</span></div>
       </div>
-      <div class="live-stat">
+      <div class="live-stat"><span class="wk-session__stat-icon">${svg('plan',18)}</span>
         <div class="live-stat-label">Sets</div>
         <div class="live-stat-value">${liveSets}</div>
       </div>
     </div>`}
-    <input type="text" id="session-title" placeholder="Workout title (e.g. Push Day)" value="${(s.title||'').replace(/"/g,'&quot;')}"
-      style="width:100%;background:none;border:none;border-bottom:2px solid var(--border);padding:8px 2px;font-size:22px;font-weight:900;color:var(--text);margin:10px 0 8px;font-family:inherit;">
+    <input type="text" id="session-title" class="wk-session__title-input" placeholder="Workout title (e.g. Push Day)" value="${(s.title||'').replace(/"/g,'&quot;')}">
     ${muscles.length? `<div style="margin:2px 0 4px;">${muscles.map(m=>`<span class="muscle-chip active">${m}</span>`).join("")}</div>`:""}
-    <textarea id="session-notes" placeholder="Workout notes (how it felt, conditions, anything worth remembering)…"
-      style="width:100%;background:var(--surface-alt);border-radius:8px;padding:9px 10px;font-size:12px;color:var(--text);margin:6px 0 14px;resize:vertical;min-height:36px;border:none;font-family:inherit;">${s.notes||''}</textarea>
+    <div class="wk-session__notes-wrap">${svg('book',16)}<textarea id="session-notes" placeholder="Workout notes (how it felt, conditions, anything worth remembering)…">${s.notes||''}</textarea></div>
 
-    <div class="eyebrow-label">Add Exercise</div>
-    <button class="btn btn-ghost btn-block" data-action="open-exercise-picker" style="margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px;">${svg('plus',16)} Add Exercise</button>
+    <div class="rh-section-head" style="margin-top:18px;"><span>Add Exercise</span></div>
+    <button class="wk-add-exercise-btn" data-action="open-exercise-picker">${svg('plus',18)} Add Exercise</button>
 
-    ${s.exercises.length===0?`<div class="empty-note">No exercises added yet.</div>`:
+    ${s.exercises.length===0?`<div class="rh-card wk-empty" style="margin-top:10px;">No exercises added yet.</div>`:
       s.exercises.map((ex,exi)=>{
         const muscle = getMuscle(ex.name);
         const restLabel = ex.restDuration ? `${ex.restDuration}s` : "OFF";
@@ -6576,11 +6915,11 @@ function renderWorkoutTab(){
         const gridCols = showRPE ? "40px minmax(0,1fr) 58px 54px 46px 44px" : "40px minmax(0,1fr) 72px 72px 44px";
         const menuOpen = state.exerciseMenuOpen===exi;
         return `
-        <div class="ex-log-card">
-          ${ex.supersetWithNext ? `<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:var(--accent);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">${svg('link',12)} Superset with next exercise</div>` : ''}
+        <div class="ex-log-card wk-ex-card">
+          ${ex.supersetWithNext ? `<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:var(--rh-blue);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">${svg('link',12)} Superset with next exercise</div>` : ''}
           <div class="row-between" style="margin-bottom:4px;position:relative;">
             <div style="min-width:0;flex:1;">
-              <div style="font-weight:800;color:var(--steel);font-size:19px;line-height:1.25;">${ex.name}</div>
+              <div class="wk-ex-card__name">${ex.name}</div>
               <span class="muscle-chip">${muscle}</span>
             </div>
             <button class="del" data-toggle-ex-menu="${exi}" aria-label="Exercise options">${svg('moreVert',17)}</button>
@@ -6600,8 +6939,8 @@ function renderWorkoutTab(){
           </div>
           <input type="text" class="notes-inline" placeholder="Add notes here…" value="${ex.notes||''}" data-notes-exercise="${exi}">
           <div class="row-between">
-            <button class="rest-toggle" data-rest-toggle="${exi}">${svg('workout',13)} Rest Timer: ${restLabel}</button>
-            ${showPlates?`<button class="rest-toggle" data-plate-calc="${exi}" style="color:var(--color-interactive);">Plates</button>`:""}
+            <button class="rest-toggle" data-rest-toggle="${exi}">${svg('timer',13)} Rest Timer: ${restLabel}</button>
+            ${showPlates?`<button class="rest-toggle" data-plate-calc="${exi}" style="color:var(--rh-blue);">Plates</button>`:""}
           </div>
           ${state.plateCalcOpen===String(exi) ? renderPlatePopover(exi) : ""}
 
@@ -6627,6 +6966,7 @@ function renderWorkoutTab(){
           <button class="add-set-btn" data-add-set="${exi}">${svg('plus',14)} Add Set</button>
         </div>
       `;}).join("")}
+    </div>
   `;
 }
 
@@ -6824,6 +7164,7 @@ function attachHandlers(){
   document.querySelectorAll("[data-nav]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const dest = el.dataset.nav;
+      state.notificationsOpen = false; // any navigation closes the header notifications panel
       if(dest === "calculators"){
         // Calculator is its own destination; it renders inside the body tab's calculator view.
         state.tab = "body";
@@ -6833,15 +7174,17 @@ function attachHandlers(){
         state.bodyView = null; // always land on the Log Weight page, not a stale calculator view
       }
       render();
-      if (["home", "health", "nutrition"].includes(state.tab)) window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
+      if (["home", "health", "nutrition", "insights"].includes(state.tab)) window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
     });
   });
-  document.querySelectorAll("[data-close-more]").forEach(el=>{
-    el.addEventListener("click", (e)=>{
-      if(e.target !== el) return; // ignore bubbled clicks from the sheet/cards inside
-      state.tab = "home";
-      render();
-    });
+  const notifBtn = document.querySelector('[data-action="toggle-notifications"]');
+  if(notifBtn) notifBtn.addEventListener("click", ()=>{
+    state.notificationsOpen = !state.notificationsOpen;
+    if(state.notificationsOpen) state.settings.notificationsSeenAt = Date.now(); // opening the panel is "read"
+    render();
+  });
+  document.querySelectorAll("[data-close-notifications]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.notificationsOpen = false; render(); });
   });
   document.querySelectorAll("[data-home-day]").forEach(el=>{
     el.addEventListener("click", ()=>{
@@ -7092,7 +7435,8 @@ function attachHandlers(){
   // Routines
   const toggleBuilderBtn = document.querySelector('[data-action="toggle-routine-builder"]');
   if(toggleBuilderBtn) toggleBuilderBtn.addEventListener("click", ()=>{
-    state.routineBuilder = state.routineBuilder ? null : { name:"", exercises:[] };
+    state.editingRoutineId = null;
+    state.routineBuilder = state.routineBuilder ? null : { name:"", exercises:[], category:null };
     render();
   });
   const openPickerForRoutineBtn = document.querySelector('[data-action="open-exercise-picker-for-routine"]');
@@ -7132,9 +7476,57 @@ function attachHandlers(){
     const nameEl = document.getElementById("routine-name");
     const name = nameEl ? nameEl.value.trim() : "";
     if(!name || !state.routineBuilder.exercises.length) return;
-    state.routines.unshift({ id: nextId(), name, exercises: state.routineBuilder.exercises });
+    if(state.editingRoutineId != null){
+      // Update in place — no duplicate routine, id/reference preserved.
+      const idx = state.routines.findIndex(r=>r.id===state.editingRoutineId);
+      if(idx!==-1) state.routines[idx] = Object.assign({}, state.routines[idx], { name, exercises: state.routineBuilder.exercises, category: state.routineBuilder.category||null });
+      state.editingRoutineId = null;
+    } else {
+      state.routines.unshift({ id: nextId(), name, exercises: state.routineBuilder.exercises, category: state.routineBuilder.category||null, favorite:false });
+    }
     state.routineBuilder = null;
     render();
+  });
+  const cancelRoutineBtn = document.querySelector('[data-action="cancel-routine"]');
+  if(cancelRoutineBtn) cancelRoutineBtn.addEventListener("click", ()=>{ state.routineBuilder=null; state.editingRoutineId=null; render(); });
+  document.querySelectorAll("[data-builder-category]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const nm=document.getElementById("routine-name"); if(nm && state.routineBuilder) state.routineBuilder.name = nm.value;
+      const cat = el.dataset.builderCategory;
+      state.routineBuilder.category = state.routineBuilder.category===cat ? null : cat;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-edit-routine]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const r = state.routines.find(x=>x.id===Number(el.dataset.editRoutine)); if(!r) return;
+      state.editingRoutineId = r.id;
+      state.routineBuilder = { name: r.name, exercises: r.exercises.map(e=>({ name:e.name, sets:e.sets })), category: r.category||null };
+      render();
+    });
+  });
+  document.querySelectorAll("[data-toggle-favorite-routine]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const r = state.routines.find(x=>x.id===Number(el.dataset.toggleFavoriteRoutine)); if(!r) return;
+      r.favorite = !r.favorite;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-workout-filter]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.workoutRoutineFilter = el.dataset.workoutFilter; render(); });
+  });
+  const workoutSortEl = document.getElementById("workout-routine-sort");
+  if(workoutSortEl) workoutSortEl.addEventListener("change", ()=>{ state.workoutRoutineSort = workoutSortEl.value; render(); });
+  document.querySelectorAll("[data-builder-ex-sets]").forEach(el=>{
+    el.addEventListener("input", ()=>{ const i=Number(el.dataset.builderExSets); if(state.routineBuilder && state.routineBuilder.exercises[i]) state.routineBuilder.exercises[i].sets = Math.max(1, Number(el.value)||1); });
+  });
+  const captureRoutineName = ()=>{ const nm=document.getElementById("routine-name"); if(nm && state.routineBuilder) state.routineBuilder.name = nm.value; };
+  document.querySelectorAll("[data-move-builder-ex-up]").forEach(el=>{
+    el.addEventListener("click", ()=>{ const i=Number(el.dataset.moveBuilderExUp), ex=state.routineBuilder.exercises; if(i>0){ captureRoutineName(); [ex[i-1],ex[i]]=[ex[i],ex[i-1]]; render(); } });
+  });
+  document.querySelectorAll("[data-move-builder-ex-down]").forEach(el=>{
+    el.addEventListener("click", ()=>{ const i=Number(el.dataset.moveBuilderExDown), ex=state.routineBuilder.exercises; if(i<ex.length-1){ captureRoutineName(); [ex[i+1],ex[i]]=[ex[i],ex[i+1]]; render(); } });
   });
   document.querySelectorAll("[data-del-routine]").forEach(el=>{
     el.addEventListener("click", ()=>{
@@ -8053,6 +8445,17 @@ function attachHandlers(){
     });
   });
 
+  // Progress dashboard chart range selectors (Training Volume / Body Weight / Heatmap).
+  document.querySelectorAll("[data-progress-range]").forEach(el=>{
+    el.addEventListener("change", ()=>{
+      const kind = el.dataset.progressRange;
+      if(kind==="volume") state.pgVolumeRange = el.value;
+      else if(kind==="weight") state.pgWeightRange = Number(el.value);
+      else if(kind==="heatmap") state.pgHeatmapRange = el.value;
+      render();
+    });
+  });
+
   // Progress home <-> detail navigation. Bound per-render like every other handler here
   // (the DOM is rebuilt each render, so listeners never accumulate).
   document.querySelectorAll("[data-progress-view]").forEach(el=>{
@@ -8216,7 +8619,7 @@ function attachHandlers(){
   // Health Connect dashboard
   const closeHealthBtn = document.querySelector('[data-action="close-health-dashboard"]');
   if(closeHealthBtn) closeHealthBtn.addEventListener("click", ()=>{
-    state.tab = "more";
+    state.tab = "tools";
     render();
   });
   const healthConnectBtn = document.querySelector('[data-action="health-connect"]');
@@ -8238,6 +8641,25 @@ function attachHandlers(){
     state.healthInsightsRange = el.dataset.healthRange;
     render();
   }));
+
+  // Insights page (Day/Week/Month/Year real period aggregates)
+  const closeInsightsBtn = document.querySelector('[data-action="close-insights"]');
+  if(closeInsightsBtn) closeInsightsBtn.addEventListener("click", ()=>{
+    state.tab = "tools";
+    render();
+  });
+  // Unlike the Health dashboard's old client-side-only range filter, each Insights range is
+  // a genuinely different native aggregate -- switching tabs fetches real data for that period
+  // (cache-first render happens immediately via getInsightsData; the fetch repaints when done).
+  document.querySelectorAll("[data-insights-range]").forEach(el=>el.addEventListener("click", ()=>{
+    state.insightsRange = el.dataset.insightsRange;
+    render();
+    if(window.HealthConnectIntegration) window.HealthConnectIntegration.refreshInsights(state.insightsRange);
+  }));
+  const insightsRefreshBtn = document.querySelector('[data-action="insights-refresh"]');
+  if(insightsRefreshBtn) insightsRefreshBtn.addEventListener("click", ()=>{
+    if(window.HealthConnectIntegration) window.HealthConnectIntegration.refreshInsights(state.insightsRange || "day").then(render);
+  });
 
   // Toast / confirm dialog
   const toastEl = document.querySelector('[data-action="dismiss-toast"]');
