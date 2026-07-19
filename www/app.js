@@ -1363,6 +1363,8 @@ const ICONS = {
   calendar:'<rect x="4" y="5.5" width="16" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 10h16M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="7.5" y="13" width="3" height="3" rx=".5" fill="currentColor"/>',
   tools:'<rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2" fill="currentColor"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="2" fill="currentColor"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="2" fill="currentColor"/><rect x="13" y="13" width="7.5" height="7.5" rx="2" fill="currentColor"/>',
   target:'<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
+  run:'<circle cx="14.5" cy="4.5" r="1.8" fill="currentColor"/><path d="M11 8l3 2.5-1 4M13 10.5l3 1 2.5-2.5M13 10.5l-2.5 1.5-3.5-1M9 19l3-4.5 2 2 3.5-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  flag:'<path d="M6 3v18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 4h13l-3 4 3 4H6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   flask:'<path d="M9 3h6M10 3v6.5L4.8 18.2A2 2 0 0 0 6.5 21h11a2 2 0 0 0 1.7-2.8L14 9.5V3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M7.5 15h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   bell:'<path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6.5H4c.5-1 2-2.5 2-6.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   pencil:'<path d="M4 20l.9-4L16 4.9a1.5 1.5 0 0 1 2.1 0l1 1a1.5 1.5 0 0 1 0 2.1L8 19 4 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
@@ -1656,6 +1658,7 @@ const state = {
   exercisePickerContext: "session", // "session" adds to the active workout; "routine" adds to the routine builder
   routineBuilderSets: 3,
   viewingHyroxSchedule: false,
+  viewingHyroxInfo: false,
   csvImportPreview: null,
   exerciseMenuOpen: null,
   replacingExerciseIndex: null,
@@ -3961,7 +3964,8 @@ function renderApp(){
   // disappears the moment you navigate away or open a Progress detail view.
   const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || (state.tab==="progress" && !state.progressView)
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
-    || (state.tab==="body" && state.bodyView==="personal-info");
+    || (state.tab==="body" && state.bodyView==="personal-info")
+    || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo);
   const notifications = computeNotifications();
   const unreadCount = notifications.filter(n=>n.ts>(state.settings.notificationsSeenAt||0)).length;
   root.innerHTML = `
@@ -6431,25 +6435,109 @@ function renderErrorScreen(err){
 function renderPlanTab(){
   if(state.viewingHyroxSchedule) return renderHyroxSchedule();
   if(state.viewingRaceMode) return renderRaceMode();
-  return `
-    <div class="info-box" style="font-size:12px;margin-bottom:14px;">Looking for your routines? They've moved to the <b style="color:var(--text);">Workout</b> tab.</div>
-    <div class="eyebrow-label" style="margin-top:4px;">HYROX Training Schedule</div>
-    <div class="info-box" style="padding:18px;">
-      <div style="font-weight:900;font-size:17px;margin-bottom:4px;">HYROX Training Schedule</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">8-Week Structured HYROX Program</div>
-      <div style="margin-bottom:14px;">
-        ${Object.values(LEVELS).map(lv=>`<span class="muscle-chip">${lv.label}</span>`).join("")}
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Week ${state.activeWeek} of 8 · ${weekProgress(WEEKS[state.activeWeek-1])}% this week · ${LEVELS[state.activeLevel].label} level</div>
-      <button class="btn btn-accent btn-block" data-action="open-hyrox-schedule">Open Schedule</button>
-    </div>
+  if(state.viewingHyroxInfo) return renderHyroxInfo();
 
-    <div class="eyebrow-label">HYROX Race Simulation</div>
-    <div class="info-box" style="padding:18px;">
-      <div style="font-weight:900;font-size:17px;margin-bottom:4px;">Race Simulation</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">Live stopwatch through the full 8-run/8-station race format.</div>
-      ${bestRaceTime()!=null ? `<div style="font-size:11px;color:var(--muted);margin-bottom:14px;">Personal best: <span class="mono" style="color:var(--accent);font-weight:800;">${formatDuration(bestRaceTime())}</span></div>` : ''}
-      <button class="btn btn-steel btn-block" data-action="open-race-mode">Open Race Mode</button>
+  const week = WEEKS[state.activeWeek-1];
+  // Real count: prescribed (non-"Optional") training days that actually have exercises --
+  // not a fixed number, recalculates per level/week since buildWeek() varies by activeLevel.
+  const sessionsThisWeek = week.days.filter(d=>d.exercises.length>0 && !d.session.includes("Optional")).length;
+  const overallPct = overallPlanProgress();
+  const best = bestRaceTime();
+
+  return `
+    <div class="pg-light">
+      <div class="info-box" style="font-size:12px;margin-bottom:14px;background:var(--rh-card);border:1px solid var(--rh-border);color:var(--rh-muted);">Looking for your routines? They've moved to the <b style="color:var(--rh-text);">Workout</b> tab.</div>
+
+      <div class="rh-section-head" style="margin-top:0;"><span>HYROX Training Schedule</span></div>
+      <div class="pg-card">
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <span class="tl-card__icon" style="width:44px;height:44px;flex:none;">${svg('calendar',22)}</span>
+          <div style="min-width:0;">
+            <div style="font-weight:800;font-size:17px;">HYROX Training Schedule</div>
+            <div style="font-size:12px;color:var(--rh-muted);margin-top:1px;">8-Week Structured HYROX Program</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;margin:14px 0;">
+          ${Object.entries(LEVELS).map(([key,lv])=>`<button class="cat-chip ${state.activeLevel===key?'active':''}" data-level="${key}" style="flex:1;text-align:center;">${lv.label}</button>`).join("")}
+        </div>
+        <div class="pi-grid2" style="grid-template-columns:repeat(3,minmax(0,1fr));padding-top:12px;border-top:1px solid var(--rh-border);">
+          <div style="text-align:center;"><span style="color:var(--rh-blue);">${svg('calendar',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">Week ${state.activeWeek} of 8</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Current Week</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-blue);">${svg('dumbbell',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">${sessionsThisWeek} Sessions</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">This Week</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-blue);">${svg('timer',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">60 min/day</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Est. Time</div></div>
+        </div>
+        <div style="margin-top:14px;">
+          <span style="font-size:12px;color:var(--rh-muted);font-weight:600;">Progress</span>
+          <div class="row-between" style="align-items:center;margin-top:2px;">
+            <span style="font-size:20px;font-weight:800;color:var(--rh-blue);">${overallPct}%</span>
+            <span style="font-size:12px;color:var(--rh-muted);">Week ${state.activeWeek} of 8</span>
+          </div>
+          <div class="rh-progress-track"><div class="rh-progress-fill" style="width:${overallPct}%;"></div></div>
+        </div>
+        <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:16px;padding:14px;font-size:15px;" data-action="open-hyrox-schedule">${svg('workout',16)} Open Schedule</button>
+      </div>
+
+      <div class="rh-section-head"><span>HYROX Race Simulation</span></div>
+      <div class="pg-card">
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <span class="tl-card__icon" style="width:44px;height:44px;flex:none;color:var(--rh-green);background:rgba(22,163,74,.1);">${svg('flag',22)}</span>
+          <div style="min-width:0;">
+            <div style="font-weight:800;font-size:17px;">Race Simulation</div>
+            <div style="font-size:12px;color:var(--rh-muted);margin-top:1px;">Live stopwatch through the full 8-run/8-station race format.</div>
+          </div>
+        </div>
+        <div class="pi-grid2" style="grid-template-columns:repeat(4,minmax(0,1fr));padding-top:12px;margin-top:12px;border-top:1px solid var(--rh-border);">
+          <div style="text-align:center;"><span style="color:var(--rh-green);">${svg('run',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">8</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Runs</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-green);">${svg('target',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">8</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Stations</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-green);">${svg('timer',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">90 min</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Est. Time</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-red);">${svg('health',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">High</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Intensity</div></div>
+        </div>
+        ${best!=null ? `<div style="font-size:12px;color:var(--rh-muted);margin-top:12px;">Personal best: <span style="color:var(--rh-green);font-weight:800;">${formatDuration(best)}</span></div>` : ''}
+        <button class="rh-btn" style="width:100%;margin-top:14px;padding:14px;font-size:15px;background:rgba(22,163,74,.15);color:var(--rh-green);" data-action="open-race-mode">${svg('workout',16)} Open Race Mode</button>
+      </div>
+
+      <button class="tl-card" data-action="hyrox-info" style="margin-top:12px;">
+        <span class="tl-card__icon">${svg('book',20)}</span>
+        <div class="tl-card__body"><div class="tl-card__label">Getting Started</div><div class="tl-card__desc">Not sure where to begin? Learn about HYROX</div></div>
+        <span class="tl-card__chev">›</span>
+      </button>
+    </div>
+  `;
+}
+
+/* Real, factual background on the HYROX race format -- the official station order/distances
+   are a fixed, public fact about the sport (not user data, nothing fabricated), included so
+   "Getting Started" is a genuine answer, not a dead link. */
+function renderHyroxInfo(){
+  const stations = [
+    ["1 km Run", "Repeated 8 times, alternating with each station below."],
+    ["SkiErg — 1000 m", "Full-body pulling power on the ski ergometer."],
+    ["Sled Push — 50 m", "Loaded sled pushed the length of the lane."],
+    ["Sled Pull — 50 m", "Rope-pulled sled dragged back the same distance."],
+    ["Burpee Broad Jumps — 80 m", "Burpee into a broad jump, repeated for distance."],
+    ["Rowing — 1000 m", "Full-body pulling power on the rowing ergometer."],
+    ["Farmers Carry — 200 m", "Heavy carry, one kettlebell/handle per hand."],
+    ["Sandbag Lunges — 100 m", "Walking lunges carrying a loaded sandbag."],
+    ["Wall Balls — 75/100 reps", "Squat + overhead throw to a target, reps by division."]
+  ];
+  return `
+    <div class="pg-light">
+      <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:10px;" data-action="close-hyrox-info">← Back</button>
+      <div style="font-size:22px;font-weight:800;margin-bottom:2px;">Getting Started with HYROX</div>
+      <div style="font-size:13px;color:var(--rh-muted);margin-bottom:14px;">The official race format, and how this app's plan trains for it.</div>
+
+      <div class="pg-card">
+        <div style="font-size:15px;font-weight:800;margin-bottom:6px;">The Race Format</div>
+        <div style="font-size:13px;color:var(--rh-muted);line-height:1.5;margin-bottom:12px;">HYROX is a fixed-format fitness race: 8× 1&nbsp;km runs, each immediately followed by one functional-fitness station, run in this exact order for every athlete worldwide.</div>
+        ${stations.map((s,i)=>`<div style="display:flex;gap:10px;padding:9px 0;${i>0?'border-top:1px solid var(--rh-border);':''}">
+          <span style="flex:none;width:22px;height:22px;border-radius:50%;background:rgba(37,99,235,.1);color:var(--rh-blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;">${i+1}</span>
+          <div><div style="font-size:13px;font-weight:700;">${s[0]}</div><div style="font-size:11px;color:var(--rh-muted);margin-top:1px;">${s[1]}</div></div>
+        </div>`).join("")}
+      </div>
+
+      <div class="pg-card" style="margin-top:12px;">
+        <div style="font-size:15px;font-weight:800;margin-bottom:6px;">This App's Plan</div>
+        <div style="font-size:13px;color:var(--rh-muted);line-height:1.6;">The 8-week Training Schedule builds toward this exact format with a mix of strength, running, and HYROX-specific station work. Choose Beginner, Intermediate, or Advanced to match your training age — you can switch levels anytime, and your plan rebuilds around it. Race Simulation is a free-standing live stopwatch through the full 8-run/8-station structure, for practicing pacing and transitions ahead of race day.</div>
+      </div>
     </div>
   `;
 }
@@ -7489,6 +7577,16 @@ function attachHandlers(){
   const closeScheduleBtn = document.querySelector('[data-action="close-hyrox-schedule"]');
   if(closeScheduleBtn) closeScheduleBtn.addEventListener("click", ()=>{
     state.viewingHyroxSchedule = false;
+    render();
+  });
+  const openHyroxInfoBtn = document.querySelector('[data-action="hyrox-info"]');
+  if(openHyroxInfoBtn) openHyroxInfoBtn.addEventListener("click", ()=>{
+    state.viewingHyroxInfo = true;
+    render();
+  });
+  const closeHyroxInfoBtn = document.querySelector('[data-action="close-hyrox-info"]');
+  if(closeHyroxInfoBtn) closeHyroxInfoBtn.addEventListener("click", ()=>{
+    state.viewingHyroxInfo = false;
     render();
   });
   const openRaceBtn = document.querySelector('[data-action="open-race-mode"]');
