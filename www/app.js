@@ -2615,6 +2615,44 @@ function sparklineChart(points, opts={}){
   `;
 }
 
+/* Richer area/line chart with real gridline/axis labels and an end-value bubble -- same
+   visual approach already used by Progress's and Goals' weight charts (each a self-contained
+   copy in its own module); this is the app.js-scope version for the Log Weight screen. */
+function axisAreaChart(points, opts={}){
+  const color = opts.color || "var(--rh-blue)";
+  if(points.length < 2) return `<div class="wk-empty">Log at least two weigh-ins to see a trend graph.</div>`;
+  const w=320, h=180, padL=30, padR=10, padT=10, padB=22;
+  const vals = points.map(p=>p.value);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = (max-min) || 1, yPad = range*0.15;
+  const yMin = min-yPad, yMax = max+yPad;
+  const stepX = (w-padL-padR) / (points.length-1);
+  const coords = points.map((p,i)=>({ x: padL+i*stepX, y: padT + (1-(p.value-yMin)/(yMax-yMin)) * (h-padT-padB) }));
+  const pathD = coords.map((c,i)=>(i===0?'M':'L')+c.x.toFixed(1)+','+c.y.toFixed(1)).join(' ');
+  const areaD = pathD + ` L${coords[coords.length-1].x.toFixed(1)},${h-padB} L${coords[0].x.toFixed(1)},${h-padB} Z`;
+  const ySteps = 4, yDecimals = (yMax-yMin) < ySteps*2 ? 1 : 0;
+  const gridlines = Array.from({length:ySteps+1},(_,i)=>{
+    const v = yMin + (yMax-yMin)*(i/ySteps), y = padT + (1-i/ySteps) * (h-padT-padB);
+    return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="var(--rh-border)" stroke-width="1"/>
+      <text x="2" y="${(y+3).toFixed(1)}" font-size="9" fill="var(--rh-muted)">${v.toFixed(yDecimals)}</text>`;
+  }).join('');
+  const dots = coords.map((c,i)=>`<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.5" fill="${color}"/>`).join('');
+  // Show at most 7 x-axis labels so dense ranges (90D/1Y) never overlap.
+  const labelStep = Math.max(1, Math.ceil(points.length/7));
+  const xLabels = points.map((p,i)=> (i%labelStep===0 || i===points.length-1) ?
+    `<text x="${coords[i].x.toFixed(1)}" y="${h-6}" font-size="9" fill="var(--rh-muted)" text-anchor="middle">${p.label}</text>` : '').join('');
+  const last = coords[coords.length-1], lastVal = points[points.length-1].value;
+  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    ${gridlines}
+    <path d="${areaD}" fill="${color}" fill-opacity="0.12" stroke="none"/>
+    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    ${dots}
+    <circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="3.5" fill="${color}"/>
+    ${xLabels}
+  </svg>
+  <div class="pg-chart-bubble">${lastVal}${opts.unit||''}</div>`;
+}
+
 /* =========================================================
    WORKOUT — HYROX plan structure, Race Mode logic, PR detection,
    achievements, set/session helpers, and workout-history/progress
@@ -3964,7 +4002,7 @@ function renderApp(){
   // disappears the moment you navigate away or open a Progress detail view.
   const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || (state.tab==="progress" && !state.progressView)
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
-    || (state.tab==="body" && state.bodyView==="personal-info")
+    || (state.tab==="body" && (state.bodyView==="personal-info" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo);
   const notifications = computeNotifications();
   const unreadCount = notifications.filter(n=>n.ts>(state.settings.notificationsSeenAt||0)).length;
@@ -6055,44 +6093,13 @@ function renderPersonalInfoTab(){
   `;
 }
 
+const BODY_WEIGHT_RANGES = { "7D":7, "30D":30, "90D":90, "1Y":365 };
+
 function renderBodyTab(){
   const entries = state.bodylog;
-  const first = entries[entries.length-1];
-  const latest = entries[0];
-  const delta = (first && latest) ? (Number(latest.weight)-Number(first.weight)) : null;
-  const fieldSm = (id,label,ph,color) => `<div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">${label}</label>
-    <input type="number" id="${id}" placeholder="${ph}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin-top:4px;font-size:16px;color:${color};"></div>`;
-
   const p = state.profile;
-  const maint = profileMaintenance();
-  const target = profileCalorieTarget();
-
-  // Body composition: prefer latest logged body fat %, else estimate via Navy from latest measurements
-  let bfPct = null;
-  const latestBF = entries.find(e=>e.bodyfat);
-  const latestWaist = entries.find(e=>e.waist);
-  if(latestBF) bfPct = Number(latestBF.bodyfat);
-  else if(latestWaist && state.calc.neck){
-    bfPct = calcBodyFatNavy(p.gender, p.height, state.calc.neck, Number(latestWaist.waist), state.calc.hip);
-  }
-  const lbmBoer = calcLBM(p.gender, p.height, p.weight).boer;
-  let fatMass = null, leanMass = null, muscleMass = null;
-  if(bfPct!=null && bfPct>0){
-    fatMass = p.weight * bfPct/100;
-    leanMass = p.weight - fatMass;
-    muscleMass = leanMass * 0.535; // skeletal muscle ≈ 53.5% of lean mass (Lee et al. estimate)
-  }
-
-  // Log Weight card data (weight-only entries, newest-first from state.bodylog)
-  const wLog = entries.filter(e=> e.weight!==undefined && e.weight!==null && e.weight!=="" && !isNaN(Number(e.weight)));
-  const latestW = wLog[0];
-  const weightsKg = wLog.map(e=>Number(e.weight));
-  const highKg = weightsKg.length ? Math.max(...weightsKg) : null;
-  const lowKg  = weightsKg.length ? Math.min(...weightsKg) : null;
-  const nowMs = Date.now();
-  const in7 = wLog.filter(e=> (nowMs - new Date(e.date+"T12:00:00").getTime()) <= 7*86400000);
-  const sevenChangeKg = in7.length>=2 ? (Number(in7[0].weight) - Number(in7[in7.length-1].weight)) : null;
-  const trend = wLog.slice().reverse().map(e=>({date:e.date, value: Number(displayW(Number(e.weight)))}));
+  const fieldSm = (id,label,ph,color) => `<div><label class="pi-label" style="text-transform:uppercase;">${label}</label>
+    <input type="number" id="${id}" placeholder="${ph}" class="pi-input" style="color:${color};"></div>`;
 
   // Dedicated calculator view (opened by a calculator card or "View All Calculators")
   if(state.bodyView==='calculators'){
@@ -6105,97 +6112,210 @@ function renderBodyTab(){
 
   if(state.bodyView==='personal-info') return renderPersonalInfoTab();
 
+  // Real weight-only entries, newest-first (matches state.bodylog's own storage order)
+  const wLog = entries.filter(e=> e.weight!==undefined && e.weight!==null && e.weight!=="" && !isNaN(Number(e.weight)));
+  const latestW = wLog[0];
+  const nowMs = Date.now();
+
+  /** Closest entry to `daysAgo` days back, for real "vs N days ago" deltas -- not just the
+   *  oldest entry in a filtered window, so this stays accurate even with sparse logging. */
+  function closestTo(daysAgo){
+    if(!wLog.length) return null;
+    const targetMs = nowMs - daysAgo*86400000;
+    return wLog.reduce((best,e)=>{
+      const d = Math.abs(new Date(e.date+"T12:00:00").getTime() - targetMs);
+      const bd = Math.abs(new Date(best.date+"T12:00:00").getTime() - targetMs);
+      return d<bd ? e : best;
+    });
+  }
+  const weekAgo = wLog.length>1 ? closestTo(7) : null;
+  const monthAgo = wLog.length>1 ? closestTo(30) : null;
+  const weeklyChangeKg = (latestW && weekAgo && weekAgo!==latestW) ? Number(latestW.weight)-Number(weekAgo.weight) : null;
+  const monthlyChangeKg = (latestW && monthAgo && monthAgo!==latestW) ? Number(latestW.weight)-Number(monthAgo.weight) : null;
+  const trendLabel = weeklyChangeKg==null ? "—" : weeklyChangeKg<0 ? "Down" : weeklyChangeKg>0 ? "Up" : "Flat";
+
+  // Real active-goal integration (Fitness Goals) -- honestly omitted below when no goal is active.
+  const goal = window.IgnytGoals ? window.IgnytGoals.activeGoal() : null;
+  const goalCompute = goal ? window.IgnytGoals.compute(goal) : null;
+  const goalPct = goal ? window.IgnytGoals.progressPct(goal, latestW?Number(latestW.weight):null) : null;
+  const goalRemaining = (goal && latestW) ? Math.round(Math.abs(Number(latestW.weight)-goal.targetWeight)*10)/10 : null;
+
+  // Range-scoped chart + stats (7D/30D/90D/1Y) -- both the chart and Highest/Lowest/Average
+  // below are scoped to the SAME selected range, so the numbers on screen always match what's drawn.
+  const rangeKey = BODY_WEIGHT_RANGES[state.bodyWeightRange] ? state.bodyWeightRange : "7D";
+  const rangeDays = BODY_WEIGHT_RANGES[rangeKey];
+  const rangeCutoff = nowMs - rangeDays*86400000;
+  const inRange = wLog.filter(e=> new Date(e.date+"T12:00:00").getTime() >= rangeCutoff).slice().reverse(); // chronological
+  const chartPoints = inRange.map(e=>({ label: new Date(e.date+"T12:00:00").toLocaleDateString('default',{month:'short',day:'numeric'}), value: displayW(Number(e.weight)) }));
+  const rangeVals = inRange.map(e=>Number(e.weight));
+  const rangeHighKg = rangeVals.length ? Math.max(...rangeVals) : null;
+  const rangeLowKg = rangeVals.length ? Math.min(...rangeVals) : null;
+  const rangeAvgKg = rangeVals.length ? rangeVals.reduce((a,b)=>a+b,0)/rangeVals.length : null;
+  const rangeHighEntry = rangeHighKg!=null ? inRange.find(e=>Number(e.weight)===rangeHighKg) : null;
+  const rangeLowEntry = rangeLowKg!=null ? inRange.find(e=>Number(e.weight)===rangeLowKg) : null;
+  const rangeNoun = rangeKey==="7D"?"This Week":rangeKey==="30D"?"This Month":rangeKey==="90D"?"Last 90 Days":"This Year";
+
+  const showMore = !!state.bodyShowMoreMetrics;
+
   return `
-    <div class="section-heading"><span class="section-heading__label">Log Weight</span></div>
-    <section class="premium-card" style="padding:var(--space-md);">
-      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;">
-        <div style="min-width:0;">
-          <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-secondary);">Current Weight</div>
-          <div class="mono" style="font-size:34px;font-weight:900;line-height:1.05;">${latestW?displayW(Number(latestW.weight)):displayW(p.weight)}<span style="font-size:15px;font-weight:700;color:var(--color-text-secondary);margin-left:4px;">${wUnit()}</span></div>
-          <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">${latestW?('Last updated '+latestW.date):'From your profile — not yet logged'}</div>
+    <div class="pg-light">
+      <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:6px;" data-action="close-log-weight">← Back</button>
+      <div style="font-size:22px;font-weight:800;">Log Weight</div>
+      <div style="font-size:12px;color:var(--rh-muted);margin-bottom:14px;">Track your progress. Stay consistent.</div>
+
+      <div class="pg-card-row" style="margin-top:0;grid-template-columns:1.4fr 1fr;">
+        <div class="pg-card" style="display:flex;align-items:center;gap:12px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:11px;color:var(--rh-muted);font-weight:700;text-transform:uppercase;">Current Weight</div>
+            <div style="font-size:26px;font-weight:800;margin-top:2px;">${latestW?displayW(Number(latestW.weight)):displayW(p.weight)}<span style="font-size:13px;font-weight:600;color:var(--rh-muted);margin-left:2px;">${wUnit()}</span></div>
+            ${weeklyChangeKg!=null ? `<div style="font-size:12px;font-weight:700;margin-top:4px;color:${weeklyChangeKg<=0?'var(--rh-green)':'var(--rh-red)'};">${weeklyChangeKg>0?'▲':weeklyChangeKg<0?'▼':''} ${Math.abs(displayW(weeklyChangeKg,1))} ${wUnit()} this week</div>` : ''}
+            ${goal ? `<div style="font-size:11px;color:var(--rh-muted);margin-top:10px;">Goal: ${displayW(goal.targetWeight)} ${wUnit()}</div>
+              <div class="rh-progress-track rh-progress-track--sm"><div class="rh-progress-fill" style="width:${goalPct||0}%;"></div></div>
+              <div style="font-size:11px;color:var(--rh-muted);margin-top:4px;">${goalRemaining!=null?goalRemaining+' '+wUnit()+' remaining':''}${goalCompute&&goalCompute.completion?' · Est. completion: '+new Date(goalCompute.completion).toLocaleDateString('default',{month:'short',year:'numeric'}):''}</div>`
+              : `<div style="font-size:11px;color:var(--rh-muted);margin-top:10px;">No active goal — set one in Fitness Goals.</div>`}
+          </div>
+          ${goal ? `<div style="flex:none;">${(()=>{ const pct=goalPct||0; return `<div class="pg-ring" style="--pct:${pct};--ring-color:var(--rh-blue);width:76px;height:76px;"><div class="pg-ring__inner" style="width:60px;height:60px;flex-direction:column;"><div style="font-size:16px;font-weight:800;">${pct}%</div><div style="font-size:8px;color:var(--rh-muted);font-weight:700;">Goal</div></div></div>`; })()}</div>` : ''}
         </div>
-        <button class="btn btn-accent" data-action="add-weight-focus" style="flex-shrink:0;padding:11px 16px;">${svg('plus',15)} Add Weight</button>
+        <div class="pg-card" style="display:flex;flex-direction:column;gap:10px;">
+          <button class="rh-btn rh-btn--primary" style="padding:10px;font-size:13px;" data-action="add-weight-focus">${svg('plus',14)} Add Weight</button>
+          <div class="pi-row" style="background:none;border:none;padding:0;"><span class="pi-row__icon">${svg('timer',14)}</span><div class="pi-row__body"><div class="pi-row__label">Last Updated</div><div class="pi-row__value">${latestW?latestW.date:'Not logged'}</div></div></div>
+          <div class="pi-row" style="background:none;border:none;padding:0;"><span class="pi-row__icon">${svg('trend',14)}</span><div class="pi-row__body"><div class="pi-row__label">Trend</div><div class="pi-row__value">${trendLabel}</div></div></div>
+          <div class="pi-row" style="background:none;border:none;padding:0;"><span class="pi-row__icon">${svg('target',14)}</span><div class="pi-row__body"><div class="pi-row__label">Unit</div><div class="pi-row__value">${wUnit()==='kg'?'Kilograms (kg)':'Pounds (lb)'}</div></div></div>
+        </div>
       </div>
-      ${trend.length>=2 ? `<div style="margin-top:14px;">${sparklineChart(trend, {color:"var(--color-interactive)", unit:wUnit()})}</div>` : `<div style="margin-top:12px;font-size:12px;color:var(--color-text-secondary);">Log at least two weigh-ins to see your trend graph.</div>`}
-      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px;">
-        <div class="stat-card"><div class="stat-label">Highest</div><div class="stat-value" style="font-size:18px;">${highKg!=null?displayW(highKg):'—'}<span class="stat-unit">${wUnit()}</span></div></div>
-        <div class="stat-card"><div class="stat-label">Lowest</div><div class="stat-value" style="font-size:18px;">${lowKg!=null?displayW(lowKg):'—'}<span class="stat-unit">${wUnit()}</span></div></div>
-        <div class="stat-card"><div class="stat-label">7-Day</div><div class="stat-value" style="font-size:18px;color:${sevenChangeKg==null?'var(--text)':sevenChangeKg<=0?'var(--mint)':'var(--accent)'};">${sevenChangeKg==null?'—':(sevenChangeKg>0?'+':'')+displayW(sevenChangeKg)}<span class="stat-unit">${wUnit()}</span></div></div>
+
+      <div class="pg-card" style="margin-top:12px;">
+        <div class="pg-card__head">
+          <span class="pg-card__title">Weight Trend</span>
+          <div style="display:flex;gap:4px;">
+            ${Object.keys(BODY_WEIGHT_RANGES).map(k=>`<button class="cat-chip ${rangeKey===k?'active':''}" data-body-weight-range="${k}" style="padding:5px 9px;font-size:11px;">${k}</button>`).join("")}
+          </div>
+        </div>
+        ${axisAreaChart(chartPoints, {color:"var(--rh-blue)", unit:' '+wUnit()})}
       </div>
-      <button class="btn btn-secondary btn-block" data-action="view-weight-history" style="margin-top:12px;">View Weight History</button>
-    </section>
 
-    <div class="eyebrow-label" id="body-log-entry">Log Entry</div>
-    <div class="info-box" style="padding:14px;">
-      <div class="grid2">
-        <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Date</label>
-          <input type="date" id="b-date" value="${new Date().toISOString().slice(0,10)}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin-top:4px;font-size:16px;color:var(--text);"></div>
-        ${fieldSm("b-weight",`Weight (${wUnit()})`,wUnit()==='lb'?'220':'101.0',"var(--accent)")}
-        ${fieldSm("b-sleep","Sleep (hrs)","7.5","var(--steel)")}
-        ${fieldSm("b-hrv","HRV (ms)","91","var(--steel)")}
-        ${fieldSm("b-waist","Waist (cm)","","var(--text)")}
-        ${fieldSm("b-chest","Chest (cm)","","var(--text)")}
-        ${fieldSm("b-arms","Arms (cm)","","var(--text)")}
+      <div class="pg-stat-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-top:12px;">
+        <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(22,163,74,.1);color:var(--rh-green);">${svg('chevronUp',16)}</span>
+          <div class="pg-stat-card__value">${rangeHighKg!=null?displayW(rangeHighKg):'—'}<span class="pg-stat-card__unit">${wUnit()}</span></div>
+          <div class="pg-stat-card__label">Highest</div><div class="pg-stat-card__sub">${rangeHighEntry?rangeHighEntry.date:''}</div></div>
+        <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(239,68,68,.1);color:var(--rh-red);">${svg('chevronDown',16)}</span>
+          <div class="pg-stat-card__value">${rangeLowKg!=null?displayW(rangeLowKg):'—'}<span class="pg-stat-card__unit">${wUnit()}</span></div>
+          <div class="pg-stat-card__label">Lowest</div><div class="pg-stat-card__sub">${rangeLowEntry?rangeLowEntry.date:''}</div></div>
+        <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(124,58,237,.1);color:var(--rh-purple);">${svg('trend',16)}</span>
+          <div class="pg-stat-card__value">${rangeAvgKg!=null?displayW(rangeAvgKg):'—'}<span class="pg-stat-card__unit">${wUnit()}</span></div>
+          <div class="pg-stat-card__label">Average</div><div class="pg-stat-card__sub">${rangeNoun}</div></div>
+        <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('trend',16)}</span>
+          <div class="pg-stat-card__value">${weeklyChangeKg!=null?(weeklyChangeKg>0?'+':'')+displayW(weeklyChangeKg,1):'—'}<span class="pg-stat-card__unit">${wUnit()}</span></div>
+          <div class="pg-stat-card__label">Weekly Change</div><div class="pg-stat-card__sub">vs last week</div></div>
+        <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(217,119,6,.12);color:#D97706;">${svg('trend',16)}</span>
+          <div class="pg-stat-card__value">${monthlyChangeKg!=null?(monthlyChangeKg>0?'+':'')+displayW(monthlyChangeKg,1):'—'}<span class="pg-stat-card__unit">${wUnit()}</span></div>
+          <div class="pg-stat-card__label">Monthly Change</div><div class="pg-stat-card__sub">vs last month</div></div>
+        <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('target',16)}</span>
+          <div class="pg-stat-card__value">${goalRemaining!=null?goalRemaining:'—'}<span class="pg-stat-card__unit">${wUnit()}</span></div>
+          <div class="pg-stat-card__label">Goal Remaining</div><div class="pg-stat-card__sub">${goal?'to reach goal':'no goal set'}</div></div>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin:8px 0;">Logging a weight here updates your profile weight and recalculates calories & macros everywhere.</div>
-      <button class="btn btn-accent btn-block" data-action="log-body">Log Entry</button>
-    </div>
 
-    ${delta!==null?`<div class="field" style="margin-top:12px;"><label>Total weight change</label>
-      <span class="mono" style="font-weight:900;color:${delta<=0?'var(--mint)':'var(--accent)'};">${delta>0?'+':''}${displayW(delta)} ${wUnit()}</span></div>`:''}
+      <div class="rh-section-head"><span>Recent Entries</span>${entries.length>4?`<a href="#" class="rh-view-all" data-action="view-weight-history">View All</a>`:''}</div>
+      ${wLog.length===0 ? `<div class="pg-card wk-empty">No entries yet — log your first weigh-in below.</div>` : `
+      <div class="pg-pr-row">
+        ${wLog.slice(0,6).map((e,i)=>{
+          const prev = wLog[i+1];
+          const d = prev ? Number(e.weight)-Number(prev.weight) : null;
+          const time = new Date(e.id).toLocaleTimeString('default',{hour:'numeric',minute:'2-digit'});
+          return `<div class="pg-pr-card ${i===0?'is-connected':''}" style="border:1.5px solid ${i===0?'var(--rh-blue)':'var(--rh-border)'};">
+            <div style="font-size:11px;color:var(--rh-muted);font-weight:600;">${e.date}</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+              <span style="font-size:17px;font-weight:800;">${displayW(e.weight)} ${wUnit()}</span>
+              ${d!=null?`<span style="color:${d<=0?'var(--rh-green)':'var(--rh-red)'};font-size:13px;">${d>0?'▲':d<0?'▼':''}</span>`:''}
+            </div>
+            <div style="font-size:10px;color:var(--rh-muted);margin-top:4px;">${time}</div>
+          </div>`;
+        }).join('')}
+      </div>`}
 
-    <div class="row-between" id="body-history">
-      <span class="eyebrow-label">Body History</span>
-      ${entries.length>5?`<button class="btn btn-ghost" data-action="toggle-body-history" style="padding:4px 10px;font-size:12px;">${state.showAllBodyHistory?'Show Less':'View All ('+entries.length+')'}</button>`:''}
-    </div>
-    ${entries.length===0?`<div class="empty-note">No entries yet.</div>`:
-      (state.showAllBodyHistory ? entries : entries.slice(0,5)).map(e=>`<div class="history-row">
-        <span class="mono" style="font-size:13px;color:var(--muted);">${e.date}</span>
-        <span class="mono" style="font-size:14px;color:var(--accent);">${displayW(e.weight)}${wUnit()}</span>
-        <span class="mono" style="font-size:13px;color:var(--steel);">${e.sleep||'–'}h</span>
-        <span class="mono" style="font-size:13px;color:var(--steel);">${e.hrv||'–'}ms</span>
-        <button class="del" data-del-body="${e.id}" aria-label="Delete body log entry">${svg('x',12)}</button>
-      </div>`).join("")}
-
-    <div class="eyebrow-label">Body Progress Photos</div>
-    <div class="info-box" style="padding:14px;">
-      <div style="display:flex;gap:6px;margin-bottom:10px;">
-        ${["Front","Side","Back","Other"].map(c=>`<button class="cat-chip ${state.bodyPhotoCategory===c?'active':''}" data-body-photo-category="${c}" style="flex:1;text-align:center;">${c}</button>`).join("")}
+      <div class="row-between" id="body-history" style="margin-top:14px;">
+        <span style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);">Body History</span>
+        ${entries.length>5?`<button class="rh-view-all" style="background:none;border:none;cursor:pointer;padding:0;" data-action="toggle-body-history">${state.showAllBodyHistory?'Show Less':'View All ('+entries.length+')'}</button>`:''}
       </div>
-      <input type="text" id="body-photo-note" placeholder="Optional note" style="width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;font-size:14px;color:var(--text);margin-bottom:10px;">
-      <label class="btn btn-accent btn-block" style="display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;">
-        ${svg('plus',16)} Add Photo
-        <input type="file" id="body-photo-file" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
-      </label>
-    </div>
-    ${state.bodyPhotos.length===0 ? `<div class="empty-note">No progress photos yet.</div>` : `
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;">
-      ${state.bodyPhotos.map(ph=>{
+      ${entries.length>0 ? `<div class="pg-card" style="margin-top:8px;padding:4px 14px;">
+        ${(state.showAllBodyHistory ? entries : entries.slice(0,5)).map(e=>`<div class="row-between" style="padding:10px 0;border-top:1px solid var(--rh-border);">
+          <span style="font-size:12px;color:var(--rh-muted);">${e.date}</span>
+          <span style="font-size:13px;font-weight:700;color:var(--rh-blue);">${displayW(e.weight)}${wUnit()}</span>
+          <span style="font-size:12px;color:var(--rh-purple);">${e.sleep||'–'}h</span>
+          <span style="font-size:12px;color:var(--rh-purple);">${e.hrv||'–'}ms</span>
+          <button class="del" data-del-body="${e.id}" aria-label="Delete body log entry">${svg('x',12)}</button>
+        </div>`).join("")}
+      </div>` : ''}
+
+      <div class="rh-section-head"><span>Log Entry</span></div>
+      <div class="pg-card" id="body-log-entry">
+        <div class="pi-grid2">
+          <div><label class="pi-label">Date</label><input type="date" id="b-date" value="${new Date().toISOString().slice(0,10)}" class="pi-input"></div>
+          ${fieldSm("b-weight",`Weight (${wUnit()})`,wUnit()==='lb'?'220':'101.0',"var(--rh-blue)")}
+        </div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">Body</div>
+        <div class="pi-grid2" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+          ${fieldSm("b-waist","Waist (cm)","","var(--rh-text)")}
+          ${fieldSm("b-chest","Chest (cm)","","var(--rh-text)")}
+          ${fieldSm("b-bodyfat","Body Fat (%)","","var(--rh-text)")}
+        </div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">Recovery</div>
+        <div class="pi-grid2">
+          ${fieldSm("b-sleep","Sleep (hrs)","7.5","var(--rh-purple)")}
+          ${fieldSm("b-hrv","HRV (ms)","91","var(--rh-purple)")}
+        </div>
+        ${showMore ? `<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">More Metrics</div>
+          <div class="pi-grid2" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+            ${fieldSm("b-arms","Arms (cm)","","var(--rh-text)")}
+            ${fieldSm("b-hips","Hips (cm)","","var(--rh-text)")}
+            ${fieldSm("b-thighs","Thighs (cm)","","var(--rh-text)")}
+          </div>` : ''}
+        <div style="font-size:11px;color:var(--rh-muted);margin:12px 0 4px;">Logging a weight here updates your profile weight and recalculates calories &amp; macros everywhere.</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+          <button class="rh-btn rh-btn--ghost" style="flex:1;padding:10px;font-size:13px;" data-action="toggle-body-more-metrics">${svg('plus',13)} ${showMore?'Fewer Metrics':'More Metrics'}</button>
+          <button style="flex:none;width:44px;height:44px;border-radius:50%;border:none;background:var(--rh-blue);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;" data-action="log-body" aria-label="Log entry">${svg('plus',18)}</button>
+        </div>
+      </div>
+
+      <div class="rh-section-head"><span>Body Progress Photos</span></div>
+      <div class="pg-card">
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+          ${["Front","Side","Back","Other"].map(c=>`<button class="cat-chip ${state.bodyPhotoCategory===c?'active':''}" data-body-photo-category="${c}" style="flex:1;text-align:center;">${c}</button>`).join("")}
+        </div>
+        <input type="text" id="body-photo-note" placeholder="Optional note" class="pi-input" style="margin-bottom:10px;">
+        <label class="rh-btn rh-btn--primary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;position:relative;">
+          ${svg('plus',16)} Add Photo
+          <input type="file" id="body-photo-file" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
+        </label>
+      </div>
+      ${state.bodyPhotos.length===0 ? `<div class="wk-empty" style="margin-top:8px;">No progress photos yet.</div>` : `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0;">
+        ${state.bodyPhotos.map(ph=>{
+          const url = photoThumbUrl(ph.id);
+          return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
+            ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--rh-muted);font-size:11px;">Loading…</div>`}
+            <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;padding:2px 4px;text-align:center;">${ph.category}</span>
+          </button>`;
+        }).join("")}
+      </div>`}
+      ${state.viewingBodyPhotoId!=null ? (()=>{
+        const ph = state.bodyPhotos.find(p2=>p2.id===state.viewingBodyPhotoId);
+        if(!ph) return "";
         const url = photoThumbUrl(ph.id);
-        return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;border:none;padding:0;background:var(--surface-alt);cursor:pointer;">
-          ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;">Loading…</div>`}
-          <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;padding:2px 4px;text-align:center;">${ph.category}</span>
-        </button>`;
-      }).join("")}
-    </div>`}
-    ${state.viewingBodyPhotoId!=null ? (()=>{
-      const ph = state.bodyPhotos.find(p2=>p2.id===state.viewingBodyPhotoId);
-      if(!ph) return "";
-      const url = photoThumbUrl(ph.id);
-      return `<div class="dialog-backdrop" data-close-body-photo style="z-index:190;"></div>
-      <div class="dialog-box" style="max-width:400px;padding:14px;z-index:191;">
-        <!-- z-index kept below the shared confirm-dialog component's (210/211) so that when
-             "Delete" opens a confirm prompt on top of this still-open lightbox, the confirm
-             prompt is genuinely visible and clickable, not obscured underneath. -->
-        ${url ? `<img src="${url}" alt="" style="width:100%;max-height:60vh;object-fit:contain;border-radius:10px;display:block;">` : ""}
-        <div style="margin-top:10px;font-size:13px;color:var(--muted);">${ph.date} · ${ph.category}${ph.note?` · ${ph.note}`:''}</div>
-        <div style="display:flex;gap:8px;margin-top:14px;">
-          <button class="btn btn-ghost" data-close-body-photo style="flex:1;">Close</button>
-          <button class="btn btn-ghost" data-del-body-photo="${ph.id}" style="flex:1;color:#ff6b6b;">Delete</button>
-        </div>
-      </div>`;
-    })() : ""}
-
+        return `<div class="dialog-backdrop" data-close-body-photo style="z-index:190;"></div>
+        <div class="dialog-box" style="max-width:400px;padding:14px;z-index:191;">
+          <!-- z-index kept below the shared confirm-dialog component's (210/211) so that when
+               "Delete" opens a confirm prompt on top of this still-open lightbox, the confirm
+               prompt is genuinely visible and clickable, not obscured underneath. -->
+          ${url ? `<img src="${url}" alt="" style="width:100%;max-height:60vh;object-fit:contain;border-radius:10px;display:block;">` : ""}
+          <div style="margin-top:10px;font-size:13px;color:var(--muted);">${ph.date} · ${ph.category}${ph.note?` · ${ph.note}`:''}</div>
+          <div style="display:flex;gap:8px;margin-top:14px;">
+            <button class="btn btn-ghost" data-close-body-photo style="flex:1;">Close</button>
+            <button class="btn btn-ghost" data-del-body-photo="${ph.id}" style="flex:1;color:#ff6b6b;">Delete</button>
+          </div>
+        </div>`;
+      })() : ""}
+    </div>
   `;
 }
 
@@ -8535,15 +8655,21 @@ function attachHandlers(){
     const rawWeight = document.getElementById("b-weight").value;
     if(!rawWeight) return;
     const weight = parseInputW(rawWeight); // convert from displayed unit to canonical kg for storage
+    // "More Metrics" fields (arms/hips/thighs) only exist in the DOM when that section is
+    // expanded -- optional chaining keeps this safe either way, matching the rest of the form.
+    const val = id => document.getElementById(id)?.value;
     state.bodylog.unshift({
       id: nextId(),
       date: document.getElementById("b-date").value,
       weight,
-      sleep: document.getElementById("b-sleep").value,
-      hrv: document.getElementById("b-hrv").value,
-      waist: document.getElementById("b-waist").value,
-      chest: document.getElementById("b-chest").value,
-      arms: document.getElementById("b-arms").value
+      sleep: val("b-sleep"),
+      hrv: val("b-hrv"),
+      waist: val("b-waist"),
+      chest: val("b-chest"),
+      bodyfat: val("b-bodyfat"),
+      arms: val("b-arms"),
+      hips: val("b-hips"),
+      thighs: val("b-thighs")
     });
     // Weight logged here becomes the single source of truth -> recalcs calories/macros everywhere
     state.profile.weight = Number(weight) || state.profile.weight;
@@ -8621,6 +8747,13 @@ function attachHandlers(){
     render();
     setTimeout(()=>{ const h=document.getElementById("body-history"); if(h) h.scrollIntoView({behavior:"smooth", block:"start"}); }, 0);
   });
+  const closeLogWeightBtn = document.querySelector('[data-action="close-log-weight"]');
+  if(closeLogWeightBtn) closeLogWeightBtn.addEventListener("click", ()=>{ state.tab = "tools"; state.bodyView = null; render(); });
+  document.querySelectorAll("[data-body-weight-range]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.bodyWeightRange = el.dataset.bodyWeightRange; render(); });
+  });
+  const moreMetricsBtn = document.querySelector('[data-action="toggle-body-more-metrics"]');
+  if(moreMetricsBtn) moreMetricsBtn.addEventListener("click", ()=>{ state.bodyShowMoreMetrics = !state.bodyShowMoreMetrics; render(); });
 
   // Calculator cards -> dedicated calculator view
   document.querySelectorAll("[data-calc-open]").forEach(el=>{

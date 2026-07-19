@@ -489,5 +489,5 @@
   // own dashboard-vs-detail-view light/dark split.
   function isDashboardShowing() { return view.screen === null && !!activeGoal(); }
 
-  window.IgnytGoals = { render: render, attach: attach, activeGoal: activeGoal, compute: compute, GOAL_TYPES: GOAL_TYPES, isDashboardShowing: isDashboardShowing };
+  window.IgnytGoals = { render: render, attach: attach, activeGoal: activeGoal, compute: compute, progressPct: progressPct, GOAL_TYPES: GOAL_TYPES, isDashboardShowing: isDashboardShowing };
 })();
