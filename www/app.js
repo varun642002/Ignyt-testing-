@@ -6999,51 +6999,69 @@ function renderWorkoutComplete(s){
       ${breakdown.filter(b=>b.sets>0).slice(0,6).map(b=>`<div>${b.name}</div>`).join("")}
     </div>`);
 
+  // No real exercise photos exist anywhere in this app (every EXERCISE_DETAILS.thumbnailUrl
+  // is null) -- an icon badge per row, not a fabricated photo, matches the honest-assets
+  // approach used everywhere else this session (Tools/Profile/Plan all use icon badges
+  // where the reference showed photography this app has no real asset for).
+  const exIcon = (name) => {
+    const m = getMuscle(name);
+    return ["Chest","Shoulders","Triceps"].includes(m) ? "dumbbell" : ["Back","Biceps","Lats"].includes(m) ? "workout" : "body";
+  };
+
   return `
-    <div style="text-align:center;margin:8px 0 4px;">
-      <div style="font-size:26px;font-weight:900;">Workout Complete 🎉</div>
-      <div style="font-size:14px;color:var(--muted);margin-top:4px;">${timeLabel}</div>
-    </div>
+    <div class="pg-light">
+      <div style="text-align:center;margin:8px 0 4px;">
+        <div style="font-size:24px;font-weight:800;">Workout Complete 🎉</div>
+        <div style="font-size:13px;color:var(--rh-muted);margin-top:4px;">${timeLabel}</div>
+      </div>
 
-    ${prs.length ? `<div class="info-box" style="padding:12px;margin:10px 0;border:1px solid rgba(255,90,31,.35);">
-      <div style="font-weight:900;font-size:15px;color:var(--accent);margin-bottom:4px;">🏆 ${prs.length} Personal Record${prs.length>1?'s':''}</div>
-      ${prs.slice(0,4).map(p=>`<div style="font-size:13px;color:var(--muted);">${p.exerciseName} — ${p.type==='1rm'?'est. 1RM':p.type} ${displayW(p.value,1)}${p.type==='volume'?wUnit():wUnit()}</div>`).join("")}
-    </div>`:""}
+      ${prs.length ? `<div class="pg-card" style="margin:12px 0;background:rgba(217,119,6,.06);border-color:rgba(217,119,6,.25);">
+        <div style="display:flex;align-items:center;gap:6px;font-weight:800;font-size:15px;color:#D97706;margin-bottom:8px;">${svg('trophy',18)} ${prs.length} Personal Record${prs.length>1?'s':''}</div>
+        ${prs.slice(0,4).map(p=>`<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--rh-text);padding:3px 0;"><span style="color:#D97706;">${svg('trend',13)}</span>${p.exerciseName||'Session'} — ${p.type==='1rm'?'est. 1RM':p.type} ${displayW(p.value,1)}${wUnit()}</div>`).join("")}
+      </div>`:""}
 
-    <div class="grid2" style="margin:12px 0;">
-      ${statTile("Duration", workoutDurationLabel(s))}
-      ${statTile("Volume", displayW(s.volume||0,0).toLocaleString(), wUnit())}
-      ${statTile("Completed Sets", completedSets)}
-      ${statTile("Exercises", s.exercises.length)}
-    </div>
+      <div class="pg-stat-grid" style="margin:12px 0;">
+        <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('timer',18)}</span>
+          <div class="pg-stat-card__value">${workoutDurationLabel(s)}</div><div class="pg-stat-card__label">Duration</div></div>
+        <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(124,58,237,.1);color:var(--rh-purple);">${svg('target',18)}</span>
+          <div class="pg-stat-card__value">${displayW(s.volume||0,0).toLocaleString()}<span class="pg-stat-card__unit">${wUnit()}</span></div><div class="pg-stat-card__label">Volume</div></div>
+        <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(22,163,74,.1);color:var(--rh-green);">${svg('check',18)}</span>
+          <div class="pg-stat-card__value">${completedSets}</div><div class="pg-stat-card__label">Completed Sets</div></div>
+        <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(217,119,6,.12);color:#D97706;">${svg('body',18)}</span>
+          <div class="pg-stat-card__value">${s.exercises.length}</div><div class="pg-stat-card__label">Exercises</div></div>
+      </div>
 
-    <div class="eyebrow-label">Exercise Breakdown</div>
-    <div class="info-box" style="padding:12px 14px;">
-      ${breakdown.length ? breakdown.map(b=>`<div class="row-between" style="padding:5px 0;">
-        <span style="font-size:15px;">${b.name}</span>
-        <span class="mono" style="font-size:14px;color:${b.sets>0?'var(--text)':'var(--muted)'};">${b.sets} set${b.sets!==1?'s':''}</span>
-      </div>`).join("") : `<div style="color:var(--muted);font-size:14px;">No exercises</div>`}
-    </div>
+      <div class="rh-section-head" style="margin-top:0;"><span>Exercise Breakdown</span></div>
+      <div class="pg-card" style="padding:6px 14px;">
+        ${breakdown.length ? breakdown.map(b=>`<div class="row-between" style="padding:9px 0;border-top:1px solid var(--rh-border);">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+            <span class="tl-card__icon" style="width:32px;height:32px;flex:none;">${svg(exIcon(b.name),16)}</span>
+            <span style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${b.name}</span>
+          </div>
+          <span style="font-size:13px;font-weight:700;color:${b.sets>0?'var(--rh-blue)':'var(--rh-muted)'};flex-shrink:0;">${b.sets} set${b.sets!==1?'s':''}</span>
+        </div>`).join("") : `<div class="wk-empty">No exercises</div>`}
+      </div>
 
-    ${muscles.length?`<div class="eyebrow-label">Muscles Trained</div>
-    <div style="margin-bottom:12px;">${muscles.map(m=>`<span class="muscle-chip active">${m}</span>`).join("")}</div>`:""}
+      ${muscles.length?`<div class="rh-section-head"><span>Muscles Trained</span></div>
+      <div style="margin-bottom:12px;">${muscles.map(m=>`<span class="muscle-chip active" style="background:rgba(217,119,6,.1);color:#D97706;">${m}</span>`).join("")}</div>`:""}
 
-    <div class="eyebrow-label">Share</div>
-    <div class="share-carousel" id="share-carousel" aria-label="Share cards, swipe to browse">
-      ${card1}${card2}${card3}
+      <div class="rh-section-head"><span>Share</span></div>
+      <div class="share-carousel" id="share-carousel" aria-label="Share cards, swipe to browse">
+        ${card1}${card2}${card3}
+      </div>
+      <div class="share-dots" id="share-dots">
+        ${[0,1,2].map(i=>`<span class="share-dot ${i===(state.shareCardIndex||0)?'active':''}"></span>`).join("")}
+      </div>
+      <div style="display:flex;gap:6px;margin:8px 0 12px;justify-content:center;">
+        ${Object.entries(SHARE_THEMES).map(([key,t])=>`<button class="cat-chip ${theme===key?'active':''}" data-share-theme="${key}">${t.label}</button>`).join("")}
+      </div>
+      <div class="pg-card-row" style="margin-top:0;">
+        <button class="rh-btn" style="padding:13px;background:rgba(37,99,235,.1);color:var(--rh-blue);" data-action="share-workout-image" aria-label="Share workout card image">${svg('upload',15)} Share Image</button>
+        <button class="rh-btn" style="padding:13px;background:rgba(22,163,74,.1);color:var(--rh-green);" data-action="save-workout-image" aria-label="Save workout card image">${svg('download',15)} Save Image</button>
+      </div>
+      <button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:8px;padding:13px;" data-action="copy-workout-summary" aria-label="Copy workout summary text">${svg('file',15)} Copy Summary Text</button>
+      <button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:8px;padding:13px;" data-action="close-workout-complete">Done</button>
     </div>
-    <div class="share-dots" id="share-dots">
-      ${[0,1,2].map(i=>`<span class="share-dot ${i===(state.shareCardIndex||0)?'active':''}"></span>`).join("")}
-    </div>
-    <div style="display:flex;gap:6px;margin:8px 0 12px;justify-content:center;">
-      ${Object.entries(SHARE_THEMES).map(([key,t])=>`<button class="cat-chip ${theme===key?'active':''}" data-share-theme="${key}">${t.label}</button>`).join("")}
-    </div>
-    <div class="grid2" style="gap:8px;">
-      <button class="btn btn-accent" data-action="share-workout-image" aria-label="Share workout card image">Share Image</button>
-      <button class="btn btn-steel" data-action="save-workout-image" aria-label="Save workout card image">Save Image</button>
-    </div>
-    <button class="btn btn-ghost btn-block" data-action="copy-workout-summary" style="margin-top:8px;" aria-label="Copy workout summary text">Copy Summary Text</button>
-    <button class="btn btn-ghost btn-block" data-action="close-workout-complete" style="margin-top:8px;">Done</button>
   `;
 }
 
