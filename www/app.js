@@ -1374,7 +1374,17 @@ const ICONS = {
   mail:'<rect x="3.5" y="5.5" width="17" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 7l7.5 6 7.5-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   phone:'<path d="M6.5 3.5h3l1.5 4-2 1.5a11 11 0 0 0 5 5l1.5-2 4 1.5v3a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 5 5.1 1.5 1.5 0 0 1 6.5 3.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   shield:'<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
-  ruler:'<rect x="3" y="8" width="18" height="8" rx="1.5" transform="rotate(-45 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9.5 9.5l1.4 1.4M12 7l1.4 1.4M14.5 4.5l1.4 1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'
+  ruler:'<rect x="3" y="8" width="18" height="8" rx="1.5" transform="rotate(-45 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9.5 9.5l1.4 1.4M12 7l1.4 1.4M14.5 4.5l1.4 1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  speaker:'<path d="M4 9v6h4l5 4V5L8 9H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M17 9a4 4 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  vibrate:'<rect x="8" y="4" width="8" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 9v6M21 9v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  mobile:'<rect x="6.5" y="3" width="11" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  monitor:'<rect x="3" y="4.5" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 20h8M12 16.5V20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  download:'<path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  upload:'<path d="M12 15V3m0 0l-4.5 4.5M12 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  box:'<path d="M3.5 7.5L12 3l8.5 4.5L12 12 3.5 7.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3.5 7.5V16L12 20.5M20.5 7.5V16L12 20.5M12 12v8.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  file:'<path d="M6 2.5h8l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 20V4a1.5 1.5 0 0 1 1.5-1.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 2.5V7h4M8 12h8M8 16h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  trash:'<path d="M4 7h16M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7M6.5 7l1 12.5a1.5 1.5 0 0 0 1.5 1.4h6a1.5 1.5 0 0 0 1.5-1.4L17.5 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  info:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7.5v.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
 };
 
 /* =========================================================
@@ -1659,6 +1669,7 @@ const state = {
   routineBuilderSets: 3,
   viewingHyroxSchedule: false,
   viewingHyroxInfo: false,
+  viewingPrivacyInfo: false,
   csvImportPreview: null,
   exerciseMenuOpen: null,
   replacingExerciseIndex: null,
@@ -3530,16 +3541,25 @@ function applyTheme(){
   document.documentElement.setAttribute("data-theme", resolved);
 }
 
-function settingToggle(key, label, desc){
+/* Settings' only caller of this is renderSettingsTab(), now entirely wrapped in .pg-light
+   (same light "premium reference" system as Home/Workout/Progress/Tools/Profile/Goals) --
+   so this uses those --rh-* tokens directly rather than the theme-aware --surface-alt/--steel
+   ones, which would render dark-toggle colors regardless of the user's actual dark/light
+   app-theme setting (that setting still exists and still governs every other, unredesigned
+   screen; this row's own colors just aren't wired to it, same as every other light screen). */
+function settingToggle(key, label, desc, icon){
   const on = !!state.settings[key];
-  return `<div style="padding:14px 0;border-bottom:1px solid var(--border);">
-    <div class="row-between">
-      <span style="font-weight:700;font-size:15px;">${label}</span>
-      <button data-setting-toggle="${key}" style="width:46px;height:26px;border-radius:13px;border:none;cursor:pointer;position:relative;background:${on?'var(--steel)':'var(--surface-alt)'};transition:background .15s;">
-        <span style="position:absolute;top:3px;${on?'right:3px':'left:3px'};width:20px;height:20px;border-radius:50%;background:${on?'#fff':'#6a6a74'};"></span>
-      </button>
+  return `<div class="pi-row" style="background:none;border:none;border-radius:0;padding:14px 0;border-bottom:1px solid var(--rh-border);align-items:center;">
+    ${icon?`<span class="pi-row__icon" style="flex-shrink:0;">${svg(icon,16)}</span>`:''}
+    <div class="pi-row__body" style="flex:1;">
+      <div class="row-between">
+        <span style="font-weight:700;font-size:14px;">${label}</span>
+        <button data-setting-toggle="${key}" style="width:46px;height:26px;border-radius:13px;border:none;cursor:pointer;position:relative;flex-shrink:0;background:${on?'var(--rh-blue)':'#D9DEE7'};transition:background .15s;">
+          <span style="position:absolute;top:3px;${on?'right:3px':'left:3px'};width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
+        </button>
+      </div>
+      ${desc?`<div style="font-size:11px;color:var(--rh-muted);margin-top:3px;max-width:92%;">${desc}</div>`:""}
     </div>
-    ${desc?`<div style="font-size:12px;color:var(--muted);margin-top:4px;max-width:85%;">${desc}</div>`:""}
   </div>`;
 }
 
@@ -3551,194 +3571,240 @@ function settingToggle(key, label, desc){
  *  fitness profile (hx_profile) and every other hx_* key, none of which it reads or writes.
  *  Renders from IgnytAuth's cached snapshot (instant + offline); auth.js reconciles that
  *  snapshot against the real persisted Firebase session once per launch. */
+/* No "Premium"/subscription badge here -- this app has no payment or subscription system,
+   so nothing implying a paid tier is shown (same principle already applied to Profile). */
 function renderAccountSection(){
   const esc = v => String(v == null ? "" : v)
     .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const auth = window.IgnytAuth;
-  const header = `<div class="eyebrow-label" style="margin-top:4px;">IGNYT Account</div>`;
 
   if(!auth) return ""; // auth.js failed to load — never break the rest of Settings over it
 
   if(!auth.isNativeAndroid()){
-    return `${header}
-      <div class="info-box" style="padding:14px;">
-        <div style="font-size:13px;color:var(--muted);">Sign-in is available in the IGNYT Android app.</div>
-      </div>`;
+    return `<div class="pg-card">
+      <div style="font-size:13px;color:var(--rh-muted);">Sign-in is available in the IGNYT Android app.</div>
+    </div>`;
   }
 
   const busy = auth.isBusy();
   const errorMsg = auth.getError();
   const account = auth.getAccount();
-  const errorHtml = errorMsg ? `<div style="font-size:12px;color:var(--accent);margin-bottom:10px;">${esc(errorMsg)}</div>` : "";
+  const errorHtml = errorMsg ? `<div style="font-size:12px;color:var(--rh-red);margin-top:10px;">${esc(errorMsg)}</div>` : "";
 
   if(!account){
-    return `${header}
-      <div class="info-box" style="padding:14px;">
-        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Sign in to securely back up your fitness data and enable future multi-device sync.</div>
-        ${errorHtml}
-        <button class="btn btn-accent btn-block" data-action="account-signin" ${busy?'disabled':''}>${busy?'Signing in…':'Continue with Google'}</button>
-      </div>`;
+    return `<div class="pg-card">
+      <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Sign in to securely back up your fitness data and enable future multi-device sync.</div>
+      ${errorHtml}
+      <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:${errorHtml?'10px':'0'};padding:12px;" data-action="account-signin" ${busy?'disabled':''}>${busy?'Signing in…':'Continue with Google'}</button>
+    </div>`;
   }
 
   const initial = esc((account.displayName || account.email || "?").trim().charAt(0).toUpperCase() || "?");
-  // Initials avatar always rendered underneath; the photo covers it when it loads and
-  // removes itself if it can't (offline, revoked URL, no photo) — no broken-image icon ever.
-  const avatar = `
-    <div style="position:relative;width:44px;height:44px;flex-shrink:0;">
-      <div style="width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;">${initial}</div>
-      ${account.photoUrl ? `<img src="${esc(account.photoUrl)}" alt="" referrerpolicy="no-referrer" style="position:absolute;top:0;left:0;width:44px;height:44px;border-radius:50%;" onerror="this.remove()">` : ""}
-    </div>`;
+  const cs = window.IgnytCloudSync;
+  const lastSyncLabel = cs && cs.getStatus().lastSyncAt
+    ? hcTimeAgo(new Date(cs.getStatus().lastSyncAt).toISOString()) : null;
 
-  return `${header}
-    <div class="info-box" style="padding:14px;">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-        ${avatar}
-        <div style="min-width:0;flex:1;">
-          <div style="font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(account.displayName) || "Google Account"}</div>
-          <div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(account.email)}</div>
-        </div>
+  return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;">
+    <div class="pf-avatar" style="width:52px;height:52px;flex:none;">
+      ${account.photoUrl ? `<img src="${esc(account.photoUrl)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
+      <span class="pf-avatar__initial" style="font-size:18px;">${initial}</span>
+    </div>
+    <div style="min-width:0;flex:1;">
+      <div style="font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(account.displayName) || "Google Account"}</div>
+      <div style="font-size:12px;color:var(--rh-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(account.email)}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+        <span style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--rh-green);">${svg('check',11)} Signed in with Google</span>
+        ${lastSyncLabel?`<span style="font-size:10px;color:var(--rh-muted);">Last sync<br>${lastSyncLabel}</span>`:''}
       </div>
-      <div class="row-between" style="margin-bottom:12px;">
-        <span style="font-size:12px;color:var(--muted);">Status</span>
-        <span style="font-size:12px;font-weight:700;color:var(--mint);">Signed in with Google</span>
-      </div>
-      ${renderCloudSyncRow()}
       ${errorHtml}
-      <button class="btn btn-ghost btn-block" data-action="account-signout" ${busy?'disabled':''}>${busy?'Signing out…':'Sign Out'}</button>
-    </div>`;
+    </div>
+  </div>`;
 }
 
 /** Small cloud-sync status row inside the signed-in account card (Phase 2B). Reads
  *  IgnytCloudSync's state; shows nothing if cloud-sync.js isn't loaded. Raw Firebase
  *  errors are never shown — cloud-sync.js maps them to short friendly strings. */
-function renderCloudSyncRow(){
+/** Plain status text for the Data & Sync card in Settings (tap-to-sync, see the
+ *  data-action="cloud-sync-now" handler on that card). Same real status source as before,
+ *  just returning text instead of a full row -- the card itself supplies the layout now. */
+function renderCloudSyncStatusText(){
   const cs = window.IgnytCloudSync;
-  if(!cs) return "";
+  if(!cs) return "Offline — saved on this device";
   const s = cs.getStatus();
   const lastLabel = s.lastSyncAt
     ? new Date(s.lastSyncAt).toLocaleString([], { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" })
     : null;
-  const view = {
-    "syncing":    { text:"Syncing…",                          color:"var(--muted)" },
-    "synced":     { text: lastLabel ? "Synced · "+lastLabel : "Synced", color:"var(--mint)" },
-    "queued":     { text:"Saved — will upload when online",   color:"var(--muted)" },
-    "offline":    { text:"Offline — saved on this device",    color:"var(--muted)" },
-    "failed":     { text:"Sync failed",                       color:"var(--accent)" },
-    "signed-out": { text:"Sign in to sync",                   color:"var(--muted)" },
-    "idle":       { text: lastLabel ? "Synced · "+lastLabel : "Not synced yet", color:"var(--muted)" }
-  }[s.status] || { text:"—", color:"var(--muted)" };
-  const detail = (s.status==="failed" || s.status==="offline") && s.detail
-    ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">${s.detail}</div>` : "";
+  return ({
+    "syncing":    "Syncing…",
+    "synced":     lastLabel ? "Synced · "+lastLabel : "Synced",
+    "queued":     "Saved — will upload when online",
+    "offline":    "Offline — saved on this device",
+    "failed":     "Sync failed — tap to retry",
+    "signed-out": "Sign in to sync",
+    "idle":       lastLabel ? "Synced · "+lastLabel : "Not synced yet"
+  })[s.status] || "—";
+}
+
+/* Real, honest facts about how this app actually handles data -- no dedicated "Privacy &
+   Security" screen existed before; this one only states what's genuinely true (local-only
+   storage, real notification/Health Connect permission status), nothing invented. */
+function renderPrivacySecurityInfo(){
+  let hcConnected = false;
+  try { hcConnected = !!(window.HealthConnectIntegration && window.HealthConnectIntegration.loadState().connected); } catch(e){}
+  const notifPerm = typeof Notification!=='undefined' ? Notification.permission : 'unsupported';
+  const cs = window.IgnytCloudSync;
+  const signedIn = window.IgnytAuth && window.IgnytAuth.isNativeAndroid() && !!window.IgnytAuth.getAccount();
   return `
-    <div style="margin-bottom:12px;">
-      <div class="row-between">
-        <span style="font-size:12px;color:var(--muted);">Cloud sync</span>
-        <span style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:12px;font-weight:700;color:${view.color};">${view.text}</span>
-          <button class="cat-chip" data-action="cloud-sync-now" ${cs.isBusy()?'disabled':''} style="margin:0;">Sync Now</button>
-        </span>
+    <div class="pg-light">
+      <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:10px;" data-action="close-privacy-info">← Back</button>
+      <div style="font-size:22px;font-weight:800;margin-bottom:2px;">Privacy &amp; Security</div>
+      <div style="font-size:13px;color:var(--rh-muted);margin-bottom:14px;">How your data is actually stored and shared.</div>
+
+      <div class="pg-card">
+        <div style="font-size:15px;font-weight:800;margin-bottom:6px;">Where your data lives</div>
+        <div style="font-size:13px;color:var(--rh-muted);line-height:1.55;">Every workout, weigh-in, food entry, goal and setting is stored locally on this device by default. ${signedIn?'You\'re signed in with Google, so it also backs up to your account\'s cloud storage.':'Nothing leaves this device unless you sign in with Google (Tools → Settings) to enable cloud backup, or you explicitly export a file.'}</div>
       </div>
-      ${detail}
-    </div>`;
+
+      <div class="pg-card" style="margin-top:12px;">
+        <div style="font-size:15px;font-weight:800;margin-bottom:10px;">Real permission status</div>
+        <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('bell',16)}</span><div class="pi-row__body"><div class="pi-row__label">Notifications</div><div class="pi-row__value" style="text-transform:capitalize;">${notifPerm}</div></div></div>
+        <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('health',16)}</span><div class="pi-row__body"><div class="pi-row__label">Health Connect</div><div class="pi-row__value">${hcConnected?'Connected':'Not connected'}</div></div></div>
+        <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('signout',16)}</span><div class="pi-row__body"><div class="pi-row__label">Google Sign-In</div><div class="pi-row__value">${signedIn?'Signed in':'Not signed in'}</div></div></div>
+        <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('cloud',16)}</span><div class="pi-row__body"><div class="pi-row__label">Cloud Sync</div><div class="pi-row__value">${cs?cs.getStatus().status:'Not available'}</div></div></div>
+      </div>
+
+      <div class="pg-card" style="margin-top:12px;">
+        <div style="font-size:15px;font-weight:800;margin-bottom:6px;">Deleting your data</div>
+        <div style="font-size:13px;color:var(--rh-muted);line-height:1.55;">Delete a single entry anytime from its own screen (workouts, weigh-ins, food, photos), or permanently erase everything at once from Settings → Danger Zone → Reset All App Data.</div>
+      </div>
+    </div>
+  `;
 }
 
 function renderSettingsTab(){
+  if(state.viewingPrivacyInfo) return renderPrivacySecurityInfo();
   const s = state.settings;
   return `
-    ${renderAccountSection()}
-    <div class="eyebrow-label">Export Data</div>
-    <div class="info-box" style="padding:14px;">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export your entire workout and measurement history. The JSON backup can be imported back; CSVs are for spreadsheets.</div>
-      <button class="btn btn-accent btn-block" data-action="export-json" style="margin-bottom:8px;">Full Backup (JSON)</button>
-      <button class="btn btn-steel btn-block" data-action="export-workouts-csv" style="margin-bottom:8px;">Export Workouts (CSV)</button>
-      <button class="btn btn-steel btn-block" data-action="export-measurements-csv">Export Measurements (CSV)</button>
-    </div>
+    <div class="pg-light">
+      <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:6px;" data-action="close-settings">← Back</button>
+      <div style="font-size:22px;font-weight:800;">Settings</div>
+      <div style="font-size:12px;color:var(--rh-muted);margin-bottom:14px;">Personalise your experience</div>
 
-    <div class="eyebrow-label">Import Data</div>
-    <div class="info-box" style="padding:14px;">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Restore from a Full Backup (JSON) file. This replaces all current data in the app.</div>
-      <input type="file" id="import-file" accept=".json,application/json" style="display:none;">
-      <button class="btn btn-ghost btn-block" data-action="import-json">Choose Backup File…</button>
-    </div>
+      ${renderAccountSection()}
 
-    <div class="eyebrow-label">Import CSV</div>
-    <div class="info-box" style="padding:14px;">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">
-        Import from a spreadsheet. Three formats are auto-detected:<br>
-        <b style="color:var(--text);">Exercises</b> — columns <b style="color:var(--text);">name</b>, <b style="color:var(--text);">muscle</b> (optional: cat, presc, unit). Adds to Custom Exercises only.<br>
-        <b style="color:var(--text);">Workout History</b> — a Hevy-style export (title, start_time, exercise_title, set_type, weight_kg, reps, …). Adds full past workouts and backfills PRs.<br>
-        <b style="color:var(--text);">Foods</b> — columns <b style="color:var(--text);">name</b>, <b style="color:var(--text);">calories</b> (optional: protein, carbs, fat, fibre). Adds to Favorite Foods for quick-add — never creates fake dated food-log entries.<br>
-        Either way, this only adds — it never overwrites or deletes anything, and re-importing the same file skips what's already there.
-      </div>
-      <input type="file" id="import-csv" accept=".csv,text/csv" style="display:none;">
-      <button class="btn btn-ghost btn-block" data-action="import-csv">Choose CSV File…</button>
-      ${state.csvImportPreview ? renderCsvImportPreview() : ""}
-    </div>
-
-    <div class="eyebrow-label">Workout Settings</div>
-    <div class="info-box" style="padding:0 14px;">
-      ${settingToggle("sounds","Sounds","Beep when the rest timer finishes.")}
-      ${settingToggle("vibration","Vibration","Vibrate when the rest timer finishes.")}
-      ${settingToggle("autoStartRest","Auto-Start Rest Timer","Checking off a set automatically starts that exercise's rest timer.")}
-      ${settingToggle("keepAwake","Keep Awake During Workout","Prevents your phone screen from sleeping while a session is in progress.")}
-      ${settingToggle("plateCalc","Plate Calculator","Shows a plates button next to weight inputs for barbell exercises.")}
-      ${settingToggle("rpeTracking","RPE Tracking","Show the RPE column in the workout logger.")}
-      ${settingToggle("exerciseCalorieBudget","Exercise Calorie Budget","Add today’s real Health Connect active calories to your Food Log calorie budget.")}
-      <div style="padding:14px 0;">
-        <div class="row-between">
-          <span style="font-weight:700;font-size:15px;">Default Rest Timer</span>
-          <select class="select-input" id="default-rest-select" style="width:auto;margin:0;padding:6px 10px;">
-            ${[0,30,60,90,120,150,180,240].map(v=>`<option value="${v}" ${s.defaultRest===v?'selected':''}>${v===0?'Off':v+'s'}</option>`).join("")}
-          </select>
+      <div class="rh-section-head" style="margin-top:16px;"><span>${svg('moon',13)} Appearance</span></div>
+      <div class="pg-card">
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">
+          ${[{key:"dark",label:"Dark",icon:"moon"},{key:"light",label:"Light",icon:"sun"},{key:"system",label:"System",icon:"monitor"}].map(t=>`
+            <button class="tl-card ${s.theme===t.key?'is-connected':''}" style="flex-direction:column;align-items:center;text-align:center;padding:16px 8px;" data-theme-select="${t.key}">
+              <span class="tl-card__icon" style="margin:0 0 8px;">${svg(t.icon,20)}</span>
+              <span style="font-size:13px;font-weight:700;">${t.label}</span>
+            </button>`).join("")}
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px;">New exercises added to a session start with this rest duration.</div>
       </div>
-      <div style="padding:14px 0;">
-        <div class="row-between">
-          <span style="font-weight:700;font-size:15px;">Weight Unit</span>
-          <div style="display:flex;gap:6px;">
-            <button class="cat-chip ${s.weightUnit==='kg'?'active':''}" data-weight-unit="kg">kg</button>
-            <button class="cat-chip ${s.weightUnit==='lb'?'active':''}" data-weight-unit="lb">lb</button>
+
+      <div class="rh-section-head"><span>${svg('dumbbell',13)} Workout Settings</span></div>
+      <div class="pg-card">
+        ${settingToggle("sounds","Sounds","Beep when the rest timer finishes.","speaker")}
+        ${settingToggle("vibration","Vibration","Vibrate when the rest timer finishes.","vibrate")}
+        ${settingToggle("autoStartRest","Auto-Start Rest Timer","Automatically starts rest timer.","timer")}
+        ${settingToggle("keepAwake","Keep Awake During Workout","Prevents your screen from sleeping.","mobile")}
+        ${settingToggle("plateCalc","Plate Calculator","Shows a plates button for barbell exercises.","dumbbell")}
+        ${settingToggle("rpeTracking","RPE Tracking","Show the RPE column in the workout logger.","progress")}
+        ${settingToggle("exerciseCalorieBudget","Exercise Calorie Budget","Add active calories to your Food Log.","flame")}
+        <div class="pi-row" style="background:none;border:none;padding:14px 0;align-items:center;">
+          <span class="pi-row__icon">${svg('timer',16)}</span>
+          <div class="pi-row__body">
+            <div class="row-between"><span style="font-weight:700;font-size:14px;">Default Rest Timer</span>
+              <select class="pi-input" id="default-rest-select" style="width:auto;padding:6px 10px;">
+                ${[0,30,60,90,120,150,180,240].map(v=>`<option value="${v}" ${s.defaultRest===v?'selected':''}>${v===0?'Off':v+'s'}</option>`).join("")}
+              </select>
+            </div>
+            <div style="font-size:11px;color:var(--rh-muted);margin-top:3px;">New exercises use this duration.</div>
           </div>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px;">Applies to workout logging, body weight, and PRs. Calculators and the plate calculator stay in kg.</div>
-      </div>
-      <div style="padding:14px 0;">
-        <div class="row-between">
-          <span style="font-weight:700;font-size:15px;">Daily Water Target</span>
-          <select class="select-input" id="water-target-select" style="width:auto;margin:0;padding:6px 10px;">
-            ${[1500,2000,2500,3000,3500,4000].map(v=>`<option value="${v}" ${s.waterTargetMl===v?'selected':''}>${(v/1000).toFixed(1)}L</option>`).join("")}
-          </select>
+        <div class="pi-row" style="background:none;border:none;padding:14px 0;align-items:center;border-top:1px solid var(--rh-border);">
+          <span class="pi-row__icon">${svg('dumbbell',16)}</span>
+          <div class="pi-row__body">
+            <div class="row-between"><span style="font-weight:700;font-size:14px;">Weight Unit</span>
+              <div style="display:flex;gap:6px;">
+                <button class="cat-chip ${s.weightUnit==='kg'?'active':''}" data-weight-unit="kg">kg</button>
+                <button class="cat-chip ${s.weightUnit==='lb'?'active':''}" data-weight-unit="lb">lb</button>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--rh-muted);margin-top:3px;">Applies to workout logging, body weight, and PRs.</div>
+          </div>
+        </div>
+        <div class="pi-row" style="background:none;border:none;padding:14px 0;align-items:center;border-top:1px solid var(--rh-border);">
+          <span class="pi-row__icon">${svg('droplet',16)}</span>
+          <div class="pi-row__body">
+            <div class="row-between"><span style="font-weight:700;font-size:14px;">Daily Water Target</span>
+              <select class="pi-input" id="water-target-select" style="width:auto;padding:6px 10px;">
+                ${[1500,2000,2500,3000,3500,4000].map(v=>`<option value="${v}" ${s.waterTargetMl===v?'selected':''}>${(v/1000).toFixed(1)}L</option>`).join("")}
+              </select>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="eyebrow-label">Appearance</div>
-    <div class="info-box" style="padding:14px;">
-      <div style="display:flex;gap:6px;">
-        ${[{key:"dark",label:"Dark"},{key:"light",label:"Light"},{key:"system",label:"System"}].map(t=>`
-          <button class="cat-chip ${s.theme===t.key?'active':''}" data-theme-select="${t.key}" style="flex:1;text-align:center;">${t.label}</button>
-        `).join("")}
+      <div class="rh-section-head"><span>${svg('bell',13)} Notifications</span></div>
+      <div class="pg-card">
+        <div style="font-size:11px;color:var(--rh-muted);margin-bottom:10px;line-height:1.4;">Reminders only fire while IGNYT is open — mobile OSes don't allow true background notifications without a push server.</div>
+        ${settingToggle("workoutReminders","Workout Reminders","Nudge you in the evening.","calendar")}
+        ${settingToggle("hydrationReminders","Hydration Reminders","Nudge you mid-afternoon.","droplet")}
+        ${settingToggle("weeklyReports","Weekly Reports","Summary of your training week.","progress")}
+        <button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:12px;" data-action="test-notification">Send Test Notification</button>
+        ${typeof Notification!=='undefined' && Notification.permission==='denied' ? `<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Notifications are blocked for this site in your browser settings.</div>` : ''}
       </div>
-    </div>
 
-    <div class="eyebrow-label">Notifications</div>
-    <div class="info-box" style="padding:0 14px;">
-      <div style="font-size:12px;color:var(--muted);padding:14px 0 4px;">
-        Reminders only fire while Ignyt is open in a browser tab or the installed app — mobile browsers don't allow true background notifications without a push server, so this isn't a set-and-forget alarm.
+      <div class="rh-section-head"><span>${svg('cloud',13)} Data &amp; Sync</span></div>
+      <div class="tl-grid" style="grid-template-columns:1fr;">
+        <button class="tl-card" data-action="cloud-sync-now" style="cursor:${window.IgnytCloudSync?'pointer':'default'};">
+          <span class="tl-card__icon">${svg('cloud',20)}</span>
+          <div class="tl-card__body"><div class="tl-card__label">Cloud Sync</div><div class="tl-card__desc">${window.IgnytCloudSync?renderCloudSyncStatusText():'Offline — saved on this device'}</div></div>
+          ${window.IgnytCloudSync && window.IgnytCloudSync.getStatus().status==='synced' ? `<span class="tl-card__badge" style="position:static;background:rgba(22,163,74,.12);color:var(--rh-green);border-radius:14px;padding:4px 10px;font-size:11px;font-weight:700;">Connected</span>` : `<span class="tl-card__chev">›</span>`}
+        </button>
+        <button class="tl-card" data-action="open-privacy-info">
+          <span class="tl-card__icon">${svg('shield',20)}</span>
+          <div class="tl-card__body"><div class="tl-card__label">Privacy &amp; Security</div><div class="tl-card__desc">Manage your data and permissions</div></div>
+          <span class="tl-card__chev">›</span>
+        </button>
       </div>
-      ${settingToggle("workoutReminders","Workout Reminders","Nudge you in the evening if you haven't logged a workout yet today.")}
-      ${settingToggle("hydrationReminders","Hydration Reminders","Nudge you mid-afternoon if you're well behind your water target.")}
-      ${settingToggle("weeklyReports","Weekly Reports","Show a summary of the week's training when you open the app.")}
-      <div style="padding:14px 0;">
-        <button class="btn btn-ghost btn-block" data-action="test-notification">Send Test Notification</button>
-        ${typeof Notification!=='undefined' && Notification.permission==='denied' ? `<div style="font-size:11px;color:var(--accent);margin-top:6px;">Notifications are blocked for this site in your browser settings — re-enable them there to use reminders.</div>` : ''}
-      </div>
-    </div>
 
-    <div class="eyebrow-label">Danger Zone</div>
-    <div class="info-box" style="padding:14px;">
-      <button class="btn btn-ghost btn-block" data-action="reset-all" style="color:#ff6b6b;">Reset All App Data</button>
+      <div class="rh-section-head"><span>${svg('download',13)} Export Data</span></div>
+      <div class="pg-card" style="margin-bottom:10px;">
+        <div style="font-size:12px;color:var(--rh-muted);line-height:1.5;">Export your entire workout and measurement history. The JSON backup can be imported back; CSVs are for spreadsheets.</div>
+      </div>
+      <div class="tl-grid" style="grid-template-columns:1fr;">
+        <button class="tl-card" data-action="export-json"><span class="tl-card__icon">${svg('box',20)}</span><div class="tl-card__body"><div class="tl-card__label">Full Backup (JSON)</div><div class="tl-card__desc">Export all app data</div></div><span class="tl-card__chev">›</span></button>
+        <button class="tl-card" data-action="export-workouts-csv"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Export Workouts (CSV)</div><div class="tl-card__desc">Download workout history</div></div><span class="tl-card__chev">›</span></button>
+        <button class="tl-card" data-action="export-measurements-csv"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Export Measurements (CSV)</div><div class="tl-card__desc">Download body metrics</div></div><span class="tl-card__chev">›</span></button>
+      </div>
+
+      <div class="rh-section-head"><span>${svg('upload',13)} Import Data</span></div>
+      <div class="tl-grid" style="grid-template-columns:1fr;">
+        <button class="tl-card" data-action="import-json"><span class="tl-card__icon">${svg('upload',20)}</span><div class="tl-card__body"><div class="tl-card__label">Choose Backup File…</div><div class="tl-card__desc">Restore from a JSON backup</div></div><span class="tl-card__chev">›</span></button>
+        <button class="tl-card" data-action="import-csv"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Import CSV</div><div class="tl-card__desc">Import workouts or measurements</div></div><span class="tl-card__chev">›</span></button>
+      </div>
+      <input type="file" id="import-file" accept=".json,application/json" style="display:none;">
+      <input type="file" id="import-csv" accept=".csv,text/csv" style="display:none;">
+      ${state.csvImportPreview ? `<div class="pg-card" style="margin-top:8px;">${renderCsvImportPreview()}</div>` : ""}
+      <div style="font-size:11px;color:var(--rh-muted);margin-top:8px;line-height:1.5;">Imports only add data — three formats are auto-detected (Exercises, Workout History, Foods) and re-importing the same file skips what's already there.</div>
+
+      <div class="rh-section-head"><span style="color:var(--rh-red);">${svg('x',13)} Danger Zone</span></div>
+      <button class="pg-card" data-action="reset-all" style="width:100%;text-align:left;cursor:pointer;background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3);display:flex;align-items:center;gap:12px;">
+        <span class="tl-card__icon" style="background:rgba(239,68,68,.15);color:var(--rh-red);">${svg('trash',20)}</span>
+        <div><div style="font-weight:800;font-size:14px;color:var(--rh-red);">Reset All App Data</div><div style="font-size:11px;color:var(--rh-muted);margin-top:2px;">Delete all workouts, measurements and settings permanently.</div></div>
+      </button>
+
+      <div class="rh-section-head"><span>${svg('info',13)} About</span></div>
+      <div class="tl-grid" style="grid-template-columns:1fr;">
+        <div class="tl-card" style="cursor:default;"><span class="tl-card__icon">${svg('info',20)}</span><div class="tl-card__body"><div class="tl-card__label">App Version</div><div class="tl-card__desc">IGNYT v1.0</div></div></div>
+      </div>
+
+      ${window.IgnytAuth && window.IgnytAuth.isNativeAndroid() && window.IgnytAuth.getAccount() ? `
+      <button class="rh-btn" style="width:100%;margin-top:16px;padding:14px;background:rgba(239,68,68,.1);color:var(--rh-red);" data-action="account-signout">${svg('signout',16)} Sign Out</button>
+      ` : ''}
     </div>
   `;
 }
@@ -4003,7 +4069,8 @@ function renderApp(){
   const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || (state.tab==="progress" && !state.progressView)
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || !state.bodyView))
-    || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo);
+    || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
+    || state.tab==="settings";
   const notifications = computeNotifications();
   const unreadCount = notifications.filter(n=>n.ts>(state.settings.notificationsSeenAt||0)).length;
   root.innerHTML = `
@@ -7587,6 +7654,12 @@ function attachHandlers(){
   if(accountSignoutBtn) accountSignoutBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signOut(); });
   const cloudSyncNowBtn = document.querySelector('[data-action="cloud-sync-now"]');
   if(cloudSyncNowBtn) cloudSyncNowBtn.addEventListener("click", ()=>{ if(window.IgnytCloudSync) IgnytCloudSync.syncNow(); });
+  const closeSettingsBtn = document.querySelector('[data-action="close-settings"]');
+  if(closeSettingsBtn) closeSettingsBtn.addEventListener("click", ()=>{ state.tab = "tools"; state.viewingPrivacyInfo = false; render(); });
+  const openPrivacyBtn = document.querySelector('[data-action="open-privacy-info"]');
+  if(openPrivacyBtn) openPrivacyBtn.addEventListener("click", ()=>{ state.viewingPrivacyInfo = true; render(); });
+  const closePrivacyBtn = document.querySelector('[data-action="close-privacy-info"]');
+  if(closePrivacyBtn) closePrivacyBtn.addEventListener("click", ()=>{ state.viewingPrivacyInfo = false; render(); });
   const testNotifBtn = document.querySelector('[data-action="test-notification"]');
   if(testNotifBtn) testNotifBtn.addEventListener("click", ()=>{
     if(typeof Notification==='undefined'){
