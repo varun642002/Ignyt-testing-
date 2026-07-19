@@ -1359,7 +1359,10 @@ const ICONS = {
   search:'<circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4.8-4.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   upload:'<path d="M12 15V4M8 8l4-4 4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
   dumbbell:'<path d="M4 9v6M2.5 10.5v3M20 9v6M21.5 10.5v3M7 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="4" y="8" width="3" height="8" rx="1" fill="currentColor"/><rect x="17" y="8" width="3" height="8" rx="1" fill="currentColor"/>',
-  calendar:'<rect x="4" y="5.5" width="16" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 10h16M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="7.5" y="13" width="3" height="3" rx=".5" fill="currentColor"/>'
+  calendar:'<rect x="4" y="5.5" width="16" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 10h16M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="7.5" y="13" width="3" height="3" rx=".5" fill="currentColor"/>',
+  tools:'<rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2" fill="currentColor"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="2" fill="currentColor"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="2" fill="currentColor"/><rect x="13" y="13" width="7.5" height="7.5" rx="2" fill="currentColor"/>',
+  target:'<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
+  flask:'<path d="M9 3h6M10 3v6.5L4.8 18.2A2 2 0 0 0 6.5 21h11a2 2 0 0 0 1.7-2.8L14 9.5V3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M7.5 15h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
 };
 
 /* =========================================================
@@ -1627,7 +1630,7 @@ const state = {
 /* ---------- Derived values from shared profile (auto-recalc everywhere) ---------- */
 
 function persist(){
-  LS.set("hx_tab", state.tab==="more" ? (LS.get("hx_tab","home")) : state.tab);
+  LS.set("hx_tab", state.tab);
   LS.set("hx_active_week", state.activeWeek);
   LS.set("hx_active_level", state.activeLevel);
   LS.set("hx_profile", state.profile);
@@ -3890,32 +3893,32 @@ function renderApp(){
   // Phase 2: AI Coach is temporarily removed. Redirect any lingering/persisted ai-coach tab
   // (e.g. saved hx_tab) to Home so it's fully unreachable. Its data stays intact.
   if(state.tab==="ai-coach") state.tab = "home";
-  const MORE_TABS = ["library","body","settings","health","insights","nutrition"];
-  const isMoreActive = MORE_TABS.includes(state.tab) || state.tab==="more";
-  // Home, Workout, and Progress's own dashboard (not its detail views, which stay dark --
-  // see renderProgressTab) share a dedicated light "premium reference" look (see home.css/
-  // workout.css/progress.css); the header/nav shell is shared across every tab, so this
-  // modifier class is only added while one of those is showing and disappears the moment
-  // you navigate away or open a Progress detail view -- Health/Profile are unaffected.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || (state.tab==="progress" && !state.progressView);
+  // "more" was the old transient bottom-sheet overlay tab; Tools is now a real permanent
+  // page reachable from the bottom nav, so any persisted "more" value just maps onto it.
+  if(state.tab==="more") state.tab = "tools";
+  // Home, Workout, Progress's own dashboard (not its detail views, which stay dark -- see
+  // renderProgressTab), and Tools share a dedicated light "premium reference" look (see
+  // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
+  // every tab, so this modifier class is only added while one of those is showing and
+  // disappears the moment you navigate away or open a Progress detail view.
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || (state.tab==="progress" && !state.progressView);
   root.innerHTML = `
     <header class="app-header page-title-row ${isLightTab?'app-header--home-light':''}">
       <div>
         <div class="eyebrow-row"><div class="eyebrow-dash"></div><span class="eyebrow">Train with intent</span></div>
         <h1 class="title">IGNYT</h1>
       </div>
-      <button class="page-tools-btn" data-nav="more" aria-label="Open profile, settings, and tools">${svg(isLightTab?'sun':'gear',22)}</button>
+      <button class="page-tools-btn" data-nav="tools" aria-label="Open Tools">${svg(isLightTab?'sun':'gear',22)}</button>
     </header>
     <main id="main"></main>
     ${renderTimerOverlay()}
     ${renderToast()}
     ${renderConfirmDialog()}
-    ${state.tab==="more" ? renderMoreSheet() : ""}
     <nav class="bottom-nav ${isLightTab?'bottom-nav--home-light':''}">
       ${navBtn("home","Home")}
       ${navBtn("workout","Workout")}
       ${navBtn("progress","Progress")}
-      ${navBtn("health","Health")}
+      ${navBtn("tools","Tools")}
       ${navBtn("body","Profile")}
     </nav>
   `;
@@ -3931,10 +3934,10 @@ function renderApp(){
   if(state.tab==="settings") main.innerHTML = renderSettingsTab();
   if(state.tab==="health") main.innerHTML = renderHealthDashboard();
   if(state.tab==="insights") main.innerHTML = renderInsightsTab();
+  if(state.tab==="tools") main.innerHTML = renderToolsTab();
   if(state.tab==="bloodwork") main.innerHTML = window.IgnytBloodwork ? window.IgnytBloodwork.render() : "";
   if(state.tab==="goals") main.innerHTML = window.IgnytGoals ? window.IgnytGoals.render() : "";
   if(state.tab==="uploads") main.innerHTML = window.IgnytHealthUploads ? window.IgnytHealthUploads.render() : "";
-  if(state.tab==="more") main.innerHTML = ""; // sheet covers it
   attachHandlers();
   persist();
 }
@@ -3942,32 +3945,66 @@ function renderApp(){
 /* Fallback UI so a runtime error never leaves a blank screen. Self-contained —
    doesn't rely on attachHandlers() or any state that may itself be broken. */
 
-function renderMoreSheet(){
-  const items = [
-    {id:"plan", label:"Training Plan", desc:"HYROX schedule & routines", color:"var(--steel)", icon:"plan"},
-    {id:"library", label:"Library", desc:"Exercises & equipment", color:"var(--steel)", icon:"library"},
-    {id:"body", label:"Log Weight", desc:"Weight, trend & history", color:"var(--color-interactive)", icon:"body"},
-    {id:"goals", label:"Goals", desc:"Smart goal engine & targets", color:"var(--color-interactive)", icon:"progress"},
-    {id:"uploads", label:"Medical Reports", desc:"Blood work, InBody, DEXA & more", color:"#e5484d", icon:"progress"},
-    {id:"calculators", label:"Calculator", desc:"BMI, BMR, TDEE & macros", color:"var(--steel)", icon:"calc"},
-    {id:"nutrition", label:"Food Log", desc:"Meals, macros & calorie budget", color:"#FFB020", icon:"nutrition"},
-    {id:"settings", label:"Settings", desc:"Backups & preferences", color:"var(--muted)", icon:"gear"},
-    {id:"health", label:"Health Connect", desc:"Steps, heart rate, calories, weight, workouts", color:"var(--mint)", icon:"progress"},
-    {id:"insights", label:"Insights", desc:"Day, Week, Month & Year health trends", color:"var(--mint)", icon:"trend"}
+/* Tools — the old transient "More" bottom-sheet is now a real, permanent page (reachable
+   from the bottom nav like any other tab), light-themed to match Home/Workout/Progress.
+   Same 10 real destinations as before, just grouped into sections and restyled -- nothing
+   was added or removed, and every data-nav target below is unchanged. */
+function renderToolsTab(){
+  const SECTIONS = [
+    ["Training", [
+      {id:"plan", label:"Training Plan", desc:"HYROX schedule & routines", icon:"calendar"},
+      {id:"library", label:"Library", desc:"Exercises & equipment", icon:"library"},
+      {id:"goals", label:"Goals", desc:"Smart goal engine & targets", icon:"target"},
+      {id:"body", label:"Log Weight", desc:"Weight, trend & history", icon:"body"}
+    ]],
+    ["Health", [
+      {id:"health", label:"Health Connect", desc:"Sync with apps, track all metrics", icon:"health"},
+      {id:"uploads", label:"Medical Reports", desc:"Blood work & DEXA", icon:"flask"}
+    ]],
+    ["Nutrition", [
+      {id:"nutrition", label:"Food Log", desc:"Meals, macros & calorie budget", icon:"nutrition"},
+      {id:"calculators", label:"Calculator", desc:"BMI, BMR, TDEE & macros", icon:"calc"}
+    ]],
+    ["Insights", [
+      {id:"insights", label:"Insights", desc:"Day, week, month & year trends", icon:"progress"},
+      {id:"settings", label:"Settings", desc:"Backups & preferences", icon:"gear"}
+    ]]
   ];
-  return `<div class="more-sheet-backdrop" data-close-more>
-    <div class="more-sheet">
-      <div class="more-sheet-handle"></div>
-      <div class="eyebrow-label" style="margin-top:0;margin-bottom:14px;">More</div>
-      <div class="more-sheet-grid">
-        ${items.map(it=>`<button class="more-sheet-card" data-nav="${it.id}">
-          <span class="more-sheet-icon-badge" style="background:${it.color}22;color:${it.color};">${svg(it.icon,22)}</span>
-          <div style="font-weight:800;font-size:15px;margin-top:10px;">${it.label}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">${it.desc}</div>
-        </button>`).join("")}
+  let hcConnected = false;
+  try { hcConnected = !!(window.HealthConnectIntegration && window.HealthConnectIntegration.loadState().connected); } catch(e) {}
+  const streak = computeStreak();
+
+  return `
+    <div class="pg-light">
+      <div class="pg-header">
+        <div class="pg-header__title">Tools</div>
+        <div class="pg-header__sub">Everything you need to train smarter</div>
       </div>
-    </div>
-  </div>`;
+
+      <div class="tl-stats-bar">
+        <div class="tl-stat"><span class="tl-stat__icon">${svg('flame',18)}</span><div class="tl-stat__value">${streak}</div><div class="tl-stat__label">Day Streak</div></div>
+        <div class="tl-stat"><span class="tl-stat__icon">${svg('dumbbell',18)}</span><div class="tl-stat__value">${state.workoutLog.length}</div><div class="tl-stat__label">Workouts</div></div>
+        <div class="tl-stat"><span class="tl-stat__icon">${svg('trophy',18)}</span><div class="tl-stat__value">${state.prs.length}</div><div class="tl-stat__label">PRs</div></div>
+      </div>
+
+      ${SECTIONS.map(([title, cards])=>`
+        <div class="rh-section-head"><span>${title}</span></div>
+        <div class="tl-grid">
+          ${cards.map(c=>{
+            const isHealthConnected = c.id==="health" && hcConnected;
+            return `<button class="tl-card ${isHealthConnected?'is-connected':''}" data-nav="${c.id}">
+              <span class="tl-card__icon">${svg(c.icon,22)}</span>
+              <div class="tl-card__body">
+                <div class="tl-card__label">${c.label}</div>
+                <div class="tl-card__desc">${c.desc}</div>
+                ${isHealthConnected?`<span class="tl-card__badge">${svg('check',11)} Connected</span>`:''}
+              </div>
+              <span class="tl-card__chev">›</span>
+            </button>`;
+          }).join("")}
+        </div>
+      `).join("")}
+    </div>`;
 }
 
 /* Honest navigation shell: AI assistance is not implemented in this repository, so this
@@ -6989,13 +7026,6 @@ function attachHandlers(){
       if (["home", "health", "nutrition", "insights"].includes(state.tab)) window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
     });
   });
-  document.querySelectorAll("[data-close-more]").forEach(el=>{
-    el.addEventListener("click", (e)=>{
-      if(e.target !== el) return; // ignore bubbled clicks from the sheet/cards inside
-      state.tab = "home";
-      render();
-    });
-  });
   document.querySelectorAll("[data-home-day]").forEach(el=>{
     el.addEventListener("click", ()=>{
       state.activeDayIdx = Number(el.dataset.homeDay);
@@ -8429,7 +8459,7 @@ function attachHandlers(){
   // Health Connect dashboard
   const closeHealthBtn = document.querySelector('[data-action="close-health-dashboard"]');
   if(closeHealthBtn) closeHealthBtn.addEventListener("click", ()=>{
-    state.tab = "more";
+    state.tab = "tools";
     render();
   });
   const healthConnectBtn = document.querySelector('[data-action="health-connect"]');
@@ -8455,7 +8485,7 @@ function attachHandlers(){
   // Insights page (Day/Week/Month/Year real period aggregates)
   const closeInsightsBtn = document.querySelector('[data-action="close-insights"]');
   if(closeInsightsBtn) closeInsightsBtn.addEventListener("click", ()=>{
-    state.tab = "more";
+    state.tab = "tools";
     render();
   });
   // Unlike the Health dashboard's old client-side-only range filter, each Insights range is
