@@ -1328,6 +1328,7 @@ const ICONS = {
   workout:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 8l6 4-6 4z" fill="currentColor"/>',
   library:'<path d="M5 4h9a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 4h1a2 2 0 0 1 2 2v14h-3" fill="none" stroke="currentColor" stroke-width="2"/>',
   body:'<circle cx="12" cy="5" r="2.2" fill="currentColor"/><path d="M12 8v7M8 11h8M9 20l3-5 3 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  profile:'<circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 20c1.2-4 4-6 7.5-6s6.3 2 7.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   nutrition:'<path d="M12 21c-4 0-7-4-7-9a6 6 0 0 1 7-6 6 6 0 0 1 7 6c0 5-3 9-7 9z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 6c0-2 1.5-3.5 3-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
   progress:'<path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
   calc:'<rect x="5" y="3" width="14" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 7h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 11h.5M12 11h.5M16 11h.5M8 14h.5M12 14h.5M16 14h.5M8 17h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
@@ -1362,7 +1363,12 @@ const ICONS = {
   calendar:'<rect x="4" y="5.5" width="16" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 10h16M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="7.5" y="13" width="3" height="3" rx=".5" fill="currentColor"/>',
   tools:'<rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2" fill="currentColor"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="2" fill="currentColor"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="2" fill="currentColor"/><rect x="13" y="13" width="7.5" height="7.5" rx="2" fill="currentColor"/>',
   target:'<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
-  flask:'<path d="M9 3h6M10 3v6.5L4.8 18.2A2 2 0 0 0 6.5 21h11a2 2 0 0 0 1.7-2.8L14 9.5V3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M7.5 15h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+  flask:'<path d="M9 3h6M10 3v6.5L4.8 18.2A2 2 0 0 0 6.5 21h11a2 2 0 0 0 1.7-2.8L14 9.5V3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M7.5 15h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  bell:'<path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6.5H4c.5-1 2-2.5 2-6.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  pencil:'<path d="M4 20l.9-4L16 4.9a1.5 1.5 0 0 1 2.1 0l1 1a1.5 1.5 0 0 1 0 2.1L8 19 4 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  cloud:'<path d="M7 18h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.1 9.02 4 4 0 0 0 7 18z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 12v6M9.5 15.5 12 13l2.5 2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  lock:'<rect x="5" y="10.5" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="15.2" r="1.4" fill="currentColor"/>',
+  signout:'<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 8l5 4-5 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
 };
 
 /* =========================================================
@@ -1587,8 +1593,9 @@ const state = {
     plateCalc:true, rpeTracking:true, autoStartRest:true, waterTargetMl:2500,
     workoutReminders:false, hydrationReminders:false, weeklyReports:false,
     lastWorkoutReminderDate:null, lastHydrationReminderDate:null, lastWeeklyReportAt:null,
-    theme:"dark", weightUnit:"kg", exerciseCalorieBudget:true
+    theme:"dark", weightUnit:"kg", exerciseCalorieBudget:true, notificationsSeenAt:0
   }, LS.get("hx_settings", {})),
+  notificationsOpen: false, // transient — not persisted, matches other dropdown/menu UI state
   plateCalcOpen: null, // element id string when plate calc popover open
   restDuration: LS.get("hx_rest_duration",90),
   session: LS.get("hx_active_session", null),
@@ -2937,6 +2944,21 @@ function computeStreak(){
   return streak;
 }
 
+/* Real notification feed for the header bell -- built from genuine app events (achievements
+   unlocked, PRs set) in the last 14 days, newest first. No invented content: if nothing real
+   happened recently, the list is honestly empty rather than padded with placeholder items. */
+function computeNotifications(){
+  const cutoff = Date.now() - 14*86400000;
+  const items = [];
+  state.achievements.filter(a=>a.achievedAt>=cutoff).forEach(a=>{
+    items.push({ ts:a.achievedAt, icon:"trophy", text:`Achievement unlocked: ${a.name}` });
+  });
+  state.prs.filter(p=>p.achievedAt>=cutoff).forEach(p=>{
+    items.push({ ts:p.achievedAt, icon:"trend", text:`New PR: ${p.exerciseName||'Session Volume'} — ${prValueLabel(p)}` });
+  });
+  return items.sort((a,b)=>b.ts-a.ts).slice(0,15);
+}
+
 /* =========================================================
    HABIT TRACKER — genuinely new feature (Progress page). Deliberately does NOT reuse
    todayStr()/computeStreak()'s date pattern (new Date().toISOString().slice(0,10) on a
@@ -3901,14 +3923,22 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || (state.tab==="progress" && !state.progressView);
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || (state.tab==="progress" && !state.progressView);
+  const notifications = computeNotifications();
+  const unreadCount = notifications.filter(n=>n.ts>(state.settings.notificationsSeenAt||0)).length;
   root.innerHTML = `
     <header class="app-header page-title-row ${isLightTab?'app-header--home-light':''}">
       <div>
         <div class="eyebrow-row"><div class="eyebrow-dash"></div><span class="eyebrow">Train with intent</span></div>
         <h1 class="title">IGNYT</h1>
       </div>
-      <button class="page-tools-btn" data-nav="tools" aria-label="Open Tools">${svg(isLightTab?'sun':'gear',22)}</button>
+      <div style="display:flex;gap:8px;position:relative;">
+        <button class="page-tools-btn" data-action="toggle-notifications" aria-label="Notifications${unreadCount?` (${unreadCount} new)`:''}">
+          ${svg('bell',20)}${unreadCount?'<span class="hdr-badge-dot"></span>':''}
+        </button>
+        <button class="page-tools-btn" data-nav="settings" aria-label="Open Settings">${svg('gear',20)}</button>
+        ${state.notificationsOpen ? renderNotificationsPanel(notifications) : ''}
+      </div>
     </header>
     <main id="main"></main>
     ${renderTimerOverlay()}
@@ -3919,7 +3949,7 @@ function renderApp(){
       ${navBtn("workout","Workout")}
       ${navBtn("progress","Progress")}
       ${navBtn("tools","Tools")}
-      ${navBtn("body","Profile")}
+      ${navBtn("profile","Profile")}
     </nav>
   `;
   const main = document.getElementById("main");
@@ -3935,11 +3965,28 @@ function renderApp(){
   if(state.tab==="health") main.innerHTML = renderHealthDashboard();
   if(state.tab==="insights") main.innerHTML = renderInsightsTab();
   if(state.tab==="tools") main.innerHTML = renderToolsTab();
+  if(state.tab==="profile") main.innerHTML = renderProfileTab();
   if(state.tab==="bloodwork") main.innerHTML = window.IgnytBloodwork ? window.IgnytBloodwork.render() : "";
   if(state.tab==="goals") main.innerHTML = window.IgnytGoals ? window.IgnytGoals.render() : "";
   if(state.tab==="uploads") main.innerHTML = window.IgnytHealthUploads ? window.IgnytHealthUploads.render() : "";
   attachHandlers();
   persist();
+}
+
+function renderNotificationsPanel(notifications){
+  return `
+    <div class="hdr-notif-backdrop" data-close-notifications></div>
+    <div class="hdr-notif-panel">
+      <div class="hdr-notif-panel__title">Notifications</div>
+      ${notifications.length===0 ? `<div class="hdr-notif-empty">No recent activity yet — achievements and PRs you earn will show up here.</div>` :
+        notifications.map(n=>`<div class="hdr-notif-item">
+          <span class="hdr-notif-item__icon">${svg(n.icon,15)}</span>
+          <div class="hdr-notif-item__body">
+            <div class="hdr-notif-item__text">${n.text}</div>
+            <div class="hdr-notif-item__time">${new Date(n.ts).toLocaleDateString('default',{month:'short',day:'numeric'})}</div>
+          </div>
+        </div>`).join("")}
+    </div>`;
 }
 
 /* Fallback UI so a runtime error never leaves a blank screen. Self-contained —
@@ -4004,6 +4051,109 @@ function renderToolsTab(){
           }).join("")}
         </div>
       `).join("")}
+    </div>`;
+}
+
+/* Profile — a summary dashboard, distinct from the existing full Body/Weight tab (still
+   fully intact at data-nav="body", now reached via "Personal Information"/"View All" below
+   instead of the bottom nav directly -- same pattern as Health Connect moving into Tools).
+   Every stat is real; fields with no genuine historical baseline (Muscle Mass has only ever
+   had a single latest Health Connect reading cached, never a time series) show the current
+   value with no invented trend arrow instead of a fabricated delta. */
+function renderProfileTab(){
+  const auth = window.IgnytAuth;
+  const account = auth && auth.isNativeAndroid() ? auth.getAccount() : null;
+  const initial = (state.profile.name || account?.displayName || "?").trim().charAt(0).toUpperCase() || "?";
+
+  const streak = computeStreak();
+  const totalHours = Math.round(state.workoutLog.reduce((a,s)=>a+(s.durationMin||0),0)/60);
+
+  function fieldDelta30d(field){
+    const cutoff = Date.now() - 30*86400000;
+    const inWindow = state.bodylog.filter(e=>e[field]!=null && e[field]!=="" && new Date(e.date).getTime()>=cutoff)
+      .slice().reverse(); // bodylog is newest-first; reverse to chronological
+    const latest = state.bodylog.find(e=>e[field]!=null && e[field]!=="");
+    if(!latest) return null;
+    if(inWindow.length<2) return { value:Number(latest[field]), delta:null };
+    return { value:Number(inWindow[inWindow.length-1][field]), delta:Number(inWindow[inWindow.length-1][field])-Number(inWindow[0][field]) };
+  }
+  const weight = fieldDelta30d('weight');
+  const bodyFat = fieldDelta30d('bodyfat');
+  const isLossGoal = (state.profile.goalDelta||0) < 0, isGainGoal = (state.profile.goalDelta||0) > 0;
+
+  let hcLeanMass = null;
+  try { hcLeanMass = JSON.parse(localStorage.getItem('hx_hc_dashboard_cache')||'null')?.leanBodyMass?.kg ?? null; } catch(e) {}
+
+  const latestWeightKg = weight ? weight.value : (state.bodylog[0]?.weight || state.profile.weight);
+  const heightM = (state.profile.height||0)/100;
+  const bmi = (latestWeightKg && heightM) ? latestWeightKg/(heightM*heightM) : null;
+  const bmiCat = bmi==null ? null : bmi<18.5?"Underweight":bmi<25?"Healthy":bmi<30?"Overweight":"Obese";
+  const bmiColor = bmi==null ? 'var(--rh-muted)' : bmi<18.5?'#2563EB':bmi<25?'var(--rh-green)':bmi<30?'#D97706':'var(--rh-red)';
+
+  const themeLabel = { dark:"Dark mode", light:"Light mode", system:"Follows system" }[state.settings.theme] || "Dark mode";
+
+  return `
+    <div class="pg-light">
+      <div class="pf-header-row">
+        <div class="pf-avatar">
+          ${account?.photoUrl ? `<img src="${account.photoUrl}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
+          <span class="pf-avatar__initial">${initial}</span>
+          <button class="pf-avatar__edit" data-nav="body" aria-label="Edit personal information">${svg('pencil',13)}</button>
+        </div>
+        <div class="pf-header-row__text">
+          <div class="pf-name">${state.profile.name || 'Athlete'}</div>
+          <div class="pf-tagline">Stronger every day.</div>
+        </div>
+      </div>
+
+      <div class="tl-stats-bar" style="margin-top:16px;">
+        <div class="tl-stat"><span class="tl-stat__icon" style="color:#EA580C;">${svg('flame',18)}</span><div class="tl-stat__value">${streak}</div><div class="tl-stat__label">Day Streak</div></div>
+        <div class="tl-stat"><span class="tl-stat__icon" style="color:var(--rh-green);">${svg('dumbbell',18)}</span><div class="tl-stat__value">${state.workoutLog.length}</div><div class="tl-stat__label">Workouts</div></div>
+        <div class="tl-stat"><span class="tl-stat__icon" style="color:#D97706;">${svg('trophy',18)}</span><div class="tl-stat__value">${state.prs.length}</div><div class="tl-stat__label">PRs</div></div>
+        <div class="tl-stat"><span class="tl-stat__icon" style="color:var(--rh-purple);">${svg('timer',18)}</span><div class="tl-stat__value">${totalHours}<span class="pf-stat-unit">hrs</span></div><div class="tl-stat__label">Total Time</div></div>
+      </div>
+
+      <div class="rh-section-head"><span>Current Progress</span><a href="#" class="rh-view-all" data-open-progress-view="body">View All</a></div>
+      <div class="pg-card">
+        <div class="pf-progress-grid">
+          <div class="pf-progress-item">
+            <div class="pf-progress-item__head"><span class="pf-progress-item__icon" style="color:var(--rh-blue);">${svg('body',16)}</span>Weight</div>
+            <div class="pf-progress-item__value">${weight?displayW(weight.value):'—'}<span class="pf-progress-item__unit">${wUnit()}</span></div>
+            ${weight && weight.delta!=null ? `<div class="pf-progress-item__trend ${(isLossGoal?weight.delta<0:isGainGoal?weight.delta>0:null)===false?'is-down':'is-up'}">${weight.delta>0?'▲':weight.delta<0?'▼':''} ${Math.abs(displayW(weight.delta,1))} ${wUnit()}<span class="pf-progress-item__sub">vs last 30 days</span></div>` : ''}
+          </div>
+          <div class="pf-progress-item">
+            <div class="pf-progress-item__head"><span class="pf-progress-item__icon" style="color:var(--rh-green);">${svg('trend',16)}</span>Body Fat</div>
+            <div class="pf-progress-item__value">${bodyFat?bodyFat.value.toFixed(1):'—'}<span class="pf-progress-item__unit">%</span></div>
+            ${bodyFat && bodyFat.delta!=null ? `<div class="pf-progress-item__trend ${bodyFat.delta<=0?'is-up':'is-down'}">${bodyFat.delta>0?'▲':'▼'} ${Math.abs(bodyFat.delta).toFixed(1)}%<span class="pf-progress-item__sub">vs last 30 days</span></div>` : ''}
+          </div>
+          <div class="pf-progress-item">
+            <div class="pf-progress-item__head"><span class="pf-progress-item__icon" style="color:var(--rh-purple);">${svg('dumbbell',16)}</span>Muscle Mass</div>
+            <div class="pf-progress-item__value">${hcLeanMass!=null?displayW(hcLeanMass):'—'}<span class="pf-progress-item__unit">${wUnit()}</span></div>
+            <div class="pf-progress-item__sub" style="margin-top:6px;">${hcLeanMass!=null?'Latest Health Connect reading':'No data'}</div>
+          </div>
+          <div class="pf-progress-item">
+            <div class="pf-progress-item__head"><span class="pf-progress-item__icon" style="color:#D97706;">${svg('trend',16)}</span>BMI</div>
+            <div class="pf-progress-item__value">${bmi!=null?bmi.toFixed(1):'—'}</div>
+            ${bmiCat?`<div class="pf-progress-item__trend" style="color:${bmiColor};">${bmiCat}</div>`:''}
+          </div>
+        </div>
+      </div>
+
+      <div class="rh-section-head"><span>Account</span></div>
+      <div class="tl-grid" style="grid-template-columns:1fr;">
+        <button class="tl-card" data-nav="body"><span class="tl-card__icon">${svg('body',20)}</span><div class="tl-card__body"><div class="tl-card__label">Personal Information</div><div class="tl-card__desc">Update your profile details</div></div><span class="tl-card__chev">›</span></button>
+        <button class="tl-card" data-nav="goals"><span class="tl-card__icon">${svg('target',20)}</span><div class="tl-card__body"><div class="tl-card__label">Fitness Goals</div><div class="tl-card__desc">View and edit your goals</div></div><span class="tl-card__chev">›</span></button>
+        <button class="tl-card" data-open-progress-view="achievements"><span class="tl-card__icon">${svg('trophy',20)}</span><div class="tl-card__body"><div class="tl-card__label">Achievements</div><div class="tl-card__desc">Badges, milestones &amp; records</div></div><span class="tl-card__chev">›</span></button>
+      </div>
+
+      <div class="rh-section-head"><span>Data &amp; Settings</span></div>
+      <div class="tl-grid" style="grid-template-columns:1fr;">
+        <button class="tl-card" data-nav="settings"><span class="tl-card__icon">${svg('cloud',20)}</span><div class="tl-card__body"><div class="tl-card__label">Data &amp; Backups</div><div class="tl-card__desc">Backup and restore your data</div></div><span class="tl-card__chev">›</span></button>
+        <button class="tl-card" data-nav="settings"><span class="tl-card__icon">${svg('lock',20)}</span><div class="tl-card__body"><div class="tl-card__label">Privacy</div><div class="tl-card__desc">Data storage &amp; reset options</div></div><span class="tl-card__chev">›</span></button>
+        <button class="tl-card" data-nav="settings"><span class="tl-card__icon">${svg('moon',20)}</span><div class="tl-card__body"><div class="tl-card__label">Appearance</div><div class="tl-card__desc">${themeLabel}</div></div><span class="tl-card__chev">›</span></button>
+        ${account ? `<button class="tl-card" data-action="account-signout"><span class="tl-card__icon" style="color:var(--rh-red);background:rgba(239,68,68,.1);">${svg('signout',20)}</span><div class="tl-card__body"><div class="tl-card__label">Sign Out</div><div class="tl-card__desc">Log out from your account</div></div><span class="tl-card__chev">›</span></button>`
+          : auth && auth.isNativeAndroid() ? `<button class="tl-card" data-action="account-signin"><span class="tl-card__icon" style="color:var(--rh-red);background:rgba(239,68,68,.1);">${svg('signout',20)}</span><div class="tl-card__body"><div class="tl-card__label">Sign In</div><div class="tl-card__desc">Sync and back up with Google</div></div><span class="tl-card__chev">›</span></button>` : ''}
+      </div>
     </div>`;
 }
 
@@ -7014,6 +7164,7 @@ function attachHandlers(){
   document.querySelectorAll("[data-nav]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const dest = el.dataset.nav;
+      state.notificationsOpen = false; // any navigation closes the header notifications panel
       if(dest === "calculators"){
         // Calculator is its own destination; it renders inside the body tab's calculator view.
         state.tab = "body";
@@ -7025,6 +7176,15 @@ function attachHandlers(){
       render();
       if (["home", "health", "nutrition", "insights"].includes(state.tab)) window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
     });
+  });
+  const notifBtn = document.querySelector('[data-action="toggle-notifications"]');
+  if(notifBtn) notifBtn.addEventListener("click", ()=>{
+    state.notificationsOpen = !state.notificationsOpen;
+    if(state.notificationsOpen) state.settings.notificationsSeenAt = Date.now(); // opening the panel is "read"
+    render();
+  });
+  document.querySelectorAll("[data-close-notifications]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.notificationsOpen = false; render(); });
   });
   document.querySelectorAll("[data-home-day]").forEach(el=>{
     el.addEventListener("click", ()=>{
