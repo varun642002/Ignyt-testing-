@@ -25,3 +25,33 @@
 .tl-card__badge { display:inline-flex; align-items:center; gap:3px; margin-top:8px; background:rgba(37,99,235,.1); color:var(--rh-blue);
   font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; }
 .tl-card__chev { position:absolute; top:14px; right:12px; color:var(--rh-muted); font-size:16px; }
+
+/* =========================================================
+   EXERCISE LIBRARY — reached from Tools > Library (www/app.js
+   renderLibraryTab()). Reuses .pg-light/.pg-card/.tl-card__icon/.pi-input
+   from the shared design system; lib-* is only this screen's own chrome.
+========================================================= */
+
+.lib-search-wrap { position:relative; margin-bottom:10px; }
+.lib-search-wrap svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--rh-muted); pointer-events:none; }
+.lib-search-wrap input { padding-left:36px; }
+
+.lib-cats { display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; margin-bottom:12px; }
+
+.lib-count-row { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; color:var(--rh-muted); font-weight:600; margin-bottom:12px; }
+.lib-count-row b { color:var(--rh-text); }
+.lib-add-link { display:inline-flex; align-items:center; gap:4px; flex:none; color:var(--rh-blue); font-weight:700; font-size:12.5px; background:none; border:none; cursor:pointer; padding:0; }
+
+.lib-ex-row { position:relative; display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; cursor:pointer; }
+.lib-ex-row__body { flex:1; min-width:0; }
+.lib-ex-row__name { font-size:15px; font-weight:800; padding-right:24px; }
+.lib-tags { display:flex; gap:6px; margin:6px 0; flex-wrap:wrap; }
+.lib-tag { display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap; }
+.lib-ex-row__meta { font-size:12px; color:var(--rh-muted); font-weight:600; }
+
+.lib-ex-row__actions { flex:none; display:flex; flex-direction:column; align-items:center; gap:6px; }
+.lib-guide-btn { display:inline-flex; align-items:center; gap:4px; background:rgba(37,99,235,.1); color:var(--rh-blue);
+  font-size:11.5px; font-weight:700; border:none; border-radius:20px; padding:6px 10px; cursor:pointer; white-space:nowrap; }
+.lib-chev { color:var(--rh-muted); font-size:18px; line-height:1; }
+.lib-bookmark { position:absolute; top:14px; right:14px; background:none; border:none; padding:2px; cursor:pointer; color:var(--rh-border); }
+.lib-bookmark.is-saved { color:var(--rh-blue); }

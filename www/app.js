@@ -10,7 +10,7 @@ const SCHEMA_VERSION = 1; // bump when localStorage shape changes; add a migrate
 /* ---------- Storage ---------- */
 
 const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_profile","hx_nutrition","hx_bodylog","hx_custom_exercises",
-  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_achievements","hx_favorite_foods","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version"];
+  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_achievements","hx_favorite_foods","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises"];
 
 const SET_TYPE_IMPORT_MAP = { normal:"working", warmup:"warmup", dropset:"drop", failure:"failure" };
 
@@ -1682,6 +1682,7 @@ const state = {
   lastUnlockedAchievements: null, // transient celebration, mirrors lastSessionPRs pattern
   favoriteFoods: LS.get("hx_favorite_foods", []),
   waterLog: LS.get("hx_water_log", []),
+  savedExercises: LS.get("hx_saved_exercises", []),
   timer: null
 };
 
@@ -1700,6 +1701,7 @@ function persist(){
   LS.set("hx_achievements", state.achievements);
   LS.set("hx_favorite_foods", state.favoriteFoods);
   LS.set("hx_water_log", state.waterLog);
+  LS.set("hx_saved_exercises", state.savedExercises);
   LS.set("hx_race_log", state.raceLog);
   LS.set("hx_race_active", state.raceActive);
   LS.set("hx_workout_log", state.workoutLog);
@@ -2757,7 +2759,11 @@ function recentExerciseNames(limit=10){
 }
 
 function allLibraryExercises(){
-  const custom = LS.get("hx_custom_exercises", []);
+  // Reads the in-memory state, not localStorage directly: state.customExercises is only
+  // flushed to hx_custom_exercises by persist() at the END of render(), so reading disk here
+  // meant a just-added custom exercise wouldn't appear in its own render pass (it showed up
+  // only after a second, unrelated render). state is always the current source of truth.
+  const custom = state.customExercises;
   const list = [];
   // Dedupe by case-insensitive name. Built-ins are canonical and added first; a custom
   // exercise whose name collides with a built-in (e.g. an accidentally re-created
@@ -4067,7 +4073,7 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || (state.tab==="progress" && (!state.progressView || state.progressView==="body"))
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || (state.tab==="progress" && (!state.progressView || state.progressView==="body"))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
@@ -7567,29 +7573,90 @@ function renderExerciseDetailHowTo(name, detail, libEntry){
   `;
 }
 
+// Broad-group color coding for the muscle tag on each row -- reuses the real FINE_TO_BROAD
+// map (already used for the radar chart) instead of inventing a new taxonomy. "Cardio" and
+// "Mobility" aren't in FINE_TO_BROAD (they're pseudo-muscle values on cardio/stretch entries),
+// so they fall through to their own colors.
+const MUSCLE_GROUP_COLORS = { Chest:'#DC2626', Back:'#16A34A', Legs:'#7C3AED', Arms:'#D97706', Shoulders:'#2563EB', Core:'#0D9488', Cardio:'#DB2777', Mobility:'#64748B' };
+function muscleTagColor(muscle){ return MUSCLE_GROUP_COLORS[FINE_TO_BROAD[muscle] || muscle] || '#64748B'; }
+
 function renderLibraryTab(){
   if(state.viewingExerciseDetail) return renderExerciseDetail(state.viewingExerciseDetail);
 
-  const cats = ["All", ...Object.keys(LIBRARY), ...(state.customExercises.length?["Custom"]:[])];
+  // "Cardio" is a display-only merge of the two real LIBRARY categories (Cardio Machine /
+  // Cardio Outdoor) so the chip row matches how the reference groups them; the underlying
+  // exercises and their real cat are untouched, this only affects the filter chip shown.
+  const cats = ["All"];
+  Object.keys(LIBRARY).forEach(c=>{
+    if(c==="Cardio Machine" || c==="Cardio Outdoor"){ if(!cats.includes("Cardio")) cats.push("Cardio"); }
+    else cats.push(c);
+  });
+  if(state.customExercises.length) cats.push("Custom");
+
   let items = allLibraryExercises();
-  if(state.libCategory!=="All") items = items.filter(i=> i.cat===state.libCategory || (state.libCategory==="Custom" && i.custom));
+  if(state.libCategory==="Cardio") items = items.filter(i=> i.cat==="Cardio Machine" || i.cat==="Cardio Outdoor");
+  else if(state.libCategory==="Custom") items = items.filter(i=> i.custom);
+  else if(state.libCategory!=="All") items = items.filter(i=> i.cat===state.libCategory);
   if(state.libSearch) items = items.filter(i=> i.name.toLowerCase().includes(state.libSearch.toLowerCase()));
 
+  const customCount = state.customExercises.length;
+  const totalCount = allLibraryExercises().length;
+
+  // No real exercise photos exist anywhere in this app (every EXERCISE_DETAILS.thumbnailUrl
+  // is null) -- an icon badge per row, colored by muscle group, not a fabricated photo.
+  const rowIcon = (muscle) => {
+    const g = FINE_TO_BROAD[muscle];
+    return (g==='Chest'||g==='Shoulders'||g==='Arms') ? 'dumbbell' : (g==='Back') ? 'workout' : 'body';
+  };
+  const equipMeta = (cat) => {
+    if(cat==="Barbell" || cat==="Dumbbell" || cat==="Kettlebell") return { icon:'dumbbell' };
+    if(cat==="Cardio Machine" || cat==="Cardio Outdoor") return { icon:'run' };
+    return { icon:'workout' }; // Machine, Bodyweight, Hyrox Station, Mobility / Stretch, Conditioning, custom
+  };
+
   return `
-    <div class="search-bar">
-      <input type="text" id="lib-search" placeholder="Search any exercise…" value="${state.libSearch}">
+    <div class="pg-light">
+      <div style="font-size:22px;font-weight:800;">Exercise Library</div>
+      <div style="font-size:12px;color:var(--rh-muted);margin-bottom:14px;">Find the right move for every muscle.</div>
+
+      <div class="lib-search-wrap">
+        ${svg('search',17)}
+        <input type="text" id="lib-search" class="pi-input" placeholder="Search any exercise…" value="${state.libSearch}">
+      </div>
+
+      <div class="lib-cats">
+        ${cats.map(c=>`<button class="cat-chip ${state.libCategory===c?'active':''}" data-cat="${c}">${c}</button>`).join("")}
+      </div>
+
+      <div class="lib-count-row">
+        <span><b>${totalCount}</b> Exercises${customCount?` · <b>${customCount}</b> Custom`:''}</span>
+        <button class="lib-add-link" data-action="show-add-custom">${svg('plus',13)} Add Custom Exercise</button>
+      </div>
+
+      <div id="custom-form-slot">${state.showCustomForm ? customExerciseForm() : ""}</div>
+
+      ${items.map(ex=>{
+        const saved = state.savedExercises.includes(ex.name);
+        const equip = equipMeta(ex.cat);
+        return `<div class="pg-card lib-ex-row" data-view-exercise="${ex.name}">
+          <span class="tl-card__icon" style="flex:none;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg(rowIcon(ex.muscle),20)}</span>
+          <div class="lib-ex-row__body">
+            <div class="lib-ex-row__name">${ex.name}${ex.custom?' <span style="color:var(--rh-blue);font-size:10px;font-weight:800;">CUSTOM</span>':''}</div>
+            <div class="lib-tags">
+              <span class="lib-tag" style="background:${muscleTagColor(ex.muscle)}1a;color:${muscleTagColor(ex.muscle)};">${ex.muscle}</span>
+              <span class="lib-tag" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg(equip.icon,11)} ${ex.cat}</span>
+            </div>
+            <div class="lib-ex-row__meta">${ex.cat} · ${ex.presc}${ex.custom?` · <span style="color:var(--rh-red);cursor:pointer;" data-del-custom-exercise="${ex.name}">Remove</span>`:''}</div>
+          </div>
+          <div class="lib-ex-row__actions">
+            <button class="lib-guide-btn">${svg('workout',13)} Guide</button>
+            <span class="lib-chev">›</span>
+          </div>
+          <button class="lib-bookmark ${saved?'is-saved':''}" data-toggle-saved-exercise="${ex.name}" title="${saved?'Remove from saved':'Save exercise'}" aria-label="${saved?'Remove from saved':'Save exercise'}">${svg(saved?'starFilled':'star',16)}</button>
+        </div>`;
+      }).join("")}
+      ${items.length===0?`<div class="empty-note">No exercises match.</div>`:""}
     </div>
-    <div style="margin-bottom:8px;">
-      ${cats.map(c=>`<button class="cat-chip ${state.libCategory===c?'active':''}" data-cat="${c}">${c}</button>`).join("")}
-    </div>
-    <button class="btn btn-accent btn-block" data-action="show-add-custom" style="margin-bottom:16px;">${svg('plus',16)} Add Custom Exercise</button>
-    <div id="custom-form-slot">${state.showCustomForm ? customExerciseForm() : ""}</div>
-    ${items.map(ex=>`<div class="lib-item" data-view-exercise="${ex.name}" style="cursor:pointer;">
-      <div style="min-width:0;"><div class="lib-item-name">${ex.name}${ex.custom?' <span style="color:var(--accent);font-size:10px;">CUSTOM</span>':''}${EXERCISE_DETAILS[ex.name]?' <span style="color:var(--mint);font-size:10px;">GUIDE</span>':''}</div>
-      <div class="lib-item-cat">${ex.cat} · ${ex.presc}</div></div>
-      ${ex.custom?`<button class="del" data-del-custom-exercise="${ex.name}" title="Remove custom exercise" aria-label="Remove custom exercise ${ex.name}" style="flex-shrink:0;">${svg('x',15)}</button>`:''}
-    </div>`).join("")}
-    ${items.length===0?`<div class="empty-note">No exercises match.</div>`:""}
   `;
 }
 
@@ -8578,6 +8645,17 @@ function attachHandlers(){
       if(!(await confirmDialog(`Remove the custom exercise “${name}”? This does not affect any workout you've already logged.`, render))) return;
       const key = (name||"").trim().toLowerCase();
       state.customExercises = state.customExercises.filter(x=>(x.name||"").trim().toLowerCase() !== key);
+      persist();
+      render();
+    });
+  });
+  document.querySelectorAll("[data-toggle-saved-exercise]").forEach(el=>{
+    el.addEventListener("click", (ev)=>{
+      ev.stopPropagation();
+      const name = el.dataset.toggleSavedExercise;
+      state.savedExercises = state.savedExercises.includes(name)
+        ? state.savedExercises.filter(n=>n!==name)
+        : state.savedExercises.concat(name);
       persist();
       render();
     });

@@ -24,6 +24,12 @@
 .pg-header__title { font-size:28px; font-weight:800; letter-spacing:-.02em; }
 .pg-header__sub { font-size:13px; color:var(--rh-muted); margin-top:2px; }
 
+/* Shared .cat-chip reskin for every .pg-light screen (Log Weight ranges, Body Progress
+   week-nav, Exercise Library category filter, etc.) -- same idea as .wk-light .cat-chip
+   in workout.css, just scoped to the broader .pg-light wrapper instead of one page. */
+.pg-light .cat-chip { flex:none; background:var(--rh-card); color:var(--rh-muted); border:1px solid var(--rh-border); white-space:nowrap; }
+.pg-light .cat-chip.active { background:var(--rh-blue); color:#fff; border-color:var(--rh-blue); }
+
 /* ---------- This Week stat grid ---------- */
 .pg-stat-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:14px; }
 .pg-stat-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px; }
