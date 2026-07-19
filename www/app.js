@@ -3923,7 +3923,8 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || (state.tab==="progress" && !state.progressView);
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || (state.tab==="progress" && !state.progressView)
+    || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing());
   const notifications = computeNotifications();
   const unreadCount = notifications.filter(n=>n.ts>(state.settings.notificationsSeenAt||0)).length;
   root.innerHTML = `

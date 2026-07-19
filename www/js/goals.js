@@ -146,8 +146,8 @@
   var wUnit = function () { return (window.wUnit ? window.wUnit() : "kg"); };
   var dW = function (kg) { return (window.displayW ? window.displayW(kg, 1) : kg); };
 
-  var view = { screen: null, step: 1, draft: null }; // screen: null=auto, 'wizard','history','timeline'
-  function resetView() { view = { screen: null, step: 1, draft: null }; }
+  var view = { screen: null, step: 1, draft: null, editing: false }; // screen: null=auto, 'wizard','history','timeline'
+  function resetView() { view = { screen: null, step: 1, draft: null, editing: false }; }
 
   function render() {
     if (view.screen === "wizard") return renderWizard();
@@ -183,7 +183,7 @@
   function renderWizard() {
     var d = view.draft || (view.draft = draftInit());
     var s = view.step;
-    var h = head("New Goal", true) + '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Step ' + s + ' of 3</div>';
+    var h = head(view.editing ? "Edit Goal" : "New Goal", true) + '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Step ' + s + ' of 3</div>';
     if (s === 1) {
       h += '<div class="goal-card"><label class="goal-label">Goal type</label><select id="g-type" class="goal-input">' +
         GOAL_TYPES.map(function (t) { return '<option value="' + t.id + '"' + (d.type === t.id ? " selected" : "") + '>' + esc(t.label) + '</option>'; }).join("") + '</select>' +
@@ -214,7 +214,7 @@
     }
     h += '<div style="display:flex;gap:8px;margin-top:14px;">' +
       (s > 1 ? '<button class="btn btn-secondary" data-goal="prev" style="flex:1;">Back</button>' : "") +
-      (s < 3 ? '<button class="btn btn-accent" data-goal="next" style="flex:2;">Next</button>' : '<button class="btn btn-accent" data-goal="create" style="flex:2;">Start Goal</button>') +
+      (s < 3 ? '<button class="btn btn-accent" data-goal="next" style="flex:2;">Next</button>' : '<button class="btn btn-accent" data-goal="create" style="flex:2;">' + (view.editing ? "Save Changes" : "Start Goal") + '</button>') +
       '</div>';
     return h;
   }
@@ -243,48 +243,150 @@
     var mon = new Date(now); mon.setHours(0, 0, 0, 0); mon.setDate(mon.getDate() - day);
     return log.filter(function (w) { return new Date(w.startedAt || w.date) >= mon; }).length;
   }
+  /* Real area/line chart for the weight trend card -- self-contained (goals.js doesn't reach
+     into progress.js's private chart helpers), same visual approach: gridlines + axis labels
+     + an end-value bubble, drawn only from genuine state.bodylog entries in range. */
+  function weightTrendChart(days) {
+    var cutoff = Date.now() - days * 864e5;
+    var pts = ((typeof state !== "undefined" && state.bodylog) || [])
+      .filter(function (e) { return e.weight && new Date(e.date).getTime() >= cutoff; })
+      .slice().reverse() // bodylog is newest-first -> chronological
+      .map(function (e) { return { date: new Date(e.date), value: Number(e.weight) }; });
+    if (pts.length < 2) return '<div style="color:var(--rh-muted);font-size:13px;padding:24px 0;text-align:center;">Log at least two weigh-ins to see a trend graph.</div>';
+    var w = 320, h2 = 170, padL = 30, padR = 10, padT = 10, padB = 22;
+    var vals = pts.map(function (p) { return p.value; });
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    var range = (max - min) || 1, yPad = range * 0.15;
+    var yMin = min - yPad, yMax = max + yPad;
+    var stepX = (w - padL - padR) / (pts.length - 1);
+    var coords = pts.map(function (p, i) { return { x: padL + i * stepX, y: padT + (1 - (p.value - yMin) / (yMax - yMin)) * (h2 - padT - padB) }; });
+    var pathD = coords.map(function (c, i) { return (i === 0 ? "M" : "L") + c.x.toFixed(1) + "," + c.y.toFixed(1); }).join(" ");
+    var areaD = pathD + " L" + coords[coords.length - 1].x.toFixed(1) + "," + (h2 - padB) + " L" + coords[0].x.toFixed(1) + "," + (h2 - padB) + " Z";
+    var ySteps = 4, yDecimals = (yMax - yMin) < ySteps * 2 ? 1 : 0;
+    var gridlines = "";
+    for (var i = 0; i <= ySteps; i++) {
+      var v = yMin + (yMax - yMin) * (i / ySteps), y = padT + (1 - i / ySteps) * (h2 - padT - padB);
+      gridlines += '<line x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (w - padR) + '" y2="' + y.toFixed(1) + '" stroke="var(--rh-border)" stroke-width="1"/>' +
+        '<text x="2" y="' + (y + 3).toFixed(1) + '" font-size="9" fill="var(--rh-muted)">' + v.toFixed(yDecimals) + '</text>';
+    }
+    var xIdx = [0, Math.floor((pts.length - 1) / 2), pts.length - 1];
+    var xLabels = xIdx.map(function (i) { var c = coords[i]; return '<text x="' + c.x.toFixed(1) + '" y="' + (h2 - 6) + '" font-size="9" fill="var(--rh-muted)" text-anchor="middle">' + fmtDate(pts[i].date) + '</text>'; }).join("");
+    var last = coords[coords.length - 1], lastVal = pts[pts.length - 1].value;
+    return '<svg width="100%" height="' + h2 + '" viewBox="0 0 ' + w + ' ' + h2 + '" preserveAspectRatio="none">' + gridlines +
+      '<path d="' + areaD + '" fill="var(--rh-blue)" fill-opacity="0.12" stroke="none"/>' +
+      '<path d="' + pathD + '" fill="none" stroke="var(--rh-blue)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<circle cx="' + last.x.toFixed(1) + '" cy="' + last.y.toFixed(1) + '" r="3.5" fill="var(--rh-blue)"/>' + xLabels + '</svg>' +
+      '<div class="pg-chart-bubble">' + dW(lastVal) + ' ' + wUnit() + '</div>';
+  }
+
+  function ringHtml(pct, color) {
+    var clamped = pct == null ? 0 : Math.max(0, Math.min(100, pct));
+    return '<div class="pg-ring" style="--pct:' + clamped + ';--ring-color:' + color + ';width:56px;height:56px;"><div class="pg-ring__inner" style="width:44px;height:44px;font-size:12px;"></div></div>';
+  }
+
   function renderDashboard() {
     var g = activeGoal(), c = compute(g), cur = currentWeightKg(), t = typeById[g.type] || typeById.custom;
     var pct = progressPct(g, cur);
     var remaining = (cur != null && g.targetWeight != null) ? Math.round(Math.abs(cur - g.targetWeight) * 10) / 10 : null;
     var ms = milestonesFor(g).map(function (m) { m.done = milestoneDone(g, m, cur); return m; });
     var next = ms.filter(function (m) { return !m.done; })[0];
-    var eaten = window.todayEaten ? Math.round(window.todayEaten()) : null;
-    var protToday = window.todayMacros ? Math.round(window.todayMacros().protein) : null;
+    var eaten = window.todayEaten ? Math.round(window.todayEaten()) : 0;
+    var todayMac = window.todayMacros ? window.todayMacros() : { protein: 0, carbs: 0, fat: 0 };
+    var protToday = Math.round(todayMac.protein || 0), carbToday = Math.round(todayMac.carbs || 0), fatToday = Math.round(todayMac.fat || 0);
     var wk = workoutsThisWeek();
+    var streak = window.computeStreak ? window.computeStreak() : 0;
 
-    var h = head(t.label) +
-      '<div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Started ' + fmtDate(g.startDate) + (g.targetDate ? ' · target ' + fmtDate(g.targetDate) : "") + '</div>';
+    // Real "on track" status: expected progress by now (elapsed / planned weeks) vs actual --
+    // only shown when there's a real target date/rate to judge against, never guessed.
+    var onTrack = null;
+    if (c.weeks && g.startDate && pct != null) {
+      var elapsedWeeks = Math.max(0, (Date.now() - new Date(g.startDate).getTime()) / (7 * 864e5));
+      var expectedPct = Math.min(100, Math.round(elapsedWeeks / c.weeks * 100));
+      onTrack = pct >= expectedPct - 5;
+    }
 
-    // progress ring-ish bar
-    h += '<div class="goal-card"><div class="row-between"><span style="font-weight:800;">Goal progress</span><span class="mono" style="font-weight:900;color:var(--color-interactive);">' + (pct == null ? "—" : pct + "%") + '</span></div>' +
-      (pct != null ? '<div class="goal-bar"><span style="width:' + pct + '%;"></span></div>' : "") +
-      '<div class="row-between" style="margin-top:8px;font-size:13px;color:var(--muted);">' +
-      '<span>' + (cur != null ? dW(cur) + " " + wUnit() : "no weight logged") + '</span>' +
-      '<span>' + (remaining != null ? remaining + " " + wUnit() + " to go" : "") + '</span></div>' +
-      (c.completion ? '<div style="font-size:12px;color:var(--muted);margin-top:6px;">Est. completion ' + fmtDate(c.completion) + '</div>' : "") + '</div>';
+    var bmiCat = c.bmi == null ? null : c.bmi < 18.5 ? "Low" : c.bmi < 25 ? "Healthy" : c.bmi < 30 ? "High" : "Very High";
+    var bmiColor = c.bmi == null ? "var(--rh-muted)" : c.bmi < 18.5 ? "#2563EB" : c.bmi < 25 ? "var(--rh-green)" : c.bmi < 30 ? "#D97706" : "var(--rh-red)";
 
-    h += '<div class="section-heading"><span class="section-heading__label">Today</span></div>' +
-      '<div class="goal-grid">' +
-      '<div class="goal-metric"><div class="goal-metric__l">Calories</div><div class="goal-metric__v">' + (eaten != null ? eaten : "—") + '<span class="goal-metric__u">/ ' + c.calories + '</span></div></div>' +
-      '<div class="goal-metric"><div class="goal-metric__l">Protein</div><div class="goal-metric__v">' + (protToday != null ? protToday : "—") + '<span class="goal-metric__u">/ ' + c.protein + 'g</span></div></div>' +
-      '<div class="goal-metric"><div class="goal-metric__l">Workouts (wk)</div><div class="goal-metric__v">' + wk + '<span class="goal-metric__u">/ ' + (g.trainingDays || "—") + '</span></div></div>' +
-      '<div class="goal-metric"><div class="goal-metric__l">Streak</div><div class="goal-metric__v">' + (window.computeStreak ? window.computeStreak() : 0) + '<span class="goal-metric__u">days</span></div></div>' +
+    var h = '<div class="pg-light">' +
+      '<div class="row-between" style="margin-top:4px;">' +
+      '<div style="display:flex;align-items:center;gap:8px;">' + svg("target", 22) + '<span style="font-size:22px;font-weight:800;">' + esc(t.label) + '</span></div>' +
+      '<button class="rh-btn rh-btn--ghost" style="flex:none;padding:9px 14px;font-size:13px;" data-goal="edit">' + svg("pencil", 13) + ' Edit Goal</button>' +
       '</div>';
 
-    h += '<div class="section-heading"><span class="section-heading__label">Nutrition targets</span></div>' + planGrid(c) +
-      '<div style="font-size:11px;color:var(--muted);margin:6px 2px;">These targets drive your Nutrition and Home calorie/macro goals automatically.</div>';
+    // Goal progress card
+    h += '<div class="pg-card" style="margin-top:12px;display:flex;align-items:center;gap:16px;">' +
+      '<div class="pg-ring" style="--pct:' + (pct || 0) + ';--ring-color:var(--rh-blue);width:96px;height:96px;flex:none;">' +
+      '<div class="pg-ring__inner" style="width:76px;height:76px;flex-direction:column;">' +
+      '<div style="font-size:20px;font-weight:800;">' + (pct == null ? "—" : pct + "%") + '</div><div style="font-size:9px;color:var(--rh-muted);font-weight:700;">Complete</div></div></div>' +
+      '<div style="flex:1;min-width:0;">' +
+      '<div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Current Weight</div><div style="font-size:19px;font-weight:800;margin-bottom:6px;">' + (cur != null ? dW(cur) + " " + wUnit() : "—") + '</div>' +
+      '<div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Target Weight</div><div style="font-size:19px;font-weight:800;">' + (g.targetWeight != null ? dW(g.targetWeight) + " " + wUnit() : "—") + '</div>' +
+      (pct != null ? '<div class="rh-progress-track rh-progress-track--sm"><div class="rh-progress-fill" style="width:' + pct + '%;"></div></div>' : "") +
+      (remaining != null ? '<div style="font-size:12px;font-weight:700;color:var(--rh-blue);margin-top:6px;">' + remaining + ' ' + wUnit() + ' remaining</div>' : "") +
+      '</div>' +
+      '<div style="flex:none;text-align:right;">' +
+      (c.completion ? '<div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Est. Completion</div><div style="font-size:13px;font-weight:700;margin-bottom:8px;">' + fmtDate(c.completion) + '</div>' : "") +
+      (onTrack != null ? '<span style="display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:' + (onTrack ? "rgba(22,163,74,.12);color:var(--rh-green)" : "rgba(239,68,68,.12);color:var(--rh-red)") + ';">' + (onTrack ? "On Track" : "Behind Pace") + '</span>' : "") +
+      '</div></div>';
 
-    h += '<div class="section-heading"><span class="section-heading__label">Milestones</span></div><div class="goal-card">' +
-      (ms.length ? ms.map(function (m) { return '<div class="row-between" style="padding:7px 0;border-top:1px solid var(--border);"><span>' + (m.done ? "✅ " : "⬜ ") + esc(m.label) + '</span></div>'; }).join("") : '<div style="color:var(--muted);font-size:13px;">Set a target weight to generate milestones.</div>') +
-      (next ? '<div style="font-size:12px;color:var(--muted);margin-top:8px;">Next: ' + esc(next.label) + '</div>' : "") + '</div>';
+    // Weight trend chart
+    h += '<div class="pg-card" style="margin-top:12px;"><div class="pg-card__head"><span class="pg-card__title">Weight Trend (30 Days)</span></div>' + weightTrendChart(30) + '</div>';
 
-    h += '<div class="section-heading"><span class="section-heading__label">Manage</span></div><div style="display:flex;flex-wrap:wrap;gap:8px;">' +
-      '<button class="btn btn-secondary" data-goal="pause" style="flex:1;">Pause</button>' +
-      '<button class="btn btn-secondary" data-goal="complete" style="flex:1;">Complete</button>' +
-      '<button class="btn btn-secondary" data-goal="timeline" style="flex:1;">Timeline</button>' +
-      '<button class="btn btn-ghost" data-goal="cancel" style="flex:1;color:var(--accent);">Cancel</button>' +
-      '</div><button class="btn btn-secondary btn-block" data-goal="history" style="margin-top:8px;">Past goals</button>';
+    // Today's summary
+    h += '<div class="rh-section-head"><span>Today\'s Summary</span></div>' +
+      '<div class="pg-stat-grid">' +
+      '<div class="pg-stat-card"><div style="display:flex;align-items:center;gap:8px;">' + ringHtml(c.calories ? Math.min(100, Math.round(eaten / c.calories * 100)) : null, "var(--rh-blue)") + '<div><div style="font-size:12px;font-weight:700;">Calories</div></div></div>' +
+      '<div style="font-size:11px;color:var(--rh-muted);margin-top:6px;">' + eaten + ' / ' + c.calories + ' kcal</div>' +
+      '<button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:8px;padding:8px;font-size:12px;" data-nav="nutrition">+ Food</button></div>' +
+      '<div class="pg-stat-card"><div style="display:flex;align-items:center;gap:8px;">' + ringHtml(c.protein ? Math.min(100, Math.round(protToday / c.protein * 100)) : null, "var(--rh-green)") + '<div><div style="font-size:12px;font-weight:700;">Protein</div></div></div>' +
+      '<div style="font-size:11px;color:var(--rh-muted);margin-top:6px;">' + protToday + ' / ' + c.protein + ' g</div>' +
+      '<button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:8px;padding:8px;font-size:12px;" data-nav="nutrition">+ Log</button></div>' +
+      '<div class="pg-stat-card"><div style="display:flex;align-items:center;gap:8px;color:var(--rh-purple);">' + svg("dumbbell", 20) + '<div><div style="font-size:12px;font-weight:700;color:var(--rh-text);">Workouts</div></div></div>' +
+      '<div style="font-size:19px;font-weight:800;margin-top:6px;">' + wk + '<span style="font-size:11px;color:var(--rh-muted);font-weight:600;"> / ' + (g.trainingDays || "—") + ' this week</span></div>' +
+      '<button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:8px;padding:8px;font-size:12px;" data-nav="workout">+ Workout</button></div>' +
+      '<div class="pg-stat-card"><div style="display:flex;align-items:center;gap:8px;color:#EA580C;">' + svg("flame", 20) + '<div><div style="font-size:12px;font-weight:700;color:var(--rh-text);">Streak</div></div></div>' +
+      '<div style="font-size:19px;font-weight:800;margin-top:6px;">' + streak + '<span style="font-size:11px;color:var(--rh-muted);font-weight:600;"> days</span></div>' +
+      '<button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:8px;padding:8px;font-size:12px;" data-nav="workout">+ Keep Going</button></div>' +
+      '</div>';
+
+    // Nutrition targets
+    h += '<div class="rh-section-head"><span>Nutrition Targets</span><a href="#" class="rh-view-all" data-nav="nutrition">Edit Targets</a></div>' +
+      '<div class="pg-card" style="margin-bottom:10px;">' +
+      '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin-bottom:8px;">' + svg("bolt", 12) + ' Energy</div>' +
+      '<div class="pf-progress-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));">' +
+      '<div class="pf-progress-item"><div class="pf-progress-item__head">Calories</div><div class="pf-progress-item__value" style="font-size:15px;">' + eaten + '<span class="pf-progress-item__unit"> / ' + c.calories + '</span></div><div class="rh-progress-track rh-progress-track--sm"><div class="rh-progress-fill" style="width:' + Math.min(100, Math.round(eaten / c.calories * 100)) + '%;"></div></div></div>' +
+      '<div class="pf-progress-item"><div class="pf-progress-item__head">BMR</div><div class="pf-progress-item__value" style="font-size:15px;">' + c.bmr + '<span class="pf-progress-item__unit"> kcal</span></div></div>' +
+      '<div class="pf-progress-item"><div class="pf-progress-item__head">Maintenance</div><div class="pf-progress-item__value" style="font-size:15px;">' + c.maintenance + '<span class="pf-progress-item__unit"> kcal</span></div></div>' +
+      '</div></div>' +
+      '<div class="pg-card" style="margin-bottom:10px;">' +
+      '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin-bottom:8px;">Macros</div>' +
+      '<div class="pf-progress-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));">' +
+      '<div class="pf-progress-item"><div class="pf-progress-item__head">Protein</div><div class="pf-progress-item__value" style="font-size:15px;">' + protToday + '<span class="pf-progress-item__unit"> / ' + c.protein + 'g</span></div><div class="rh-progress-track rh-progress-track--sm"><div class="rh-progress-fill" style="width:' + (c.protein ? Math.min(100, Math.round(protToday / c.protein * 100)) : 0) + '%;background:var(--rh-green);"></div></div></div>' +
+      '<div class="pf-progress-item"><div class="pf-progress-item__head">Carbs</div><div class="pf-progress-item__value" style="font-size:15px;">' + carbToday + '<span class="pf-progress-item__unit"> / ' + c.carbs + 'g</span></div><div class="rh-progress-track rh-progress-track--sm"><div class="rh-progress-fill" style="width:' + Math.min(100, (c.carbs ? Math.round(carbToday / c.carbs * 100) : 0)) + '%;background:#D97706;"></div></div></div>' +
+      '<div class="pf-progress-item"><div class="pf-progress-item__head">Fat</div><div class="pf-progress-item__value" style="font-size:15px;">' + fatToday + '<span class="pf-progress-item__unit"> / ' + c.fat + 'g</span></div><div class="rh-progress-track rh-progress-track--sm"><div class="rh-progress-fill" style="width:' + Math.min(100, Math.round(fatToday / c.fat * 100)) + '%;background:var(--rh-purple);"></div></div></div>' +
+      '</div></div>' +
+      '<div class="pg-card">' +
+      '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin-bottom:8px;">Body Metrics</div>' +
+      '<div class="pf-progress-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));">' +
+      '<div class="pf-progress-item"><div class="pf-progress-item__head">Lean Mass</div><div class="pf-progress-item__value">' + (c.lbm != null ? c.lbm : "—") + '<span class="pf-progress-item__unit"> kg</span></div></div>' +
+      '<div class="pf-progress-item"><div class="pf-progress-item__head">BMI</div><div style="display:flex;align-items:center;gap:8px;"><div class="pf-progress-item__value">' + (c.bmi != null ? c.bmi : "—") + '</div>' + (bmiCat ? '<span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:' + bmiColor + '1a;color:' + bmiColor + ';">' + bmiCat + '</span>' : "") + '</div></div>' +
+      '</div></div>' +
+      '<div style="font-size:11px;color:var(--rh-muted);margin:8px 2px 0;">These targets drive your Nutrition and Home calorie/macro goals automatically.</div>';
+
+    // Milestones (existing feature, kept, restyled to match)
+    h += '<div class="rh-section-head"><span>Milestones</span></div><div class="pg-card">' +
+      (ms.length ? ms.map(function (m) { return '<div class="row-between" style="padding:8px 0;border-top:1px solid var(--rh-border);font-size:13px;"><span>' + (m.done ? "✅ " : "⬜ ") + esc(m.label) + '</span></div>'; }).join("") : '<div style="color:var(--rh-muted);font-size:13px;">Set a target weight to generate milestones.</div>') +
+      (next ? '<div style="font-size:12px;color:var(--rh-muted);margin-top:8px;">Next: ' + esc(next.label) + '</div>' : "") + '</div>';
+
+    // Manage (existing actions, kept, restyled)
+    h += '<div class="rh-section-head"><span>Manage</span></div><div style="display:flex;flex-wrap:wrap;gap:8px;">' +
+      '<button class="rh-btn rh-btn--ghost" data-goal="pause">Pause</button>' +
+      '<button class="rh-btn rh-btn--ghost" data-goal="complete">Complete</button>' +
+      '<button class="rh-btn rh-btn--ghost" data-goal="timeline">Timeline</button>' +
+      '<button class="rh-btn rh-btn--ghost" style="color:var(--rh-red);" data-goal="cancel">Cancel</button>' +
+      '</div><button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:8px;" data-goal="history">Past goals</button>' +
+      '</div>';
     return h;
   }
 
@@ -348,6 +450,12 @@
       var a = el.getAttribute("data-goal");
       if (a === "home") { resetView(); return repaint(); }
       if (a === "new") { view.screen = "wizard"; view.step = 1; view.draft = draftInit(); return repaint(); }
+      // Editing an active goal reuses the exact same wizard + createFromDraft() path as
+      // creating one -- "Save Changes" archives the current goal and starts a new one with
+      // the edited numbers (same mechanism updateActive() uses for pause/complete/cancel,
+      // just via the wizard instead of a single-field mutation). No separate edit codepath
+      // to keep in sync with create.
+      if (a === "edit") { var ag = activeGoal(); if (!ag) return; view.screen = "wizard"; view.step = 1; view.editing = true; view.draft = Object.assign({}, ag); return repaint(); }
       if (a === "next") { readStep(); if (view.step < 3) view.step++; return repaint(); }
       if (a === "prev") { readStep(); if (view.step > 1) view.step--; return repaint(); }
       if (a === "create") { readStep(); createFromDraft(); return repaint(); }
@@ -375,5 +483,11 @@
     });
   }
 
-  window.IgnytGoals = { render: render, attach: attach, activeGoal: activeGoal, compute: compute, GOAL_TYPES: GOAL_TYPES };
+  // Lets app.js's shared header/nav apply the same light "premium reference" treatment used
+  // by Home/Workout/Progress-dashboard/Tools/Profile -- true only while the real dashboard is
+  // showing (an active goal, no wizard/history/timeline open), same scoping rule as Progress's
+  // own dashboard-vs-detail-view light/dark split.
+  function isDashboardShowing() { return view.screen === null && !!activeGoal(); }
+
+  window.IgnytGoals = { render: render, attach: attach, activeGoal: activeGoal, compute: compute, GOAL_TYPES: GOAL_TYPES, isDashboardShowing: isDashboardShowing };
 })();
