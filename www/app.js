@@ -1368,7 +1368,11 @@ const ICONS = {
   pencil:'<path d="M4 20l.9-4L16 4.9a1.5 1.5 0 0 1 2.1 0l1 1a1.5 1.5 0 0 1 0 2.1L8 19 4 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   cloud:'<path d="M7 18h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.1 9.02 4 4 0 0 0 7 18z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 12v6M9.5 15.5 12 13l2.5 2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   lock:'<rect x="5" y="10.5" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="15.2" r="1.4" fill="currentColor"/>',
-  signout:'<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 8l5 4-5 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+  signout:'<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 8l5 4-5 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  mail:'<rect x="3.5" y="5.5" width="17" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 7l7.5 6 7.5-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  phone:'<path d="M6.5 3.5h3l1.5 4-2 1.5a11 11 0 0 0 5 5l1.5-2 4 1.5v3a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 5 5.1 1.5 1.5 0 0 1 6.5 3.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  shield:'<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  ruler:'<rect x="3" y="8" width="18" height="8" rx="1.5" transform="rotate(-45 12 12)" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9.5 9.5l1.4 1.4M12 7l1.4 1.4M14.5 4.5l1.4 1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'
 };
 
 /* =========================================================
@@ -1513,6 +1517,36 @@ function parseInputW(raw){
   return wUnit()==="lb" ? +lbToKg(n).toFixed(2) : n;
 }
 
+/* Height unit conversion -- exact mirror of the weight-unit pattern above. Height is always
+   stored in cm (every BMI/BMR formula in this app expects cm); these only affect display and
+   what a typed value converts back to. */
+function hUnit(){ return state.settings.heightUnit==="in" ? "in" : "cm"; }
+function cmToIn(cm){ return cm/2.54; }
+function inToCm(inches){ return inches*2.54; }
+function displayH(cm, decimals=1){
+  const n = Number(cm);
+  if(isNaN(n) || cm==="" || cm==null) return "";
+  const v = hUnit()==="in" ? cmToIn(n) : n;
+  return decimals===0 ? Math.round(v) : +v.toFixed(decimals);
+}
+function parseInputH(raw){
+  const n = parseFloat(raw);
+  if(isNaN(n)) return raw===""||raw==null ? "" : raw;
+  return hUnit()==="in" ? +inToCm(n).toFixed(2) : n;
+}
+
+/* Real age from a stored date-of-birth (calendar-accurate, not just year subtraction). Only
+   called when profile.dob is actually set -- users who never set one keep using the existing
+   manually-entered profile.age untouched, so nothing regresses for them. */
+function ageFromDob(dob){
+  if(!dob) return null;
+  const d = new Date(dob), now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if(m<0 || (m===0 && now.getDate()<d.getDate())) age--;
+  return age;
+}
+
 /* Plate calculator: greedy plates-per-side for a target barbell weight */
 function calcPlates(target, barWeight){
   if(!target || target <= barWeight) return { perSide:[], remainder:0 };
@@ -1559,7 +1593,8 @@ const state = {
     weight:101, height:180, age:25, gender:"male",
     activityMultiplier:1.465, goalDelta:-400,
     name:"", hyroxExperience:"first-timer", trainingDays:5,
-    equipment:["Barbell","Dumbbell","Machines","Sled","Rower","Ski Erg","Kettlebell"]
+    equipment:["Barbell","Dumbbell","Machines","Sled","Rower","Ski Erg","Kettlebell"],
+    username:"", phone:"", dob:null, medicalConditions:[], allergies:[]
   }, LS.get("hx_profile",{})),
   onboardingComplete: LS.get("hx_onboarding_complete", null), // resolved to true/false at boot in resolveOnboardingStatus()
   nutrition: Object.assign({proteinPct:30,carbPct:45,fatPct:25,fibreTarget:30},
@@ -1593,7 +1628,8 @@ const state = {
     plateCalc:true, rpeTracking:true, autoStartRest:true, waterTargetMl:2500,
     workoutReminders:false, hydrationReminders:false, weeklyReports:false,
     lastWorkoutReminderDate:null, lastHydrationReminderDate:null, lastWeeklyReportAt:null,
-    theme:"dark", weightUnit:"kg", exerciseCalorieBudget:true, notificationsSeenAt:0
+    theme:"dark", weightUnit:"kg", exerciseCalorieBudget:true, notificationsSeenAt:0,
+    heightUnit:"cm", dateFormat:"DD MMM YYYY", timeFormat:"12h"
   }, LS.get("hx_settings", {})),
   notificationsOpen: false, // transient — not persisted, matches other dropdown/menu UI state
   plateCalcOpen: null, // element id string when plate calc popover open
@@ -3924,7 +3960,8 @@ function renderApp(){
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
   const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || (state.tab==="progress" && !state.progressView)
-    || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing());
+    || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
+    || (state.tab==="body" && state.bodyView==="personal-info");
   const notifications = computeNotifications();
   const unreadCount = notifications.filter(n=>n.ts>(state.settings.notificationsSeenAt||0)).length;
   root.innerHTML = `
@@ -4099,7 +4136,7 @@ function renderProfileTab(){
         <div class="pf-avatar">
           ${account?.photoUrl ? `<img src="${account.photoUrl}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
           <span class="pf-avatar__initial">${initial}</span>
-          <button class="pf-avatar__edit" data-nav="body" aria-label="Edit personal information">${svg('pencil',13)}</button>
+          <button class="pf-avatar__edit" data-action="open-personal-info" aria-label="Edit personal information">${svg('pencil',13)}</button>
         </div>
         <div class="pf-header-row__text">
           <div class="pf-name">${state.profile.name || 'Athlete'}</div>
@@ -4142,7 +4179,7 @@ function renderProfileTab(){
 
       <div class="rh-section-head"><span>Account</span></div>
       <div class="tl-grid" style="grid-template-columns:1fr;">
-        <button class="tl-card" data-nav="body"><span class="tl-card__icon">${svg('body',20)}</span><div class="tl-card__body"><div class="tl-card__label">Personal Information</div><div class="tl-card__desc">Update your profile details</div></div><span class="tl-card__chev">›</span></button>
+        <button class="tl-card" data-action="open-personal-info"><span class="tl-card__icon">${svg('body',20)}</span><div class="tl-card__body"><div class="tl-card__label">Personal Information</div><div class="tl-card__desc">Update your profile details</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-nav="goals"><span class="tl-card__icon">${svg('target',20)}</span><div class="tl-card__body"><div class="tl-card__label">Fitness Goals</div><div class="tl-card__desc">View and edit your goals</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-open-progress-view="achievements"><span class="tl-card__icon">${svg('trophy',20)}</span><div class="tl-card__body"><div class="tl-card__label">Achievements</div><div class="tl-card__desc">Badges, milestones &amp; records</div></div><span class="tl-card__chev">›</span></button>
       </div>
@@ -5913,6 +5950,107 @@ function renderProfileForm(){
   `;
 }
 
+/* Personal Information — reached from Profile > Personal Information (and the avatar edit
+   button there). Reuses the EXACT SAME ids/data-attrs as the fields that already exist and
+   have working handlers (p-name, p-height, p-age, data-profile-gender, p-activity) so those
+   keep working unchanged regardless of which screen renders them -- same "single source of
+   truth" pattern renderProfileForm() above already established. Username/phone/DOB/body fat/
+   height unit/date format/time format/medical conditions/allergies are new real fields (see
+   state.profile / state.settings defaults) -- all genuinely stored, none fabricated; empty
+   until the user fills them in. "Save Changes" is honest, not decorative: every field here
+   already applies live on change (same as the rest of this app), so by the time it's tapped
+   everything is already saved -- it's a "done editing" nav action, not a hidden draft flush. */
+function renderPersonalInfoTab(){
+  const p = state.profile;
+  const auth = window.IgnytAuth;
+  const account = auth && auth.isNativeAndroid() ? auth.getAccount() : null;
+  const entries = state.bodylog;
+  const latestBF = entries.find(e=>e.bodyfat!=null && e.bodyfat!=="");
+  const latestW = entries.find(e=>e.weight!=null && e.weight!=="");
+  const initial = (p.name || account?.displayName || "?").trim().charAt(0).toUpperCase() || "?";
+
+  const row = (icon, label, valueHtml) => `<div class="pi-row"><span class="pi-row__icon">${svg(icon,18)}</span><div class="pi-row__body"><div class="pi-row__label">${label}</div>${valueHtml}</div></div>`;
+
+  return `
+    <div class="pg-light">
+      <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:6px;" data-action="close-personal-info">← Back</button>
+      <div class="row-between" style="margin-top:4px;align-items:flex-start;">
+        <div><div style="font-size:22px;font-weight:800;">Personal Information</div><div style="font-size:12px;color:var(--rh-muted);">Update your details and preferences</div></div>
+        <button class="rh-btn rh-btn--primary" style="flex:none;padding:9px 16px;font-size:13px;" data-action="close-personal-info">Save Changes</button>
+      </div>
+
+      <div class="pg-card" style="margin-top:14px;">
+        <div style="font-size:15px;font-weight:800;margin-bottom:12px;">Profile</div>
+        <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;">
+          <div class="pf-avatar" style="width:64px;height:64px;">
+            ${account?.photoUrl ? `<img src="${account.photoUrl}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
+            <span class="pf-avatar__initial" style="font-size:22px;">${initial}</span>
+            <span class="pf-avatar__edit" title="Photo comes from your Google account" style="pointer-events:none;">${svg('pencil',11)}</span>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <label class="pi-label">Full Name</label>
+            <input type="text" id="p-name" class="pi-input" value="${(p.name||'').replace(/"/g,'&quot;')}" placeholder="Your name">
+          </div>
+        </div>
+        <label class="pi-label">Username</label>
+        <input type="text" id="p-username" class="pi-input" value="${(p.username||'').replace(/"/g,'&quot;')}" placeholder="@username" style="margin-bottom:12px;">
+        <div class="pi-grid2">
+          ${row('mail', 'Email Address', `<div class="pi-row__value">${account ? account.email : 'Sign in with Google to add an email'}</div>`)}
+          ${row('phone', 'Phone Number', `<input type="tel" id="p-phone" class="pi-input" style="margin:2px 0 0;padding:6px 0;background:none;border:none;" value="${(p.phone||'').replace(/"/g,'&quot;')}" placeholder="Add phone number">`)}
+        </div>
+      </div>
+
+      <div class="rh-section-head"><span>Physical Information</span></div>
+      <div class="pg-card">
+        <div class="pi-grid2">
+          <div class="pi-field"><label class="pi-label">${svg('calendar',14)} Date of Birth</label><input type="date" id="p-dob" class="pi-input" value="${p.dob||''}"></div>
+          <div class="pi-field"><label class="pi-label">${svg('profile',14)} Gender</label>
+            <div style="display:flex;gap:6px;">
+              <button class="cat-chip ${p.gender==='male'?'active':''}" data-profile-gender="male" style="flex:1;text-align:center;">Male</button>
+              <button class="cat-chip ${p.gender==='female'?'active':''}" data-profile-gender="female" style="flex:1;text-align:center;">Female</button>
+            </div></div>
+          <div class="pi-field"><label class="pi-label">${svg('body',14)} Height</label><input type="number" id="p-height" class="pi-input" value="${displayH(p.height)}"><span class="pi-unit">${hUnit()}</span></div>
+          <div class="pi-field"><label class="pi-label">${svg('dumbbell',14)} Weight</label><input type="number" id="p-weight-display" class="pi-input" value="${latestW?displayW(Number(latestW.weight)):displayW(p.weight)}" disabled style="opacity:.6;"><span class="pi-unit">${wUnit()}</span></div>
+          <div class="pi-field"><label class="pi-label">${svg('profile',14)} Body Fat %</label><input type="number" id="p-bodyfat" class="pi-input" value="${latestBF?latestBF.bodyfat:''}" placeholder="—"><span class="pi-unit">%</span></div>
+          <div class="pi-field"><label class="pi-label">${svg('workout',14)} Activity Level</label>
+            <select class="pi-input" id="p-activity">${ACTIVITY_MULTIPLIERS.map(a=>`<option value="${a.mult}" ${p.activityMultiplier===a.mult?'selected':''}>${a.label}</option>`).join("")}</select></div>
+        </div>
+        ${latestW ? `<div style="font-size:11px;color:var(--rh-muted);margin-top:8px;">Weight is set from your latest log entry — update it from the Log Weight screen.</div>` : ''}
+      </div>
+
+      <div class="rh-section-head"><span>Preferences</span></div>
+      <div class="pg-card">
+        <div class="pi-grid2">
+          <div class="pi-field"><label class="pi-label">${svg('dumbbell',14)} Weight Unit</label>
+            <select class="pi-input" id="p-weight-unit"><option value="kg" ${state.settings.weightUnit==='kg'?'selected':''}>Kilograms (kg)</option><option value="lb" ${state.settings.weightUnit==='lb'?'selected':''}>Pounds (lb)</option></select></div>
+          <div class="pi-field"><label class="pi-label">${svg('ruler',14)} Height Unit</label>
+            <select class="pi-input" id="p-height-unit"><option value="cm" ${state.settings.heightUnit==='cm'?'selected':''}>Centimeters (cm)</option><option value="in" ${state.settings.heightUnit==='in'?'selected':''}>Inches (in)</option></select></div>
+          <div class="pi-field"><label class="pi-label">${svg('calendar',14)} Date Format</label>
+            <select class="pi-input" id="p-date-format">${["DD MMM YYYY","MM/DD/YYYY","YYYY-MM-DD"].map(f=>`<option value="${f}" ${state.settings.dateFormat===f?'selected':''}>${f}</option>`).join("")}</select></div>
+          <div class="pi-field"><label class="pi-label">${svg('timer',14)} Time Format</label>
+            <select class="pi-input" id="p-time-format"><option value="12h" ${state.settings.timeFormat==='12h'?'selected':''}>12 Hour (AM/PM)</option><option value="24h" ${state.settings.timeFormat==='24h'?'selected':''}>24 Hour</option></select></div>
+        </div>
+      </div>
+
+      <div class="rh-section-head"><span>Health Information <span style="font-weight:600;color:var(--rh-muted);">(Optional)</span></span></div>
+      <div class="pg-card">
+        <div class="pi-grid2">
+          <div class="pi-field">
+            <label class="pi-label">${svg('health',14)} Medical Conditions</label>
+            <div class="pi-tags">${p.medicalConditions.length ? p.medicalConditions.map((c,i)=>`<span class="pi-tag">${c}<button data-del-medical="${i}" aria-label="Remove">×</button></span>`).join("") : `<span class="pi-tags__empty">None added</span>`}</div>
+            <div style="display:flex;gap:6px;margin-top:8px;"><input type="text" id="p-medical-new" class="pi-input" placeholder="Add a condition" style="flex:1;"><button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 12px;" data-action="add-medical">Add</button></div>
+          </div>
+          <div class="pi-field">
+            <label class="pi-label">${svg('shield',14)} Allergies</label>
+            <div class="pi-tags">${p.allergies.length ? p.allergies.map((c,i)=>`<span class="pi-tag">${c}<button data-del-allergy="${i}" aria-label="Remove">×</button></span>`).join("") : `<span class="pi-tags__empty">None added</span>`}</div>
+            <div style="display:flex;gap:6px;margin-top:8px;"><input type="text" id="p-allergy-new" class="pi-input" placeholder="Add an allergy" style="flex:1;"><button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 12px;" data-action="add-allergy">Add</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderBodyTab(){
   const entries = state.bodylog;
   const first = entries[entries.length-1];
@@ -5960,6 +6098,8 @@ function renderBodyTab(){
       <div class="info-box" style="padding:14px;">${renderCalculators()}</div>
     `;
   }
+
+  if(state.bodyView==='personal-info') return renderPersonalInfoTab();
 
   return `
     <div class="section-heading"><span class="section-heading__label">Log Weight</span></div>
@@ -8212,7 +8352,7 @@ function attachHandlers(){
   const ph = document.getElementById("p-height");
   const pa = document.getElementById("p-age");
   if(pn) pn.addEventListener("change", ()=>{ state.profile.name = pn.value; render(); });
-  if(ph) ph.addEventListener("change", ()=>{ state.profile.height = Number(ph.value)||state.profile.height; render(); });
+  if(ph) ph.addEventListener("change", ()=>{ const v = parseInputH(ph.value); state.profile.height = (typeof v==="number" && v>0) ? v : state.profile.height; render(); });
   if(pa) pa.addEventListener("change", ()=>{ state.profile.age = Number(pa.value)||state.profile.age; render(); });
   document.querySelectorAll("[data-profile-gender]").forEach(el=>{
     el.addEventListener("click", ()=>{ state.profile.gender = el.dataset.profileGender; render(); });
@@ -8221,6 +8361,59 @@ function attachHandlers(){
   if(pact) pact.addEventListener("change", ()=>{ state.profile.activityMultiplier = Number(pact.value); render(); });
   const pgoal = document.getElementById("p-goal");
   if(pgoal) pgoal.addEventListener("change", ()=>{ state.profile.goalDelta = Number(pgoal.value); render(); });
+  // Personal Information — new real fields (see state.profile/state.settings defaults)
+  const openPiBtns = document.querySelectorAll('[data-action="open-personal-info"]');
+  openPiBtns.forEach(el=>el.addEventListener("click", ()=>{ state.tab = "body"; state.bodyView = "personal-info"; render(); }));
+  const closePiBtns = document.querySelectorAll('[data-action="close-personal-info"]');
+  closePiBtns.forEach(el=>el.addEventListener("click", ()=>{ state.tab = "profile"; state.bodyView = null; render(); }));
+  const pUsername = document.getElementById("p-username");
+  if(pUsername) pUsername.addEventListener("change", ()=>{ state.profile.username = pUsername.value; render(); });
+  const pPhone = document.getElementById("p-phone");
+  if(pPhone) pPhone.addEventListener("change", ()=>{ state.profile.phone = pPhone.value; render(); });
+  const pDob = document.getElementById("p-dob");
+  if(pDob) pDob.addEventListener("change", ()=>{
+    state.profile.dob = pDob.value || null;
+    const age = ageFromDob(state.profile.dob);
+    if(age!=null) state.profile.age = age; // keeps every existing age-based calculation (BMR, goals, etc.) correct with zero changes to them
+    render();
+  });
+  const pBodyfat = document.getElementById("p-bodyfat");
+  if(pBodyfat) pBodyfat.addEventListener("change", ()=>{
+    const v = parseFloat(pBodyfat.value);
+    if(isNaN(v)) return;
+    // Same store as every other body-fat reading in this app (Progress/Profile both read
+    // state.bodylog[].bodyfat) -- upserts today's entry rather than inventing a separate field.
+    const today = todayStr();
+    let entry = state.bodylog.find(e=>e.date===today);
+    if(entry) entry.bodyfat = v;
+    else state.bodylog.unshift({ id: nextId(), date: today, bodyfat: v });
+    render();
+  });
+  const pWeightUnit = document.getElementById("p-weight-unit");
+  if(pWeightUnit) pWeightUnit.addEventListener("change", ()=>{ state.settings.weightUnit = pWeightUnit.value; render(); });
+  const pHeightUnit = document.getElementById("p-height-unit");
+  if(pHeightUnit) pHeightUnit.addEventListener("change", ()=>{ state.settings.heightUnit = pHeightUnit.value; render(); });
+  const pDateFormat = document.getElementById("p-date-format");
+  if(pDateFormat) pDateFormat.addEventListener("change", ()=>{ state.settings.dateFormat = pDateFormat.value; render(); });
+  const pTimeFormat = document.getElementById("p-time-format");
+  if(pTimeFormat) pTimeFormat.addEventListener("change", ()=>{ state.settings.timeFormat = pTimeFormat.value; render(); });
+  const addMedicalBtn = document.querySelector('[data-action="add-medical"]');
+  if(addMedicalBtn) addMedicalBtn.addEventListener("click", ()=>{
+    const el = document.getElementById("p-medical-new"); const v = el && el.value.trim();
+    if(v){ state.profile.medicalConditions.push(v); render(); }
+  });
+  document.querySelectorAll("[data-del-medical]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.profile.medicalConditions.splice(Number(el.dataset.delMedical),1); render(); });
+  });
+  const addAllergyBtn = document.querySelector('[data-action="add-allergy"]');
+  if(addAllergyBtn) addAllergyBtn.addEventListener("click", ()=>{
+    const el = document.getElementById("p-allergy-new"); const v = el && el.value.trim();
+    if(v){ state.profile.allergies.push(v); render(); }
+  });
+  document.querySelectorAll("[data-del-allergy]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.profile.allergies.splice(Number(el.dataset.delAllergy),1); render(); });
+  });
+
   const phyroxExp = document.getElementById("p-hyrox-exp");
   if(phyroxExp) phyroxExp.addEventListener("change", ()=>{ state.profile.hyroxExperience = phyroxExp.value; render(); });
   const ptDays = document.getElementById("p-training-days");

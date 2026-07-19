@@ -25,3 +25,31 @@
 .pf-progress-item__trend { font-size:11px; font-weight:700; margin-top:3px; color:var(--rh-green); }
 .pf-progress-item__trend.is-down { color:var(--rh-red); }
 .pf-progress-item__sub { display:block; font-size:10px; font-weight:600; color:var(--rh-muted); margin-top:1px; }
+
+/* =========================================================
+   PERSONAL INFORMATION — reached from Profile > Personal Information.
+   Reuses .pg-light/.pf-avatar/.rh-section-head from the shared design
+   system; pi-* is only the form-field chrome unique to this screen.
+========================================================= */
+
+.pi-label { display:flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:var(--rh-muted); margin-bottom:5px; }
+.pi-input { width:100%; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:10px; padding:10px 12px;
+  font-size:14px; color:var(--rh-text); font-family:inherit; }
+.pi-input:disabled { color:var(--rh-muted); }
+.pi-grid2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.pi-field { position:relative; }
+.pi-unit { position:absolute; right:12px; bottom:10px; font-size:11px; color:var(--rh-muted); font-weight:600; pointer-events:none; }
+
+.pi-row { display:flex; align-items:flex-start; gap:10px; background:var(--rh-bg); border:1px solid var(--rh-border); border-radius:10px; padding:10px 12px; }
+.pi-row__icon { flex:none; width:30px; height:30px; border-radius:9px; background:rgba(37,99,235,.1); color:var(--rh-blue); display:flex; align-items:center; justify-content:center; }
+.pi-row__body { flex:1; min-width:0; }
+.pi-row__label { font-size:11px; color:var(--rh-muted); font-weight:600; }
+.pi-row__value { font-size:13px; font-weight:700; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.pi-tags { display:flex; flex-wrap:wrap; gap:6px; min-height:24px; }
+.pi-tags__empty { font-size:12px; color:var(--rh-muted); }
+.pi-tag { display:inline-flex; align-items:center; gap:5px; background:rgba(37,99,235,.1); color:var(--rh-blue); font-size:12px; font-weight:600;
+  padding:4px 6px 4px 10px; border-radius:20px; }
+.pi-tag button { background:none; border:none; color:var(--rh-blue); font-size:14px; line-height:1; cursor:pointer; padding:0 2px; }
+
+@media (max-width:374px) { .pi-grid2 { grid-template-columns:1fr; } }
