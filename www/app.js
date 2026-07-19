@@ -1384,7 +1384,8 @@ const ICONS = {
   box:'<path d="M3.5 7.5L12 3l8.5 4.5L12 12 3.5 7.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3.5 7.5V16L12 20.5M20.5 7.5V16L12 20.5M12 12v8.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   file:'<path d="M6 2.5h8l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 20V4a1.5 1.5 0 0 1 1.5-1.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 2.5V7h4M8 12h8M8 16h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   trash:'<path d="M4 7h16M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7M6.5 7l1 12.5a1.5 1.5 0 0 0 1.5 1.4h6a1.5 1.5 0 0 0 1.5-1.4L17.5 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
-  info:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7.5v.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+  info:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7.5v.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  scale:'<path d="M12 3v18M7 21h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 6h14M5 6L2.5 11a2.5 2.5 0 0 0 5 0L5 6zM19 6l-2.5 5a2.5 2.5 0 0 0 5 0L19 6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>'
 };
 
 /* =========================================================
@@ -2436,12 +2437,12 @@ function renderBodyDistribution(weekOffset){
     const active = dates.has(dStr);
     const isToday = dStr===todayStr0;
     strip += `<div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
-      <span style="font-size:10px;color:var(--muted);font-weight:700;">${dayLabels[i]}</span>
-      <div style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+      <span style="font-size:10px;color:var(--rh-muted);font-weight:700;">${dayLabels[i]}</span>
+      <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
         font-size:12px;font-weight:800;font-family:'SF Mono',monospace;
-        background:${active?'var(--accent)':'transparent'};
-        color:${active?'#151515':'var(--muted)'};
-        ${isToday && !active?'box-shadow:inset 0 0 0 1.5px var(--steel);color:var(--steel);':''}">${d.getDate()}</div>
+        background:${active?'rgba(217,119,6,.15)':'transparent'};
+        color:${active?'#D97706':'var(--rh-muted)'};
+        ${isToday && !active?'box-shadow:inset 0 0 0 1.5px var(--rh-blue);color:var(--rh-blue);':''}">${d.getDate()}</div>
     </div>`;
   }
   const rangeLabel = `${start.toLocaleDateString('default',{day:'2-digit',month:'short'})} – ${new Date(end.getTime()-86400000).toLocaleDateString('default',{day:'2-digit',month:'short',year:'numeric'})}`;
@@ -2450,21 +2451,21 @@ function renderBodyDistribution(weekOffset){
   const totalSets = Object.values(counts).reduce((a,b)=>a+b,0);
 
   return `
-    <div class="row-between" style="margin-bottom:12px;">
-      <button class="btn btn-ghost" data-bodydist-nav="1" style="padding:6px 12px;">‹</button>
-      <span class="mono" style="font-size:12px;font-weight:700;color:var(--text);">${rangeLabel}</span>
-      <button class="btn btn-ghost" data-bodydist-nav="-1" style="padding:6px 12px;" ${weekOffset<=0?'disabled':''}>›</button>
+    <div class="row-between" style="margin-bottom:14px;">
+      <button class="rh-btn rh-btn--ghost" style="flex:none;width:32px;height:32px;padding:0;" data-bodydist-nav="1">‹</button>
+      <span style="font-size:13px;font-weight:800;">${rangeLabel}</span>
+      <button class="rh-btn rh-btn--ghost" style="flex:none;width:32px;height:32px;padding:0;" data-bodydist-nav="-1" ${weekOffset<=0?'disabled':''}>›</button>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:18px;">${strip}</div>
-    <div style="display:flex;justify-content:space-between;padding:8px 2px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;">
+    <div style="display:flex;justify-content:space-between;padding:8px 2px;border-bottom:1px solid var(--rh-border);font-size:11px;font-weight:700;color:var(--rh-muted);text-transform:uppercase;">
       <span>Muscle</span><span>Sets</span>
     </div>
-    <div style="display:flex;justify-content:space-between;padding:10px 2px;border-bottom:1px solid var(--border);">
-      <span style="font-weight:800;font-size:14px;">Total</span><span class="mono" style="font-weight:800;color:var(--accent);">${totalSets}</span>
+    <div style="display:flex;justify-content:space-between;padding:10px 2px;border-bottom:1px solid var(--rh-border);">
+      <span style="font-weight:800;font-size:14px;">Total</span><span style="font-weight:800;color:#D97706;">${totalSets}</span>
     </div>
-    ${BODY_MUSCLES.map(m=>`<div style="display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid var(--border);">
-      <span style="font-size:13px;color:${counts[m]>0?'var(--text)':'var(--muted)'};">${m}</span>
-      <span class="mono" style="font-size:13px;color:${counts[m]>0?'var(--steel)':'var(--muted)'};">${counts[m]}</span>
+    ${BODY_MUSCLES.map(m=>`<div style="display:flex;justify-content:space-between;padding:9px 2px;border-bottom:1px solid var(--rh-border);">
+      <span style="font-size:13px;color:${counts[m]>0?'var(--rh-text)':'var(--rh-muted)'};">${m}</span>
+      <span style="font-size:13px;font-weight:600;color:${counts[m]>0?'var(--rh-blue)':'var(--rh-muted)'};">${counts[m]}</span>
     </div>`).join("")}
   `;
 }
@@ -4066,7 +4067,7 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || (state.tab==="progress" && !state.progressView)
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || (state.tab==="progress" && (!state.progressView || state.progressView==="body"))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
@@ -5528,6 +5529,20 @@ function renderProgressTab(){
       console.warn("Progress detail render failed:", view, e);
       body = `<div class="empty-note">This section hit an error and couldn't load. Your data is untouched — try again or reopen the app.</div>`;
     }
+    // Only "body" is light-redesigned so far (matches the reference given for it); every
+    // other detail view (achievements/habits/analytics/exercise/nutrition/calendar/plan)
+    // keeps its existing dark wrapper, same "only restyle what was actually shown" rule
+    // already applied throughout this session (Progress dashboard vs. its own detail views).
+    if(view==='body'){
+      return `<div class="pg-light">
+        <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:10px;" data-action="progress-back">← Progress</button>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <span class="tl-card__icon" style="width:38px;height:38px;flex:none;">${svg('scale',20)}</span>
+          <span style="font-size:22px;font-weight:800;">${PROGRESS_VIEWS[view].title}</span>
+        </div>
+        ${body}
+      </div>`;
+    }
     return `
       <button class="btn btn-ghost" data-action="progress-back" style="padding:8px 14px;font-size:14px;margin:4px 0 10px;">← Progress</button>
       <div style="font-size:25px;font-weight:900;margin-bottom:12px;">${PROGRESS_VIEWS[view].icon} ${PROGRESS_VIEWS[view].title}</div>
@@ -5854,6 +5869,8 @@ function renderProgressExercise(){
 
 /* ---------- Body Progress ---------- */
 
+const BODY_PROGRESS_RANGES = { "7D":7, "30D":30, "90D":90, "1Y":365, "All":null };
+
 function renderProgressBody(){
   const entries = state.bodylog;
   const latest = entries[0], first = entries[entries.length-1];
@@ -5865,25 +5882,48 @@ function renderProgressBody(){
     return e ? {label, unit, value:Number(e[f]), date:e.date} : null;
   }).filter(m=> m && isFinite(m.value));
 
+  // Real range-scoped weight trend chart -- same BODY_WEIGHT_RANGES-style approach and
+  // axisAreaChart already built for the Log Weight screen, "All" added here since that's
+  // this screen's own default (full logged history, not just a recent window).
+  const wLog = entries.filter(e=> e.weight!==undefined && e.weight!==null && e.weight!=="" && !isNaN(Number(e.weight)));
+  const rangeKey = BODY_PROGRESS_RANGES.hasOwnProperty(state.bodyProgressRange) ? state.bodyProgressRange : "All";
+  const rangeDays = BODY_PROGRESS_RANGES[rangeKey];
+  const nowMs = Date.now();
+  const inRange = (rangeDays==null ? wLog : wLog.filter(e=> new Date(e.date+"T12:00:00").getTime() >= nowMs - rangeDays*86400000)).slice().reverse();
+  const chartPoints = inRange.map(e=>({ label: new Date(e.date+"T12:00:00").toLocaleDateString('default',{month:'short',day:'numeric'}), value: displayW(Number(e.weight)) }));
+  const rangeDeltaKg = inRange.length>1 ? Number(inRange[inRange.length-1].weight)-Number(inRange[0].weight) : null;
+
   return `
-    <div class="grid2" style="margin-bottom:14px;">
-      <div class="stat-card"><div class="stat-label">Latest Weight</div><div class="stat-value" style="font-size:20px;">${latest&&latest.weight?`${displayW(latest.weight)}<span class="stat-unit">${wUnit()}</span>`:'No data'}</div></div>
-      <div class="stat-card"><div class="stat-label">Change (all time)</div><div class="stat-value" style="font-size:20px;color:${delta==null?'var(--muted)':(delta<=0?'var(--mint)':'var(--accent)')};">${delta==null?'No data':`${delta>0?'+':''}${displayW(delta,1)}<span class="stat-unit">${wUnit()}</span>`}</div></div>
+    <div class="pg-stat-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:14px;">
+      <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('body',18)}</span>
+        <div class="pg-stat-card__value">${latest&&latest.weight?displayW(latest.weight):'—'}<span class="pg-stat-card__unit">${wUnit()}</span></div>
+        <div class="pg-stat-card__label">Latest Weight</div><div class="pg-stat-card__sub">${latest?latest.date:''}</div></div>
+      <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:${delta==null?'rgba(100,116,139,.1)':delta<=0?'rgba(22,163,74,.1)':'rgba(239,68,68,.1)'};color:${delta==null?'var(--rh-muted)':delta<=0?'var(--rh-green)':'var(--rh-red)'};">${svg(delta==null?'trend':delta<=0?'chevronDown':'chevronUp',18)}</span>
+        <div class="pg-stat-card__value" style="color:${delta==null?'inherit':delta<=0?'var(--rh-green)':'var(--rh-red)'};">${delta==null?'—':`${delta>0?'+':''}${displayW(delta,1)}`}<span class="pg-stat-card__unit">${wUnit()}</span></div>
+        <div class="pg-stat-card__label">Change (All Time)</div><div class="pg-stat-card__sub">Since start</div></div>
     </div>
 
-    <div class="eyebrow-label">Body Weight Trend</div>
-    <div class="info-box" style="padding:14px;margin-bottom:14px;">
-      ${sparklineChart(bodyWeightTrend(20).map(p=>({date:p.date, value:displayW(p.value)})), {color:"var(--steel)", unit:wUnit()})}
+    <div class="pg-card">
+      <div class="pg-card__head">
+        <span class="pg-card__title">Body Weight Trend</span>
+        <select class="pi-input" id="body-progress-range" style="width:auto;padding:6px 10px;font-size:12px;">
+          ${Object.keys(BODY_PROGRESS_RANGES).map(k=>`<option value="${k}" ${rangeKey===k?'selected':''}>${k==='All'?'All Time':k}</option>`).join("")}
+        </select>
+      </div>
+      ${axisAreaChart(chartPoints, {color:"var(--rh-blue)", unit:' '+wUnit()})}
+      ${rangeDeltaKg!=null ? `<div style="text-align:center;font-size:13px;font-weight:700;margin-top:8px;color:${rangeDeltaKg<=0?'var(--rh-green)':'var(--rh-red)'};">${rangeDeltaKg>0?'+':''}${displayW(rangeDeltaKg,1)} ${wUnit()} since start</div>` : ''}
     </div>
 
     ${measurements.length ? `
-    <div class="eyebrow-label">Latest Measurements</div>
-    <div class="grid2" style="margin-bottom:14px;">
-      ${measurements.map(m=>`<div class="stat-card"><div class="stat-label">${m.label}</div><div class="stat-value" style="font-size:20px;">${m.value}<span class="stat-unit">${m.unit}</span></div><div style="font-size:11px;color:var(--muted);margin-top:2px;">${m.date}</div></div>`).join("")}
+    <div class="rh-section-head"><span>Latest Measurements</span></div>
+    <div class="pg-stat-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:14px;">
+      ${measurements.map(m=>`<div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('body',18)}</span>
+        <div class="pg-stat-card__value">${m.value}<span class="pg-stat-card__unit">${m.unit}</span></div>
+        <div class="pg-stat-card__label">${m.label}</div><div class="pg-stat-card__sub">${m.date}</div></div>`).join("")}
     </div>`:""}
 
-    <div class="eyebrow-label">Body Distribution</div>
-    <div class="info-box" style="padding:14px;">
+    <div class="rh-section-head"><span>Body Distribution</span></div>
+    <div class="pg-card">
       ${renderBodyDistribution(state.bodyDistWeekOffset||0)}
     </div>
   `;
@@ -8959,6 +8999,13 @@ function attachHandlers(){
       state.progressView = el.dataset.openProgressView;
       render();
     });
+  });
+
+  // Body Progress detail view's own weight-trend range (separate from the dashboard's).
+  const bodyProgressRangeSelect = document.getElementById("body-progress-range");
+  if(bodyProgressRangeSelect) bodyProgressRangeSelect.addEventListener("change", ()=>{
+    state.bodyProgressRange = bodyProgressRangeSelect.value;
+    render();
   });
 
   // Progress dashboard chart range selectors (Training Volume / Body Weight / Heatmap).
