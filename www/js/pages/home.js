@@ -1,230 +1,160 @@
 /* Home page module. It intentionally receives dependencies from app.js so the existing
    state and Health Connect behavior stay authoritative during incremental extraction.
 
-   This pass restyles Home to match a light "premium reference" mockup (hero card with a
-   Recovery Score ring, Quick Actions, a horizontal Today's Overview strip, Weekly Goal,
-   Habits, and Recovery & Health gauges) while keeping every value genuinely sourced from
-   existing app state / Health Connect -- no fabricated numbers, no invented charts. Where
-   the reference shows something this app has no real source for (e.g. a day-over-day trend
-   for a metric with no stored history), that element is honestly omitted rather than faked. */
+   This pass rebuilds Home to match a newer "premium reference" mockup (simple greeting +
+   weekly-goal ring, a real weight-goal progress card, a Today's Summary strip, Quick Actions,
+   and Recent Workouts) -- replacing the previous hero-image/recovery-score layout, which the
+   newer reference deck no longer shows. Every value is genuinely sourced from existing app
+   state / Health Connect / the Smart Goal Engine (window.IgnytGoals) -- no fabricated numbers.
+   Where the reference shows something this app has no real source for, that element is
+   honestly omitted rather than faked. */
 (function () {
   window.IgnytPages = window.IgnytPages || {};
 
-  // No configurable daily step goal exists anywhere in Settings/profile today. 10,000 is a
-  // widely-used default step target (matches common fitness-app convention); it is only ever
-  // used as the denominator shown next to a genuine synced step count -- the step count itself
-  // is always real Health Connect data, never fabricated.
-  const DEFAULT_STEPS_GOAL = 10000;
-  const DEFAULT_ACTIVE_CALORIES_GOAL = 2000; // same convention: display-only denominator, real numerator
-  const DEFAULT_WORKOUT_MINUTES_GOAL = 60;   // same convention: no per-user setting exists yet
-  const SLEEP_TARGET_MINUTES = 480;          // 8h, same convention used for the Sleep gauge/tile
+  const DEFAULT_STEPS_GOAL = 10000; // no configurable step goal exists yet; display-only denominator, real numerator
+  const DEFAULT_ACTIVE_CALORIES_GOAL = 2000;
+  const DEFAULT_WORKOUT_MINUTES_GOAL = 60;
 
   function healthValue(cache, path, fallback) {
     try { return path.split('.').reduce((value, key) => value == null ? null : value[key], cache) ?? fallback; }
     catch (_) { return fallback; }
   }
 
-  /** Real day-over-day % change from Health Connect's own 7-day steps history -- the only
-   *  metric on this screen with genuine stored daily history to compare against. Every other
-   *  "Today's Overview" tile has no stored per-day history locally, so no trend badge is shown
-   *  for those (an honest omission, not a fabricated placeholder). */
-  function stepsTrendPct(history) {
-    if (!Array.isArray(history) || history.length < 2) return null;
-    const sorted = history.slice().sort((a, b) => String(a.date).localeCompare(String(b.date)));
-    const today = Number(sorted[sorted.length - 1].value) || 0;
-    const yesterday = Number(sorted[sorted.length - 2].value) || 0;
-    if (yesterday <= 0) return null;
-    return Math.round(((today - yesterday) / yesterday) * 100);
-  }
-
-  /** Recovery Score: a genuine blend of whichever real signals are actually available today
-   *  (sleep vs. an 8h target, resting heart rate vs. a normal-range heuristic), each capped at
-   *  100 and only included when real data exists -- same honest-average approach already used
-   *  by this app's other blended metrics. Returns null (not a fake number) when nothing is
-   *  available yet, so the UI can show "Not enough data" instead of a made-up score. */
-  function computeRecoveryScore(sleepMinutes, restingBpm) {
-    const parts = [];
-    if (sleepMinutes != null) parts.push(Math.max(0, Math.min(100, Math.round(sleepMinutes / SLEEP_TARGET_MINUTES * 100))));
-    if (restingBpm != null) parts.push(Math.max(0, Math.min(100, Math.round(100 - (restingBpm - 50) * 2))));
-    if (!parts.length) return null;
-    return Math.round(parts.reduce((a, b) => a + b, 0) / parts.length);
-  }
-  function recoveryLabel(score) {
-    if (score == null) return 'Not enough data';
-    if (score >= 80) return 'Ready to Train';
-    if (score >= 60) return 'Good';
-    if (score >= 40) return 'Take it Easy';
-    return 'Rest Recommended';
-  }
-
-  /** One donut/ring gauge, drawn with a conic-gradient (no chart library, no canvas). `pct`
-   *  null means "no real value" -- rendered as a flat unfilled ring, never a fake fill. */
-  function gaugeRing(pct, color) {
-    const clamped = pct == null ? 0 : Math.max(0, Math.min(100, pct));
-    return `<div class="rh-gauge" style="--pct:${clamped};--gauge-color:${color};"><div class="rh-gauge__inner"></div></div>`;
-  }
-
-  function overviewTile(icon, value, unit, label, goalText, trendPct) {
-    return `<article class="ov-tile">
-      <span class="ov-tile__icon">${icon}</span>
-      <div class="ov-tile__value">${value}${unit ? `<span class="ov-tile__unit">${unit}</span>` : ''}</div>
-      <div class="ov-tile__label">${label}</div>
-      <div class="ov-tile__goal">${goalText}</div>
-      ${trendPct != null ? `<div class="ov-tile__trend ${trendPct >= 0 ? 'is-up' : 'is-down'}">${trendPct >= 0 ? '▲' : '▼'} ${Math.abs(trendPct)}%</div>` : ''}
-    </article>`;
-  }
-
   window.IgnytPages.renderHome = function renderHome(ctx) {
-    const { state, week, streak, water, waterTarget, greeting, displayW, wUnit, svg,
-      weekStats, todayMuscles, habitStreak, habitDateStr,
-      renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed } = ctx;
+    const { state, week, streak, greeting, displayW, wUnit, svg,
+      weekStats, targets, eaten, burned, dayDone, dayTotal, plannedDay,
+      renderAchievementCelebration, renderPRCelebration } = ctx;
 
     let health = null;
     try { health = JSON.parse(localStorage.getItem('hx_hc_dashboard_cache') || 'null'); } catch (_) {}
     const steps = healthValue(health, 'steps.steps', null);
-    const activeKcal = healthValue(health, 'activeCalories.kcal', null);
-    const sleepMinutes = healthValue(health, 'sleep.totalMinutes', null);
-    const restingBpm = healthValue(health, 'heartRate.minBpm', null); // best real proxy for "resting" -- today's lowest recorded reading, not a fabricated stat
-    const hrv = state.bodylog[0] && state.bodylog[0].hrv != null ? state.bodylog[0].hrv : null;
-    const stepsHistory = healthValue(health, 'steps7Days', null);
 
     const workoutToday = state.workoutLog.find(s => new Date(s.startedAt || s.date).toDateString() === new Date().toDateString());
     const workoutMinutes = workoutToday ? Math.round(workoutToday.durationMin || 0) : null;
+    const workoutDoneCount = dayTotal > 0 ? dayDone : (workoutToday ? 1 : 0);
+    const workoutTotalCount = dayTotal > 0 ? dayTotal : (workoutToday ? 1 : 1);
 
-    const recoveryScore = computeRecoveryScore(sleepMinutes, restingBpm);
+    const weeklyGoalPct = weekStats.workoutsGoal ? Math.min(100, Math.round(weekStats.workoutsCompleted / weekStats.workoutsGoal * 100)) : 0;
 
-    const plannedDay = ctx.plannedDay;
-    const habits = state.habits || [];
-    const todayHabitStr = habitDateStr();
+    // Real weight-goal projection from the Smart Goal Engine (same module already used by the
+    // Log Weight screen) -- no goal invented here if the user hasn't set one.
+    const goals = window.IgnytGoals;
+    const activeGoal = goals ? goals.activeGoal() : null;
+    const currentWeightKg = state.bodylog[0] ? Number(state.bodylog[0].weight) : (activeGoal ? activeGoal.startWeight : null);
+    const goalCompute = activeGoal ? goals.compute(activeGoal) : null;
+    const goalPct = (activeGoal && goals && currentWeightKg != null) ? (goals.progressPct(activeGoal, currentWeightKg) || 0) : null;
+    let daysLeft = null;
+    if (goalCompute && goalCompute.completion) {
+      daysLeft = Math.max(0, Math.round((new Date(goalCompute.completion) - new Date()) / 86400000));
+    }
+    const weightDeltaKg = (activeGoal && currentWeightKg != null) ? (activeGoal.targetWeight - currentWeightKg) : null;
+
+    const recentSessions = state.workoutLog.slice(0, 3);
+    const rowIcon = (muscles) => {
+      const g = muscles.length ? FINE_TO_BROAD[muscles[0]] : null;
+      return (g === 'Chest' || g === 'Shoulders' || g === 'Arms') ? 'dumbbell' : (g === 'Back') ? 'workout' : 'body';
+    };
+
+    const summaryTile = (icon, bg, color, value, unit, label, goalText) => `<div class="pg-card" style="padding:14px;background:${bg};border-color:transparent;">
+      <span style="color:${color};">${svg(icon, 18)}</span>
+      <div style="font-size:18px;font-weight:800;margin-top:8px;">${value}${unit ? `<span style="font-size:11px;font-weight:600;color:var(--rh-muted);"> ${unit}</span>` : ''}</div>
+      <div style="font-size:11px;color:var(--rh-muted);font-weight:600;margin-top:1px;">${label}</div>
+      <div style="font-size:10px;color:var(--rh-muted);font-weight:600;margin-top:1px;">${goalText}</div>
+    </div>`;
+
+    const quickAction = (icon, color, label, attrs) => `<button class="rh-quick-card" style="padding:12px 4px;" ${attrs}>
+      <span style="color:${color};">${svg(icon, 20)}</span><span>${label}</span>
+    </button>`;
 
     return `
     <div class="home-light">
-      <section class="rh-hero">
-        <div class="rh-hero__row">
-          <div class="rh-hero__text">
-            <div class="rh-hero__greeting">${greeting()},</div>
-            <div class="rh-hero__name">${state.profile.name || 'Athlete'} 👋</div>
-            <div class="rh-hero__streak">🔥 ${streak} Day Streak</div>
-            ${renderAchievementCelebration ? (state.lastUnlockedAchievements && state.lastUnlockedAchievements.length ? renderAchievementCelebration() : '') : ''}
-            ${renderPRCelebration ? (state.lastSessionPRs && state.lastSessionPRs.length ? renderPRCelebration() : '') : ''}
+      ${renderAchievementCelebration ? (state.lastUnlockedAchievements && state.lastUnlockedAchievements.length ? renderAchievementCelebration() : '') : ''}
+      ${renderPRCelebration ? (state.lastSessionPRs && state.lastSessionPRs.length ? renderPRCelebration() : '') : ''}
 
-            <div class="rh-hero__divider"></div>
-
-            <div class="rh-hero__mid">
-              <div class="rh-hero__workout">
-                <div class="rh-hero__eyebrow">Today's Workout</div>
-                <div class="rh-hero__workout-title">${plannedDay ? plannedDay.session : 'Rest Day'}</div>
-                <div class="rh-hero__workout-sub">${plannedDay ? (todayMuscles.length ? todayMuscles.join(' • ') : `${plannedDay.exercises.length} exercises`) : 'Recovery, mobility, or an easy walk'}</div>
-              </div>
-              <div class="rh-hero__recovery">
-                ${gaugeRing(recoveryScore, 'var(--rh-blue)')}
-                <div class="rh-hero__recovery-value">${recoveryScore == null ? '—' : recoveryScore + '%'}</div>
-                <div class="rh-hero__recovery-label">${recoveryScore == null ? 'Recovery' : recoveryLabel(recoveryScore)}</div>
-              </div>
-            </div>
-
-            <div class="rh-hero__actions">
-              <button class="rh-btn rh-btn--primary" data-nav="workout">${plannedDay && plannedDay.exercises.some(ex=>state.completed[`${week.week}|${plannedDay.day}|${ex.name}`]) ? 'Continue Workout' : 'Start Workout'} ›</button>
-              <button class="rh-btn rh-btn--ghost" data-nav="plan">View Plan</button>
+      <div class="pg-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:4px;">
+        <div style="min-width:0;">
+          <div style="font-size:20px;font-weight:800;">${greeting()}, ${state.profile.name || 'Athlete'} 👋</div>
+          <div style="font-size:13px;color:var(--rh-muted);margin-top:3px;">You've got this! Consistency creates results.</div>
+        </div>
+        <div style="flex:none;">
+          <div class="pg-ring" style="--pct:${weeklyGoalPct};--ring-color:var(--rh-blue);width:76px;height:76px;">
+            <div class="pg-ring__inner" style="width:62px;height:62px;flex-direction:column;">
+              <div style="font-size:17px;font-weight:800;">${weeklyGoalPct}%</div>
             </div>
           </div>
-          <div class="rh-hero__image-wrap">
-            <img class="rh-hero__athlete" src="assets/images/athletes/home-athlete.png" alt="" decoding="async"
-              onerror="this.parentElement.style.display='none';">
+          <div style="font-size:10px;color:var(--rh-muted);font-weight:700;text-align:center;margin-top:4px;">Weekly Goal</div>
+        </div>
+      </div>
+
+      ${activeGoal ? `
+      <div class="rh-section-head" style="margin-top:16px;"><span>Goal Progress</span></div>
+      <div class="pg-card" style="display:flex;gap:14px;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;gap:20px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="tl-card__icon" style="width:32px;height:32px;flex:none;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('scale', 16)}</span>
+              <div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Current Weight</div><div style="font-size:15px;font-weight:800;">${currentWeightKg != null ? displayW(currentWeightKg) : '—'} ${wUnit()}</div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="tl-card__icon" style="width:32px;height:32px;flex:none;background:rgba(22,163,74,.1);color:var(--rh-green);">${svg('target', 16)}</span>
+              <div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Goal Weight</div><div style="font-size:15px;font-weight:800;">${displayW(activeGoal.targetWeight)} ${wUnit()}</div></div>
+            </div>
+          </div>
+          <div class="rh-progress-track"><div class="rh-progress-fill" style="width:${goalPct || 0}%;"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;">
+            <span style="color:var(--rh-muted);">${weightDeltaKg != null ? `You need to ${weightDeltaKg < 0 ? 'lose' : 'gain'} <b style="color:var(--rh-text);">${Math.abs(displayW(weightDeltaKg, 1))} ${wUnit()}</b>` : ''}</span>
+            <span style="color:var(--rh-muted);">${goalCompute && goalCompute.weeklyRate ? `<b style="color:var(--rh-blue);">${Math.abs(goalCompute.weeklyRate)} ${wUnit()}</b> per week` : ''}</span>
           </div>
         </div>
-      </section>
+        ${daysLeft != null ? `<div style="flex:none;border-left:1px solid var(--rh-border);padding-left:14px;text-align:center;">
+          <div style="font-size:11px;color:var(--rh-blue);font-weight:700;">Days Left</div>
+          <div style="font-size:22px;font-weight:800;margin-top:2px;">${daysLeft}</div>
+          <div style="font-size:10px;color:var(--rh-muted);margin-top:1px;">days left</div>
+          <div style="font-size:10px;color:var(--rh-muted);font-weight:700;margin-top:10px;">Target Date</div>
+          <div style="font-size:11px;font-weight:700;margin-top:1px;white-space:nowrap;">${new Date(goalCompute.completion).toLocaleDateString('default',{day:'2-digit',month:'short',year:'numeric'})}</div>
+        </div>` : ''}
+      </div>` : `
+      <div class="rh-section-head" style="margin-top:16px;"><span>Goal Progress</span></div>
+      <button class="pg-card" style="width:100%;text-align:left;background:none;border-style:dashed;cursor:pointer;" data-nav="goals">
+        <div style="font-size:13px;font-weight:700;">Set a weight goal</div>
+        <div style="font-size:12px;color:var(--rh-muted);margin-top:2px;">Track your progress toward a target weight and date in Fitness Goals.</div>
+      </button>`}
 
-      <div class="rh-quick-grid">
-        <button class="rh-quick-card" data-nav="workout">${svg('workout', 22)}<span>Start Workout</span></button>
-        <button class="rh-quick-card" data-nav="progress">${svg('progress', 22)}<span>Progress</span></button>
-        <button class="rh-quick-card" data-nav="plan">${svg('plan', 22)}<span>Plans</span></button>
-        <button class="rh-quick-card" data-open-progress-view="achievements">${svg('trophy', 22)}<span>Achievements</span></button>
+      <div class="rh-section-head"><span>Today's Summary</span><a href="#" class="rh-view-all" data-open-progress-view="analytics">View All</a></div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+        ${summaryTile('flame', 'rgba(22,163,74,.08)', 'var(--rh-green)', eaten.toLocaleString(), '', 'Calories', `/ ${Math.round(targets.kcal).toLocaleString()} kcal`)}
+        ${summaryTile('dumbbell', 'rgba(124,58,237,.08)', 'var(--rh-purple)', `${workoutDoneCount}`, `/ ${workoutTotalCount}`, 'Workout', workoutDoneCount >= workoutTotalCount && workoutTotalCount > 0 ? 'Completed' : 'In progress')}
+        ${summaryTile('footprints', 'rgba(217,119,6,.08)', '#D97706', steps == null ? '—' : Number(steps).toLocaleString(), '', 'Steps', `/ ${DEFAULT_STEPS_GOAL.toLocaleString()}`)}
+        ${summaryTile('timer', 'rgba(37,99,235,.08)', 'var(--rh-blue)', workoutMinutes == null ? '—' : workoutMinutes, '', 'Active Minutes', `/ ${DEFAULT_WORKOUT_MINUTES_GOAL} min`)}
       </div>
 
-      <div class="rh-section-head"><span>Today's Overview</span><a href="#" class="rh-view-all" data-open-progress-view="analytics">View All</a></div>
-      <div class="rh-overview-scroll">
-        ${overviewTile(svg('footprints',20), steps==null?'—':Number(steps).toLocaleString(), '', 'Steps', `/ ${DEFAULT_STEPS_GOAL.toLocaleString()}`, stepsTrendPct(stepsHistory))}
-        ${overviewTile(svg('flame',20), activeKcal==null?'—':Math.round(activeKcal).toLocaleString(), '', 'kcal', `/ ${DEFAULT_ACTIVE_CALORIES_GOAL.toLocaleString()}`, null)}
-        ${overviewTile(svg('droplet',20), (water/1000).toFixed(1), '', 'L', `/ ${(waterTarget/1000).toFixed(1)} L`, null)}
-        ${overviewTile(svg('timer',20), workoutMinutes==null?'—':workoutMinutes, '', 'min', `/ ${DEFAULT_WORKOUT_MINUTES_GOAL} min`, null)}
-        ${overviewTile(svg('moon',20), sleepMinutes==null?'—':`${Math.floor(sleepMinutes/60)}h ${sleepMinutes%60}m`, '', 'Sleep', `/ ${Math.floor(SLEEP_TARGET_MINUTES/60)}h`, null)}
+      <div class="rh-section-head"><span>Quick Actions</span></div>
+      <div class="rh-quick-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+        ${quickAction('workout', 'var(--rh-green)', 'Start Workout', 'data-nav="workout"')}
+        ${quickAction('scale', 'var(--rh-blue)', 'Log Weight', 'data-nav="body"')}
+        ${quickAction('progress', 'var(--rh-purple)', 'Progress', 'data-nav="progress"')}
+        ${quickAction('heart', '#DC2626', 'Heart Rate', 'data-action="open-calc" data-calc="hr"')}
+        ${quickAction('calc', 'var(--rh-purple)', 'BMI Calculator', 'data-action="open-calc" data-calc="bmi"')}
+        ${quickAction('more', 'var(--rh-muted)', 'More', 'data-nav="tools"')}
       </div>
 
-      <div class="rh-section-head"><span>Weekly Goal</span></div>
-      <section class="rh-card rh-weekly-goal">
-        <div class="rh-weekly-goal__row">
-          <div>
-            <div class="rh-weekly-goal__label">Workout Progress</div>
-            <div class="rh-weekly-goal__count">${weekStats.workoutsCompleted}<span> / ${weekStats.workoutsGoal || '—'}</span></div>
-            <div class="rh-weekly-goal__sub">workouts completed</div>
-          </div>
-          <span class="rh-weekly-goal__badge">${svg('trophy', 20)}</span>
-        </div>
-        ${weekStats.workoutsGoal ? (() => {
-          const pct = Math.min(100, Math.round(weekStats.workoutsCompleted / weekStats.workoutsGoal * 100));
-          return `<div class="rh-progress-track"><div class="rh-progress-fill" style="width:${pct}%;"></div></div>
-          <div class="rh-weekly-goal__pct">${pct}%</div>`;
-        })() : `<div class="rh-weekly-goal__sub" style="margin-top:8px;">Set weekly training days in your Profile to track this.</div>`}
-      </section>
-
-      <div class="rh-section-head"><span>Habits</span>${habits.length ? `<a href="#" class="rh-view-all" data-open-progress-view="habits">View All</a>` : ''}</div>
-      ${!habits.length ? `
-        <button class="rh-card rh-habits-empty" data-open-progress-view="habits">
-          <div class="rh-habits-empty__title">Build a daily habit</div>
-          <div class="rh-habits-empty__sub">Track training, diet, sleep and more — tap to add your first habit.</div>
-        </button>
-      ` : `
-        <div class="rh-habit-grid">
-          ${habits.slice(0, 3).map(h => {
-            const done = !!(state.habitCompletions[h.id] && state.habitCompletions[h.id][todayHabitStr]);
-            const hStreak = habitStreak(h.id);
-            return `<button class="rh-habit-card" data-toggle-habit="${h.id}">
-              <span class="rh-habit-card__icon ${done ? 'is-done' : ''}">${done ? svg('check', 18) : svg('bolt', 18)}</span>
-              <div class="rh-habit-card__name">${h.name}</div>
-              <div class="rh-habit-card__streak">🔥 ${hStreak} Day Streak</div>
-              <div class="rh-progress-track rh-progress-track--sm"><div class="rh-progress-fill" style="width:${done?100:0}%;"></div></div>
-              <div class="rh-habit-card__state">${done ? 'Completed' : 'Tap to complete'}</div>
-            </button>`;
-          }).join('')}
-        </div>
-      `}
-
-      <div class="rh-section-head"><span>Recovery &amp; Health</span><a href="#" class="rh-view-all" data-nav="health">View All</a></div>
-      <div class="rh-recovery-scroll">
-        <article class="rh-gauge-card">
-          ${gaugeRing(sleepMinutes==null?null:Math.min(100,Math.round(sleepMinutes/SLEEP_TARGET_MINUTES*100)), 'var(--rh-purple)')}
-          <div class="rh-gauge-card__value">${sleepMinutes==null?'No data':`${Math.floor(sleepMinutes/60)}h ${sleepMinutes%60}m`}</div>
-          <div class="rh-gauge-card__label">Sleep</div>
-          <div class="rh-gauge-card__sub" style="color:var(--rh-purple);">${sleepMinutes==null?'—':(sleepMinutes>=SLEEP_TARGET_MINUTES?'Excellent':'Below target')}</div>
-        </article>
-        <article class="rh-gauge-card">
-          ${gaugeRing(hrv==null?null:100, 'var(--rh-green)')}
-          <div class="rh-gauge-card__value">${hrv==null?'No data':`${hrv} ms`}</div>
-          <div class="rh-gauge-card__label">HRV</div>
-          <div class="rh-gauge-card__sub" style="color:var(--rh-green);">${hrv==null?'—':'Latest body log'}</div>
-        </article>
-        <article class="rh-gauge-card">
-          ${gaugeRing(recoveryScore, 'var(--rh-green)')}
-          <div class="rh-gauge-card__value">${recoveryScore==null?'No data':recoveryScore+'%'}</div>
-          <div class="rh-gauge-card__label">Recovery</div>
-          <div class="rh-gauge-card__sub" style="color:var(--rh-green);">${recoveryLabel(recoveryScore)}</div>
-        </article>
-        <article class="rh-gauge-card">
-          ${gaugeRing(restingBpm==null?null:100, 'var(--rh-red)')}
-          <div class="rh-gauge-card__value">${restingBpm==null?'No data':`${Math.round(restingBpm)} bpm`}</div>
-          <div class="rh-gauge-card__label">Resting HR</div>
-          <div class="rh-gauge-card__sub" style="color:var(--rh-red);">${restingBpm==null?'—':'Optimal'}</div>
-        </article>
-        <article class="rh-gauge-card">
-          ${gaugeRing(Math.min(100,Math.round(water/waterTarget*100)), 'var(--rh-blue)')}
-          <div class="rh-gauge-card__value">${(water/1000).toFixed(1)} L</div>
-          <div class="rh-gauge-card__label">Hydration</div>
-          <div class="rh-gauge-card__sub" style="color:var(--rh-blue);">${water>=waterTarget?'Goal met':'Good'}</div>
-        </article>
-      </div>
-
-      <details class="rh-card rh-health-summary"><summary>Health Connect details</summary><div style="padding-top:12px;">${renderHomeHealthFeed()}</div></details>
+      <div class="rh-section-head"><span>Recent Workouts</span><a href="#" class="rh-view-all" data-nav="workout">View All</a></div>
+      ${recentSessions.length === 0 ? `<div class="pg-card" style="text-align:center;padding:20px;font-size:13px;color:var(--rh-muted);">No workouts logged yet.</div>` :
+        recentSessions.map(s => {
+          const muscles = sessionMuscles(s.exercises);
+          return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;cursor:pointer;" data-view-session="${s.id}">
+            <span class="tl-card__icon" style="flex:none;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg(rowIcon(muscles), 20)}</span>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:15px;font-weight:800;">${sessionTitle(s)}</div>
+              <div style="font-size:12px;color:var(--rh-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${muscles.length ? muscles.join(', ') : `${s.exercises.length} exercise${s.exercises.length!==1?'s':''}`}</div>
+            </div>
+            <div style="flex:none;text-align:right;">
+              <div style="font-size:13px;font-weight:700;">${workoutDurationLabel(s)}</div>
+              <div style="font-size:11px;color:var(--rh-muted);margin-top:2px;">${new Date(s.date).toLocaleDateString('default',{day:'2-digit',month:'short',year:'numeric'})}</div>
+            </div>
+            <span style="color:var(--rh-muted);flex:none;">›</span>
+          </div>`;
+        }).join('')}
     </div>`;
   };
 })();

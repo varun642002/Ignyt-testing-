@@ -9279,6 +9279,17 @@ function attachHandlers(){
   });
   const bodyCalcBackBtn = document.querySelector('[data-action="body-calc-back"]');
   if(bodyCalcBackBtn) bodyCalcBackBtn.addEventListener("click", ()=>{ state.bodyView = null; render(); });
+  // Home's Quick Actions (Heart Rate / BMI Calculator) jump straight into a specific
+  // calculator instead of landing on the picker's default.
+  document.querySelectorAll('[data-action="open-calc"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.tab = "body";
+      state.bodyView = "calculators";
+      state.calc.activeCalc = el.dataset.calc;
+      state.calc.result = null;
+      render();
+    });
+  });
 
   // Calculators
   const calcPicker = document.getElementById("calc-picker");
