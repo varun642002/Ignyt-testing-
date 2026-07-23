@@ -1,6 +1,63 @@
 # CLAUDE_PROGRESS.md
 
-## Current task (this session) — COMPLETE, commit c47a297, pushed
+## Current task (this session) — 8-item backlog, ALL COMPLETE, one branch per item, all pushed
+Request: Cardio/Timed-Hold/Carry exercise logging, Notifications, Dark Mode, Splash Screen,
+Export Data, Built-in Exercise Timer, Smart Exercise Logging, Testing. Google Drive
+Backup/Sync (expanded scope) queued separately, blocked on user OAuth setup — not started.
+
+- `feature/dark-mode-support` — real dark variants for all pg-light/wk-light/home-light
+  screens (`www/css/pages/dark-mode.css`, isDarkTheme()-aware radar chart). Commit 38940b7.
+- `feature/exercise-library-redesign` — Goal Wizard redesign (unrelated cleanup finished
+  first). Commit 4f4f794.
+- Smart Exercise Logging + Cardio/Hold/Carry fields (`exerciseLogType()`, `newSet()`,
+  extended set-table rendering, CSV import/export) — same branch line as timer/export below.
+- `feature/exercise-timer` — built-in hold timer (Start/Pause/Resume/Reset, auto-save).
+- `feature/export-data-fix` (commit 308809f) — root cause: `<a download>` blob trick no-ops
+  in native WebView. Fix: extended existing hand-rolled `SharePlugin.kt` (IgnytShare) with
+  `shareText()`; `downloadFile()` in app.js now calls it on native. Added Nutrition CSV export.
+- `feature/splash-screen` (commit 313fc1e) — native `installSplashScreen()` short hold +
+  fade-out + WebView bg-color fix (no white flash) in MainActivity.java, handing off to a
+  JS `#boot-splash` overlay (logo/IGNYT/spinner) for the rest of a ~2s hold, sessionStorage-
+  gated to once per cold start.
+- `feature/notifications-fix` (commit 438d48b) — root cause: reminders used the web
+  `Notification` API only (undefined in native WebView, foreground-only elsewhere). Fix: new
+  hand-rolled `com.varun.ignyt.notify` plugin (`IgnytNotify`) — AlarmManager + NotificationManager,
+  `BootReceiver` re-arms after reboot, runtime POST_NOTIFICATIONS handling. app.js schedules/
+  cancels native reminders on toggle change and reconciles at boot; old Notification-API path
+  kept as browser/PWA fallback.
+
+### Environment fix (affects ALL future builds in this repo, not just this session)
+Gradle 8.14.3's daemon cannot compile build/settings Groovy scripts when JAVA_HOME is JDK 25
+(this machine's default) — `Unsupported class file major version 69`. Fixed via
+`org.gradle.java.home=C:\Program Files\Android\Android Studio\jbr` (a real local JDK 21) in
+`android/gradle.properties`. Does not change the project's pinned Java/Kotlin target (still 21).
+
+### Architectural note for future sessions
+This project deliberately uses ONLY hand-rolled native Kotlin Capacitor plugins
+(HealthConnectPlugin, AuthPlugin, CloudSyncPlugin, SharePlugin, now NotifyPlugin) — NO
+third-party Capacitor plugins. `@capacitor/filesystem`/`@capacitor/share` were tried and
+reverted this session: they ship Kotlin ≥2.1 metadata, incompatible with this project's
+pinned `kotlin_version = '1.9.24'` (required for Health Connect). Do not reintroduce them;
+extend the existing hand-rolled plugins instead.
+
+### Build status
+Every branch above individually reached BUILD SUCCESSFUL (`npx cap sync android` +
+`gradlew.bat assembleDebug`) before commit. None merged to main.
+
+### Known gaps / next action for the user
+1. None of the 3 native-only branches (export, splash, notifications) have been exercised on
+   a real Android device or emulator in this environment — only build-verified + browser-pane
+   logic-verified (the native code paths themselves can't run outside `window.Capacitor`).
+2. Google Drive Backup/Sync (expanded scope: cloud sync across devices, user accounts,
+   conflict resolution, incremental backups, scheduled backups, version history/rollback,
+   passphrase E2E encryption) is fully speced but NOT started — blocked on the user setting
+   up a real Google Cloud OAuth Client ID.
+3. These branches are independent siblings (not stacked) — merge order/conflict resolution
+   into main is still the user's call.
+
+---
+
+## Previous task — COMPLETE, commit c47a297, pushed
 Branch: `feature/health-insights-autosync` (from `feature/phase2-refinement` tip e92977b).
 Request: Insights page with real Day/Week/Month/Year Health Connect data; auto-sync on
 launch/foreground/Home-Insights-Food Log open/5-min interval; auto-update HC active calories
