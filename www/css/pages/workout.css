@@ -73,6 +73,13 @@
 .wk-routine-card__start { position:absolute; bottom:14px; right:14px; width:36px; height:36px; border-radius:50%; border:none;
   background:var(--rh-blue); color:#fff; font-size:13px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
 
+/* ---------- Add Exercise picker (reskins the shared .ex-picker-* classes, which have no
+   other callers, for this light page) ---------- */
+.wk-light .ex-picker-textbtn { color:var(--rh-muted); }
+.wk-light .ex-picker-row { border-bottom:1px solid var(--rh-border); }
+.wk-light .ex-picker-row:active { background:var(--rh-bg); }
+.wk-light .ex-picker-info { color:var(--rh-blue); }
+
 /* Completion ring (conic-gradient), same technique as Home's Recovery Score ring. */
 .wk-ring { width:40px; height:40px; border-radius:50%; flex:none; display:grid; place-items:center;
   background:conic-gradient(var(--ring-color,#2563EB) calc(var(--pct,0) * 1%), #EEF1F6 0); }

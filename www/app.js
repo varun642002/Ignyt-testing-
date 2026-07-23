@@ -5035,32 +5035,41 @@ function renderExercisePicker(){
   // while typing. Only #ex-picker-results is updated live (see updateExercisePickerResults),
   // so the <input> element — and therefore keyboard focus — is never destroyed mid-typing.
   return `
+    <div class="wk-light">
     <div class="row-between" style="margin-bottom:14px;">
       <button class="ex-picker-textbtn" data-action="close-exercise-picker">Cancel</button>
       <span style="font-weight:800;font-size:16px;">${state.exercisePickerContext==="routine"?"Add to Routine":state.exercisePickerContext==="replace"?"Replace Exercise":"Add Exercise"}</span>
-      <button class="ex-picker-textbtn" data-action="show-create-in-picker" style="color:var(--color-interactive);">Create</button>
+      <button class="ex-picker-textbtn" data-action="show-create-in-picker" style="color:var(--rh-blue);">Create</button>
     </div>
 
-    <div class="search-bar" style="margin-bottom:10px;">
-      <input type="text" id="ex-picker-search" placeholder="Search exercise" value="${state.exercisePickerSearch}" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+    <div class="lib-search-wrap" style="margin-bottom:10px;">
+      ${svg('search',17)}
+      <input type="text" id="ex-picker-search" class="pi-input" placeholder="Search exercise" value="${state.exercisePickerSearch}" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
     </div>
 
-    <div class="grid2" style="margin-bottom:${state.exercisePickerContext==='routine'?'10px':'14px'};">
-      <select class="select-input" id="ex-picker-equip" style="margin:0;">
-        ${equipOptions.map(o=>`<option value="${o}" ${equip===o?'selected':''}>${o==="All"?"All Equipment":o}</option>`).join("")}
-      </select>
-      <select class="select-input" id="ex-picker-muscle" style="margin:0;">
-        ${muscleOptions.map(o=>`<option value="${o}" ${muscleFilter===o?'selected':''}>${o==="All"?"All Muscles":o}</option>`).join("")}
-      </select>
+    <div class="pi-grid2" style="margin-bottom:${state.exercisePickerContext==='routine'?'10px':'14px'};">
+      <div class="pi-field" style="display:flex;align-items:center;gap:8px;background:var(--rh-card);border:1px solid var(--rh-border);border-radius:10px;padding:0 12px;">
+        <span style="flex:none;color:var(--rh-blue);">${svg('dumbbell',15)}</span>
+        <select id="ex-picker-equip" style="flex:1;min-width:0;border:none;background:none;padding:10px 0;font-size:13px;color:var(--rh-text);">
+          ${equipOptions.map(o=>`<option value="${o}" ${equip===o?'selected':''}>${o==="All"?"All Equipment":o}</option>`).join("")}
+        </select>
+      </div>
+      <div class="pi-field" style="display:flex;align-items:center;gap:8px;background:var(--rh-card);border:1px solid var(--rh-border);border-radius:10px;padding:0 12px;">
+        <span style="flex:none;color:var(--rh-blue);">${svg('profile',15)}</span>
+        <select id="ex-picker-muscle" style="flex:1;min-width:0;border:none;background:none;padding:10px 0;font-size:13px;color:var(--rh-text);">
+          ${muscleOptions.map(o=>`<option value="${o}" ${muscleFilter===o?'selected':''}>${o==="All"?"All Muscles":o}</option>`).join("")}
+        </select>
+      </div>
     </div>
     ${state.exercisePickerContext==="routine" ? `
-      <div class="row-between" style="margin-bottom:14px;background:var(--surface-alt);border-radius:8px;padding:8px 12px;">
-        <span style="font-size:12px;color:var(--muted);">Sets for the exercise you pick</span>
-        <input type="number" id="ex-picker-routine-sets" value="${state.routineBuilderSets}" min="1" style="width:44px;background:var(--surface);border-radius:6px;padding:6px;text-align:center;color:var(--accent);font-family:'SF Mono',monospace;font-weight:700;border:none;">
+      <div class="row-between" style="margin-bottom:14px;background:var(--rh-card);border:1px solid var(--rh-border);border-radius:10px;padding:8px 12px;">
+        <span style="font-size:12px;color:var(--rh-muted);">Sets for the exercise you pick</span>
+        <input type="number" id="ex-picker-routine-sets" value="${state.routineBuilderSets}" min="1" style="width:44px;background:var(--rh-bg);border-radius:6px;padding:6px;text-align:center;color:var(--rh-blue);font-family:'SF Mono',monospace;font-weight:700;border:none;">
       </div>
     ` : ""}
 
     <div id="ex-picker-results">${exercisePickerResultsHtml()}</div>
+    </div>
   `;
 }
 
@@ -5110,7 +5119,7 @@ function exercisePickerRow(ex){
     <div class="ex-picker-avatar" style="background:${color}22;color:${color};">${initial}</div>
     <div style="flex:1;min-width:0;">
       <div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ex.name}${equipSuffix}</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:1px;">${ex.muscle}</div>
+      <div style="font-size:12px;color:var(--rh-muted);margin-top:1px;">${ex.muscle}</div>
     </div>
     <button class="ex-picker-info" data-view-exercise-from-picker="${ex.name}" title="View exercise guide" aria-label="View exercise guide">${svg('progress',16)}</button>
   </div>`;
