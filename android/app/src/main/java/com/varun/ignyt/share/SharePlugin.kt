@@ -44,6 +44,35 @@ class SharePlugin : com.getcapacitor.Plugin() {
         return raw.replace(Regex("[^A-Za-z0-9._-]"), "_")
     }
 
+    /** Writes real text content (JSON/CSV export data) to the app cache and opens the system
+     *  share sheet with it -- same hand-rolled approach as shareImage() above, generalized
+     *  beyond PNGs so Settings > Export Data (backup JSON, workout/measurement/nutrition CSV)
+     *  actually produces a file on-device instead of silently no-oping, which is what the
+     *  browser-only <a download> blob trick did inside this native WebView. */
+    @PluginMethod
+    fun shareText(call: PluginCall) {
+        try {
+            val content = call.getString("content")
+            if (content.isNullOrEmpty()) { resolveError(call, "content is required."); return }
+            val mimeType = call.getString("mimeType") ?: "text/plain"
+            val fileName = safeFileName(call)
+            val dir = File(context.cacheDir, "share").apply { mkdirs() }
+            val file = File(dir, fileName)
+            file.writeText(content)
+
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = mimeType
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            activity.startActivity(Intent.createChooser(send, "Save or share $fileName"))
+            resolveSuccess(call, JSObject().apply { put("shared", true) })
+        } catch (e: Exception) {
+            resolveError(call, "Share failed: ${e.message ?: "unknown error"}")
+        }
+    }
+
     /** Writes the PNG to the app cache and opens the system share sheet with it. */
     @PluginMethod
     fun shareImage(call: PluginCall) {

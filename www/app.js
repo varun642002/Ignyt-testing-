@@ -1407,7 +1407,32 @@ const ICONS = {
 
 function csvEscape(s){ s = String(s==null?"":s); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
 
-function downloadFile(filename, content, mime){
+// The plain <a download> blob-URL trick below only actually saves a file on a real desktop/
+// mobile BROWSER. Inside the native Android WebView it silently does nothing -- this was the
+// real root cause of "Export Data doesn't work": every export button called this and appeared
+// to succeed (no error), but no file was ever produced on-device. Native Android instead calls
+// the app's own hand-rolled IgnytShare.shareText native plugin (android/app/.../share/
+// SharePlugin.kt), which writes the real file to the app cache and opens the OS share sheet --
+// same "no third-party Capacitor plugins" approach already established for shareImage()/
+// saveImage() (the official @capacitor/filesystem ships Kotlin 2.1 bytecode this project's
+// pinned Kotlin 1.9.24 compiler can't read; confirmed by trying it before writing this).
+async function downloadFile(filename, content, mime){
+  const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+  if(isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytShare){
+    try{
+      const res = await window.Capacitor.Plugins.IgnytShare.shareText({ fileName: filename, content, mimeType: mime });
+      if(res && res.success){
+        if(window.showToast) showToast("Exported "+filename, "success", window.render);
+      } else {
+        if(window.showToast) showToast("Export failed: "+((res&&res.error)||"unknown error"), "error", window.render);
+      }
+      return;
+    }catch(e){
+      console.error("Native file export failed:", e);
+      if(window.showToast) showToast("Export failed: "+(e && e.message || "unknown error"), "error", window.render);
+      return; // don't fall through to the blob trick -- it would silently no-op on native anyway
+    }
+  }
   const blob = new Blob([content], {type:mime});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -2039,6 +2064,15 @@ function exportMeasurementsCSV(){
   });
   const csv = rows.map(r=>r.map(csvEscape).join(",")).join("\n");
   downloadFile("ignyt-measurements-"+todayStr()+".csv", csv, "text/csv");
+}
+
+function exportNutritionCSV(){
+  const rows = [["date","meal","name","calories","protein_g","carbs_g","fat_g","fibre_g"]];
+  state.foodLog.slice().reverse().forEach(f=>{
+    rows.push([f.date, f.meal||"", f.name||"", f.calories||"", f.protein||"", f.carbs||"", f.fat||"", f.fibre||""]);
+  });
+  const csv = rows.map(r=>r.map(csvEscape).join(",")).join("\n");
+  downloadFile("ignyt-nutrition-"+todayStr()+".csv", csv, "text/csv");
 }
 
 function importAllJSON(file){
@@ -4070,6 +4104,7 @@ function renderSettingsTab(){
         <button class="tl-card" data-action="export-json"><span class="tl-card__icon">${svg('box',20)}</span><div class="tl-card__body"><div class="tl-card__label">Full Backup (JSON)</div><div class="tl-card__desc">Export all app data</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-action="export-workouts-csv"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Export Workouts (CSV)</div><div class="tl-card__desc">Download workout history</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-action="export-measurements-csv"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Export Measurements (CSV)</div><div class="tl-card__desc">Download body metrics</div></div><span class="tl-card__chev">›</span></button>
+        <button class="tl-card" data-action="export-nutrition-csv"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Export Nutrition (CSV)</div><div class="tl-card__desc">Download food log</div></div><span class="tl-card__chev">›</span></button>
       </div>
 
       <div class="rh-section-head"><span>${svg('upload',13)} Import Data</span></div>
@@ -8377,6 +8412,8 @@ function attachHandlers(){
   if(expWkBtn) expWkBtn.addEventListener("click", exportWorkoutsCSV);
   const expMeasBtn = document.querySelector('[data-action="export-measurements-csv"]');
   if(expMeasBtn) expMeasBtn.addEventListener("click", exportMeasurementsCSV);
+  const expNutBtn = document.querySelector('[data-action="export-nutrition-csv"]');
+  if(expNutBtn) expNutBtn.addEventListener("click", exportNutritionCSV);
   const impBtn = document.querySelector('[data-action="import-json"]');
   const impFile = document.getElementById("import-file");
   if(impBtn && impFile){
