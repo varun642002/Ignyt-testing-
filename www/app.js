@@ -1348,6 +1348,7 @@ const ICONS = {
   trend:'<path d="M4 15l5-5 4 4 7-8" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h5v5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   trendDown:'<path d="M4 9l5 5 4-4 7 8" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 18h5v-5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   repeat:'<path d="M17 2l4 4-4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12v-2a4 4 0 0 1 4-4h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M7 22l-4-4 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12v2a4 4 0 0 1-4 4H3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  filter:'<path d="M4 5h16M7 12h10M10.5 19h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   waist:'<path d="M7 4h10c-.9 2.8-.9 4.6 0 8-.9 3.4-.9 5.2 0 8H7c.9-2.8.9-4.6 0-8-.9-3.4-.9-5.2 0-8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 12h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
   chest:'<path d="M12 7c-1.3-2.2-5-2.4-6.2.2C4.6 9.9 5.8 13.3 9 14.4c1 .35 2.1-.15 3-1.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7c1.3-2.2 5-2.4 6.2.2 1.2 2.5 0 5.9-3.2 7-1 .35-2.1-.15-3-1.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
   footprints:'<path d="M9 5.5c1.4 0 2.5 1.4 2.5 3.5S10.4 15 9 15s-2.5-2.2-2.5-4.5S7.6 5.5 9 5.5z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15 11c1.4 0 2.5 1.4 2.5 3.5S16.4 20.5 15 20.5s-2.5-2.2-2.5-4.5S13.6 11 15 11z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6.5 16h5M12.5 21h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
@@ -1663,6 +1664,7 @@ const state = {
   chartMetric: "sets",
   calendarMonthOffset: 0,
   bodyDistWeekOffset: 0,
+  analyticsWeekOffset: 0,
   progressExercise: null,
   viewingExerciseDetail: null,
   showExercisePicker: false,
@@ -2518,6 +2520,46 @@ function radarChart(current, previous){
   </svg>`;
 }
 
+// Light-theme variant of radarChart() for the redesigned Workout Analytics screen -- same
+// real current/previous muscle-distribution data and geometry, just re-colored (light rings/
+// spokes/labels, orange "Current" fill matching this screen's accent, gray "Previous 30d").
+function radarChartLight(current, previous){
+  const size=260, cx=size/2, cy=size/2, r=90;
+  const n = RADAR_MUSCLES.length;
+  const maxVal = Math.max(4, ...Object.values(current), ...Object.values(previous));
+  function pt(i,val){
+    const angle = (Math.PI*2*i/n) - Math.PI/2;
+    const dist = (val/maxVal)*r;
+    return [cx+dist*Math.cos(angle), cy+dist*Math.sin(angle)];
+  }
+  function labelPt(i){
+    const angle = (Math.PI*2*i/n) - Math.PI/2;
+    return [cx+(r+26)*Math.cos(angle), cy+(r+22)*Math.sin(angle)];
+  }
+  function polygon(data,color,fillOpacity){
+    const pts = RADAR_MUSCLES.map((m,i)=>pt(i,data[m]).join(",")).join(" ");
+    return `<polygon points="${pts}" fill="${color}" fill-opacity="${fillOpacity}" stroke="${color}" stroke-width="2"/>`;
+  }
+  const rings = [0.33,0.66,1].map(f=>{
+    const pts = RADAR_MUSCLES.map((m,i)=>pt(i,maxVal*f).join(",")).join(" ");
+    return `<polygon points="${pts}" fill="none" stroke="#E2E8F0" stroke-width="1"/>`;
+  }).join("");
+  const spokes = RADAR_MUSCLES.map((m,i)=>{
+    const [x,y] = pt(i,maxVal);
+    return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#E2E8F0" stroke-width="1"/>`;
+  }).join("");
+  const labels = RADAR_MUSCLES.map((m,i)=>{
+    const [x,y] = labelPt(i);
+    return `<text x="${x}" y="${y}" fill="#64748B" font-size="11" font-weight="700" text-anchor="middle" dominant-baseline="middle">${m}</text>`;
+  }).join("");
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    ${rings}${spokes}
+    ${polygon(previous,"#94A3B8",0.12)}
+    ${polygon(current,"#D97706",0.28)}
+    ${labels}
+  </svg>`;
+}
+
 /* --- SVG weekly bar chart --- */
 
 function weeklyBarChart(buckets, metric){
@@ -2544,6 +2586,35 @@ function weeklyBarChart(buckets, metric){
         <div style="width:${buckets.length>20?'85%':'65%'};border-radius:4px 4px 0 0;background:${isLast?'#FF5A1F':'#4FA8D8'};height:${bh}px;"></div>
       </div>`;
     }).join("")}
+  </div>`;
+}
+
+// Light-theme daily (Mon-Sun) bar chart for one real week -- used by the redesigned Workout
+// Analytics "Weekly Activity" card. Distinct from weeklyBarChart() above (which plots many
+// weeks of trend data on the dark theme); this one only ever renders exactly 7 day buckets.
+function dailyBarChart(buckets, metric, weekOffset){
+  const vals = buckets.map(b=>b[metric]);
+  const max = Math.max(1, ...vals);
+  const fmt = (v)=>{
+    if(metric==="volume") return v>0 ? displayW(v,0).toLocaleString() : "";
+    if(metric==="duration") return v>0 ? fmtMinutes(v) : "";
+    return v>0 ? String(v) : "-";
+  };
+  const dayLabels = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const todayIdx = weekOffset===0 ? (new Date().getDay()+6)%7 : -1;
+  return `<div style="height:130px;display:flex;align-items:flex-end;gap:8px;min-width:0;">
+    ${buckets.map((b,i)=>{
+      const val = b[metric];
+      const isToday = i===todayIdx;
+      const bh = Math.max(val>0?4:0, Math.round((val/max)*90));
+      return `<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;">
+        <span class="mono" style="font-size:10px;font-weight:700;color:var(--rh-text);min-height:12px;">${fmt(val)}</span>
+        <div style="width:60%;border-radius:4px 4px 0 0;background:${isToday?'#D97706':'var(--rh-blue)'};height:${bh}px;"></div>
+      </div>`;
+    }).join("")}
+  </div>
+  <div style="display:flex;gap:8px;margin-top:6px;">
+    ${dayLabels.map(d=>`<span style="flex:1 1 0;text-align:center;font-size:11px;color:var(--rh-muted);font-weight:600;">${d}</span>`).join("")}
   </div>`;
 }
 
@@ -3225,6 +3296,23 @@ function computeWeeklyActivity(weeks=8){
     const idx = Math.floor((now - ts) / (7*86400000));
     if(idx>=0 && idx<weeks){
       buckets[weeks-1-idx].sets += 1; // rough count; plan sets already reflected via radar, this is activity volume proxy
+    }
+  });
+  return buckets;
+}
+
+// Day-of-week (Mon..Sun) breakdown for ONE real week, reusing weekRange() (same Monday-start
+// boundary already used by Body Distribution's week-nav) -- distinct from computeWeeklyActivity
+// above, which buckets by whole weeks over a longer range for the trend view.
+function computeDailyActivityForWeek(weekOffset){
+  const { start } = weekRange(weekOffset);
+  const buckets = Array.from({length:7},()=>({duration:0, volume:0, sets:0}));
+  state.workoutLog.forEach(s=>{
+    const dayIdx = Math.floor((new Date(s.date).getTime() - start.getTime()) / 86400000);
+    if(dayIdx>=0 && dayIdx<7){
+      buckets[dayIdx].duration += s.durationMin || 0;
+      buckets[dayIdx].volume += s.volume || 0;
+      buckets[dayIdx].sets += s.exercises.reduce((a,ex)=>a+ex.sets.length,0);
     }
   });
   return buckets;
@@ -4077,7 +4165,7 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || (state.tab==="progress" && (!state.progressView || state.progressView==="body" || state.progressView==="habits"))
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || (state.tab==="progress" && (!state.progressView || state.progressView==="body" || state.progressView==="habits" || state.progressView==="analytics"))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
@@ -5545,8 +5633,9 @@ function renderProgressTab(){
     // shown" rule already applied throughout this session (Progress dashboard vs. its own
     // detail views).
     const LIGHT_VIEW_HEADERS = {
-      body:   { icon:'scale' },
-      habits: { icon:'repeat', bg:'rgba(217,119,6,.1)', color:'#D97706', sub:'Build consistency. Build you.' }
+      body:      { icon:'scale' },
+      habits:    { icon:'repeat', bg:'rgba(217,119,6,.1)', color:'#D97706', sub:'Build consistency. Build you.' },
+      analytics: { icon:'progress', sub:'Track your progress. Improve every day.' }
     };
     if(LIGHT_VIEW_HEADERS[view]){
       const h = LIGHT_VIEW_HEADERS[view];
@@ -5749,90 +5838,94 @@ function renderProgressAnalytics(){
   const doneSets = sessions.reduce((a,s)=>a+computeCompletedSets(s.exercises),0);
   const estKcal = Math.round(minutes * ACTIVITY_KCAL_PER_MIN);
 
-  let chartWeeks = range.weeks;
-  if(!chartWeeks){
-    const oldest = state.workoutLog.length ? new Date(state.workoutLog[state.workoutLog.length-1].date).getTime() : Date.now();
-    chartWeeks = Math.min(104, Math.max(4, Math.ceil((Date.now()-oldest)/(7*86400000))+1));
-  }
+  const weekOffset = state.analyticsWeekOffset || 0;
   const metric = state.chartMetric || "sets";
-  let buckets = computeWeeklyActivity(Math.max(4, chartWeeks));
-  // Long ranges: aggregate consecutive weekly buckets (genuine sums, no invention) so the
-  // chart stays readable and can never demand more width than the phone has.
-  if(buckets.length > 16){
-    const groupSize = Math.ceil(buckets.length / 13);
-    const merged = [];
-    for(let i=0; i<buckets.length; i+=groupSize){
-      const group = buckets.slice(i, i+groupSize);
-      merged.push({
-        duration: group.reduce((a,b)=>a+b.duration,0),
-        volume: group.reduce((a,b)=>a+b.volume,0),
-        sets: group.reduce((a,b)=>a+b.sets,0)
-      });
-    }
-    buckets = merged;
-  }
+  const dailyBuckets = computeDailyActivityForWeek(weekOffset);
+
   const currentMuscles = computeMuscleDistribution(30,0);
   const prevMuscles = computeMuscleDistribution(30,30);
+  const hasMuscleData = RADAR_MUSCLES.some(m=>currentMuscles[m]>0);
+  const focusGroups = hasMuscleData ? RADAR_MUSCLES.slice().sort((a,b)=>currentMuscles[a]-currentMuscles[b]).slice(0,3) : [];
   const mc = monthlyComparison();
   const totalVolume = state.workoutLog.reduce((a,s)=>a+(s.volume||0),0);
   const totalSets = state.workoutLog.reduce((a,s)=>a+s.exercises.reduce((x,e)=>x+e.sets.length,0),0);
 
-  const cmpRow = (label, curDisplay, cur, prev) => {
+  const cmpRow = (icon, bg, color, label, curDisplay, cur, prev) => {
     const c = comparisonLabel(cur, prev);
-    return `<div class="row-between" style="padding:9px 0;border-top:1px solid var(--border);">
-      <span style="font-size:14px;font-weight:700;">${label}</span>
+    return `<div class="row-between" style="padding:10px 0;border-top:1px solid var(--rh-border);">
+      <span style="display:flex;align-items:center;gap:10px;">
+        <span class="tl-card__icon" style="width:30px;height:30px;flex:none;background:${bg};color:${color};">${svg(icon,15)}</span>
+        <span style="font-size:14px;font-weight:700;">${label}</span>
+      </span>
       <span style="display:flex;gap:10px;align-items:center;">
         <span class="mono" style="font-size:14px;">${curDisplay}</span>
-        <span class="mono" style="font-size:12px;color:${c.positive?'var(--mint)':'var(--accent)'};font-weight:800;">${c.text}</span>
+        <span class="mono" style="font-size:12px;color:${c.positive?'var(--rh-green)':'var(--rh-red)'};font-weight:800;">${c.text} ${c.positive?'↗':'↘'}</span>
       </span>
     </div>`;
   };
+  const statCard = (icon, bg, color, label, valueHtml) =>
+    `<div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:${bg};color:${color};">${svg(icon,18)}</span>
+      <div class="pg-stat-card__value">${valueHtml}</div><div class="pg-stat-card__label">${label}</div></div>`;
 
   return `
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
-      ${Object.keys(ANALYTICS_RANGES).map(k=>`<button class="cat-chip ${rangeKey===k?'active':''}" data-analytics-range="${k}">${k}</button>`).join("")}
-    </div>
-    <div class="grid2" style="margin-bottom:14px;">
-      <div class="stat-card"><div class="stat-label">Workouts</div><div class="stat-value">${sessions.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Training Time</div><div class="stat-value" style="font-size:20px;">${fmtMinutes(minutes)}</div></div>
-      <div class="stat-card"><div class="stat-label">Volume</div><div class="stat-value" style="font-size:20px;">${displayW(volume,0).toLocaleString()}<span class="stat-unit">${wUnit()}</span></div></div>
-      <div class="stat-card"><div class="stat-label">Completed Sets</div><div class="stat-value">${doneSets}</div></div>
-      <div class="stat-card"><div class="stat-label">Est. Calories</div><div class="stat-value" style="font-size:20px;">${estKcal.toLocaleString()}<span class="stat-unit">kcal</span></div></div>
-      <div class="stat-card"><div class="stat-label">Avg Frequency</div><div class="stat-value">${workoutsPerWeekAvg()}<span class="stat-unit">/wk</span></div></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0;">
+        ${Object.keys(ANALYTICS_RANGES).filter(k=>k!=="All").map(k=>`<button class="cat-chip ${rangeKey===k?'active':''}" data-analytics-range="${k}">${k}</button>`).join("")}
+      </div>
+      <button class="cat-chip ${rangeKey==='All'?'active':''}" style="flex:none;display:inline-flex;align-items:center;gap:4px;" data-analytics-range="All">${svg('filter',12)} All</button>
     </div>
 
-    <div class="eyebrow-label">Weekly Activity</div>
-    <div class="info-box" style="padding:14px;">
-      <div style="display:flex;gap:6px;margin-bottom:10px;">
+    <div class="pg-stat-grid" style="margin-bottom:14px;">
+      ${statCard('dumbbell','rgba(37,99,235,.1)','var(--rh-blue)','Workouts', sessions.length)}
+      ${statCard('timer','rgba(22,163,74,.1)','var(--rh-green)','Training Time', fmtMinutes(minutes))}
+      ${statCard('target','rgba(124,58,237,.1)','var(--rh-purple)','Volume', `${displayW(volume,0).toLocaleString()}<span class="pg-stat-card__unit">${wUnit()}</span>`)}
+      ${statCard('check','rgba(217,119,6,.1)','#D97706','Completed Sets', doneSets)}
+      ${statCard('flame','rgba(217,119,6,.1)','#D97706','Est. Calories', `${estKcal.toLocaleString()}<span class="pg-stat-card__unit">kcal</span>`)}
+      ${statCard('heart','rgba(13,148,136,.1)','#0D9488','Avg Frequency', `${workoutsPerWeekAvg()}<span class="pg-stat-card__unit">/wk</span>`)}
+    </div>
+
+    <div class="pg-card">
+      <div class="pg-card__head">
+        <span class="pg-card__title">Weekly Activity</span>
+        <select class="pi-input" id="analytics-week-select" style="width:auto;padding:6px 10px;font-size:12px;">
+          <option value="0" ${weekOffset===0?'selected':''}>This Week</option>
+          <option value="1" ${weekOffset===1?'selected':''}>Last Week</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:6px;margin:10px 0;">
         ${["sets","duration","volume"].map(m=>`<button class="cat-chip ${metric===m?'active':''}" data-metric="${m}">${m.charAt(0).toUpperCase()+m.slice(1)}</button>`).join("")}
       </div>
-      ${weeklyBarChart(buckets, metric)}
+      ${dailyBarChart(dailyBuckets, metric, weekOffset)}
     </div>
 
-    <div class="eyebrow-label">Muscle Distribution — Last 30 Days</div>
-    <div class="info-box" style="display:flex; flex-direction:column; align-items:center; padding:16px;">
-      ${radarChart(currentMuscles, prevMuscles)}
+    <div class="rh-section-head"><span>Muscle Distribution — Last 30 Days</span></div>
+    <div class="pg-card" style="display:flex; flex-direction:column; align-items:center; padding:16px;">
+      ${radarChartLight(currentMuscles, prevMuscles)}
       <div style="display:flex; gap:16px; margin-top:6px;">
-        <span style="font-size:12px;color:var(--muted);"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:5px;"></span>Current</span>
-        <span style="font-size:12px;color:var(--muted);"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);margin-right:5px;"></span>Previous 30d</span>
+        <span style="font-size:12px;color:var(--rh-muted);"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D97706;margin-right:5px;"></span>Current</span>
+        <span style="font-size:12px;color:var(--rh-muted);"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#94A3B8;margin-right:5px;"></span>Previous 30d</span>
       </div>
+      ${focusGroups.length ? `<div style="width:100%;margin-top:14px;background:rgba(37,99,235,.08);border-radius:10px;padding:10px 12px;display:flex;gap:8px;align-items:flex-start;">
+        <span style="flex:none;color:var(--rh-blue);margin-top:1px;">${svg('info',14)}</span>
+        <span style="font-size:12px;color:var(--rh-text);line-height:1.4;">Focus more on ${focusGroups.join(', ').replace(/, ([^,]*)$/, ' and $1')} to balance your muscle distribution.</span>
+      </div>` : ''}
     </div>
 
-    <div class="eyebrow-label">This Month vs Last Month</div>
-    <div class="info-box" style="padding:6px 14px;">
-      ${cmpRow("Sessions", mc.thisMonth.sessions, mc.thisMonth.sessions, mc.lastMonth.sessions)}
-      ${cmpRow("Volume", `${displayW(mc.thisMonth.volume,0).toLocaleString()} ${wUnit()}`, mc.thisMonth.volume, mc.lastMonth.volume)}
-      ${cmpRow("Training Time", fmtMinutes(mc.thisMonth.minutes), mc.thisMonth.minutes, mc.lastMonth.minutes)}
+    <div class="rh-section-head"><span>This Month vs Last Month</span></div>
+    <div class="pg-card" style="padding:4px 14px;">
+      ${cmpRow('progress','rgba(37,99,235,.1)','var(--rh-blue)',"Sessions", mc.thisMonth.sessions, mc.thisMonth.sessions, mc.lastMonth.sessions)}
+      ${cmpRow('target','rgba(124,58,237,.1)','var(--rh-purple)',"Volume", `${displayW(mc.thisMonth.volume,0).toLocaleString()} ${wUnit()}`, mc.thisMonth.volume, mc.lastMonth.volume)}
+      ${cmpRow('timer','rgba(22,163,74,.1)','var(--rh-green)',"Training Time", fmtMinutes(mc.thisMonth.minutes), mc.thisMonth.minutes, mc.lastMonth.minutes)}
     </div>
 
-    <div class="eyebrow-label">All Time</div>
-    <div class="grid2" style="margin-bottom:14px;">
-      <div class="stat-card"><div class="stat-label">Current Streak</div><div class="stat-value" style="color:var(--accent);">🔥 ${computeStreak()}<span class="stat-unit">days</span></div></div>
-      <div class="stat-card"><div class="stat-label">Longest Streak</div><div class="stat-value" style="color:var(--steel);">${computeLongestStreak()}<span class="stat-unit">days</span></div></div>
-      <div class="stat-card"><div class="stat-label">Total Workouts</div><div class="stat-value">${state.workoutLog.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Total Volume</div><div class="stat-value" style="font-size:20px;">${displayW(totalVolume,0).toLocaleString()}<span class="stat-unit">${wUnit()}</span></div></div>
-      <div class="stat-card"><div class="stat-label">Total Training Time</div><div class="stat-value" style="font-size:20px;">${fmtMinutes(totalTrainingTimeMin())}</div></div>
-      <div class="stat-card"><div class="stat-label">Total Sets Logged</div><div class="stat-value">${totalSets}</div></div>
+    <div class="rh-section-head"><span>All Time</span></div>
+    <div class="pg-stat-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:14px;">
+      ${statCard('flame','rgba(217,119,6,.1)','#D97706','Current Streak', `${computeStreak()}<span class="pg-stat-card__unit">days</span>`)}
+      ${statCard('trophy','rgba(37,99,235,.1)','var(--rh-blue)','Longest Streak', `${computeLongestStreak()}<span class="pg-stat-card__unit">days</span>`)}
+      ${statCard('calendar','rgba(22,163,74,.1)','var(--rh-green)','Total Workouts', state.workoutLog.length)}
+      ${statCard('dumbbell','rgba(124,58,237,.1)','var(--rh-purple)','Total Volume', `${displayW(totalVolume,0).toLocaleString()}<span class="pg-stat-card__unit">${wUnit()}</span>`)}
+      ${statCard('timer','rgba(217,119,6,.1)','#D97706','Total Training Time', fmtMinutes(totalTrainingTimeMin()))}
+      ${statCard('check','rgba(37,99,235,.1)','var(--rh-blue)','Total Sets Logged', totalSets)}
     </div>
   `;
 }
@@ -9168,6 +9261,11 @@ function attachHandlers(){
   });
   document.querySelectorAll("[data-analytics-range]").forEach(el=>{
     el.addEventListener("click", ()=>{ state.analyticsRange = el.dataset.analyticsRange; render(); });
+  });
+  const analyticsWeekSelect = document.getElementById("analytics-week-select");
+  if(analyticsWeekSelect) analyticsWeekSelect.addEventListener("change", ()=>{
+    state.analyticsWeekOffset = Number(analyticsWeekSelect.value);
+    render();
   });
   document.querySelectorAll("[data-nutrition-range]").forEach(el=>{
     el.addEventListener("click", ()=>{ state.nutritionRange = Number(el.dataset.nutritionRange); render(); });
