@@ -1682,6 +1682,7 @@ const state = {
     heightUnit:"cm", dateFormat:"DD MMM YYYY", timeFormat:"12h"
   }, LS.get("hx_settings", {})),
   notificationsOpen: false, // transient — not persisted, matches other dropdown/menu UI state
+  nativeNotifPermissionGranted: null, // transient — null=unknown yet, refreshed from IgnytNotify at boot
   plateCalcOpen: null, // element id string when plate calc popover open
   restDuration: LS.get("hx_rest_duration",90),
   session: LS.get("hx_active_session", null),
@@ -3976,7 +3977,8 @@ function renderCloudSyncStatusText(){
 function renderPrivacySecurityInfo(){
   let hcConnected = false;
   try { hcConnected = !!(window.HealthConnectIntegration && window.HealthConnectIntegration.loadState().connected); } catch(e){}
-  const notifPerm = typeof Notification!=='undefined' ? Notification.permission : 'unsupported';
+  const notifPerm = nativeNotify() ? (state.nativeNotifPermissionGranted===null ? 'unknown' : (state.nativeNotifPermissionGranted?'granted':'denied'))
+    : (typeof Notification!=='undefined' ? Notification.permission : 'unsupported');
   const cs = window.IgnytCloudSync;
   const signedIn = window.IgnytAuth && window.IgnytAuth.isNativeAndroid() && !!window.IgnytAuth.getAccount();
   return `
@@ -4074,12 +4076,13 @@ function renderSettingsTab(){
 
       <div class="rh-section-head"><span>${svg('bell',13)} Notifications</span></div>
       <div class="pg-card">
-        <div style="font-size:11px;color:var(--rh-muted);margin-bottom:10px;line-height:1.4;">Reminders only fire while IGNYT is open — mobile OSes don't allow true background notifications without a push server.</div>
+        <div style="font-size:11px;color:var(--rh-muted);margin-bottom:10px;line-height:1.4;">${nativeNotify() ? 'Reminders are scheduled on-device and fire even when IGNYT is closed.' : "Reminders only fire while IGNYT is open — mobile browsers don't allow true background notifications without a push server."}</div>
         ${settingToggle("workoutReminders","Workout Reminders","Nudge you in the evening.","calendar")}
         ${settingToggle("hydrationReminders","Hydration Reminders","Nudge you mid-afternoon.","droplet")}
         ${settingToggle("weeklyReports","Weekly Reports","Summary of your training week.","progress")}
         <button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:12px;" data-action="test-notification">Send Test Notification</button>
-        ${typeof Notification!=='undefined' && Notification.permission==='denied' ? `<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Notifications are blocked for this site in your browser settings.</div>` : ''}
+        ${nativeNotify() ? (state.nativeNotifPermissionGranted===false ? `<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Notifications are blocked — enable them for IGNYT in Android Settings.</div>` : '')
+          : (typeof Notification!=='undefined' && Notification.permission==='denied' ? `<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Notifications are blocked for this site in your browser settings.</div>` : '')}
       </div>
 
       <div class="rh-section-head"><span>${svg('cloud',13)} Data &amp; Sync</span></div>
@@ -4372,6 +4375,48 @@ function maybeShowReminders(){
     }
   }
   if(changed) persist();
+}
+
+/* =========================================================
+   NATIVE REMINDERS -- real, background-capable daily notifications on
+   Android via the hand-rolled IgnytNotify plugin (AlarmManager +
+   NotificationManager; no third-party Capacitor plugin, no push server,
+   consistent with IgnytShare/HealthConnect/IgnytAuth). maybeShowReminders()
+   above stays as the in-app-open fallback for browser/PWA use, where
+   there is no such thing as a background reminder.
+========================================================= */
+function nativeNotify(){
+  return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytNotify) || null;
+}
+
+const REMINDER_DEFS = {
+  workoutReminders: { id:"workout", hour:20, minute:0, title:"IGNYT", body:"No workout logged yet today — still time to get one in." },
+  hydrationReminders: { id:"hydration", hour:15, minute:0, title:"IGNYT", body:"Don't forget to log your water today." },
+  weeklyReports: { id:"weekly", hour:18, minute:0, title:"IGNYT Weekly Report", body:"Your training week summary is ready.", intervalDays:7 }
+};
+
+async function refreshNativeNotifPermission(){
+  const plugin = nativeNotify();
+  if(!plugin) return;
+  try{
+    const res = await plugin.checkPermission();
+    state.nativeNotifPermissionGranted = !!(res && res.granted);
+  }catch(e){ /* leave as unknown */ }
+}
+
+async function syncNativeReminder(key){
+  const plugin = nativeNotify();
+  if(!plugin) return;
+  const def = REMINDER_DEFS[key];
+  try{
+    if(state.settings[key]) await plugin.scheduleDaily(def);
+    else await plugin.cancel({ id: def.id });
+  }catch(e){ console.error("Native reminder sync failed for "+key+":", e); }
+}
+
+async function syncAllNativeReminders(){
+  if(!nativeNotify()) return;
+  for(const key of Object.keys(REMINDER_DEFS)) await syncNativeReminder(key);
 }
 
 /* =========================================================
@@ -8348,9 +8393,17 @@ function attachHandlers(){
       state.settings[key] = !state.settings[key];
       if(key==="keepAwake") applyWakeLock();
       const NOTIFICATION_KEYS = ["workoutReminders","hydrationReminders","weeklyReports"];
-      if(NOTIFICATION_KEYS.includes(key) && state.settings[key] && typeof Notification!=='undefined' && Notification.permission==='default'){
-        // Contextual request: only fires the moment the user actually turns a reminder on, never at launch
-        Notification.requestPermission();
+      if(NOTIFICATION_KEYS.includes(key)){
+        const plugin = nativeNotify();
+        if(plugin){
+          // Contextual request: only fires the moment the user actually turns a reminder on, never at launch
+          (state.settings[key] ? plugin.requestPermission() : Promise.resolve({granted:state.nativeNotifPermissionGranted}))
+            .then(res=>{ state.nativeNotifPermissionGranted = !!(res && res.granted); return syncNativeReminder(key); })
+            .then(render)
+            .catch(e=>console.error("Native reminder toggle failed:", e));
+        } else if(state.settings[key] && typeof Notification!=='undefined' && Notification.permission==='default'){
+          Notification.requestPermission();
+        }
       }
       render();
     });
@@ -8392,6 +8445,15 @@ function attachHandlers(){
   if(closePrivacyBtn) closePrivacyBtn.addEventListener("click", ()=>{ state.viewingPrivacyInfo = false; render(); });
   const testNotifBtn = document.querySelector('[data-action="test-notification"]');
   if(testNotifBtn) testNotifBtn.addEventListener("click", ()=>{
+    const plugin = nativeNotify();
+    if(plugin){
+      plugin.requestPermission().then(res=>{
+        state.nativeNotifPermissionGranted = !!(res && res.granted);
+        if(!res || !res.granted){ showToast("Notifications are blocked — enable them for IGNYT in Android Settings.", "error", render); return; }
+        return plugin.sendTest({ title:"IGNYT", body:"Notifications are working. Reminders will look like this." });
+      }).catch(e=>console.error("Test notification failed:", e));
+      return;
+    }
     if(typeof Notification==='undefined'){
       showToast("This browser doesn't support notifications.", "error", render);
       return;
@@ -10068,4 +10130,11 @@ if("serviceWorker" in navigator){
   window.addEventListener("load", ()=>{
     navigator.serviceWorker.register("sw.js").catch(()=>{});
   });
+}
+
+// Reconciles native reminder alarms with current settings on every cold start (handles a
+// fresh install where toggles were already on, and is a cheap no-op otherwise since
+// AlarmManager's set*Repeating() calls are idempotent for an unchanged schedule).
+if(nativeNotify()){
+  refreshNativeNotifPermission().then(()=> state.nativeNotifPermissionGranted && syncAllNativeReminders()).then(render).catch(()=>{});
 }

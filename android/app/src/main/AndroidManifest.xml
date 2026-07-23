@@ -51,6 +51,16 @@
                 <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
             </intent-filter>
         </activity-alias>
+
+        <!-- ADDED for background workout/hydration/weekly reminders (NotifyPlugin /
+             ReminderScheduler): the alarm receiver that shows the notification, and the boot
+             receiver that re-arms alarms after a reboot (AlarmManager alarms don't survive one). -->
+        <receiver android:name=".notify.ReminderReceiver" android:exported="false" />
+        <receiver android:name=".notify.BootReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 
     <!-- Health Connect's own AAR does not declare this. Without it, Android 11+ package
@@ -64,6 +74,10 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- ADDED for background workout/hydration/weekly reminders -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
    <!-- Health Connect permissions used by IGNYT:
      17 read permissions and 2 write permissions.
