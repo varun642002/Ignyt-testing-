@@ -1451,11 +1451,12 @@ function parseCsvText(text){
    map directly onto this app's own SET_TYPE_CYCLE, weight is already in kg,
    and rpe values already match this app's RPE_OPTIONS format.
 
-   Distance/duration-based cardio sets (Treadmill etc.) are imported with
-   blank weight/reps -- so they never corrupt volume or PR math -- with a
-   note on the exercise flagging that distance/duration weren't preserved,
-   since this app's set schema has no field for them (same honest gap as
-   PRs/Race analytics elsewhere in this build).
+   Distance/duration-based cardio/carry/timed-hold sets (Treadmill, Farmer's
+   Carry, Plank, etc.) are classified by exerciseLogType() (same real
+   classifier the in-app logger uses) and imported into their real
+   distanceKm/durationSec/calories fields -- not weight/reps, so they never
+   corrupt strength volume or PR math, but the real values are kept rather
+   than discarded.
 
    Additive only: existing workout history is never touched or replaced.
    Re-importing the same file is safe -- sessions already present (matched
@@ -2013,18 +2014,18 @@ function exportAllJSON(){
 }
 
 function exportWorkoutsCSV(){
-  const rows = [["date","workout_title","exercise","muscle","set_number","weight_kg","reps","rpe","duration_min","session_volume_kg","notes"]];
+  const rows = [["date","workout_title","exercise","muscle","set_number","weight_kg","reps","rpe","distance_km","duration_seconds","calories","duration_min","session_volume_kg","notes"]];
   state.workoutLog.slice().reverse().forEach(s=>{
     s.exercises.forEach(ex=>{
       ex.sets.forEach((set,si)=>{
-        rows.push([s.date, sessionTitle(s), ex.name, getMuscle(ex.name), si+1, set.weight||"", set.reps||"", set.rpe||"", s.durationMin||"", s.volume?Math.round(s.volume):"", ex.notes||""]);
+        rows.push([s.date, sessionTitle(s), ex.name, getMuscle(ex.name), si+1, set.weight||"", set.reps||"", set.rpe||"", set.distanceKm||"", set.durationSec||"", set.calories||"", s.durationMin||"", s.volume?Math.round(s.volume):"", ex.notes||""]);
       });
     });
   });
   // plan completions as their own rows
   Object.entries(state.completed).forEach(([key,ts])=>{
     const [wk,day,exName] = key.split("|");
-    rows.push([new Date(ts).toISOString().slice(0,10), "Plan "+wk+" "+day, exName, getMuscle(exName), "", "", "", "", "", "", "plan check-off"]);
+    rows.push([new Date(ts).toISOString().slice(0,10), "Plan "+wk+" "+day, exName, getMuscle(exName), "", "", "", "", "", "", "", "", "", "plan check-off"]);
   });
   const csv = rows.map(r=>r.map(csvEscape).join(",")).join("\n");
   downloadFile("ignyt-workouts-"+todayStr()+".csv", csv, "text/csv");
@@ -2198,11 +2199,16 @@ function validateWorkoutCsv(text){
     const distance = col(r,"distance_km");
     const duration = col(r,"duration_seconds");
     if((distance || duration) && !weight && !reps) ex.hasCardio = true;
-    ex.sets.push({
-      weight: weight || "", reps: reps || "",
-      rpe: col(r,"rpe") || "", done:true,
-      type: SET_TYPE_IMPORT_MAP[col(r,"set_type").toLowerCase()] || "working"
-    });
+    const set = { done:true, type: SET_TYPE_IMPORT_MAP[col(r,"set_type").toLowerCase()] || "working" };
+    // Real per-set shape now follows the exercise's real log type (same classifier the
+    // in-app logger uses), so a cardio/carry/hold set imported from CSV keeps its actual
+    // distance/duration instead of being silently dropped down to blank weight/reps.
+    const logType = exerciseLogType(exerciseTitle);
+    if(logType==="strength"){ set.weight = weight||""; set.reps = reps||""; set.rpe = col(r,"rpe")||""; }
+    else if(logType==="hold"){ set.durationSec = duration||""; }
+    else if(logType==="carry"){ set.distanceKm = distance||""; set.weight = weight||""; set.durationSec = duration||""; }
+    else { set.distanceKm = distance||""; set.durationSec = duration||""; set.calories = col(r,"calories")||""; set.heartRate = ""; }
+    ex.sets.push(set);
   }
 
   const validSessions = [], duplicateSessions = [];
@@ -2212,7 +2218,7 @@ function validateWorkoutCsv(text){
       const ex = s.exercisesByName.get(name);
       return {
         name: ex.name,
-        notes: ex.hasCardio ? (ex.notes ? ex.notes+" " : "")+"(Imported cardio set — distance/duration not preserved, this app tracks weight/reps only.)" : ex.notes,
+        notes: ex.notes,
         restDuration: 90,
         sets: ex.sets
       };
@@ -3049,6 +3055,95 @@ function nextSetType(t){
 
 function isCountingSet(set){ return (set.type||"working") !== "warmup"; }
 
+/* =========================================================
+   EXERCISE LOG TYPE — classifies a real exercise name into which fields its sets should
+   capture. Not every movement is weight x reps: carries/sleds need distance + weight,
+   cardio needs distance/time/pace, timed holds need only time. Classification is by real
+   name pattern (checked against this app's own LIBRARY entries during design -- the
+   patterns below cover every Cardio Machine/Cardio Outdoor/Hyrox Station "distance" or
+   "time" unit exercise, every Mobility/Stretch hold, and the carry/sled movements) rather
+   than a per-exercise database field, so custom exercises the user creates are classified
+   the same real way. Genuinely rep-counted movements that happen to live in a cardio-ish
+   category (Wall Balls, Burpee Broad Jumps, Box Jump) fall through to "strength" on purpose
+   -- they're counted in reps, not timed or measured by distance.
+========================================================= */
+const EXERCISE_LOG_TYPES = {
+  strength: { fields:["weight","reps","rpe"], label:"Strength" },
+  cardio:   { fields:["distanceKm","durationSec","calories","heartRate"], label:"Cardio" },
+  hold:     { fields:["durationSec"], label:"Timed Hold" },
+  carry:    { fields:["distanceKm","weight","durationSec"], label:"Carry" }
+};
+function exerciseLogType(name){
+  const n = (name||"").toLowerCase();
+  if(/\bcarry\b|sled push|sled pull|yoke walk/.test(n)) return "carry";
+  if(/\bplank\b|wall sit|dead hang|hollow (hold|body)|\bl-sit\b|handstand hold|stretch|\bpose\b|foam rolling|dislocate|ankle circles|cat-cow|child's pose|downward-facing dog|warrior (i|ii)|deep squat hold|bird dog|90\/90 hip switch|thoracic rotation|meditation|\byoga\b/.test(n)) return "hold";
+  if(/running|\bwalk|\bjog|cycling|\bswim|rowing|ski ?erg|bike ?erg|assault bike|jump rope|stair climber|stairmaster|elliptical|\bhiking\b|treadmill|stationary (bike|cycling)|jacob's ladder/.test(n)) return "cardio";
+  return "strength";
+}
+// New set object for a given real exercise, shaped for its real log type. `prefillFrom`
+// (an existing set) carries forward distance/duration/weight the same way "Add Set" already
+// carried forward weight/reps for strength sets -- calories/heart-rate are always left blank
+// since those genuinely vary per set rather than repeating.
+function newSet(name, prefillFrom){
+  const type = exerciseLogType(name);
+  const base = { done:false, type:"working" };
+  if(type==="cardio") return Object.assign(base, { distanceKm: prefillFrom?prefillFrom.distanceKm||"":"", durationSec: prefillFrom?prefillFrom.durationSec||"":"", calories:"", heartRate:"" });
+  if(type==="hold") return Object.assign(base, { durationSec: prefillFrom?prefillFrom.durationSec||"":"" });
+  if(type==="carry") return Object.assign(base, { distanceKm: prefillFrom?prefillFrom.distanceKm||"":"", weight: prefillFrom?prefillFrom.weight||"":"", durationSec: prefillFrom?prefillFrom.durationSec||"":"" });
+  return Object.assign(base, { weight: prefillFrom?prefillFrom.weight||"":"", reps: prefillFrom?prefillFrom.reps||"":"", rpe:"" });
+}
+// mm:ss (or h:mm:ss) display for a real stored duration in seconds. Returns "" for no data,
+// never a fabricated 0:00.
+function fmtDurationSec(sec){
+  const s = parseFloat(sec);
+  if(!isFinite(s) || s<=0) return "";
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), r = Math.round(s%60);
+  return (h>0 ? h+":"+String(m).padStart(2,"0") : m) + ":" + String(r).padStart(2,"0");
+}
+// Real pace (min:sec per km), derived on the fly from real distance+duration -- never stored,
+// so it can't drift from the two real numbers it's computed from.
+function fmtPace(distanceKm, durationSec){
+  const d = parseFloat(distanceKm), t = parseFloat(durationSec);
+  if(!isFinite(d) || d<=0 || !isFinite(t) || t<=0) return "";
+  const secPerKm = t/d;
+  const m = Math.floor(secPerKm/60), s = Math.round(secPerKm%60);
+  return m+":"+String(s).padStart(2,"0")+"/km";
+}
+// Inverse of fmtDurationSec: "28:35" -> 1715, "1:05:00" -> 3900, a bare "90" -> 90 (seconds).
+// Returns "" for empty/unparseable input rather than 0, so clearing the field genuinely clears it.
+function parseDurationStr(str){
+  const s = String(str||"").trim();
+  if(!s) return "";
+  const parts = s.split(":").map(p=>parseFloat(p));
+  if(parts.some(p=>!isFinite(p))) return "";
+  let sec = 0;
+  if(parts.length===3) sec = parts[0]*3600 + parts[1]*60 + parts[2];
+  else if(parts.length===2) sec = parts[0]*60 + parts[1];
+  else sec = parts[0];
+  return Math.round(sec);
+}
+// One finished set's real summary line (Session Detail, Exercise History) -- shaped per the
+// exercise's real log type instead of always assuming weight x reps.
+function setSummaryLabel(exerciseName, set){
+  const type = exerciseLogType(exerciseName);
+  if(type==="cardio"){
+    const pace = fmtPace(set.distanceKm, set.durationSec);
+    return `${set.distanceKm?set.distanceKm+'km':'–'}${set.durationSec?' · '+fmtDurationSec(set.durationSec):''}${pace?' · '+pace:''}${set.calories?' · '+set.calories+' kcal':''}`;
+  }
+  if(type==="carry") return `${set.distanceKm?set.distanceKm+'km':'–'}${set.weight?' @ '+displayW(set.weight)+wUnit():''}${set.durationSec?' · '+fmtDurationSec(set.durationSec):''}`;
+  if(type==="hold") return set.durationSec ? fmtDurationSec(set.durationSec) : '–';
+  return `${set.weight?displayW(set.weight):'–'}${wUnit()} × ${set.reps||'–'}${set.rpe?` @ RPE ${set.rpe}`:''}`;
+}
+function hasSetValues(set){ return !!(set && (set.weight||set.reps||set.distanceKm||set.durationSec)); }
+// PREVIOUS column label, shaped per real log type instead of always assuming weight x reps.
+function previousSetLabel(logType, prev){
+  if(!prev) return "–";
+  if(logType==="cardio") return (prev.distanceKm?prev.distanceKm+"km":"–")+(prev.durationSec?" "+fmtDurationSec(prev.durationSec):"");
+  if(logType==="carry") return (prev.distanceKm?prev.distanceKm+"km":"–")+(prev.weight?" @"+displayW(prev.weight)+wUnit():"");
+  if(logType==="hold") return prev.durationSec ? fmtDurationSec(prev.durationSec) : "–";
+  return `${prev.weight?displayW(prev.weight):'–'}${wUnit()}×${prev.reps||'–'}`;
+}
+
 /* Volume counts ONLY genuinely completed (checked-off) working sets: weight × reps.
    Warm-ups stay excluded (pre-existing intentional behavior), incomplete/empty sets never
    count, cardio has no weight×reps so it naturally contributes nothing. */
@@ -3077,8 +3172,8 @@ function getPreviousSet(exerciseName, setIndex){
   for(const sess of state.workoutLog){
     const ex = sess.exercises.find(e=>e.name===exerciseName);
     if(ex && ex.sets.length){
-      const usable = ex.sets.filter(s=> s && (s.weight||s.reps) && (s.done || s.done===undefined));
-      const pool = usable.length ? usable : ex.sets.filter(s=> s && (s.weight||s.reps));
+      const usable = ex.sets.filter(s=> hasSetValues(s) && (s.done || s.done===undefined));
+      const pool = usable.length ? usable : ex.sets.filter(hasSetValues);
       if(pool.length){
         return pool[setIndex] || pool[pool.length-1];
       }
@@ -5651,7 +5746,7 @@ function renderCalculators(){
 
 function renderSessionDetail(s){
   const muscles = sessionMuscles(s.exercises);
-  const workingSets = s.exercises.reduce((a,e)=>a+e.sets.filter(set=>set.weight||set.reps).length, 0);
+  const workingSets = s.exercises.reduce((a,e)=>a+e.sets.filter(hasSetValues).length, 0);
   const prs = state.prs.filter(p=>p.workoutId===s.id);
   const startTime = s.startedAt ? new Date(s.startedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : null;
   const endTime = s.finishedAt ? new Date(s.finishedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : null;
@@ -5686,7 +5781,7 @@ function renderSessionDetail(s){
       <div style="margin-top:8px;">
         ${ex.sets.map((set,i)=>`<div class="row-between" style="padding:5px 0;border-top:1px solid var(--border);">
           <span class="mono" style="font-size:12px;color:var(--muted);">Set ${i+1}</span>
-          <span class="mono" style="font-size:13px;">${set.weight?displayW(set.weight):'–'}${wUnit()} × ${set.reps||'–'}${set.rpe?` <span style="color:var(--muted);">@ RPE ${set.rpe}</span>`:''}</span>
+          <span class="mono" style="font-size:13px;">${setSummaryLabel(ex.name, set)}</span>
         </div>`).join("")}
       </div>
     </div>`).join("")}
@@ -5700,7 +5795,7 @@ function renderSessionDetail(s){
   `;
 }
 
-function renderExerciseDetailHistory(history){
+function renderExerciseDetailHistory(history, exerciseName){
   if(history.length===0) return `<div class="pg-card" style="text-align:center;padding:28px 18px;">
     <span class="tl-card__icon" style="width:44px;height:44px;margin:0 auto 12px;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('calendar',22)}</span>
     <div style="font-size:15px;font-weight:800;">No history yet</div>
@@ -5718,7 +5813,7 @@ function renderExerciseDetailHistory(history){
       ${h.notes ? `<div style="font-size:12px;color:var(--rh-muted);font-style:italic;margin-bottom:6px;">"${h.notes}"</div>` : ''}
       ${h.sets.map((s,i)=>`<div class="row-between" style="padding:4px 0;${i>0?'border-top:1px solid var(--rh-border);':''}">
         <span style="font-size:11px;color:var(--rh-muted);">Set ${i+1}</span>
-        <span style="font-size:12px;font-weight:600;">${s.weight?displayW(s.weight):'–'}${wUnit()} × ${s.reps||'–'}${s.rpe?` <span style="color:var(--rh-muted);">@ RPE ${s.rpe}</span>`:''}</span>
+        <span style="font-size:12px;font-weight:600;">${setSummaryLabel(exerciseName, s)}</span>
       </div>`).join("")}
     </div>`).join("")}
   `;
@@ -7727,10 +7822,14 @@ function renderWorkoutTab(){
       s.exercises.map((ex,exi)=>{
         const muscle = getMuscle(ex.name);
         const restLabel = ex.restDuration ? `${ex.restDuration}s` : "OFF";
-        const showRPE = state.settings.rpeTracking;
-        const isBarbell = (LIBRARY["Barbell"]||[]).some(i=>i[0]===ex.name);
+        const logType = exerciseLogType(ex.name);
+        const showRPE = state.settings.rpeTracking && logType==="strength";
+        const isBarbell = logType==="strength" && (LIBRARY["Barbell"]||[]).some(i=>i[0]===ex.name);
         const showPlates = state.settings.plateCalc && isBarbell;
-        const gridCols = showRPE ? "40px minmax(0,1fr) 58px 54px 46px 44px" : "40px minmax(0,1fr) 72px 72px 44px";
+        const gridCols = logType==="strength" ? (showRPE ? "40px minmax(0,1fr) 58px 54px 46px 44px" : "40px minmax(0,1fr) 72px 72px 44px")
+          : logType==="cardio" ? "40px minmax(0,1fr) 52px 56px 50px 44px"
+          : logType==="carry" ? "40px minmax(0,1fr) 52px 52px 52px 44px"
+          : "40px minmax(0,1fr) 1fr 44px"; // hold
         const menuOpen = state.exerciseMenuOpen===exi;
         return `
         <div class="ex-log-card wk-ex-card">
@@ -7763,24 +7862,45 @@ function renderWorkoutTab(){
           ${state.plateCalcOpen===String(exi) ? renderPlatePopover(exi) : ""}
 
           <div class="set-table-header" style="grid-template-columns:${gridCols};">
-            <span>SET</span><span>PREVIOUS</span><span>${wUnit().toUpperCase()}</span><span>REPS</span>${showRPE?"<span>RPE</span>":""}<span></span>
+            ${logType==="strength" ? `<span>SET</span><span>PREVIOUS</span><span>${wUnit().toUpperCase()}</span><span>REPS</span>${showRPE?"<span>RPE</span>":""}<span></span>`
+              : logType==="cardio" ? `<span>SET</span><span>PREVIOUS</span><span>KM</span><span>TIME</span><span>PACE</span><span></span>`
+              : logType==="carry" ? `<span>SET</span><span>PREVIOUS</span><span>KM</span><span>${wUnit().toUpperCase()}</span><span>TIME</span><span></span>`
+              : `<span>SET</span><span>PREVIOUS</span><span>TIME</span><span></span>`}
           </div>
           ${ex.sets.map((set,si)=>{
             const prev = getPreviousSet(ex.name, si);
-            const prevLabel = prev ? `${prev.weight?displayW(prev.weight):'–'}${wUnit()}×${prev.reps||'–'}` : "–";
+            const prevLabel = previousSetLabel(logType, prev);
             const typeMeta = SET_TYPE_META[set.type||"working"];
+            const numBtn = `<button class="mono set-num" data-cycle-set-type="${exi}|${si}" style="color:${typeMeta.color};background:none;border:none;cursor:pointer;font-weight:800;" title="Tap to mark warm-up / drop / failure set">${typeMeta.badge}${si+1}</button>`;
+            const doneBtn = `<button class="set-check ${set.done?'done':''}" data-set-done="${exi}|${si}" aria-label="${set.done?'Mark set incomplete':'Mark set complete'}">${set.done?svg('check',13):''}</button>`;
+            const fields = logType==="strength" ? `
+                <input type="number" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–">
+                <input type="text" class="mono set-input" value="${set.reps}" data-set-field="${exi}|${si}|reps" placeholder="–">
+                ${showRPE?`<button class="rpe-btn" data-rpe="${exi}|${si}">${set.rpe||'RPE'}</button>`:""}`
+              : logType==="cardio" ? `
+                <input type="number" class="mono set-input" value="${set.distanceKm||''}" data-set-field="${exi}|${si}|distanceKm" placeholder="–" step="0.01">
+                <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss">
+                <span class="mono set-prev" style="text-align:center;">${fmtPace(set.distanceKm,set.durationSec)||'–'}</span>`
+              : logType==="carry" ? `
+                <input type="number" class="mono set-input" value="${set.distanceKm||''}" data-set-field="${exi}|${si}|distanceKm" placeholder="–" step="0.01">
+                <input type="number" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–">
+                <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss">`
+              : `
+                <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss">`;
             return `<div class="set-row-wrap" data-swipe-row="${exi}|${si}">
               <button class="swipe-del-btn" data-del-set="${exi}|${si}" aria-label="Delete set ${si+1}" tabindex="-1">Delete</button>
               <div class="set-row ${set.done?'done':''}" style="grid-template-columns:${gridCols};">
-                <button class="mono set-num" data-cycle-set-type="${exi}|${si}" style="color:${typeMeta.color};background:none;border:none;cursor:pointer;font-weight:800;" title="Tap to mark warm-up / drop / failure set">${typeMeta.badge}${si+1}</button>
+                ${numBtn}
                 <span class="mono set-prev">${prevLabel}</span>
-                <input type="number" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–">
-                <input type="text" class="mono set-input" value="${set.reps}" data-set-field="${exi}|${si}|reps" placeholder="–">
-                ${showRPE?`<button class="rpe-btn" data-rpe="${exi}|${si}">${set.rpe||'RPE'}</button>`:""}
-                <button class="set-check ${set.done?'done':''}" data-set-done="${exi}|${si}" aria-label="${set.done?'Mark set incomplete':'Mark set complete'}">${set.done?svg('check',13):''}</button>
+                ${fields}
+                ${doneBtn}
               </div>
             </div>`;
           }).join("")}
+          ${logType==="cardio" ? `<div class="row-between" style="padding:2px 4px;">
+            <span style="font-size:11px;color:var(--rh-muted);">Calories (optional)</span>
+            <input type="number" class="mono" style="width:70px;background:var(--rh-bg,var(--surface-alt));border-radius:6px;padding:6px 8px;text-align:right;color:var(--rh-text,var(--text));border:1px solid var(--rh-border,transparent);" value="${ex.sets[0]&&ex.sets[0].calories||''}" data-set-field="${exi}|0|calories" placeholder="–">
+          </div>` : ''}
           <button class="add-set-btn" data-add-set="${exi}">${svg('plus',14)} Add Set</button>
         </div>
       `;}).join("")}
@@ -7843,7 +7963,7 @@ function renderExerciseDetail(name){
     </div>
 
     ${tab==="summary" ? renderExerciseDetailSummary(name, detail, libEntry, prs) : ""}
-    ${tab==="history" ? renderExerciseDetailHistory(history) : ""}
+    ${tab==="history" ? renderExerciseDetailHistory(history, name) : ""}
     ${tab==="howto" ? renderExerciseDetailHowTo(name, detail, libEntry) : ""}
 
     <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:8px;" data-action="add-detail-to-workout" data-exercise-name="${name}">${svg('plus',16)} Add to Workout</button>
@@ -8453,7 +8573,7 @@ function attachHandlers(){
         title: routine.name,
         exercises: routine.exercises.map(e=>({
           name: e.name, notes:"", restDuration:state.settings.defaultRest,
-          sets: Array.from({length:e.sets}, ()=>({weight:"",reps:"",rpe:"",done:false,type:"working"}))
+          sets: Array.from({length:e.sets}, ()=>newSet(e.name))
         }))
       };
       state.editingSessionId = null;
@@ -8667,7 +8787,7 @@ function attachHandlers(){
       title: s.title || "",
       exercises: s.exercises.map(e=>({
         name: e.name, notes:"", restDuration: e.restDuration || state.settings.defaultRest,
-        sets: e.sets.map(()=>({weight:"",reps:"",rpe:"",done:false,type:"working"}))
+        sets: e.sets.map(()=>newSet(e.name))
       }))
     };
     state.viewingSessionId = null;
@@ -8707,7 +8827,7 @@ function attachHandlers(){
     const picker = document.getElementById("ex-picker");
     if(picker && picker.value){
       state.session.exercises.push({ name: picker.value, notes:"", restDuration:state.settings.defaultRest,
-        sets: [{ weight:"", reps:"", rpe:"", done:false, type:"working" }] });
+        sets: [newSet(picker.value)] });
       render();
     }
   });
@@ -8841,7 +8961,7 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{
       const ex = state.session.exercises[Number(el.dataset.addSet)];
       const last = ex.sets[ex.sets.length-1];
-      ex.sets.push({ weight: last?last.weight:"", reps: last?last.reps:"", rpe:"", done:false, type:"working" });
+      ex.sets.push(newSet(ex.name, last));
       render();
     });
   });
@@ -8872,7 +8992,17 @@ function attachHandlers(){
   document.querySelectorAll("[data-set-field]").forEach(el=>{
     el.addEventListener("change", ()=>{
       const [exi,si,field] = el.dataset.setField.split("|");
-      state.session.exercises[Number(exi)].sets[Number(si)][field] = field==="weight" ? parseInputW(el.value) : el.value;
+      const set = state.session.exercises[Number(exi)].sets[Number(si)];
+      if(field==="weight") set[field] = parseInputW(el.value);
+      else if(field==="durationSec"){ set[field] = parseDurationStr(el.value); el.value = fmtDurationSec(set[field]); }
+      else set[field] = el.value;
+      // Pace lives next to the duration input but is only ever computed, never stored --
+      // recompute its display in place so it doesn't wait for a full re-render.
+      if(field==="distanceKm" || field==="durationSec"){
+        const row = el.closest(".set-row");
+        const paceEl = row && row.querySelector(".set-prev:last-of-type");
+        if(paceEl && exerciseLogType(state.session.exercises[Number(exi)].name)==="cardio") paceEl.textContent = fmtPace(set.distanceKm, set.durationSec) || "–";
+      }
       persist();
     });
   });
@@ -8944,7 +9074,7 @@ function attachHandlers(){
       applyWakeLock();
     }
     state.session.exercises.push({ name, notes:"", restDuration:state.settings.defaultRest,
-      sets: [{ weight:"", reps:"", rpe:"", done:false, type:"working" }] });
+      sets: [newSet(name)] });
     state.viewingExerciseDetail = null;
     state.tab = "workout";
     render();
@@ -9084,12 +9214,12 @@ function attachHandlers(){
           // New exercise, so old sets (tied to the old movement's weights/reps) don't carry over --
           // start it fresh, same as adding a brand new exercise, but keep its position in the list.
           state.session.exercises[idx] = { name, notes:"", restDuration:state.settings.defaultRest,
-            sets: [{ weight:"", reps:"", rpe:"", done:false, type:"working" }] };
+            sets: [newSet(name)] };
         }
         state.replacingExerciseIndex = null;
       } else {
         state.session.exercises.push({ name, notes:"", restDuration:state.settings.defaultRest,
-          sets: [{ weight:"", reps:"", rpe:"", done:false, type:"working" }] });
+          sets: [newSet(name)] });
       }
       state.showExercisePicker = false;
       render();
@@ -9114,12 +9244,12 @@ function attachHandlers(){
       const idx = state.replacingExerciseIndex;
       if(idx!=null && state.session.exercises[idx]){
         state.session.exercises[idx] = { name, notes:"", restDuration:state.settings.defaultRest,
-          sets: [{ weight:"", reps:"", rpe:"", done:false, type:"working" }] };
+          sets: [newSet(name)] };
       }
       state.replacingExerciseIndex = null;
     } else {
       state.session.exercises.push({ name, notes:"", restDuration:state.settings.defaultRest,
-        sets: [{ weight:"", reps:"", rpe:"", done:false, type:"working" }] });
+        sets: [newSet(name)] });
     }
     state.exercisePickerShowCreate = false;
     state.showExercisePicker = false;
