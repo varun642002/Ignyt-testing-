@@ -1346,6 +1346,9 @@ const ICONS = {
   swap:'<path d="M4 8h13M13 4l4 4-4 4M20 16H7M11 20l-4-4 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   book:'<path d="M4 4.5A2.5 2.5 0 016.5 2H20v17H6.5A2.5 2.5 0 004 16.5v-12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 16.5A2.5 2.5 0 016.5 19H20" fill="none" stroke="currentColor" stroke-width="2"/>',
   trend:'<path d="M4 15l5-5 4 4 7-8" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h5v5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+  trendDown:'<path d="M4 9l5 5 4-4 7 8" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 18h5v-5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+  waist:'<path d="M7 4h10c-.9 2.8-.9 4.6 0 8-.9 3.4-.9 5.2 0 8H7c.9-2.8.9-4.6 0-8-.9-3.4-.9-5.2 0-8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 12h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  chest:'<path d="M12 7c-1.3-2.2-5-2.4-6.2.2C4.6 9.9 5.8 13.3 9 14.4c1 .35 2.1-.15 3-1.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7c1.3-2.2 5-2.4 6.2.2 1.2 2.5 0 5.9-3.2 7-1 .35-2.1-.15-3-1.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
   footprints:'<path d="M9 5.5c1.4 0 2.5 1.4 2.5 3.5S10.4 15 9 15s-2.5-2.2-2.5-4.5S7.6 5.5 9 5.5z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15 11c1.4 0 2.5 1.4 2.5 3.5S16.4 20.5 15 20.5s-2.5-2.2-2.5-4.5S13.6 11 15 11z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6.5 16h5M12.5 21h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   droplet:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   flame:'<path d="M12 3c1 3-3 4-3 7a3 3 0 0 0 6 0c1.5 1 2 2.6 2 4a5 5 0 0 1-10 0c0-4 3-5 3-8 0-1 .5-2 2-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
@@ -5877,6 +5880,11 @@ function renderProgressExercise(){
 
 const BODY_PROGRESS_RANGES = { "7D":7, "30D":30, "90D":90, "1Y":365, "All":null };
 
+// Per-field icon for the Latest Measurements grid -- Waist/Chest get real anatomical icons
+// (matching the reference); the remaining fields reuse the closest existing icon rather than
+// drawing five more single-use anatomical paths for fields the reference never showed.
+const MEASUREMENT_ICONS = { "Waist":"waist", "Chest":"chest", "Hips":"waist", "Arms":"dumbbell", "Thighs":"run", "Neck":"ruler", "Body Fat":"droplet" };
+
 function renderProgressBody(){
   const entries = state.bodylog;
   const latest = entries[0], first = entries[entries.length-1];
@@ -5901,10 +5909,10 @@ function renderProgressBody(){
 
   return `
     <div class="pg-stat-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:14px;">
-      <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('body',18)}</span>
+      <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('scale',18)}</span>
         <div class="pg-stat-card__value">${latest&&latest.weight?displayW(latest.weight):'—'}<span class="pg-stat-card__unit">${wUnit()}</span></div>
         <div class="pg-stat-card__label">Latest Weight</div><div class="pg-stat-card__sub">${latest?latest.date:''}</div></div>
-      <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:${delta==null?'rgba(100,116,139,.1)':delta<=0?'rgba(22,163,74,.1)':'rgba(239,68,68,.1)'};color:${delta==null?'var(--rh-muted)':delta<=0?'var(--rh-green)':'var(--rh-red)'};">${svg(delta==null?'trend':delta<=0?'chevronDown':'chevronUp',18)}</span>
+      <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:${delta==null?'rgba(100,116,139,.1)':delta<=0?'rgba(22,163,74,.1)':'rgba(239,68,68,.1)'};color:${delta==null?'var(--rh-muted)':delta<=0?'var(--rh-green)':'var(--rh-red)'};">${svg(delta==null?'trend':delta<=0?'trendDown':'trend',18)}</span>
         <div class="pg-stat-card__value" style="color:${delta==null?'inherit':delta<=0?'var(--rh-green)':'var(--rh-red)'};">${delta==null?'—':`${delta>0?'+':''}${displayW(delta,1)}`}<span class="pg-stat-card__unit">${wUnit()}</span></div>
         <div class="pg-stat-card__label">Change (All Time)</div><div class="pg-stat-card__sub">Since start</div></div>
     </div>
@@ -5923,7 +5931,7 @@ function renderProgressBody(){
     ${measurements.length ? `
     <div class="rh-section-head"><span>Latest Measurements</span></div>
     <div class="pg-stat-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:14px;">
-      ${measurements.map(m=>`<div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('body',18)}</span>
+      ${measurements.map(m=>`<div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg(MEASUREMENT_ICONS[m.label]||'body',18)}</span>
         <div class="pg-stat-card__value">${m.value}<span class="pg-stat-card__unit">${m.unit}</span></div>
         <div class="pg-stat-card__label">${m.label}</div><div class="pg-stat-card__sub">${m.date}</div></div>`).join("")}
     </div>`:""}
