@@ -180,47 +180,129 @@
       equipment: "", foodPref: "", restrictions: "", injuries: "", motivation: ""
     };
   }
+  // One icon-prefixed field row (label above, icon badge + input/select side by side, an
+  // optional real computed caption below) -- shared by all three wizard steps so they read as
+  // one consistent flow rather than step 1 alone getting the light treatment.
+  function iconField(icon, color, label, inputHtml, caption, captionColor) {
+    return '<div style="margin-bottom:16px;"><div class="pi-label">' + esc(label) + '</div>' +
+      '<div style="display:flex;align-items:center;gap:10px;">' +
+      '<span class="tl-card__icon" style="width:36px;height:36px;flex:none;background:' + color + '1a;color:' + color + ';">' + svg(icon, 17) + '</span>' +
+      '<div style="flex:1;min-width:0;">' + inputHtml + '</div></div>' +
+      (caption ? '<div style="font-size:11px;font-weight:600;color:' + (captionColor || "var(--rh-muted)") + ';margin:5px 0 0 46px;">' + caption + '</div>' : "") +
+      '</div>';
+  }
+  function stepIndicator(s) {
+    var steps = [[1, "Goal"], [2, "Activity Level"], [3, "Confirmation"]];
+    return '<div style="display:flex;align-items:flex-start;margin:14px 0 20px;">' +
+      steps.map(function (st, i) {
+        var n = st[0], active = n <= s, current = n === s;
+        var circle = '<div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex:none;' +
+          (active ? "background:var(--rh-blue);color:#fff;" : "background:var(--rh-card);color:var(--rh-muted);border:1px solid var(--rh-border);") + '">' + n + '</div>';
+        var label = '<div style="font-size:10px;font-weight:' + (current ? 800 : 600) + ';color:' + (current ? "var(--rh-text)" : "var(--rh-muted)") + ';margin-top:5px;white-space:nowrap;text-align:center;">' + st[1] + '</div>';
+        var connector = i < steps.length - 1 ? '<div style="flex:1;height:1px;background:' + (n < s ? "var(--rh-blue)" : "var(--rh-border)") + ';margin:15px 6px 0;"></div>' : '';
+        return '<div style="display:flex;flex-direction:column;align-items:center;">' + circle + label + '</div>' + connector;
+      }).join('') + '</div>';
+  }
   function renderWizard() {
     var d = view.draft || (view.draft = draftInit());
     var s = view.step;
-    var h = head(view.editing ? "Edit Goal" : "New Goal", true) + '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Step ' + s + ' of 3</div>';
+    var h = '<div class="pg-light">' +
+      '<button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:10px;" data-goal="home">← Back</button>' +
+      '<div style="display:flex;align-items:center;gap:10px;">' +
+      '<span class="tl-card__icon" style="width:38px;height:38px;flex:none;background:rgba(239,68,68,.1);color:var(--rh-red);">' + svg("target", 20) + '</span>' +
+      '<span style="font-size:22px;font-weight:800;">' + (view.editing ? "Edit Goal" : "New Goal") + '</span></div>' +
+      '<div style="font-size:12px;color:var(--rh-muted);margin:2px 0 0 50px;">Step ' + s + ' of 3</div>' +
+      stepIndicator(s);
     if (s === 1) {
-      h += '<div class="goal-card"><label class="goal-label">Goal type</label><select id="g-type" class="goal-input">' +
-        GOAL_TYPES.map(function (t) { return '<option value="' + t.id + '"' + (d.type === t.id ? " selected" : "") + '>' + esc(t.label) + '</option>'; }).join("") + '</select>' +
-        '<label class="goal-label">Current weight (' + wUnit() + ')</label><input id="g-cw" class="goal-input" inputmode="decimal" value="' + esc(d.startWeight) + '">' +
-        '<label class="goal-label">Target weight (' + wUnit() + ', optional)</label><input id="g-tw" class="goal-input" inputmode="decimal" value="' + esc(d.targetWeight) + '">' +
-        '<label class="goal-label">Target date (optional)</label><input id="g-td" type="date" class="goal-input" value="' + esc(d.targetDate) + '">' +
+      var curW = num(d.startWeight), tgtW = num(d.targetWeight);
+      var lastLog = (typeof state !== "undefined" && state.bodylog && state.bodylog[0]) || null;
+      var updatedCaption = lastLog ? "Last updated: " + (lastLog.date === todayISO() ? "Today" : fmtDate(lastLog.date)) : "";
+      var deltaCaption = "", deltaColor = "var(--rh-blue)";
+      if (curW != null && tgtW != null && curW !== tgtW) {
+        deltaCaption = (tgtW < curW ? "Lose " : "Gain ") + Math.round(Math.abs(curW - tgtW) * 10) / 10 + " " + wUnit();
+      }
+      var dateCaption = "";
+      if (d.targetDate) {
+        var days = Math.round((new Date(d.targetDate) - new Date(d.startDate || todayISO())) / 864e5);
+        if (days > 0) dateCaption = days + " days remaining (" + Math.round(days / 30) + " months)";
+      }
+      h += '<div class="pg-card">' +
+        iconField("target", "var(--rh-blue)", "Goal type",
+          '<select id="g-type" class="pi-input">' + GOAL_TYPES.map(function (t) { return '<option value="' + t.id + '"' + (d.type === t.id ? " selected" : "") + '>' + esc(t.label) + '</option>'; }).join("") + '</select>') +
+        iconField("scale", "var(--rh-blue)", "Current weight (" + wUnit() + ")",
+          '<input id="g-cw" class="pi-input" inputmode="decimal" value="' + esc(d.startWeight) + '">', updatedCaption) +
+        iconField("flag", "var(--rh-blue)", "Target weight (" + wUnit() + ")",
+          '<input id="g-tw" class="pi-input" inputmode="decimal" value="' + esc(d.targetWeight) + '">', deltaCaption, deltaColor) +
+        iconField("calendar", "var(--rh-blue)", "Target date (optional)",
+          '<input id="g-td" type="date" class="pi-input" value="' + esc(d.targetDate) + '">', dateCaption) +
         '</div>';
+      // Live "Goal Summary" preview -- same real compute() the confirmation step already uses,
+      // just run early against the in-progress draft so the user sees the real projection
+      // before reaching step 3, not a fabricated preview number.
+      if (curW != null && tgtW != null && curW !== tgtW) {
+        var gp = draftToGoal(d), cp = compute(gp);
+        var daysLeft = cp.completion ? Math.max(0, Math.round((new Date(cp.completion) - new Date()) / 864e5)) : null;
+        var paceAbs = Math.abs(cp.weeklyRate);
+        var pace = paceAbs <= 0.5 ? "Healthy" : paceAbs <= 0.8 ? "Moderate" : "Aggressive";
+        var paceColor = pace === "Healthy" ? "var(--rh-green)" : pace === "Moderate" ? "#D97706" : "var(--rh-red)";
+        var tip = pace === "Healthy"
+          ? "You're on a healthy track to achieve your goal. Stay consistent and trust the process."
+          : "This pace is faster than the generally recommended rate — consider a later target date for a more sustainable plan.";
+        h += '<div class="pg-card" style="margin-bottom:16px;">' +
+          '<div style="display:flex;align-items:center;gap:6px;font-weight:800;font-size:14px;">' + svg("progress", 16) + ' Goal Summary</div>' +
+          '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px;text-align:center;">' +
+          '<div><div style="font-size:11px;color:var(--rh-muted);">Weight to ' + (tgtW < curW ? "lose" : "gain") + '</div><div style="font-size:16px;font-weight:800;color:var(--rh-blue);margin-top:2px;">' + Math.round(Math.abs(curW - tgtW) * 10) / 10 + ' ' + wUnit() + '</div></div>' +
+          '<div><div style="font-size:11px;color:var(--rh-muted);">Days remaining</div><div style="font-size:16px;font-weight:800;color:var(--rh-blue);margin-top:2px;">' + (daysLeft != null ? daysLeft : "—") + '</div></div>' +
+          '<div><div style="font-size:11px;color:var(--rh-muted);">Target date</div><div style="font-size:13px;font-weight:800;margin-top:4px;">' + (cp.completion ? fmtDate(cp.completion) : "—") + '</div></div>' +
+          '</div>' +
+          '<div style="display:flex;gap:14px;margin-top:14px;border-top:1px solid var(--rh-border);padding-top:12px;">' +
+          '<div style="flex:1;display:flex;align-items:center;gap:8px;"><span style="flex:none;color:var(--rh-green);">' + svg("trend", 16) + '</span><div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Required weekly ' + (tgtW < curW ? "loss" : "gain") + '</div><div style="font-size:13px;font-weight:800;color:var(--rh-green);">' + paceAbs + ' ' + wUnit() + '/week</div></div></div>' +
+          '<div style="flex:1;display:flex;align-items:center;gap:8px;"><span style="flex:none;color:' + paceColor + ';">' + svg("check", 16) + '</span><div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Goal pace</div><div style="font-size:13px;font-weight:800;color:' + paceColor + ';">' + pace + '</div></div></div>' +
+          '</div>' +
+          '<div style="margin-top:14px;background:' + (pace === "Healthy" ? "rgba(22,163,74,.08)" : "rgba(217,119,6,.08)") + ';border-radius:10px;padding:12px;display:flex;gap:10px;align-items:flex-start;">' +
+          '<span style="flex:none;font-size:18px;">' + (pace === "Healthy" ? "🚀" : "⚠️") + '</span>' +
+          '<div><div style="font-weight:800;font-size:13px;color:' + (pace === "Healthy" ? "var(--rh-green)" : "#D97706") + ';">' + (pace === "Healthy" ? "Great!" : "Heads up") + '</div>' +
+          '<div style="font-size:12px;color:var(--rh-text);margin-top:2px;line-height:1.4;">' + tip + '</div></div></div>' +
+          '</div>';
+      }
     } else if (s === 2) {
-      h += '<div class="goal-card">' +
-        '<div class="goal-two"><div><label class="goal-label">Height (cm)</label><input id="g-h" class="goal-input" inputmode="decimal" value="' + esc(d.height) + '"></div>' +
-        '<div><label class="goal-label">Age</label><input id="g-age" class="goal-input" inputmode="numeric" value="' + esc(d.age) + '"></div></div>' +
-        '<label class="goal-label">Gender</label><select id="g-gender" class="goal-input"><option value="male"' + (d.gender === "male" ? " selected" : "") + '>Male</option><option value="female"' + (d.gender === "female" ? " selected" : "") + '>Female</option></select>' +
-        '<label class="goal-label">Activity level</label><select id="g-act" class="goal-input">' +
-        [[1.2, "Sedentary"], [1.375, "Light"], [1.465, "Moderate"], [1.55, "Active"], [1.725, "Very active"]].map(function (a) { return '<option value="' + a[0] + '"' + (Number(d.activityMultiplier) === a[0] ? " selected" : "") + '>' + a[1] + '</option>'; }).join("") + '</select>' +
-        '<div class="goal-two"><div><label class="goal-label">Current body fat % (opt)</label><input id="g-cbf" class="goal-input" inputmode="decimal" value="' + esc(d.startBodyFat) + '"></div>' +
-        '<div><label class="goal-label">Target body fat % (opt)</label><input id="g-tbf" class="goal-input" inputmode="decimal" value="' + esc(d.targetBodyFat) + '"></div></div>' +
-        '<div class="goal-two"><div><label class="goal-label">Training days/week</label><input id="g-days" class="goal-input" inputmode="numeric" value="' + esc(d.trainingDays) + '"></div>' +
-        '<div><label class="goal-label">Session (min)</label><input id="g-dur" class="goal-input" inputmode="numeric" value="' + esc(d.workoutDuration) + '"></div></div>' +
+      h += '<div class="pg-card">' +
+        '<div class="pi-grid2">' +
+        iconField("ruler", "var(--rh-blue)", "Height (cm)", '<input id="g-h" class="pi-input" inputmode="decimal" value="' + esc(d.height) + '">') +
+        iconField("profile", "var(--rh-blue)", "Age", '<input id="g-age" class="pi-input" inputmode="numeric" value="' + esc(d.age) + '">') +
+        '</div>' +
+        iconField("profile", "var(--rh-blue)", "Gender", '<select id="g-gender" class="pi-input"><option value="male"' + (d.gender === "male" ? " selected" : "") + '>Male</option><option value="female"' + (d.gender === "female" ? " selected" : "") + '>Female</option></select>') +
+        iconField("run", "var(--rh-blue)", "Activity level", '<select id="g-act" class="pi-input">' +
+          [[1.2, "Sedentary"], [1.375, "Light"], [1.465, "Moderate"], [1.55, "Active"], [1.725, "Very active"]].map(function (a) { return '<option value="' + a[0] + '"' + (Number(d.activityMultiplier) === a[0] ? " selected" : "") + '>' + a[1] + '</option>'; }).join("") + '</select>') +
+        '<div class="pi-grid2">' +
+        iconField("droplet", "var(--rh-blue)", "Current body fat % (opt)", '<input id="g-cbf" class="pi-input" inputmode="decimal" value="' + esc(d.startBodyFat) + '">') +
+        iconField("target", "var(--rh-blue)", "Target body fat % (opt)", '<input id="g-tbf" class="pi-input" inputmode="decimal" value="' + esc(d.targetBodyFat) + '">') +
+        '</div>' +
+        '<div class="pi-grid2">' +
+        iconField("calendar", "var(--rh-blue)", "Training days/week", '<input id="g-days" class="pi-input" inputmode="numeric" value="' + esc(d.trainingDays) + '">') +
+        iconField("timer", "var(--rh-blue)", "Session (min)", '<input id="g-dur" class="pi-input" inputmode="numeric" value="' + esc(d.workoutDuration) + '">') +
+        '</div>' +
         '</div>';
     } else {
       var g = draftToGoal(d), c = compute(g);
-      h += '<div class="goal-card"><label class="goal-label">Equipment (optional)</label><input id="g-equip" class="goal-input" value="' + esc(d.equipment) + '" placeholder="e.g. Full gym, dumbbells only">' +
-        '<label class="goal-label">Food preference (optional)</label><input id="g-food" class="goal-input" value="' + esc(d.foodPref) + '" placeholder="e.g. Vegetarian">' +
-        '<label class="goal-label">Injuries / restrictions (optional)</label><input id="g-inj" class="goal-input" value="' + esc(d.injuries) + '">' +
-        '<label class="goal-label">Primary motivation (optional)</label><input id="g-mot" class="goal-input" value="' + esc(d.motivation) + '"></div>' +
-        '<div class="section-heading"><span class="section-heading__label">Your plan</span></div>' + planGrid(c) +
-        (c.completion ? '<div style="font-size:12px;color:var(--muted);margin:8px 2px;">Est. completion ' + fmtDate(c.completion) + ' at ~' + Math.abs(c.weeklyRate) + ' ' + wUnit() + '/week.</div>' : "");
+      h += '<div class="pg-card">' +
+        iconField("dumbbell", "var(--rh-blue)", "Equipment (optional)", '<input id="g-equip" class="pi-input" value="' + esc(d.equipment) + '" placeholder="e.g. Full gym, dumbbells only">') +
+        iconField("nutrition", "var(--rh-blue)", "Food preference (optional)", '<input id="g-food" class="pi-input" value="' + esc(d.foodPref) + '" placeholder="e.g. Vegetarian">') +
+        iconField("info", "var(--rh-blue)", "Injuries / restrictions (optional)", '<input id="g-inj" class="pi-input" value="' + esc(d.injuries) + '">') +
+        iconField("flag", "var(--rh-blue)", "Primary motivation (optional)", '<input id="g-mot" class="pi-input" value="' + esc(d.motivation) + '">') +
+        '</div>' +
+        '<div class="rh-section-head"><span>Your Plan</span></div><div class="pg-card">' + planGrid(c) + '</div>' +
+        (c.completion ? '<div style="font-size:12px;color:var(--rh-muted);margin:8px 2px;">Est. completion ' + fmtDate(c.completion) + ' at ~' + Math.abs(c.weeklyRate) + ' ' + wUnit() + '/week.</div>' : "");
     }
-    h += '<div style="display:flex;gap:8px;margin-top:14px;">' +
-      (s > 1 ? '<button class="btn btn-secondary" data-goal="prev" style="flex:1;">Back</button>' : "") +
-      (s < 3 ? '<button class="btn btn-accent" data-goal="next" style="flex:2;">Next</button>' : '<button class="btn btn-accent" data-goal="create" style="flex:2;">' + (view.editing ? "Save Changes" : "Start Goal") + '</button>') +
-      '</div>';
+    h += '<div style="display:flex;gap:8px;margin-top:14px;margin-bottom:16px;">' +
+      (s > 1 ? '<button class="rh-btn rh-btn--ghost" data-goal="prev" style="flex:1;">Back</button>' : "") +
+      (s < 3 ? '<button class="rh-btn rh-btn--primary" data-goal="next" style="flex:2;">Continue →</button>' : '<button class="rh-btn rh-btn--primary" data-goal="create" style="flex:2;">' + (view.editing ? "Save Changes" : "Start Goal") + '</button>') +
+      '</div></div>';
     return h;
   }
   function planGrid(c) {
-    var cell = function (l, v, u) { return '<div class="goal-metric"><div class="goal-metric__l">' + l + '</div><div class="goal-metric__v">' + v + (u ? '<span class="goal-metric__u">' + u + '</span>' : '') + '</div></div>'; };
-    return '<div class="goal-grid">' +
+    var cell = function (l, v, u) { return '<div class="pg-stat-card"><div class="pg-stat-card__label">' + l + '</div><div class="pg-stat-card__value" style="font-size:16px;">' + v + (u ? '<span class="pg-stat-card__unit">' + u + '</span>' : '') + '</div></div>'; };
+    return '<div class="pg-stat-grid">' +
       cell("Daily calories", c.calories, "kcal") + cell("Maintenance", c.maintenance, "kcal") +
       cell("Protein", c.protein, "g") + cell("Carbs", c.carbs, "g") + cell("Fat", c.fat, "g") +
       cell("BMR", c.bmr, "kcal") + cell("Lean mass", c.lbm != null ? c.lbm : "—", "kg") + cell("BMI", c.bmi != null ? c.bmi : "—", "") +
@@ -480,6 +562,15 @@
       if (typeof state === "undefined" || state.tab !== "goals" || view.screen !== "wizard") return;
       // keep type selection live for the review step preview
       if (e.target.id === "g-type" && view.draft) view.draft.type = e.target.value;
+    });
+    // Weight/date fields commit on change (blur), not every keystroke, so the live Goal
+    // Summary preview can re-render without ever stealing focus mid-type -- same tradeoff
+    // already made for every other numeric input in this app.
+    document.addEventListener("change", function (e) {
+      if (typeof state === "undefined" || state.tab !== "goals" || view.screen !== "wizard" || view.step !== 1 || !view.draft) return;
+      if (e.target.id === "g-cw") { view.draft.startWeight = e.target.value; repaint(); }
+      else if (e.target.id === "g-tw") { view.draft.targetWeight = e.target.value; repaint(); }
+      else if (e.target.id === "g-td") { view.draft.targetDate = e.target.value; repaint(); }
     });
   }
 
