@@ -212,6 +212,7 @@
 
     const QUICK_ACCESS = [
       ['achievements','trophy','#D97706', `${state.achievements.length}/${ACHIEVEMENT_DEFS.length} unlocked`],
+      ['history','file','#64748B', `${state.prs.length} record${state.prs.length!==1?'s':''}`],
       ['habits','check','#16A34A', `${state.habits.length} habit${state.habits.length!==1?'s':''} active`],
       ['analytics','progress','#2563EB', 'View insights'],
       ['exercise','trend','#7C3AED', 'Track your lifts'],
@@ -299,7 +300,7 @@
         </div>
       </div>
 
-      <div class="rh-section-head"><span>Personal Records</span><a href="#" class="rh-view-all" data-progress-view="achievements">View All</a></div>
+      <div class="rh-section-head"><span>Personal Records</span><a href="#" class="rh-view-all" data-progress-view="history">View All</a></div>
       ${recentPRs.length===0 ? `<div class="pg-card wk-empty">No PRs yet — finish a workout to start tracking records.</div>` : `
       <div class="pg-pr-row">
         ${recentPRs.map(pr=>{

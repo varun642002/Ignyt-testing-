@@ -4171,7 +4171,7 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || (state.tab==="progress" && (!state.progressView || state.progressView==="body" || state.progressView==="habits" || state.progressView==="analytics"))
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history"].includes(state.progressView)))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || state.bodyView==="calculators" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
@@ -5643,7 +5643,8 @@ function renderExerciseDetailHistory(history){
 ========================================================= */
 
 const PROGRESS_VIEWS = {
-  achievements: { icon:"🎖️", title:"Achievements & Records", sub:"Personal records, milestones, streaks and unlocked achievements." },
+  achievements: { icon:"🎖️", title:"Achievements & Records", sub:"Milestones, streaks and unlocked achievements." },
+  history:      { icon:"📄", title:"Workout History",   sub:"Every personal record you've ever set." },
   habits:       { icon:"🔁", title:"Habit Tracker",      sub:"Daily habits, streaks, and completion history." },
   analytics:    { icon:"📊", title:"Workout Analytics",  sub:"Training frequency, volume, duration, and muscle distribution." },
   exercise:     { icon:"📈", title:"Exercise Progress",  sub:"Weight and estimated 1RM trends for individual exercises." },
@@ -5675,7 +5676,7 @@ function renderProgressTab(){
   const view = state.progressView;
   if(view && PROGRESS_VIEWS[view]){
     const detailFns = {
-      achievements: ()=> renderProgressAchievements() + renderProgressPRs(), habits: renderProgressHabits,
+      achievements: renderProgressAchievements, history: renderProgressPRs, habits: renderProgressHabits,
       analytics: renderProgressAnalytics, exercise: renderProgressExercise,
       nutrition: renderProgressNutrition,
       body: renderProgressBody,
@@ -5694,9 +5695,12 @@ function renderProgressTab(){
     // shown" rule already applied throughout this session (Progress dashboard vs. its own
     // detail views).
     const LIGHT_VIEW_HEADERS = {
-      body:      { icon:'scale' },
-      habits:    { icon:'repeat', bg:'rgba(217,119,6,.1)', color:'#D97706', sub:'Build consistency. Build you.' },
-      analytics: { icon:'progress', sub:'Track your progress. Improve every day.' }
+      body:         { icon:'scale' },
+      habits:       { icon:'repeat', bg:'rgba(217,119,6,.1)', color:'#D97706', sub:'Build consistency. Build you.' },
+      analytics:    { icon:'progress', sub:'Track your progress. Improve every day.' },
+      achievements: { icon:'trophy', bg:'rgba(217,119,6,.1)', color:'#D97706' },
+      history:      { icon:'file', bg:'var(--rh-bg)', color:'var(--rh-muted)',
+        sub:"Dates show when each achievement was unlocked in IGNYT. For imported workout history, that's the day of the import — the counts themselves are always genuine." }
     };
     if(LIGHT_VIEW_HEADERS[view]){
       const h = LIGHT_VIEW_HEADERS[view];
@@ -5770,59 +5774,100 @@ function renderLegacyProgressHome(){
 
 /* ---------- Personal Records ---------- */
 
+const PR_TYPE_FILTERS = ["All","Weight","1RM","Reps","Volume"];
+const PR_TYPE_KEY = {Weight:"weight","1RM":"1rm",Reps:"reps",Volume:"volume"};
+
 function renderProgressPRs(){
   if(state.prs.length===0) return `<div class="empty-note">No PRs yet — finish a freestyle workout to start tracking heaviest weight, estimated 1RM, rep records, and session volume.</div>`;
   const q = (state.prSearch||"").trim().toLowerCase();
-  const all = q ? state.prs.filter(pr=> (pr.exerciseName||"Session Volume").toLowerCase().includes(q)) : state.prs;
+  const typeFilter = PR_TYPE_FILTERS.includes(state.prTypeFilter) ? state.prTypeFilter : "All";
+  let all = state.prs;
+  if(q) all = all.filter(pr=> (pr.exerciseName||"Session Volume").toLowerCase().includes(q));
+  if(typeFilter!=="All") all = all.filter(pr=> pr.type===PR_TYPE_KEY[typeFilter]);
   const showCount = state.prShowCount || 10;
   const shown = all.slice(0, showCount);
   const remaining = all.length - shown.length;
+  // Same muscle-group icon/color convention as the Exercise Library rows (rowIcon there),
+  // reusing the already-real per-exercise muscle field via getMuscle() -- Session Volume PRs
+  // have no exercise name and fall back to the neutral 'body'/gray pairing.
+  const rowIcon = (muscle) => {
+    const g = FINE_TO_BROAD[muscle];
+    return (g==='Chest'||g==='Shoulders'||g==='Arms') ? 'dumbbell' : (g==='Back') ? 'workout' : 'body';
+  };
   return `
-    <div style="font-size:14px;color:var(--muted);margin-bottom:10px;">${state.prs.length} record${state.prs.length!==1?'s':''} total${q?` · ${all.length} matching`:''}</div>
-    <div class="search-bar"><input type="text" id="pr-search" placeholder="Search by exercise…" value="${(state.prSearch||'').replace(/"/g,'&quot;')}" aria-label="Search personal records"></div>
-    ${all.length===0 ? `<div class="empty-note">No records match your search.</div>` : `
-    <div class="info-box" style="padding:4px 14px;">
-      ${shown.map(pr=>`<div class="history-row" style="background:none;padding:12px 0;margin:0;border-bottom:1px solid var(--border);">
-        <div style="min-width:0;">
-          <div style="font-size:15px;font-weight:700;">${pr.exerciseName||'Session Volume'}</div>
-          <div style="font-size:13px;color:var(--muted);margin-top:1px;">${prTypeLabel(pr)} · ${new Date(pr.achievedAt).toLocaleDateString('default',{month:'short',day:'numeric',year:'numeric'})}</div>
-        </div>
-        <span class="mono" style="font-size:15px;color:var(--accent);font-weight:800;flex-shrink:0;">${prValueLabel(pr)}</span>
-      </div>`).join("")}
+    <div style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--rh-muted);font-weight:600;margin-bottom:10px;">
+      ${svg('file',15)} ${state.prs.length} record${state.prs.length!==1?'s':''} total${(q||typeFilter!=='All')?` · ${all.length} matching`:''}
     </div>
-    ${remaining>0?`<button class="btn btn-ghost btn-block" data-action="pr-show-more" style="margin-top:8px;">Show ${Math.min(10,remaining)} More (${remaining} remaining)</button>`:""}`}
+    <div class="lib-search-wrap">
+      ${svg('search',17)}
+      <input type="text" id="pr-search" class="pi-input" placeholder="Search by exercise…" value="${(state.prSearch||'').replace(/"/g,'&quot;')}" aria-label="Search personal records">
+    </div>
+    <div class="lib-cats" style="margin-top:10px;">
+      ${PR_TYPE_FILTERS.map(t=>`<button class="cat-chip ${typeFilter===t?'active':''}" data-pr-type-filter="${t}">${t}</button>`).join("")}
+    </div>
+    ${all.length===0 ? `<div class="empty-note">No records match.</div>` : `
+    ${shown.map(pr=>{
+      const muscle = pr.exerciseName ? getMuscle(pr.exerciseName) : null;
+      const color = muscle ? muscleTagColor(muscle) : '#64748B';
+      return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:12px 14px;">
+        <span class="tl-card__icon" style="width:38px;height:38px;flex:none;background:${color}1a;color:${color};">${svg(rowIcon(muscle),18)}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:15px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pr.exerciseName||'Session Volume'}</div>
+          <div style="font-size:12px;color:var(--rh-muted);margin-top:1px;">${prTypeLabel(pr)} · ${new Date(pr.achievedAt).toLocaleDateString('default',{month:'short',day:'numeric',year:'numeric'})}</div>
+        </div>
+        <span style="font-size:15px;color:var(--rh-blue);font-weight:800;flex:none;">${prValueLabel(pr)}</span>
+      </div>`;
+    }).join("")}
+    ${remaining>0?`<button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:4px;" data-action="pr-show-more">Show ${Math.min(10,remaining)} More (${remaining} remaining)</button>`:""}`}
   `;
 }
 
 /* ---------- Achievements ---------- */
 
+// Cycled by each achievement's fixed position in ACHIEVEMENT_DEFS (not by unlock order, so a
+// given achievement always gets the same color) -- purely a display palette, doesn't encode
+// any real category since ACHIEVEMENT_DEFS has no tier/category field of its own.
+const ACHIEVEMENT_COLORS = ['var(--rh-blue)','var(--rh-purple)','var(--rh-green)','#D97706','var(--rh-red)'];
+
 function renderProgressAchievements(){
   const unlockedIds = new Set(state.achievements.map(a=>a.id));
   const unlocked = state.achievements.slice().sort((a,b)=>b.achievedAt-a.achievedAt);
   const locked = ACHIEVEMENT_DEFS.filter(d=>!unlockedIds.has(d.id));
+  const pct = Math.round(unlocked.length/ACHIEVEMENT_DEFS.length*100);
+  const colorFor = (id) => ACHIEVEMENT_COLORS[Math.max(0,ACHIEVEMENT_DEFS.findIndex(d=>d.id===id)) % ACHIEVEMENT_COLORS.length];
   return `
-    <div style="font-size:14px;color:var(--muted);margin-bottom:10px;">${unlocked.length} of ${ACHIEVEMENT_DEFS.length} unlocked</div>
-    ${unlocked.length===0 ? `<div class="empty-note" style="margin-bottom:14px;">No achievements unlocked yet — your first workout is the first one.</div>` : `
-    <div class="info-box" style="padding:4px 14px;margin-bottom:14px;">
-      ${unlocked.map(a=>`<div class="history-row" style="background:none;padding:12px 0;margin:0;border-bottom:1px solid var(--border);">
-        <div style="min-width:0;">
-          <div style="font-size:15px;font-weight:700;">🎖️ ${a.name}</div>
-          <div style="font-size:13px;color:var(--muted);margin-top:1px;">${a.desc}</div>
+    <div class="pg-card">
+      <div class="row-between">
+        <span style="font-size:13px;font-weight:700;">${unlocked.length} of ${ACHIEVEMENT_DEFS.length} unlocked</span>
+        <span style="font-size:13px;font-weight:800;color:var(--rh-blue);">${pct}%</span>
+      </div>
+      <div class="rh-progress-track"><div class="rh-progress-fill" style="width:${pct}%;"></div></div>
+    </div>
+    ${unlocked.length===0 ? `<div class="empty-note" style="margin:14px 0;">No achievements unlocked yet — your first workout is the first one.</div>` : `
+    <div style="margin-top:14px;">
+      ${unlocked.map(a=>{ const c=colorFor(a.id); return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:12px 14px;">
+        <span class="tl-card__icon" style="width:40px;height:40px;flex:none;background:${c}1a;color:${c};">${svg('trophy',20)}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:15px;font-weight:800;">${a.name}</div>
+          <div style="font-size:12px;color:var(--rh-muted);margin-top:1px;">${a.desc}</div>
         </div>
-        <span class="mono" style="font-size:12px;color:var(--muted);flex-shrink:0;">${new Date(a.achievedAt).toLocaleDateString('default',{month:'short',day:'numeric',year:'numeric'})}</span>
-      </div>`).join("")}
+        <span style="font-size:11px;color:var(--rh-muted);font-weight:600;flex:none;">${new Date(a.achievedAt).toLocaleDateString('default',{month:'short',day:'2-digit',year:'numeric'})}</span>
+      </div>`; }).join("")}
     </div>`}
     ${locked.length ? `
-    <div class="eyebrow-label">Locked</div>
-    <div class="info-box" style="padding:4px 14px;">
-      ${locked.map(d=>`<div class="history-row" style="background:none;padding:12px 0;margin:0;border-bottom:1px solid var(--border);opacity:.55;">
-        <div style="min-width:0;">
-          <div style="font-size:15px;font-weight:700;">🔒 ${d.name}</div>
-          <div style="font-size:13px;color:var(--muted);margin-top:1px;">${d.desc}</div>
-        </div>
-      </div>`).join("")}
-    </div>`:""}
-    <div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5;">Dates show when each achievement was unlocked in IGNYT. For imported workout history, that's the day of the import — the counts themselves are always genuine.</div>
+    <div class="rh-section-head"><span>Locked</span></div>
+    ${locked.map(d=>`<div class="pg-card" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:12px 14px;opacity:.65;">
+      <span class="tl-card__icon" style="width:40px;height:40px;flex:none;background:var(--rh-bg);color:var(--rh-muted);">${svg('lock',18)}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:15px;font-weight:800;">${d.name}</div>
+        <div style="font-size:12px;color:var(--rh-muted);margin-top:1px;">${d.desc}</div>
+      </div>
+      <span style="font-size:13px;color:var(--rh-muted);flex:none;">—</span>
+    </div>`).join("")}` : ""}
+    <div class="pg-card" style="margin-top:14px;background:rgba(37,99,235,.06);display:flex;align-items:center;gap:10px;">
+      <span style="flex:1;font-size:12px;color:var(--rh-text);line-height:1.4;">Keep training, stay consistent and unlock all achievements!</span>
+      <span style="flex:none;font-size:26px;">🏆</span>
+    </div>
   `;
 }
 
@@ -9307,7 +9352,7 @@ function attachHandlers(){
   const progBackBtn = document.querySelector('[data-action="progress-back"]');
   if(progBackBtn) progBackBtn.addEventListener("click", ()=>{
     state.progressView = null;
-    state.prShowCount = 10; state.prSearch = ""; state.exProgressSearch = "";
+    state.prShowCount = 10; state.prSearch = ""; state.prTypeFilter = "All"; state.exProgressSearch = "";
     state.calendarSelectedDate = null;
     render();
     const main = document.getElementById("main");
@@ -9315,6 +9360,9 @@ function attachHandlers(){
   });
   const prMoreBtn = document.querySelector('[data-action="pr-show-more"]');
   if(prMoreBtn) prMoreBtn.addEventListener("click", ()=>{ state.prShowCount = (state.prShowCount||10)+10; render(); });
+  document.querySelectorAll("[data-pr-type-filter]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.prTypeFilter = el.dataset.prTypeFilter; state.prShowCount = 10; render(); });
+  });
   const prSearchInput = document.getElementById("pr-search");
   if(prSearchInput) prSearchInput.addEventListener("input", (e)=>{
     state.prSearch = e.target.value;

@@ -1,4 +1,4 @@
-const CACHE = "ignyt-v42";
+const CACHE = "ignyt-v43";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./app.js",
   "./css/tokens.css", "./css/base.css", "./css/layout.css", "./css/components.css", "./css/responsive.css", "./css/pages/home.css", "./css/pages/workout.css", "./css/pages/nutrition.css", "./css/pages/progress.css", "./css/pages/tools.css", "./css/pages/profile.css", "./css/pages/ai-coach.css", "./js/pages/home.js", "./js/pages/workout.js", "./js/pages/progress.js", "./js/body-photos-db.js", "./js/bloodwork.js", "./js/goals.js", "./js/health-uploads.js", "./js/ai-coach.js", "./assets/images/athletes/home-athlete.png"];
 
