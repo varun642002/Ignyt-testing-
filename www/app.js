@@ -3903,6 +3903,7 @@ function renderAccountSection(){
   const esc = v => String(v == null ? "" : v)
     .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const auth = window.IgnytAuth;
+  const header = `<div class="eyebrow-label" style="margin-top:4px;">IGNYT Account</div>`;
 
   if(!auth) return ""; // auth.js failed to load — never break the rest of Settings over it
 
@@ -3926,9 +3927,6 @@ function renderAccountSection(){
   }
 
   const initial = esc((account.displayName || account.email || "?").trim().charAt(0).toUpperCase() || "?");
-  const cs = window.IgnytCloudSync;
-  const lastSyncLabel = cs && cs.getStatus().lastSyncAt
-    ? hcTimeAgo(new Date(cs.getStatus().lastSyncAt).toISOString()) : null;
 
   return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;">
     <div class="pf-avatar" style="width:52px;height:52px;flex:none;">
@@ -3938,11 +3936,10 @@ function renderAccountSection(){
     <div style="min-width:0;flex:1;">
       <div style="font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(account.displayName) || "Google Account"}</div>
       <div style="font-size:12px;color:var(--rh-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(account.email)}</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
-        <span style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--rh-green);">${svg('check',11)} Signed in with Google</span>
-        ${lastSyncLabel?`<span style="font-size:10px;color:var(--rh-muted);">Last sync<br>${lastSyncLabel}</span>`:''}
-      </div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--rh-green);margin-top:6px;">${svg('check',11)} Signed in with Google</div>
+      ${renderCloudSyncRow()}
       ${errorHtml}
+      <button class="btn btn-ghost btn-block" data-action="account-signout" ${busy?'disabled':''}>${busy?'Signing out…':'Sign Out'}</button>
     </div>
   </div>`;
 }
@@ -3969,6 +3966,40 @@ function renderCloudSyncStatusText(){
     "signed-out": "Sign in to sync",
     "idle":       lastLabel ? "Synced · "+lastLabel : "Not synced yet"
   })[s.status] || "—";
+}
+
+/** Small cloud-sync status row inside the signed-in account card (Phase 2B). Reads
+ *  IgnytCloudSync's state; shows nothing if cloud-sync.js isn't loaded. Raw Firebase
+ *  errors are never shown — cloud-sync.js maps them to short friendly strings. */
+function renderCloudSyncRow(){
+  const cs = window.IgnytCloudSync;
+  if(!cs) return "";
+  const s = cs.getStatus();
+  const lastLabel = s.lastSyncAt
+    ? new Date(s.lastSyncAt).toLocaleString([], { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" })
+    : null;
+  const view = {
+    "syncing":    { text:"Syncing…",                          color:"var(--muted)" },
+    "synced":     { text: lastLabel ? "Synced · "+lastLabel : "Synced", color:"var(--mint)" },
+    "queued":     { text:"Saved — will upload when online",   color:"var(--muted)" },
+    "offline":    { text:"Offline — saved on this device",    color:"var(--muted)" },
+    "failed":     { text:"Sync failed",                       color:"var(--accent)" },
+    "signed-out": { text:"Sign in to sync",                   color:"var(--muted)" },
+    "idle":       { text: lastLabel ? "Synced · "+lastLabel : "Not synced yet", color:"var(--muted)" }
+  }[s.status] || { text:"—", color:"var(--muted)" };
+  const detail = (s.status==="failed" || s.status==="offline") && s.detail
+    ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">${s.detail}</div>` : "";
+  return `
+    <div style="margin-bottom:12px;">
+      <div class="row-between">
+        <span style="font-size:12px;color:var(--muted);">Cloud sync</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:12px;font-weight:700;color:${view.color};">${view.text}</span>
+          <button class="cat-chip" data-action="cloud-sync-now" ${cs.isBusy()?'disabled':''} style="margin:0;">Sync Now</button>
+        </span>
+      </div>
+      ${detail}
+    </div>`;
 }
 
 /* Real, honest facts about how this app actually handles data -- no dedicated "Privacy &
@@ -4018,7 +4049,6 @@ function renderSettingsTab(){
       <div style="font-size:12px;color:var(--rh-muted);margin-bottom:14px;">Personalise your experience</div>
 
       ${renderAccountSection()}
-
       <div class="rh-section-head" style="margin-top:16px;"><span>${svg('moon',13)} Appearance</span></div>
       <div class="pg-card">
         <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">
