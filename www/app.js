@@ -12,6 +12,60 @@ const SCHEMA_VERSION = 1; // bump when localStorage shape changes; add a migrate
 const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_profile","hx_nutrition","hx_bodylog","hx_custom_exercises",
   "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history"];
 
+// Single source of truth for every trackable body measurement beyond weight -- the entry
+// form, CSV export/import, and the chart metric switcher all read this list instead of each
+// hardcoding their own field set, so adding a future measurement is a one-line change here.
+// "computed" fields are never inputs (BMI/BMR/TDEE derive from weight+profile, shown read-only).
+const BODY_MEASUREMENT_GROUPS = [
+  { id:"composition", label:"Body Composition", fields:[
+    {key:"bodyfat", label:"Body Fat", unit:"%"},
+    {key:"leanBodyMass", label:"Lean Body Mass", unit:"kg"},
+    {key:"muscleMass", label:"Muscle Mass", unit:"kg"},
+    {key:"fatMass", label:"Fat Mass", unit:"kg"},
+    {key:"visceralFat", label:"Visceral Fat", unit:""},
+    {key:"waterPct", label:"Water", unit:"%"},
+    {key:"boneMass", label:"Bone Mass", unit:"kg"},
+    {key:"proteinPct", label:"Protein", unit:"%"}
+  ]},
+  { id:"upper", label:"Upper Body (cm)", fields:[
+    {key:"neck", label:"Neck", unit:"cm"},
+    {key:"shoulders", label:"Shoulders", unit:"cm"},
+    {key:"chest", label:"Chest", unit:"cm"},
+    {key:"upperChest", label:"Upper Chest", unit:"cm"},
+    {key:"leftArm", label:"Left Arm", unit:"cm"},
+    {key:"rightArm", label:"Right Arm", unit:"cm"},
+    {key:"leftForearm", label:"Left Forearm", unit:"cm"},
+    {key:"rightForearm", label:"Right Forearm", unit:"cm"},
+    {key:"leftWrist", label:"Left Wrist", unit:"cm"},
+    {key:"rightWrist", label:"Right Wrist", unit:"cm"}
+  ]},
+  { id:"lower", label:"Lower Body (cm)", fields:[
+    {key:"waist", label:"Waist", unit:"cm"},
+    {key:"lowerWaist", label:"Lower Waist", unit:"cm"},
+    {key:"hips", label:"Hips", unit:"cm"},
+    {key:"leftThigh", label:"Left Thigh", unit:"cm"},
+    {key:"rightThigh", label:"Right Thigh", unit:"cm"},
+    {key:"leftCalf", label:"Left Calf", unit:"cm"},
+    {key:"rightCalf", label:"Right Calf", unit:"cm"}
+  ]}
+];
+const BODY_MEASUREMENT_KEYS = BODY_MEASUREMENT_GROUPS.flatMap(g=>g.fields.map(f=>f.key));
+// Chart-able metrics -- a subset of the above plus weight/BMI, which aren't logged fields
+// (weight has its own top-level column; BMI is always computed, never stored).
+const BODY_CHART_METRICS = [
+  {key:"weight", label:"Weight", unit:()=>wUnit()},
+  {key:"bmi", label:"BMI", unit:()=>""},
+  {key:"bodyfat", label:"Body Fat", unit:()=>"%"},
+  {key:"leanBodyMass", label:"Lean Mass", unit:()=>"kg"},
+  {key:"muscleMass", label:"Muscle Mass", unit:()=>"kg"},
+  {key:"waist", label:"Waist", unit:()=>"cm"},
+  {key:"chest", label:"Chest", unit:()=>"cm"},
+  {key:"leftArm", label:"Arms", unit:()=>"cm"},
+  {key:"leftThigh", label:"Legs", unit:()=>"cm"}
+];
+
+const BODY_SCAN_CATEGORIES = ["Front Relaxed","Front Flexed","Back Relaxed","Back Flexed","Side Left","Side Right","Transformation","Competition","Custom"];
+
 const SET_TYPE_IMPORT_MAP = { normal:"working", warmup:"warmup", dropset:"drop", failure:"failure" };
 
 /* "10 Jul 2026, 11:53" -> timestamp (ms), or null if unparseable */
@@ -1763,7 +1817,7 @@ const state = {
   // bodyPhotos here is just an in-memory metadata cache (no blobs), populated asynchronously
   // after boot (see the IgnytBodyPhotosDB.getAllMeta() call near the bottom of this file).
   bodyPhotos: [],
-  bodyPhotoCategory: "Front",
+  bodyPhotoCategory: "Front Relaxed",
   viewingBodyPhotoId: null,
   bodyView: null, // null = Log Weight page; 'calculators' = dedicated calculator view (transient, not persisted)
   calc: LS.get("hx_calc", {
@@ -2393,10 +2447,16 @@ function exportWorkoutsCSV(){
   downloadFile("ignyt-workouts-"+todayStr()+".csv", csv, "text/csv");
 }
 
+// Legacy columns kept byte-identical (a file exported before this increment must still
+// re-import cleanly); every other BODY_MEASUREMENT_GROUPS field is appended after them.
+const MEASUREMENTS_CSV_LEGACY_COLS = ["date","weight_kg","sleep_hrs","hrv_ms","waist_cm","chest_cm","arms_cm","bodyfat_pct"];
+const MEASUREMENTS_CSV_EXTRA_KEYS = BODY_MEASUREMENT_KEYS.filter(k=> !["waist","chest","bodyfat"].includes(k));
+
 function exportMeasurementsCSV(){
-  const rows = [["date","weight_kg","sleep_hrs","hrv_ms","waist_cm","chest_cm","arms_cm","bodyfat_pct"]];
+  const rows = [MEASUREMENTS_CSV_LEGACY_COLS.concat(MEASUREMENTS_CSV_EXTRA_KEYS)];
   state.bodylog.slice().reverse().forEach(e=>{
-    rows.push([e.date, e.weight||"", e.sleep||"", e.hrv||"", e.waist||"", e.chest||"", e.arms||"", e.bodyfat||""]);
+    rows.push([e.date, e.weight||"", e.sleep||"", e.hrv||"", e.waist||"", e.chest||"", e.arms||"", e.bodyfat||""]
+      .concat(MEASUREMENTS_CSV_EXTRA_KEYS.map(k=> e[k]!=null?e[k]:"")));
   });
   const csv = rows.map(r=>r.map(csvEscape).join(",")).join("\n");
   downloadFile("ignyt-measurements-"+todayStr()+".csv", csv, "text/csv");
@@ -2462,6 +2522,7 @@ function importAllJSON(file){
 function detectCsvKind(header){
   const h = header.map(c=>c.trim().toLowerCase());
   if(h.includes("exercise_title") && h.includes("start_time") && h.includes("set_type")) return "workouts";
+  if(h.includes("date") && h.includes("weight_kg")) return "measurements";
   if(h.includes("name") && h.includes("muscle")) return "exercises";
   if(h.includes("name") && h.includes("calories")) return "foods";
   return "unknown";
@@ -2517,6 +2578,54 @@ function validateFoodsCsv(text){
     totalRows: rows.length-1,
     validRows, invalidRows, duplicateRows,
     validCount: validRows.length, invalidCount: invalidRows.length, duplicateCount: duplicateRows.length
+  };
+}
+
+// Matches exportMeasurementsCSV's own header exactly (legacy cols + every BODY_MEASUREMENT_KEYS
+// extra column), so an IGNYT-exported measurements file always round-trips. Any row with a
+// valid date and at least one numeric value is imported -- a measurements entry doesn't need
+// weight (e.g. a waist-only or body-fat-only day), unlike the weight-only wLog filter elsewhere.
+function validateMeasurementsCsv(text){
+  let rows;
+  try{ rows = parseCsvText(text); }
+  catch(e){ return { error:"Could not read this file as CSV." }; }
+  if(rows.length < 2) return { error:"This file has no data rows." };
+
+  const header = rows[0].map(h=>h.trim().toLowerCase());
+  const dateIdx = header.indexOf("date");
+  if(dateIdx===-1) return { error:"Missing required column: date. Found columns: "+header.join(", ") };
+  const colIdx = {
+    weight: header.indexOf("weight_kg"), sleep: header.indexOf("sleep_hrs"), hrv: header.indexOf("hrv_ms"),
+    waist: header.indexOf("waist_cm"), chest: header.indexOf("chest_cm"), arms: header.indexOf("arms_cm"), bodyfat: header.indexOf("bodyfat_pct")
+  };
+  BODY_MEASUREMENT_KEYS.forEach(k=>{ if(!["waist","chest","bodyfat"].includes(k)) colIdx[k] = header.indexOf(k.toLowerCase()); });
+
+  const validRows = [], invalidRows = [];
+  for(let i=1;i<rows.length;i++){
+    const r = rows[i];
+    if(r.every(c=>c.trim()==="")) continue;
+    const date = (r[dateIdx]||"").trim();
+    if(!date || isNaN(new Date(date).getTime())){
+      invalidRows.push({ row:i+1, name:date||"(blank)", reason:"missing or unparseable date" });
+      continue;
+    }
+    const entry = { id: nextId(), date };
+    let hasValue = false;
+    Object.keys(colIdx).forEach(key=>{
+      const idx = colIdx[key];
+      if(idx===-1) return;
+      const v = (r[idx]||"").trim();
+      if(v!==""){ entry[key] = v; hasValue = true; }
+    });
+    if(!hasValue){ invalidRows.push({ row:i+1, name:date, reason:"no measurement values" }); continue; }
+    validRows.push(entry);
+  }
+
+  return {
+    kind: "measurements",
+    totalRows: rows.length-1,
+    validRows, invalidRows, duplicateRows: [],
+    validCount: validRows.length, invalidCount: invalidRows.length, duplicateCount: 0
   };
 }
 
@@ -2675,10 +2784,11 @@ function importCsv(file){
     if(!rows.length){ alert("This file appears to be empty."); return; }
     const kind = detectCsvKind(rows[0]);
     if(kind==="unknown"){
-      alert("Couldn't recognize this CSV's columns. Expected an exercise list (name, muscle, …), a Hevy-style workout export (title, start_time, exercise_title, set_type, …), or a foods list (name, calories, …).");
+      alert("Couldn't recognize this CSV's columns. Expected an exercise list (name, muscle, …), a Hevy-style workout export (title, start_time, exercise_title, set_type, …), a measurements export (date, weight_kg, …), or a foods list (name, calories, …).");
       return;
     }
     const result = kind==="workouts" ? validateWorkoutCsv(reader.result)
+      : kind==="measurements" ? validateMeasurementsCsv(reader.result)
       : kind==="foods" ? validateFoodsCsv(reader.result)
       : validateExerciseCsv(reader.result);
     if(result.error){
@@ -4013,6 +4123,13 @@ function profileMaintenance(){
 
 function profileCalorieTarget(){
   return Math.round(profileMaintenance() + state.profile.goalDelta);
+}
+
+function bmiCategory(bmi){
+  if(bmi<18.5) return "Underweight";
+  if(bmi<25) return "Normal";
+  if(bmi<30) return "Overweight";
+  return "Obese";
 }
 
 function calcBMR(age, gender, heightCm, weightKg){
@@ -7728,17 +7845,56 @@ function renderProgressPlan(){
 
 const _photoUrlCache = {};
 const _photoUrlLoading = new Set();
+const _photoFullUrlCache = {};
+const _photoFullUrlLoading = new Set();
 
+// Grids/timelines use the small pre-downscaled thumb (getThumbBlob falls back to the full
+// blob for older photos that predate thumbnails) -- decoding a few KB per tile instead of a
+// multi-MB original is the real cost saver on a screen showing dozens of photos at once.
 function photoThumbUrl(id){
   if(_photoUrlCache[id]) return _photoUrlCache[id];
   if(!_photoUrlLoading.has(id) && window.IgnytBodyPhotosDB){
     _photoUrlLoading.add(id);
-    window.IgnytBodyPhotosDB.getBlob(id).then(blob=>{
+    window.IgnytBodyPhotosDB.getThumbBlob(id).then(blob=>{
       _photoUrlLoading.delete(id);
       if(blob){ _photoUrlCache[id] = URL.createObjectURL(blob); render(); }
     }).catch(()=>{ _photoUrlLoading.delete(id); });
   }
   return null;
+}
+
+// Full-resolution blob, only requested by the single-photo viewer / before-after compare --
+// never by the grid -- so opening the archive never pulls every original into memory at once.
+function photoFullUrl(id){
+  if(_photoFullUrlCache[id]) return _photoFullUrlCache[id];
+  if(!_photoFullUrlLoading.has(id) && window.IgnytBodyPhotosDB){
+    _photoFullUrlLoading.add(id);
+    window.IgnytBodyPhotosDB.getBlob(id).then(blob=>{
+      _photoFullUrlLoading.delete(id);
+      if(blob){ _photoFullUrlCache[id] = URL.createObjectURL(blob); render(); }
+    }).catch(()=>{ _photoFullUrlLoading.delete(id); });
+  }
+  return null;
+}
+
+let _bodyPhotoSlideshowHandle = null;
+function startBodyPhotoSlideshow(){
+  stopBodyPhotoSlideshow();
+  state.bodyPhotoSlideshow = true;
+  _bodyPhotoSlideshowHandle = setInterval(()=>{
+    const ph = state.bodyPhotos.find(p2=>p2.id===state.viewingBodyPhotoId);
+    if(!ph){ stopBodyPhotoSlideshow(); render(); return; }
+    const sameCategory = state.bodyPhotos.filter(p2=>p2.category===ph.category);
+    const idx = sameCategory.findIndex(p2=>p2.id===ph.id);
+    const next = idx<sameCategory.length-1 ? sameCategory[idx+1] : sameCategory[0]; // loops
+    state.viewingBodyPhotoId = next.id;
+    state.bodyPhotoZoom = 1; state.bodyPhotoPan = {x:0,y:0};
+    render();
+  }, 2500);
+}
+function stopBodyPhotoSlideshow(){
+  if(_bodyPhotoSlideshowHandle){ clearInterval(_bodyPhotoSlideshowHandle); _bodyPhotoSlideshowHandle = null; }
+  state.bodyPhotoSlideshow = false;
 }
 
 /* =========================================================
@@ -7910,6 +8066,165 @@ function renderPersonalInfoTab(){
 
 const BODY_WEIGHT_RANGES = { "7D":7, "30D":30, "90D":90, "1Y":365 };
 
+// Chart points for any BODY_CHART_METRICS key, scoped to a chronological (oldest-first) list
+// of bodylog entries. "weight" reads the top-level column (unit-converted); "bmi" is computed
+// per-entry from that entry's own weight + the profile's height (a person's height doesn't
+// meaningfully change entry-to-entry, so reusing the current profile height is accurate);
+// everything else reads straight off the matching BODY_MEASUREMENT_GROUPS field. Entries
+// missing that field are skipped, not zero-filled -- a gap in the chart is honest, a fake 0 isn't.
+function bodyMetricSeries(metric, chronologicalEntries){
+  const p = state.profile;
+  return chronologicalEntries.map(e=>{
+    const label = new Date(e.date+"T12:00:00").toLocaleDateString('default',{month:'short',day:'numeric'});
+    let raw = null;
+    if(metric==="weight") raw = e.weight!=null && e.weight!=="" ? displayW(Number(e.weight)) : null;
+    else if(metric==="bmi") raw = (e.weight && p.height) ? Number(e.weight)/((p.height/100)**2) : null;
+    else raw = e[metric]!=null && e[metric]!=="" ? Number(e[metric]) : null;
+    return raw!=null && !isNaN(raw) ? { label, value: raw } : null;
+  }).filter(Boolean);
+}
+
+/* Single-photo viewer: zoom (wheel, or the Zoom button which toggles 1x/2x -- pinch-to-zoom
+   needs multi-touch tracking that's disproportionate to add for a photo-review screen; wheel +
+   tap-to-zoom covers desktop and mobile without it), pan by dragging once zoomed, rotate
+   (persisted to the record so it's remembered next time, not just a view transform), real OS
+   fullscreen via the Fullscreen API, slideshow auto-advancing through the SAME category, and a
+   metadata panel. Reused by both the compact grid on the main Body tab and the full archive. */
+function renderBodyPhotoViewer(id, photoList){
+  const ph = photoList.find(p2=>p2.id===id);
+  if(!ph) return "";
+  const url = photoFullUrl(id);
+  const zoom = state.bodyPhotoZoom || 1;
+  const sameCategory = photoList.filter(p2=>p2.category===ph.category);
+  const idx = sameCategory.findIndex(p2=>p2.id===id);
+  const prevPh = idx>0 ? sameCategory[idx-1] : null;
+  const nextPh = idx<sameCategory.length-1 ? sameCategory[idx+1] : null;
+  return `<div class="dialog-backdrop" data-close-body-photo style="z-index:190;"></div>
+    <div class="dialog-box" id="body-photo-viewer-wrap" style="max-width:460px;padding:14px;z-index:191;">
+      <div id="body-photo-viewer-img-wrap" style="position:relative;width:100%;max-height:56vh;overflow:hidden;border-radius:10px;background:#000;display:flex;align-items:center;justify-content:center;touch-action:${zoom>1?'none':'pan-y'};" data-body-photo-zoom-target>
+        ${url ? `<img src="${url}" alt="" draggable="false" style="max-width:100%;max-height:56vh;object-fit:contain;display:block;transform:rotate(${ph.rotation||0}deg) scale(${zoom}) translate(${(state.bodyPhotoPan&&state.bodyPhotoPan.x)||0}px, ${(state.bodyPhotoPan&&state.bodyPhotoPan.y)||0}px);cursor:${zoom>1?'grab':'zoom-in'};" data-body-photo-img>` : `<div style="color:#888;font-size:12px;padding:40px;">Loading…</div>`}
+        ${prevPh?`<button data-body-photo-nav="${prevPh.id}" aria-label="Previous" style="position:absolute;left:6px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);border:none;color:#fff;width:32px;height:32px;border-radius:50%;">‹</button>`:''}
+        ${nextPh?`<button data-body-photo-nav="${nextPh.id}" aria-label="Next" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);border:none;color:#fff;width:32px;height:32px;border-radius:50%;">›</button>`:''}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+        <button class="rh-btn rh-btn--ghost" style="flex:1;padding:8px;font-size:12px;" data-action="body-photo-zoom-toggle">${svg('search',13)} ${zoom>1?'Zoom Out':'Zoom In'}</button>
+        <button class="rh-btn rh-btn--ghost" style="flex:1;padding:8px;font-size:12px;" data-action="body-photo-rotate">${svg('repeat',13)} Rotate</button>
+        <button class="rh-btn rh-btn--ghost" style="flex:1;padding:8px;font-size:12px;" data-action="body-photo-fullscreen">${svg('link',13)} Fullscreen</button>
+        <button class="rh-btn rh-btn--ghost" style="flex:1;padding:8px;font-size:12px;" data-action="body-photo-slideshow-toggle">${svg(state.bodyPhotoSlideshow?'x':'plan',13)} ${state.bodyPhotoSlideshow?'Stop':'Slideshow'}</button>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.7;">
+        <div><b>${ph.date}</b> · ${escHtml(ph.category)}${ph.milestone?' · ★ Milestone':''}</div>
+        ${ph.weight!=null?`<div>Weight: ${displayW(Number(ph.weight))} ${wUnit()}</div>`:''}
+        ${ph.bodyfat!=null?`<div>Body Fat: ${ph.bodyfat}%</div>`:''}
+        ${ph.goal?`<div>Goal: ${escHtml(ph.goal)}</div>`:''}
+        ${ph.note?`<div>Note: ${escHtml(ph.note)}</div>`:''}
+        ${ph.tags&&ph.tags.length?`<div>Tags: ${ph.tags.map(escHtml).join(", ")}</div>`:''}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn btn-ghost" data-action="body-photo-milestone-toggle" data-id="${ph.id}" style="flex:1;">${ph.milestone?'Unmark Milestone':'Mark Milestone'}</button>
+        <button class="btn btn-ghost" data-close-body-photo style="flex:1;">Close</button>
+        <button class="btn btn-ghost" data-del-body-photo="${ph.id}" style="flex:1;color:#ff6b6b;">Delete</button>
+      </div>
+    </div>`;
+}
+
+/* Full Body Scan Archive -- Grid / Timeline / Compare. A separate screen from the compact
+   preview on the main Body tab (that stays a lightweight "recent 9 + Open Archive" widget);
+   this is where the category filter, month/year grouping, milestones, and before/after
+   comparison actually live, so the everyday Body tab isn't cluttered by them. */
+function renderBodyScanArchive(){
+  const view = state.bodyScanView || "grid";
+  const catFilter = state.bodyScanCategoryFilter || "All";
+  const photos = state.bodyPhotos.filter(ph=> catFilter==="All" || ph.category===catFilter);
+
+  const tabBtn = (id,label) => `<button class="cat-chip ${view===id?'active':''}" data-body-scan-view="${id}" style="flex:1;text-align:center;">${label}</button>`;
+  const catChips = `<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-bottom:10px;">
+    <button class="cat-chip ${catFilter==='All'?'active':''}" data-body-scan-category="All" style="flex:none;">All</button>
+    ${BODY_SCAN_CATEGORIES.map(c=>`<button class="cat-chip ${catFilter===c?'active':''}" data-body-scan-category="${c}" style="flex:none;white-space:nowrap;">${c}</button>`).join("")}
+  </div>`;
+
+  function gridView(){
+    if(!photos.length) return `<div class="wk-empty">No photos in this category yet.</div>`;
+    return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+      ${photos.map(ph=>{
+        const url = photoThumbUrl(ph.id);
+        return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
+          ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--rh-muted);font-size:11px;">Loading…</div>`}
+          <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;padding:2px 4px;text-align:center;">${ph.date}</span>
+          ${ph.milestone?`<span style="position:absolute;top:4px;right:4px;">${svg('star',14)}</span>`:''}
+        </button>`;
+      }).join("")}
+    </div>`;
+  }
+
+  function timelineView(){
+    if(!photos.length) return `<div class="wk-empty">No photos in this category yet.</div>`;
+    // Group by "Month Year" -- covers both "Monthly Gallery" and (via the section list itself)
+    // a de-facto yearly view, without a full interactive calendar grid.
+    const groups = {};
+    photos.forEach(ph=>{
+      const d = new Date(ph.date+"T12:00:00");
+      const key = isNaN(d.getTime()) ? "Undated" : d.toLocaleDateString('default',{month:'long',year:'numeric'});
+      (groups[key] = groups[key] || []).push(ph);
+    });
+    return Object.keys(groups).map(key=>`
+      <div class="rh-section-head" style="margin-top:14px;"><span>${escHtml(key)}</span></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
+        ${groups[key].map(ph=>{
+          const url = photoThumbUrl(ph.id);
+          return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:8px;overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
+            ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : ''}
+            ${ph.milestone?`<span style="position:absolute;top:2px;right:2px;">${svg('star',11)}</span>`:''}
+          </button>`;
+        }).join("")}
+      </div>`).join("");
+  }
+
+  function compareView(){
+    if(photos.length<2) return `<div class="wk-empty">Need at least 2 photos in this category to compare.</div>`;
+    const a = photos.find(p2=>p2.id===state.bodyCompareA) || photos[photos.length-1];
+    const b = photos.find(p2=>p2.id===state.bodyCompareB) || photos[0];
+    const urlA = photoFullUrl(a.id), urlB = photoFullUrl(b.id);
+    const mode = state.bodyCompareMode || "slider";
+    const pct = state.bodyCompareSliderPct!=null ? state.bodyCompareSliderPct : 50;
+    const picker = (label, sel, val) => `<div style="flex:1;"><label class="pi-label">${label}</label>
+      <select class="pi-input" data-body-compare-select="${sel}">
+        ${photos.map(ph=>`<option value="${ph.id}" ${ph.id===val?'selected':''}>${ph.date}</option>`).join("")}
+      </select></div>`;
+    return `
+      <div style="display:flex;gap:8px;margin-bottom:10px;">${picker("Before","A",a.id)}${picker("After","B",b.id)}</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <button class="cat-chip ${mode==='slider'?'active':''}" data-body-compare-mode="slider" style="flex:1;text-align:center;">Photo Slider</button>
+        <button class="cat-chip ${mode==='sideBySide'?'active':''}" data-body-compare-mode="sideBySide" style="flex:1;text-align:center;">Side by Side</button>
+      </div>
+      ${mode==="sideBySide" ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:#000;">${urlA?`<img src="${urlA}" style="width:100%;height:100%;object-fit:cover;transform:rotate(${a.rotation||0}deg);">`:''}</div>
+          <div style="aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:#000;">${urlB?`<img src="${urlB}" style="width:100%;height:100%;object-fit:cover;transform:rotate(${b.rotation||0}deg);">`:''}</div>
+        </div>` : `
+        <div id="body-compare-slider" style="position:relative;width:100%;aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:#000;user-select:none;">
+          ${urlB?`<img src="${urlB}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:rotate(${b.rotation||0}deg);">`:''}
+          <div style="position:absolute;inset:0;width:${pct}%;overflow:hidden;">
+            ${urlA?`<img src="${urlA}" style="width:${pct>0?(100/(pct/100)):100}%;max-width:none;height:100%;object-fit:cover;transform:rotate(${a.rotation||0}deg);">`:''}
+          </div>
+          <div style="position:absolute;top:0;bottom:0;left:${pct}%;width:2px;background:#fff;"></div>
+          <input type="range" min="0" max="100" value="${pct}" data-body-compare-slider style="position:absolute;left:0;right:0;bottom:8px;width:92%;margin:0 4%;">
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--rh-muted);margin-top:4px;"><span>Before · ${a.date}</span><span>After · ${b.date}</span></div>`}
+    `;
+  }
+
+  return `<div class="pg-light">
+    <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:6px;" data-action="close-body-scan-archive">← Back</button>
+    <div style="font-size:22px;font-weight:800;">Body Scan Archive</div>
+    <div style="font-size:12px;color:var(--rh-muted);margin-bottom:14px;">${state.bodyPhotos.length} photo${state.bodyPhotos.length!==1?'s':''} stored on this device.</div>
+    <div style="display:flex;gap:4px;margin-bottom:12px;">${tabBtn('grid','Grid')}${tabBtn('timeline','Timeline')}${tabBtn('compare','Compare')}</div>
+    ${view!=="compare" ? catChips : ''}
+    <div class="pg-card">${view==="grid"?gridView():view==="timeline"?timelineView():compareView()}</div>
+    ${state.viewingBodyPhotoId!=null ? renderBodyPhotoViewer(state.viewingBodyPhotoId, state.bodyPhotos) : ""}
+  </div>`;
+}
+
 function renderBodyTab(){
   const entries = state.bodylog;
   const p = state.profile;
@@ -7930,6 +8245,7 @@ function renderBodyTab(){
   }
 
   if(state.bodyView==='personal-info') return renderPersonalInfoTab();
+  if(state.bodyView==='photos') return renderBodyScanArchive();
 
   // Real weight-only entries, newest-first (matches state.bodylog's own storage order)
   const wLog = entries.filter(e=> e.weight!==undefined && e.weight!==null && e.weight!=="" && !isNaN(Number(e.weight)));
@@ -7949,9 +8265,20 @@ function renderBodyTab(){
   }
   const weekAgo = wLog.length>1 ? closestTo(7) : null;
   const monthAgo = wLog.length>1 ? closestTo(30) : null;
+  const yearAgo = wLog.length>1 ? closestTo(365) : null;
   const weeklyChangeKg = (latestW && weekAgo && weekAgo!==latestW) ? Number(latestW.weight)-Number(weekAgo.weight) : null;
   const monthlyChangeKg = (latestW && monthAgo && monthAgo!==latestW) ? Number(latestW.weight)-Number(monthAgo.weight) : null;
+  const yearlyChangeKg = (latestW && yearAgo && yearAgo!==latestW) ? Number(latestW.weight)-Number(yearAgo.weight) : null;
   const trendLabel = weeklyChangeKg==null ? "—" : weeklyChangeKg<0 ? "Down" : weeklyChangeKg>0 ? "Up" : "Flat";
+
+  // BMI/BMR/TDEE -- always computed live from weight+profile (never stored, never stale).
+  // BMR/TDEE reuse the exact same Mifflin-St Jeor + activity-multiplier formulas the Profile
+  // tab's calorie target already uses (calcBMR/profileMaintenance), so the number here always
+  // matches Nutrition's maintenance figure instead of drifting via a second formula.
+  const curWeightKg = latestW ? Number(latestW.weight) : p.weight;
+  const bmiValue = p.height ? curWeightKg/((p.height/100)**2) : null;
+  const bmrValue = Math.round(calcBMR(p.age, p.gender, p.height, curWeightKg));
+  const tdeeValue = Math.round(bmrValue * p.activityMultiplier);
 
   // Real active-goal integration (Fitness Goals) -- honestly omitted below when no goal is active.
   const goal = window.IgnytGoals ? window.IgnytGoals.activeGoal() : null;
@@ -7965,7 +8292,6 @@ function renderBodyTab(){
   const rangeDays = BODY_WEIGHT_RANGES[rangeKey];
   const rangeCutoff = nowMs - rangeDays*86400000;
   const inRange = wLog.filter(e=> new Date(e.date+"T12:00:00").getTime() >= rangeCutoff).slice().reverse(); // chronological
-  const chartPoints = inRange.map(e=>({ label: new Date(e.date+"T12:00:00").toLocaleDateString('default',{month:'short',day:'numeric'}), value: displayW(Number(e.weight)) }));
   const rangeVals = inRange.map(e=>Number(e.weight));
   const rangeHighKg = rangeVals.length ? Math.max(...rangeVals) : null;
   const rangeLowKg = rangeVals.length ? Math.min(...rangeVals) : null;
@@ -7973,6 +8299,12 @@ function renderBodyTab(){
   const rangeHighEntry = rangeHighKg!=null ? inRange.find(e=>Number(e.weight)===rangeHighKg) : null;
   const rangeLowEntry = rangeLowKg!=null ? inRange.find(e=>Number(e.weight)===rangeLowKg) : null;
   const rangeNoun = rangeKey==="7D"?"This Week":rangeKey==="30D"?"This Month":rangeKey==="90D"?"Last 90 Days":"This Year";
+
+  // Chart metric switcher -- reuses the same range window, but scans ALL entries (not just
+  // weight-bearing ones) so a body-fat-only or waist-only entry still shows up on those charts.
+  const chartMetric = BODY_CHART_METRICS.find(m=>m.key===state.bodyChartMetric) || BODY_CHART_METRICS[0];
+  const inRangeAll = entries.filter(e=> new Date(e.date+"T12:00:00").getTime() >= rangeCutoff).slice().reverse();
+  const chartPoints = bodyMetricSeries(chartMetric.key, inRangeAll);
 
   const showMore = !!state.bodyShowMoreMetrics;
 
@@ -8005,15 +8337,30 @@ function renderBodyTab(){
 
       <div class="pg-card" style="margin-top:12px;">
         <div class="pg-card__head">
-          <span class="pg-card__title">Weight Trend</span>
+          <span class="pg-card__title">${escHtml(chartMetric.label)} Trend</span>
           <div style="display:flex;gap:4px;">
             ${Object.keys(BODY_WEIGHT_RANGES).map(k=>`<button class="cat-chip ${rangeKey===k?'active':''}" data-body-weight-range="${k}" style="padding:5px 9px;font-size:11px;">${k}</button>`).join("")}
           </div>
         </div>
-        ${axisAreaChart(chartPoints, {color:"var(--rh-blue)", unit:' '+wUnit()})}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+          ${BODY_CHART_METRICS.map(m=>`<button class="cat-chip ${chartMetric.key===m.key?'active':''}" data-body-chart-metric="${m.key}" style="padding:5px 9px;font-size:11px;">${m.label}</button>`).join("")}
+        </div>
+        ${chartPoints.length ? axisAreaChart(chartPoints, {color:"var(--rh-blue)", unit:' '+chartMetric.unit()}) : `<div class="wk-empty">No ${escHtml(chartMetric.label.toLowerCase())} data in this range yet.</div>`}
       </div>
 
       <div class="pg-stat-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-top:12px;">
+        <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('body',16)}</span>
+          <div class="pg-stat-card__value">${bmiValue!=null?bmiValue.toFixed(1):'—'}</div>
+          <div class="pg-stat-card__label">BMI</div><div class="pg-stat-card__sub">${bmiValue!=null?bmiCategory(bmiValue):''}</div></div>
+        <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(217,119,6,.12);color:#D97706;">${svg('flame',16)}</span>
+          <div class="pg-stat-card__value">${bmrValue}<span class="pg-stat-card__unit">kcal</span></div>
+          <div class="pg-stat-card__label">BMR</div><div class="pg-stat-card__sub">at rest</div></div>
+        <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(124,58,237,.1);color:var(--rh-purple);">${svg('flame',16)}</span>
+          <div class="pg-stat-card__value">${tdeeValue}<span class="pg-stat-card__unit">kcal</span></div>
+          <div class="pg-stat-card__label">TDEE</div><div class="pg-stat-card__sub">daily maintenance</div></div>
+      </div>
+
+      <div class="pg-stat-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-top:8px;">
         <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(22,163,74,.1);color:var(--rh-green);">${svg('chevronUp',16)}</span>
           <div class="pg-stat-card__value">${rangeHighKg!=null?displayW(rangeHighKg):'—'}<span class="pg-stat-card__unit">${wUnit()}</span></div>
           <div class="pg-stat-card__label">Highest</div><div class="pg-stat-card__sub">${rangeHighEntry?rangeHighEntry.date:''}</div></div>
@@ -8029,9 +8376,13 @@ function renderBodyTab(){
         <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(217,119,6,.12);color:#D97706;">${svg('trend',16)}</span>
           <div class="pg-stat-card__value">${monthlyChangeKg!=null?(monthlyChangeKg>0?'+':'')+displayW(monthlyChangeKg,1):'—'}<span class="pg-stat-card__unit">${wUnit()}</span></div>
           <div class="pg-stat-card__label">Monthly Change</div><div class="pg-stat-card__sub">vs last month</div></div>
+        <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(124,58,237,.1);color:var(--rh-purple);">${svg('trend',16)}</span>
+          <div class="pg-stat-card__value">${yearlyChangeKg!=null?(yearlyChangeKg>0?'+':'')+displayW(yearlyChangeKg,1):'—'}<span class="pg-stat-card__unit">${wUnit()}</span></div>
+          <div class="pg-stat-card__label">Yearly Change</div><div class="pg-stat-card__sub">vs last year</div></div>
         <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('target',16)}</span>
           <div class="pg-stat-card__value">${goalRemaining!=null?goalRemaining:'—'}<span class="pg-stat-card__unit">${wUnit()}</span></div>
-          <div class="pg-stat-card__label">Goal Remaining</div><div class="pg-stat-card__sub">${goal?'to reach goal':'no goal set'}</div></div>
+          <div class="pg-stat-card__label">Goal Remaining</div><div class="pg-stat-card__sub">${goal?'to reach goal':'no goal set'}</div>
+          ${goalCompute&&goalCompute.completion?`<div class="pg-stat-card__sub" style="margin-top:2px;">Est. ${new Date(goalCompute.completion).toLocaleDateString('default',{month:'short',year:'numeric'})}</div>`:''}</div>
       </div>
 
       <div class="rh-section-head"><span>Recent Entries</span>${entries.length>4?`<a href="#" class="rh-view-all" data-action="view-weight-history">View All</a>`:''}</div>
@@ -8083,12 +8434,11 @@ function renderBodyTab(){
           ${fieldSm("b-sleep","Sleep (hrs)","7.5","var(--rh-purple)")}
           ${fieldSm("b-hrv","HRV (ms)","91","var(--rh-purple)")}
         </div>
-        ${showMore ? `<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">More Metrics</div>
+        ${showMore ? BODY_MEASUREMENT_GROUPS.map(g=>`
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">${escHtml(g.label)}</div>
           <div class="pi-grid2" style="grid-template-columns:repeat(3,minmax(0,1fr));">
-            ${fieldSm("b-arms","Arms (cm)","","var(--rh-text)")}
-            ${fieldSm("b-hips","Hips (cm)","","var(--rh-text)")}
-            ${fieldSm("b-thighs","Thighs (cm)","","var(--rh-text)")}
-          </div>` : ''}
+            ${g.fields.filter(f=>f.key!=="waist"&&f.key!=="chest"&&f.key!=="bodyfat").map(f=>fieldSm("b-"+f.key, f.label+(f.unit?` (${f.unit})`:""), "", "var(--rh-text)")).join("")}
+          </div>`).join("") : ''}
         <div style="font-size:11px;color:var(--rh-muted);margin:12px 0 4px;">Logging a weight here updates your profile weight and recalculates calories &amp; macros everywhere.</div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
           <button class="rh-btn rh-btn--ghost" style="flex:1;padding:10px;font-size:13px;" data-action="toggle-body-more-metrics">${svg('plus',13)} ${showMore?'Fewer Metrics':'More Metrics'}</button>
@@ -8096,12 +8446,13 @@ function renderBodyTab(){
         </div>
       </div>
 
-      <div class="rh-section-head"><span>Body Progress Photos</span></div>
+      <div class="rh-section-head"><span>Body Scan Archive</span>${state.bodyPhotos.length>0?`<a href="#" class="rh-view-all" data-action="open-body-scan-archive">Open Archive</a>`:''}</div>
       <div class="pg-card">
-        <div style="display:flex;gap:6px;margin-bottom:10px;">
-          ${["Front","Side","Back","Other"].map(c=>`<button class="cat-chip ${state.bodyPhotoCategory===c?'active':''}" data-body-photo-category="${c}" style="flex:1;text-align:center;">${c}</button>`).join("")}
+        <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;padding-bottom:2px;">
+          ${BODY_SCAN_CATEGORIES.map(c=>`<button class="cat-chip ${state.bodyPhotoCategory===c?'active':''}" data-body-photo-category="${c}" style="flex:none;white-space:nowrap;">${c}</button>`).join("")}
         </div>
-        <input type="text" id="body-photo-note" placeholder="Optional note" class="pi-input" style="margin-bottom:10px;">
+        <input type="text" id="body-photo-note" placeholder="Optional note" class="pi-input" style="margin-bottom:8px;">
+        <input type="text" id="body-photo-tags" placeholder="Tags, comma separated (optional)" class="pi-input" style="margin-bottom:10px;">
         <label class="rh-btn rh-btn--primary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;position:relative;">
           ${svg('plus',16)} Add Photo
           <input type="file" id="body-photo-file" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
@@ -8109,31 +8460,17 @@ function renderBodyTab(){
       </div>
       ${state.bodyPhotos.length===0 ? `<div class="wk-empty" style="margin-top:8px;">No progress photos yet.</div>` : `
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0;">
-        ${state.bodyPhotos.map(ph=>{
+        ${state.bodyPhotos.slice(0,9).map(ph=>{
           const url = photoThumbUrl(ph.id);
           return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
-            ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--rh-muted);font-size:11px;">Loading…</div>`}
-            <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;padding:2px 4px;text-align:center;">${ph.category}</span>
+            ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--rh-muted);font-size:11px;">Loading…</div>`}
+            <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;padding:2px 4px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(ph.category)}</span>
+            ${ph.milestone?`<span style="position:absolute;top:4px;right:4px;">${svg('star',14)}</span>`:''}
           </button>`;
         }).join("")}
-      </div>`}
-      ${state.viewingBodyPhotoId!=null ? (()=>{
-        const ph = state.bodyPhotos.find(p2=>p2.id===state.viewingBodyPhotoId);
-        if(!ph) return "";
-        const url = photoThumbUrl(ph.id);
-        return `<div class="dialog-backdrop" data-close-body-photo style="z-index:190;"></div>
-        <div class="dialog-box" style="max-width:400px;padding:14px;z-index:191;">
-          <!-- z-index kept below the shared confirm-dialog component's (210/211) so that when
-               "Delete" opens a confirm prompt on top of this still-open lightbox, the confirm
-               prompt is genuinely visible and clickable, not obscured underneath. -->
-          ${url ? `<img src="${url}" alt="" style="width:100%;max-height:60vh;object-fit:contain;border-radius:10px;display:block;">` : ""}
-          <div style="margin-top:10px;font-size:13px;color:var(--muted);">${ph.date} · ${ph.category}${ph.note?` · ${ph.note}`:''}</div>
-          <div style="display:flex;gap:8px;margin-top:14px;">
-            <button class="btn btn-ghost" data-close-body-photo style="flex:1;">Close</button>
-            <button class="btn btn-ghost" data-del-body-photo="${ph.id}" style="flex:1;color:#ff6b6b;">Delete</button>
-          </div>
-        </div>`;
-      })() : ""}
+      </div>
+      ${state.bodyPhotos.length>9?`<button class="rh-btn rh-btn--ghost" style="width:100%;" data-action="open-body-scan-archive">View all ${state.bodyPhotos.length} photos</button>`:''}`}
+      ${state.viewingBodyPhotoId!=null ? renderBodyPhotoViewer(state.viewingBodyPhotoId, state.bodyPhotos) : ""}
     </div>
   `;
 }
@@ -9426,9 +9763,11 @@ function renderCsvImportPreview(){
       </div>
     `;
   }
+  const kindLabel = { foods:"Foods", exercises:"Exercises", measurements:"Body Measurements" }[r.kind] || "Rows";
+  const itemLabel = { foods:"Food", exercises:"Exercise", measurements:"Measurement" }[r.kind] || "Row";
   return `
     <div class="info-box" style="padding:12px 14px;margin-top:12px;background:var(--surface-alt);">
-      <div style="font-weight:800;font-size:14px;margin-bottom:8px;">Import Preview — ${r.kind==="foods"?"Foods":"Exercises"}</div>
+      <div style="font-weight:800;font-size:14px;margin-bottom:8px;">Import Preview — ${kindLabel}</div>
       <div class="row-between" style="padding:3px 0;"><span style="font-size:13px;">Total rows found</span><span class="mono" style="font-weight:700;">${r.totalRows}</span></div>
       <div class="row-between" style="padding:3px 0;"><span style="font-size:13px;color:var(--mint);">Valid</span><span class="mono" style="font-weight:700;color:var(--mint);">${r.validCount}</span></div>
       <div class="row-between" style="padding:3px 0;"><span style="font-size:13px;color:var(--accent);">Invalid</span><span class="mono" style="font-weight:700;color:var(--accent);">${r.invalidCount}</span></div>
@@ -9436,7 +9775,8 @@ function renderCsvImportPreview(){
       ${r.invalidRows.length ? `<div style="font-size:11px;color:var(--muted);margin-top:8px;">Invalid rows: ${r.invalidRows.slice(0,5).map(x=>`row ${x.row} (${x.reason})`).join(", ")}${r.invalidRows.length>5?` +${r.invalidRows.length-5} more`:''}</div>` : ""}
       ${r.validCount>0 ? `
         ${r.kind==="foods" ? `<div style="font-size:11px;color:var(--muted);margin:8px 0 2px;">Imported as Favorite Foods for quick-add — this doesn't create any dated food-log entries.</div>` : ''}
-        <button class="btn btn-accent btn-block" data-action="confirm-csv-import" style="margin-top:8px;">Import ${r.validCount} ${r.kind==="foods"?"Food":"Exercise"}${r.validCount!==1?'s':''}</button>
+        ${r.kind==="measurements" ? `<div style="font-size:11px;color:var(--muted);margin:8px 0 2px;">Imported as new Body History entries, dated as in the file.</div>` : ''}
+        <button class="btn btn-accent btn-block" data-action="confirm-csv-import" style="margin-top:8px;">Import ${r.validCount} ${itemLabel}${r.validCount!==1?'s':''}</button>
       ` : `<div style="font-size:12px;color:var(--muted);margin-top:10px;">Nothing valid to import.</div>`}
       <button class="btn btn-ghost btn-block" data-action="cancel-csv-import" style="margin-top:8px;">Cancel</button>
     </div>
@@ -9860,6 +10200,18 @@ function attachHandlers(){
       persist();
       render();
       showToast("Imported "+foodCount+" food"+(foodCount!==1?"s":"")+" as favorites.", "success", render);
+      return;
+    }
+    if(r.kind==="measurements"){
+      // Newest-first, matching how every other entry point (log-body, HC sync) inserts.
+      state.bodylog = r.validRows.concat(state.bodylog);
+      const latest = r.validRows.slice().sort((a,b)=> new Date(b.date)-new Date(a.date))[0];
+      if(latest && latest.weight) state.profile.weight = Number(latest.weight) || state.profile.weight;
+      const mCount = r.validCount;
+      state.csvImportPreview = null;
+      persist();
+      render();
+      showToast("Imported "+mCount+" measurement entr"+(mCount!==1?"ies":"y")+".", "success", render);
       return;
     }
     state.customExercises = state.customExercises.concat(r.validRows);
@@ -10975,22 +11327,19 @@ function attachHandlers(){
     const rawWeight = document.getElementById("b-weight").value;
     if(!rawWeight) return;
     const weight = parseInputW(rawWeight); // convert from displayed unit to canonical kg for storage
-    // "More Metrics" fields (arms/hips/thighs) only exist in the DOM when that section is
-    // expanded -- optional chaining keeps this safe either way, matching the rest of the form.
+    // Every BODY_MEASUREMENT_GROUPS field, whether or not "More Metrics" is currently expanded
+    // (collapsed fields simply aren't in the DOM -- optional chaining reads them as blank).
     const val = id => document.getElementById(id)?.value;
-    state.bodylog.unshift({
-      id: nextId(),
-      date: document.getElementById("b-date").value,
-      weight,
-      sleep: val("b-sleep"),
-      hrv: val("b-hrv"),
-      waist: val("b-waist"),
-      chest: val("b-chest"),
-      bodyfat: val("b-bodyfat"),
-      arms: val("b-arms"),
-      hips: val("b-hips"),
-      thighs: val("b-thighs")
-    });
+    const entry = { id: nextId(), date: document.getElementById("b-date").value, weight, sleep: val("b-sleep"), hrv: val("b-hrv") };
+    BODY_MEASUREMENT_KEYS.forEach(key=>{ const v = val("b-"+key); if(v!=="" && v!=null) entry[key] = v; });
+    // Auto-estimate body fat (Navy method, already used by the Calculators tab) from
+    // neck+waist(+hips for women) when the user gave those but left Body Fat % blank --
+    // a real formula on real inputs, not a guess, and clearly marked as an estimate.
+    if(entry.bodyfat==null && entry.neck && entry.waist && state.profile.height){
+      const est = calcBodyFatNavy(state.profile.gender, state.profile.height, Number(entry.neck), Number(entry.waist), Number(entry.hips)||0);
+      if(isFinite(est) && est>0 && est<70){ entry.bodyfat = Math.round(est*10)/10; entry.bodyfatEstimated = true; }
+    }
+    state.bodylog.unshift(entry);
     // Weight logged here becomes the single source of truth -> recalcs calories/macros everywhere
     state.profile.weight = Number(weight) || state.profile.weight;
     render();
@@ -11024,20 +11373,38 @@ function attachHandlers(){
     }
     const noteEl = document.getElementById("body-photo-note");
     const note = noteEl ? noteEl.value.trim() : "";
-    window.IgnytBodyPhotosDB.addPhoto({ date: todayStr(), category: state.bodyPhotoCategory, note, blob: file })
+    const tagsEl = document.getElementById("body-photo-tags");
+    const tags = tagsEl ? tagsEl.value.split(",").map(t=>t.trim()).filter(Boolean) : [];
+    // Auto-links the photo to the closest real measurement on record, same "single source of
+    // truth" reuse as everywhere else -- never a fabricated number for weight/body fat.
+    const latestEntry = state.bodylog.find(e=>e.weight!=null && e.weight!=="");
+    const weight = latestEntry ? Number(latestEntry.weight) : null;
+    const bodyfat = latestEntry && latestEntry.bodyfat!=null ? Number(latestEntry.bodyfat) : null;
+    const activeGoalObj = window.IgnytGoals ? window.IgnytGoals.activeGoal() : null;
+    const goal = activeGoalObj && activeGoalObj.targetWeight!=null ? `Target ${displayW(activeGoalObj.targetWeight)} ${wUnit()}` : "";
+    window.IgnytBodyPhotosDB.addPhoto({ date: todayStr(), category: state.bodyPhotoCategory, note, blob: file, weight, bodyfat, goal, tags })
       .then(()=> window.IgnytBodyPhotosDB.getAllMeta())
-      .then(list=>{ state.bodyPhotos = list; render(); })
+      .then(list=>{ state.bodyPhotos = list; if(tagsEl) tagsEl.value=""; render(); })
       .catch(()=>{ showToast("Couldn't save that photo. Please try again.", "error", render); });
   });
   document.querySelectorAll("[data-view-body-photo]").forEach(el=>{
     el.addEventListener("click", ()=>{
       state.viewingBodyPhotoId = Number(el.dataset.viewBodyPhoto);
+      state.bodyPhotoZoom = 1; state.bodyPhotoPan = {x:0,y:0};
+      render();
+    });
+  });
+  document.querySelectorAll("[data-body-photo-nav]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.viewingBodyPhotoId = Number(el.dataset.bodyPhotoNav);
+      state.bodyPhotoZoom = 1; state.bodyPhotoPan = {x:0,y:0};
       render();
     });
   });
   document.querySelectorAll("[data-close-body-photo]").forEach(el=>{
     el.addEventListener("click", ()=>{
       state.viewingBodyPhotoId = null;
+      stopBodyPhotoSlideshow();
       render();
     });
   });
@@ -11047,10 +11414,101 @@ function attachHandlers(){
       if(!(await confirmDialog("Delete this progress photo? This can't be undone.", render))) return;
       if(window.IgnytBodyPhotosDB) await window.IgnytBodyPhotosDB.deletePhoto(id).catch(()=>{});
       if(_photoUrlCache[id]){ URL.revokeObjectURL(_photoUrlCache[id]); delete _photoUrlCache[id]; }
+      if(_photoFullUrlCache[id]){ URL.revokeObjectURL(_photoFullUrlCache[id]); delete _photoFullUrlCache[id]; }
       state.bodyPhotos = state.bodyPhotos.filter(p=>p.id!==id);
       state.viewingBodyPhotoId = null;
+      stopBodyPhotoSlideshow();
       render();
     });
+  });
+  const bodyPhotoZoomBtn = document.querySelector('[data-action="body-photo-zoom-toggle"]');
+  if(bodyPhotoZoomBtn) bodyPhotoZoomBtn.addEventListener("click", ()=>{
+    state.bodyPhotoZoom = (state.bodyPhotoZoom||1) > 1 ? 1 : 2;
+    state.bodyPhotoPan = {x:0,y:0};
+    render();
+  });
+  const bodyPhotoZoomTarget = document.querySelector('[data-body-photo-zoom-target]');
+  if(bodyPhotoZoomTarget) bodyPhotoZoomTarget.addEventListener("wheel", (e)=>{
+    e.preventDefault();
+    const z = Math.min(4, Math.max(1, (state.bodyPhotoZoom||1) + (e.deltaY<0?0.25:-0.25)));
+    state.bodyPhotoZoom = z;
+    if(z<=1) state.bodyPhotoPan = {x:0,y:0};
+    render();
+  }, {passive:false});
+  const bodyPhotoImg = document.querySelector('[data-body-photo-img]');
+  if(bodyPhotoImg && (state.bodyPhotoZoom||1) > 1){
+    const curPh = state.bodyPhotos.find(p2=>p2.id===state.viewingBodyPhotoId);
+    const rotDeg = curPh ? (curPh.rotation||0) : 0;
+    let dragging = false, startX=0, startY=0, startPan={x:0,y:0};
+    bodyPhotoImg.addEventListener("pointerdown", (e)=>{ dragging=true; startX=e.clientX; startY=e.clientY; startPan=Object.assign({},state.bodyPhotoPan||{x:0,y:0}); bodyPhotoImg.setPointerCapture(e.pointerId); });
+    bodyPhotoImg.addEventListener("pointermove", (e)=>{
+      if(!dragging) return;
+      state.bodyPhotoPan = { x: startPan.x + (e.clientX-startX)/(state.bodyPhotoZoom||1), y: startPan.y + (e.clientY-startY)/(state.bodyPhotoZoom||1) };
+      // Direct style write during the drag (no render()) keeps panning smooth at 60fps;
+      // render() only fires once, on pointerup, to persist the final pan into state.
+      bodyPhotoImg.style.transform = `rotate(${rotDeg}deg) scale(${state.bodyPhotoZoom}) translate(${state.bodyPhotoPan.x}px, ${state.bodyPhotoPan.y}px)`;
+    });
+    const endDrag = ()=>{ if(dragging){ dragging=false; render(); } };
+    bodyPhotoImg.addEventListener("pointerup", endDrag);
+    bodyPhotoImg.addEventListener("pointercancel", endDrag);
+  }
+  const bodyPhotoRotateBtn = document.querySelector('[data-action="body-photo-rotate"]');
+  if(bodyPhotoRotateBtn) bodyPhotoRotateBtn.addEventListener("click", ()=>{
+    const ph = state.bodyPhotos.find(p2=>p2.id===state.viewingBodyPhotoId); if(!ph) return;
+    const rotation = ((ph.rotation||0) + 90) % 360;
+    ph.rotation = rotation; // optimistic UI; persisted below
+    if(window.IgnytBodyPhotosDB) window.IgnytBodyPhotosDB.updatePhoto(ph.id, {rotation});
+    render();
+  });
+  const bodyPhotoFullscreenBtn = document.querySelector('[data-action="body-photo-fullscreen"]');
+  if(bodyPhotoFullscreenBtn) bodyPhotoFullscreenBtn.addEventListener("click", ()=>{
+    const el = document.getElementById("body-photo-viewer-img-wrap");
+    if(el && el.requestFullscreen) el.requestFullscreen().catch(()=>{});
+  });
+  const bodyPhotoSlideshowBtn = document.querySelector('[data-action="body-photo-slideshow-toggle"]');
+  if(bodyPhotoSlideshowBtn) bodyPhotoSlideshowBtn.addEventListener("click", ()=>{
+    if(state.bodyPhotoSlideshow) stopBodyPhotoSlideshow();
+    else startBodyPhotoSlideshow();
+    render();
+  });
+  const bodyPhotoMilestoneBtn = document.querySelector('[data-action="body-photo-milestone-toggle"]');
+  if(bodyPhotoMilestoneBtn) bodyPhotoMilestoneBtn.addEventListener("click", ()=>{
+    const id = Number(bodyPhotoMilestoneBtn.dataset.id);
+    const ph = state.bodyPhotos.find(p2=>p2.id===id); if(!ph) return;
+    ph.milestone = !ph.milestone;
+    if(window.IgnytBodyPhotosDB) window.IgnytBodyPhotosDB.updatePhoto(id, {milestone: ph.milestone});
+    render();
+  });
+
+  // Body Scan Archive screen
+  const openArchiveBtn = document.querySelector('[data-action="open-body-scan-archive"]');
+  if(openArchiveBtn) openArchiveBtn.addEventListener("click", ()=>{ state.bodyView = "photos"; render(); });
+  const closeArchiveBtn = document.querySelector('[data-action="close-body-scan-archive"]');
+  if(closeArchiveBtn) closeArchiveBtn.addEventListener("click", ()=>{ state.bodyView = null; render(); });
+  document.querySelectorAll("[data-body-scan-view]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.bodyScanView = el.dataset.bodyScanView; render(); });
+  });
+  document.querySelectorAll("[data-body-scan-category]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.bodyScanCategoryFilter = el.dataset.bodyScanCategory; render(); });
+  });
+  document.querySelectorAll("[data-body-compare-select]").forEach(el=>{
+    el.addEventListener("change", ()=>{
+      if(el.dataset.bodyCompareSelect==="A") state.bodyCompareA = Number(el.value);
+      else state.bodyCompareB = Number(el.value);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-body-compare-mode]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.bodyCompareMode = el.dataset.bodyCompareMode; render(); });
+  });
+  const compareSlider = document.querySelector('[data-body-compare-slider]');
+  if(compareSlider) compareSlider.addEventListener("input", ()=>{
+    state.bodyCompareSliderPct = Number(compareSlider.value);
+    const wrap = document.getElementById("body-compare-slider");
+    if(wrap){
+      wrap.children[1].style.width = state.bodyCompareSliderPct+"%";
+      wrap.children[2].style.left = state.bodyCompareSliderPct+"%";
+    }
   });
 
   // Log Weight card actions
@@ -11071,6 +11529,9 @@ function attachHandlers(){
   if(closeLogWeightBtn) closeLogWeightBtn.addEventListener("click", ()=>{ state.tab = "tools"; state.bodyView = null; render(); });
   document.querySelectorAll("[data-body-weight-range]").forEach(el=>{
     el.addEventListener("click", ()=>{ state.bodyWeightRange = el.dataset.bodyWeightRange; render(); });
+  });
+  document.querySelectorAll("[data-body-chart-metric]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.bodyChartMetric = el.dataset.bodyChartMetric; render(); });
   });
   const moreMetricsBtn = document.querySelector('[data-action="toggle-body-more-metrics"]');
   if(moreMetricsBtn) moreMetricsBtn.addEventListener("click", ()=>{ state.bodyShowMoreMetrics = !state.bodyShowMoreMetrics; render(); });
