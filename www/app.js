@@ -1782,6 +1782,11 @@ const state = {
   notificationsOpen: false, // transient — not persisted, matches other dropdown/menu UI state
   nativeNotifPermissionGranted: null, // transient — null=unknown yet, refreshed from IgnytNotify at boot
   plateCalcOpen: null, // element id string when plate calc popover open
+  viewingDriveBackups: false, // transient — Settings > Manage Backups list view
+  driveBackupsCache: null, // transient — array once loaded, null = not fetched yet
+  driveBackupsBusy: false, // transient
+  driveRestorePrompt: null, // transient — {fileId, name, createdTime} while the Merge/Replace/Cancel dialog is open
+  passphrasePrompt: null, // transient — {purpose:"set"|"backup"|"restore", error} while the encryption passphrase dialog is open
   restDuration: LS.get("hx_rest_duration",90),
   session: LS.get("hx_active_session", null),
   prs: LS.get("hx_prs", []),
@@ -2300,10 +2305,74 @@ function resolveOnboardingStatus(){
 /* Applies the resolved theme (dark/light) as a data-attribute on <html> so all
    CSS var overrides cascade. "system" resolves live against the OS preference. */
 
-function exportAllJSON(){
+// Shared by the local "Full Backup (JSON)" export button and Drive Backup (drive-backup.js)
+// -- both need the exact same payload shape, so it's built once here.
+function buildFullBackupPayload(){
   const data = { app:"ignyt", version:1, schemaVersion:SCHEMA_VERSION, exportedAt:new Date().toISOString(), data:{} };
   ALL_DATA_KEYS.forEach(k=>{ const v = localStorage.getItem(k); if(v!==null) data.data[k]=v; });
-  downloadFile("ignyt-backup-"+todayStr()+".json", JSON.stringify(data,null,2), "application/json");
+  return data;
+}
+
+function exportAllJSON(){
+  downloadFile("ignyt-backup-"+todayStr()+".json", JSON.stringify(buildFullBackupPayload(),null,2), "application/json");
+}
+
+/* Validates a backup payload (same shape buildFullBackupPayload/exportAllJSON/Drive Backup
+   produce) and returns {ok:true, staged:{key:jsonString}} or {ok:false, error}. Never writes
+   anything itself -- see applyBackupPayload for that. Shares its validation rules with the
+   existing local-file Import (importAllJSON below) so both accept the same files. */
+function validateBackupPayload(parsed){
+  if(!parsed || typeof parsed!=="object" || (parsed.app!=="ignyt" && parsed.app!=="hyrox-prep") || !parsed.data || typeof parsed.data!=="object"){
+    return { ok:false, error:"This doesn't look like an Ignyt backup file." };
+  }
+  const staged = {};
+  const badKeys = [];
+  Object.entries(parsed.data).forEach(([k,v])=>{
+    if(!ALL_DATA_KEYS.includes(k)) return; // ignore unknown/future keys rather than failing
+    try{ JSON.parse(v); staged[k] = v; }
+    catch(e){ badKeys.push(k); }
+  });
+  if(badKeys.length) return { ok:false, error:"This backup is corrupted (bad data for: "+badKeys.join(", ")+")." };
+  if(Object.keys(staged).length===0) return { ok:false, error:"This backup has no recognizable Ignyt data." };
+  return { ok:true, staged };
+}
+
+/* Merge = union by id (arrays with a stable id field) or by full-value identity (arrays
+   without one, e.g. customExercises) -- LOCAL WINS on id collision, matching the "local wins"
+   convention already established by cloud-sync.js's 3-way merge. Plain objects (settings,
+   profile, the completed-map) union their keys, local wins per-key. Scalars/shape mismatches
+   always keep the LOCAL value (e.g. activeWeek/activeLevel shouldn't jump backward on restore). */
+function mergeStoredValue(localRaw, backupRaw){
+  let local, backup;
+  try{ local = localRaw==null ? undefined : JSON.parse(localRaw); }catch(e){ local = undefined; }
+  try{ backup = JSON.parse(backupRaw); }catch(e){ return localRaw; }
+  if(local===undefined) return backupRaw;
+  if(Array.isArray(local) && Array.isArray(backup)){
+    const hasIds = local.every(x=>x && typeof x==="object" && "id" in x) && backup.every(x=>x && typeof x==="object" && "id" in x);
+    if(hasIds){
+      const byId = new Map(local.map(x=>[x.id,x]));
+      backup.forEach(x=>{ if(!byId.has(x.id)) byId.set(x.id, x); });
+      return JSON.stringify(Array.from(byId.values()));
+    }
+    const seen = new Set(local.map(x=>JSON.stringify(x)));
+    const merged = local.slice();
+    backup.forEach(x=>{ const s = JSON.stringify(x); if(!seen.has(s)){ merged.push(x); seen.add(s); } });
+    return JSON.stringify(merged);
+  }
+  if(local && backup && typeof local==="object" && typeof backup==="object" && !Array.isArray(local) && !Array.isArray(backup)){
+    return JSON.stringify(Object.assign({}, backup, local)); // local keys win
+  }
+  return localRaw; // scalar or shape mismatch -- keep local
+}
+
+/* Commits an already-validated backup (the {staged} from validateBackupPayload). mode
+   "replace" overwrites every included key outright (same behavior as the existing local
+   Import Data flow); "merge" combines with current data via mergeStoredValue() above. Caller
+   is responsible for any user confirmation before calling this. */
+function applyBackupPayload(staged, mode){
+  Object.entries(staged).forEach(([k,backupRaw])=>{
+    localStorage.setItem(k, mode==="merge" ? mergeStoredValue(localStorage.getItem(k), backupRaw) : backupRaw);
+  });
 }
 
 function exportWorkoutsCSV(){
@@ -4305,8 +4374,195 @@ function renderPrivacySecurityInfo(){
   `;
 }
 
+function driveEsc(v){
+  return String(v == null ? "" : v)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+function fmtBackupBytes(n){
+  n = Number(n) || 0;
+  if(n < 1024) return n+" B";
+  if(n < 1024*1024) return (n/1024).toFixed(1)+" KB";
+  return (n/(1024*1024)).toFixed(1)+" MB";
+}
+
+/** Settings > Backup & Restore card. Real states only: not-native, not-configured (no
+ *  google-services.json/OAuth client at build time — same honest pattern as renderAccountSection),
+ *  not-connected, and connected (account + last backup + actions). */
+function renderDriveBackupSection(){
+  const drive = window.IgnytDriveBackup;
+  if(!drive) return `<div class="info-box" style="padding:14px;"><div style="font-size:13px;color:var(--muted);">Backup module failed to load.</div></div>`;
+
+  if(!drive.isNativeAndroid()){
+    return `<div class="info-box" style="padding:14px;"><div style="font-size:13px;color:var(--muted);">Google Drive backup is available in the IGNYT Android app.</div></div>`;
+  }
+
+  const st = drive.getStatus();
+  const errorHtml = st.lastError ? `<div style="font-size:12px;color:var(--accent);margin:8px 0;">${driveEsc(st.lastError)}</div>` : "";
+
+  if(!st.connected){
+    return `
+      <div class="info-box" style="padding:14px;">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Back up your workouts, measurements, settings and more to your own Google Drive. Only files IGNYT creates are ever touched — nothing else in your Drive.</div>
+        ${errorHtml}
+        <button class="btn btn-accent btn-block" data-action="drive-connect" ${st.busy?'disabled':''}>${st.busy?'Connecting…':'Connect Google Drive'}</button>
+      </div>`;
+  }
+
+  const acct = st.account || {};
+  const initial = driveEsc((acct.displayName || acct.email || "?").trim().charAt(0).toUpperCase() || "?");
+  const avatar = `
+    <div style="position:relative;width:40px;height:40px;flex-shrink:0;">
+      <div style="width:40px;height:40px;border-radius:50%;background:var(--steel);color:#0c1c24;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;">${initial}</div>
+      ${acct.photoUrl ? `<img src="${driveEsc(acct.photoUrl)}" alt="" referrerpolicy="no-referrer" style="position:absolute;top:0;left:0;width:40px;height:40px;border-radius:50%;" onerror="this.remove()">` : ""}
+    </div>`;
+  const lastBackupLine = st.lastBackupAt
+    ? "Last backup: "+new Date(st.lastBackupAt).toLocaleString([], { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" })+" · "+fmtBackupBytes(st.lastBackupSizeBytes)
+    : "No backups yet";
+
+  return `
+    <div class="info-box" style="padding:14px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        ${avatar}
+        <div style="min-width:0;flex:1;">
+          <div style="font-weight:800;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${driveEsc(acct.displayName) || "Google Drive"}</div>
+          <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${driveEsc(acct.email)}</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">${lastBackupLine}</div>
+      ${errorHtml}
+      <button class="btn btn-accent btn-block" data-action="drive-backup-now" ${st.busy?'disabled':''} style="margin-bottom:8px;">${st.busy?'Backing up…':'Back Up Now'}</button>
+      <button class="btn btn-steel btn-block" data-action="drive-manage-backups" ${st.busy?'disabled':''} style="margin-bottom:8px;">Manage Backups</button>
+      <button class="btn btn-ghost btn-block" data-action="drive-disconnect" ${st.busy?'disabled':''}>Sign Out of Drive Backup</button>
+    </div>
+    ${renderDriveScheduleSection()}`;
+}
+
+/** Manual/Daily/Weekly/Monthly + Wi-Fi-only/charging-only. Real behavior, not a cosmetic
+ *  toggle -- see drive-backup.js's header for exactly how scheduling works in a Capacitor app
+ *  (a reminder notification + a boot-time check, not a true background alarm-driven upload). */
+function renderDriveScheduleSection(){
+  const drive = window.IgnytDriveBackup;
+  const sched = drive.getScheduleSettings();
+  const freqOptions = [{key:"manual",label:"Manual"},{key:"daily",label:"Daily"},{key:"weekly",label:"Weekly"},{key:"monthly",label:"Monthly"}];
+  return `
+    <div class="info-box" style="padding:14px;margin-top:10px;">
+      <div style="font-weight:800;font-size:13px;margin-bottom:8px;">Automatic Backups</div>
+      <div style="display:flex;gap:6px;margin-bottom:${sched.frequency!=='manual'?'12px':'0'};">
+        ${freqOptions.map(o=>`<button class="cat-chip ${sched.frequency===o.key?'active':''}" data-drive-schedule-freq="${o.key}" style="flex:1;text-align:center;">${o.label}</button>`).join("")}
+      </div>
+      ${sched.frequency!=='manual' ? `
+        <div class="row-between" style="padding:8px 0;">
+          <span style="font-size:13px;">Wi-Fi only</span>
+          <input type="checkbox" data-drive-schedule-wifi ${sched.wifiOnly?'checked':''}>
+        </div>
+        <div class="row-between" style="padding:8px 0;">
+          <span style="font-size:13px;">Charging only</span>
+          <input type="checkbox" data-drive-schedule-charging ${sched.chargingOnly?'checked':''}>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">You'll get a notification to open IGNYT when a backup is due — the backup itself runs right after, in the background.</div>
+      ` : ''}
+    </div>
+    ${renderDriveEncryptionSection()}`;
+}
+
+/** End-to-end encryption toggle. The passphrase is never persisted -- only cached in memory
+ *  for the current session (drive-backup.js's _sessionPassphrase), so this section always
+ *  shows whether it still needs to be entered this session, and offers Change/Forget. */
+function renderDriveEncryptionSection(){
+  const drive = window.IgnytDriveBackup;
+  const enc = drive.getEncryptionSettings();
+  const hasPass = drive.hasSessionPassphrase();
+  return `
+    <div class="info-box" style="padding:14px;margin-top:10px;">
+      <div class="row-between">
+        <div>
+          <div style="font-weight:800;font-size:13px;">End-to-End Encryption</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Encrypts backups with your passphrase before upload. IGNYT never stores it — if you forget it, encrypted backups can't be recovered.</div>
+        </div>
+        <input type="checkbox" data-drive-encryption-toggle ${enc.enabled?'checked':''} style="flex:none;margin-left:10px;">
+      </div>
+      ${enc.enabled ? `
+        <div style="font-size:12px;color:${hasPass?'var(--mint)':'var(--accent)'};margin-top:10px;">${hasPass?'Passphrase set for this session.':'Passphrase not entered this session — you\'ll be asked on your next backup or restore.'}</div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn btn-ghost" style="flex:1;padding:9px;font-size:13px;" data-action="drive-change-passphrase">${hasPass?'Change':'Set'} Passphrase</button>
+          ${hasPass?`<button class="btn btn-ghost" style="flex:1;padding:9px;font-size:13px;" data-action="drive-forget-passphrase">Forget This Session</button>`:''}
+        </div>
+      ` : ''}
+    </div>`;
+}
+
+/** Passphrase entry/creation dialog. purpose "set" requires a matching confirm field and an
+ *  explicit acknowledgement that IGNYT can't recover a forgotten passphrase; "backup"/"restore"
+ *  just need the existing passphrase once. Its own dialog (not confirmDialog) since it needs
+ *  password inputs and inline validation, not just Confirm/Cancel. */
+function renderPassphrasePrompt(){
+  if(!state.passphrasePrompt) return "";
+  const pr = state.passphrasePrompt;
+  const isSet = pr.purpose === "set";
+  return `
+    <div class="dialog-backdrop" data-passphrase-action="cancel"></div>
+    <div class="dialog-box">
+      <div class="dialog-title">${isSet ? "Set Backup Passphrase" : "Enter Backup Passphrase"}</div>
+      <div class="dialog-message">
+        ${isSet ? "This passphrase encrypts your Google Drive backups. IGNYT never stores it — if you forget it, encrypted backups can't be recovered." : "This backup is encrypted with your passphrase."}
+      </div>
+      <input type="password" id="passphrase-input-1" class="pi-input" placeholder="${isSet?'New passphrase (min. 8 characters)':'Passphrase'}" style="width:100%;margin-bottom:${isSet?'8px':'0'};box-sizing:border-box;">
+      ${isSet ? `<input type="password" id="passphrase-input-2" class="pi-input" placeholder="Confirm passphrase" style="width:100%;box-sizing:border-box;">` : ''}
+      ${pr.error ? `<div style="font-size:12px;color:var(--accent);margin-top:8px;">${driveEsc(pr.error)}</div>` : ''}
+      <div class="dialog-actions" style="margin-top:14px;">
+        <button class="btn btn-ghost" data-passphrase-action="cancel">Cancel</button>
+        <button class="btn btn-accent" data-passphrase-action="submit">${isSet?'Set Passphrase':'Continue'}</button>
+      </div>
+    </div>`;
+}
+
+/** Settings > Backup & Restore > Manage Backups. Lists the "IGNYT Backups" Drive folder
+ *  (newest first, server already caps it at 10 — see DriveBackupPlugin.pruneOldBackups),
+ *  each row offering Restore (opens the Merge/Replace/Cancel prompt below) and Delete. */
+function renderDriveBackupsListView(){
+  const drive = window.IgnytDriveBackup;
+  const list = state.driveBackupsCache;
+  return `
+    <button class="btn btn-ghost" style="margin-bottom:12px;" data-action="drive-backups-back">← Back</button>
+    <div class="eyebrow-label" style="margin-top:0;">Manage Backups</div>
+    ${state.driveBackupsBusy ? `<div class="info-box" style="padding:14px;"><div style="font-size:13px;color:var(--muted);">Loading…</div></div>` :
+      !list ? `<div class="info-box" style="padding:14px;"><div style="font-size:13px;color:var(--accent);">Couldn't load backups. ${driveEsc(drive ? drive.getStatus().lastError||"" : "")}</div></div>` :
+      list.length===0 ? `<div class="info-box" style="padding:14px;"><div style="font-size:13px;color:var(--muted);">No backups yet — use Back Up Now in Settings.</div></div>` :
+      list.map(b=>`
+        <div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
+          <div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${driveEsc(b.name)}</div>
+          <div style="font-size:11px;color:var(--muted);margin:2px 0 10px;">${b.createdTime ? new Date(b.createdTime).toLocaleString([], { month:"short", day:"numeric", year:"numeric", hour:"2-digit", minute:"2-digit" }) : ""} · ${fmtBackupBytes(b.sizeBytes)}</div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-accent" style="flex:1;padding:9px;font-size:13px;" data-drive-restore-file="${driveEsc(b.fileId)}" data-drive-restore-name="${driveEsc(b.name)}" data-drive-restore-created="${driveEsc(b.createdTime)}">Restore</button>
+            <button class="btn btn-ghost" style="flex:1;padding:9px;font-size:13px;" data-drive-delete-file="${driveEsc(b.fileId)}">Delete</button>
+          </div>
+        </div>`).join("")
+    }
+  `;
+}
+
+/** The Merge / Replace / Cancel choice for a Drive restore. A plain confirmDialog() only
+ *  supports two choices, so this is its own small dialog, styled the same way. */
+function renderDriveRestorePrompt(){
+  if(!state.driveRestorePrompt) return "";
+  const p = state.driveRestorePrompt;
+  return `
+    <div class="dialog-backdrop" data-drive-restore-action="cancel"></div>
+    <div class="dialog-box">
+      <div class="dialog-title">Restore Backup</div>
+      <div class="dialog-message">Restore "${driveEsc(p.name)}"?<br><br><b>Merge</b> combines it with what's on this device — your local changes win if the same item changed in both places.<br><br><b>Replace</b> overwrites everything on this device with the backup.</div>
+      <div class="dialog-actions" style="flex-direction:column;gap:8px;">
+        <button class="btn btn-accent btn-block" data-drive-restore-action="merge">Merge</button>
+        <button class="btn btn-steel btn-block" data-drive-restore-action="replace">Replace Everything</button>
+        <button class="btn btn-ghost btn-block" data-drive-restore-action="cancel">Cancel</button>
+      </div>
+    </div>`;
+}
+
 function renderSettingsTab(){
   if(state.viewingPrivacyInfo) return renderPrivacySecurityInfo();
+  if(state.viewingDriveBackups) return renderDriveBackupsListView();
   const s = state.settings;
   return `
     <div class="pg-light">
@@ -4399,6 +4655,9 @@ function renderSettingsTab(){
           <span class="tl-card__chev">›</span>
         </button>
       </div>
+
+      <div class="rh-section-head"><span>${svg('cloud',13)} Backup &amp; Restore (Google Drive)</span></div>
+      ${renderDriveBackupSection()}
 
       <div class="rh-section-head"><span>${svg('download',13)} Export Data</span></div>
       <div class="pg-card" style="margin-bottom:10px;">
@@ -4508,6 +4767,29 @@ function resolveConfirmDialog(result, renderFn){
   if(renderFn) renderFn();
   if(r) r(result);
 }
+
+let _passphraseResolver = null;
+
+/** Resolves to the passphrase string, or null if cancelled. purpose: "set" (validates min
+ *  length + matching confirm field before resolving), "backup"/"restore" (single field).
+ *  Called from drive-backup.js (window.promptPassphrase) and directly from the encryption
+ *  Settings toggle. */
+function promptPassphrase(purpose, renderFn){
+  return new Promise(resolve=>{
+    _passphraseResolver = resolve;
+    state.passphrasePrompt = { purpose, error: null };
+    if(renderFn) renderFn();
+  });
+}
+
+function resolvePassphrasePrompt(value, renderFn){
+  state.passphrasePrompt = null;
+  const r = _passphraseResolver;
+  _passphraseResolver = null;
+  if(renderFn) renderFn();
+  if(r) r(value);
+}
+window.promptPassphrase = (purpose) => promptPassphrase(purpose, render);
 
 function renderConfirmDialog(){
   if(!state.confirmDialog) return "";
@@ -4797,6 +5079,8 @@ function renderApp(){
     ${renderHoldTimerOverlay()}
     ${renderToast()}
     ${renderConfirmDialog()}
+    ${renderDriveRestorePrompt()}
+    ${renderPassphrasePrompt()}
     <nav class="bottom-nav ${isLightTab?'bottom-nav--home-light':''}">
       ${navBtn("home","Home")}
       ${navBtn("workout","Workout")}
@@ -11144,6 +11428,155 @@ function attachHandlers(){
     if(window.HealthConnectIntegration) window.HealthConnectIntegration.refreshInsights(state.insightsRange || "day").then(render);
   });
 
+  // Google Drive Backup & Restore
+  const driveConnectBtn = document.querySelector('[data-action="drive-connect"]');
+  if(driveConnectBtn) driveConnectBtn.addEventListener("click", async ()=>{
+    render();
+    const res = await window.IgnytDriveBackup.connect();
+    render();
+    if(res.success) showToast("Connected to Google Drive.", "success", render);
+  });
+  const driveBackupNowBtn = document.querySelector('[data-action="drive-backup-now"]');
+  if(driveBackupNowBtn) driveBackupNowBtn.addEventListener("click", async ()=>{
+    render();
+    let res = await window.IgnytDriveBackup.backupNow();
+    if(res.needsPassphrase){
+      const pass = await promptPassphrase("backup", render);
+      if(!pass) return;
+      window.IgnytDriveBackup.setSessionPassphrase(pass);
+      render();
+      res = await window.IgnytDriveBackup.backupNow();
+    }
+    render();
+    showToast(res.success ? "Backed up to Google Drive." : ("Backup failed: "+res.error), res.success?"success":"error", render);
+  });
+  const driveManageBtn = document.querySelector('[data-action="drive-manage-backups"]');
+  if(driveManageBtn) driveManageBtn.addEventListener("click", async ()=>{
+    state.viewingDriveBackups = true;
+    state.driveBackupsBusy = true;
+    state.driveBackupsCache = null;
+    render();
+    const res = await window.IgnytDriveBackup.listBackups();
+    state.driveBackupsBusy = false;
+    state.driveBackupsCache = res.success ? res.backups : null;
+    render();
+  });
+  const driveBackBtn = document.querySelector('[data-action="drive-backups-back"]');
+  if(driveBackBtn) driveBackBtn.addEventListener("click", ()=>{
+    state.viewingDriveBackups = false;
+    render();
+  });
+  const driveDisconnectBtn = document.querySelector('[data-action="drive-disconnect"]');
+  if(driveDisconnectBtn) driveDisconnectBtn.addEventListener("click", async ()=>{
+    if(!(await confirmDialog("Sign out of Google Drive backup? Your backups stay in your Drive — this only disconnects this device.", render))) return;
+    await window.IgnytDriveBackup.disconnect();
+    render();
+  });
+  document.querySelectorAll("[data-drive-schedule-freq]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const sched = window.IgnytDriveBackup.getScheduleSettings();
+      const res = await window.IgnytDriveBackup.scheduleBackups(Object.assign({}, sched, { frequency: el.dataset.driveScheduleFreq }));
+      render();
+      if(!res.success) showToast("Couldn't update backup schedule: "+res.error, "error", render);
+    });
+  });
+  const driveWifiCb = document.querySelector('[data-drive-schedule-wifi]');
+  if(driveWifiCb) driveWifiCb.addEventListener("change", async ()=>{
+    const sched = window.IgnytDriveBackup.getScheduleSettings();
+    await window.IgnytDriveBackup.scheduleBackups(Object.assign({}, sched, { wifiOnly: driveWifiCb.checked }));
+  });
+  const driveChargingCb = document.querySelector('[data-drive-schedule-charging]');
+  if(driveChargingCb) driveChargingCb.addEventListener("change", async ()=>{
+    const sched = window.IgnytDriveBackup.getScheduleSettings();
+    await window.IgnytDriveBackup.scheduleBackups(Object.assign({}, sched, { chargingOnly: driveChargingCb.checked }));
+  });
+  document.querySelectorAll("[data-drive-restore-file]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.driveRestorePrompt = { fileId: el.dataset.driveRestoreFile, name: el.dataset.driveRestoreName, createdTime: el.dataset.driveRestoreCreated };
+      render();
+    });
+  });
+  document.querySelectorAll("[data-drive-delete-file]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      if(!(await confirmDialog("Delete this backup from Google Drive? This can't be undone.", render, { danger:true, confirmLabel:"Delete" }))) return;
+      const fileId = el.dataset.driveDeleteFile;
+      state.driveBackupsBusy = true;
+      render();
+      const res = await window.IgnytDriveBackup.deleteBackup(fileId);
+      if(res.success && state.driveBackupsCache) state.driveBackupsCache = state.driveBackupsCache.filter(b=>b.fileId!==fileId);
+      state.driveBackupsBusy = false;
+      render();
+      if(!res.success) showToast("Delete failed: "+res.error, "error", render);
+    });
+  });
+  document.querySelectorAll("[data-drive-restore-action]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const mode = el.dataset.driveRestoreAction;
+      const prompt = state.driveRestorePrompt;
+      state.driveRestorePrompt = null;
+      if(mode==="cancel" || !prompt){ render(); return; }
+      render();
+      let res = await window.IgnytDriveBackup.restoreBackup(prompt.fileId, mode);
+      while(res.needsPassphrase || res.wrongPassphrase){
+        const pass = await promptPassphrase("restore", render);
+        if(!pass) { render(); return; }
+        render();
+        res = await window.IgnytDriveBackup.restoreBackup(prompt.fileId, mode, pass);
+      }
+      if(res.success){
+        showToast("Restored — reloading…", "success", render);
+        setTimeout(()=> location.reload(), 900);
+      } else {
+        render();
+        showToast("Restore failed: "+res.error, "error", render);
+      }
+    });
+  });
+  const driveEncToggle = document.querySelector('[data-drive-encryption-toggle]');
+  if(driveEncToggle) driveEncToggle.addEventListener("change", async ()=>{
+    const drive = window.IgnytDriveBackup;
+    if(driveEncToggle.checked){
+      const pass = await promptPassphrase("set", render);
+      if(!pass){ render(); return; }
+      drive.setSessionPassphrase(pass);
+      drive.setEncryptionEnabled(true);
+    } else {
+      drive.setEncryptionEnabled(false);
+    }
+    render();
+  });
+  const driveChangePassBtn = document.querySelector('[data-action="drive-change-passphrase"]');
+  if(driveChangePassBtn) driveChangePassBtn.addEventListener("click", async ()=>{
+    const pass = await promptPassphrase("set", render);
+    if(!pass) return;
+    window.IgnytDriveBackup.setSessionPassphrase(pass);
+    render();
+    showToast("Passphrase set for this session.", "success", render);
+  });
+  const driveForgetPassBtn = document.querySelector('[data-action="drive-forget-passphrase"]');
+  if(driveForgetPassBtn) driveForgetPassBtn.addEventListener("click", ()=>{
+    window.IgnytDriveBackup.forgetSessionPassphrase();
+    render();
+  });
+  document.querySelectorAll("[data-passphrase-action]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const action = el.dataset.passphraseAction;
+      if(action==="cancel"){ resolvePassphrasePrompt(null, render); return; }
+      const pr = state.passphrasePrompt;
+      const v1 = document.getElementById("passphrase-input-1");
+      const val1 = v1 ? v1.value : "";
+      if(pr.purpose==="set"){
+        const v2 = document.getElementById("passphrase-input-2");
+        const val2 = v2 ? v2.value : "";
+        if(val1.length<8){ state.passphrasePrompt = Object.assign({}, pr, {error:"Passphrase must be at least 8 characters."}); render(); return; }
+        if(val1!==val2){ state.passphrasePrompt = Object.assign({}, pr, {error:"Passphrases don't match."}); render(); return; }
+      } else if(!val1){
+        state.passphrasePrompt = Object.assign({}, pr, {error:"Enter your passphrase."}); render(); return;
+      }
+      resolvePassphrasePrompt(val1, render);
+    });
+  });
+
   // Toast / confirm dialog
   const toastEl = document.querySelector('[data-action="dismiss-toast"]');
   if(toastEl) toastEl.addEventListener("click", ()=> dismissToast(render));
@@ -11258,4 +11691,15 @@ if("serviceWorker" in navigator){
 // AlarmManager's set*Repeating() calls are idempotent for an unchanged schedule).
 if(nativeNotify()){
   refreshNativeNotifPermission().then(()=> state.nativeNotifPermissionGranted && syncAllNativeReminders()).then(render).catch(()=>{});
+}
+
+// Scheduled Google Drive backup: checked once per cold start. Real work (if due, if
+// constraints pass) happens silently in the background; see drive-backup.js's header for why
+// this runs at boot rather than from a true background alarm.
+if(window.IgnytDriveBackup && window.IgnytDriveBackup.isNativeAndroid()){
+  window.IgnytDriveBackup.maybeRunScheduledBackup().then(res=>{
+    if(res && res.ran){
+      showToast(res.success ? "Scheduled backup completed." : "Scheduled backup failed: "+res.error, res.success?"success":"error", render);
+    }
+  }).catch(()=>{});
 }

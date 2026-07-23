@@ -73,6 +73,15 @@ dependencies {
     implementation "com.google.android.libraries.identity.googleid:googleid:1.1.1"
     // Task.await() bridge used by AuthPlugin; same version line as coroutines-android above.
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3"
+
+    // ADDED for Google Drive backup/restore (DriveBackupPlugin): the Authorization API
+    // (Identity.getAuthorizationClient) for a drive.file-scoped OAuth grant. This is the
+    // classic, mostly-Java Play Services Auth library -- not a small pure-Kotlin utility
+    // library like the ones that forced Kotlin >=2.1 metadata on @capacitor/filesystem, so it
+    // is not expected to hit this project's kotlin_version 1.9.24 ceiling. Drive REST calls
+    // themselves use plain HttpURLConnection (DriveRestClient) -- no google-api-services-drive
+    // client library added, to keep this dependency the only new one.
+    implementation "com.google.android.gms:play-services-auth:21.2.0"
 }
 
 apply from: 'capacitor.build.gradle'

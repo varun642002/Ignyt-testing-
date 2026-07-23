@@ -61,6 +61,17 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- ADDED for scheduled Google Drive backup reminders (BackupReminderScheduler /
+             DriveBackupPlugin.scheduleBackupReminder): the alarm receiver that nudges the user
+             to open the app so the real backup can run in JS, and the boot receiver that
+             re-arms the alarm after a reboot (AlarmManager alarms don't survive one). -->
+        <receiver android:name=".drivebackup.BackupReminderReceiver" android:exported="false" />
+        <receiver android:name=".drivebackup.BackupBootReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 
     <!-- Health Connect's own AAR does not declare this. Without it, Android 11+ package
@@ -75,9 +86,11 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- ADDED for background workout/hydration/weekly reminders -->
+    <!-- ADDED for background workout/hydration/weekly reminders, and scheduled Google Drive
+         backup reminders -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
    <!-- Health Connect permissions used by IGNYT:
      17 read permissions and 2 write permissions.
