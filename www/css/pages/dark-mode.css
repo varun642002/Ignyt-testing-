@@ -1,0 +1,47 @@
+/* =========================================================
+   DARK MODE for the "premium light" redesigned screens (Home, Workout,
+   Progress dashboard + every detail view, Tools, Profile, Library,
+   Exercise Detail, Calculators, Insights, Health Connect, Goals, etc).
+
+   All of those screens were built against one shared set of --rh-*
+   custom properties, redeclared identically by .home-light/.pg-light/
+   .wk-light (see home.css/progress.css/workout.css). Overriding those
+   three redeclarations under [data-theme="dark"] retroactively re-themes
+   every one of those screens through the var(--rh-*) usage already
+   threaded through their markup and CSS -- no need to touch each
+   screen's own rules individually.
+
+   The dark values reuse the app's REAL existing dark theme tokens
+   (css/tokens.css :root) so these screens match the rest of the app's
+   dark mode instead of inventing a second, disconnected palette.
+========================================================= */
+
+[data-theme="dark"] .home-light,
+[data-theme="dark"] .pg-light,
+[data-theme="dark"] .wk-light {
+  --rh-bg: var(--color-bg);
+  --rh-card: var(--color-surface-elevated);
+  --rh-blue: var(--color-interactive);
+  --rh-text: var(--color-text-primary);
+  --rh-muted: var(--color-text-secondary);
+  --rh-border: var(--color-border);
+  --rh-purple: #A78BFA;
+  --rh-green: var(--color-success);
+  --rh-red: var(--color-error);
+}
+
+/* Shared header/bottom-nav "light tab" modifier classes (applied by app.js while any
+   pg-light/wk-light/home-light screen is the active tab) hardcode their own hex values
+   instead of the --rh-* vars above, so they need an explicit dark pass too. */
+[data-theme="dark"] .app-header--home-light { background:var(--color-bg); }
+[data-theme="dark"] .app-header--home-light .eyebrow { color:var(--color-interactive); }
+[data-theme="dark"] .app-header--home-light .eyebrow-dash { background:var(--color-interactive); }
+[data-theme="dark"] .app-header--home-light .title { color:var(--color-text-primary); }
+[data-theme="dark"] .app-header--home-light .page-tools-btn { background:var(--color-surface-elevated); border-color:var(--color-border); color:var(--color-interactive); box-shadow:none; }
+[data-theme="dark"] nav.bottom-nav--home-light { background:var(--color-surface-elevated) !important; border-top:1px solid var(--color-border); }
+[data-theme="dark"] nav.bottom-nav--home-light .nav-btn { color:var(--color-text-secondary); }
+[data-theme="dark"] nav.bottom-nav--home-light .nav-btn.active { color:var(--color-interactive); }
+
+/* Soft icon-badge tints (background:rgba(R,G,B,.1) + color:var(--rh-*)) read fine as-is on
+   a dark card -- low-opacity color tints keep working on either surface, so those are
+   deliberately NOT touched here. */

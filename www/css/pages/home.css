@@ -42,7 +42,7 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 .rh-hero__actions { display:flex; gap:10px; margin-top:16px; }
 .rh-btn { border:none; border-radius:12px; font-weight:700; font-size:14px; padding:13px 16px; cursor:pointer; flex:1; text-align:center; }
 .rh-btn--primary { background:var(--rh-blue); color:#fff; }
-.rh-btn--ghost { background:#fff; color:var(--rh-text); border:1px solid var(--rh-border); }
+.rh-btn--ghost { background:var(--rh-card); color:var(--rh-text); border:1px solid var(--rh-border); }
 .rh-hero__image-wrap { flex:none; width:130px; align-self:flex-end; margin:-20px -20px -20px 0; position:relative; }
 .rh-hero__athlete { width:100%; display:block; object-fit:contain; object-position:bottom right; pointer-events:none; }
 @media (max-width:374px) { .rh-hero__image-wrap { width:104px; } .rh-hero__name { font-size:22px; } }

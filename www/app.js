@@ -2529,12 +2529,21 @@ function radarChart(current, previous){
   </svg>`;
 }
 
+// SVG presentation attributes (stroke="...", fill="...") don't reliably resolve var()
+// the way a style="" attribute does, so the pg-light/wk-light/home-light dark-mode CSS
+// override can't retint hardcoded hex values used this way -- charts that draw their own
+// grid/label colors resolve the real current theme directly instead.
+function isDarkTheme(){ return document.documentElement.getAttribute("data-theme")==="dark"; }
+
 // Light-theme variant of radarChart() for the redesigned Workout Analytics screen -- same
 // real current/previous muscle-distribution data and geometry, just re-colored (light rings/
 // spokes/labels, orange "Current" fill matching this screen's accent, gray "Previous 30d").
 function radarChartLight(current, previous){
   const size=260, cx=size/2, cy=size/2, r=90;
   const n = RADAR_MUSCLES.length;
+  const dark = isDarkTheme();
+  const gridColor = dark ? "#2A2E38" : "#E2E8F0";
+  const labelColor = dark ? "#94A3B8" : "#64748B";
   const maxVal = Math.max(4, ...Object.values(current), ...Object.values(previous));
   function pt(i,val){
     const angle = (Math.PI*2*i/n) - Math.PI/2;
@@ -2551,15 +2560,15 @@ function radarChartLight(current, previous){
   }
   const rings = [0.33,0.66,1].map(f=>{
     const pts = RADAR_MUSCLES.map((m,i)=>pt(i,maxVal*f).join(",")).join(" ");
-    return `<polygon points="${pts}" fill="none" stroke="#E2E8F0" stroke-width="1"/>`;
+    return `<polygon points="${pts}" fill="none" stroke="${gridColor}" stroke-width="1"/>`;
   }).join("");
   const spokes = RADAR_MUSCLES.map((m,i)=>{
     const [x,y] = pt(i,maxVal);
-    return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#E2E8F0" stroke-width="1"/>`;
+    return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${gridColor}" stroke-width="1"/>`;
   }).join("");
   const labels = RADAR_MUSCLES.map((m,i)=>{
     const [x,y] = labelPt(i);
-    return `<text x="${x}" y="${y}" fill="#64748B" font-size="11" font-weight="700" text-anchor="middle" dominant-baseline="middle">${m}</text>`;
+    return `<text x="${x}" y="${y}" fill="${labelColor}" font-size="11" font-weight="700" text-anchor="middle" dominant-baseline="middle">${m}</text>`;
   }).join("");
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
     ${rings}${spokes}
