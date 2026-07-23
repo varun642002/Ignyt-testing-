@@ -1352,6 +1352,9 @@ const ICONS = {
   trendDown:'<path d="M4 9l5 5 4-4 7 8" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 18h5v-5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   repeat:'<path d="M17 2l4 4-4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12v-2a4 4 0 0 1 4-4h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M7 22l-4-4 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12v2a4 4 0 0 1-4 4H3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
   filter:'<path d="M4 5h16M7 12h10M10.5 19h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  pin:'<path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="9" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/>',
+  lungs:'<path d="M12 3v7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 10c-2-3-6-2-7 1-1 3 0 8 2 9 1.5.7 3-.5 3-2v-4M12 10c2-3 6-2 7 1 1 3 0 8-2 9-1.5.7-3-.5-3-2v-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
+  thermometer:'<path d="M12 14.5V5a2 2 0 0 0-4 0v9.5a4 4 0 1 0 4 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="10" cy="17" r="1.6" fill="currentColor"/>',
   waist:'<path d="M7 4h10c-.9 2.8-.9 4.6 0 8-.9 3.4-.9 5.2 0 8H7c.9-2.8.9-4.6 0-8-.9-3.4-.9-5.2 0-8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 12h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
   chest:'<path d="M12 7c-1.3-2.2-5-2.4-6.2.2C4.6 9.9 5.8 13.3 9 14.4c1 .35 2.1-.15 3-1.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7c1.3-2.2 5-2.4 6.2.2 1.2 2.5 0 5.9-3.2 7-1 .35-2.1-.15-3-1.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
   footprints:'<path d="M9 5.5c1.4 0 2.5 1.4 2.5 3.5S10.4 15 9 15s-2.5-2.2-2.5-4.5S7.6 5.5 9 5.5z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15 11c1.4 0 2.5 1.4 2.5 3.5S16.4 20.5 15 20.5s-2.5-2.2-2.5-4.5S13.6 11 15 11z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6.5 16h5M12.5 21h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
@@ -4171,7 +4174,7 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history"].includes(state.progressView)))
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="insights" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history"].includes(state.progressView)))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || state.bodyView==="calculators" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
@@ -4716,11 +4719,45 @@ function renderHomeHealthFeed() {
   return `<div class="eyebrow-label">Health Connect</div>${cards.join("")}`;
 }
 
-function hcInsightTile(label, value, unit, period, permissionMissing) {
+// icon/bg/color are only passed by the redesigned Insights screen (renderInsightsTab);
+// the Health Connect dashboard's renderHealthInsightMetrics() calls this without them and
+// keeps getting the original dark .stat-card markup, unaffected by this screen's redesign.
+function hcInsightTile(label, value, unit, period, permissionMissing, icon) {
   const text = permissionMissing ? "Permission required" : (value == null ? "No data" : `${value}${unit ? ` <span class="stat-unit">${unit}</span>` : ""}`);
   const dim = permissionMissing || value == null;
+  if(icon){
+    const rhText = permissionMissing ? "Permission required" : (value == null ? "No data" : `${value}${unit ? ` <span style="font-size:11px;font-weight:600;color:var(--rh-muted);"> ${unit}</span>` : ""}`);
+    return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;padding:14px;">
+      <span class="tl-card__icon" style="flex:none;background:${icon.bg};color:${icon.color};">${svg(icon.icon,20)}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);letter-spacing:.02em;">${label}</div>
+        <div style="font-size:${dim?'14px':'19px'};font-weight:800;margin-top:3px;color:${dim?'var(--rh-muted)':'var(--rh-text)'};">${rhText}</div>
+        <div style="font-size:10px;font-weight:600;color:var(--rh-muted);text-transform:uppercase;margin-top:2px;">${period}</div>
+      </div>
+    </div>`;
+  }
   return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value" style="font-size:${dim ? '13px' : '20px'};color:${dim ? 'var(--muted)' : 'var(--text)'};">${text}</div><div style="font-size:10px;color:var(--muted);margin-top:2px;font-weight:700;text-transform:uppercase;">${period}</div></div>`;
 }
+
+const INSIGHT_ICON_META = {
+  "Steps": {icon:'footprints', bg:'rgba(37,99,235,.1)', color:'var(--rh-blue)'},
+  "Active Calories": {icon:'flame', bg:'rgba(217,119,6,.1)', color:'#D97706'},
+  "Distance": {icon:'pin', bg:'rgba(22,163,74,.1)', color:'var(--rh-green)'},
+  "Workouts": {icon:'workout', bg:'rgba(124,58,237,.1)', color:'var(--rh-purple)'},
+  "Heart Rate": {icon:'heart', bg:'rgba(239,68,68,.1)', color:'var(--rh-red)'},
+  "Sleep": {icon:'moon', bg:'rgba(124,58,237,.1)', color:'var(--rh-purple)'},
+  "Hydration": {icon:'droplet', bg:'rgba(37,99,235,.1)', color:'var(--rh-blue)'},
+  "Nutrition": {icon:'nutrition', bg:'rgba(22,163,74,.1)', color:'var(--rh-green)'},
+  "Weight": {icon:'scale', bg:'rgba(37,99,235,.1)', color:'var(--rh-blue)'},
+  "Respiratory Rate": {icon:'lungs', bg:'rgba(37,99,235,.1)', color:'var(--rh-blue)'},
+  "Oxygen Saturation": {icon:'droplet', bg:'rgba(13,148,136,.1)', color:'#0D9488'},
+  "Blood Pressure": {icon:'heart', bg:'rgba(239,68,68,.1)', color:'var(--rh-red)'},
+  "Body Temperature": {icon:'thermometer', bg:'rgba(37,99,235,.1)', color:'var(--rh-blue)'},
+  "Body Fat": {icon:'droplet', bg:'rgba(217,119,6,.1)', color:'#D97706'},
+  "Height": {icon:'ruler', bg:'rgba(124,58,237,.1)', color:'var(--rh-purple)'},
+  "Lean Body Mass": {icon:'dumbbell', bg:'rgba(37,99,235,.1)', color:'var(--rh-blue)'},
+  "BMR": {icon:'flame', bg:'rgba(217,119,6,.1)', color:'#D97706'}
+};
 
 /** Day shows today's/latest real reading for every metric, same as before. Week/Month/Year
  *  used to just relabel that exact same today/latest snapshot as if it were a period total --
@@ -4874,29 +4911,29 @@ const INSIGHTS_RANGES = [["day","Day"],["week","Week"],["month","Month"],["year"
 const INSIGHTS_RANGE_LABEL = { day:"Today", week:"Last 7 days", month:"Last 30 days", year:"Last 365 days" };
 
 function renderInsightsTab(){
-  const backBtn = `<button class="btn btn-ghost" data-action="close-insights" style="padding:6px 12px;font-size:12px;margin-bottom:12px;">← Back</button>`;
+  const backBtn = `<button class="rh-btn rh-btn--ghost" data-action="close-insights" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:10px;">← Back</button>`;
   const isNative = window.HealthConnect && HealthConnect.isNativeAndroid();
 
   if (!isNative) {
-    return `
+    return `<div class="pg-light">
       ${backBtn}
-      <div class="row-between" style="margin-bottom:16px;"><span style="font-size:20px;font-weight:900;">Insights</span></div>
-      <div class="info-box" style="padding:16px;">
-        <div style="font-size:13px;color:var(--muted);">Health Connect Insights are only available in the IGNYT Android app.</div>
-      </div>`;
+      <div style="font-size:22px;font-weight:800;margin-bottom:14px;">Insights</div>
+      <div class="pg-card"><div style="font-size:13px;color:var(--rh-muted);">Health Connect Insights are only available in the IGNYT Android app.</div></div>
+    </div>`;
   }
 
   const integ = window.HealthConnectIntegration;
   const hcState = integ ? integ.loadState() : { connected: false };
 
   if (!hcState.connected) {
-    return `
+    return `<div class="pg-light">
       ${backBtn}
-      <div class="row-between" style="margin-bottom:16px;"><span style="font-size:20px;font-weight:900;">Insights</span></div>
-      <div class="info-box" style="padding:16px;">
-        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Connect Health Connect to see your real Day, Week, Month and Year health trends.</div>
-        <button class="btn btn-accent btn-block" data-nav="health">Go to Health Connect</button>
-      </div>`;
+      <div style="font-size:22px;font-weight:800;margin-bottom:14px;">Insights</div>
+      <div class="pg-card">
+        <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Connect Health Connect to see your real Day, Week, Month and Year health trends.</div>
+        <button class="rh-btn rh-btn--primary" style="width:100%;" data-nav="health">Go to Health Connect</button>
+      </div>
+    </div>`;
   }
 
   const range = INSIGHTS_RANGES.some(([v])=>v===state.insightsRange) ? state.insightsRange : "day";
@@ -4928,31 +4965,31 @@ function renderInsightsTab(){
     ["BMR", d.basalMetabolicRate && d.basalMetabolicRate.kcalPerDay != null ? Math.round(d.basalMetabolicRate.kcalPerDay).toLocaleString() : null, "kcal/day", "BMR"]
   ];
 
-  return `
+  return `<div class="pg-light">
     ${backBtn}
-    <div class="row-between" style="margin-bottom:16px;">
-      <span style="font-size:20px;font-weight:900;">Insights</span>
-      ${d.fetchedAt ? `<span style="font-size:11px;color:var(--muted);">Synced ${hcTimeAgo(new Date(d.fetchedAt).toISOString())}</span>` : ""}
+    <div class="row-between" style="margin-bottom:14px;">
+      <span style="font-size:22px;font-weight:800;">Insights</span>
+      ${d.fetchedAt ? `<span style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--rh-blue);font-weight:600;">${svg('repeat',13)} Synced ${hcTimeAgo(new Date(d.fetchedAt).toISOString())}</span>` : ""}
     </div>
 
-    <div style="display:flex;gap:6px;margin:0 0 14px;">
-      ${INSIGHTS_RANGES.map(([value,label])=>`<button class="cat-chip ${range===value?'active':''}" data-insights-range="${value}" style="flex:1;text-align:center;">${label}</button>`).join("")}
+    <div class="lib-cats" style="margin-bottom:14px;">
+      ${INSIGHTS_RANGES.map(([value,label])=>`<button class="cat-chip ${range===value?'active':''}" style="flex:1;text-align:center;" data-insights-range="${value}">${label}</button>`).join("")}
     </div>
 
-    ${!hasData ? `<div class="info-box" style="padding:14px;margin-bottom:12px;font-size:13px;color:var(--muted);">${busy ? `Loading ${rangeLabel.toLowerCase()} insights…` : "No data yet for this range — tap Refresh below."}</div>` : ""}
+    ${!hasData ? `<div class="pg-card" style="margin-bottom:12px;font-size:13px;color:var(--rh-muted);">${busy ? `Loading ${rangeLabel.toLowerCase()} insights…` : "No data yet for this range — tap Refresh below."}</div>` : ""}
 
-    <div class="eyebrow-label">${rangeLabel}</div>
-    <div class="grid2" style="margin-bottom:16px;">
-      ${cumulativeTiles.map(([label,value,unit,permKey])=>hcInsightTile(label, value, unit, rangeLabel, hcPermissionMissing(d, permKey))).join("")}
+    <div class="rh-section-head" style="margin-top:0;"><span>${rangeLabel}</span></div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px;">
+      ${cumulativeTiles.map(([label,value,unit,permKey])=>hcInsightTile(label, value, unit, rangeLabel, hcPermissionMissing(d, permKey), INSIGHT_ICON_META[permKey])).join("")}
     </div>
 
-    <div class="eyebrow-label">Latest Readings</div>
-    <div class="grid2" style="margin-bottom:16px;">
-      ${vitalsTiles.map(([label,value,unit,permKey])=>hcInsightTile(label, value, unit, "Latest", hcPermissionMissing(d, permKey))).join("")}
+    <div class="rh-section-head"><span>Latest Readings</span></div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px;">
+      ${vitalsTiles.map(([label,value,unit,permKey])=>hcInsightTile(label, value, unit, "Latest", hcPermissionMissing(d, permKey), INSIGHT_ICON_META[permKey])).join("")}
     </div>
 
-    <button class="btn btn-ghost btn-block" data-action="insights-refresh" ${busy ? "disabled" : ""} style="font-size:12px;color:var(--muted);">${busy ? "Syncing…" : "Refresh"}</button>
-  `;
+    <button class="rh-btn rh-btn--ghost" style="width:100%;" data-action="insights-refresh" ${busy ? "disabled" : ""}>${busy ? "Syncing…" : "Refresh"}</button>
+  </div>`;
 }
 
 function navBtn(id,label){
