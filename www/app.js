@@ -10,7 +10,7 @@ const SCHEMA_VERSION = 1; // bump when localStorage shape changes; add a migrate
 /* ---------- Storage ---------- */
 
 const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_profile","hx_nutrition","hx_bodylog","hx_custom_exercises",
-  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_achievements","hx_favorite_foods","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version"];
+  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version"];
 
 const SET_TYPE_IMPORT_MAP = { normal:"working", warmup:"warmup", dropset:"drop", failure:"failure" };
 
@@ -1316,7 +1316,66 @@ const HYROX_EXPERIENCE_OPTIONS = [
   {key:"experienced", label:"Raced multiple times"}
 ];
 
-const EQUIPMENT_OPTIONS = ["Barbell","Dumbbell","Machines","Sled","Rower","Ski Erg","Kettlebell","Bodyweight Only"];
+const EQUIPMENT_OPTIONS = ["Commercial Gym","Home Gym","Bodyweight Only","Adjustable Dumbbells","Barbell","Machines",
+  "Resistance Bands","Cable Machine","Kettlebells","TRX","Medicine Balls","Sled","RowErg","SkiErg","Assault Bike",
+  "Treadmill","Exercise Bike","Elliptical","Swimming Pool","Running Track"];
+
+/* =========================================================
+   GOAL WIZARD & INTELLIGENT ONBOARDING — option lists (Steps 1-8).
+   These feed renderOnboardingWizard() below. Real, editable-anytime
+   answers stored in state.onboarding (new fields) plus the existing
+   state.profile fields they already overlap with (weight/height/age/
+   gender/trainingDays/equipment/goalDelta) -- no duplicate source of
+   truth for anything that already existed.
+========================================================= */
+
+const PRIMARY_GOAL_OPTIONS = ["Lose Weight","Fat Loss","Build Muscle","Hypertrophy","Increase Strength",
+  "Increase Power","Improve Endurance","Improve Stamina","Athletic Performance","Functional Fitness",
+  "General Fitness","Improve Mobility","Improve Flexibility","Body Recomposition","HYROX Training",
+  "Cross Training","Powerlifting","Bodybuilding","Marathon Training","Half Marathon Training","10K Training",
+  "5K Training","OCR Training","Sports Performance"];
+
+const TARGET_GOAL_PRESETS = {
+  "Lose Weight": ["Lose 5 kg","Lose 10 kg","Lose 15 kg","Lose 20 kg","Lose 25 kg"],
+  "Fat Loss": ["Lose 5 kg","Lose 10 kg","Lose 15 kg","Lose 20 kg","Lose 25 kg"],
+  "Build Muscle": ["Gain 2 kg Muscle","Gain 5 kg Muscle","Gain 8 kg Muscle","Gain 10 kg Muscle"],
+  "Hypertrophy": ["Gain 2 kg Muscle","Gain 5 kg Muscle","Gain 8 kg Muscle","Gain 10 kg Muscle"],
+  "Increase Strength": ["Bench Press 100 kg","Squat 180 kg","Deadlift 220 kg"],
+  "Increase Power": ["Bench Press 100 kg","Squat 180 kg","Deadlift 220 kg"],
+  "Powerlifting": ["Bench Press 100 kg","Squat 180 kg","Deadlift 220 kg"],
+  "5K Training": ["Run 5 km"],
+  "10K Training": ["Run 10 km"],
+  "Half Marathon Training": ["Half Marathon"],
+  "Marathon Training": ["Marathon"],
+  "HYROX Training": ["Finish First HYROX","Improve HYROX Time","Elite Competition"]
+};
+
+const TARGET_DATE_OPTIONS = [
+  {label:"4 Weeks", weeks:4}, {label:"8 Weeks", weeks:8}, {label:"12 Weeks", weeks:12},
+  {label:"16 Weeks", weeks:16}, {label:"6 Months", weeks:26}, {label:"9 Months", weeks:39}, {label:"12 Months", weeks:52}
+];
+
+const TRAINING_TIME_OPTIONS = ["Morning","Afternoon","Evening","Flexible"];
+const SESSION_MINUTES_OPTIONS = [15,30,45,60,75,90,120];
+
+const EXPERIENCE_LEVEL_OPTIONS = ["Beginner","Intermediate","Advanced"];
+const ACTIVITY_LEVEL_OPTIONS = ["Sedentary","Lightly Active","Moderately Active","Very Active","Extremely Active"];
+const RATING_LEVEL_OPTIONS = ["Beginner","Intermediate","Advanced","Elite"]; // strength/cardio/mobility/flexibility
+const STRESS_LEVEL_OPTIONS = ["Low","Moderate","High","Very High"];
+
+const PAIN_AREA_OPTIONS = ["Lower Back","Shoulder","Knee","Hip","Ankle","Elbow"];
+
+const TRAINING_STYLE_OPTIONS = ["Push Pull Legs","Upper Lower","Full Body","Bro Split","PHUL","PHAT","5x5",
+  "Bodybuilding","Powerlifting","CrossFit","Functional","HYROX","Circuit Training","HIIT"];
+
+const PREFERRED_CARDIO_OPTIONS = ["Walking","Jogging","Running","Cycling","Swimming","Rowing","Elliptical",
+  "Stair Climber","HIIT","No Cardio"];
+
+const ONBOARDING_STEP_TITLES = ["Primary Goal","Target Goal","Target Date","Availability","Equipment",
+  "Fitness Assessment","Health Screening","Preferences","Fitness Level Test","Your Plan"];
+
+const MOBILITY_RATING_OPTIONS = ["Poor","Fair","Good","Excellent"];
+const FITNESS_LEVELS = ["Beginner","Novice","Intermediate","Advanced","Elite"];
 
 const ICONS = {
   plan:'<path d="M6.5 6.5h11v11h-11z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 3v4M16 3v4M6.5 10h11" stroke="currentColor" stroke-width="2" fill="none"/>',
@@ -1532,6 +1591,31 @@ const state = {
     equipment:["Barbell","Dumbbell","Machines","Sled","Rower","Ski Erg","Kettlebell"]
   }, LS.get("hx_profile",{})),
   onboardingComplete: LS.get("hx_onboarding_complete", null), // resolved to true/false at boot in resolveOnboardingStatus()
+  // GOAL WIZARD — everything the wizard collects that ISN'T already a state.profile field
+  // (weight/height/age/gender/trainingDays/equipment/goalDelta stay in profile, the single
+  // source of truth for those; duplicating them here would just create a second place they
+  // could drift out of sync). step/editingFromSettings are transient (not persisted).
+  onboarding: Object.assign({
+    primaryGoal: null, secondaryGoals: [], targetGoalText: "",
+    targetDateWeeks: null, targetDateCustom: null,
+    minutesPerSession: null, preferredTime: null,
+    targetWeight: null, bodyFatPct: null, experienceLevel: null, activityLevel: null,
+    strengthLevel: null, cardioLevel: null, mobilityLevel: null, flexibilityLevel: null,
+    dailySteps: null, restingHeartRate: null, sleepHours: null, stressLevel: null, occupation: "",
+    painAreas: [], previousInjuries: "", medicalConditions: "", movementRestrictions: "",
+    exercisesToAvoid: "", dietaryRestrictions: "",
+    trainingStyle: null, preferredCardio: [],
+    // Fitness Level Assessment (real measured tests, not just self-report) -- feeds
+    // classifyFitnessLevel() below. All optional/skippable like everything else.
+    pushupsCount: null, squatsCount: null, plankSeconds: null, pullupsCount: null,
+    oneRMWeight: null, oneRMReps: null, oneRMExercise: "",
+    oneKmSeconds: null, cooperTestMeters: null,
+    squatDepth: null, shoulderMobility: null, hamstringFlexibility: null,
+    waistCm: null, chestCm: null, armsCm: null, thighsCm: null,
+    completedAt: null
+  }, LS.get("hx_onboarding_wizard", {})),
+  onboardingStep: 1, // transient — current wizard step
+  editingOnboarding: false, // transient — true when reopened from Settings to revisit answers
   nutrition: Object.assign({proteinPct:30,carbPct:45,fatPct:25,fibreTarget:30},
     LS.get("hx_nutrition",{})),
   mealOpen: null,
@@ -1610,6 +1694,7 @@ function persist(){
   LS.set("hx_active_level", state.activeLevel);
   LS.set("hx_profile", state.profile);
   LS.set("hx_onboarding_complete", state.onboardingComplete);
+  LS.set("hx_onboarding_wizard", state.onboarding);
   LS.set("hx_completed", state.completed);
   LS.set("hx_nutrition", state.nutrition);
   LS.set("hx_bodylog", state.bodylog);
@@ -3524,6 +3609,11 @@ function renderSettingsTab(){
     ${renderAccountSection()}
     <div class="eyebrow-label">Profile</div>
     ${renderProfileForm()}
+    <div class="eyebrow-label">Goal Wizard</div>
+    <div class="info-box" style="padding:14px;">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Your goal, availability, equipment, and health screening — retake it anytime as your situation changes.</div>
+      <button class="btn btn-steel btn-block" data-action="retake-goal-wizard">Retake Goal Wizard</button>
+    </div>
     <div class="eyebrow-label">Export Data</div>
     <div class="info-box" style="padding:14px;">
       <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Export your entire workout and measurement history. The JSON backup can be imported back; CSVs are for spreadsheets.</div>
@@ -3714,6 +3804,38 @@ function renderConfirmDialog(){
 
 /* Incremental migration boundary: Home presentation now lives in js/pages/home.js.
    Keep this adapter small so business/data logic remains stable while page UI evolves. */
+/* Deliberately rule-based (not machine-learning) recommendation engine: reacts to real
+   logged data -- missed workouts vs the Goal Wizard's trainingDays, weight-trend direction
+   vs the primary goal, streak-based deload timing. This is the honest, buildable version of
+   "adaptive learning": deterministic rules over real data, recomputed on every render,
+   nothing cached/stored. Returns null (renders nothing) when no rule applies. */
+function computeAdaptiveRecommendation(){
+  const o = state.onboarding;
+  if(!o || !o.primaryGoal) return null;
+  const w = thisWeekStats();
+  if(w.workoutsGoal && (w.workoutsGoal - w.workoutsCompleted) >= 2){
+    return { text: `You've missed ${w.workoutsGoal - w.workoutsCompleted} of this week's planned ${w.workoutsGoal} workouts. A lighter session today beats skipping again.` };
+  }
+  const trend = bodyWeightTrend(6);
+  if(trend.length>=3){
+    const delta = trend[trend.length-1].value - trend[0].value;
+    const isLossGoal = /lose|fat loss|recomposition/i.test(o.primaryGoal);
+    const isGainGoal = /build muscle|hypertrophy|bodybuilding/i.test(o.primaryGoal);
+    if(isLossGoal && delta >= 0.3) return { text: `Your weight's been flat or up over your last ${trend.length} check-ins. Your calorie target may need a bigger deficit — review it in Settings.` };
+    if(isGainGoal && delta <= -0.3) return { text: `Your weight's been flat or down over your last ${trend.length} check-ins. Your calorie target may need more of a surplus — review it in Settings.` };
+  }
+  if(w.currentStreak>0 && w.currentStreak % 28 === 0) return { text: `${w.currentStreak}-day streak — good week for a deload. Try ~40% less volume/intensity this week.` };
+  return null;
+}
+
+function renderAdaptiveRecommendationBanner(rec){
+  if(!rec) return "";
+  return `<div class="info-box" style="padding:12px 14px;margin-bottom:12px;border-left:3px solid var(--accent);">
+    <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:4px;">Recommendation</div>
+    <div style="font-size:13px;color:var(--text);line-height:1.4;">${obEsc(rec.text)}</div>
+  </div>`;
+}
+
 function renderHomeTab(){
   maybeShowReminders();
   const week = WEEKS[state.activeWeek-1];
@@ -3723,13 +3845,14 @@ function renderHomeTab(){
     dayTotal = plannedDay.exercises.length;
     dayDone = plannedDay.exercises.filter(ex=>state.completed[`${week.week}|${plannedDay.day}|${ex.name}`]).length;
   }
-  if(window.IgnytPages && typeof window.IgnytPages.renderHome === 'function') return window.IgnytPages.renderHome({
+  const recHtml = renderAdaptiveRecommendationBanner(computeAdaptiveRecommendation());
+  if(window.IgnytPages && typeof window.IgnytPages.renderHome === 'function') return recHtml + window.IgnytPages.renderHome({
     state, week, plannedDay, planPct: overallPlanProgress(), streak: computeStreak(), targets: macroTargets(),
     eaten: Math.round(todayEaten()), proteinToday: Math.round(todayMacros().protein), latestWeight: state.bodylog[0],
     burned: todayBurned(), water: Math.round(todayWater()), waterTarget: state.settings.waterTargetMl || 2500,
     dayDone, dayTotal, greeting, displayW, wUnit, svg, renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed, renderHomeHabits
   });
-  return renderLegacyHomeTab();
+  return recHtml + renderLegacyHomeTab();
 }
 
 function renderLegacyHomeTab(){
@@ -4598,85 +4721,463 @@ function renderRoutineBuilder(){
   </div>`;
 }
 
-function renderOnboarding(){
-  const root = document.getElementById("app");
+/* =========================================================
+   GOAL WIZARD & INTELLIGENT ONBOARDING
+   9 real steps (Steps 1-8 collect, Step 9 is the generated plan/summary).
+   Every question is skippable -- Continue is never disabled. Answers
+   write straight into state.profile (for fields that already existed:
+   weight/height/age/gender/trainingDays/equipment/goalDelta) or the new
+   state.onboarding object (everything else in the spec). Revisitable any
+   time via Settings > Retake Goal Wizard (state.editingOnboarding).
+========================================================= */
+
+function obEsc(v){
+  return String(v == null ? "" : v)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+// fieldPath is "profile.X" or "onboarding.X" -- lets one generic set of chip/input
+// helpers write into either object without duplicating a field in both places.
+function obTargetObj(fieldPath){ return fieldPath.indexOf("profile.")===0 ? state.profile : state.onboarding; }
+function obKey(fieldPath){ return fieldPath.split(".")[1]; }
+function obGet(fieldPath){ return obTargetObj(fieldPath)[obKey(fieldPath)]; }
+function obSet(fieldPath, value){ obTargetObj(fieldPath)[obKey(fieldPath)] = value; }
+
+function obChipSingle(fieldPath, options, colStyle){
+  const current = obGet(fieldPath);
+  return `<div style="display:${colStyle||'flex'};flex-wrap:wrap;gap:6px;">
+    ${options.map(o=>{
+      const val = typeof o==="object" ? o.key : o;
+      const label = typeof o==="object" ? o.label : o;
+      return `<button class="cat-chip ${current===val?'active':''}" data-ob-select="${obEsc(fieldPath)}|${obEsc(val)}">${obEsc(label)}</button>`;
+    }).join("")}
+  </div>`;
+}
+
+function obChipMulti(fieldPath, options){
+  const current = obGet(fieldPath) || [];
+  return `<div style="display:flex;flex-wrap:wrap;gap:6px;">
+    ${options.map(o=>{
+      const val = typeof o==="object" ? o.key : o;
+      const label = typeof o==="object" ? o.label : o;
+      return `<button class="cat-chip ${current.includes(val)?'active':''}" data-ob-toggle="${obEsc(fieldPath)}|${obEsc(val)}">${obEsc(label)}</button>`;
+    }).join("")}
+  </div>`;
+}
+
+function obLabel(text, hint){
+  return `<label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;">${obEsc(text)}</label>${hint?`<div style="font-size:11px;color:var(--muted);margin:-2px 0 8px;">${obEsc(hint)}</div>`:''}`;
+}
+
+function obNumberInput(fieldPath, placeholder, unit){
+  const v = obGet(fieldPath);
+  return `<div style="display:flex;align-items:center;background:var(--surface-alt);border-radius:8px;padding:11px;margin-bottom:14px;">
+    <input type="number" data-ob-field="${obEsc(fieldPath)}" value="${v==null?'':v}" placeholder="${obEsc(placeholder||'')}" style="flex:1;background:none;color:var(--text);font-size:14px;">
+    ${unit?`<span style="font-size:11px;color:var(--muted);">${obEsc(unit)}</span>`:''}
+  </div>`;
+}
+
+function obTextInput(fieldPath, placeholder){
+  const v = obGet(fieldPath);
+  return `<input type="text" data-ob-field="${obEsc(fieldPath)}" value="${obEsc(v||'')}" placeholder="${obEsc(placeholder||'')}" style="width:100%;background:var(--surface-alt);border-radius:8px;padding:11px;font-size:14px;color:var(--text);margin-bottom:14px;border:none;">`;
+}
+
+function obTextarea(fieldPath, placeholder){
+  const v = obGet(fieldPath);
+  return `<textarea class="note-input" data-ob-field="${obEsc(fieldPath)}" placeholder="${obEsc(placeholder||'')}" style="margin-bottom:14px;min-height:52px;">${obEsc(v||'')}</textarea>`;
+}
+
+const ONBOARDING_TOTAL_STEPS = 10;
+
+function onboardingProgressHeader(step){
+  return `
+    <div style="margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">Step ${step} of ${ONBOARDING_TOTAL_STEPS} — ${ONBOARDING_STEP_TITLES[step-1]}</div>
+      <div style="display:flex;gap:4px;">
+        ${Array.from({length:ONBOARDING_TOTAL_STEPS},(_,i)=>`<div style="flex:1;height:4px;border-radius:2px;background:${i<step?'var(--accent)':'var(--surface-alt)'};"></div>`).join("")}
+      </div>
+    </div>`;
+}
+
+function onboardingNav(step, opts){
+  opts = opts || {};
+  return `
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      ${step>1 ? `<button class="btn btn-ghost" data-ob-nav="back" style="flex:1;">Back</button>` : ''}
+      <button class="btn btn-accent" data-ob-nav="next" style="flex:2;">${opts.nextLabel || 'Continue'}</button>
+    </div>
+    ${opts.skipHint!==false ? `<div style="font-size:11px;color:var(--muted);text-align:center;margin-top:10px;">Not sure? Skip it — you can always update this later.</div>` : ''}`;
+}
+
+function obStep1(){
+  const o = state.onboarding;
+  return `
+    ${obLabel("What is your primary fitness goal?")}
+    ${obChipSingle("onboarding.primaryGoal", PRIMARY_GOAL_OPTIONS)}
+    <div style="margin-top:18px;">${obLabel("Any secondary goals? (optional)")}</div>
+    ${obChipMulti("onboarding.secondaryGoals", PRIMARY_GOAL_OPTIONS.filter(g=>g!==o.primaryGoal))}
+  `;
+}
+
+function obStep2(){
+  const o = state.onboarding;
+  const presets = TARGET_GOAL_PRESETS[o.primaryGoal] || [];
+  return `
+    ${obLabel("What exactly do you want to achieve?", "A specific, measurable target helps IGNYT build a real plan around it.")}
+    ${presets.length ? `<div style="margin-bottom:10px;">${obChipSingle("onboarding.targetGoalText", presets)}</div>` : ''}
+    ${obLabel("Or describe it in your own words")}
+    ${obTextInput("onboarding.targetGoalText", "e.g. Lose 8 kg, or Run my first 10K")}
+  `;
+}
+
+function obStep3(){
+  const o = state.onboarding;
+  return `
+    ${obLabel("When would you like to achieve this goal?")}
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+      ${TARGET_DATE_OPTIONS.map(t=>`<button class="cat-chip ${o.targetDateWeeks===t.weeks?'active':''}" data-ob-select="onboarding.targetDateWeeks|${t.weeks}">${t.label}</button>`).join("")}
+    </div>
+    ${obLabel("Or pick an exact date")}
+    <input type="date" data-ob-field="onboarding.targetDateCustom" value="${obEsc(o.targetDateCustom||'')}" style="width:100%;background:var(--surface-alt);border-radius:8px;padding:11px;font-size:14px;color:var(--text);margin-bottom:14px;border:none;">
+    ${onboardingRealismWarning(o)}
+  `;
+}
+
+/* Real math, same "healthy/moderate/aggressive" thresholds already used by the weight-goal
+   summary elsewhere in this app (<=0.5 kg/wk healthy, <=0.8 moderate, >0.8 aggressive) --
+   only shown when the target text has a parseable kg amount and a timeframe is chosen. */
+function onboardingRealismWarning(o){
+  const m = /(\d+(\.\d+)?)\s*kg/i.exec(o.targetGoalText||"");
+  const weeks = o.targetDateWeeks || (o.targetDateCustom ? Math.max(1, Math.round((new Date(o.targetDateCustom)-new Date())/(7*86400000))) : null);
+  if(!m || !weeks) return "";
+  const kg = Number(m[1]);
+  const perWeek = kg/weeks;
+  if(perWeek<=0.5) return `<div class="info-box" style="padding:12px;font-size:12px;">That's about ${perWeek.toFixed(2)} kg/week — a healthy, sustainable pace.</div>`;
+  if(perWeek<=0.8) return `<div class="info-box" style="padding:12px;font-size:12px;color:var(--steel);">That's about ${perWeek.toFixed(2)} kg/week — moderate. Doable with consistent training and nutrition.</div>`;
+  return `<div class="info-box" style="padding:12px;font-size:12px;color:var(--accent);">That's about ${perWeek.toFixed(2)} kg/week — aggressive and hard to sustain safely. Consider a longer timeframe.</div>`;
+}
+
+function obStep4(){
+  const p = state.profile, o = state.onboarding;
+  return `
+    ${obLabel("How many days per week can you train?")}
+    <select class="select-input" data-ob-field="profile.trainingDays" style="margin-bottom:14px;">
+      ${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${p.trainingDays===n?'selected':''}>${n} Day${n>1?'s':''}</option>`).join("")}
+    </select>
+    ${obLabel("How much time do you have per workout?")}
+    <select class="select-input" data-ob-field="onboarding.minutesPerSession" style="margin-bottom:14px;">
+      <option value="">Not sure</option>
+      ${SESSION_MINUTES_OPTIONS.map(n=>`<option value="${n}" ${o.minutesPerSession===n?'selected':''}>${n} Minutes</option>`).join("")}
+    </select>
+    ${obLabel("What time do you usually train?")}
+    ${obChipSingle("onboarding.preferredTime", TRAINING_TIME_OPTIONS)}
+  `;
+}
+
+function obStep5(){
   const p = state.profile;
-  root.innerHTML = `
-    <div style="padding:24px 20px 100px;max-width:480px;margin:0 auto;">
-      <div style="text-align:center;margin-bottom:24px;">
-        <div style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:800;margin-bottom:4px;">Welcome to</div>
-        <h1 style="font-size:32px;font-weight:900;margin:0;">IGNYT</h1>
-        <div style="font-size:13px;color:var(--muted);margin-top:6px;">A few quick details so your plan, calories, and macros start off right.</div>
-      </div>
+  return `
+    ${obLabel("What equipment do you have access to?", "Pick as many as apply.")}
+    ${obChipMulti("profile.equipment", EQUIPMENT_OPTIONS)}
+  `;
+}
 
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;">Your Name</label>
-      <input type="text" id="ob-name" value="${p.name||''}" placeholder="What should we call you?" style="width:100%;background:var(--surface-alt);border-radius:8px;padding:11px;font-size:14px;color:var(--text);margin-bottom:14px;border:none;">
+function obStep6(){
+  const p = state.profile;
+  return `
+    <div class="grid2" style="margin-bottom:0;">
+      <div>${obLabel("Current Weight")}${obNumberInput("profile.weight", "", "kg")}</div>
+      <div>${obLabel("Target Weight")}${obNumberInput("onboarding.targetWeight", "", "kg")}</div>
+      <div>${obLabel("Height")}${obNumberInput("profile.height", "", "cm")}</div>
+      <div>${obLabel("Body Fat %")}${obNumberInput("onboarding.bodyFatPct", "", "%")}</div>
+      <div>${obLabel("Age")}${obNumberInput("profile.age", "", "yrs")}</div>
+      <div>${obLabel("Gender")}${obChipSingle("profile.gender", [{key:"male",label:"Male"},{key:"female",label:"Female"}])}</div>
+    </div>
+    ${obLabel("Experience Level")}${obChipSingle("onboarding.experienceLevel", EXPERIENCE_LEVEL_OPTIONS)}
+    <div style="margin-top:14px;">${obLabel("Current Activity Level")}${obChipSingle("onboarding.activityLevel", ACTIVITY_LEVEL_OPTIONS)}</div>
+    <div style="margin-top:14px;">${obLabel("Current Strength Level")}${obChipSingle("onboarding.strengthLevel", RATING_LEVEL_OPTIONS)}</div>
+    <div style="margin-top:14px;">${obLabel("Cardio Level")}${obChipSingle("onboarding.cardioLevel", RATING_LEVEL_OPTIONS)}</div>
+    <div style="margin-top:14px;">${obLabel("Mobility")}${obChipSingle("onboarding.mobilityLevel", RATING_LEVEL_OPTIONS)}</div>
+    <div style="margin-top:14px;">${obLabel("Flexibility")}${obChipSingle("onboarding.flexibilityLevel", RATING_LEVEL_OPTIONS)}</div>
+    <div class="grid2" style="margin-top:14px;">
+      <div>${obLabel("Daily Steps")}${obNumberInput("onboarding.dailySteps", "e.g. 6000")}</div>
+      <div>${obLabel("Resting Heart Rate")}${obNumberInput("onboarding.restingHeartRate", "", "bpm")}</div>
+      <div>${obLabel("Sleep Hours")}${obNumberInput("onboarding.sleepHours", "", "hrs/night")}</div>
+      <div>${obLabel("Occupation")}${obTextInput("onboarding.occupation", "e.g. Desk job")}</div>
+    </div>
+    ${obLabel("Stress Level")}${obChipSingle("onboarding.stressLevel", STRESS_LEVEL_OPTIONS)}
+  `;
+}
 
-      <div class="grid2" style="margin-bottom:14px;">
-        <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Age</label>
-          <input type="number" id="ob-age" value="${p.age}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:11px;margin-top:4px;font-size:14px;color:var(--text);border:none;"></div>
-        <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Gender</label>
-          <div style="display:flex;gap:6px;margin-top:4px;">
-            <button class="cat-chip ${p.gender==='male'?'active':''}" data-ob-gender="male" style="flex:1;text-align:center;">Male</button>
-            <button class="cat-chip ${p.gender==='female'?'active':''}" data-ob-gender="female" style="flex:1;text-align:center;">Female</button>
-          </div></div>
-        <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Height (cm)</label>
-          <input type="number" id="ob-height" value="${p.height}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:11px;margin-top:4px;font-size:14px;color:var(--text);border:none;"></div>
-        <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Weight (kg)</label>
-          <input type="number" id="ob-weight" value="${p.weight}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:11px;margin-top:4px;font-size:14px;color:var(--accent);font-weight:700;border:none;"></div>
-      </div>
+function obStep7(){
+  return `
+    ${obLabel("Any pain or discomfort in these areas?", "Select any that apply — helps IGNYT avoid aggravating movements.")}
+    ${obChipMulti("onboarding.painAreas", PAIN_AREA_OPTIONS)}
+    <div style="margin-top:14px;">${obLabel("Previous Injuries")}${obTextarea("onboarding.previousInjuries", "e.g. ACL tear (2021), fully rehabbed")}</div>
+    ${obLabel("Medical Conditions")}${obTextarea("onboarding.medicalConditions", "e.g. Asthma, high blood pressure")}
+    ${obLabel("Movement Restrictions")}${obTextarea("onboarding.movementRestrictions", "e.g. Can't overhead press")}
+    ${obLabel("Exercises to Avoid")}${obTextarea("onboarding.exercisesToAvoid", "e.g. Box jumps, deep squats")}
+    ${obLabel("Dietary Restrictions")}${obTextarea("onboarding.dietaryRestrictions", "e.g. Vegetarian, lactose intolerant")}
+  `;
+}
 
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;">Primary Goal</label>
-      <select class="select-input" id="ob-goal" style="margin-bottom:14px;">
-        ${GOAL_OPTIONS.map(g=>`<option value="${g.delta}" ${p.goalDelta===g.delta?'selected':''}>${g.label}</option>`).join("")}
-      </select>
+function obStep8(){
+  return `
+    ${obLabel("Preferred Training Style")}
+    ${obChipSingle("onboarding.trainingStyle", TRAINING_STYLE_OPTIONS)}
+    <div style="margin-top:18px;">${obLabel("Preferred Cardio")}</div>
+    ${obChipMulti("onboarding.preferredCardio", PREFERRED_CARDIO_OPTIONS)}
+  `;
+}
 
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;">Training Experience Level</label>
-      <div style="display:flex;gap:6px;margin-bottom:14px;">
-        ${Object.entries(LEVELS).map(([key,lv])=>`<button class="cat-chip ${state.activeLevel===key?'active':''}" data-ob-level="${key}" style="flex:1;text-align:center;">${lv.label}</button>`).join("")}
-      </div>
+/* Real measured tests, not just the Step 6 self-report -- feeds classifyFitnessLevel()
+   below. Every test is independently optional; the classifier only uses whichever ones
+   were actually filled in. */
+function obStep9Tests(){
+  const o = state.onboarding;
+  return `
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Do what you can today — even 1-2 tests give IGNYT a real baseline. Skip the rest.</div>
+    <div style="font-weight:800;font-size:13px;margin:14px 0 8px;">Strength Tests</div>
+    <div class="grid2">
+      <div>${obLabel("Push-ups (max reps)")}${obNumberInput("onboarding.pushupsCount","","reps")}</div>
+      <div>${obLabel("Bodyweight Squats (max reps)")}${obNumberInput("onboarding.squatsCount","","reps")}</div>
+      <div>${obLabel("Plank Hold")}${obNumberInput("onboarding.plankSeconds","","sec")}</div>
+      <div>${obLabel("Pull-ups (max reps)")}${obNumberInput("onboarding.pullupsCount","","reps")}</div>
+    </div>
+    ${obLabel("Estimated 1RM", "Any lift — weight × reps you can actually do, we'll estimate your 1-rep max.")}
+    <div class="grid2" style="margin-bottom:14px;">
+      ${obTextInput("onboarding.oneRMExercise", "e.g. Bench Press")}
+      <div style="display:flex;gap:6px;">${obNumberInput("onboarding.oneRMWeight","","kg")}${obNumberInput("onboarding.oneRMReps","","reps")}</div>
+    </div>
+    ${onboardingOneRMPreview(o)}
 
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;">Hyrox Experience</label>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
-        ${HYROX_EXPERIENCE_OPTIONS.map(o=>`<button class="cat-chip ${p.hyroxExperience===o.key?'active':''}" data-ob-hyrox="${o.key}" style="text-align:left;padding:11px 14px;">${o.label}</button>`).join("")}
-      </div>
+    <div style="font-weight:800;font-size:13px;margin:18px 0 8px;">Cardio Tests</div>
+    <div class="grid2">
+      <div>${obLabel("1 km Walk/Run Time")}${obNumberInput("onboarding.oneKmSeconds","","sec")}</div>
+      <div>${obLabel("Cooper Test (12-min run distance)")}${obNumberInput("onboarding.cooperTestMeters","","m")}</div>
+    </div>
+    ${onboardingVO2MaxPreview(o)}
 
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;">Training Days Per Week</label>
-      <select class="select-input" id="ob-days" style="margin-bottom:14px;">
-        ${[2,3,4,5,6,7].map(n=>`<option value="${n}" ${p.trainingDays===n?'selected':''}>${n} days/week</option>`).join("")}
-      </select>
+    <div style="font-weight:800;font-size:13px;margin:18px 0 8px;">Mobility Tests</div>
+    ${obLabel("Squat Depth")}${obChipSingle("onboarding.squatDepth", MOBILITY_RATING_OPTIONS)}
+    <div style="margin-top:14px;">${obLabel("Shoulder Mobility")}${obChipSingle("onboarding.shoulderMobility", MOBILITY_RATING_OPTIONS)}</div>
+    <div style="margin-top:14px;">${obLabel("Hamstring Flexibility")}${obChipSingle("onboarding.hamstringFlexibility", MOBILITY_RATING_OPTIONS)}</div>
 
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;">Available Equipment</label>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;">
-        ${EQUIPMENT_OPTIONS.map(eq=>`<button class="cat-chip ${p.equipment.includes(eq)?'active':''}" data-ob-equipment="${eq}">${eq}</button>`).join("")}
-      </div>
-
-      <button class="btn btn-accent btn-block" data-action="onboarding-complete" style="margin-bottom:10px;">Get Started</button>
-      <button class="btn btn-ghost btn-block" data-action="onboarding-skip">Skip for now</button>
+    <div style="font-weight:800;font-size:13px;margin:18px 0 8px;">Body Composition</div>
+    <div class="grid2">
+      <div>${obLabel("Waist")}${obNumberInput("onboarding.waistCm","","cm")}</div>
+      <div>${obLabel("Chest")}${obNumberInput("onboarding.chestCm","","cm")}</div>
+      <div>${obLabel("Arms")}${obNumberInput("onboarding.armsCm","","cm")}</div>
+      <div>${obLabel("Thighs")}${obNumberInput("onboarding.thighsCm","","cm")}</div>
     </div>
   `;
-  document.getElementById("ob-name").addEventListener("change", e=> p.name = e.target.value);
-  document.getElementById("ob-age").addEventListener("change", e=> p.age = Number(e.target.value)||p.age);
-  document.getElementById("ob-height").addEventListener("change", e=> p.height = Number(e.target.value)||p.height);
-  document.getElementById("ob-weight").addEventListener("change", e=> p.weight = Number(e.target.value)||p.weight);
-  document.getElementById("ob-goal").addEventListener("change", e=> p.goalDelta = Number(e.target.value));
-  document.getElementById("ob-days").addEventListener("change", e=> p.trainingDays = Number(e.target.value));
-  document.querySelectorAll("[data-ob-gender]").forEach(el=> el.addEventListener("click", ()=>{ p.gender = el.dataset.obGender; renderOnboarding(); }));
-  document.querySelectorAll("[data-ob-level]").forEach(el=> el.addEventListener("click", ()=>{ state.activeLevel = el.dataset.obLevel; renderOnboarding(); }));
-  document.querySelectorAll("[data-ob-hyrox]").forEach(el=> el.addEventListener("click", ()=>{ p.hyroxExperience = el.dataset.obHyrox; renderOnboarding(); }));
-  document.querySelectorAll("[data-ob-equipment]").forEach(el=> el.addEventListener("click", ()=>{
-    const eq = el.dataset.obEquipment;
-    if(p.equipment.includes(eq)) p.equipment = p.equipment.filter(e=>e!==eq);
-    else p.equipment = p.equipment.concat([eq]);
-    renderOnboarding();
-  }));
-  document.querySelector('[data-action="onboarding-complete"]').addEventListener("click", ()=>{
+}
+
+function onboardingOneRMPreview(o){
+  const w = Number(o.oneRMWeight), r = Number(o.oneRMReps);
+  if(!w || !r) return "";
+  const oneRM = Math.round(w * (1 + r/30)); // Epley -- same formula Progress > Exercise Progress already uses
+  return `<div class="info-box" style="padding:10px 12px;margin-bottom:14px;font-size:12px;">Estimated 1RM: <b style="color:var(--accent);">${oneRM} kg</b></div>`;
+}
+
+function onboardingVO2MaxPreview(o){
+  const m = Number(o.cooperTestMeters);
+  if(!m) return "";
+  const vo2 = Math.round(((m - 504.9) / 44.73) * 10) / 10; // standard Cooper test VO2max formula
+  return `<div class="info-box" style="padding:10px 12px;margin-top:10px;font-size:12px;">Estimated VO₂ Max: <b style="color:var(--accent);">${vo2} ml/kg/min</b></div>`;
+}
+
+/* Deterministic 1-5 point scoring per test (documented generic thresholds — unisex, not
+   age/gender-adjusted; a real strength-standards table is a large dataset this session
+   doesn't fabricate). Only tests that were actually filled in count toward the average;
+   falls back to the Step 6 self-reported experience level when no tests were done at all. */
+function classifyFitnessLevel(){
+  const o = state.onboarding;
+  const scores = [];
+  const bump = (val, thresholds) => { // thresholds = 4 ascending cutoffs for scores 2..5
+    if(val==null || val==="" || isNaN(val)) return;
+    val = Number(val);
+    let s = 1; for(const t of thresholds) if(val>=t) s++;
+    scores.push(s);
+  };
+  bump(o.pushupsCount, [10,20,35,50]);
+  bump(o.squatsCount, [15,25,40,60]);
+  bump(o.plankSeconds, [30,60,120,180]);
+  bump(o.pullupsCount, [1,4,8,14]);
+  if(o.oneKmSeconds){ // lower is better -- invert onto the same 1-5 scale
+    const sec = Number(o.oneKmSeconds);
+    let s = 1; for(const t of [420,360,300,240]) if(sec<=t) s++;
+    scores.push(s);
+  }
+  if(o.cooperTestMeters){
+    const vo2 = ((Number(o.cooperTestMeters) - 504.9) / 44.73);
+    let s = 1; for(const t of [30,38,45,52]) if(vo2>=t) s++;
+    scores.push(s);
+  }
+  if(scores.length===0){
+    const fallback = { "Beginner":"Beginner", "Intermediate":"Intermediate", "Advanced":"Advanced" }[o.experienceLevel];
+    return fallback ? { level: fallback, source: "self-reported experience level (no tests completed)" } : null;
+  }
+  const avg = scores.reduce((a,b)=>a+b,0) / scores.length;
+  return { level: FITNESS_LEVELS[Math.min(4, Math.round(avg)-1)], source: scores.length+" test"+(scores.length!==1?'s':'')+" completed" };
+}
+
+// Primary goal -> a sensible calorie delta (kcal/day). Anything not listed defaults to
+// maintenance (0) -- endurance/mobility/general/performance goals aren't calorie-driven.
+const GOAL_TO_CALORIE_DELTA = {
+  "Lose Weight": -500, "Fat Loss": -500, "Body Recomposition": -250,
+  "Build Muscle": 300, "Hypertrophy": 350, "Bodybuilding": 300,
+  "Increase Strength": 150, "Increase Power": 150, "Powerlifting": 150
+};
+
+// Trained-days -> a real split recommendation, only used when the user didn't pick their
+// own Preferred Training Style in Step 8. Simple, documented rule -- not a fabricated "AI".
+function recommendedSplit(days, trainingStyle){
+  if(trainingStyle) return trainingStyle;
+  if(days<=2) return "Full Body";
+  if(days===3) return "Full Body";
+  if(days===4) return "Upper Lower";
+  return "Push Pull Legs";
+}
+
+// 5-tier assessment -> the app's real 3-tier training-volume scale (state.activeLevel,
+// which LEVELS above already uses to drive rebuildWeeks()'s actual volume/intensity/rest).
+const FITNESS_LEVEL_TO_ACTIVE_LEVEL = { "Beginner":"beginner", "Novice":"beginner", "Intermediate":"intermediate", "Advanced":"advanced", "Elite":"advanced" };
+
+function obStepSummary(){
+  const p = state.profile, o = state.onboarding;
+  const fitness = classifyFitnessLevel();
+  const delta = GOAL_TO_CALORIE_DELTA[o.primaryGoal] || 0;
+  const kcal = Math.round(profileMaintenance() + delta); // same formula as profileCalorieTarget(), previewed before Finish commits goalDelta
+  const protein = Math.round(kcal*(state.nutrition.proteinPct/100)/4);
+  const carbs = Math.round(kcal*(state.nutrition.carbPct/100)/4);
+  const fat = Math.round(kcal*(state.nutrition.fatPct/100)/9);
+  const waterMl = Math.round((p.weight||70) * 35);
+  const split = recommendedSplit(p.trainingDays||3, o.trainingStyle);
+  const weeks = o.targetDateWeeks || (o.targetDateCustom ? Math.max(1, Math.round((new Date(o.targetDateCustom)-new Date())/(7*86400000))) : null);
+  const targetDateLabel = o.targetDateCustom ? new Date(o.targetDateCustom).toLocaleDateString('default',{month:'long',day:'numeric',year:'numeric'})
+    : weeks ? new Date(Date.now()+weeks*7*86400000).toLocaleDateString('default',{month:'long',day:'numeric',year:'numeric'}) : "Not set";
+  return `
+    <div style="text-align:center;margin-bottom:18px;">
+      <div style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:800;">Your Personalized Plan</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:6px;">Built from what you just told us. Everything here updates automatically as you train.</div>
+    </div>
+    <div class="info-box" style="padding:14px;margin-bottom:10px;">
+      <div style="font-weight:800;font-size:14px;margin-bottom:8px;">Goal</div>
+      <div style="font-size:13px;color:var(--muted);">${obEsc(o.primaryGoal||"Not set")}${o.targetGoalText?" — "+obEsc(o.targetGoalText):""}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;">Target date: ${targetDateLabel}</div>
+    </div>
+    <div class="info-box" style="padding:14px;margin-bottom:10px;">
+      <div style="font-weight:800;font-size:14px;margin-bottom:8px;">Daily Nutrition Targets</div>
+      <div class="grid2">
+        <div class="stat-card"><div class="stat-label">Calories</div><div class="stat-value">${kcal}</div></div>
+        <div class="stat-card"><div class="stat-label">Protein</div><div class="stat-value">${protein}<span class="stat-unit">g</span></div></div>
+        <div class="stat-card"><div class="stat-label">Carbs</div><div class="stat-value">${carbs}<span class="stat-unit">g</span></div></div>
+        <div class="stat-card"><div class="stat-label">Fat</div><div class="stat-value">${fat}<span class="stat-unit">g</span></div></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;">Water target: ~${(waterMl/1000).toFixed(1)}L/day. Recalculated from your BMR × activity level, same formula as Tools › Calculators.</div>
+    </div>
+    ${fitness ? `<div class="info-box" style="padding:14px;margin-bottom:10px;">
+      <div style="font-weight:800;font-size:14px;margin-bottom:6px;">Fitness Level</div>
+      <div style="font-size:20px;font-weight:900;color:var(--accent);">${obEsc(fitness.level)}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px;">Based on ${obEsc(fitness.source)}. This sets your training volume/intensity below.</div>
+    </div>` : ''}
+    <div class="info-box" style="padding:14px;margin-bottom:10px;">
+      <div style="font-weight:800;font-size:14px;margin-bottom:8px;">Training</div>
+      <div style="font-size:13px;color:var(--muted);">${p.trainingDays||3} days/week · Recommended split: <b style="color:var(--text);">${obEsc(split)}</b></div>
+      ${o.minutesPerSession?`<div style="font-size:12px;color:var(--muted);margin-top:4px;">~${o.minutesPerSession} min/session, ${obEsc(o.preferredTime||'flexible')}</div>`:''}
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;">Deload week recommended every 4th week — standard recovery cadence for this training volume.</div>
+    </div>
+    ${o.painAreas && o.painAreas.length ? `<div class="info-box" style="padding:14px;margin-bottom:10px;">
+      <div style="font-weight:800;font-size:14px;margin-bottom:6px;">Noted for your safety</div>
+      <div style="font-size:12px;color:var(--muted);">Movements around your ${o.painAreas.map(obEsc).join(", ")} will be flagged for extra care where IGNYT can detect them.</div>
+    </div>` : ''}
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin:4px 0 14px;">You can revisit and change any of this anytime from Settings.</div>
+  `;
+}
+
+const ONBOARDING_STEP_RENDERERS = [obStep1,obStep2,obStep3,obStep4,obStep5,obStep6,obStep7,obStep8,obStep9Tests,obStepSummary];
+
+function renderOnboardingWizard(){
+  const root = document.getElementById("app");
+  const step = state.onboardingStep;
+  const isLast = step===ONBOARDING_TOTAL_STEPS;
+  root.innerHTML = `
+    <div style="padding:24px 20px 100px;max-width:480px;margin:0 auto;">
+      ${step===1 && !state.editingOnboarding ? `
+        <div style="text-align:center;margin-bottom:20px;">
+          <div style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:800;margin-bottom:4px;">Welcome to</div>
+          <h1 style="font-size:32px;font-weight:900;margin:0;">IGNYT</h1>
+          <div style="font-size:13px;color:var(--muted);margin-top:6px;">A few questions so every recommendation in the app is actually built for you.</div>
+        </div>` : ''}
+      ${onboardingProgressHeader(step)}
+      ${ONBOARDING_STEP_RENDERERS[step-1]()}
+      ${onboardingNav(step, isLast
+        ? { nextLabel: state.editingOnboarding ? "Save & Done" : "Get Started", skipHint:false }
+        : {})}
+      ${step===1 ? `<button class="btn btn-ghost btn-block" data-ob-nav="skip-all" style="margin-top:14px;">${state.editingOnboarding?'Cancel':'Skip for now'}</button>` : ''}
+    </div>
+  `;
+  wireOnboardingWizard();
+}
+
+function wireOnboardingWizard(){
+  document.querySelectorAll("[data-ob-select]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const [fieldPath, raw] = el.dataset.obSelect.split("|");
+      const current = obGet(fieldPath);
+      const val = /^-?\d+$/.test(raw) ? Number(raw) : raw;
+      obSet(fieldPath, current===val ? null : val); // tap again to deselect
+      renderOnboardingWizard();
+    });
+  });
+  document.querySelectorAll("[data-ob-toggle]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const [fieldPath, val] = el.dataset.obToggle.split("|");
+      const arr = obGet(fieldPath) || [];
+      obSet(fieldPath, arr.includes(val) ? arr.filter(x=>x!==val) : arr.concat([val]));
+      renderOnboardingWizard();
+    });
+  });
+  document.querySelectorAll("[data-ob-field]").forEach(el=>{
+    el.addEventListener("change", ()=>{
+      const fieldPath = el.dataset.obField;
+      const isNumber = el.type==="number" || fieldPath==="profile.trainingDays" || fieldPath==="onboarding.minutesPerSession";
+      obSet(fieldPath, isNumber ? (el.value===""?null:Number(el.value)) : el.value);
+      if(fieldPath==="onboarding.targetGoalText" || fieldPath==="onboarding.targetDateCustom") renderOnboardingWizard();
+    });
+  });
+  const backBtn = document.querySelector('[data-ob-nav="back"]');
+  if(backBtn) backBtn.addEventListener("click", ()=>{ state.onboardingStep = Math.max(1, state.onboardingStep-1); renderOnboardingWizard(); });
+  const nextBtn = document.querySelector('[data-ob-nav="next"]');
+  if(nextBtn) nextBtn.addEventListener("click", ()=>{
+    if(state.onboardingStep < ONBOARDING_TOTAL_STEPS){
+      state.onboardingStep++;
+      renderOnboardingWizard();
+      return;
+    }
+    // Finishing: apply the recommended calorie delta, and the measured fitness level (if
+    // any tests were completed) to the app's real 3-tier training-volume scale.
+    state.profile.goalDelta = GOAL_TO_CALORIE_DELTA[state.onboarding.primaryGoal] || 0;
+    const fitness = classifyFitnessLevel();
+    if(fitness){
+      state.onboarding.experienceLevel = fitness.level;
+      state.activeLevel = FITNESS_LEVEL_TO_ACTIVE_LEVEL[fitness.level] || state.activeLevel;
+    }
+    state.onboarding.completedAt = Date.now();
     state.onboardingComplete = true;
+    state.editingOnboarding = false;
+    state.onboardingStep = 1;
     rebuildWeeks();
+    persist();
     render();
   });
-  document.querySelector('[data-action="onboarding-skip"]').addEventListener("click", ()=>{
-    state.onboardingComplete = true; // don't ask again — defaults remain, editable anytime in Body tab / Settings
+  const skipAllBtn = document.querySelector('[data-ob-nav="skip-all"]');
+  if(skipAllBtn) skipAllBtn.addEventListener("click", ()=>{
+    state.onboardingComplete = true; // don't ask again — defaults remain, editable anytime via Settings
+    state.editingOnboarding = false;
+    state.onboardingStep = 1;
+    persist();
     render();
   });
 }
@@ -5905,8 +6406,8 @@ function macroBar(label, val, target, color, unit){
 function render(){
   try{
     applyTheme();
-    if(!state.onboardingComplete){
-      renderOnboarding();
+    if(!state.onboardingComplete || state.editingOnboarding){
+      renderOnboardingWizard();
       return;
     }
     renderApp();
@@ -6989,6 +7490,12 @@ function attachHandlers(){
         location.reload();
       }
     }
+  });
+  const retakeWizardBtn = document.querySelector('[data-action="retake-goal-wizard"]');
+  if(retakeWizardBtn) retakeWizardBtn.addEventListener("click", ()=>{
+    state.editingOnboarding = true;
+    state.onboardingStep = 1;
+    render();
   });
 
   // Plan tab
