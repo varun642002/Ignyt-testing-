@@ -4178,7 +4178,7 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="insights" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","calendar"].includes(state.progressView)))
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","calendar"].includes(state.progressView)))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || state.bodyView==="calculators" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
@@ -4774,7 +4774,7 @@ const INSIGHT_ICON_META = {
  *  figure from the native sync, plus a genuine 7-day history for Steps -- so Week shows the
  *  real weekly Steps sum, and everything else without real period-scoped data honestly shows
  *  "No data" (or "Permission required") under Week/Month/Year rather than a mislabeled Day value. */
-function renderHealthInsightMetrics(d, period) {
+function renderHealthInsightMetrics(d, period, light) {
   const isDay = period === "Day";
   const weeklySteps = period === "Week" && Array.isArray(d.steps7Days) && d.steps7Days.length
     ? d.steps7Days.reduce((sum, p) => sum + (Number(p.value) || 0), 0)
@@ -4803,7 +4803,7 @@ function renderHealthInsightMetrics(d, period) {
     ["Hydration", isDay && d.hydration?.liters != null ? d.hydration.liters.toFixed(2) : null, "L"],
     ["Nutrition", n?.kcal != null ? Math.round(n.kcal) : null, "kcal"]
   ];
-  return `<div class="grid2" style="margin-bottom:16px;">${metrics.map(([label, value, unit]) => hcInsightTile(label, value, unit, period, hcPermissionMissing(d, label))).join("")}</div>`;
+  return `<div class="grid2" style="margin-bottom:16px;">${metrics.map(([label, value, unit]) => hcInsightTile(label, value, unit, period, hcPermissionMissing(d, label), light ? INSIGHT_ICON_META[label] : null)).join("")}</div>`;
 }
 
 function renderHealthDashboard() {
@@ -4814,35 +4814,36 @@ function renderHealthDashboard() {
   const busy = integ ? integ.isBusy() : false;
   const errorMsg = integ ? integ.getError() : null;
 
-  const backBtn = `<button class="btn btn-ghost" data-action="close-health-dashboard" style="padding:6px 12px;font-size:12px;margin-bottom:12px;">\u2190 Back</button>`;
+  const backBtn = `<button class="rh-btn rh-btn--ghost" data-action="close-health-dashboard" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:10px;">\u2190 Back</button>`;
+  const headerIcon = `<span class="tl-card__icon" style="width:38px;height:38px;flex:none;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('heart',20)}</span>`;
 
   if (!isNative) {
-    return `
+    return `<div class="pg-light">
       ${backBtn}
-      <div class="row-between" style="margin-bottom:16px;">
-        <span style="font-size:20px;font-weight:900;">Health Connect</span>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">${headerIcon}<span style="font-size:22px;font-weight:800;">Health Connect</span></div>
+      <div class="pg-card">
+        <div style="font-size:13px;color:var(--rh-muted);">Health Connect is not available on this device.</div>
+        <div style="font-size:12px;color:var(--rh-muted);margin-top:6px;">This feature only works in the IGNYT Android app.</div>
       </div>
-      <div class="info-box" style="padding:16px;">
-        <div style="font-size:13px;color:var(--muted);">Health Connect is not available on this device.</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:6px;">This feature only works in the IGNYT Android app.</div>
-      </div>`;
+    </div>`;
   }
 
-  const statusDot = hcState.connected
-    ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mint);margin-right:6px;"></span>Connected`
-    : `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted);margin-right:6px;"></span>Not Connected`;
+  const statusPill = hcState.connected
+    ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--rh-green);background:rgba(22,163,74,.1);padding:5px 12px;border-radius:20px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--rh-green);"></span>Connected</span>`
+    : `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--rh-muted);background:var(--rh-bg);padding:5px 12px;border-radius:20px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--rh-muted);"></span>Not Connected</span>`;
 
   if (!hcState.connected) {
-    return `
+    return `<div class="pg-light">
       ${backBtn}
-      <div class="row-between" style="margin-bottom:16px;">
-        <span style="font-size:20px;font-weight:900;">Health Connect</span>
-        <span style="font-size:12px;font-weight:700;color:var(--muted);display:flex;align-items:center;">${statusDot}</span>
+      <div class="row-between" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:10px;">${headerIcon}<span style="font-size:22px;font-weight:800;">Health Connect</span></div>
+        ${statusPill}
       </div>
-      <div class="info-box" style="padding:16px;">
-        ${errorMsg ? `<div style="font-size:13px;color:var(--accent);margin-bottom:10px;">${errorMsg}</div>` : `<div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Sync your fitness and health data with IGNYT.</div>`}
-        <button class="btn btn-accent btn-block" data-action="health-connect" ${busy ? "disabled" : ""}>${busy ? "Connecting\u2026" : "Connect Health Connect"}</button>
-      </div>`;
+      <div class="pg-card">
+        ${errorMsg ? `<div style="font-size:13px;color:var(--rh-red);margin-bottom:10px;">${errorMsg}</div>` : `<div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Sync your fitness and health data with IGNYT.</div>`}
+        <button class="rh-btn rh-btn--primary" style="width:100%;" data-action="health-connect" ${busy ? "disabled" : ""}>${busy ? "Connecting\u2026" : "Connect Health Connect"}</button>
+      </div>
+    </div>`;
   }
 
   const lastSync = hcState.lastSyncAt
@@ -4862,44 +4863,48 @@ function renderHealthDashboard() {
     ["Workouts", d.workouts ? hcFmt(d.workouts.count) : hcFmt(null), "Today"]
   ];
 
-  return `
+  return `<div class="pg-light">
     ${backBtn}
-    <div class="row-between" style="margin-bottom:16px;">
-      <span style="font-size:20px;font-weight:900;">Health Connect</span>
-      <span style="font-size:12px;font-weight:700;color:var(--mint);display:flex;align-items:center;">${statusDot}</span>
+    <div class="row-between" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;">${headerIcon}<span style="font-size:22px;font-weight:800;">Health Connect</span></div>
+      ${statusPill}
     </div>
 
-    <div class="eyebrow-label">Today's Health</div>
+    <div class="rh-section-head" style="margin-top:0;"><span>Today's Health</span></div>
     <div class="grid2" style="margin-bottom:16px;">
       ${tiles.map(([label, value, sub]) => {
         const permMissing = hcPermissionMissing(d, label);
-        const displayValue = permMissing ? "Permission required" : value;
         const dim = permMissing || value === "No data available";
-        return `
-        <div class="stat-card">
-          <div class="stat-label">${label}</div>
-          <div class="stat-value" style="font-size:${dim ? "13px" : "20px"};color:${dim ? "var(--muted)" : "var(--text)"};">${displayValue}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:2px;font-weight:700;text-transform:uppercase;">${sub}</div>
-        </div>
-      `;}).join("")}
+        const displayValue = permMissing ? "Permission required" : value;
+        const icon = INSIGHT_ICON_META[label];
+        return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;padding:14px;">
+          <span class="tl-card__icon" style="flex:none;background:${icon.bg};color:${icon.color};">${svg(icon.icon,20)}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);letter-spacing:.02em;">${label}</div>
+            <div style="font-size:${dim?'14px':'19px'};font-weight:800;margin-top:3px;color:${dim?'var(--rh-muted)':'var(--rh-text)'};">${displayValue}</div>
+            <div style="font-size:10px;font-weight:600;color:var(--rh-muted);text-transform:uppercase;margin-top:2px;">${sub}</div>
+          </div>
+        </div>`;
+      }).join("")}
     </div>
 
-    <div class="eyebrow-label">Insights</div>
-    <div style="display:flex;gap:6px;margin:0 0 10px;">
-      ${["Day", "Week", "Month", "Year"].map(value => `<button class="cat-chip ${range === value ? 'active' : ''}" data-health-range="${value}">${value}</button>`).join("")}
+    <div class="rh-section-head"><span>Insights</span></div>
+    <div class="lib-cats" style="margin-bottom:12px;">
+      ${["Day", "Week", "Month", "Year"].map(value => `<button class="cat-chip ${range === value ? 'active' : ''}" style="flex:1;text-align:center;" data-health-range="${value}">${value}</button>`).join("")}
     </div>
-    ${renderHealthInsightMetrics(d, range)}
+    ${renderHealthInsightMetrics(d, range, true)}
 
-    ${errorMsg ? `<div class="info-box" style="padding:12px;margin-bottom:12px;font-size:12px;color:var(--accent);">${errorMsg}</div>` : ""}
+    ${errorMsg ? `<div class="pg-card" style="margin-bottom:12px;font-size:12px;color:var(--rh-red);">${errorMsg}</div>` : ""}
 
-    <div class="info-box" style="padding:14px;">
+    <div class="pg-card">
       <div class="row-between" style="margin-bottom:12px;">
-        <span style="font-size:12px;color:var(--muted);">Last synced</span>
+        <span style="font-size:12px;color:var(--rh-muted);">Last synced</span>
         <span style="font-size:12px;font-weight:700;">${lastSync}</span>
       </div>
-      <button class="btn btn-accent btn-block" data-action="health-sync" ${busy ? "disabled" : ""} style="margin-bottom:8px;">${busy ? "Syncing\u2026" : "Sync Now"}</button>
-      <button class="btn btn-ghost btn-block" data-action="health-disconnect" ${busy ? "disabled" : ""} style="font-size:12px;color:var(--muted);">Disconnect</button>
-    </div>`;
+      <button class="rh-btn rh-btn--primary" style="width:100%;margin-bottom:8px;" data-action="health-sync" ${busy ? "disabled" : ""}>${busy ? "Syncing\u2026" : "Sync Now"}</button>
+      <button class="rh-btn rh-btn--ghost" style="width:100%;color:var(--rh-muted);" data-action="health-disconnect" ${busy ? "disabled" : ""}>Disconnect</button>
+    </div>
+  </div>`;
 }
 
 /* =========================================================
