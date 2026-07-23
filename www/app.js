@@ -1569,6 +1569,7 @@ const state = {
   driveBackupsCache: null, // transient — array once loaded, null = not fetched yet
   driveBackupsBusy: false, // transient
   driveRestorePrompt: null, // transient — {fileId, name, createdTime} while the Merge/Replace/Cancel dialog is open
+  passphrasePrompt: null, // transient — {purpose:"set"|"backup"|"restore", error} while the encryption passphrase dialog is open
   restDuration: LS.get("hx_rest_duration",90),
   session: LS.get("hx_active_session", null),
   prs: LS.get("hx_prs", []),
@@ -3674,6 +3675,58 @@ function renderDriveScheduleSection(){
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:4px;">You'll get a notification to open IGNYT when a backup is due — the backup itself runs right after, in the background.</div>
       ` : ''}
+    </div>
+    ${renderDriveEncryptionSection()}`;
+}
+
+/** End-to-end encryption toggle. The passphrase is never persisted -- only cached in memory
+ *  for the current session (drive-backup.js's _sessionPassphrase), so this section always
+ *  shows whether it still needs to be entered this session, and offers Change/Forget. */
+function renderDriveEncryptionSection(){
+  const drive = window.IgnytDriveBackup;
+  const enc = drive.getEncryptionSettings();
+  const hasPass = drive.hasSessionPassphrase();
+  return `
+    <div class="info-box" style="padding:14px;margin-top:10px;">
+      <div class="row-between">
+        <div>
+          <div style="font-weight:800;font-size:13px;">End-to-End Encryption</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Encrypts backups with your passphrase before upload. IGNYT never stores it — if you forget it, encrypted backups can't be recovered.</div>
+        </div>
+        <input type="checkbox" data-drive-encryption-toggle ${enc.enabled?'checked':''} style="flex:none;margin-left:10px;">
+      </div>
+      ${enc.enabled ? `
+        <div style="font-size:12px;color:${hasPass?'var(--mint)':'var(--accent)'};margin-top:10px;">${hasPass?'Passphrase set for this session.':'Passphrase not entered this session — you\'ll be asked on your next backup or restore.'}</div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn btn-ghost" style="flex:1;padding:9px;font-size:13px;" data-action="drive-change-passphrase">${hasPass?'Change':'Set'} Passphrase</button>
+          ${hasPass?`<button class="btn btn-ghost" style="flex:1;padding:9px;font-size:13px;" data-action="drive-forget-passphrase">Forget This Session</button>`:''}
+        </div>
+      ` : ''}
+    </div>`;
+}
+
+/** Passphrase entry/creation dialog. purpose "set" requires a matching confirm field and an
+ *  explicit acknowledgement that IGNYT can't recover a forgotten passphrase; "backup"/"restore"
+ *  just need the existing passphrase once. Its own dialog (not confirmDialog) since it needs
+ *  password inputs and inline validation, not just Confirm/Cancel. */
+function renderPassphrasePrompt(){
+  if(!state.passphrasePrompt) return "";
+  const pr = state.passphrasePrompt;
+  const isSet = pr.purpose === "set";
+  return `
+    <div class="dialog-backdrop" data-passphrase-action="cancel"></div>
+    <div class="dialog-box">
+      <div class="dialog-title">${isSet ? "Set Backup Passphrase" : "Enter Backup Passphrase"}</div>
+      <div class="dialog-message">
+        ${isSet ? "This passphrase encrypts your Google Drive backups. IGNYT never stores it — if you forget it, encrypted backups can't be recovered." : "This backup is encrypted with your passphrase."}
+      </div>
+      <input type="password" id="passphrase-input-1" class="pi-input" placeholder="${isSet?'New passphrase (min. 8 characters)':'Passphrase'}" style="width:100%;margin-bottom:${isSet?'8px':'0'};box-sizing:border-box;">
+      ${isSet ? `<input type="password" id="passphrase-input-2" class="pi-input" placeholder="Confirm passphrase" style="width:100%;box-sizing:border-box;">` : ''}
+      ${pr.error ? `<div style="font-size:12px;color:var(--accent);margin-top:8px;">${driveEsc(pr.error)}</div>` : ''}
+      <div class="dialog-actions" style="margin-top:14px;">
+        <button class="btn btn-ghost" data-passphrase-action="cancel">Cancel</button>
+        <button class="btn btn-accent" data-passphrase-action="submit">${isSet?'Set Passphrase':'Continue'}</button>
+      </div>
     </div>`;
 }
 
@@ -3896,6 +3949,29 @@ function resolveConfirmDialog(result, renderFn){
   if(r) r(result);
 }
 
+let _passphraseResolver = null;
+
+/** Resolves to the passphrase string, or null if cancelled. purpose: "set" (validates min
+ *  length + matching confirm field before resolving), "backup"/"restore" (single field).
+ *  Called from drive-backup.js (window.promptPassphrase) and directly from the encryption
+ *  Settings toggle. */
+function promptPassphrase(purpose, renderFn){
+  return new Promise(resolve=>{
+    _passphraseResolver = resolve;
+    state.passphrasePrompt = { purpose, error: null };
+    if(renderFn) renderFn();
+  });
+}
+
+function resolvePassphrasePrompt(value, renderFn){
+  state.passphrasePrompt = null;
+  const r = _passphraseResolver;
+  _passphraseResolver = null;
+  if(renderFn) renderFn();
+  if(r) r(value);
+}
+window.promptPassphrase = (purpose) => promptPassphrase(purpose, render);
+
 function renderConfirmDialog(){
   if(!state.confirmDialog) return "";
   const d = state.confirmDialog;
@@ -4085,6 +4161,7 @@ function renderApp(){
     ${renderToast()}
     ${renderConfirmDialog()}
     ${renderDriveRestorePrompt()}
+    ${renderPassphrasePrompt()}
     ${state.tab==="more" ? renderMoreSheet() : ""}
     <nav class="bottom-nav">
       ${navBtn("home","Home")}
@@ -8451,7 +8528,14 @@ function attachHandlers(){
   const driveBackupNowBtn = document.querySelector('[data-action="drive-backup-now"]');
   if(driveBackupNowBtn) driveBackupNowBtn.addEventListener("click", async ()=>{
     render();
-    const res = await window.IgnytDriveBackup.backupNow();
+    let res = await window.IgnytDriveBackup.backupNow();
+    if(res.needsPassphrase){
+      const pass = await promptPassphrase("backup", render);
+      if(!pass) return;
+      window.IgnytDriveBackup.setSessionPassphrase(pass);
+      render();
+      res = await window.IgnytDriveBackup.backupNow();
+    }
     render();
     showToast(res.success ? "Backed up to Google Drive." : ("Backup failed: "+res.error), res.success?"success":"error", render);
   });
@@ -8521,7 +8605,13 @@ function attachHandlers(){
       state.driveRestorePrompt = null;
       if(mode==="cancel" || !prompt){ render(); return; }
       render();
-      const res = await window.IgnytDriveBackup.restoreBackup(prompt.fileId, mode);
+      let res = await window.IgnytDriveBackup.restoreBackup(prompt.fileId, mode);
+      while(res.needsPassphrase || res.wrongPassphrase){
+        const pass = await promptPassphrase("restore", render);
+        if(!pass) { render(); return; }
+        render();
+        res = await window.IgnytDriveBackup.restoreBackup(prompt.fileId, mode, pass);
+      }
       if(res.success){
         showToast("Restored — reloading…", "success", render);
         setTimeout(()=> location.reload(), 900);
@@ -8529,6 +8619,50 @@ function attachHandlers(){
         render();
         showToast("Restore failed: "+res.error, "error", render);
       }
+    });
+  });
+  const driveEncToggle = document.querySelector('[data-drive-encryption-toggle]');
+  if(driveEncToggle) driveEncToggle.addEventListener("change", async ()=>{
+    const drive = window.IgnytDriveBackup;
+    if(driveEncToggle.checked){
+      const pass = await promptPassphrase("set", render);
+      if(!pass){ render(); return; }
+      drive.setSessionPassphrase(pass);
+      drive.setEncryptionEnabled(true);
+    } else {
+      drive.setEncryptionEnabled(false);
+    }
+    render();
+  });
+  const driveChangePassBtn = document.querySelector('[data-action="drive-change-passphrase"]');
+  if(driveChangePassBtn) driveChangePassBtn.addEventListener("click", async ()=>{
+    const pass = await promptPassphrase("set", render);
+    if(!pass) return;
+    window.IgnytDriveBackup.setSessionPassphrase(pass);
+    render();
+    showToast("Passphrase set for this session.", "success", render);
+  });
+  const driveForgetPassBtn = document.querySelector('[data-action="drive-forget-passphrase"]');
+  if(driveForgetPassBtn) driveForgetPassBtn.addEventListener("click", ()=>{
+    window.IgnytDriveBackup.forgetSessionPassphrase();
+    render();
+  });
+  document.querySelectorAll("[data-passphrase-action]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const action = el.dataset.passphraseAction;
+      if(action==="cancel"){ resolvePassphrasePrompt(null, render); return; }
+      const pr = state.passphrasePrompt;
+      const v1 = document.getElementById("passphrase-input-1");
+      const val1 = v1 ? v1.value : "";
+      if(pr.purpose==="set"){
+        const v2 = document.getElementById("passphrase-input-2");
+        const val2 = v2 ? v2.value : "";
+        if(val1.length<8){ state.passphrasePrompt = Object.assign({}, pr, {error:"Passphrase must be at least 8 characters."}); render(); return; }
+        if(val1!==val2){ state.passphrasePrompt = Object.assign({}, pr, {error:"Passphrases don't match."}); render(); return; }
+      } else if(!val1){
+        state.passphrasePrompt = Object.assign({}, pr, {error:"Enter your passphrase."}); render(); return;
+      }
+      resolvePassphrasePrompt(val1, render);
     });
   });
 

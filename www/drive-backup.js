@@ -33,19 +33,31 @@
    documented elsewhere in this app (Health Connect refresh, cloud sync
    foreground triggers) -- not literally a 2am background upload.
 
+   END-TO-END ENCRYPTION (backup-encryption.js, IgnytBackupCrypto): optional,
+   off by default. When enabled, the JSON payload is AES-256-GCM encrypted
+   (PBKDF2-derived key) client-side before upload and decrypted client-side
+   after download -- Drive only ever sees ciphertext. The passphrase is
+   NEVER persisted anywhere, only cached in a module-level JS variable for
+   the current app session (cleared on app close/reload). Manual Back Up
+   Now / Restore prompt for it via app.js's promptPassphrase() when not
+   already cached; the silent scheduled-backup path (maybeRunScheduledBackup)
+   deliberately does NOT prompt -- it just skips that cycle if no passphrase
+   is cached, since popping a passphrase dialog at cold-start boot would be
+   startling, and tries again next time the app is opened.
+
    DELIBERATELY NOT IN THIS INCREMENT (queued, not silently dropped):
    incremental (diff) uploads, a dedicated version-history/rollback UI
-   beyond list+restore, user-passphrase end-to-end encryption, and true
-   multi-device real-time sync (a different feature from backup -- would
-   extend the EXISTING Firestore-based CloudSyncPlugin/cloud-sync.js,
-   not Drive).
+   beyond list+restore, and true multi-device real-time sync (a different
+   feature from backup -- would extend the EXISTING Firestore-based
+   CloudSyncPlugin/cloud-sync.js, not Drive).
 ========================================================= */
 
 const IgnytDriveBackup = (() => {
 
-  const STATE_KEY = "hx_drive_backup_state"; // {lastBackupAt, lastBackupSizeBytes, account:{email,displayName,photoUrl}}
+  const STATE_KEY = "hx_drive_backup_state"; // {lastBackupAt, lastBackupSizeBytes, account:{...}, schedule:{...}, encryption:{enabled}}
   let _busy = false;
   let _lastError = null;
+  let _sessionPassphrase = null; // NEVER persisted -- cleared whenever the app process ends
 
   function isNative(){
     return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
@@ -96,14 +108,32 @@ const IgnytDriveBackup = (() => {
     return !!getAccountInfo();
   }
 
+  function getEncryptionSettings(){
+    return Object.assign({ enabled:false }, loadState().encryption || {});
+  }
+  function setEncryptionEnabled(enabled){
+    saveState({ encryption: { enabled: !!enabled } });
+    if(!enabled) _sessionPassphrase = null; // nothing left to decrypt for this session -- drop it
+  }
+  function hasSessionPassphrase(){ return !!_sessionPassphrase; }
+  function setSessionPassphrase(p){ _sessionPassphrase = p || null; }
+  function forgetSessionPassphrase(){ _sessionPassphrase = null; }
+
   async function backupNow(){
     const p = plugin();
     if(!p) return { success:false, error:"Drive backup is only available in the IGNYT Android app." };
     if(_busy) return { success:false, error:"A Drive operation is already in progress." };
+    const enc = getEncryptionSettings();
+    if(enc.enabled && !_sessionPassphrase){
+      return { success:false, needsPassphrase:true, error:"Enter your backup passphrase first." };
+    }
     _busy = true; _lastError = null;
     try{
-      const payload = JSON.stringify(buildFullBackupPayload());
-      const fileName = "ignyt-backup-"+new Date().toISOString().replace(/[:.]/g,"-")+".json";
+      let payload = JSON.stringify(buildFullBackupPayload());
+      if(enc.enabled){
+        payload = await window.IgnytBackupCrypto.encrypt(payload, _sessionPassphrase);
+      }
+      const fileName = "ignyt-backup-"+new Date().toISOString().replace(/[:.]/g,"-")+(enc.enabled?".enc":"")+".json";
       const res = await p.backupNow({ content: payload, fileName });
       if(res && res.success){
         saveState({ lastBackupAt: Date.now(), lastBackupSizeBytes: payload.length });
@@ -129,10 +159,12 @@ const IgnytDriveBackup = (() => {
     }
   }
 
-  /** mode: "merge" or "replace". Downloads the chosen backup, validates it (same rules as
-   *  local JSON import), and applies it via applyBackupPayload (app.js). Reloads the app on
-   *  success so every screen picks up the restored data, same as local Import already does. */
-  async function restoreBackup(fileId, mode){
+  /** mode: "merge" or "replace". Downloads the chosen backup, transparently decrypts it if it's
+   *  an IgnytBackupCrypto envelope (passphrase from the session cache, or {needsPassphrase:true}
+   *  if not cached -- caller should prompt and retry), validates it (same rules as local JSON
+   *  import), and applies it via applyBackupPayload (app.js). Reloads the app on success so
+   *  every screen picks up the restored data, same as local Import already does. */
+  async function restoreBackup(fileId, mode, passphraseOverride){
     const p = plugin();
     if(!p) return { success:false, error:"Drive backup is only available in the IGNYT Android app." };
     if(_busy) return { success:false, error:"A Drive operation is already in progress." };
@@ -143,8 +175,22 @@ const IgnytDriveBackup = (() => {
         _lastError = (res && res.error) || "Couldn't download that backup.";
         return { success:false, error:_lastError };
       }
+      let contentStr = res.data.content;
+      if(window.IgnytBackupCrypto && window.IgnytBackupCrypto.isEncryptedEnvelope(contentStr)){
+        const passphrase = passphraseOverride || _sessionPassphrase;
+        if(!passphrase){
+          return { success:false, needsPassphrase:true, error:"This backup is encrypted — enter your passphrase." };
+        }
+        try{
+          contentStr = await window.IgnytBackupCrypto.decrypt(contentStr, passphrase);
+          _sessionPassphrase = passphrase; // confirmed correct -- cache for the rest of the session
+        }catch(e){
+          _lastError = e.message || "Incorrect passphrase.";
+          return { success:false, error:_lastError, wrongPassphrase:true };
+        }
+      }
       let parsed;
-      try{ parsed = JSON.parse(res.data.content); }
+      try{ parsed = JSON.parse(contentStr); }
       catch(e){ _lastError = "That backup file isn't valid JSON."; return { success:false, error:_lastError }; }
       const v = validateBackupPayload(parsed);
       if(!v.ok){ _lastError = v.error; return { success:false, error:v.error }; }
@@ -215,6 +261,9 @@ const IgnytDriveBackup = (() => {
   async function maybeRunScheduledBackup(){
     const p = plugin();
     if(!p || !isConnected() || !dueForScheduledBackup()) return { ran:false };
+    if(getEncryptionSettings().enabled && !_sessionPassphrase){
+      return { ran:false, reason:"encryption passphrase not entered this session" };
+    }
     const sched = getScheduleSettings();
     if(sched.wifiOnly || sched.chargingOnly){
       try{
@@ -242,7 +291,12 @@ const IgnytDriveBackup = (() => {
     getStatus,
     getScheduleSettings,
     scheduleBackups,
-    maybeRunScheduledBackup
+    maybeRunScheduledBackup,
+    getEncryptionSettings,
+    setEncryptionEnabled,
+    hasSessionPassphrase,
+    setSessionPassphrase,
+    forgetSessionPassphrase
   };
 })();
 
