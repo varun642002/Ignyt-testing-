@@ -1698,7 +1698,8 @@ const state = {
   waterLog: LS.get("hx_water_log", []),
   savedExercises: LS.get("hx_saved_exercises", []),
   calcHistory: LS.get("hx_calc_history", []),
-  timer: null
+  timer: null,
+  holdTimer: null // {exi,si,targetSec,accumulatedMs,runStartedAt,running,handle,fired} -- see startHoldTimer()
 };
 
 /* ---------- Derived values from shared profile (auto-recalc everywhere) ---------- */
@@ -2393,6 +2394,80 @@ function tickRestTimer(){
    overlay shows the true remaining time (or completes) without waiting for a throttled tick. */
 function syncTimerAfterResume(){
   if(state.timer) tickRestTimer();
+}
+
+/* =========================================================
+   HOLD TIMER — built-in Start/Pause/Resume/Reset timer for timed-hold
+   exercises (Plank, Wall Sit, Dead Hang, Hollow Hold, L-Sit, stretches,
+   meditation, yoga -- i.e. exerciseLogType()==="hold"). Same
+   timestamp-based-truth approach as the rest timer (accumulatedMs is
+   real elapsed time already banked; runStartedAt is only added while
+   actually running), so pausing/backgrounding never drifts. A real
+   target duration is parsed from the exercise's own LIBRARY prescription
+   (e.g. "3x45s" -> 45s) when one exists; open-ended holds with no
+   parseable target just count up with no beep, since there's nothing
+   real to count down against.
+========================================================= */
+function holdTargetSecFor(name){
+  const entry = allLibraryExercises().find(e=>e.name===name);
+  if(!entry || entry.unit!=="time") return null;
+  const m = String(entry.presc||"").match(/(\d+(?:\.\d+)?)s(?:\/side)?/i);
+  return m ? Math.round(parseFloat(m[1])) : null;
+}
+function startHoldTimer(exi, si){
+  if(!state.session) return;
+  const ex = state.session.exercises[exi];
+  if(!ex) return;
+  if(state.holdTimer && state.holdTimer.handle) clearInterval(state.holdTimer.handle);
+  state.holdTimer = {
+    exi, si, targetSec: holdTargetSecFor(ex.name),
+    accumulatedMs: 0, runStartedAt: Date.now(), running: true, handle: null, fired: false
+  };
+  state.holdTimer.handle = setInterval(tickHoldTimer, 500);
+  render();
+}
+function holdTimerElapsedSec(t){
+  return Math.floor((t.accumulatedMs + (t.running ? Date.now()-t.runStartedAt : 0)) / 1000);
+}
+function tickHoldTimer(){
+  const t = state.holdTimer;
+  if(!t || !t.running) return;
+  const elapsed = holdTimerElapsedSec(t);
+  if(t.targetSec && elapsed>=t.targetSec && !t.fired){ t.fired = true; playBeep(); vibrate(300); }
+  const el = document.getElementById("hold-timer-display");
+  if(el) el.textContent = formatTime(elapsed) + (t.targetSec ? " / "+formatTime(t.targetSec) : "");
+}
+function pauseHoldTimer(){
+  const t = state.holdTimer; if(!t || !t.running) return;
+  t.accumulatedMs += Date.now()-t.runStartedAt;
+  t.running = false;
+  if(t.handle) clearInterval(t.handle);
+  render();
+}
+function resumeHoldTimer(){
+  const t = state.holdTimer; if(!t || t.running) return;
+  t.runStartedAt = Date.now(); t.running = true;
+  t.handle = setInterval(tickHoldTimer, 500);
+  render();
+}
+function resetHoldTimer(){
+  const t = state.holdTimer; if(!t) return;
+  t.accumulatedMs = 0; t.runStartedAt = Date.now(); t.fired = false;
+  render();
+}
+// save=true writes the real elapsed time onto the real set and marks it done -- the
+// "auto-save duration to workout log" requirement -- save=false just discards the timer.
+function finishHoldTimer(save){
+  const t = state.holdTimer; if(!t) return;
+  if(t.handle) clearInterval(t.handle);
+  const elapsed = holdTimerElapsedSec(t);
+  if(save && elapsed>0 && state.session){
+    const ex = state.session.exercises[t.exi];
+    const set = ex && ex.sets[t.si];
+    if(set){ set.durationSec = elapsed; set.done = true; }
+  }
+  state.holdTimer = null;
+  render();
 }
 
 function playBeep(){
@@ -4305,6 +4380,7 @@ function renderApp(){
     </header>
     <main id="main"></main>
     ${renderTimerOverlay()}
+    ${renderHoldTimerOverlay()}
     ${renderToast()}
     ${renderConfirmDialog()}
     <nav class="bottom-nav ${isLightTab?'bottom-nav--home-light':''}">
@@ -5263,6 +5339,27 @@ function renderTimerOverlay(){
     <div class="timer-label">Rest</div>
     <div class="timer-ring mono">${formatTime(state.timer.remaining)}</div>
     <button class="btn btn-ghost" data-action="cancel-timer">Skip Rest</button>
+  </div>`;
+}
+
+function renderHoldTimerOverlay(){
+  const t = state.holdTimer;
+  if(!t) return "";
+  const ex = state.session && state.session.exercises[t.exi];
+  const elapsed = holdTimerElapsedSec(t);
+  return `<div class="timer-overlay">
+    <div class="timer-label">${ex?ex.name:'Hold'}</div>
+    <div class="timer-ring mono" id="hold-timer-display">${formatTime(elapsed)}${t.targetSec?' / '+formatTime(t.targetSec):''}</div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      ${t.running
+        ? `<button class="btn btn-ghost" data-action="pause-hold-timer">${svg('timer',15)} Pause</button>`
+        : `<button class="btn btn-accent" data-action="resume-hold-timer">${svg('workout',15)} ${t.accumulatedMs>0?'Resume':'Start'}</button>`}
+      <button class="btn btn-ghost" data-action="reset-hold-timer">Reset</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn btn-ghost" data-action="cancel-hold-timer">Cancel</button>
+      <button class="btn btn-accent" data-action="save-hold-timer">${svg('check',15)} Save &amp; Done</button>
+    </div>
   </div>`;
 }
 
@@ -7829,7 +7926,7 @@ function renderWorkoutTab(){
         const gridCols = logType==="strength" ? (showRPE ? "40px minmax(0,1fr) 58px 54px 46px 44px" : "40px minmax(0,1fr) 72px 72px 44px")
           : logType==="cardio" ? "40px minmax(0,1fr) 52px 56px 50px 44px"
           : logType==="carry" ? "40px minmax(0,1fr) 52px 52px 52px 44px"
-          : "40px minmax(0,1fr) 1fr 44px"; // hold
+          : "40px minmax(0,1fr) 1fr 36px 44px"; // hold: SET|PREVIOUS|TIME|timer-btn|check
         const menuOpen = state.exerciseMenuOpen===exi;
         return `
         <div class="ex-log-card wk-ex-card">
@@ -7886,7 +7983,8 @@ function renderWorkoutTab(){
                 <input type="number" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–">
                 <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss">`
               : `
-                <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss">`;
+                <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss">
+                <button class="rest-toggle" style="padding:0;" data-start-hold-timer="${exi}|${si}" aria-label="Start hold timer" title="Start built-in timer">${svg('timer',15)}</button>`;
             return `<div class="set-row-wrap" data-swipe-row="${exi}|${si}">
               <button class="swipe-del-btn" data-del-set="${exi}|${si}" aria-label="Delete set ${si+1}" tabindex="-1">Delete</button>
               <div class="set-row ${set.done?'done':''}" style="grid-template-columns:${gridCols};">
@@ -9034,6 +9132,24 @@ function attachHandlers(){
     state.timer = null;
     render();
   });
+
+  // Hold timer (Plank/Wall Sit/Dead Hang/stretches/meditation/yoga etc)
+  document.querySelectorAll("[data-start-hold-timer]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const [exi,si] = el.dataset.startHoldTimer.split("|").map(Number);
+      startHoldTimer(exi, si);
+    });
+  });
+  const pauseHold = document.querySelector('[data-action="pause-hold-timer"]');
+  if(pauseHold) pauseHold.addEventListener("click", pauseHoldTimer);
+  const resumeHold = document.querySelector('[data-action="resume-hold-timer"]');
+  if(resumeHold) resumeHold.addEventListener("click", resumeHoldTimer);
+  const resetHold = document.querySelector('[data-action="reset-hold-timer"]');
+  if(resetHold) resetHold.addEventListener("click", resetHoldTimer);
+  const cancelHold = document.querySelector('[data-action="cancel-hold-timer"]');
+  if(cancelHold) cancelHold.addEventListener("click", ()=>finishHoldTimer(false));
+  const saveHold = document.querySelector('[data-action="save-hold-timer"]');
+  if(saveHold) saveHold.addEventListener("click", ()=>finishHoldTimer(true));
 
   // Library tab
   const libSearch = document.getElementById("lib-search");
