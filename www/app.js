@@ -10036,9 +10036,11 @@ window.addEventListener("storage", (e)=>{
 
 try{
   render();
+  if(window.__hideBootSplash) window.__hideBootSplash();
 }catch(err){
   console.error("Ignyt failed to boot:", err);
   renderErrorScreen(err);
+  if(window.__hideBootSplash) window.__hideBootSplash();
 }
 
 // Report the one-time duplicate-workout cleanup to the user, exactly once. showToast needs the

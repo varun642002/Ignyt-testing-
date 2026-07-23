@@ -408,6 +408,20 @@ main{overflow-x:hidden;}
 @media (prefers-reduced-motion: reduce){
     *{animation-duration:0.001s !important; animation-iteration-count:1 !important; transition-duration:0.001s !important;}
   }
+
+/* Boot splash: takes over from the native Android splash (MainActivity.java) the instant
+   the WebView paints, and owns the rest of the ~2s branded cold-start hold (logo, app name,
+   loading spinner) plus the fade-out. Lives in this first inline <style> block, not an
+   external stylesheet, so it is guaranteed to be ready for the very first paint. */
+#boot-splash{position:fixed; inset:0; z-index:9999; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:14px; background:var(--bg);
+    transition:opacity .4s ease;}
+#boot-splash img{width:72px; height:72px; border-radius:18px;}
+#boot-splash .boot-name{font-weight:900; font-size:22px; letter-spacing:.1em; color:var(--text);}
+#boot-splash .boot-spinner{width:26px; height:26px; border-radius:50%; border:3px solid var(--surface-alt);
+    border-top-color:var(--accent); animation:boot-spin .8s linear infinite;}
+@keyframes boot-spin{ to{transform:rotate(360deg);} }
+#boot-splash.hide{opacity:0; pointer-events:none;}
 </style>
 <!-- New modular stylesheet layers intentionally follow legacy inline CSS so migrated
      design tokens and components take precedence without changing legacy screens. -->
@@ -428,6 +442,33 @@ main{overflow-x:hidden;}
 </head>
 <body>
 <div id="app"></div>
+<div id="boot-splash"><img src="icon-192.png" alt="" /><div class="boot-name">IGNYT</div><div class="boot-spinner"></div></div>
+<script>
+// Only once per cold start: sessionStorage survives Activity recreation (rotation) within
+// the same app process but is gone on a real cold start, which is exactly the "once per
+// cold start" rule asked for. window.__hideBootSplash is called by app.js right after its
+// first successful render() -- see the bottom of app.js.
+window.__bootSplashStart = Date.now();
+window.__hideBootSplash = function(){
+  var el = document.getElementById("boot-splash");
+  if(!el) return;
+  var minVisibleMs = 1600; // combined with the native splash's own hold, totals ~2s
+  var wait = Math.max(0, minVisibleMs - (Date.now() - window.__bootSplashStart));
+  setTimeout(function(){
+    el.classList.add("hide");
+    setTimeout(function(){ el.remove(); }, 420);
+  }, wait);
+};
+try{
+  if(sessionStorage.getItem("ignyt_boot_splash_shown_v1")){
+    var already = document.getElementById("boot-splash");
+    if(already) already.remove();
+    window.__hideBootSplash = function(){};
+  } else {
+    sessionStorage.setItem("ignyt_boot_splash_shown_v1", "1");
+  }
+}catch(e){ /* sessionStorage unavailable -- splash just always shows, harmless */ }
+</script>
 <script src="js/pages/home.js"></script>
 <script src="js/pages/workout.js"></script>
 <script src="js/pages/progress.js"></script>
