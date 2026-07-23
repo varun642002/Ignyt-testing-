@@ -2650,21 +2650,25 @@ function renderCalendarMonth(monthOffset){
     // Only genuinely-active days are tappable (data-cal-day) — empty days never highlight.
     cells += `<div ${active?`data-cal-day="${dateStr}"`:''} style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;
       font-size:13px;font-weight:700;font-family:'SF Mono',monospace;${active?'cursor:pointer;':''}
-      background:${active?'#FF5A1F':'transparent'};
-      color:${active?'#151515':'var(--muted)'};
-      ${selected ? 'box-shadow:0 0 0 2px var(--steel);':''}
-      ${isToday && !active ? 'box-shadow:inset 0 0 0 1.5px var(--steel);color:var(--steel);':''}">${d}</div>`;
+      background:${active?'#D97706':'transparent'};
+      color:${active?'#fff':'var(--rh-muted)'};
+      ${selected ? 'box-shadow:0 0 0 2px var(--rh-blue);':''}
+      ${isToday && !active ? 'box-shadow:inset 0 0 0 1.5px var(--rh-blue);color:var(--rh-blue);':''}">${d}</div>`;
   }
   return `
-    <div class="row-between" style="margin-bottom:10px;">
-      <button class="btn btn-ghost" data-cal-nav="-1" style="padding:6px 12px;">‹</button>
-      <span style="font-weight:800;font-size:14px;">${monthName}</span>
-      <button class="btn btn-ghost" data-cal-nav="1" style="padding:6px 12px;" ${monthOffset>=0?'disabled':''}>›</button>
+    <div class="row-between" style="margin-bottom:14px;">
+      <button class="rh-btn rh-btn--ghost" style="flex:none;width:32px;height:32px;padding:0;" data-cal-nav="-1">‹</button>
+      <span style="font-weight:800;font-size:15px;">${monthName}</span>
+      <button class="rh-btn rh-btn--ghost" style="flex:none;width:32px;height:32px;padding:0;" data-cal-nav="1" ${monthOffset>=0?'disabled':''}>›</button>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:10px;color:var(--muted);font-weight:700;text-align:center;margin-bottom:6px;">
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:11px;color:var(--rh-muted);font-weight:700;text-align:center;margin-bottom:8px;">
       <div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div><div>S</div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">${cells}</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px;">${cells}</div>
+    <div style="display:flex;gap:16px;">
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--rh-muted);font-weight:600;"><span style="width:14px;height:14px;border-radius:4px;background:#D97706;"></span>Trained</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--rh-muted);font-weight:600;"><span style="width:14px;height:14px;border-radius:4px;background:var(--rh-bg);border:1px solid var(--rh-border);"></span>No Training</span>
+    </div>
   `;
 }
 
@@ -4174,7 +4178,7 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="insights" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history"].includes(state.progressView)))
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="insights" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","calendar"].includes(state.progressView)))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || state.bodyView==="calculators" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
@@ -5737,7 +5741,8 @@ function renderProgressTab(){
       analytics:    { icon:'progress', sub:'Track your progress. Improve every day.' },
       achievements: { icon:'trophy', bg:'rgba(217,119,6,.1)', color:'#D97706' },
       history:      { icon:'file', bg:'var(--rh-bg)', color:'var(--rh-muted)',
-        sub:"Dates show when each achievement was unlocked in IGNYT. For imported workout history, that's the day of the import — the counts themselves are always genuine." }
+        sub:"Dates show when each achievement was unlocked in IGNYT. For imported workout history, that's the day of the import — the counts themselves are always genuine." },
+      calendar:     { icon:'calendar', bg:'rgba(239,68,68,.1)', color:'var(--rh-red)', sub:'Track your training days and stay consistent.' }
     };
     if(LIGHT_VIEW_HEADERS[view]){
       const h = LIGHT_VIEW_HEADERS[view];
@@ -6238,22 +6243,25 @@ function renderProgressCalendar(){
     const planCount = Object.values(state.completed).filter(ts=> new Date(ts).toISOString().slice(0,10)===sel).length;
     const dayLabel = new Date(sel+"T12:00:00").toLocaleDateString('default',{weekday:'long', month:'long', day:'numeric'});
     selHtml = `
-      <div class="eyebrow-label">${dayLabel}</div>
+      <div class="rh-section-head"><span>${dayLabel}</span></div>
       ${sessions.length===0 && planCount===0 ? `<div class="empty-note">No workout on this day.</div>` : `
       ${sessions.map(s=>{
         const doneSets = computeCompletedSets(s.exercises);
-        return `<div class="info-box" style="padding:14px;margin-bottom:10px;cursor:pointer;" data-view-session="${s.id}">
+        return `<div class="pg-card" style="margin-bottom:10px;cursor:pointer;" data-view-session="${s.id}">
           <div style="font-size:16px;font-weight:800;">${sessionTitle(s)}</div>
-          <div style="font-size:13px;color:var(--muted);margin-top:3px;">${workoutDurationLabel(s)} · ${displayW(s.volume||0,0).toLocaleString()} ${wUnit()} · ${s.exercises.length} exercise${s.exercises.length!==1?'s':''} · ${doneSets} set${doneSets!==1?'s':''}</div>
+          <div style="font-size:13px;color:var(--rh-muted);margin-top:3px;">${workoutDurationLabel(s)} · ${displayW(s.volume||0,0).toLocaleString()} ${wUnit()} · ${s.exercises.length} exercise${s.exercises.length!==1?'s':''} · ${doneSets} set${doneSets!==1?'s':''}</div>
         </div>`;
       }).join("")}
-      ${planCount ? `<div class="info-box" style="padding:12px 14px;font-size:14px;">✅ ${planCount} plan exercise${planCount!==1?'s':''} checked off</div>`:""}`}
+      ${planCount ? `<div class="pg-card" style="font-size:14px;">✅ ${planCount} plan exercise${planCount!==1?'s':''} checked off</div>`:""}`}
     `;
   }
   return `
-    <div class="info-box" style="padding:14px;margin-bottom:14px;">
+    <div class="pg-card" style="margin-bottom:14px;">
       ${renderCalendarMonth(state.calendarMonthOffset||0)}
-      <div style="font-size:12px;color:var(--muted);margin-top:8px;">Tap a highlighted day to see that day's training.</div>
+    </div>
+    <div class="pg-card" style="margin-bottom:14px;background:rgba(37,99,235,.06);display:flex;gap:8px;align-items:flex-start;">
+      <span style="flex:none;color:var(--rh-blue);">${svg('info',14)}</span>
+      <span style="font-size:12px;color:var(--rh-text);line-height:1.4;">Tap a highlighted day to see that day's training.</span>
     </div>
     ${selHtml}
   `;
