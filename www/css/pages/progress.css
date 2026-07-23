@@ -30,6 +30,11 @@
 .pg-light .cat-chip { flex:none; background:var(--rh-card); color:var(--rh-muted); border:1px solid var(--rh-border); white-space:nowrap; }
 .pg-light .cat-chip.active { background:var(--rh-blue); color:#fff; border-color:var(--rh-blue); }
 
+/* Shared .set-check reskin for .pg-light screens (Habit Tracker daily-complete toggle) --
+   same idea as .wk-light .set-check in workout.css. */
+.pg-light .set-check { border-color:var(--rh-border); }
+.pg-light .set-check.done { background:var(--rh-blue); border-color:var(--rh-blue); color:#fff; }
+
 /* ---------- This Week stat grid ---------- */
 .pg-stat-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:14px; }
 .pg-stat-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px; }

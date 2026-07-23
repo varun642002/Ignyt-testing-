@@ -1347,6 +1347,7 @@ const ICONS = {
   book:'<path d="M4 4.5A2.5 2.5 0 016.5 2H20v17H6.5A2.5 2.5 0 004 16.5v-12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 16.5A2.5 2.5 0 016.5 19H20" fill="none" stroke="currentColor" stroke-width="2"/>',
   trend:'<path d="M4 15l5-5 4 4 7-8" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h5v5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
   trendDown:'<path d="M4 9l5 5 4-4 7 8" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 18h5v-5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+  repeat:'<path d="M17 2l4 4-4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12v-2a4 4 0 0 1 4-4h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M7 22l-4-4 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12v2a4 4 0 0 1-4 4H3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
   waist:'<path d="M7 4h10c-.9 2.8-.9 4.6 0 8-.9 3.4-.9 5.2 0 8H7c.9-2.8.9-4.6 0-8-.9-3.4-.9-5.2 0-8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 12h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
   chest:'<path d="M12 7c-1.3-2.2-5-2.4-6.2.2C4.6 9.9 5.8 13.3 9 14.4c1 .35 2.1-.15 3-1.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7c1.3-2.2 5-2.4 6.2.2 1.2 2.5 0 5.9-3.2 7-1 .35-2.1-.15-3-1.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
   footprints:'<path d="M9 5.5c1.4 0 2.5 1.4 2.5 3.5S10.4 15 9 15s-2.5-2.2-2.5-4.5S7.6 5.5 9 5.5z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15 11c1.4 0 2.5 1.4 2.5 3.5S16.4 20.5 15 20.5s-2.5-2.2-2.5-4.5S13.6 11 15 11z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6.5 16h5M12.5 21h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
@@ -4076,7 +4077,7 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || (state.tab==="progress" && (!state.progressView || state.progressView==="body"))
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || (state.tab==="progress" && (!state.progressView || state.progressView==="body" || state.progressView==="habits"))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
@@ -5538,17 +5539,24 @@ function renderProgressTab(){
       console.warn("Progress detail render failed:", view, e);
       body = `<div class="empty-note">This section hit an error and couldn't load. Your data is untouched — try again or reopen the app.</div>`;
     }
-    // Only "body" is light-redesigned so far (matches the reference given for it); every
-    // other detail view (achievements/habits/analytics/exercise/nutrition/calendar/plan)
-    // keeps its existing dark wrapper, same "only restyle what was actually shown" rule
-    // already applied throughout this session (Progress dashboard vs. its own detail views).
-    if(view==='body'){
+    // Only the views in LIGHT_VIEW_HEADERS are light-redesigned so far (matches the reference
+    // given for each); every other detail view (achievements/analytics/exercise/nutrition/
+    // calendar/plan) keeps its existing dark wrapper, same "only restyle what was actually
+    // shown" rule already applied throughout this session (Progress dashboard vs. its own
+    // detail views).
+    const LIGHT_VIEW_HEADERS = {
+      body:   { icon:'scale' },
+      habits: { icon:'repeat', bg:'rgba(217,119,6,.1)', color:'#D97706', sub:'Build consistency. Build you.' }
+    };
+    if(LIGHT_VIEW_HEADERS[view]){
+      const h = LIGHT_VIEW_HEADERS[view];
       return `<div class="pg-light">
         <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:10px;" data-action="progress-back">← Progress</button>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-          <span class="tl-card__icon" style="width:38px;height:38px;flex:none;">${svg('scale',20)}</span>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:${h.sub?'2px':'14px'};">
+          <span class="tl-card__icon" style="width:38px;height:38px;flex:none;${h.bg?`background:${h.bg};color:${h.color};`:''}">${svg(h.icon,20)}</span>
           <span style="font-size:22px;font-weight:800;">${PROGRESS_VIEWS[view].title}</span>
         </div>
+        ${h.sub?`<div style="font-size:12px;color:var(--rh-muted);margin:0 0 14px 50px;">${h.sub}</div>`:''}
         ${body}
       </div>`;
     }
@@ -5670,14 +5678,25 @@ function renderProgressAchievements(){
 
 /* ---------- Habit Tracker ---------- */
 
+// Habit names are free text the user types themselves -- there's no stored "category" field
+// to key off, so this is a keyword heuristic over the real name (not fabricated data) purely
+// to pick a matching icon/color, same spirit as exIcon() elsewhere. Falls back to the repeat
+// icon (this screen's own header icon) for anything that doesn't match a known keyword.
+function habitIconMeta(name){
+  const n = (name||"").toLowerCase();
+  if(/train|workout|gym|lift|run|cardio|exercise/.test(n)) return { icon:'dumbbell', bg:'rgba(37,99,235,.1)', color:'var(--rh-blue)' };
+  if(/diet|food|eat|nutrition|meal|protein|water|hydrat/.test(n)) return { icon:'nutrition', bg:'rgba(22,163,74,.1)', color:'var(--rh-green)' };
+  if(/sleep|rest|bed/.test(n)) return { icon:'moon', bg:'rgba(124,58,237,.1)', color:'var(--rh-purple)' };
+  return { icon:'repeat', bg:'rgba(217,119,6,.1)', color:'#D97706' };
+}
+
 function renderProgressHabits(){
   const today = habitDateStr();
   return `
-    <div class="info-box" style="padding:14px;margin-bottom:14px;">
+    <div class="pg-card" style="margin-bottom:14px;">
       <div style="display:flex;gap:8px;">
-        <input type="text" id="habit-new-name" placeholder="New habit (e.g. Drink 3L water)" value="${state.habitBuilderName||''}"
-          style="flex:1;background:var(--surface-alt);border-radius:8px;padding:10px;font-size:14px;color:var(--text);min-width:0;">
-        <button class="btn btn-accent" data-action="add-habit" style="flex-shrink:0;padding:10px 16px;">${svg('plus',14)} Add</button>
+        <input type="text" id="habit-new-name" class="pi-input" placeholder="New habit (e.g. Drink 3L water)" value="${state.habitBuilderName||''}" style="flex:1;min-width:0;">
+        <button class="rh-btn rh-btn--primary" data-action="add-habit" style="flex:none;padding:10px 16px;">${svg('plus',14)} Add</button>
       </div>
     </div>
     ${state.habits.length===0 ? `<div class="empty-note">No habits yet — add one above to start tracking daily streaks.</div>` :
@@ -5688,20 +5707,23 @@ function renderProgressHabits(){
         const week = habitWeekCompletion(h.id);
         const month = habitMonthCompletion(h.id);
         const isEditing = state.editingHabitId === h.id;
-        return `<div class="ex-log-card" style="margin-bottom:10px;">
-          <div class="row-between" style="align-items:flex-start;">
+        const meta = habitIconMeta(h.name);
+        return `<div class="pg-card" style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;">
+          <span class="tl-card__icon" style="flex:none;background:${meta.bg};color:${meta.color};">${svg(meta.icon,20)}</span>
+          <div class="row-between" style="align-items:flex-start;flex:1;min-width:0;">
             ${isEditing ? `
-              <input type="text" id="habit-rename-${h.id}" value="${h.name}" style="flex:1;min-width:0;background:var(--surface-alt);border-radius:8px;padding:8px 10px;font-size:15px;font-weight:700;color:var(--text);margin-right:8px;">
+              <input type="text" id="habit-rename-${h.id}" class="pi-input" value="${h.name}" style="flex:1;min-width:0;font-weight:700;margin-right:8px;">
             ` : `
               <div style="min-width:0;flex:1;cursor:pointer;" data-rename-habit="${h.id}">
                 <div style="font-weight:800;font-size:16px;">${h.name}</div>
-                <div style="font-size:12px;color:var(--muted);margin-top:2px;">🔥 ${streak} day streak · best ${best} · ${week}/7 this week · ${month} this month</div>
+                <div style="font-size:12px;color:var(--rh-muted);margin-top:3px;">🔥 ${streak} day streak</div>
+                <div style="font-size:11px;color:var(--rh-muted);margin-top:2px;"><b style="color:var(--rh-text);">Best:</b> ${best} · ${week}/7 this week · ${month} this month</div>
               </div>
             `}
-            <div style="display:flex;gap:6px;flex-shrink:0;">
-              ${isEditing ? `<button class="btn btn-ghost" data-action="save-habit-name" data-habit-id="${h.id}" style="padding:8px 10px;font-size:12px;">Save</button>`
+            <div style="display:flex;gap:8px;flex-shrink:0;align-items:center;">
+              ${isEditing ? `<button class="rh-btn rh-btn--ghost" data-action="save-habit-name" data-habit-id="${h.id}" style="flex:none;padding:8px 12px;font-size:12px;">Save</button>`
                 : `<button class="set-check ${done?'done':''}" data-toggle-habit="${h.id}" aria-label="Mark ${h.name} complete for today">${done?svg('check',16):''}</button>
-                   <button class="del" data-del-habit="${h.id}" aria-label="Delete habit">${svg('x',14)}</button>`}
+                   <button style="background:none;border:none;padding:4px;cursor:pointer;color:var(--rh-muted);flex:none;" data-del-habit="${h.id}" aria-label="Delete habit">${svg('x',15)}</button>`}
             </div>
           </div>
         </div>`;
