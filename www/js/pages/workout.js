@@ -49,7 +49,7 @@
   window.IgnytPages.renderWorkoutList = function renderWorkoutList(ctx) {
     const { state, svg, renderPRCelebration, renderRoutineBuilder, sessionMuscles, sessionTitle,
       workoutDurationLabel, displayW, wUnit, week, plannedDay, weekStats, prsThisWeek,
-      volumeTrend, todayMuscles, ROUTINE_CATEGORIES } = ctx;
+      volumeTrend, todayMuscles, ROUTINE_CATEGORIES, routineEstimatedMinutes, escHtml } = ctx;
 
     const showAll = state.showAllSessions;
     const recent = showAll ? state.workoutLog : state.workoutLog.slice(0, 2);
@@ -137,12 +137,13 @@
           </select>
         </div>
         ${routines.length === 0 ? `<div class="rh-card wk-empty">${state.routines.length===0 ? 'No routines saved yet — build one to start logging faster.' : 'No routines match this filter.'}</div>` :
-          routines.map(r => {
+          `<div id="routine-card-list">` + routines.map(r => {
             const last = lastSessionForRoutine(state, r.name);
             const pct = last ? sessionCompletionPct(last) : null;
             const color = r.category ? CATEGORY_COLOR[r.category] : '#64748B';
             const preview = r.exercises.slice(0, 3).map(e => e.name).join(' • ') + (r.exercises.length > 3 ? ` • +${r.exercises.length - 3} more` : '');
-            return `<div class="wk-routine-card">
+            return `<div class="wk-routine-card" data-routine-card="${r.id}">
+              <button class="rt-drag" data-routine-drag="${r.id}" aria-label="Reorder ${escHtml(r.name)}" title="Drag to reorder">${svg('drag',16)}</button>
               <div class="wk-routine-card__badge" style="background:${color}1a;color:${color};">${svg('dumbbell', 20)}</div>
               <div class="wk-routine-card__body">
                 <div class="wk-routine-card__top">
@@ -166,11 +167,12 @@
               <div class="wk-routine-card__actions">
                 <button class="del" data-toggle-favorite-routine="${r.id}" aria-label="${r.favorite?'Remove from favorites':'Add to favorites'}">${svg(r.favorite?'starFilled':'star',16)}</button>
                 <button class="del" data-edit-routine="${r.id}" aria-label="Edit routine">✎</button>
+                <button class="del" data-dup-routine="${r.id}" aria-label="Duplicate routine">${svg('copy',16)}</button>
                 <button class="del" data-del-routine="${r.id}" aria-label="Delete routine">${svg('x',16)}</button>
               </div>
               <button class="wk-routine-card__start" data-start-routine="${r.id}" aria-label="Start ${r.name}">▶</button>
             </div>`;
-          }).join('')}
+          }).join('') + `</div>`}
 
         <div class="section-heading">
           <span class="section-heading__label">Recent Sessions</span>
