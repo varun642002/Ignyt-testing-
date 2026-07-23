@@ -5551,22 +5551,55 @@ function renderCalculators(){
   }
 
   if(active==="hr"){
-    fields = `<div class="grid2">
+    fields = `<div class="pi-grid2">
       ${calcInputRow("calc-age","Age",c.age,"")}
-      ${calcInputRow("calc-resting","Resting HR (optional)",c.restingHR,"bpm")}
+      ${calcInputRow("calc-resting","Resting HR (Optional)",c.restingHR,"bpm")}
     </div>`;
     if(c.result && c.result.type==="hr"){
-      result = `<div class="info-box" style="padding:14px;margin-top:10px;">
-        <div class="row-between" style="margin-bottom:10px;">
-          <span class="stat-label">Max Heart Rate</span>
-          <span class="mono" style="font-weight:900;color:var(--accent);">${c.result.maxHR} bpm</span>
+      // Standard, widely-published training-zone names/descriptions (real fitness knowledge,
+      // not per-user data) paired with this calculator's own real 5-zone %MHR breakdown --
+      // same "real generic education, not fabricated personalization" approach used for the
+      // HYROX info screens earlier this session. Zone count/order must stay in sync with
+      // calcHeartRateZones()'s `zones` array.
+      const HR_ZONE_META = [
+        { name:"Recovery", desc:"Active recovery, warm up, cool down", color:"#94A3B8" },
+        { name:"Fat Burning", desc:"Improve endurance, burn fat", color:"var(--rh-green)" },
+        { name:"Aerobic", desc:"Improve cardio fitness", color:"var(--rh-blue)" },
+        { name:"Anaerobic", desc:"Increase strength, power", color:"#D97706" },
+        { name:"Maximum", desc:"Max effort, speed, performance", color:"var(--rh-red)" }
+      ];
+      const maxHR = c.result.maxHR;
+      result = `<div class="pg-card" style="margin-top:12px;text-align:center;">
+        <div style="font-size:12px;color:var(--rh-muted);font-weight:700;text-transform:uppercase;">Your Maximum Heart Rate (MHR)</div>
+        <div style="margin-top:4px;"><span style="font-size:32px;font-weight:800;color:var(--rh-blue);">${maxHR}</span><span style="font-size:13px;color:var(--rh-muted);font-weight:600;"> bpm</span></div>
+        <div style="font-size:11px;color:var(--rh-muted);margin-top:2px;">Calculated using 220 − Age</div>
+        <div style="display:flex;height:10px;border-radius:6px;overflow:hidden;margin-top:16px;">
+          ${c.result.rows.map((z,i)=>`<div style="flex:${z.hi-z.lo};background:${HR_ZONE_META[i].color};"></div>`).join("")}
         </div>
-        ${c.result.rows.map(z=>`<div class="row-between" style="padding:6px 0;border-top:1px solid var(--border);">
-          <span style="font-size:12px;color:var(--muted);">${z.label}</span>
-          <span class="mono" style="font-size:13px;color:var(--steel);">${z.lo}–${z.hi} bpm</span>
-        </div>`).join("")}
-        ${c.result.useKarvonen ? `<div style="font-size:11px;color:var(--muted);margin-top:8px;">Calculated using the Karvonen formula (accounts for resting HR).</div>` : ""}
-      </div>`;
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--rh-muted);margin-top:4px;"><span>0</span><span>${maxHR} MHR</span></div>
+      </div>
+
+      <div class="rh-section-head"><span>Your Heart Rate Zones</span></div>
+      ${c.result.rows.map((z,i)=>{ const m = HR_ZONE_META[i];
+        return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;border-left:4px solid ${m.color};">
+        <div style="flex:none;width:46px;height:46px;border-radius:10px;background:${m.color}1a;color:${m.color};display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <span style="font-size:8px;font-weight:800;letter-spacing:.03em;">ZONE</span><span style="font-size:16px;font-weight:800;">${i+1}</span>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:800;">${m.name}</div>
+          <div style="font-size:11px;color:var(--rh-muted);margin-top:1px;">${m.desc}</div>
+        </div>
+        <div style="text-align:right;flex:none;">
+          <div style="font-size:13px;font-weight:800;color:${m.color};">${Math.round(z.lo/maxHR*100)}–${Math.round(z.hi/maxHR*100)}%</div>
+          <div style="font-size:11px;color:var(--rh-muted);margin-top:1px;">${z.lo}–${z.hi} bpm</div>
+        </div>
+      </div>`; }).join("")}
+
+      <div class="pg-card" style="background:rgba(37,99,235,.06);margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:6px;font-weight:800;font-size:13px;">${svg('target',14)} How to Use Your Zones</div>
+        <div style="font-size:12px;color:var(--rh-text);margin-top:5px;line-height:1.4;">Spend most of your training time in Zone 2 for endurance. Add Zone 3–4 for performance improvements.</div>
+      </div>
+      ${c.result.useKarvonen ? `<div style="font-size:11px;color:var(--rh-muted);margin-bottom:16px;">Calculated using the Karvonen formula (accounts for resting HR).</div>` : ""}`;
     }
   }
 
