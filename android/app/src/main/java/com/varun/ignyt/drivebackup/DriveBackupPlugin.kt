@@ -2,6 +2,9 @@ package com.varun.ignyt.drivebackup
 
 import android.app.Activity
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.os.BatteryManager
 import com.getcapacitor.JSObject
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
@@ -42,7 +45,10 @@ import org.json.JSONObject
  */
 private val DRIVE_FILE_SCOPE = Scope("https://www.googleapis.com/auth/drive.file")
 
-@CapacitorPlugin(name = "IgnytDrive")
+@CapacitorPlugin(
+    name = "IgnytDrive",
+    permissions = [com.getcapacitor.annotation.Permission(strings = [android.Manifest.permission.POST_NOTIFICATIONS], alias = "notifications")]
+)
 class DriveBackupPlugin : com.getcapacitor.Plugin() {
 
     companion object {
@@ -101,7 +107,53 @@ class DriveBackupPlugin : com.getcapacitor.Plugin() {
     @PluginMethod
     fun disconnect(call: PluginCall) {
         clearAccount()
+        BackupReminderScheduler.cancel(context)
         resolveSuccess(call, JSObject().apply { put("disconnected", true) })
+    }
+
+    /** frequency: "manual" | "daily" | "weekly" | "monthly". "manual" cancels the reminder
+     *  alarm entirely -- Back Up Now still works, there's just no automatic nudge. wifiOnly/
+     *  chargingOnly are stored here too so checkConstraints() (below) and drive-backup.js's
+     *  maybeRunScheduledBackup() agree on what "due" means without a second source of truth. */
+    @PluginMethod
+    fun scheduleBackupReminder(call: PluginCall) {
+        val frequency = call.getString("frequency") ?: "manual"
+        val wifiOnly = call.getBoolean("wifiOnly") ?: false
+        val chargingOnly = call.getBoolean("chargingOnly") ?: false
+        context.getSharedPreferences(BackupReminderScheduler.PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean("wifiOnly", wifiOnly).putBoolean("chargingOnly", chargingOnly).apply()
+        if (frequency == "manual") {
+            BackupReminderScheduler.cancel(context)
+            resolveSuccess(call, JSObject().apply { put("scheduled", false) })
+            return
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            requestPermissionForAlias("notifications", call, "scheduleBackupReminderCallback")
+        } else {
+            BackupReminderScheduler.arm(context, frequency)
+            resolveSuccess(call, JSObject().apply { put("scheduled", true) })
+        }
+    }
+
+    @com.getcapacitor.annotation.PermissionCallback
+    private fun scheduleBackupReminderCallback(call: PluginCall) {
+        // Arm regardless of the permission result -- the alarm itself is harmless without
+        // notification permission, it would just fail to show (caught in BackupReminderReceiver).
+        val frequency = call.getString("frequency") ?: "manual"
+        BackupReminderScheduler.arm(context, frequency)
+        resolveSuccess(call, JSObject().apply { put("scheduled", true) })
+    }
+
+    /** Real current connectivity/battery state -- read fresh every call, nothing cached, so
+     *  "Wi-Fi only" / "charging only" are checked against what's actually true right now. */
+    @PluginMethod
+    fun checkConstraints(call: PluginCall) {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        val caps = cm?.activeNetwork?.let { cm.getNetworkCapabilities(it) }
+        val onWifi = caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+        val bm = context.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+        val isCharging = bm?.isCharging == true
+        resolveSuccess(call, JSObject().apply { put("wifiConnected", onWifi); put("charging", isCharging) })
     }
 
     @PluginMethod

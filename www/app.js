@@ -3646,6 +3646,34 @@ function renderDriveBackupSection(){
       <button class="btn btn-accent btn-block" data-action="drive-backup-now" ${st.busy?'disabled':''} style="margin-bottom:8px;">${st.busy?'Backing up…':'Back Up Now'}</button>
       <button class="btn btn-steel btn-block" data-action="drive-manage-backups" ${st.busy?'disabled':''} style="margin-bottom:8px;">Manage Backups</button>
       <button class="btn btn-ghost btn-block" data-action="drive-disconnect" ${st.busy?'disabled':''}>Sign Out of Drive Backup</button>
+    </div>
+    ${renderDriveScheduleSection()}`;
+}
+
+/** Manual/Daily/Weekly/Monthly + Wi-Fi-only/charging-only. Real behavior, not a cosmetic
+ *  toggle -- see drive-backup.js's header for exactly how scheduling works in a Capacitor app
+ *  (a reminder notification + a boot-time check, not a true background alarm-driven upload). */
+function renderDriveScheduleSection(){
+  const drive = window.IgnytDriveBackup;
+  const sched = drive.getScheduleSettings();
+  const freqOptions = [{key:"manual",label:"Manual"},{key:"daily",label:"Daily"},{key:"weekly",label:"Weekly"},{key:"monthly",label:"Monthly"}];
+  return `
+    <div class="info-box" style="padding:14px;margin-top:10px;">
+      <div style="font-weight:800;font-size:13px;margin-bottom:8px;">Automatic Backups</div>
+      <div style="display:flex;gap:6px;margin-bottom:${sched.frequency!=='manual'?'12px':'0'};">
+        ${freqOptions.map(o=>`<button class="cat-chip ${sched.frequency===o.key?'active':''}" data-drive-schedule-freq="${o.key}" style="flex:1;text-align:center;">${o.label}</button>`).join("")}
+      </div>
+      ${sched.frequency!=='manual' ? `
+        <div class="row-between" style="padding:8px 0;">
+          <span style="font-size:13px;">Wi-Fi only</span>
+          <input type="checkbox" data-drive-schedule-wifi ${sched.wifiOnly?'checked':''}>
+        </div>
+        <div class="row-between" style="padding:8px 0;">
+          <span style="font-size:13px;">Charging only</span>
+          <input type="checkbox" data-drive-schedule-charging ${sched.chargingOnly?'checked':''}>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">You'll get a notification to open IGNYT when a backup is due — the backup itself runs right after, in the background.</div>
+      ` : ''}
     </div>`;
 }
 
@@ -8449,6 +8477,24 @@ function attachHandlers(){
     await window.IgnytDriveBackup.disconnect();
     render();
   });
+  document.querySelectorAll("[data-drive-schedule-freq]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const sched = window.IgnytDriveBackup.getScheduleSettings();
+      const res = await window.IgnytDriveBackup.scheduleBackups(Object.assign({}, sched, { frequency: el.dataset.driveScheduleFreq }));
+      render();
+      if(!res.success) showToast("Couldn't update backup schedule: "+res.error, "error", render);
+    });
+  });
+  const driveWifiCb = document.querySelector('[data-drive-schedule-wifi]');
+  if(driveWifiCb) driveWifiCb.addEventListener("change", async ()=>{
+    const sched = window.IgnytDriveBackup.getScheduleSettings();
+    await window.IgnytDriveBackup.scheduleBackups(Object.assign({}, sched, { wifiOnly: driveWifiCb.checked }));
+  });
+  const driveChargingCb = document.querySelector('[data-drive-schedule-charging]');
+  if(driveChargingCb) driveChargingCb.addEventListener("change", async ()=>{
+    const sched = window.IgnytDriveBackup.getScheduleSettings();
+    await window.IgnytDriveBackup.scheduleBackups(Object.assign({}, sched, { chargingOnly: driveChargingCb.checked }));
+  });
   document.querySelectorAll("[data-drive-restore-file]").forEach(el=>{
     el.addEventListener("click", ()=>{
       state.driveRestorePrompt = { fileId: el.dataset.driveRestoreFile, name: el.dataset.driveRestoreName, createdTime: el.dataset.driveRestoreCreated };
@@ -8588,4 +8634,15 @@ if("serviceWorker" in navigator){
   window.addEventListener("load", ()=>{
     navigator.serviceWorker.register("sw.js").catch(()=>{});
   });
+}
+
+// Scheduled Google Drive backup: checked once per cold start. Real work (if due, if
+// constraints pass) happens silently in the background; see drive-backup.js's header for why
+// this runs at boot rather than from a true background alarm.
+if(window.IgnytDriveBackup && window.IgnytDriveBackup.isNativeAndroid()){
+  window.IgnytDriveBackup.maybeRunScheduledBackup().then(res=>{
+    if(res && res.ran){
+      showToast(res.success ? "Scheduled backup completed." : "Scheduled backup failed: "+res.error, res.success?"success":"error", render);
+    }
+  }).catch(()=>{});
 }

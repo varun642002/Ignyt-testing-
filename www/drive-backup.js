@@ -7,21 +7,38 @@
    "no third-party Capacitor plugin, minimal new deps" convention as
    every other IGNYT native plugin).
 
-   Scope (this increment): connect/disconnect, Back Up Now (full JSON
-   backup -- same payload buildFullBackupPayload() in app.js already
-   produces for local export), list backups in the "IGNYT Backups"
-   Drive folder (newest first, auto-pruned to the 10 most recent),
-   Restore a chosen backup with Merge or Replace (validateBackupPayload/
-   applyBackupPayload/mergeStoredValue in app.js -- shared with local
-   JSON import so both paths behave identically), Delete a backup.
+   Scope: connect/disconnect, Back Up Now (full JSON backup -- same
+   payload buildFullBackupPayload() in app.js already produces for local
+   export), list backups in the "IGNYT Backups" Drive folder (newest
+   first, auto-pruned to the 10 most recent), Restore a chosen backup
+   with Merge or Replace (validateBackupPayload/applyBackupPayload/
+   mergeStoredValue in app.js -- shared with local JSON import so both
+   paths behave identically), Delete a backup, and scheduled Daily/
+   Weekly/Monthly automatic backups with Wi-Fi-only/charging-only
+   constraints and a backup reminder notification.
+
+   HOW SCHEDULING ACTUALLY WORKS (important, not a shortcut): a real
+   Drive upload needs the app's live localStorage data, which only the
+   WebView can produce. There is no reliable way to run that from a
+   plain background BroadcastReceiver in a Capacitor app without either
+   reverse-engineering the WebView's on-disk storage format or running a
+   heavy, intrusive foreground-service-hosted headless WebView. So the
+   native side (BackupReminderScheduler) only arms an AlarmManager alarm
+   that shows a "time for your backup" notification; tapping it opens
+   the app, and maybeRunScheduledBackup() below (called once at boot)
+   does the real work -- checks whether enough time has passed for the
+   chosen frequency AND (if set) that Wi-Fi/charging constraints are
+   currently true, then silently runs backupNow(). This is the same
+   honest "runs when the app is next opened" trade-off already
+   documented elsewhere in this app (Health Connect refresh, cloud sync
+   foreground triggers) -- not literally a 2am background upload.
 
    DELIBERATELY NOT IN THIS INCREMENT (queued, not silently dropped):
-   Wi-Fi-only/charging-only/scheduled Daily-Weekly-Monthly automatic
-   backups, incremental (diff) uploads, a dedicated version-history/
-   rollback UI beyond list+restore, user-passphrase end-to-end
-   encryption, and true multi-device real-time sync (a different
-   feature from backup -- would extend the EXISTING Firestore-based
-   CloudSyncPlugin/cloud-sync.js, not Drive).
+   incremental (diff) uploads, a dedicated version-history/rollback UI
+   beyond list+restore, user-passphrase end-to-end encryption, and true
+   multi-device real-time sync (a different feature from backup -- would
+   extend the EXISTING Firestore-based CloudSyncPlugin/cloud-sync.js,
+   not Drive).
 ========================================================= */
 
 const IgnytDriveBackup = (() => {
@@ -162,6 +179,55 @@ const IgnytDriveBackup = (() => {
     };
   }
 
+  function getScheduleSettings(){
+    return Object.assign({ frequency:"manual", wifiOnly:false, chargingOnly:false }, loadState().schedule || {});
+  }
+
+  async function scheduleBackups({ frequency, wifiOnly, chargingOnly }){
+    const p = plugin();
+    if(!p) return { success:false, error:"Drive backup is only available in the IGNYT Android app." };
+    try{
+      const res = await p.scheduleBackupReminder({ frequency, wifiOnly:!!wifiOnly, chargingOnly:!!chargingOnly });
+      if(res && res.success){
+        saveState({ schedule: { frequency, wifiOnly:!!wifiOnly, chargingOnly:!!chargingOnly } });
+        return { success:true };
+      }
+      return { success:false, error:(res && res.error) || "Couldn't set the backup schedule." };
+    }catch(e){
+      return { success:false, error: e && e.message || "Couldn't set the backup schedule." };
+    }
+  }
+
+  const FREQUENCY_MS = { daily: 86400000, weekly: 7*86400000, monthly: 30*86400000 };
+
+  function dueForScheduledBackup(){
+    const sched = getScheduleSettings();
+    const ms = FREQUENCY_MS[sched.frequency];
+    if(!ms) return false; // "manual"
+    const last = loadState().lastBackupAt || 0;
+    return (Date.now() - last) >= ms;
+  }
+
+  /** Called once at boot (app.js). Silently runs the scheduled backup if due and any
+   *  Wi-Fi-only/charging-only constraint is currently satisfied; otherwise a no-op that will
+   *  simply be checked again next time the app opens. Never shows its own UI -- returns a
+   *  result the caller can toast if it wants. */
+  async function maybeRunScheduledBackup(){
+    const p = plugin();
+    if(!p || !isConnected() || !dueForScheduledBackup()) return { ran:false };
+    const sched = getScheduleSettings();
+    if(sched.wifiOnly || sched.chargingOnly){
+      try{
+        const res = await p.checkConstraints();
+        const c = (res && res.data) || {};
+        if(sched.wifiOnly && !c.wifiConnected) return { ran:false, reason:"waiting for Wi-Fi" };
+        if(sched.chargingOnly && !c.charging) return { ran:false, reason:"waiting for charging" };
+      }catch(e){ return { ran:false }; } // can't confirm constraints -- skip rather than risk a metered upload
+    }
+    const res = await backupNow();
+    return { ran:true, success: res.success, error: res.error };
+  }
+
   return {
     isNativeAndroid: isNative,
     isConfigured,
@@ -173,7 +239,10 @@ const IgnytDriveBackup = (() => {
     listBackups,
     restoreBackup,
     deleteBackup,
-    getStatus
+    getStatus,
+    getScheduleSettings,
+    scheduleBackups,
+    maybeRunScheduledBackup
   };
 })();
 
