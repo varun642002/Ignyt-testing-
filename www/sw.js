@@ -1,6 +1,6 @@
-const CACHE = "ignyt-v60";
+const CACHE = "ignyt-v61";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./app.js",
-  "./css/tokens.css", "./css/base.css", "./css/layout.css", "./css/components.css", "./css/responsive.css", "./css/pages/home.css", "./css/pages/workout.css", "./css/pages/nutrition.css", "./css/pages/progress.css", "./css/pages/tools.css", "./css/pages/profile.css", "./css/pages/ai-coach.css", "./js/pages/home.js", "./js/pages/workout.js", "./js/pages/progress.js", "./js/body-photos-db.js", "./js/bloodwork.js", "./js/goals.js", "./js/health-uploads.js", "./js/ai-coach.js", "./assets/images/athletes/home-athlete.png", "./drive-backup.js", "./backup-encryption.js"];
+  "./css/tokens.css", "./css/base.css", "./css/layout.css", "./css/components.css", "./css/responsive.css", "./css/pages/home.css", "./css/pages/workout.css", "./css/pages/nutrition.css", "./css/pages/progress.css", "./css/pages/tools.css", "./css/pages/profile.css", "./css/pages/ai-coach.css", "./js/pages/home.js", "./js/pages/workout.js", "./js/pages/progress.js", "./js/body-photos-db.js", "./js/bloodwork.js", "./js/goals.js", "./js/health-uploads.js", "./js/health/health-security.js", "./js/health/health-db.js", "./js/health/health-models.js", "./js/health/health-stub.js", "./js/health/health-dashboard.js", "./js/ai-coach.js", "./assets/images/athletes/home-athlete.png", "./drive-backup.js", "./backup-encryption.js"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));

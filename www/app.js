@@ -1715,7 +1715,7 @@ const state = {
     activityMultiplier:1.465, goalDelta:-400,
     name:"", hyroxExperience:"first-timer", trainingDays:5,
     equipment:["Barbell","Dumbbell","Machines","Sled","Rower","Ski Erg","Kettlebell"],
-    username:"", phone:"", dob:null, medicalConditions:[], allergies:[]
+    username:"", phone:"", dob:null, medicalConditions:[], allergies:[], bloodGroup:""
   }, LS.get("hx_profile",{})),
   onboardingComplete: LS.get("hx_onboarding_complete", null), // resolved to true/false at boot in resolveOnboardingStatus()
   // GOAL WIZARD — everything the wizard collects that ISN'T already a state.profile field
@@ -5100,6 +5100,7 @@ function renderApp(){
   if(state.tab==="ai-coach") main.innerHTML = renderAiCoachTab();
   if(state.tab==="settings") main.innerHTML = renderSettingsTab();
   if(state.tab==="health") main.innerHTML = renderHealthDashboard();
+  if(state.tab==="healthhub") main.innerHTML = window.IgnytHealthDashboard ? window.IgnytHealthDashboard.render() : "";
   if(state.tab==="insights") main.innerHTML = renderInsightsTab();
   if(state.tab==="tools") main.innerHTML = renderToolsTab();
   if(state.tab==="profile") main.innerHTML = renderProfileTab();
@@ -5142,6 +5143,7 @@ function renderToolsTab(){
       {id:"body", label:"Log Weight", desc:"Weight, trend & history", icon:"body"}
     ]],
     ["Health", [
+      {id:"healthhub", label:"Health Hub", desc:"Your digital health vault", icon:"shield"},
       {id:"health", label:"Health Connect", desc:"Sync with apps, track all metrics", icon:"health"},
       {id:"uploads", label:"Medical Reports", desc:"Blood work & DEXA", icon:"flask"}
     ]],
@@ -7882,6 +7884,13 @@ function renderPersonalInfoTab(){
 
       <div class="rh-section-head"><span>Health Information <span style="font-weight:600;color:var(--rh-muted);">(Optional)</span></span></div>
       <div class="pg-card">
+        <div class="pi-field" style="margin-bottom:12px;">
+          <label class="pi-label">${svg('heart',14)} Blood Group</label>
+          <select class="pi-input" id="p-blood-group">
+            <option value="">Not set</option>
+            ${["O+","O-","A+","A-","B+","B-","AB+","AB-"].map(bg=>`<option value="${bg}" ${p.bloodGroup===bg?'selected':''}>${bg}</option>`).join("")}
+          </select>
+        </div>
         <div class="pi-grid2">
           <div class="pi-field">
             <label class="pi-label">${svg('health',14)} Medical Conditions</label>
@@ -9670,6 +9679,7 @@ function attachHandlers(){
   if(window.IgnytBloodwork) window.IgnytBloodwork.attach(); // self-guarded, binds once
   if(window.IgnytGoals) window.IgnytGoals.attach();
   if(window.IgnytHealthUploads) window.IgnytHealthUploads.attach();
+  if(window.IgnytHealthDashboard) window.IgnytHealthDashboard.attach();
   if(window.IgnytCoach) window.IgnytCoach.attach();
   document.querySelectorAll("[data-nav]").forEach(el=>{
     el.addEventListener("click", ()=>{
@@ -10923,6 +10933,8 @@ function attachHandlers(){
   if(pDateFormat) pDateFormat.addEventListener("change", ()=>{ state.settings.dateFormat = pDateFormat.value; render(); });
   const pTimeFormat = document.getElementById("p-time-format");
   if(pTimeFormat) pTimeFormat.addEventListener("change", ()=>{ state.settings.timeFormat = pTimeFormat.value; render(); });
+  const pBloodGroup = document.getElementById("p-blood-group");
+  if(pBloodGroup) pBloodGroup.addEventListener("change", ()=>{ state.profile.bloodGroup = pBloodGroup.value; render(); });
   const addMedicalBtn = document.querySelector('[data-action="add-medical"]');
   if(addMedicalBtn) addMedicalBtn.addEventListener("click", ()=>{
     const el = document.getElementById("p-medical-new"); const v = el && el.value.trim();
