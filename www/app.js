@@ -10,7 +10,7 @@ const SCHEMA_VERSION = 1; // bump when localStorage shape changes; add a migrate
 /* ---------- Storage ---------- */
 
 const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_profile","hx_nutrition","hx_bodylog","hx_custom_exercises",
-  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_achievements","hx_favorite_foods","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises"];
+  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_achievements","hx_favorite_foods","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history"];
 
 const SET_TYPE_IMPORT_MAP = { normal:"working", warmup:"warmup", dropset:"drop", failure:"failure" };
 
@@ -1298,6 +1298,9 @@ const CALCULATORS = [
   {key:"hr", label:"Heart Rate Zones"}
 ];
 
+const CALC_ICON = { bmi:'target', bmr:'flame', calorie:'flame', protein:'dumbbell', carbs:'nutrition',
+  fat:'droplet', lbm:'body', ideal:'scale', bodyfat:'droplet', bodytype:'body', hr:'heart' };
+
 const GOAL_OPTIONS = [
   {label:"Maintain weight", delta:0},
   {label:"Mild loss — 0.25 kg/week", delta:-275},
@@ -1665,6 +1668,7 @@ const state = {
   calendarMonthOffset: 0,
   bodyDistWeekOffset: 0,
   analyticsWeekOffset: 0,
+  showAllCalcHistory: false,
   progressExercise: null,
   viewingExerciseDetail: null,
   showExercisePicker: false,
@@ -1689,6 +1693,7 @@ const state = {
   favoriteFoods: LS.get("hx_favorite_foods", []),
   waterLog: LS.get("hx_water_log", []),
   savedExercises: LS.get("hx_saved_exercises", []),
+  calcHistory: LS.get("hx_calc_history", []),
   timer: null
 };
 
@@ -1708,6 +1713,7 @@ function persist(){
   LS.set("hx_favorite_foods", state.favoriteFoods);
   LS.set("hx_water_log", state.waterLog);
   LS.set("hx_saved_exercises", state.savedExercises);
+  LS.set("hx_calc_history", state.calcHistory);
   LS.set("hx_race_log", state.raceLog);
   LS.set("hx_race_active", state.raceActive);
   LS.set("hx_workout_log", state.workoutLog);
@@ -4167,7 +4173,7 @@ function renderApp(){
   // disappears the moment you navigate away or open a Progress detail view.
   const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || (state.tab==="progress" && (!state.progressView || state.progressView==="body" || state.progressView==="habits" || state.progressView==="analytics"))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
-    || (state.tab==="body" && (state.bodyView==="personal-info" || !state.bodyView))
+    || (state.tab==="body" && (state.bodyView==="personal-info" || state.bodyView==="calculators" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
     || state.tab==="settings";
   const notifications = computeNotifications();
@@ -5127,20 +5133,22 @@ function customExerciseForm(hideButton){
    FITNESS CALCULATORS — BMR, TDEE, LBM, Ideal Weight, Body Fat, HR Zones
 ========================================================= */
 
+// Only ever called from renderCalculators() (the Tools > Calculators screen), so it's safe
+// to style for that screen's pg-light wrapper specifically rather than the app's real
+// dark/light theme tokens.
 function calcInputRow(id, label, val, unit){
-  return `<div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">${label}</label>
-    <div style="display:flex;align-items:center;background:var(--surface-alt);border-radius:8px;padding:8px;margin-top:4px;">
-      <input type="number" id="${id}" value="${val}" style="flex:1;background:none;color:var(--text);font-family:'SF Mono',monospace;font-weight:700;font-size:13px;">
-      ${unit?`<span style="font-size:11px;color:var(--muted);">${unit}</span>`:""}
+  return `<div><label class="pi-label" style="text-transform:uppercase;">${label}</label>
+    <div class="pi-field">
+      <input type="number" id="${id}" value="${val}" class="pi-input" style="font-family:'SF Mono',monospace;font-weight:700;${unit?'padding-right:34px;':''}">
+      ${unit?`<span class="pi-unit">${unit}</span>`:""}
     </div></div>`;
 }
 
 function genderToggle(id, current){
-  return `<div>
-    <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Gender</label>
-    <div style="display:flex;gap:6px;margin-top:4px;">
-      <button class="cat-chip ${current==='male'?'active':''}" data-gender-toggle="${id}|male" style="flex:1;text-align:center;">Male</button>
-      <button class="cat-chip ${current==='female'?'active':''}" data-gender-toggle="${id}|female" style="flex:1;text-align:center;">Female</button>
+  return `<div><label class="pi-label" style="text-transform:uppercase;">Gender</label>
+    <div style="display:flex;gap:6px;margin-top:5px;">
+      <button class="cat-chip ${current==='male'?'active':''}" data-gender-toggle="${id}|male" style="flex:1;text-align:center;padding:10px;">Male</button>
+      <button class="cat-chip ${current==='female'?'active':''}" data-gender-toggle="${id}|female" style="flex:1;text-align:center;padding:10px;">Female</button>
     </div></div>`;
 }
 
@@ -5264,9 +5272,14 @@ function renderOnboarding(){
 
 function renderCalculators(){
   const c = state.calc;
-  // Pull shared profile values as the defaults shown in calculators
-  c.age = state.profile.age; c.gender = state.profile.gender;
-  c.height = state.profile.height; c.weight = state.profile.weight;
+  // Pull shared profile values as the ONE-TIME defaults shown in calculators. Was previously
+  // unconditional on every render, which silently reverted the Gender toggle (and any typed
+  // age/height/weight) back to the profile's values the instant a click triggered a re-render
+  // -- same guarded pattern already used below for activityMultiplier/goalDelta.
+  if(c.age==null) c.age = state.profile.age;
+  if(c.gender==null) c.gender = state.profile.gender;
+  if(c.height==null) c.height = state.profile.height;
+  if(c.weight==null) c.weight = state.profile.weight;
   if(c.activityMultiplier==null) c.activityMultiplier = state.profile.activityMultiplier;
   if(c.goalDelta==null) c.goalDelta = state.profile.goalDelta;
   const active = c.activeCalc;
@@ -5305,29 +5318,55 @@ function renderCalculators(){
   }
 
   if(active==="calorie"){
-    fields = `<div class="grid2">
+    fields = `<div class="pi-grid2">
       ${calcInputRow("calc-age","Age",c.age,"")}
       ${genderToggle("calc-gender", c.gender)}
       ${calcInputRow("calc-height","Height",c.height,"cm")}
       ${calcInputRow("calc-weight","Weight",c.weight,"kg")}
     </div>
-    <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
-    <select class="select-input" id="calc-activity">
+    <label class="pi-label" style="text-transform:uppercase;margin-top:10px;">${svg('run',13)} Activity Level</label>
+    <select class="pi-input" id="calc-activity">
       ${ACTIVITY_MULTIPLIERS.map(a=>`<option value="${a.mult}" ${c.activityMultiplier===a.mult?'selected':''}>${a.label}</option>`).join("")}
     </select>
-    <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Your Goal</label>
-    <select class="select-input" id="calc-goal">
+    <label class="pi-label" style="text-transform:uppercase;margin-top:10px;">${svg('target',13)} Your Goal</label>
+    <select class="pi-input" id="calc-goal">
       ${GOAL_OPTIONS.map(g=>`<option value="${g.delta}" ${c.goalDelta===g.delta?'selected':''}>${g.label}</option>`).join("")}
     </select>`;
     if(c.result && c.result.type==="calorie"){
       const goalKcal = c.result.tdee + c.result.goalDelta;
-      result = `<div class="grid2" style="margin-top:10px;">
-        <div class="stat-card"><div class="stat-label">Maintenance (TDEE)</div><div class="stat-value" style="color:var(--steel);">${Math.round(c.result.tdee)}<span class="stat-unit">kcal</span></div></div>
-        <div class="stat-card"><div class="stat-label">Goal Calories</div><div class="stat-value" style="color:var(--accent);">${Math.round(goalKcal)}<span class="stat-unit">kcal</span></div></div>
-      </div>
-      <div class="info-box" style="text-align:center;padding:12px;margin-top:8px;">
-        <button class="btn btn-steel" data-action="apply-calc-profile" style="padding:8px 16px;">Apply These Stats to Profile</button>
+      const basis = c.result.goalDelta>0?'Surplus':c.result.goalDelta<0?'Deficit':'Maintenance';
+      const n = state.nutrition;
+      const proteinG = goalKcal*(n.proteinPct/100)/4, carbG = goalKcal*(n.carbPct/100)/4, fatG = goalKcal*(n.fatPct/100)/9;
+      const macroRow = (label, grams, pct, color) => `<div style="flex:1;min-width:0;">
+        <div style="font-size:11px;color:var(--rh-muted);font-weight:700;">${label}</div>
+        <div style="font-size:17px;font-weight:800;margin-top:2px;">${Math.round(grams)}<span style="font-size:11px;font-weight:600;color:var(--rh-muted);"> g</span></div>
+        <div class="rh-progress-track rh-progress-track--sm" style="margin-top:6px;"><div class="rh-progress-fill" style="width:${pct}%;background:${color};"></div></div>
+        <div style="font-size:10px;color:var(--rh-muted);margin-top:2px;">${pct}%</div>
       </div>`;
+      result = `<div class="pg-card" style="margin-top:12px;">
+        <div class="row-between">
+          <span style="font-size:13px;font-weight:800;text-transform:uppercase;color:var(--rh-muted);">Your Daily Targets</span>
+          <span style="display:flex;gap:6px;">
+            <span style="font-size:10px;font-weight:700;background:rgba(37,99,235,.1);color:var(--rh-blue);padding:3px 9px;border-radius:20px;">TDEE</span>
+            <span style="font-size:10px;font-weight:700;background:var(--rh-bg);color:var(--rh-muted);padding:3px 9px;border-radius:20px;">${basis}</span>
+          </span>
+        </div>
+        <div style="margin-top:6px;">
+          <span style="font-size:30px;font-weight:800;">${Math.round(goalKcal).toLocaleString()}</span>
+          <span style="font-size:13px;color:var(--rh-muted);font-weight:600;"> kcal</span>
+        </div>
+        ${c.result.goalDelta ? `<div style="display:inline-block;font-size:11px;font-weight:700;color:${c.result.goalDelta>0?'var(--rh-green)':'var(--rh-red)'};background:${c.result.goalDelta>0?'rgba(22,163,74,.1)':'rgba(239,68,68,.1)'};padding:3px 9px;border-radius:20px;margin-top:6px;">${c.result.goalDelta>0?'+':''}${Math.round(c.result.goalDelta)} kcal (${basis})</div>` : `<div style="font-size:11px;color:var(--rh-muted);margin-top:6px;">${basis}</div>`}
+        <div style="display:flex;gap:14px;margin-top:16px;">
+          ${macroRow('Protein', proteinG, n.proteinPct, 'var(--rh-blue)')}
+          ${macroRow('Carbs', carbG, n.carbPct, '#D97706')}
+          ${macroRow('Fats', fatG, n.fatPct, 'var(--rh-green)')}
+        </div>
+      </div>
+      <div class="pg-card" style="margin-top:10px;display:flex;gap:8px;align-items:flex-start;background:rgba(37,99,235,.06);">
+        <span style="flex:none;color:var(--rh-blue);">${svg('info',14)}</span>
+        <span style="font-size:12px;color:var(--rh-text);line-height:1.4;">These values are estimates. Adjust based on your progress.</span>
+      </div>
+      <button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:10px;" data-action="apply-calc-profile">Apply These Stats to Profile</button>`;
     }
   }
 
@@ -5476,13 +5515,35 @@ function renderCalculators(){
     }
   }
 
+  const history = (state.calcHistory||[]).filter(h=>h.type==="calorie");
+  const shownHistory = state.showAllCalcHistory ? history : history.slice(0,3);
+
   return `
-    <select class="select-input" id="calc-picker">
-      ${CALCULATORS.map(cc=>`<option value="${cc.key}" ${active===cc.key?'selected':''}>${cc.label}</option>`).join("")}
-    </select>
-    ${fields}
-    <button class="btn btn-accent btn-block" data-action="run-calculator" style="margin-top:10px;">Calculate</button>
+    <div class="pg-card" style="display:flex;align-items:center;gap:10px;padding:12px 14px;">
+      <span style="flex:none;font-size:18px;">${{bmi:'🎯',bmr:'🔥',calorie:'🔥',protein:'🍗',carbs:'🍞',fat:'🥑',lbm:'⚖️',ideal:'⚖️',bodyfat:'💧',bodytype:'📐',hr:'❤️'}[active]||'🧮'}</span>
+      <select class="pi-input" id="calc-picker" style="flex:1;border:none;background:none;padding:0;font-weight:800;font-size:15px;">
+        ${CALCULATORS.map(cc=>`<option value="${cc.key}" ${active===cc.key?'selected':''}>${cc.label}</option>`).join("")}
+      </select>
+    </div>
+    <div class="pg-card" style="margin-top:10px;">
+      ${fields}
+      <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:14px;" data-action="run-calculator">Calculate</button>
+    </div>
     ${result}
+
+    ${history.length ? `
+    <div class="rh-section-head">
+      <span>Recent Calculations</span>
+      ${history.length>3 ? `<button data-action="toggle-calc-history" style="background:none;border:none;color:var(--rh-blue);font-size:12px;font-weight:700;display:flex;align-items:center;gap:2px;cursor:pointer;">${state.showAllCalcHistory?'Show Less':'View All'} ›</button>` : ''}
+    </div>
+    ${shownHistory.map(h=>`<div class="pg-card" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;padding:12px 14px;">
+      <span class="tl-card__icon" style="width:32px;height:32px;flex:none;background:rgba(217,119,6,.1);color:#D97706;">${svg('flame',16)}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:700;">TDEE (${h.goalLabel})</div>
+        <div style="font-size:11px;color:var(--rh-muted);margin-top:1px;">${new Date(h.date+'T12:00:00').toLocaleDateString('default',{month:'short',day:'2-digit',year:'numeric'})} · ${h.weight}kg</div>
+      </div>
+      <span style="font-size:14px;font-weight:800;flex:none;">${h.kcal.toLocaleString()} kcal</span>
+    </div>`).join("")}` : ''}
   `;
 }
 
@@ -6339,11 +6400,15 @@ function renderBodyTab(){
 
   // Dedicated calculator view (opened by a calculator card or "View All Calculators")
   if(state.bodyView==='calculators'){
-    return `
-      <button class="btn btn-ghost" data-action="body-calc-back" style="padding:8px 14px;font-size:14px;margin:4px 0 10px;">← Back</button>
-      <div style="font-size:25px;font-weight:900;margin-bottom:12px;">🧮 Calculators</div>
-      <div class="info-box" style="padding:14px;">${renderCalculators()}</div>
-    `;
+    return `<div class="pg-light">
+      <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:10px;" data-action="body-calc-back">← Back</button>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:2px;">
+        <span class="tl-card__icon" style="width:38px;height:38px;flex:none;">${svg('calc',20)}</span>
+        <span style="font-size:22px;font-weight:800;">Calculators</span>
+      </div>
+      <div style="font-size:12px;color:var(--rh-muted);margin:0 0 14px 50px;">Smart tools to calculate your fitness &amp; nutrition</div>
+      ${renderCalculators()}
+    </div>`;
   }
 
   if(state.bodyView==='personal-info') return renderPersonalInfoTab();
@@ -9145,6 +9210,9 @@ function attachHandlers(){
     } else if(c.activeCalc==="calorie"){
       const bmr = calcBMR(c.age, c.gender, c.height, c.weight);
       c.result = { type:"calorie", tdee: bmr*c.activityMultiplier, goalDelta: c.goalDelta };
+      const goalLabel = c.goalDelta>0?'Gain':c.goalDelta<0?'Loss':'Maintain';
+      state.calcHistory = [{ id: nextId(), type:"calorie", goalLabel, date: todayStr(), weight: c.weight,
+        kcal: Math.round(c.result.tdee + c.goalDelta) }, ...(state.calcHistory||[])].slice(0,50);
     } else if(c.activeCalc==="protein"){
       const tdee = calcBMR(c.age, c.gender, c.height, c.weight)*c.activityMultiplier;
       const m = calcMacros(tdee);
@@ -9169,6 +9237,11 @@ function attachHandlers(){
     } else if(c.activeCalc==="hr"){
       c.result = { type:"hr", ...calcHeartRateZones(c.age, c.restingHR) };
     }
+    render();
+  });
+  const toggleCalcHistoryBtn = document.querySelector('[data-action="toggle-calc-history"]');
+  if(toggleCalcHistoryBtn) toggleCalcHistoryBtn.addEventListener("click", ()=>{
+    state.showAllCalcHistory = !state.showAllCalcHistory;
     render();
   });
   const applyProfileBtn = document.querySelector('[data-action="apply-calc-profile"]');
