@@ -1,9 +1,73 @@
-/* Workout presentation overrides only; interaction and set-row sizing remain in app.js/legacy CSS. */
 .ex-log-card, .history-row, .live-stats-bar { border:1px solid var(--color-border); border-radius:var(--radius-card); box-shadow:var(--shadow-card); }
 .ex-log-card { background:var(--color-surface); }
 .live-stats-bar { background:var(--color-surface-elevated); }
-.set-row-wrap { border-radius:var(--radius-sm); }
-.set-input { font-variant-numeric:tabular-nums; }
+
+/* =========================================================
+   SET ROW — structural base (grid activation, sizing, swipe-to-delete).
+   The row's grid-template-columns is set inline per exercise type (app.js's
+   gridCols), but `display:grid` itself was never declared anywhere, so the
+   inline column tracks were a no-op and every cell fell back to normal
+   inline flow -- the root cause of the column-misalignment/cramped-input
+   reports below. Color/theme stays in the .wk-light block further down;
+   this block is the un-themed structural layer every theme sits on top of. */
+.set-table-header { display:grid; align-items:center; gap:6px; padding:2px 6px 6px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+.set-table-header span:last-child { text-align:center; } /* the empty header cell above the check column */
+
+.set-row-wrap { position:relative; border-radius:10px; overflow:hidden; margin-bottom:6px; touch-action:pan-y; }
+.set-row-wrap:last-child { margin-bottom:0; }
+.set-row { display:grid; align-items:center; gap:6px; padding:7px 6px; position:relative; z-index:1; border-radius:inherit;
+  transition:transform .22s cubic-bezier(.4,0,.2,1), background-color .2s ease, border-color .2s ease; will-change:transform; }
+.set-row.done { border-left:3px solid var(--rh-green,#16A34A); padding-left:3px; }
+.wk-light .set-row.done .set-prev { opacity:.65; }
+
+/* Delete, revealed by the row sliding left -- sits BEHIND the row (z-index:0, same stacking
+   context as the wrap) so it is fully hidden until translateX exposes it, never visible or
+   tappable by default (Bug Fix #1). Sized to exactly SWIPE_OPEN (app.js) so the reveal is pixel-exact. */
+.swipe-del-btn { position:absolute; top:0; right:0; bottom:0; width:84px; z-index:0; border:none; cursor:pointer;
+  background:var(--rh-red,#EF4444); color:#fff; display:flex; align-items:center; justify-content:center;
+  border-radius:0 10px 10px 0; }
+.swipe-del-btn:active { background:#DC2626; }
+
+.set-num { width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:9px; font-size:13px; }
+.set-prev { text-align:center; font-size:11px; padding:0 2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.set-input { font-variant-numeric:tabular-nums; width:100%; min-width:0; box-sizing:border-box; height:38px;
+  border-radius:9px; text-align:center; font-size:14px; font-weight:700; padding:0 4px;
+  transition:border-color .15s ease, box-shadow .15s ease; }
+.set-input:focus { outline:none; border-color:var(--rh-blue,#2563EB); box-shadow:0 0 0 3px rgba(37,99,235,.14); }
+
+/* Active row: highlighted the moment any of its own inputs has focus -- no extra JS state
+   needed, :focus-within tracks it for free and clears itself the instant focus leaves (Bug #8). */
+.wk-light .set-row:focus-within { background:rgba(37,99,235,.07); box-shadow:inset 0 0 0 1.5px var(--rh-blue); }
+
+.set-check { width:40px; height:40px; border-radius:11px; border:1.5px solid; background:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; flex:none; justify-self:center;
+  transition:transform .15s ease, background-color .15s ease, border-color .15s ease; }
+.set-check:active { transform:scale(.9); }
+.set-check.done { animation:wk-set-check-pop .25s ease; }
+@keyframes wk-set-check-pop { 0%{ transform:scale(.7); } 60%{ transform:scale(1.12); } 100%{ transform:scale(1); } }
+
+.rpe-btn { min-width:40px; height:38px; border-radius:9px; font-size:11px; font-weight:800; cursor:pointer; }
+.add-set-btn { display:flex; align-items:center; justify-content:center; gap:6px; width:100%; border:none;
+  cursor:pointer; font-weight:800; font-size:13px; padding:12px; margin-top:8px; transition:transform .1s ease; }
+.add-set-btn:active { transform:scale(.98); }
+
+/* First-time swipe hint -- a single gentle nudge on the newest row, shown once (gated by
+   localStorage in app.js) then never again once the user has swiped for real. */
+@keyframes wk-swipe-hint { 0%,100%{ transform:translateX(0); } 30%{ transform:translateX(-30px); } 55%{ transform:translateX(-6px); } 75%{ transform:translateX(-30px); } }
+.set-row-wrap.wk-swipe-hint .set-row { animation:wk-swipe-hint 1.6s ease 1; }
+
+/* ---------- Bottom sticky bar (always-visible Time/Sets/Calories/Finish during a live
+   session) -- sits directly above the app's own fixed bottom-nav, never overlapping it. */
+.wk-light--session { padding-bottom:170px; } /* 100px (base, reserved for bottom-nav) + ~70px sticky bar */
+.wk-sticky-bar { position:fixed; left:50%; transform:translateX(-50%); bottom:var(--nav-height,72px);
+  width:100%; max-width:480px; box-sizing:border-box; z-index:39;
+  display:flex; align-items:center; gap:8px; padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));
+  background:var(--rh-card); border-top:1px solid var(--rh-border); box-shadow:0 -2px 14px rgba(15,23,42,.08); }
+.wk-sticky-bar__stat { flex:1; text-align:center; min-width:0; }
+.wk-sticky-bar__stat-value { font-size:15px; font-weight:800; letter-spacing:-.01em; }
+.wk-sticky-bar__stat-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--rh-muted); margin-top:1px; }
+.wk-sticky-bar__finish { flex:none; padding:10px 18px; }
 
 /* =========================================================
    WORKOUT (idle list) — light "premium reference" redesign, matching Home's design
@@ -139,8 +203,8 @@
 .wk-light .set-input { background:var(--rh-card); border:1px solid var(--rh-border); color:var(--rh-text); }
 .wk-light .set-input::placeholder { color:#B6BEC9; }
 .wk-light .rpe-btn { background:var(--rh-card); border:1px solid var(--rh-border); color:var(--rh-muted); }
-.wk-light .set-check { border-color:var(--rh-border); }
-.wk-light .set-check.done { background:var(--rh-blue); border-color:var(--rh-blue); }
+.wk-light .set-check { border-color:var(--rh-border); color:var(--rh-muted); }
+.wk-light .set-check.done { background:var(--rh-blue); border-color:var(--rh-blue); color:#fff; }
 .wk-light .add-set-btn { color:var(--rh-blue); background:rgba(37,99,235,.06); border-radius:10px; }
 
 /* Live stats bar: reused as-is (structure), restyled to the light card + icon row + dividers. */

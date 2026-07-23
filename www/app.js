@@ -2830,8 +2830,11 @@ function ensureElapsedTimerRunning(){
   if(elapsedTimerHandle) return;
   elapsedTimerHandle = setInterval(()=>{
     if(!state.session){ clearInterval(elapsedTimerHandle); elapsedTimerHandle = null; return; }
+    const label = formatDuration(Date.now()-state.session.startedAt);
     const el = document.getElementById("session-elapsed");
-    if(el) el.textContent = formatDuration(Date.now()-state.session.startedAt);
+    if(el) el.textContent = label;
+    const stickyEl = document.getElementById("sticky-session-elapsed"); // bottom sticky bar's own copy
+    if(stickyEl) stickyEl.textContent = label;
   }, 1000);
 }
 
@@ -4830,9 +4833,11 @@ function renderSettingsTab(){
 ========================================================= */
 let _toastTimer = null;
 
-function showToast(message, type='info', renderFn){
+// action: optional {label, onClick} -- renders an inline button in the toast (e.g. Undo
+// Delete) and gives the toast longer on screen so there's real time to tap it.
+function showToast(message, type='info', renderFn, action){
   const id = Date.now();
-  state.toast = { id, message, type };
+  state.toast = { id, message, type, action };
   if(renderFn) renderFn();
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(()=>{
@@ -4840,7 +4845,7 @@ function showToast(message, type='info', renderFn){
       state.toast = null;
       if(renderFn) renderFn();
     }
-  }, 3200);
+  }, action ? 5000 : 3200);
 }
 
 function dismissToast(renderFn){
@@ -4853,7 +4858,10 @@ function renderToast(){
   if(!state.toast) return "";
   const t = state.toast;
   const color = t.type==='error' ? 'var(--accent)' : t.type==='success' ? 'var(--mint)' : 'var(--steel)';
-  return `<div class="toast" style="border-left:3px solid ${color};" data-action="dismiss-toast">${t.message}</div>`;
+  return `<div class="toast" style="border-left:3px solid ${color};display:flex;align-items:center;gap:12px;" data-action="dismiss-toast">
+    <span style="flex:1;">${t.message}</span>
+    ${t.action ? `<button data-toast-action style="flex:none;font-weight:800;background:none;border:none;color:${color};cursor:pointer;padding:2px;">${escHtml(t.action.label)}</button>` : ''}
+  </div>`;
 }
 
 /* =========================================================
@@ -9335,6 +9343,7 @@ function attachSwipeToDelete(){
           swiping = true;
           if(_openSwipeEl && _openSwipeEl!==wrap) closeSwipe(_openSwipeEl); // never two open rows
           try{ row.setPointerCapture(e.pointerId); }catch(err){ /* non-fatal */ }
+          if(!LS.get("hx_swipe_hint_seen", false)){ LS.set("hx_swipe_hint_seen", true); wrap.classList.remove("wk-swipe-hint"); }
         }
       }
       if(swiping){
@@ -9394,8 +9403,11 @@ function renderWorkoutTab(){
   const isEditing = !!state.editingSessionId;
   const liveVolume = Math.round(computeSessionVolume(s.exercises));
   const liveSets = computeCompletedSets(s.exercises);
+  // Only ever a real sum of what was actually typed into a Calories field (cardio sets) --
+  // never an estimate, so it honestly reads blank/0 rather than guessing for strength work.
+  const liveCalories = s.exercises.reduce((sum,ex)=> sum + ex.sets.reduce((a,set)=> a+(Number(set.calories)||0), 0), 0);
   return `
-    <div class="wk-light">
+    <div class="wk-light wk-light--session">
     <div class="row-between" style="margin-bottom:4px;">
       <div style="flex:1;min-width:0;">
         <div class="wk-session__status">${isEditing ? 'EDITING WORKOUT' : 'IN PROGRESS'}</div>
@@ -9436,10 +9448,11 @@ function renderWorkoutTab(){
         const showRPE = state.settings.rpeTracking && logType==="strength";
         const isBarbell = logType==="strength" && (LIBRARY["Barbell"]||[]).some(i=>i[0]===ex.name);
         const showPlates = state.settings.plateCalc && isBarbell;
-        const gridCols = logType==="strength" ? (showRPE ? "40px minmax(0,1fr) 58px 54px 46px 44px" : "40px minmax(0,1fr) 72px 72px 44px")
-          : logType==="cardio" ? "40px minmax(0,1fr) 52px 56px 50px 44px"
-          : logType==="carry" ? "40px minmax(0,1fr) 52px 52px 52px 44px"
-          : "40px minmax(0,1fr) 1fr 36px 44px"; // hold: SET|PREVIOUS|TIME|timer-btn|check
+        // TIME columns widened (Bug Fix #5) to comfortably fit hh:mm:ss, not just mm:ss.
+        const gridCols = logType==="strength" ? (showRPE ? "36px minmax(0,1fr) 58px 54px 46px 40px" : "36px minmax(0,1fr) 72px 72px 40px")
+          : logType==="cardio" ? "36px minmax(0,1fr) 52px 66px 50px 40px"
+          : logType==="carry" ? "36px minmax(0,1fr) 52px 52px 62px 40px"
+          : "36px minmax(0,1fr) minmax(64px,1.3fr) 36px 40px"; // hold: SET|PREVIOUS|TIME|timer-btn|check
         const menuOpen = state.exerciseMenuOpen===exi;
         return `
         <div class="ex-log-card wk-ex-card">
@@ -9498,8 +9511,9 @@ function renderWorkoutTab(){
               : `
                 <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss">
                 <button class="rest-toggle" style="padding:0;" data-start-hold-timer="${exi}|${si}" aria-label="Start hold timer" title="Start built-in timer">${svg('timer',15)}</button>`;
-            return `<div class="set-row-wrap" data-swipe-row="${exi}|${si}">
-              <button class="swipe-del-btn" data-del-set="${exi}|${si}" aria-label="Delete set ${si+1}" tabindex="-1">Delete</button>
+            const showSwipeHint = exi===0 && si===0 && !LS.get("hx_swipe_hint_seen", false);
+            return `<div class="set-row-wrap${showSwipeHint?' wk-swipe-hint':''}" data-swipe-row="${exi}|${si}">
+              <button class="swipe-del-btn" data-del-set="${exi}|${si}" aria-label="Delete set ${si+1}" tabindex="-1">${svg('trash',18)}</button>
               <div class="set-row ${set.done?'done':''}" style="grid-template-columns:${gridCols};">
                 ${numBtn}
                 <span class="mono set-prev">${prevLabel}</span>
@@ -9515,6 +9529,12 @@ function renderWorkoutTab(){
           <button class="add-set-btn" data-add-set="${exi}">${svg('plus',14)} Add Set</button>
         </div>
       `;}).join("")}
+    </div>
+    <div class="wk-sticky-bar">
+      <div class="wk-sticky-bar__stat"><div class="wk-sticky-bar__stat-value mono" id="sticky-session-elapsed">${formatDuration(Date.now()-s.startedAt)}</div><div class="wk-sticky-bar__stat-label">Time</div></div>
+      <div class="wk-sticky-bar__stat"><div class="wk-sticky-bar__stat-value">${liveSets}</div><div class="wk-sticky-bar__stat-label">Sets</div></div>
+      <div class="wk-sticky-bar__stat"><div class="wk-sticky-bar__stat-value">${liveCalories||'–'}</div><div class="wk-sticky-bar__stat-label">Calories</div></div>
+      <button class="rh-btn rh-btn--primary wk-sticky-bar__finish" data-action="finish-session">${isEditing?'Save':'Finish'}</button>
     </div>
   `;
 }
@@ -10575,8 +10595,11 @@ function attachHandlers(){
     render();
   });
 
-  const finishBtn = document.querySelector('[data-action="finish-session"]');
-  if(finishBtn) finishBtn.addEventListener("click", async ()=>{
+  // Two buttons can render "Finish Workout" (the header one, and the new sticky bottom bar's) --
+  // both share this exact one handler/one guard, so "single save coordinator" still holds no
+  // matter which one was tapped.
+  const finishBtns = document.querySelectorAll('[data-action="finish-session"]');
+  finishBtns.forEach(finishBtn=> finishBtn.addEventListener("click", async ()=>{
     if(_finishingSession) return; // double-tap guard: one workout, one save
     if(!state.session) return;
     // Validate completed work before finishing a live (non-edit) session. Finishing with
@@ -10602,9 +10625,10 @@ function attachHandlers(){
     }
     if(_finishingSession || !state.session) return; // re-check after the await
     _finishingSession = true;
-    // UI protection: lock the button the instant work starts so a slow device / laggy tap can't
-    // queue a second submit. render() rebuilds the tab (button replaced) on completion.
-    finishBtn.disabled = true; finishBtn.textContent = "Saving…";
+    // UI protection: lock every "Finish" button the instant work starts (there can be two --
+    // header + sticky bar) so a slow device / laggy tap on either can't queue a second submit.
+    // render() rebuilds the tab (buttons replaced) on completion.
+    finishBtns.forEach(b=>{ b.disabled = true; b.textContent = "Saving…"; });
     try{
       let completedId = null;
       if(state.session.exercises.length){
@@ -10641,7 +10665,7 @@ function attachHandlers(){
     } finally {
       _finishingSession = false; // released after save+render; the null session blocks re-entry anyway
     }
-  });
+  }));
   const cancelEditBtn = document.querySelector('[data-action="cancel-edit-session"]');
   if(cancelEditBtn) cancelEditBtn.addEventListener("click", ()=>{
     state.session = null;
@@ -10926,8 +10950,18 @@ function attachHandlers(){
         showToast("Each exercise keeps at least one set — remove the whole exercise from its ⋮ menu instead.", "info", render);
         return;
       }
-      ex.sets.splice(si,1); // remaining sets renumber automatically -- their "Set N" label is just their array index+1
+      const [removed] = ex.sets.splice(si,1); // remaining sets renumber automatically -- their "Set N" label is just their array index+1
       render();
+      // Undo re-inserts at the same exercise+index if the exercise is still there and that
+      // position still makes sense; if the workout moved on (exercise removed, fewer sets
+      // than the original index) it falls back to appending, so Undo can never throw or
+      // silently do nothing.
+      showToast("Set deleted.", "info", render, { label:"UNDO", onClick:()=>{
+        const target = state.session && state.session.exercises[exi];
+        if(!target) return;
+        const insertAt = Math.min(si, target.sets.length);
+        target.sets.splice(insertAt, 0, removed);
+      }});
     });
   });
   // Accessible non-swipe fallback (inside the existing ⋮ menu — no permanent delete button on rows).
@@ -12053,6 +12087,15 @@ function attachHandlers(){
   // Toast / confirm dialog
   const toastEl = document.querySelector('[data-action="dismiss-toast"]');
   if(toastEl) toastEl.addEventListener("click", ()=> dismissToast(render));
+  const toastActionBtn = document.querySelector('[data-toast-action]');
+  if(toastActionBtn) toastActionBtn.addEventListener("click", (e)=>{
+    e.stopPropagation(); // don't also fire the toast's own dismiss handler
+    const action = state.toast && state.toast.action;
+    clearTimeout(_toastTimer);
+    state.toast = null;
+    if(action && action.onClick) action.onClick();
+    render();
+  });
   document.querySelectorAll("[data-dialog-action]").forEach(el=>{
     el.addEventListener("click", ()=> resolveConfirmDialog(el.dataset.dialogAction==="confirm", render));
   });
@@ -12176,3 +12219,14 @@ if(window.IgnytDriveBackup && window.IgnytDriveBackup.isNativeAndroid()){
     }
   }).catch(()=>{});
 }
+
+// Workout set inputs: tapping one selects its existing value (Bug Fix #7 -- replacing a
+// number is the overwhelmingly common intent, not appending to it) and scrolls it fully into
+// view (Bug Fix #8's "auto scroll into view", since a set row can sit right under the
+// keyboard on short screens). One delegated listener for the app's lifetime, not per-render.
+document.addEventListener("focusin", (e)=>{
+  const el = e.target;
+  if(!(el instanceof HTMLInputElement) || !el.classList.contains("set-input")) return;
+  el.select();
+  el.scrollIntoView({ block:"center", behavior:"smooth" });
+});
