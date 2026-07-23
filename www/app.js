@@ -5650,20 +5650,24 @@ function renderSessionDetail(s){
 }
 
 function renderExerciseDetailHistory(history){
-  if(history.length===0) return `<div class="empty-note" style="margin:20px 0;">No history for this exercise yet — once you log it in a workout, every session will show up here.</div>`;
+  if(history.length===0) return `<div class="pg-card" style="text-align:center;padding:28px 18px;">
+    <span class="tl-card__icon" style="width:44px;height:44px;margin:0 auto 12px;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('calendar',22)}</span>
+    <div style="font-size:15px;font-weight:800;">No history yet</div>
+    <div style="font-size:12px;color:var(--rh-muted);margin-top:4px;">Once you log this exercise in a workout, every session will show up here.</div>
+  </div>`;
   return `
-    ${history.map(h=>`<div class="info-box" style="padding:14px;margin-bottom:10px;">
+    ${history.map(h=>`<div class="pg-card" style="margin-bottom:10px;">
       <div class="row-between" style="margin-bottom:6px;">
         <div>
           <div style="font-weight:800;font-size:14px;">${h.title}</div>
-          <div class="mono" style="font-size:11px;color:var(--muted);">${h.date}</div>
+          <div style="font-size:11px;color:var(--rh-muted);">${h.date}</div>
         </div>
-        ${h.prs.length ? `<span style="font-size:11px;font-weight:800;color:var(--accent);">🏆 ${h.prs.length} PR${h.prs.length>1?'s':''}</span>` : ''}
+        ${h.prs.length ? `<span style="font-size:11px;font-weight:800;color:#D97706;">🏆 ${h.prs.length} PR${h.prs.length>1?'s':''}</span>` : ''}
       </div>
-      ${h.notes ? `<div style="font-size:12px;color:var(--muted);font-style:italic;margin-bottom:6px;">"${h.notes}"</div>` : ''}
-      ${h.sets.map((s,i)=>`<div class="row-between" style="padding:4px 0;${i>0?'border-top:1px solid var(--border);':''}">
-        <span class="mono" style="font-size:11px;color:var(--muted);">Set ${i+1}</span>
-        <span class="mono" style="font-size:12px;">${s.weight?displayW(s.weight):'–'}${wUnit()} × ${s.reps||'–'}${s.rpe?` <span style="color:var(--muted);">@ RPE ${s.rpe}</span>`:''}</span>
+      ${h.notes ? `<div style="font-size:12px;color:var(--rh-muted);font-style:italic;margin-bottom:6px;">"${h.notes}"</div>` : ''}
+      ${h.sets.map((s,i)=>`<div class="row-between" style="padding:4px 0;${i>0?'border-top:1px solid var(--rh-border);':''}">
+        <span style="font-size:11px;color:var(--rh-muted);">Set ${i+1}</span>
+        <span style="font-size:12px;font-weight:600;">${s.weight?displayW(s.weight):'–'}${wUnit()} × ${s.reps||'–'}${s.rpe?` <span style="color:var(--rh-muted);">@ RPE ${s.rpe}</span>`:''}</span>
       </div>`).join("")}
     </div>`).join("")}
   `;
@@ -7766,15 +7770,22 @@ function renderExerciseDetail(name){
   const tab = state.exerciseDetailTab || "summary";
   const history = exerciseHistoryEntries(name);
   const prs = exercisePRs(name);
+  // Same muscle-group icon/color convention used by the Library rows and PR list rows --
+  // no real exercise photo exists here either (see the honest-assets note on renderLibraryTab).
+  const rowIcon = (() => { const g = FINE_TO_BROAD[muscle]; return (g==='Chest'||g==='Shoulders'||g==='Arms') ? 'dumbbell' : (g==='Back') ? 'workout' : 'body'; })();
+  const muscleColor = muscleTagColor(muscle);
 
-  return `
-    <div class="row-between" style="margin-bottom:4px;">
-      <button class="btn btn-ghost" data-action="close-exercise-detail" style="padding:6px 12px;font-size:12px;">← Back</button>
+  return `<div class="pg-light">
+    <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:12px;" data-action="close-exercise-detail">← Back</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+      <span class="tl-card__icon" style="width:52px;height:52px;flex:none;background:${muscleColor}1a;color:${muscleColor};">${svg(rowIcon,26)}</span>
+      <div>
+        <div style="font-size:20px;font-weight:800;">${name}</div>
+        <span class="lib-tag" style="background:${muscleColor}1a;color:${muscleColor};margin-top:4px;">${muscle}</span>
+      </div>
     </div>
-    <div style="font-size:20px;font-weight:900;margin:10px 0 6px;">${name}</div>
-    <span class="muscle-chip active">${muscle}</span>
 
-    <div style="display:flex;gap:6px;margin:14px 0;">
+    <div class="lib-cats" style="margin:14px 0;">
       ${[["summary","Summary"],["history","History"],["howto","How To"]].map(([key,label])=>`
         <button class="cat-chip ${tab===key?'active':''}" data-ex-detail-tab="${key}" style="flex:1;text-align:center;">${label}</button>
       `).join("")}
@@ -7784,74 +7795,81 @@ function renderExerciseDetail(name){
     ${tab==="history" ? renderExerciseDetailHistory(history) : ""}
     ${tab==="howto" ? renderExerciseDetailHowTo(name, detail, libEntry) : ""}
 
-    <button class="btn btn-accent btn-block" data-action="add-detail-to-workout" data-exercise-name="${name}" style="margin-top:16px;">${svg('plus',16)} Add to Workout</button>
-  `;
+    <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:8px;" data-action="add-detail-to-workout" data-exercise-name="${name}">${svg('plus',16)} Add to Workout</button>
+  </div>`;
 }
 
 function renderExerciseDetailSummary(name, detail, libEntry, prs){
   const trend = exerciseProgressTrend(name, 20);
   const hasHistory = trend.length>=2;
+  const emptyCard = (icon, title, sub) => `<div class="pg-card" style="text-align:center;padding:28px 18px;">
+    <span class="tl-card__icon" style="width:44px;height:44px;margin:0 auto 12px;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg(icon,22)}</span>
+    <div style="font-size:15px;font-weight:800;">${title}</div>
+    <div style="font-size:12px;color:var(--rh-muted);margin-top:4px;line-height:1.4;">${sub}</div>
+  </div>`;
   return `
-    ${detail ? `<div class="grid2" style="margin-top:2px;margin-bottom:8px;">
-      <div class="stat-card"><div class="stat-label">Equipment</div><div class="stat-value" style="font-size:15px;">${detail.equipment}</div></div>
-      <div class="stat-card"><div class="stat-label">Difficulty</div><div class="stat-value" style="font-size:15px;">${detail.difficulty}</div></div>
-      <div class="stat-card"><div class="stat-label">Movement Pattern</div><div class="stat-value" style="font-size:15px;">${detail.movementPattern}</div></div>
-      <div class="stat-card"><div class="stat-label">Secondary Muscles</div><div class="stat-value" style="font-size:12px;line-height:1.4;">${detail.secondaryMuscles.join(", ")||'–'}</div></div>
+    ${detail ? `<div class="pg-stat-grid" style="margin-top:2px;margin-bottom:14px;">
+      <div class="pg-stat-card"><div class="pg-stat-card__label">Equipment</div><div class="pg-stat-card__value" style="font-size:15px;">${detail.equipment}</div></div>
+      <div class="pg-stat-card"><div class="pg-stat-card__label">Difficulty</div><div class="pg-stat-card__value" style="font-size:15px;">${detail.difficulty}</div></div>
+      <div class="pg-stat-card"><div class="pg-stat-card__label">Movement Pattern</div><div class="pg-stat-card__value" style="font-size:15px;">${detail.movementPattern}</div></div>
+      <div class="pg-stat-card"><div class="pg-stat-card__label">Secondary Muscles</div><div class="pg-stat-card__value" style="font-size:12px;line-height:1.4;">${detail.secondaryMuscles.join(", ")||'–'}</div></div>
     </div>` : ""}
 
-    <div class="eyebrow-label" style="margin-top:14px;">Performance</div>
-    <div class="info-box" style="padding:14px;margin-bottom:16px;">
-      ${!hasHistory ? `<div class="empty-note">Log this exercise across a couple of workouts to see a trend here.</div>` : `
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Top Set Weight</div>
-        ${sparklineChart(trend.map(t=>({date:t.date, value:displayW(t.weight)})), {color:"var(--accent)", unit:wUnit()})}
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;">Estimated 1RM</div>
-        ${sparklineChart(trend.map(t=>({date:t.date, value:displayW(t.oneRM)})), {color:"var(--mint)", unit:wUnit()})}
-      `}
-    </div>
+    <div class="rh-section-head" style="margin-top:0;"><span>Performance</span></div>
+    ${!hasHistory ? emptyCard('progress', 'No performance data yet', 'Log this exercise across a couple of workouts to see a trend here.') : `
+    <div class="pg-card" style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin-bottom:4px;">Top Set Weight</div>
+      ${sparklineChart(trend.map(t=>({date:t.date, value:displayW(t.weight)})), {color:"var(--rh-blue)", unit:wUnit()})}
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 4px;">Estimated 1RM</div>
+      ${sparklineChart(trend.map(t=>({date:t.date, value:displayW(t.oneRM)})), {color:"var(--rh-green)", unit:wUnit()})}
+    </div>`}
 
-    <div class="eyebrow-label">Personal Records</div>
-    ${prs.length===0 ? `<div class="empty-note" style="margin-bottom:16px;">No PRs logged for this exercise yet.</div>` : `
-      <div class="info-box" style="padding:4px 14px;margin-bottom:16px;">
-        ${prs.map(pr=>`<div class="row-between" style="padding:9px 0;border-bottom:1px solid var(--border);">
+    <div class="rh-section-head"><span>Personal Records</span></div>
+    ${prs.length===0 ? emptyCard('trophy', 'No PRs logged for this exercise yet.', '') : `
+      <div class="pg-card" style="padding:4px 14px;margin-bottom:16px;">
+        ${prs.map(pr=>`<div class="row-between" style="padding:9px 0;border-top:1px solid var(--rh-border);">
           <span style="font-size:13px;font-weight:700;">${prTypeLabel(pr)}</span>
           <span style="display:flex;align-items:center;gap:8px;">
-            <span class="mono" style="font-size:11px;color:var(--muted);">${new Date(pr.achievedAt).toLocaleDateString('default',{month:'short',day:'numeric',year:'numeric'})}</span>
-            <span class="mono" style="font-size:13px;color:var(--accent);font-weight:800;">${prValueLabel(pr)}</span>
+            <span style="font-size:11px;color:var(--rh-muted);">${new Date(pr.achievedAt).toLocaleDateString('default',{month:'short',day:'numeric',year:'numeric'})}</span>
+            <span style="font-size:13px;color:var(--rh-blue);font-weight:800;">${prValueLabel(pr)}</span>
           </span>
         </div>`).join("")}
       </div>
     `}
-    <div class="info-box" style="font-size:11px;color:var(--muted);margin-bottom:16px;">
-      Cardio and HYROX-specific records (pace, distance, station/split times) aren't tracked yet — the logger only captures weight and reps, no distance or duration fields.
+    <div class="pg-card" style="margin-bottom:16px;background:rgba(37,99,235,.06);display:flex;gap:8px;align-items:flex-start;">
+      <span style="flex:none;color:var(--rh-blue);">${svg('info',14)}</span>
+      <span style="font-size:12px;color:var(--rh-text);line-height:1.4;">Cardio and HYROX-specific records (pace, distance, station/split times) aren't tracked yet — the logger only captures weight and reps, no distance or duration fields.</span>
     </div>
   `;
 }
 
 function renderExerciseDetailHowTo(name, detail, libEntry){
   if(!detail){
-    return `<div class="info-box" style="padding:14px;margin:16px 0;">
-      <div style="font-size:13px;color:var(--muted);">Instructions not available for this exercise.${libEntry?` Suggested: <span style="color:var(--text);font-weight:700;">${libEntry.presc}</span>`:''}</div>
+    return `<div class="pg-card" style="text-align:center;padding:28px 18px;">
+      <span class="tl-card__icon" style="width:44px;height:44px;margin:0 auto 12px;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('info',22)}</span>
+      <div style="font-size:15px;font-weight:800;">Instructions not available yet</div>
+      ${libEntry?`<div style="font-size:12px;color:var(--rh-muted);margin-top:4px;">Suggested: <span style="color:var(--rh-text);font-weight:700;">${libEntry.presc}</span></div>`:''}
     </div>`;
   }
   return `
     ${renderExerciseAnimation(detail)}
 
-    <div class="eyebrow-label" style="margin-top:16px;">Step-by-Step</div>
-    <div class="info-box" style="padding:14px;">
-      ${detail.instructions.map((s,i)=>`<div style="display:flex;gap:10px;padding:6px 0;${i>0?'border-top:1px solid var(--border);':''}">
-        <span class="mono" style="color:var(--accent);font-weight:900;font-size:13px;flex-shrink:0;">${i+1}</span>
+    <div class="rh-section-head" style="margin-top:16px;"><span>Step-by-Step</span></div>
+    <div class="pg-card">
+      ${detail.instructions.map((s,i)=>`<div style="display:flex;gap:10px;padding:6px 0;${i>0?'border-top:1px solid var(--rh-border);':''}">
+        <span style="color:var(--rh-blue);font-weight:900;font-size:13px;flex-shrink:0;">${i+1}</span>
         <span style="font-size:13px;line-height:1.5;">${s}</span>
       </div>`).join("")}
     </div>
 
-    <div class="eyebrow-label">Form Tips</div>
-    <div class="info-box" style="padding:14px;">
-      ${detail.formTips.map(t=>`<div style="display:flex;gap:8px;padding:4px 0;font-size:13px;"><span style="color:var(--mint);">✓</span> ${t}</div>`).join("")}
+    <div class="rh-section-head"><span>Form Tips</span></div>
+    <div class="pg-card">
+      ${detail.formTips.map(t=>`<div style="display:flex;gap:8px;padding:4px 0;font-size:13px;"><span style="color:var(--rh-green);">✓</span> ${t}</div>`).join("")}
     </div>
 
-    <div class="eyebrow-label">Common Mistakes</div>
-    <div class="info-box" style="padding:14px;margin-bottom:16px;">
-      ${detail.commonMistakes.map(t=>`<div style="display:flex;gap:8px;padding:4px 0;font-size:13px;"><span style="color:var(--accent);">✕</span> ${t}</div>`).join("")}
+    <div class="rh-section-head"><span>Common Mistakes</span></div>
+    <div class="pg-card" style="margin-bottom:16px;">
+      ${detail.commonMistakes.map(t=>`<div style="display:flex;gap:8px;padding:4px 0;font-size:13px;"><span style="color:var(--rh-red);">✕</span> ${t}</div>`).join("")}
     </div>
   `;
 }
