@@ -3207,7 +3207,7 @@ function weeklyBarChart(buckets, metric){
       const label = (showAllLabels || isLast) ? fmt(val) : "";
       return `<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;overflow:hidden;">
         <span class="mono" style="font-size:10px;font-weight:700;color:${isLast?'var(--accent)':'var(--steel)'};min-height:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</span>
-        <div style="width:${buckets.length>20?'85%':'65%'};border-radius:4px 4px 0 0;background:${isLast?'#FF5A1F':'#4FA8D8'};height:${bh}px;"></div>
+        <div style="width:${buckets.length>20?'85%':'65%'};border-radius:var(--radius-2xs) 4px 0 0;background:${isLast?'#FF5A1F':'#4FA8D8'};height:${bh}px;"></div>
       </div>`;
     }).join("")}
   </div>`;
@@ -3233,7 +3233,7 @@ function dailyBarChart(buckets, metric, weekOffset){
       const bh = Math.max(val>0?4:0, Math.round((val/max)*90));
       return `<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;">
         <span class="mono" style="font-size:10px;font-weight:700;color:var(--rh-text);min-height:12px;">${fmt(val)}</span>
-        <div style="width:60%;border-radius:4px 4px 0 0;background:${isToday?'#D97706':'var(--rh-blue)'};height:${bh}px;"></div>
+        <div style="width:60%;border-radius:var(--radius-2xs) 4px 0 0;background:${isToday?'#D97706':'var(--rh-blue)'};height:${bh}px;"></div>
       </div>`;
     }).join("")}
   </div>
@@ -3263,7 +3263,7 @@ function renderCalendarMonth(monthOffset){
     const isToday = dateStr === new Date().toISOString().slice(0,10);
     const selected = state.calendarSelectedDate === dateStr;
     // Only genuinely-active days are tappable (data-cal-day) — empty days never highlight.
-    cells += `<div ${active?`data-cal-day="${dateStr}"`:''} style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;
+    cells += `<div ${active?`data-cal-day="${dateStr}"`:''} style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-xs-plus);
       font-size:13px;font-weight:700;font-family:'SF Mono',monospace;${active?'cursor:pointer;':''}
       background:${active?'#D97706':'transparent'};
       color:${active?'#fff':'var(--rh-muted)'};
@@ -3281,8 +3281,8 @@ function renderCalendarMonth(monthOffset){
     </div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px;">${cells}</div>
     <div style="display:flex;gap:16px;">
-      <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--rh-muted);font-weight:600;"><span style="width:14px;height:14px;border-radius:4px;background:#D97706;"></span>Trained</span>
-      <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--rh-muted);font-weight:600;"><span style="width:14px;height:14px;border-radius:4px;background:var(--rh-bg);border:1px solid var(--rh-border);"></span>No Training</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--rh-muted);font-weight:600;"><span style="width:14px;height:14px;border-radius:var(--radius-2xs);background:#D97706;"></span>Trained</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--rh-muted);font-weight:600;"><span style="width:14px;height:14px;border-radius:var(--radius-2xs);background:var(--rh-bg);border:1px solid var(--rh-border);"></span>No Training</span>
     </div>
   `;
 }
@@ -4377,7 +4377,7 @@ function settingToggle(key, label, desc, icon){
     <div class="pi-row__body" style="flex:1;">
       <div class="row-between">
         <span style="font-weight:700;font-size:14px;">${label}</span>
-        <button data-setting-toggle="${key}" style="width:46px;height:26px;border-radius:13px;border:none;cursor:pointer;position:relative;flex-shrink:0;background:${on?'var(--rh-blue)':'#D9DEE7'};transition:background .15s;">
+        <button data-setting-toggle="${key}" style="width:46px;height:26px;border-radius:var(--radius-pill);border:none;cursor:pointer;position:relative;flex-shrink:0;background:${on?'var(--rh-blue)':'#D9DEE7'};transition:background .15s;">
           <span style="position:absolute;top:3px;${on?'right:3px':'left:3px'};width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
         </button>
       </div>
@@ -5564,7 +5564,7 @@ function svgSleepStages(stages, width, height) {
     x += w;
     return rect;
   }).join("");
-  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="border-radius:4px;overflow:hidden;">${rects}</svg>`;
+  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="border-radius:var(--radius-2xs);overflow:hidden;">${rects}</svg>`;
 }
 
 function hcTimeAgo(isoString) {
@@ -5585,7 +5585,7 @@ function hcCard(opts) {
   const { label, rangeLabel, value, unit, timeLabel, chartHtml, hasData, source } = opts;
   const sourceLabel = source || "Health Connect"; // real metadata when available, honest fallback otherwise -- never hardcoded to one provider
   return `
-    <button class="hc-home-card" data-nav="health" style="width:100%;text-align:left;background:var(--surface);border:none;border-radius:16px;padding:16px;margin-bottom:12px;cursor:pointer;display:block;">
+    <button class="hc-home-card" data-nav="health" style="width:100%;text-align:left;background:var(--surface);border:none;border-radius:var(--radius-card);padding:16px;margin-bottom:12px;cursor:pointer;display:block;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
         <span style="font-size:17px;font-weight:800;">${label}</span>
         <span style="color:var(--muted);font-size:18px;line-height:1;">\u203a</span>
@@ -5878,8 +5878,8 @@ function renderHealthDashboard() {
   }
 
   const statusPill = hcState.connected
-    ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--rh-green);background:rgba(22,163,74,.1);padding:5px 12px;border-radius:20px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--rh-green);"></span>Connected</span>`
-    : `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--rh-muted);background:var(--rh-bg);padding:5px 12px;border-radius:20px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--rh-muted);"></span>Not Connected</span>`;
+    ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--rh-green);background:rgba(22,163,74,.1);padding:5px 12px;border-radius:var(--radius-lg);"><span style="width:7px;height:7px;border-radius:50%;background:var(--rh-green);"></span>Connected</span>`
+    : `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--rh-muted);background:var(--rh-bg);padding:5px 12px;border-radius:var(--radius-lg);"><span style="width:7px;height:7px;border-radius:50%;background:var(--rh-muted);"></span>Not Connected</span>`;
 
   if (!hcState.connected) {
     return `<div class="pg-light">
@@ -6097,13 +6097,13 @@ function renderExercisePicker(){
     </div>
 
     <div class="pi-grid2" style="margin-bottom:${state.exercisePickerContext==='routine'?'10px':'14px'};">
-      <div class="pi-field" style="display:flex;align-items:center;gap:8px;background:var(--rh-card);border:1px solid var(--rh-border);border-radius:10px;padding:0 12px;">
+      <div class="pi-field" style="display:flex;align-items:center;gap:8px;background:var(--rh-card);border:1px solid var(--rh-border);border-radius:var(--radius-sm);padding:0 12px;">
         <span style="flex:none;color:var(--rh-blue);">${svg('dumbbell',15)}</span>
         <select id="ex-picker-equip" style="flex:1;min-width:0;border:none;background:none;padding:10px 0;font-size:13px;color:var(--rh-text);">
           ${equipOptions.map(o=>`<option value="${o}" ${equip===o?'selected':''}>${o==="All"?"All Equipment":o}</option>`).join("")}
         </select>
       </div>
-      <div class="pi-field" style="display:flex;align-items:center;gap:8px;background:var(--rh-card);border:1px solid var(--rh-border);border-radius:10px;padding:0 12px;">
+      <div class="pi-field" style="display:flex;align-items:center;gap:8px;background:var(--rh-card);border:1px solid var(--rh-border);border-radius:var(--radius-sm);padding:0 12px;">
         <span style="flex:none;color:var(--rh-blue);">${svg('profile',15)}</span>
         <select id="ex-picker-muscle" style="flex:1;min-width:0;border:none;background:none;padding:10px 0;font-size:13px;color:var(--rh-text);">
           ${muscleOptions.map(o=>`<option value="${o}" ${muscleFilter===o?'selected':''}>${o==="All"?"All Muscles":o}</option>`).join("")}
@@ -6111,9 +6111,9 @@ function renderExercisePicker(){
       </div>
     </div>
     ${state.exercisePickerContext==="routine" ? `
-      <div class="row-between" style="margin-bottom:14px;background:var(--rh-card);border:1px solid var(--rh-border);border-radius:10px;padding:8px 12px;">
+      <div class="row-between" style="margin-bottom:14px;background:var(--rh-card);border:1px solid var(--rh-border);border-radius:var(--radius-sm);padding:8px 12px;">
         <span style="font-size:12px;color:var(--rh-muted);">Sets for the exercise you pick</span>
-        <input type="number" id="ex-picker-routine-sets" value="${state.routineBuilderSets}" min="1" style="width:44px;background:var(--rh-bg);border-radius:6px;padding:6px;text-align:center;color:var(--rh-blue);font-family:'SF Mono',monospace;font-weight:700;border:none;">
+        <input type="number" id="ex-picker-routine-sets" value="${state.routineBuilderSets}" min="1" style="width:44px;background:var(--rh-bg);border-radius:var(--radius-xs);padding:6px;text-align:center;color:var(--rh-blue);font-family:'SF Mono',monospace;font-weight:700;border:none;">
       </div>
     ` : ""}
 
@@ -6207,7 +6207,7 @@ function renderPlatePopover(exi){
   return `<div class="info-box" style="padding:12px;margin-bottom:10px;">
     <div style="display:flex;gap:6px;margin-bottom:8px;">
       <div style="flex:1;"><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Target (kg)</label>
-        <input type="number" id="plate-target" value="${target||''}" placeholder="100" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:8px;margin-top:4px;font-family:'SF Mono',monospace;font-weight:700;color:var(--accent);"></div>
+        <input type="number" id="plate-target" value="${target||''}" placeholder="100" style="display:block;width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:8px;margin-top:4px;font-family:'SF Mono',monospace;font-weight:700;color:var(--accent);"></div>
       <div style="width:90px;"><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Bar (kg)</label>
         <select class="select-input" id="plate-bar" style="margin:4px 0 0;padding:8px;">
           ${[20,15,10,7.5].map(b=>`<option value="${b}" ${bar===b?'selected':''}>${b}</option>`).join("")}
@@ -6300,14 +6300,14 @@ function renderHoldTimerOverlay(){
 
 function customExerciseForm(hideButton){
   return `<div class="info-box" style="margin-bottom:16px;">
-    <input type="text" id="custom-name" placeholder="Exercise name" style="background:var(--surface-alt);border-radius:8px;padding:10px;width:100%;margin-bottom:8px;font-size:14px;color:var(--text);">
+    <input type="text" id="custom-name" placeholder="Exercise name" style="background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:10px;width:100%;margin-bottom:8px;font-size:14px;color:var(--text);">
     <select class="select-input" id="custom-cat">
       ${Object.keys(LIBRARY).map(c=>`<option value="${c}">${c}</option>`).join("")}
     </select>
     <select class="select-input" id="custom-muscle">
       ${[...BODY_MUSCLES,"Mobility","Other"].map(m=>`<option value="${m}">${m}</option>`).join("")}
     </select>
-    <input type="text" id="custom-presc" placeholder="Default prescription (e.g. 3x12)" style="background:var(--surface-alt);border-radius:8px;padding:10px;width:100%;margin-bottom:8px;font-size:14px;color:var(--text);">
+    <input type="text" id="custom-presc" placeholder="Default prescription (e.g. 3x12)" style="background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:10px;width:100%;margin-bottom:8px;font-size:14px;color:var(--text);">
     ${hideButton?'':'<button class="btn btn-accent btn-block" data-action="save-custom">Save Exercise</button>'}
   </div>`;
 }
@@ -6349,7 +6349,7 @@ function renderRoutineBuilder(){
   const b = state.routineBuilder;
   const isEditing = state.editingRoutineId != null;
   const est = routineEstimatedMinutes({ exercises: b.exercises });
-  const fieldStyle = "width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;font-size:14px;color:var(--text);border:none;";
+  const fieldStyle = "width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:10px;font-size:14px;color:var(--text);border:none;";
   return `<div class="info-box" style="padding:14px;margin-bottom:12px;">
     <div class="row-between" style="margin-bottom:10px;">
       <span class="eyebrow-label" style="margin:0;">${isEditing ? "Edit Routine" : "New Routine"}</span>
@@ -6371,7 +6371,7 @@ function renderRoutineBuilder(){
       <button class="btn btn-ghost" style="flex:1;text-align:left;display:flex;align-items:center;gap:8px;" data-action="open-exercise-picker-for-routine">${svg('plus',14)} Add Exercise…</button>
       <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
         <span style="font-size:11px;color:var(--muted);">sets</span>
-        <input type="number" id="routine-ex-sets" value="${state.routineBuilderSets}" min="1" max="${ROUTINE_MAX_SETS}" style="width:44px;background:var(--surface-alt);border-radius:8px;padding:9px 4px;text-align:center;color:var(--accent);font-family:'SF Mono',monospace;font-weight:700;border:none;">
+        <input type="number" id="routine-ex-sets" value="${state.routineBuilderSets}" min="1" max="${ROUTINE_MAX_SETS}" style="width:44px;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px 4px;text-align:center;color:var(--accent);font-family:'SF Mono',monospace;font-weight:700;border:none;">
       </div>
     </div>
 
@@ -6488,7 +6488,7 @@ function obLabel(text, hint){
 
 function obNumberInput(fieldPath, placeholder, unit){
   const v = obGet(fieldPath);
-  return `<div style="display:flex;align-items:center;background:var(--surface-alt);border-radius:8px;padding:11px;margin-bottom:14px;">
+  return `<div style="display:flex;align-items:center;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:11px;margin-bottom:14px;">
     <input type="number" data-ob-field="${obEsc(fieldPath)}" value="${v==null?'':v}" placeholder="${obEsc(placeholder||'')}" style="flex:1;background:none;color:var(--text);font-size:14px;">
     ${unit?`<span style="font-size:11px;color:var(--muted);">${obEsc(unit)}</span>`:''}
   </div>`;
@@ -6496,7 +6496,7 @@ function obNumberInput(fieldPath, placeholder, unit){
 
 function obTextInput(fieldPath, placeholder){
   const v = obGet(fieldPath);
-  return `<input type="text" data-ob-field="${obEsc(fieldPath)}" value="${obEsc(v||'')}" placeholder="${obEsc(placeholder||'')}" style="width:100%;background:var(--surface-alt);border-radius:8px;padding:11px;font-size:14px;color:var(--text);margin-bottom:14px;border:none;">`;
+  return `<input type="text" data-ob-field="${obEsc(fieldPath)}" value="${obEsc(v||'')}" placeholder="${obEsc(placeholder||'')}" style="width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:11px;font-size:14px;color:var(--text);margin-bottom:14px;border:none;">`;
 }
 
 function obTextarea(fieldPath, placeholder){
@@ -6511,7 +6511,7 @@ function onboardingProgressHeader(step){
     <div style="margin-bottom:20px;">
       <div style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">Step ${step} of ${ONBOARDING_TOTAL_STEPS} — ${ONBOARDING_STEP_TITLES[step-1]}</div>
       <div style="display:flex;gap:4px;">
-        ${Array.from({length:ONBOARDING_TOTAL_STEPS},(_,i)=>`<div style="flex:1;height:4px;border-radius:2px;background:${i<step?'var(--accent)':'var(--surface-alt)'};"></div>`).join("")}
+        ${Array.from({length:ONBOARDING_TOTAL_STEPS},(_,i)=>`<div style="flex:1;height:4px;border-radius:var(--radius-pill);background:${i<step?'var(--accent)':'var(--surface-alt)'};"></div>`).join("")}
       </div>
     </div>`;
 }
@@ -6555,7 +6555,7 @@ function obStep3(){
       ${TARGET_DATE_OPTIONS.map(t=>`<button class="cat-chip ${o.targetDateWeeks===t.weeks?'active':''}" data-ob-select="onboarding.targetDateWeeks|${t.weeks}">${t.label}</button>`).join("")}
     </div>
     ${obLabel("Or pick an exact date")}
-    <input type="date" data-ob-field="onboarding.targetDateCustom" value="${obEsc(o.targetDateCustom||'')}" style="width:100%;background:var(--surface-alt);border-radius:8px;padding:11px;font-size:14px;color:var(--text);margin-bottom:14px;border:none;">
+    <input type="date" data-ob-field="onboarding.targetDateCustom" value="${obEsc(o.targetDateCustom||'')}" style="width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:11px;font-size:14px;color:var(--text);margin-bottom:14px;border:none;">
     ${onboardingRealismWarning(o)}
   `;
 }
@@ -6976,15 +6976,15 @@ function renderCalculators(){
         <div class="row-between">
           <span style="font-size:13px;font-weight:800;text-transform:uppercase;color:var(--rh-muted);">Your Daily Targets</span>
           <span style="display:flex;gap:6px;">
-            <span style="font-size:10px;font-weight:700;background:rgba(37,99,235,.1);color:var(--rh-blue);padding:3px 9px;border-radius:20px;">TDEE</span>
-            <span style="font-size:10px;font-weight:700;background:var(--rh-bg);color:var(--rh-muted);padding:3px 9px;border-radius:20px;">${basis}</span>
+            <span style="font-size:10px;font-weight:700;background:rgba(37,99,235,.1);color:var(--rh-blue);padding:3px 9px;border-radius:var(--radius-lg);">TDEE</span>
+            <span style="font-size:10px;font-weight:700;background:var(--rh-bg);color:var(--rh-muted);padding:3px 9px;border-radius:var(--radius-lg);">${basis}</span>
           </span>
         </div>
         <div style="margin-top:6px;">
           <span style="font-size:30px;font-weight:800;">${Math.round(goalKcal).toLocaleString()}</span>
           <span style="font-size:13px;color:var(--rh-muted);font-weight:600;"> kcal</span>
         </div>
-        ${c.result.goalDelta ? `<div style="display:inline-block;font-size:11px;font-weight:700;color:${c.result.goalDelta>0?'var(--rh-green)':'var(--rh-red)'};background:${c.result.goalDelta>0?'rgba(22,163,74,.1)':'rgba(239,68,68,.1)'};padding:3px 9px;border-radius:20px;margin-top:6px;">${c.result.goalDelta>0?'+':''}${Math.round(c.result.goalDelta)} kcal (${basis})</div>` : `<div style="font-size:11px;color:var(--rh-muted);margin-top:6px;">${basis}</div>`}
+        ${c.result.goalDelta ? `<div style="display:inline-block;font-size:11px;font-weight:700;color:${c.result.goalDelta>0?'var(--rh-green)':'var(--rh-red)'};background:${c.result.goalDelta>0?'rgba(22,163,74,.1)':'rgba(239,68,68,.1)'};padding:3px 9px;border-radius:var(--radius-lg);margin-top:6px;">${c.result.goalDelta>0?'+':''}${Math.round(c.result.goalDelta)} kcal (${basis})</div>` : `<div style="font-size:11px;color:var(--rh-muted);margin-top:6px;">${basis}</div>`}
         <div style="display:flex;gap:14px;margin-top:16px;">
           ${macroRow('Protein', proteinG, n.proteinPct, 'var(--rh-blue)')}
           ${macroRow('Carbs', carbG, n.carbPct, '#D97706')}
@@ -7147,7 +7147,7 @@ function renderCalculators(){
         <div style="font-size:12px;color:var(--rh-muted);font-weight:700;text-transform:uppercase;">Your Maximum Heart Rate (MHR)</div>
         <div style="margin-top:4px;"><span style="font-size:32px;font-weight:800;color:var(--rh-blue);">${maxHR}</span><span style="font-size:13px;color:var(--rh-muted);font-weight:600;"> bpm</span></div>
         <div style="font-size:11px;color:var(--rh-muted);margin-top:2px;">Calculated using 220 − Age</div>
-        <div style="display:flex;height:10px;border-radius:6px;overflow:hidden;margin-top:16px;">
+        <div style="display:flex;height:10px;border-radius:var(--radius-xs);overflow:hidden;margin-top:16px;">
           ${c.result.rows.map((z,i)=>`<div style="flex:${z.hi-z.lo};background:${HR_ZONE_META[i].color};"></div>`).join("")}
         </div>
         <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--rh-muted);margin-top:4px;"><span>0</span><span>${maxHR} MHR</span></div>
@@ -7156,7 +7156,7 @@ function renderCalculators(){
       <div class="rh-section-head"><span>Your Heart Rate Zones</span></div>
       ${c.result.rows.map((z,i)=>{ const m = HR_ZONE_META[i];
         return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;border-left:4px solid ${m.color};">
-        <div style="flex:none;width:46px;height:46px;border-radius:10px;background:${m.color}1a;color:${m.color};display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <div style="flex:none;width:46px;height:46px;border-radius:var(--radius-sm);background:${m.color}1a;color:${m.color};display:flex;flex-direction:column;align-items:center;justify-content:center;">
           <span style="font-size:8px;font-weight:800;letter-spacing:.03em;">ZONE</span><span style="font-size:16px;font-weight:800;">${i+1}</span>
         </div>
         <div style="flex:1;min-width:0;">
@@ -7678,7 +7678,7 @@ function renderProgressAnalytics(){
         <span style="font-size:12px;color:var(--rh-muted);"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D97706;margin-right:5px;"></span>Current</span>
         <span style="font-size:12px;color:var(--rh-muted);"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#94A3B8;margin-right:5px;"></span>Previous 30d</span>
       </div>
-      ${focusGroups.length ? `<div style="width:100%;margin-top:14px;background:rgba(37,99,235,.08);border-radius:10px;padding:10px 12px;display:flex;gap:8px;align-items:flex-start;">
+      ${focusGroups.length ? `<div style="width:100%;margin-top:14px;background:rgba(37,99,235,.08);border-radius:var(--radius-sm);padding:10px 12px;display:flex;gap:8px;align-items:flex-start;">
         <span style="flex:none;color:var(--rh-blue);margin-top:1px;">${svg('info',14)}</span>
         <span style="font-size:12px;color:var(--rh-text);line-height:1.4;">Focus more on ${focusGroups.join(', ').replace(/, ([^,]*)$/, ' and $1')} to balance your muscle distribution.</span>
       </div>` : ''}
@@ -7999,14 +7999,14 @@ function renderProfileForm(){
   return `
     <div class="info-box" style="padding:14px;">
       <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Name</label>
-      <input type="text" id="p-name" value="${p.name||''}" placeholder="Optional" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin:4px 0 12px;font-size:16px;color:var(--text);">
+      <input type="text" id="p-name" value="${p.name||''}" placeholder="Optional" style="display:block;width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:10px;margin:4px 0 12px;font-size:16px;color:var(--text);">
       <div class="grid2">
         <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Weight (${wUnit()})</label>
           <div style="padding:8px;margin-top:4px;font-size:13px;color:var(--accent);font-weight:700;">${displayW(p.weight)} <span style="font-size:10px;color:var(--muted);font-weight:400;">(from log)</span></div></div>
         <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Height (cm)</label>
-          <input type="number" id="p-height" value="${p.height}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin-top:4px;font-size:16px;color:var(--text);"></div>
+          <input type="number" id="p-height" value="${p.height}" style="display:block;width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:10px;margin-top:4px;font-size:16px;color:var(--text);"></div>
         <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Age</label>
-          <input type="number" id="p-age" value="${p.age}" style="display:block;width:100%;background:var(--surface-alt);border-radius:8px;padding:10px;margin-top:4px;font-size:16px;color:var(--text);"></div>
+          <input type="number" id="p-age" value="${p.age}" style="display:block;width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:10px;margin-top:4px;font-size:16px;color:var(--text);"></div>
         <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Gender</label>
           <div style="display:flex;gap:6px;margin-top:4px;">
             <button class="cat-chip ${p.gender==='male'?'active':''}" data-profile-gender="male" style="flex:1;text-align:center;">Male</button>
@@ -8188,7 +8188,7 @@ function renderBodyPhotoViewer(id, photoList){
   const nextPh = idx<sameCategory.length-1 ? sameCategory[idx+1] : null;
   return `<div class="dialog-backdrop" data-close-body-photo style="z-index:190;"></div>
     <div class="dialog-box" id="body-photo-viewer-wrap" style="max-width:460px;padding:14px;z-index:191;">
-      <div id="body-photo-viewer-img-wrap" style="position:relative;width:100%;max-height:56vh;overflow:hidden;border-radius:10px;background:#000;display:flex;align-items:center;justify-content:center;touch-action:${zoom>1?'none':'pan-y'};" data-body-photo-zoom-target>
+      <div id="body-photo-viewer-img-wrap" style="position:relative;width:100%;max-height:56vh;overflow:hidden;border-radius:var(--radius-sm);background:#000;display:flex;align-items:center;justify-content:center;touch-action:${zoom>1?'none':'pan-y'};" data-body-photo-zoom-target>
         ${url ? `<img src="${url}" alt="" draggable="false" style="max-width:100%;max-height:56vh;object-fit:contain;display:block;transform:rotate(${ph.rotation||0}deg) scale(${zoom}) translate(${(state.bodyPhotoPan&&state.bodyPhotoPan.x)||0}px, ${(state.bodyPhotoPan&&state.bodyPhotoPan.y)||0}px);cursor:${zoom>1?'grab':'zoom-in'};" data-body-photo-img>` : `<div style="color:#888;font-size:12px;padding:40px;">Loading…</div>`}
         ${prevPh?`<button data-body-photo-nav="${prevPh.id}" aria-label="Previous" style="position:absolute;left:6px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:18px;">‹</button>`:''}
         ${nextPh?`<button data-body-photo-nav="${nextPh.id}" aria-label="Next" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:18px;">›</button>`:''}
@@ -8235,9 +8235,9 @@ function renderBodyScanArchive(){
     return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
       ${photos.map(ph=>{
         const url = photoThumbUrl(ph.id);
-        return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
+        return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
           ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--rh-muted);font-size:11px;">Loading…</div>`}
-          <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;padding:2px 4px;text-align:center;">${ph.date}</span>
+          <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:var(--radius-2xs);padding:2px 4px;text-align:center;">${ph.date}</span>
           ${ph.milestone?`<span style="position:absolute;top:4px;right:4px;">${svg('star',14)}</span>`:''}
         </button>`;
       }).join("")}
@@ -8259,7 +8259,7 @@ function renderBodyScanArchive(){
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
         ${groups[key].map(ph=>{
           const url = photoThumbUrl(ph.id);
-          return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:8px;overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
+          return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:var(--radius-xs-plus);overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
             ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : ''}
             ${ph.milestone?`<span style="position:absolute;top:2px;right:2px;">${svg('star',11)}</span>`:''}
           </button>`;
@@ -8286,10 +8286,10 @@ function renderBodyScanArchive(){
       </div>
       ${mode==="sideBySide" ? `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div style="aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:#000;">${urlA?`<img src="${urlA}" style="width:100%;height:100%;object-fit:cover;transform:rotate(${a.rotation||0}deg);">`:''}</div>
-          <div style="aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:#000;">${urlB?`<img src="${urlB}" style="width:100%;height:100%;object-fit:cover;transform:rotate(${b.rotation||0}deg);">`:''}</div>
+          <div style="aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;background:#000;">${urlA?`<img src="${urlA}" style="width:100%;height:100%;object-fit:cover;transform:rotate(${a.rotation||0}deg);">`:''}</div>
+          <div style="aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;background:#000;">${urlB?`<img src="${urlB}" style="width:100%;height:100%;object-fit:cover;transform:rotate(${b.rotation||0}deg);">`:''}</div>
         </div>` : `
-        <div id="body-compare-slider" style="position:relative;width:100%;aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:#000;user-select:none;">
+        <div id="body-compare-slider" style="position:relative;width:100%;aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;background:#000;user-select:none;">
           ${urlB?`<img src="${urlB}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:rotate(${b.rotation||0}deg);">`:''}
           <div style="position:absolute;inset:0;width:${pct}%;overflow:hidden;">
             ${urlA?`<img src="${urlA}" style="width:${pct>0?(100/(pct/100)):100}%;max-width:none;height:100%;object-fit:cover;transform:rotate(${a.rotation||0}deg);">`:''}
@@ -8549,9 +8549,9 @@ function renderBodyTab(){
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0;">
         ${state.bodyPhotos.slice(0,9).map(ph=>{
           const url = photoThumbUrl(ph.id);
-          return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
+          return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
             ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--rh-muted);font-size:11px;">Loading…</div>`}
-            <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:4px;padding:2px 4px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(ph.category)}</span>
+            <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:var(--radius-2xs);padding:2px 4px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(ph.category)}</span>
             ${ph.milestone?`<span style="position:absolute;top:4px;right:4px;">${svg('star',14)}</span>`:''}
           </button>`;
         }).join("")}
@@ -8657,13 +8657,13 @@ function renderNutritionTab(){
             <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
               ${state.favoriteFoods.map(f=>`<button class="cat-chip active" data-quick-add-food="${meal}" data-food-name="${f.name.replace(/"/g,'&quot;')}" data-food-cal="${f.calories||0}" data-food-protein="${f.protein||0}" data-food-carbs="${f.carbs||0}" data-food-fat="${f.fat||0}" data-food-fibre="${f.fibre||0}">${f.name} · ${f.calories||0}kcal</button>`).join("")}
             </div>` : ""}
-          <input type="text" id="food-name" placeholder="Food name" style="width:100%;background:var(--surface-alt);border-radius:8px;padding:9px;font-size:13px;color:var(--text);margin-bottom:6px;">
+          <input type="text" id="food-name" placeholder="Food name" style="width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:13px;color:var(--text);margin-bottom:6px;">
           <div style="display:flex;gap:6px;margin-bottom:6px;">
-            <input type="number" id="food-cal" placeholder="kcal*" style="flex:1;background:var(--surface-alt);border-radius:8px;padding:9px;font-size:12px;color:var(--accent);text-align:center;">
-            <input type="number" id="food-protein" placeholder="P g" style="flex:1;background:var(--surface-alt);border-radius:8px;padding:9px;font-size:12px;color:var(--text);text-align:center;">
-            <input type="number" id="food-carbs" placeholder="C g" style="flex:1;background:var(--surface-alt);border-radius:8px;padding:9px;font-size:12px;color:var(--text);text-align:center;">
-            <input type="number" id="food-fat" placeholder="F g" style="flex:1;background:var(--surface-alt);border-radius:8px;padding:9px;font-size:12px;color:var(--text);text-align:center;">
-            <input type="number" id="food-fibre" placeholder="Fb g" style="flex:1;background:var(--surface-alt);border-radius:8px;padding:9px;font-size:12px;color:var(--text);text-align:center;">
+            <input type="number" id="food-cal" placeholder="kcal*" style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:12px;color:var(--accent);text-align:center;">
+            <input type="number" id="food-protein" placeholder="P g" style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:12px;color:var(--text);text-align:center;">
+            <input type="number" id="food-carbs" placeholder="C g" style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:12px;color:var(--text);text-align:center;">
+            <input type="number" id="food-fat" placeholder="F g" style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:12px;color:var(--text);text-align:center;">
+            <input type="number" id="food-fibre" placeholder="Fb g" style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:12px;color:var(--text);text-align:center;">
           </div>
           <div style="display:flex;gap:6px;">
             <button class="btn btn-accent" style="flex:1;" data-log-meal-food="${meal}">Add to ${meal}</button>
@@ -8683,7 +8683,7 @@ function renderNutritionTab(){
         <div style="position:absolute;left:0;right:0;top:${100-Math.min(100,targets.kcal/maxKcal*100)}%;border-top:1.5px dashed var(--accent);opacity:.6;"></div>
         ${week.map(d=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end;">
           ${d.kcal>0?`<span class="mono" style="font-size:9px;color:var(--muted);">${d.kcal}</span>`:""}
-          <div style="width:70%;border-radius:4px 4px 0 0;background:${d.kcal>targets.kcal?'var(--accent)':'#FFB020'};height:${Math.max(2,Math.round(d.kcal/maxKcal*80))}px;"></div>
+          <div style="width:70%;border-radius:var(--radius-2xs) 4px 0 0;background:${d.kcal>targets.kcal?'var(--accent)':'#FFB020'};height:${Math.max(2,Math.round(d.kcal/maxKcal*80))}px;"></div>
           <span style="font-size:9px;color:var(--muted);font-weight:700;">${d.label}</span>
         </div>`).join("")}
       </div>
@@ -8771,11 +8771,11 @@ function renderErrorScreen(err){
       <p style="font-size:13px;color:var(--muted,#9a9aa4);margin-bottom:18px;">
         A screen failed to load. Your saved data is safe — it lives in this browser's storage, untouched.
       </p>
-      <div style="background:#1c1c22;border-radius:10px;padding:10px 12px;font-family:monospace;font-size:11px;color:#ff8a5c;margin-bottom:20px;word-break:break-word;">${msg.replace(/</g,"&lt;")}</div>
-      <button id="err-reload" style="width:100%;padding:13px;border:none;border-radius:10px;background:#FF5A1F;color:#fff;font-weight:800;font-size:14px;margin-bottom:10px;">Reload App</button>
-      <button id="err-home" style="width:100%;padding:13px;border:none;border-radius:10px;background:#2a2a32;color:#fff;font-weight:700;font-size:14px;margin-bottom:10px;">Go to Home</button>
-      <button id="err-backup" style="width:100%;padding:13px;border:none;border-radius:10px;background:#2a2a32;color:#fff;font-weight:700;font-size:14px;margin-bottom:10px;">Download Backup Now</button>
-      <button id="err-reset" style="width:100%;padding:13px;border:1px solid #ff6b6b;border-radius:10px;background:none;color:#ff6b6b;font-weight:700;font-size:13px;">Reset All App Data</button>
+      <div style="background:#1c1c22;border-radius:var(--radius-sm);padding:10px 12px;font-family:monospace;font-size:11px;color:#ff8a5c;margin-bottom:20px;word-break:break-word;">${msg.replace(/</g,"&lt;")}</div>
+      <button id="err-reload" style="width:100%;padding:13px;border:none;border-radius:var(--radius-sm);background:#FF5A1F;color:#fff;font-weight:800;font-size:14px;margin-bottom:10px;">Reload App</button>
+      <button id="err-home" style="width:100%;padding:13px;border:none;border-radius:var(--radius-sm);background:#2a2a32;color:#fff;font-weight:700;font-size:14px;margin-bottom:10px;">Go to Home</button>
+      <button id="err-backup" style="width:100%;padding:13px;border:none;border-radius:var(--radius-sm);background:#2a2a32;color:#fff;font-weight:700;font-size:14px;margin-bottom:10px;">Download Backup Now</button>
+      <button id="err-reset" style="width:100%;padding:13px;border:1px solid #ff6b6b;border-radius:var(--radius-sm);background:none;color:#ff6b6b;font-weight:700;font-size:13px;">Reset All App Data</button>
     </div>
   `;
   document.getElementById("err-reload").addEventListener("click", ()=> location.reload());
@@ -8994,7 +8994,7 @@ function renderHyroxSchedule(){
     <div class="level-rail" style="display:flex;gap:6px;margin-bottom:12px;">
       ${Object.entries(LEVELS).map(([key,lv])=>`
         <button class="level-chip ${state.activeLevel===key?'active':''}" data-level="${key}"
-          style="flex:1;padding:9px 6px;border-radius:10px;border:1.5px solid ${state.activeLevel===key?'var(--color-interactive)':'var(--border)'};background:${state.activeLevel===key?'var(--color-interactive-soft)':'var(--surface)'};color:${state.activeLevel===key?'var(--color-interactive)':'var(--muted)'};font-weight:800;font-size:12px;cursor:pointer;">
+          style="flex:1;padding:9px 6px;border-radius:var(--radius-sm);border:1.5px solid ${state.activeLevel===key?'var(--color-interactive)':'var(--border)'};background:${state.activeLevel===key?'var(--color-interactive-soft)':'var(--surface)'};color:${state.activeLevel===key?'var(--color-interactive)':'var(--muted)'};font-weight:800;font-size:12px;cursor:pointer;">
           ${lv.label}
         </button>`).join("")}
     </div>
@@ -9603,7 +9603,7 @@ function renderWorkoutTab(){
           }).join("")}
           ${logType==="cardio" ? `<div class="row-between" style="padding:2px 4px;">
             <span style="font-size:11px;color:var(--rh-muted);">Calories (optional)</span>
-            <input type="number" class="mono" style="width:70px;background:var(--rh-bg,var(--surface-alt));border-radius:6px;padding:6px 8px;text-align:right;color:var(--rh-text,var(--text));border:1px solid var(--rh-border,transparent);" value="${ex.sets[0]&&ex.sets[0].calories||''}" data-set-field="${exi}|0|calories" placeholder="–">
+            <input type="number" class="mono" style="width:70px;background:var(--rh-bg,var(--surface-alt));border-radius:var(--radius-xs);padding:6px 8px;text-align:right;color:var(--rh-text,var(--text));border:1px solid var(--rh-border,transparent);" value="${ex.sets[0]&&ex.sets[0].calories||''}" data-set-field="${exi}|0|calories" placeholder="–">
           </div>` : ''}
           <button class="add-set-btn" data-add-set="${exi}">${svg('plus',14)} Add Set</button>
         </div>
@@ -9625,7 +9625,7 @@ function renderWorkoutTab(){
 function renderExerciseAnimation(detail){
   if(!detail || !detail.animationAvailable || (!detail.animationWebmUrl && !detail.animationMp4Url)){
     return `<div class="ex-anim-fallback">
-      ${detail && detail.thumbnailUrl ? `<img src="${detail.thumbnailUrl}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:14px;">` : svg('workout',28)}
+      ${detail && detail.thumbnailUrl ? `<img src="${detail.thumbnailUrl}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius-md);">` : svg('workout',28)}
       <div style="font-size:12px;color:var(--muted);margin-top:8px;">No demonstration video yet</div>
     </div>`;
   }

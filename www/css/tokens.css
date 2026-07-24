@@ -27,8 +27,14 @@
   --space-lg: 24px; --space-xl: 32px;
   /* Radius scale covers the actual spread of ad-hoc values already in use across app.js
      (audited: 2/4/6/8/10/13/14/16/20px) -- new code should reference these instead of a
-     bare px value; existing inline styles migrate to them incrementally, not in one pass. */
-  --radius-2xs: 4px; --radius-xs: 6px; --radius-sm: 10px; --radius-md: 14px;
+     bare px value; existing inline styles migrate to them incrementally, not in one pass.
+     --radius-xs-plus:8px named literally (not a T-shirt slot) because it's the single most
+     common inline radius value found (19 occurrences) and sits exactly between --radius-xs
+     and --radius-sm -- forcing it onto either would be a real, visible change on that many
+     elements. 2px/13px values found on audit turned out to be h/2 pill shapes (a 4px-tall
+     progress step, a 26px-tall toggle switch) rather than scale outliers -- those migrate
+     to --radius-pill, not a new fixed token. */
+  --radius-2xs: 4px; --radius-xs: 6px; --radius-xs-plus: 8px; --radius-sm: 10px; --radius-md: 14px;
   --radius-card: 18px; --radius-lg: 20px; --radius-pill: 999px;
   /* Elevation scale -- --shadow-card kept as-is (widely referenced already) and now aliases
      the mid level so existing callers are unaffected. */
