@@ -1764,6 +1764,21 @@ function badge(label, color="blue", icon){
   return `<span class="badge badge--${color}">${icon?svg(icon,11):''}${label}</span>`;
 }
 
+// Shared Skeleton loading (RC1 Phase 4). skeletonImage matches the aspect-ratio image-tile
+// box pattern already used by the photo grids; skeletonList(rows) mimics a "title + meta +
+// two buttons" list row (the shape every "Loading…" list in this app actually resolves to)
+// so the loading state previews real layout instead of showing a bare text label.
+function skeletonImage(){
+  return `<div class="skeleton" style="width:100%;height:100%;"></div>`;
+}
+function skeletonList(rows=3){
+  return Array.from({length:rows}).map(()=>`
+    <div class="skeleton-row">
+      <div class="skeleton skeleton-text" style="width:70%;"></div>
+      <div class="skeleton skeleton-text" style="width:40%;height:10px;"></div>
+    </div>`).join("");
+}
+
 /* =========================================================
    STORAGE — localStorage wrapper, app state, persistence, migrations,
    onboarding-status resolution, and JSON/CSV backup export & import.
@@ -4688,7 +4703,7 @@ function renderDriveBackupsListView(){
   return `
     <button class="btn btn-ghost" style="margin-bottom:12px;" data-action="drive-backups-back">← Back</button>
     <div class="eyebrow-label" style="margin-top:0;">Manage Backups</div>
-    ${state.driveBackupsBusy ? `<div class="info-box" style="padding:14px;"><div style="font-size:13px;color:var(--muted);">Loading…</div></div>` :
+    ${state.driveBackupsBusy ? skeletonList(3) :
       !list ? `<div class="info-box" style="padding:14px;"><div style="font-size:13px;color:var(--accent);">Couldn't load backups. ${driveEsc(drive ? drive.getStatus().lastError||"" : "")}</div></div>` :
       list.length===0 ? `<div class="info-box" style="padding:14px;"><div style="font-size:13px;color:var(--muted);">No backups yet — use Back Up Now in Settings.</div></div>` :
       list.map(b=>`
@@ -8189,7 +8204,7 @@ function renderBodyPhotoViewer(id, photoList){
   return `<div class="dialog-backdrop" data-close-body-photo style="z-index:190;"></div>
     <div class="dialog-box" id="body-photo-viewer-wrap" style="max-width:460px;padding:14px;z-index:191;">
       <div id="body-photo-viewer-img-wrap" style="position:relative;width:100%;max-height:56vh;overflow:hidden;border-radius:var(--radius-sm);background:#000;display:flex;align-items:center;justify-content:center;touch-action:${zoom>1?'none':'pan-y'};" data-body-photo-zoom-target>
-        ${url ? `<img src="${url}" alt="" draggable="false" style="max-width:100%;max-height:56vh;object-fit:contain;display:block;transform:rotate(${ph.rotation||0}deg) scale(${zoom}) translate(${(state.bodyPhotoPan&&state.bodyPhotoPan.x)||0}px, ${(state.bodyPhotoPan&&state.bodyPhotoPan.y)||0}px);cursor:${zoom>1?'grab':'zoom-in'};" data-body-photo-img>` : `<div style="color:#888;font-size:12px;padding:40px;">Loading…</div>`}
+        ${url ? `<img src="${url}" alt="" draggable="false" style="max-width:100%;max-height:56vh;object-fit:contain;display:block;transform:rotate(${ph.rotation||0}deg) scale(${zoom}) translate(${(state.bodyPhotoPan&&state.bodyPhotoPan.x)||0}px, ${(state.bodyPhotoPan&&state.bodyPhotoPan.y)||0}px);cursor:${zoom>1?'grab':'zoom-in'};" data-body-photo-img>` : `<div class="skeleton" style="width:100%;height:300px;"></div>`}
         ${prevPh?`<button data-body-photo-nav="${prevPh.id}" aria-label="Previous" style="position:absolute;left:6px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:18px;">‹</button>`:''}
         ${nextPh?`<button data-body-photo-nav="${nextPh.id}" aria-label="Next" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:18px;">›</button>`:''}
       </div>
@@ -8236,7 +8251,7 @@ function renderBodyScanArchive(){
       ${photos.map(ph=>{
         const url = photoThumbUrl(ph.id);
         return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
-          ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--rh-muted);font-size:11px;">Loading…</div>`}
+          ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : skeletonImage()}
           <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:var(--radius-2xs);padding:2px 4px;text-align:center;">${ph.date}</span>
           ${ph.milestone?`<span style="position:absolute;top:4px;right:4px;">${svg('star',14)}</span>`:''}
         </button>`;
@@ -8550,7 +8565,7 @@ function renderBodyTab(){
         ${state.bodyPhotos.slice(0,9).map(ph=>{
           const url = photoThumbUrl(ph.id);
           return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
-            ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--rh-muted);font-size:11px;">Loading…</div>`}
+            ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : skeletonImage()}
             <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:var(--radius-2xs);padding:2px 4px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(ph.category)}</span>
             ${ph.milestone?`<span style="position:absolute;top:4px;right:4px;">${svg('star',14)}</span>`:''}
           </button>`;

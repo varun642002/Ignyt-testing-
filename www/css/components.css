@@ -1,3 +1,20 @@
+/* Shared Skeleton loading (RC1 Phase 4). Audit found only 4 "Loading…" text occurrences in
+   the whole app (1 list, 3 identical image-tile placeholders) -- small surface, but a text
+   label is the wrong pattern for "waiting on an image/list to appear" versus a shaped
+   placeholder that previews the eventual layout. Shimmer uses --duration-slow/--ease-standard
+   (Phase 1 motion tokens) rather than new ad-hoc timing values. */
+.skeleton { position:relative; overflow:hidden; background:var(--color-surface-elevated); border-radius:var(--radius-sm); }
+.skeleton::after {
+  content:""; position:absolute; inset:0; transform:translateX(-100%);
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
+  animation:skeleton-shimmer 1.6s var(--ease-standard) infinite;
+}
+@keyframes skeleton-shimmer { 100% { transform:translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .skeleton::after { animation:none; } }
+.skeleton-text { height:14px; border-radius:var(--radius-2xs); margin-bottom:6px; }
+.skeleton-text:last-child { margin-bottom:0; width:60%; }
+.skeleton-row { display:flex; flex-direction:column; padding:12px 14px; margin-bottom:8px; border-radius:var(--radius-md); background:var(--color-surface); border:1px solid var(--color-border); }
+
 /* Shared empty state (icon + message + optional action) -- see emptyState() in app.js.
    Global, not page-scoped: every *-light screen's --rh-muted-style text still reads through
    fine since this only sets layout/sizing, not color (color inherits from the surrounding
