@@ -203,7 +203,13 @@
 .wk-light .set-table-header { color:var(--rh-muted); }
 .wk-light .set-row-wrap { border-radius:10px; }
 .wk-light .set-row { background:var(--rh-bg); }
-.wk-light .set-row.done { background:rgba(22,163,74,.1); }
+/* Solid, not alpha-transparent: this row sits in front of the swipe-delete/duplicate buttons
+   (position:absolute, same wrapper) which must stay fully hidden until actually swiped open.
+   The old rgba(22,163,74,.1) let the red delete background bleed through a completed (done)
+   row at all times, not just while swiping. color-mix keeps the same "green-tinted" look
+   while staying opaque in both themes (mixes into the row's own solid --rh-bg, not into
+   whatever's behind it). */
+.wk-light .set-row.done { background:color-mix(in srgb, var(--rh-green,#16A34A) 12%, var(--rh-bg)); }
 .wk-light .set-num { color:var(--rh-text); }
 .wk-light .set-prev { color:var(--rh-muted); opacity:1; }
 .wk-light .set-input { background:var(--rh-card); border:1px solid var(--rh-border); color:var(--rh-text); }
