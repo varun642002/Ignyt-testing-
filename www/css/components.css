@@ -7,6 +7,32 @@
   background:var(--color-surface-elevated); color:var(--color-text-secondary); }
 .empty-state__message { font-size:var(--font-size-sm); color:var(--color-text-secondary); max-width:280px; line-height:1.5; }
 
+/* Shared Badge/Chip/Tag (Phase 2, RC1 component standardization) -- consolidates the visual
+   pattern behind .tl-card__badge/.pi-tag/.lib-tag/.lib-guide-btn (three-plus near-identical
+   "small rounded pill, tinted background, colored text" rules found on audit). Those existing
+   classes are left in place (real call sites depend on them) -- new code should reach for
+   .badge instead of writing a fourth copy of the same 6 CSS properties. Color modifiers use
+   the same --rh-*/--color-* values already used by the patterns above, not new hex. */
+.badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; padding:3px 9px; border-radius:var(--radius-pill); white-space:nowrap; }
+.badge--blue { background:rgba(37,99,235,.1); color:var(--rh-blue,var(--color-interactive)); }
+.badge--green { background:rgba(22,163,74,.12); color:var(--rh-green,var(--color-success)); }
+.badge--red { background:rgba(239,68,68,.1); color:var(--rh-red,var(--color-error)); }
+.badge--purple { background:rgba(124,58,237,.1); color:var(--rh-purple,#7C3AED); }
+.badge--muted { background:var(--color-surface-elevated); color:var(--color-text-secondary); }
+
+/* Shared Divider -- there was no dedicated divider component anywhere (audited); every
+   screen that needed one used an ad-hoc inline border-top on some other element instead. */
+.divider { border:none; border-top:1px solid var(--rh-border,var(--color-border)); margin:var(--space-sm) 0; }
+.divider--vertical { border:none; border-left:1px solid var(--rh-border,var(--color-border)); width:1px; align-self:stretch; margin:0 var(--space-sm); }
+
+/* Audit note (Phase 2): buttons and progress bars each have two parallel systems, same
+   shape as tokens.css's --rh-*/--color-* split -- .btn/.btn-ghost/.btn-accent/.btn-steel
+   (index.html inline <style>, dark legacy screens) vs .rh-btn/.rh-btn--ghost/.rh-btn--primary
+   (home.css, *-light premium screens); .progress-track/.progress-fill vs .rh-progress-track/
+   .rh-progress-fill likewise. Not merged here for the same reason --rh-*/--color-* weren't
+   value-merged in Phase 1: they're two different screens' design languages, not accidental
+   duplication of one. Flagged so it isn't rediscovered from scratch. */
+
 .premium-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); box-shadow:var(--shadow-card); }
 .premium-card--elevated { background:var(--color-surface-elevated); }
 .section-heading { display:flex; align-items:center; justify-content:space-between; gap:var(--space-sm); margin:var(--space-lg) 0 var(--space-xs); }

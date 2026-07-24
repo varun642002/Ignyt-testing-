@@ -1757,6 +1757,13 @@ function emptyState(icon, message, actionHtml){
   </div>`;
 }
 
+// Shared Badge/Chip/Tag (RC1 Phase 2 component standardization). color: "blue"|"green"|
+// "red"|"purple"|"muted". Reference implementation for new call sites -- existing
+// .tl-card__badge/.pi-tag/.lib-tag markup is untouched (real call sites depend on it).
+function badge(label, color="blue", icon){
+  return `<span class="badge badge--${color}">${icon?svg(icon,11):''}${label}</span>`;
+}
+
 /* =========================================================
    STORAGE — localStorage wrapper, app state, persistence, migrations,
    onboarding-status resolution, and JSON/CSV backup export & import.
@@ -4802,7 +4809,7 @@ function renderSettingsTab(){
         <button class="tl-card" data-action="cloud-sync-now" style="cursor:${window.IgnytCloudSync?'pointer':'default'};">
           <span class="tl-card__icon">${svg('cloud',20)}</span>
           <div class="tl-card__body"><div class="tl-card__label">Cloud Sync</div><div class="tl-card__desc">${window.IgnytCloudSync?renderCloudSyncStatusText():'Offline — saved on this device'}</div></div>
-          ${window.IgnytCloudSync && window.IgnytCloudSync.getStatus().status==='synced' ? `<span class="tl-card__badge" style="position:static;background:rgba(22,163,74,.12);color:var(--rh-green);border-radius:14px;padding:4px 10px;font-size:11px;font-weight:700;">Connected</span>` : `<span class="tl-card__chev">›</span>`}
+          ${window.IgnytCloudSync && window.IgnytCloudSync.getStatus().status==='synced' ? badge('Connected','green') : `<span class="tl-card__chev">›</span>`}
         </button>
         <button class="tl-card" data-action="open-privacy-info">
           <span class="tl-card__icon">${svg('shield',20)}</span>
