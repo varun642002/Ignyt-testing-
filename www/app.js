@@ -3807,7 +3807,9 @@ function isPreviousSetPR(exerciseName){
 
 function sessionMuscles(exercises){
   const set = new Set();
-  exercises.forEach(ex=> set.add(getMuscle(ex.name)));
+  // A malformed/legacy workoutLog entry with a missing or non-array `exercises` field must not
+  // crash the Home/Workout list render -- treat it as having no exercises rather than throwing.
+  (Array.isArray(exercises) ? exercises : []).forEach(ex=> set.add(getMuscle(ex.name)));
   return Array.from(set);
 }
 

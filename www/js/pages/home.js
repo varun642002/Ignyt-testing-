@@ -147,7 +147,7 @@
             <span class="tl-card__icon" style="flex:none;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg(rowIcon(muscles), 20)}</span>
             <div style="flex:1;min-width:0;">
               <div style="font-size:15px;font-weight:800;">${sessionTitle(s)}</div>
-              <div style="font-size:12px;color:var(--rh-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${muscles.length ? muscles.join(', ') : `${s.exercises.length} exercise${s.exercises.length!==1?'s':''}`}</div>
+              <div style="font-size:12px;color:var(--rh-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${muscles.length ? muscles.join(', ') : `${(s.exercises||[]).length} exercise${(s.exercises||[]).length!==1?'s':''}`}</div>
             </div>
             <div style="flex:none;text-align:right;">
               <div style="font-size:13px;font-weight:700;">${workoutDurationLabel(s)}</div>
