@@ -12542,20 +12542,28 @@ document.addEventListener("focusin", (e)=>{
 /* =========================================================
    KEYBOARD-AWARE WORKOUT LAYOUT
 
-   Root cause of the keyboard covering the set row: MainActivity had no windowSoftInputMode,
-   so the native WebView never resized for the keyboard, and nothing reacted to the browser/PWA
-   case (layout viewport never resizes there either -- only the visual viewport shrinks). This
-   block is driven by visualViewport, the one API that reports the real usable screen height
-   under both models:
+   Root cause of the bottom nav still showing on-device: the previous version compared
+   visualViewport.height against the LIVE window.innerHeight. That breaks under
+   windowSoftInputMode="adjustResize" (AndroidManifest.xml) -- adjustResize makes
+   window.innerHeight itself shrink together with the keyboard, so window.innerHeight minus
+   visualViewport.height stayed near 0 the entire time and "keyboard open" never triggered.
+   Fixed by comparing against a HEIGHT BASELINE captured once while the keyboard is known to
+   be closed, instead of the live (already-shrunk) window height -- this stays correct whether
+   or not the platform resizes the window for the keyboard, i.e. identically for native
+   Android (adjustResize) and browser/PWA mode (layout viewport never resizes, only the visual
+   viewport shrinks).
 
    1. body.kb-open (index.html) slides the fixed bottom nav out of the way.
    2. The focused exercise's header (name / muscle badge / notes / rest timer / column
       headers -- .wk-ex-card__pin) sticks to the top of the scroll area, so it survives the
-      set list scrolling underneath it -- .set-row:focus-within already highlights the active
-      row itself (workout.css).
-   3. The focused set-input is scrolled so it clears both the pinned header and the keyboard,
-      computed from actual element/viewport geometry (getBoundingClientRect, visualViewport)
-      rather than any fixed pixel guess, so it holds up at any header height or screen size.
+      set list scrolling underneath it -- .set-input:focus already gives the active field its
+      own subtle highlight (workout.css).
+   3. The focused set-input is centered in the band between the pinned header and the top of
+      the keyboard, computed from actual element/viewport geometry (getBoundingClientRect,
+      visualViewport) rather than any fixed pixel guess, so it holds up at any header height,
+      font size or screen size.
+   4. The scroll position from right before editing started is saved once and restored once
+      the keyboard fully closes, so the list lands back exactly where the user left it.
 
    One listener for the app's lifetime, not per-render.
 ========================================================= */
@@ -12565,6 +12573,15 @@ document.addEventListener("focusin", (e)=>{
   const main = document.querySelector("main");
   let scrollTimer = null;
   let pinnedEl = null;
+  let wasOpen = false;
+  let savedScrollTop = null;
+  // Captured once at startup, before any keyboard could possibly be open -- the "no keyboard"
+  // reference height every later reading is compared against. Re-captured on orientation
+  // change (a real dimension change, not a keyboard one).
+  let baseHeight = window.innerHeight;
+  window.addEventListener("orientationchange", ()=>{
+    setTimeout(()=>{ baseHeight = window.innerHeight; onViewportChange(); }, 300);
+  });
 
   function activeSetControl(){
     const a = document.activeElement;
@@ -12587,35 +12604,44 @@ document.addEventListener("focusin", (e)=>{
     return pin;
   }
 
-  function scrollRowAboveKeyboard(el, pin){
+  // Centers the active row in the band between the pinned header and the top of the keyboard
+  // (not just nudged clear of it), so editing reads like Strong/Hevy's "row floats mid-screen".
+  function centerRowInView(el, pin){
     if(!main || !el) return;
     const rect = el.getBoundingClientRect();
-    const visibleTop = Math.max(pin ? pin.getBoundingClientRect().bottom : 0, vv.offsetTop);
-    const visibleBottom = vv.offsetTop + vv.height;
-    let delta = 0;
-    if(rect.bottom > visibleBottom) delta = rect.bottom - visibleBottom;
-    else if(rect.top < visibleTop) delta = rect.top - visibleTop;
-    if(delta) main.scrollBy({ top:Math.round(delta), behavior:"smooth" });
+    const bandTop = pin ? pin.getBoundingClientRect().bottom : vv.offsetTop;
+    const bandBottom = vv.offsetTop + vv.height;
+    const rowCenter = (rect.top + rect.bottom) / 2;
+    const targetCenter = (bandTop + bandBottom) / 2;
+    const delta = rowCenter - targetCenter;
+    if(Math.abs(delta) > 2) main.scrollBy({ top:Math.round(delta), behavior:"smooth" });
   }
 
   function onViewportChange(){
-    const inset = Math.max(0, Math.round(window.innerHeight - vv.height));
+    const inset = Math.max(0, Math.round(baseHeight - vv.height));
     document.documentElement.style.setProperty("--kb-inset", inset + "px");
     const open = inset > 120; // real keyboards are much taller than URL-bar/chrome height changes
+    if(open && !wasOpen && main) savedScrollTop = main.scrollTop; // capture right as editing starts
     document.body.classList.toggle("kb-open", open);
     const active = open ? activeSetControl() : null;
     const pin = setPin(active ? active.closest(".wk-ex-card") : null);
     if(active){
       clearTimeout(scrollTimer);
-      scrollTimer = setTimeout(()=> scrollRowAboveKeyboard(active, pin), 50);
+      scrollTimer = setTimeout(()=> centerRowInView(active, pin), 60);
+    } else if(wasOpen && !open && main && savedScrollTop!=null){
+      // Keyboard just fully closed: restore exactly where the user was before they started editing.
+      clearTimeout(scrollTimer);
+      main.scrollTo({ top:savedScrollTop, behavior:"smooth" });
+      savedScrollTop = null;
     }
+    wasOpen = open;
   }
 
   vv.addEventListener("resize", onViewportChange);
   vv.addEventListener("scroll", onViewportChange);
   // Moving focus straight from one exercise's row to another's while the keyboard stays open
   // doesn't fire a visualViewport resize (the keyboard itself hasn't moved), but still needs
-  // to re-pin/re-scroll for the newly focused row.
+  // to re-pin/re-center for the newly focused row.
   document.addEventListener("focusin", onViewportChange);
   document.addEventListener("focusout", ()=> setTimeout(()=>{ if(!activeSetControl()) setPin(null); }, 0));
 })();

@@ -45,6 +45,9 @@
   transition:border-color .15s ease, box-shadow .15s ease;
   scroll-margin-top:var(--pin-height,0px); scroll-margin-bottom:16px; }
 .set-input:focus { outline:none; border-color:var(--rh-blue,#2563EB); box-shadow:0 0 0 3px rgba(37,99,235,.14); }
+/* RPE gets the same subtle focus treatment as the text inputs (border + glow, not a full-row
+   fill) so the whole row reads consistently when tabbing/auto-advancing through it. */
+.rpe-btn:focus { outline:none; border-color:var(--rh-blue,#2563EB); box-shadow:0 0 0 3px rgba(37,99,235,.14); }
 
 /* Sticky exercise header while actively editing a set (keyboard open) -- keeps the name,
    muscle badge, notes, rest timer and column headers in view while only the set rows scroll
@@ -56,9 +59,10 @@
    editable until un-checked. Applies to inputs, the RPE button, and the hold-timer button. */
 .set-input:disabled, .rpe-btn:disabled, .rest-toggle:disabled { opacity:.6; cursor:default; }
 
-/* Active row: highlighted the moment any of its own inputs has focus -- no extra JS state
-   needed, :focus-within tracks it for free and clears itself the instant focus leaves (Bug #8). */
-.wk-light .set-row:focus-within { background:rgba(37,99,235,.07); box-shadow:inset 0 0 0 1.5px var(--rh-blue); }
+/* Active row: previously a full blue row background+border on :focus-within -- reported as too
+   heavy/distracting. Replaced with per-field highlighting only (.set-input:focus,
+   .rpe-btn:focus above): a subtle border + glow on the exact control being edited, leaving the
+   row itself on its normal card background. */
 
 .set-check { width:40px; height:40px; border-radius:11px; border:1.5px solid; background:none; cursor:pointer;
   display:flex; align-items:center; justify-content:center; flex:none; justify-self:center;
