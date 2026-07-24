@@ -191,8 +191,8 @@
 /* Exercise log card + its interactive set table -- structure/attributes unchanged, colors only. */
 .wk-light .ex-log-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:18px; margin-bottom:14px; box-shadow:0 1px 4px rgba(15,23,42,.05); }
 .wk-ex-card__name { font-weight:800; color:var(--rh-text); font-size:20px; line-height:1.25; letter-spacing:-.01em; }
-.wk-light .muscle-chip { background:rgba(37,99,235,.1); color:var(--rh-blue); }
-.wk-light .muscle-chip.active { background:rgba(37,99,235,.14); color:var(--rh-blue); }
+.wk-light .muscle-chip { background:rgba(37,99,235,.22); color:var(--rh-blue); border-radius:var(--radius-xs); }
+.wk-light .muscle-chip.active { background:rgba(37,99,235,.22); color:var(--rh-blue); border-radius:var(--radius-xs); }
 .wk-light .notes-inline { color:var(--rh-muted); border-bottom-color:var(--rh-border); }
 .wk-light .notes-inline:focus { color:var(--rh-text); border-color:var(--rh-blue); }
 .wk-light .rest-toggle { color:var(--rh-blue); }
