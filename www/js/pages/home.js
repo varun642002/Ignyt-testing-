@@ -135,6 +135,7 @@
         ${quickAction('progress', 'var(--rh-purple)', 'Progress', 'data-nav="progress"')}
         ${quickAction('heart', '#DC2626', 'Heart Rate', 'data-action="open-calc" data-calc="hr"')}
         ${quickAction('calc', 'var(--rh-purple)', 'BMI Calculator', 'data-action="open-calc" data-calc="bmi"')}
+        ${quickAction('flask', '#0891B2', 'Medical Records', 'data-nav="uploads"')}
         ${quickAction('more', 'var(--rh-muted)', 'More', 'data-nav="tools"')}
       </div>
 

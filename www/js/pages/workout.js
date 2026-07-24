@@ -54,8 +54,6 @@
     const showAll = state.showAllSessions;
     const recent = showAll ? state.workoutLog : state.workoutLog.slice(0, 2);
 
-    const estMinutes = plannedDay ? Math.round(plannedDay.exercises.reduce((sum, ex) => sum + (parseSets(ex.presc) || 3), 0) * WORKOUT_MIN_PER_SET) : null;
-
     const filter = state.workoutRoutineFilter || 'All';
     const sort = state.workoutRoutineSort || 'recent';
     let routines = state.routines.slice();
@@ -68,31 +66,6 @@
     return `
       <div class="wk-light">
         ${renderPRCelebration && state.lastSessionPRs && state.lastSessionPRs.length ? renderPRCelebration() : ''}
-
-        ${plannedDay ? `
-          <section class="wk-hero">
-            <div class="wk-hero__eyebrow">Today's Workout</div>
-            <div class="wk-hero__title">${plannedDay.session}</div>
-            <div class="wk-hero__meta">
-              <span>${svg('dumbbell', 15)} ${plannedDay.exercises.length} Exercises</span>
-              ${estMinutes ? `<span>${svg('timer', 15)} ~${estMinutes} min</span>` : ''}
-            </div>
-            ${todayMuscles.length ? `<div class="wk-hero__muscles">${svg('body', 15)} ${todayMuscles.join(' • ')}</div>` : ''}
-            <div class="wk-hero__actions">
-              <button class="rh-btn rh-btn--primary" data-action="start-session">▶ Start Workout</button>
-              <button class="rh-btn rh-btn--ghost" data-home-day="${week.days.indexOf(plannedDay)}">View Details</button>
-            </div>
-          </section>
-        ` : `
-          <section class="wk-hero wk-hero--rest">
-            <div class="wk-hero__eyebrow">Today's Workout</div>
-            <div class="wk-hero__title">Rest Day</div>
-            <div class="wk-hero__muscles">Recovery, mobility, or an easy walk.</div>
-            <div class="wk-hero__actions">
-              <button class="rh-btn rh-btn--primary" data-action="start-session">▶ Start Empty Workout</button>
-            </div>
-          </section>
-        `}
 
         <div class="rh-section-head"><span>This Week</span><a href="#" class="rh-view-all" data-nav="plan">Week ${week.week} of 8 ›</a></div>
         <div class="wk-stat-grid">
