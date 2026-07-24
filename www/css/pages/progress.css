@@ -46,7 +46,13 @@
 .pg-stat-card__sub.is-down { color:var(--rh-red); }
 
 /* ---------- Chart cards ---------- */
-.pg-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:16px; }
+/* color:var(--rh-text) added here for the same reason as .pg-quick-card above: .pg-card is
+   normally a div (inherits color fine), but is also used as a real <button> in a couple of
+   places (Home's "Set a weight goal" prompt, Settings' Reset All Data row) where a child
+   text node has no color of its own -- without this, those buttons default to black text via
+   the UA button stylesheet, invisible in light theme, unreadable in dark. No-op for the many
+   existing div usages (they already resolved to this value via inheritance). */
+.pg-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:16px; color:var(--rh-text); }
 .pg-card-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; align-items:stretch; }
 .pg-card--half { padding:14px; }
 .pg-card__head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
@@ -94,7 +100,15 @@
 
 /* ---------- Quick access grid ---------- */
 .pg-quick-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-.pg-quick-card { display:flex; align-items:center; gap:10px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:14px; padding:12px; cursor:pointer; text-align:left; }
+/* color:var(--rh-text) here is the actual fix, not decoration: .pg-quick-card is a real
+   <button> element, and buttons don't inherit color the way a div/span does -- the browser's
+   own UA stylesheet gives <button> its own default text color (buttontext, effectively black
+   in Chrome/WebView) that wins unless something overrides it. Every other *-light card here
+   is a div/span and inherits color:var(--rh-text) from .pg-light fine; this was the one real
+   <button> on the Progress dashboard and the one place that inheritance silently broke --
+   invisible in light theme (black-on-white still reads), unreadable in dark theme
+   (black-on-#171b24). Audited: no other <button> in progress.js/progress.css. */
+.pg-quick-card { display:flex; align-items:center; gap:10px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:14px; padding:12px; cursor:pointer; text-align:left; color:var(--rh-text); }
 .pg-quick-card__icon { display:flex; width:34px; height:34px; border-radius:10px; align-items:center; justify-content:center; flex:none; }
 .pg-quick-card__body { flex:1; min-width:0; }
 .pg-quick-card__title { font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
