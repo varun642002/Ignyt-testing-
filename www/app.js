@@ -4844,6 +4844,8 @@ function renderSettingsTab(){
       <div class="rh-section-head"><span>${svg('info',13)} About</span></div>
       <div class="tl-grid" style="grid-template-columns:1fr;">
         <div class="tl-card" style="cursor:default;"><span class="tl-card__icon">${svg('info',20)}</span><div class="tl-card__body"><div class="tl-card__label">App Version</div><div class="tl-card__desc">IGNYT v1.0</div></div></div>
+        <a class="tl-card" href="legal/privacy-policy.html" target="_blank" rel="noopener"><span class="tl-card__icon">${svg('shield',20)}</span><div class="tl-card__body"><div class="tl-card__label">Privacy Policy</div><div class="tl-card__desc">How your data is stored and shared</div></div><span class="tl-card__chev">›</span></a>
+        <a class="tl-card" href="legal/medical-disclaimer.html" target="_blank" rel="noopener"><span class="tl-card__icon">${svg('health',20)}</span><div class="tl-card__body"><div class="tl-card__label">Medical &amp; Fitness Disclaimer</div><div class="tl-card__desc">Read before starting a program</div></div><span class="tl-card__chev">›</span></a>
       </div>
 
       ${window.IgnytAuth && window.IgnytAuth.isNativeAndroid() && window.IgnytAuth.getAccount() ? `
