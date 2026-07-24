@@ -1313,7 +1313,7 @@ const RACE_SEGMENTS = [
   {type:"run", name:"Run 8"}, {type:"station", name:"Wall Balls", detail:"100 reps"}
 ];
 
-const REST_OPTIONS = [0,60,90,120,180];
+const REST_OPTIONS = [0,30,45,60,90,120]; // matches the Rest Timer bottom sheet's preset row; "Custom" is a separate input, not a member of this array
 
 const RPE_OPTIONS = ["–","6","6.5","7","7.5","8","8.5","9","9.5","10"];
 
@@ -6222,28 +6222,84 @@ function exercisePickerRow(ex){
   </div>`;
 }
 
-function renderPlatePopover(exi){
+/* ---------- Bottom sheets: Rest Timer / RPE / Plates (all reuse .sheet-* from
+   components.css) -- replacing the old cycle-tap Rest Timer button, cycle-tap RPE button,
+   and inline Plates popover with a proper picker, per the Workout screen spec. ---------- */
+
+function renderRestTimerSheet(){
+  const exi = state.restTimerSheetExi;
+  if(exi==null || !state.session) return "";
+  const ex = state.session.exercises[Number(exi)];
+  if(!ex) return "";
+  const current = ex.restDuration || 0;
+  const isCustom = current>0 && !REST_OPTIONS.includes(current);
+  return `<div class="sheet-backdrop" data-action="close-rest-sheet"></div>
+    <div class="sheet">
+      <div class="sheet__handle"></div>
+      <div class="sheet__title">Rest Timer — ${escHtml(ex.name)}</div>
+      <div class="sheet-options">
+        <button class="sheet-option ${current===0?'active':''}" data-rest-preset="0">OFF</button>
+        ${REST_OPTIONS.filter(v=>v>0).map(v=>`<button class="sheet-option ${current===v?'active':''}" data-rest-preset="${v}">${v}s</button>`).join("")}
+        <button class="sheet-option ${isCustom||state.restCustomOpen?'active':''}" data-action="rest-custom-toggle">Custom${isCustom?` (${current}s)`:''}</button>
+      </div>
+      ${state.restCustomOpen ? `<div style="display:flex;gap:8px;margin-top:10px;">
+        <input type="number" inputmode="numeric" id="rest-custom-input" class="pi-input" placeholder="Seconds" value="${isCustom?current:''}" style="flex:1;">
+        <button class="rh-btn rh-btn--primary" style="flex:none;padding:10px 16px;" data-action="rest-custom-save">Set</button>
+      </div>` : ''}
+    </div>`;
+}
+
+function renderRpeSheet(){
+  const t = state.rpeSheetTarget;
+  if(!t || !state.session) return "";
+  const ex = state.session.exercises[t.exi];
+  const set = ex && ex.sets[t.si];
+  if(!set) return "";
+  const current = set.rpe || "";
+  return `<div class="sheet-backdrop" data-action="close-rpe-sheet"></div>
+    <div class="sheet">
+      <div class="sheet__handle"></div>
+      <div class="sheet__title">RPE — ${escHtml(ex.name)}, Set ${t.si+1}</div>
+      <div class="sheet-options">
+        ${RPE_OPTIONS.filter(v=>v!=="–").map(v=>`<button class="sheet-option ${current===v?'active':''}" data-rpe-preset="${v}">${v}</button>`).join("")}
+        <button class="sheet-option ${!current?'active':''}" data-rpe-preset="">Clear</button>
+      </div>
+    </div>`;
+}
+
+// Same standard plate set + calcPlates() the old popover used -- "available plates" is this
+// fixed standard set, not a per-user owned-plates inventory (that's real future work, not
+// attempted here). Bar thickness in the visual is illustrative, not to scale.
+const PLATE_COLORS = { 25:'#EF4444', 20:'#2563EB', 15:'#F59E0B', 10:'#16A34A', 5:'#F1F5F9', 2.5:'#94A3B8', 1.25:'#CBD5E1' };
+function renderPlatesSheet(){
+  const exi = state.plateCalcOpen;
+  if(exi==null || !state.session) return "";
+  const ex = state.session.exercises[Number(exi)];
+  if(!ex) return "";
   const target = Number(state.plateTarget||0);
   const bar = Number(state.plateBar||20);
   const res = calcPlates(target, bar);
-  return `<div class="info-box" style="padding:12px;margin-bottom:10px;">
-    <div style="display:flex;gap:6px;margin-bottom:8px;">
-      <div style="flex:1;"><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Target (kg)</label>
-        <input type="number" id="plate-target" value="${target||''}" placeholder="100" style="display:block;width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:8px;margin-top:4px;font-family:'SF Mono',monospace;font-weight:700;color:var(--accent);"></div>
-      <div style="width:90px;"><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Bar (kg)</label>
-        <select class="select-input" id="plate-bar" style="margin:4px 0 0;padding:8px;">
-          ${[20,15,10,7.5].map(b=>`<option value="${b}" ${bar===b?'selected':''}>${b}</option>`).join("")}
-        </select></div>
-    </div>
-    <button class="btn btn-steel btn-block" data-action="run-plate-calc">Calculate Plates</button>
-    ${target>0 ? (res.perSide.length ?
-      `<div style="margin-top:10px;text-align:center;">
-        <div class="stat-label">Per Side</div>
-        <div class="mono" style="font-weight:900;font-size:16px;color:var(--text);margin-top:4px;">${res.perSide.map(p=>`${p.count}×${p.plate}kg`).join("  +  ")}</div>
-        ${res.remainder>0.01?`<div style="font-size:11px;color:var(--accent);margin-top:4px;">${res.remainder.toFixed(2)}kg/side can't be made with standard plates</div>`:""}
-      </div>`
-      : `<div style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center;">Target must be heavier than the bar.</div>`) : ""}
-  </div>`;
+  const maxPlate = PLATE_SIZES[0];
+  const stackPlates = res.perSide.flatMap(p=>Array.from({length:p.count}).map(()=>p.plate));
+  return `<div class="sheet-backdrop" data-action="close-plates-sheet"></div>
+    <div class="sheet">
+      <div class="sheet__handle"></div>
+      <div class="sheet__title">Plate Calculator — ${escHtml(ex.name)}</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <div style="flex:1;"><label class="pi-label">Target (kg)</label><input type="number" inputmode="decimal" id="plate-target" value="${target||''}" placeholder="100" class="pi-input"></div>
+        <div style="width:100px;"><label class="pi-label">Bar (kg)</label>
+          <select class="pi-input" id="plate-bar">${[20,15,10,7.5].map(b=>`<option value="${b}" ${bar===b?'selected':''}>${b}</option>`).join("")}</select></div>
+      </div>
+      <button class="btn btn-accent btn-block" data-action="run-plate-calc">Calculate</button>
+      ${target>bar ? (stackPlates.length ? `
+        <div class="plate-stack">
+          <div class="plate-stack__bar"></div>
+          ${stackPlates.map(p=>{ const h = 20+Math.round((p/maxPlate)*44); return `<div class="plate-block" style="height:${h}px;width:${Math.max(14,Math.round(h*0.4))}px;background:${PLATE_COLORS[p]||'var(--rh-blue)'};${p<=5?'border:1px solid var(--rh-border);':''}${p<=5?'color:#0F172A;':''}">${p}</div>`; }).join("")}
+        </div>
+        <div style="text-align:center;font-size:13px;font-weight:700;">${res.perSide.map(p=>`${p.count}×${p.plate}kg`).join(' + ')} <span style="color:var(--rh-muted);font-weight:600;">per side</span></div>
+        ${res.remainder>0.01?`<div style="text-align:center;font-size:11px;color:var(--rh-red);margin-top:4px;">${res.remainder.toFixed(2)}kg/side remaining — can't be made with standard plates</div>`:''}
+      ` : `<div style="text-align:center;font-size:12px;color:var(--rh-muted);margin-top:10px;">Target must be heavier than the bar.</div>`) : ''}
+    </div>`;
 }
 
 /* =========================================================
@@ -9585,7 +9641,6 @@ function renderWorkoutTab(){
             <button class="rest-toggle" data-rest-toggle="${exi}">${svg('timer',13)} Rest Timer: ${restLabel}</button>
             ${showPlates?`<button class="rest-toggle" data-plate-calc="${exi}" style="color:var(--rh-blue);">Plates</button>`:""}
           </div>
-          ${state.plateCalcOpen===String(exi) ? renderPlatePopover(exi) : ""}
 
           <hr class="divider">
           <div class="set-table-header" style="grid-template-columns:${gridCols};">
@@ -9637,6 +9692,9 @@ function renderWorkoutTab(){
       `;}).join("")}
     </div>
     <button class="wk-finish-fab" data-action="finish-session" aria-label="${isEditing?'Save workout':'Finish workout'}">${svg('check',22)}</button>
+    ${renderRestTimerSheet()}
+    ${renderRpeSheet()}
+    ${renderPlatesSheet()}
   `;
 }
 
@@ -11025,18 +11083,46 @@ function attachHandlers(){
   });
   document.querySelectorAll("[data-rest-toggle]").forEach(el=>{
     el.addEventListener("click", ()=>{
-      const ex = state.session.exercises[Number(el.dataset.restToggle)];
-      const idx = REST_OPTIONS.indexOf(ex.restDuration || 0);
-      ex.restDuration = REST_OPTIONS[(idx+1) % REST_OPTIONS.length];
+      state.restTimerSheetExi = el.dataset.restToggle;
+      state.restCustomOpen = false;
       render();
     });
   });
-  document.querySelectorAll("[data-plate-calc]").forEach(el=>{
+  const closeRestSheetBtn = document.querySelector('[data-action="close-rest-sheet"]');
+  if(closeRestSheetBtn) closeRestSheetBtn.addEventListener("click", ()=>{
+    state.restTimerSheetExi = null; state.restCustomOpen = false; render();
+  });
+  document.querySelectorAll("[data-rest-preset]").forEach(el=>{
     el.addEventListener("click", ()=>{
-      const exi = el.dataset.plateCalc;
-      state.plateCalcOpen = state.plateCalcOpen===exi ? null : exi;
+      const ex = state.session.exercises[Number(state.restTimerSheetExi)];
+      if(ex) ex.restDuration = Number(el.dataset.restPreset);
+      state.restTimerSheetExi = null; state.restCustomOpen = false;
       render();
     });
+  });
+  const restCustomToggleBtn = document.querySelector('[data-action="rest-custom-toggle"]');
+  if(restCustomToggleBtn) restCustomToggleBtn.addEventListener("click", ()=>{
+    state.restCustomOpen = !state.restCustomOpen;
+    render();
+  });
+  const restCustomSaveBtn = document.querySelector('[data-action="rest-custom-save"]');
+  if(restCustomSaveBtn) restCustomSaveBtn.addEventListener("click", ()=>{
+    const input = document.getElementById("rest-custom-input");
+    const secs = Math.max(0, Math.round(Number(input && input.value) || 0));
+    const ex = state.session.exercises[Number(state.restTimerSheetExi)];
+    if(ex) ex.restDuration = secs;
+    state.restTimerSheetExi = null; state.restCustomOpen = false;
+    render();
+  });
+  document.querySelectorAll("[data-plate-calc]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.plateCalcOpen = el.dataset.plateCalc;
+      render();
+    });
+  });
+  const closePlatesSheetBtn = document.querySelector('[data-action="close-plates-sheet"]');
+  if(closePlatesSheetBtn) closePlatesSheetBtn.addEventListener("click", ()=>{
+    state.plateCalcOpen = null; render();
   });
   const runPlateBtn = document.querySelector('[data-action="run-plate-calc"]');
   if(runPlateBtn) runPlateBtn.addEventListener("click", ()=>{
@@ -11136,10 +11222,20 @@ function attachHandlers(){
   document.querySelectorAll("[data-rpe]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const [exi,si] = el.dataset.rpe.split("|").map(Number);
-      const set = state.session.exercises[exi].sets[si];
-      const idx = RPE_OPTIONS.indexOf(set.rpe || "–");
-      set.rpe = RPE_OPTIONS[(idx+1) % RPE_OPTIONS.length];
-      if(set.rpe === "–") set.rpe = "";
+      state.rpeSheetTarget = { exi, si };
+      render();
+    });
+  });
+  const closeRpeSheetBtn = document.querySelector('[data-action="close-rpe-sheet"]');
+  if(closeRpeSheetBtn) closeRpeSheetBtn.addEventListener("click", ()=>{
+    state.rpeSheetTarget = null; render();
+  });
+  document.querySelectorAll("[data-rpe-preset]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const t = state.rpeSheetTarget;
+      const set = t && state.session.exercises[t.exi] && state.session.exercises[t.exi].sets[t.si];
+      if(set) set.rpe = el.dataset.rpePreset;
+      state.rpeSheetTarget = null;
       render();
     });
   });

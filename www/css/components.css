@@ -15,6 +15,36 @@
 .skeleton-text:last-child { margin-bottom:0; width:60%; }
 .skeleton-row { display:flex; flex-direction:column; padding:12px 14px; margin-bottom:8px; border-radius:var(--radius-md); background:var(--color-surface); border:1px solid var(--color-border); }
 
+/* Shared Bottom Sheet (Rest Timer / RPE / Plates on the Workout screen). Audit note: a
+   .more-sheet class already existed (health-uploads.js's upload-source picker) but only ever
+   had border-radius set -- no position/backdrop/animation anywhere in any stylesheet, so it
+   was never a real bottom sheet, just inline-flowed content. Not fixed here (out of scope for
+   this task) but flagged rather than silently reused, which is why this is a new .sheet-*
+   namespace instead of building on top of the incomplete one. */
+.sheet-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100; animation:sheet-fade-in .2s var(--ease-standard); }
+.sheet { position:fixed; left:50%; bottom:0; transform:translateX(-50%); width:100%; max-width:480px;
+  z-index:101; background:var(--rh-card,var(--color-surface-elevated)); border-radius:var(--radius-card) var(--radius-card) 0 0;
+  padding:10px 18px calc(18px + env(safe-area-inset-bottom,0px)); max-height:75vh; overflow-y:auto; box-sizing:border-box;
+  animation:sheet-slide-up .25s var(--ease-standard); }
+.sheet__handle { width:36px; height:4px; border-radius:var(--radius-pill); background:var(--rh-border,var(--color-border)); margin:0 auto 14px; }
+.sheet__title { font-size:16px; font-weight:800; color:var(--rh-text,var(--color-text-primary)); margin-bottom:12px; }
+@keyframes sheet-fade-in { from{ opacity:0; } to{ opacity:1; } }
+@keyframes sheet-slide-up { from{ transform:translateX(-50%) translateY(100%); } to{ transform:translateX(-50%) translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .sheet-backdrop, .sheet { animation:none; } }
+
+/* Option grid used by the Rest Timer / RPE sheets -- equal-size tappable chips, selected one
+   filled solid instead of outlined. */
+.sheet-options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:6px; }
+.sheet-option { padding:14px 8px; text-align:center; border-radius:var(--radius-sm); border:1.5px solid var(--rh-border,var(--color-border));
+  background:none; color:var(--rh-text,var(--color-text-primary)); font-weight:700; font-size:14px; cursor:pointer; transition:transform .1s ease; }
+.sheet-option:active { transform:scale(.95); }
+.sheet-option.active { background:var(--rh-blue,var(--color-interactive)); border-color:var(--rh-blue,var(--color-interactive)); color:#fff; }
+
+/* Plate visualizer -- proportionally-sized colored blocks, biggest plate closest to the bar. */
+.plate-stack { display:flex; align-items:center; gap:2px; height:64px; margin:14px 0; padding:0 4px; }
+.plate-stack__bar { width:10px; height:8px; background:var(--rh-muted,var(--color-text-secondary)); border-radius:2px; flex:none; }
+.plate-block { border-radius:3px; flex:none; display:flex; align-items:center; justify-content:center; color:#fff; font-size:9px; font-weight:800; }
+
 /* Shared empty state (icon + message + optional action) -- see emptyState() in app.js.
    Global, not page-scoped: every *-light screen's --rh-muted-style text still reads through
    fine since this only sets layout/sizing, not color (color inherits from the surrounding
