@@ -2847,11 +2847,13 @@ function stopElapsedTimer(){
    decrementing counter drifts — deriving remaining time from Date.now() means the timer
    is always correct the moment the app comes back, and syncTimerAfterResume() below
    settles an expiry that happened while backgrounded (beep fires once, via the fired flag). */
-function startTimer(seconds){
+function startTimer(seconds, label){
   if(state.timer && state.timer.handle) clearInterval(state.timer.handle); // never two timers
   const now = Date.now();
-  state.timer = {endsAt: now + seconds*1000, total:seconds, remaining:seconds, fired:false, handle:null};
+  // label is purely for the overlay header (Bug Fix #4) -- never read by the countdown math.
+  state.timer = {endsAt: now + seconds*1000, total:seconds, remaining:seconds, fired:false, handle:null, label:label||null};
   render();
+  vibrate(30);
   const handle = setInterval(()=>{ tickRestTimer(); }, 500);
   state.timer.handle = handle;
 }
@@ -2868,9 +2870,16 @@ function tickRestTimer(){
     return;
   }
   if(remaining <= 3 && remaining !== t.remaining){ vibrate(80); }
+  const changed = remaining !== t.remaining;
   t.remaining = remaining;
+  // The last 5 seconds get a full render (cheap -- at most 5 extra renders per rest) so the
+  // big countdown flash (Bug Fix #8) and its number can actually appear/update; everything
+  // above 5s keeps the original lightweight direct-DOM patch, unchanged from before.
+  if(remaining <= 5 && changed){ render(); return; }
   const ring = document.querySelector(".timer-ring");
   if(ring) ring.textContent = formatTime(remaining);
+  const ringWrap = document.querySelector(".timer-progress-ring");
+  if(ringWrap && t.total>0) ringWrap.style.setProperty("--pct", Math.min(100, Math.round((t.total-remaining)/t.total*100)));
 }
 
 /* Called on visibilitychange -> visible: recompute from the timestamp immediately so the
@@ -2908,6 +2917,7 @@ function startHoldTimer(exi, si){
   };
   state.holdTimer.handle = setInterval(tickHoldTimer, 500);
   render();
+  vibrate(30);
 }
 function holdTimerElapsedSec(t){
   return Math.floor((t.accumulatedMs + (t.running ? Date.now()-t.runStartedAt : 0)) / 1000);
@@ -2919,6 +2929,10 @@ function tickHoldTimer(){
   if(t.targetSec && elapsed>=t.targetSec && !t.fired){ t.fired = true; playBeep(); vibrate(300); }
   const el = document.getElementById("hold-timer-display");
   if(el) el.textContent = formatTime(elapsed) + (t.targetSec ? " / "+formatTime(t.targetSec) : "");
+  if(t.targetSec){
+    const ringWrap = document.querySelector(".timer-progress-ring");
+    if(ringWrap) ringWrap.style.setProperty("--pct", Math.min(100, Math.round(elapsed/t.targetSec*100)));
+  }
 }
 function pauseHoldTimer(){
   const t = state.holdTimer; if(!t || !t.running) return;
@@ -2926,12 +2940,14 @@ function pauseHoldTimer(){
   t.running = false;
   if(t.handle) clearInterval(t.handle);
   render();
+  vibrate(30);
 }
 function resumeHoldTimer(){
   const t = state.holdTimer; if(!t || t.running) return;
   t.runStartedAt = Date.now(); t.running = true;
   t.handle = setInterval(tickHoldTimer, 500);
   render();
+  vibrate(30);
 }
 function resetHoldTimer(){
   const t = state.holdTimer; if(!t) return;
@@ -2951,6 +2967,7 @@ function finishHoldTimer(save){
   }
   state.holdTimer = null;
   render();
+  if(save) vibrate(60);
 }
 
 function playBeep(){
@@ -6186,11 +6203,25 @@ function renderPlatePopover(exi){
 
 function renderTimerOverlay(){
   if(!state.timer) return "";
-  return `<div class="timer-overlay">
-    <div class="timer-label">Rest</div>
-    <div class="timer-ring mono">${formatTime(state.timer.remaining)}</div>
-    <button class="btn btn-ghost" data-action="cancel-timer">Skip Rest</button>
-  </div>`;
+  const t = state.timer;
+  const pct = t.total>0 ? Math.min(100, Math.round((t.total-t.remaining)/t.total*100)) : 0;
+  const isCountdown = t.remaining<=5;
+  return `<div class="timer-overlay" role="timer" aria-label="Rest timer${t.label?': '+escHtml(t.label):''}">
+    <div class="timer-header">
+      <div class="timer-label">Resting</div>
+      <div class="timer-header__name">${t.label?escHtml(t.label):'Rest'}</div>
+      <div class="timer-header__meta"><span>${formatTime(t.total)} total</span></div>
+    </div>
+    <div class="timer-progress-ring" style="--pct:${pct};">
+      <div class="timer-progress-ring__inner">
+        <div class="timer-ring mono${isCountdown?' timer-ring--countdown':''}" aria-live="off">${formatTime(t.remaining)}</div>
+      </div>
+    </div>
+    <div class="timer-action-bar">
+      <button class="timer-action-bar__btn timer-action-bar__btn--primary" data-action="cancel-timer" aria-label="Skip rest"><span>Skip Rest</span></button>
+    </div>
+  </div>
+  ${t.remaining<=5 && t.remaining>0 ? `<div class="timer-countdown-flash" aria-live="assertive"><div class="timer-countdown-flash__num" id="timer-countdown-flash-num">${t.remaining}</div></div>` : ''}`;
 }
 
 function renderHoldTimerOverlay(){
@@ -6198,18 +6229,39 @@ function renderHoldTimerOverlay(){
   if(!t) return "";
   const ex = state.session && state.session.exercises[t.exi];
   const elapsed = holdTimerElapsedSec(t);
-  return `<div class="timer-overlay">
-    <div class="timer-label">${ex?ex.name:'Hold'}</div>
-    <div class="timer-ring mono" id="hold-timer-display">${formatTime(elapsed)}${t.targetSec?' / '+formatTime(t.targetSec):''}</div>
-    <div style="display:flex;gap:8px;margin-top:14px;">
-      ${t.running
-        ? `<button class="btn btn-ghost" data-action="pause-hold-timer">${svg('timer',15)} Pause</button>`
-        : `<button class="btn btn-accent" data-action="resume-hold-timer">${svg('workout',15)} ${t.accumulatedMs>0?'Resume':'Start'}</button>`}
-      <button class="btn btn-ghost" data-action="reset-hold-timer">Reset</button>
+  const detail = ex ? EXERCISE_DETAILS[ex.name] : null;
+  const pct = t.targetSec ? Math.min(100, Math.round(elapsed/t.targetSec*100)) : 0;
+  const setLabel = ex ? `Set ${t.si+1} of ${ex.sets.length}` : '';
+  // Real numbers only: best/previous come from actual history for this exercise, exactly
+  // like the set-row's own "Previous" column -- never a placeholder figure.
+  const prevSet = ex ? getPreviousSet(ex.name, t.si) : null;
+  const bestSec = ex ? state.workoutLog.reduce((best,session)=>{
+    (session.exercises||[]).forEach(e=>{ if(e.name===ex.name) e.sets.forEach(s=>{ if(s.durationSec && Number(s.durationSec)>best) best = Number(s.durationSec); }); });
+    return best;
+  }, 0) : 0;
+  return `<div class="timer-overlay" role="timer" aria-label="Hold timer${ex?': '+escHtml(ex.name):''}">
+    <div class="timer-header">
+      <div class="timer-header__thumb">${renderExerciseAnimation(detail)}</div>
+      <div class="timer-header__name">${ex?escHtml(ex.name):'Hold'}</div>
+      <div class="timer-header__meta">
+        ${setLabel?`<span>${setLabel}</span>`:''}
+        ${t.targetSec?`<span>Target ${formatTime(t.targetSec)}</span>`:''}
+        ${prevSet&&prevSet.durationSec?`<span>Previous ${formatTime(Number(prevSet.durationSec))}</span>`:''}
+        ${bestSec>0?`<span>Best ${formatTime(bestSec)}</span>`:''}
+      </div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:8px;">
-      <button class="btn btn-ghost" data-action="cancel-hold-timer">Cancel</button>
-      <button class="btn btn-accent" data-action="save-hold-timer">${svg('check',15)} Save &amp; Done</button>
+    <div class="timer-progress-ring ${t.targetSec?'':'timer-progress-ring--indeterminate'}" ${t.targetSec?`style="--pct:${pct};"`:''}>
+      <div class="timer-progress-ring__inner">
+        <div class="timer-ring mono" id="hold-timer-display" aria-live="off">${formatTime(elapsed)}${t.targetSec?' / '+formatTime(t.targetSec):''}</div>
+      </div>
+    </div>
+    <div class="timer-action-bar">
+      ${t.running
+        ? `<button class="timer-action-bar__btn" data-action="pause-hold-timer" aria-label="Pause">${svg('timer',18)}<span>Pause</span></button>`
+        : `<button class="timer-action-bar__btn timer-action-bar__btn--primary" data-action="resume-hold-timer" aria-label="${t.accumulatedMs>0?'Resume':'Start'}">${svg('workout',18)}<span>${t.accumulatedMs>0?'Resume':'Start'}</span></button>`}
+      <button class="timer-action-bar__btn" data-action="reset-hold-timer" aria-label="Reset">${svg('repeat',18)}<span>Reset</span></button>
+      <button class="timer-action-bar__btn timer-action-bar__btn--danger" data-action="cancel-hold-timer" aria-label="Cancel">${svg('x',18)}<span>Cancel</span></button>
+      <button class="timer-action-bar__btn timer-action-bar__btn--primary" data-action="save-hold-timer" aria-label="Save and done">${svg('check',18)}<span>Save</span></button>
     </div>
   </div>`;
 }
@@ -11008,7 +11060,7 @@ function attachHandlers(){
       const set = ex.sets[si];
       set.done = !set.done;
       render();
-      if(set.done && ex.restDuration>0 && state.settings.autoStartRest && !ex.supersetWithNext) startTimer(ex.restDuration);
+      if(set.done && ex.restDuration>0 && state.settings.autoStartRest && !ex.supersetWithNext) startTimer(ex.restDuration, ex.name);
     });
   });
 

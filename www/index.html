@@ -202,12 +202,67 @@ input,select,textarea{font-family:inherit; background:transparent; color:var(--t
 
 .lib-add-btn{font-size:18px; color:var(--accent); font-weight:900; padding:0 6px;}
 
-.timer-overlay{position:fixed; inset:0; background:rgba(10,10,12,.92); backdrop-filter:blur(6px);
-    display:flex; align-items:center; justify-content:center; z-index:50; flex-direction:column; gap:20px;}
+.timer-overlay{position:fixed; inset:0; background:rgba(10,10,12,.94); backdrop-filter:blur(10px);
+    display:flex; align-items:center; justify-content:center; z-index:50; flex-direction:column; gap:18px;
+    padding:24px 20px calc(24px + env(safe-area-inset-bottom,0px)); overflow-y:auto;
+    animation:timer-overlay-in .28s cubic-bezier(.2,.8,.2,1);}
+@keyframes timer-overlay-in{ from{ opacity:0; } to{ opacity:1; } }
+@media (prefers-reduced-motion: reduce){ .timer-overlay{ animation:none; } }
 
-.timer-ring{font-family:'SF Mono',monospace; font-weight:900; font-size:64px; color:var(--accent);}
+.timer-ring{font-family:'SF Mono',monospace; font-weight:900; font-size:clamp(48px,14vw,80px); color:var(--accent);
+    line-height:1; letter-spacing:-.01em; transition:color .2s ease;}
+.timer-ring--countdown{ color:#fff; animation:timer-pulse .5s ease infinite; }
+@keyframes timer-pulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
 
 .timer-label{font-size:13px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); font-weight:700;}
+
+/* ---------- Header: exercise context above the ring (Bug Fix #4) ---------- */
+.timer-header{ display:flex; flex-direction:column; align-items:center; gap:10px; max-width:340px; text-align:center; }
+.timer-header__thumb{ width:72px; height:72px; border-radius:18px; overflow:hidden; background:var(--surface); flex:none; }
+.timer-header__thumb img, .timer-header__thumb video{ width:100%; height:100%; object-fit:cover; }
+.timer-header__name{ font-size:19px; font-weight:800; color:var(--text); }
+.timer-header__meta{ font-size:12px; color:var(--muted); font-weight:600; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+
+/* ---------- Progress ring (Bug Fix #6) -- conic-gradient, same technique already used by
+   .wk-ring/.pg-ring elsewhere in the app, kept visually consistent with those. Updated on
+   every tick via a --pct custom property (app.js writes it directly, no full re-render, so
+   the existing tickRestTimer()/tickHoldTimer() performance characteristics are unchanged). ---------- */
+.timer-progress-ring{ width:min(72vw,260px); height:min(72vw,260px); border-radius:50%; flex:none;
+    display:grid; place-items:center; background:conic-gradient(var(--accent) calc(var(--pct,0) * 1%), rgba(255,255,255,.08) 0);
+    transition:background .3s linear; }
+.timer-progress-ring__inner{ width:calc(100% - 14px); height:calc(100% - 14px); border-radius:50%; background:#0A0A0C;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+.timer-progress-ring--indeterminate{ background:none; border:3px solid rgba(255,255,255,.12); position:relative; }
+.timer-progress-ring--indeterminate::before{ content:""; position:absolute; inset:-3px; border-radius:50%;
+    border:3px solid transparent; border-top-color:var(--accent); animation:timer-spin 1.4s linear infinite; }
+@keyframes timer-spin{ to{ transform:rotate(360deg); } }
+@media (prefers-reduced-motion: reduce){ .timer-progress-ring--indeterminate::before{ animation:none; } }
+
+/* ---------- Unified bottom action bar (Bug Fix #2) -- equal-width, equal-height,
+   consistent spacing, replaces the previous two disconnected flex rows. ---------- */
+.timer-action-bar{ display:flex; gap:8px; width:100%; max-width:340px; }
+.timer-action-bar__btn{ flex:1; min-height:52px; border-radius:14px; border:none; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    font-size:12px; font-weight:700; background:var(--surface); color:var(--text); transition:transform .1s ease, opacity .15s ease; }
+.timer-action-bar__btn:active{ transform:scale(.95); }
+.timer-action-bar__btn--primary{ background:var(--accent); color:#fff; }
+.timer-action-bar__btn--danger{ color:#ff6b6b; }
+.timer-action-bar__btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+/* ---------- 5-4-3-2-1-GO countdown flash (Bug Fix #8) ---------- */
+.timer-countdown-flash{ position:fixed; inset:0; z-index:51; display:flex; align-items:center; justify-content:center;
+    background:rgba(10,10,12,.55); pointer-events:none; }
+.timer-countdown-flash__num{ font-family:'SF Mono',monospace; font-weight:900; font-size:min(40vw,220px); color:#fff;
+    animation:timer-countdown-pop .5s cubic-bezier(.2,.8,.2,1); }
+@keyframes timer-countdown-pop{ 0%{ transform:scale(.4); opacity:0; } 40%{ transform:scale(1.15); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
+@media (prefers-reduced-motion: reduce){ .timer-countdown-flash__num{ animation:none; } }
+
+@media (orientation:landscape) and (max-height:480px){
+  .timer-overlay{ flex-direction:row; gap:28px; padding:16px 24px; }
+  .timer-header{ max-width:180px; }
+  .timer-progress-ring{ width:min(38vh,200px); height:min(38vh,200px); }
+  .timer-action-bar{ flex-direction:column; max-width:150px; }
+}
 
 nav.bottom-nav{position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px;
     display:flex; padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px)); gap:2px;
