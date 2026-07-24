@@ -124,8 +124,8 @@
   }
 
   /* ---------- storage ---------- */
-  function load() { try { var a = JSON.parse(localStorage.getItem(STORE) || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
-  function save(list) { try { localStorage.setItem(STORE, JSON.stringify(list)); } catch (e) {} }
+  function load() { return window.IgnytStorageUtils.readArray(STORE); }
+  function save(list) { window.IgnytStorageUtils.writeJson(STORE, list); }
   function uid() { return (window.nextId ? window.nextId() : Date.now()); }
   function hash(str) { var h = 5381; for (var i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36) + ":" + str.length; }
 

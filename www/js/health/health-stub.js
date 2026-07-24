@@ -7,7 +7,7 @@
 ========================================================= */
 (function () {
   "use strict";
-  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); }
+  var esc = window.IgnytHealthUtils.escapeHtml;
   var svg = function (n, s) { return window.svg ? window.svg(n, s) : ""; };
 
   function render(moduleId) {

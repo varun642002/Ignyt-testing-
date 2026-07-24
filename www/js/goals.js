@@ -19,6 +19,7 @@
   "use strict";
   var GOALS = "hx_goals", ACTIVE = "hx_active_goal";
   var KCAL_PER_KG = 7700;
+  var storage = window.IgnytStorageUtils;
 
   var GOAL_TYPES = [
     { id: "weight_loss", label: "Weight Loss", dir: -1, protein: 2.0 },
@@ -40,10 +41,10 @@
   var typeById = {}; GOAL_TYPES.forEach(function (t) { typeById[t.id] = t; });
 
   /* ---------- storage ---------- */
-  function loadGoals() { try { var a = JSON.parse(localStorage.getItem(GOALS) || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
-  function saveGoals(a) { try { localStorage.setItem(GOALS, JSON.stringify(a)); } catch (e) {} }
-  function activeId() { try { return JSON.parse(localStorage.getItem(ACTIVE) || "null"); } catch (e) { return null; } }
-  function setActiveId(id) { try { localStorage.setItem(ACTIVE, JSON.stringify(id)); } catch (e) {} }
+  function loadGoals() { return storage.readArray(GOALS); }
+  function saveGoals(goals) { storage.writeJson(GOALS, goals); }
+  function activeId() { return storage.readJson(ACTIVE, null); }
+  function setActiveId(id) { storage.writeJson(ACTIVE, id); }
   function activeGoal() { var id = activeId(); return loadGoals().filter(function (g) { return String(g.id) === String(id) && g.status === "active"; })[0] || null; }
   function uid() { return window.nextId ? window.nextId() : Date.now(); }
   function num(v, d) { var n = parseFloat(v); return isFinite(n) ? n : (d == null ? null : d); }
