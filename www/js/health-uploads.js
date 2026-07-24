@@ -53,10 +53,10 @@
   function idbDel(id) { return openDB().then(function (db) { return new Promise(function (res) { var tx = db.transaction(STORE, "readwrite"); tx.objectStore(STORE).delete(id); tx.oncomplete = function () { res(); }; tx.onerror = function () { res(); }; }); }); }
 
   /* ---------- metadata + generic records ---------- */
-  function loadMeta() { try { var a = JSON.parse(localStorage.getItem(META) || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
-  function saveMeta(a) { try { localStorage.setItem(META, JSON.stringify(a)); } catch (e) {} }
-  function loadRecords() { try { var a = JSON.parse(localStorage.getItem(RECORDS) || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
-  function saveRecords(a) { try { localStorage.setItem(RECORDS, JSON.stringify(a)); } catch (e) {} }
+  function loadMeta() { return window.IgnytStorageUtils.readArray(META); }
+  function saveMeta(metadata) { window.IgnytStorageUtils.writeJson(META, metadata); }
+  function loadRecords() { return window.IgnytStorageUtils.readArray(RECORDS); }
+  function saveRecords(records) { window.IgnytStorageUtils.writeJson(RECORDS, records); }
   function uid() { return window.nextId ? window.nextId() : Date.now(); }
   function hashStr(s) { var h = 5381; for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36) + ":" + s.length; }
   function detectCategory(name) { var s = (name || "").toLowerCase(); for (var i = 0; i < CATEGORIES.length; i++) { if (CATEGORIES[i].match.some(function (m) { return s.indexOf(m) !== -1; })) return CATEGORIES[i].id; } return "other"; }
@@ -224,10 +224,40 @@
     if (window.render) window.render();
   }
 
+  // The plain <a download> blob-URL trick below only actually saves a file on a real desktop/
+  // mobile browser -- inside the native Android WebView it silently does nothing (same root
+  // cause already fixed for Settings > Export Data in app.js's downloadFile(); see the comment
+  // there). Native Android instead goes through IgnytShare.shareFile (android/app/.../share/
+  // SharePlugin.kt's shareFile, added alongside shareText/shareImage), which writes the real
+  // file to the app cache and opens the OS share sheet.
+  function blobToBase64(blob) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onloadend = function () {
+        // reader.result is a data: URL ("data:<mime>;base64,<data>") -- strip the prefix.
+        var s = String(reader.result || "");
+        resolve(s.slice(s.indexOf(",") + 1));
+      };
+      reader.onerror = function () { reject(reader.error || new Error("read failed")); };
+      reader.readAsDataURL(blob);
+    });
+  }
   function exportFile(id) {
     var r = loadMeta().filter(function (x) { return String(x.id) === String(id); })[0]; if (!r) return;
     idbGet(r.fileId).then(function (blob) {
       if (!blob) { if (window.showToast) window.showToast("Original file not found.", "error", window.render); return; }
+      var isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+      var share = isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytShare;
+      if (share) {
+        blobToBase64(blob).then(function (base64) {
+          return share.shareFile({ fileName: r.name, base64: base64, mimeType: r.mime || blob.type || "application/octet-stream" });
+        }).then(function (res) {
+          if (!res || !res.success) { if (window.showToast) window.showToast("Export failed: " + ((res && res.error) || "unknown error"), "error", window.render); }
+        }).catch(function (e) {
+          if (window.showToast) window.showToast("Export failed: " + (e && e.message || "unknown error"), "error", window.render);
+        });
+        return;
+      }
       var url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = r.name; document.body.appendChild(a); a.click();
       setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
     });

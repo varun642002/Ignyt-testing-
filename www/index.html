@@ -209,7 +209,7 @@ input,select,textarea{font-family:inherit; background:transparent; color:var(--t
 @keyframes timer-overlay-in{ from{ opacity:0; } to{ opacity:1; } }
 @media (prefers-reduced-motion: reduce){ .timer-overlay{ animation:none; } }
 
-.timer-ring{font-family:'SF Mono',monospace; font-weight:900; font-size:clamp(48px,14vw,80px); color:var(--accent);
+.timer-ring{font-family:'SF Mono',monospace; font-weight:900; font-size:clamp(52px,15vw,86px); color:var(--accent);
     line-height:1; letter-spacing:-.01em; transition:color .2s ease;}
 .timer-ring--countdown{ color:#fff; animation:timer-pulse .5s ease infinite; }
 @keyframes timer-pulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
@@ -372,7 +372,7 @@ textarea.note-input{background:var(--surface); border-radius:10px; padding:10px 
 .live-stats-bar{display:flex; background:var(--surface); border-radius:14px; padding:14px 16px; margin:8px 0 4px; justify-content:space-between; gap:10px;}
 .live-stat{flex:1; min-width:0;}
 .live-stat-label{font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted);}
-.live-stat-value{font-size:24px; font-weight:900; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.live-stat-value{font-size:27px; font-weight:900; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .live-stat-unit{font-size:13px; font-weight:600; color:var(--muted); margin-left:3px;}
 
 /* Post-workout share cards: horizontal scroll-snap carousel + dots. Cards keep their own

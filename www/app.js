@@ -1805,7 +1805,7 @@ const state = {
   completed: LS.get("hx_completed",{}),
   // SHARED PROFILE — single source of truth for weight/height/age/gender/activity/goal
   profile: Object.assign({
-    weight:101, height:180, age:25, gender:"male",
+    weight:0, height:180, age:25, gender:"male",
     activityMultiplier:1.465, goalDelta:-400,
     name:"", hyroxExperience:"first-timer", trainingDays:5,
     equipment:["Barbell","Dumbbell","Machines","Sled","Rower","Ski Erg","Kettlebell"],
@@ -1910,6 +1910,7 @@ const state = {
   favoriteExercises: LS.get("hx_favorite_exercises", []), // array of exercise NAMES (mirrors hx_favorite_foods)
   viewingHyroxSchedule: false,
   viewingHyroxInfo: false,
+  viewingLegal: null, // "privacy" | "disclaimer" | null -- see renderLegalViewer()
   viewingPrivacyInfo: false,
   csvImportPreview: null,
   exerciseMenuOpen: null,
@@ -4873,8 +4874,8 @@ function renderSettingsTab(){
       <div class="rh-section-head"><span>${svg('info',13)} About</span></div>
       <div class="tl-grid" style="grid-template-columns:1fr;">
         <div class="tl-card" style="cursor:default;"><span class="tl-card__icon">${svg('info',20)}</span><div class="tl-card__body"><div class="tl-card__label">App Version</div><div class="tl-card__desc">IGNYT v1.0</div></div></div>
-        <a class="tl-card" href="legal/privacy-policy.html" target="_blank" rel="noopener"><span class="tl-card__icon">${svg('shield',20)}</span><div class="tl-card__body"><div class="tl-card__label">Privacy Policy</div><div class="tl-card__desc">How your data is stored and shared</div></div><span class="tl-card__chev">›</span></a>
-        <a class="tl-card" href="legal/medical-disclaimer.html" target="_blank" rel="noopener"><span class="tl-card__icon">${svg('health',20)}</span><div class="tl-card__body"><div class="tl-card__label">Medical &amp; Fitness Disclaimer</div><div class="tl-card__desc">Read before starting a program</div></div><span class="tl-card__chev">›</span></a>
+        <button class="tl-card" data-action="open-legal-privacy"><span class="tl-card__icon">${svg('shield',20)}</span><div class="tl-card__body"><div class="tl-card__label">Privacy Policy</div><div class="tl-card__desc">How your data is stored and shared</div></div><span class="tl-card__chev">›</span></button>
+        <button class="tl-card" data-action="open-legal-disclaimer"><span class="tl-card__icon">${svg('health',20)}</span><div class="tl-card__body"><div class="tl-card__label">Medical &amp; Fitness Disclaimer</div><div class="tl-card__desc">Read before starting a program</div></div><span class="tl-card__chev">›</span></button>
       </div>
 
       ${window.IgnytAuth && window.IgnytAuth.isNativeAndroid() && window.IgnytAuth.getAccount() ? `
@@ -4981,6 +4982,32 @@ function resolvePassphrasePrompt(value, renderFn){
   if(r) r(value);
 }
 window.promptPassphrase = (purpose) => promptPassphrase(purpose, render);
+
+// Privacy Policy / Medical Disclaimer: rendered as an in-app overlay (iframe onto the existing
+// static www/legal/*.html, single source of truth) instead of a real <a target="_blank">
+// navigation. The old link navigated the app's own WebView away from the SPA entirely (no
+// history entry of its own), so Android hardware back had nowhere to go but exit the app --
+// this keeps the SPA's own document in place the whole time, closed the same way every other
+// overlay in the app is (a state flag + handleHardwareBack(), see below).
+const LEGAL_PAGES = {
+  privacy: { title: "Privacy Policy", url: "legal/privacy-policy.html" },
+  disclaimer: { title: "Medical & Fitness Disclaimer", url: "legal/medical-disclaimer.html" }
+};
+function renderLegalViewer(){
+  const page = LEGAL_PAGES[state.viewingLegal];
+  if(!page) return "";
+  return `
+    <div class="dialog-backdrop" data-action="close-legal-viewer"></div>
+    <div class="dialog-box" style="max-width:520px;width:94vw;height:88vh;padding:0;display:flex;flex-direction:column;overflow:hidden;">
+      <div class="row-between" style="padding:12px 14px;border-bottom:1px solid var(--rh-border,var(--border));flex:none;">
+        <button class="rh-btn rh-btn--ghost" style="padding:8px 12px;" data-action="close-legal-viewer">← Back</button>
+        <span style="font-weight:800;font-size:14px;">${page.title}</span>
+        <span style="width:60px;"></span>
+      </div>
+      <iframe src="${page.url}" title="${page.title}" style="flex:1;border:none;width:100%;background:#fff;"></iframe>
+    </div>
+  `;
+}
 
 function renderConfirmDialog(){
   if(!state.confirmDialog) return "";
@@ -5272,6 +5299,7 @@ function renderApp(){
     ${renderConfirmDialog()}
     ${renderDriveRestorePrompt()}
     ${renderPassphrasePrompt()}
+    ${renderLegalViewer()}
     <nav class="bottom-nav ${isLightTab?'bottom-nav--home-light':''}">
       ${navBtn("home","Home")}
       ${navBtn("workout","Workout")}
@@ -5334,7 +5362,9 @@ function renderToolsTab(){
       {id:"body", label:"Log Weight", desc:"Weight, trend & history", icon:"body"}
     ]],
     ["Health", [
-      {id:"healthhub", label:"Health Hub", desc:"Your digital health vault", icon:"shield"},
+      // Health Hub ({id:"healthhub"}) intentionally disconnected for this release (not
+      // deleted -- renderApp()'s state.tab==="healthhub" route and www/js/health/* are still
+      // in the repo for future work, just unreachable from the UI now).
       {id:"health", label:"Health Connect", desc:"Sync with apps, track all metrics", icon:"health"},
       {id:"uploads", label:"Medical Reports", desc:"Blood work & DEXA", icon:"flask"}
     ]],
@@ -10317,6 +10347,13 @@ function attachHandlers(){
   if(openPrivacyBtn) openPrivacyBtn.addEventListener("click", ()=>{ state.viewingPrivacyInfo = true; render(); });
   const closePrivacyBtn = document.querySelector('[data-action="close-privacy-info"]');
   if(closePrivacyBtn) closePrivacyBtn.addEventListener("click", ()=>{ state.viewingPrivacyInfo = false; render(); });
+  const openLegalPrivacyBtn = document.querySelector('[data-action="open-legal-privacy"]');
+  if(openLegalPrivacyBtn) openLegalPrivacyBtn.addEventListener("click", ()=>{ state.viewingLegal = "privacy"; render(); });
+  const openLegalDisclaimerBtn = document.querySelector('[data-action="open-legal-disclaimer"]');
+  if(openLegalDisclaimerBtn) openLegalDisclaimerBtn.addEventListener("click", ()=>{ state.viewingLegal = "disclaimer"; render(); });
+  document.querySelectorAll('[data-action="close-legal-viewer"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.viewingLegal = null; render(); });
+  });
   const testNotifBtn = document.querySelector('[data-action="test-notification"]');
   if(testNotifBtn) testNotifBtn.addEventListener("click", ()=>{
     const plugin = nativeNotify();
@@ -10542,12 +10579,22 @@ function attachHandlers(){
   });
 
   // Workout tab
-  const startBtn = document.querySelector('[data-action="start-session"]');
-  if(startBtn) startBtn.addEventListener("click", ()=>{
-    state.session = { startedAt: Date.now(), exercises: [], notes:"", title:"" };
-    state.editingSessionId = null;
-    applyWakeLock();
-    render();
+  // querySelectorAll, not querySelector: the hero "Start Workout"/"Start Empty Workout" button
+  // and the "Start Empty" quick-action card both carry this action, and binding only the first
+  // left whichever one is second in the DOM dead.
+  document.querySelectorAll('[data-action="start-session"]').forEach(startBtn=>{
+    startBtn.addEventListener("click", ()=>{
+      state.session = { startedAt: Date.now(), exercises: [], notes:"", title:"" };
+      state.editingSessionId = null;
+      applyWakeLock();
+      render();
+    });
+  });
+  document.querySelectorAll("[data-workout-filter]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.workoutRoutineFilter = el.dataset.workoutFilter;
+      render();
+    });
   });
 
   // Routines — every routine write goes through the editor lifecycle helpers above, so
@@ -12505,6 +12552,51 @@ if("serviceWorker" in navigator){
     navigator.serviceWorker.register("sw.js").catch(()=>{});
   });
 }
+
+/* =========================================================
+   ANDROID HARDWARE BACK BUTTON
+
+   Root cause of "Back exits the app" on Privacy Policy / Medical Disclaimer / the Body
+   Progress full-screen image viewer (and, before this, every other overlay in the app): there
+   was no back-button handling anywhere -- no @capacitor/app listener, no popstate, nothing in
+   MainActivity.java. Every overlay here is an in-DOM state flag (never a real page
+   navigation), so Android's hardware back had nothing to consume and always fell through to
+   the OS default of finishing the Activity.
+
+   This is the single place that decides what a hardware back press closes. Overlays are
+   checked topmost/most-nested first; the first one found open is closed and nothing else runs.
+   Add new closeable overlays here as they're introduced, rather than teaching each feature
+   its own back-button handling.
+========================================================= */
+function handleHardwareBack(){
+  if(state.confirmDialog){ resolveConfirmDialog(false, render); return true; }
+  if(state.passphrasePrompt){ resolvePassphrasePrompt(null, render); return true; }
+  if(state.driveRestorePrompt){ state.driveRestorePrompt = null; render(); return true; }
+  if(state.viewingLegal){ state.viewingLegal = null; render(); return true; }
+  if(state.viewingBodyPhotoId!=null){ state.viewingBodyPhotoId = null; render(); return true; }
+  if(state.rpeSheetTarget){ state.rpeSheetTarget = null; render(); return true; }
+  if(state.restTimerSheetExi!=null){ state.restTimerSheetExi = null; state.restCustomOpen = false; render(); return true; }
+  if(state.plateCalcOpen!=null){ state.plateCalcOpen = null; render(); return true; }
+  if(state.showExercisePicker){ state.showExercisePicker = false; render(); return true; }
+  if(state.exerciseMenuOpen!=null){ state.exerciseMenuOpen = null; render(); return true; }
+  if(state.notificationsOpen){ state.notificationsOpen = false; render(); return true; }
+  if(state.viewingPrivacyInfo){ state.viewingPrivacyInfo = false; render(); return true; }
+  if(state.viewingSessionId!=null){ state.viewingSessionId = null; render(); return true; }
+  if(state.viewingHyroxSchedule){ state.viewingHyroxSchedule = false; render(); return true; }
+  if(state.viewingHyroxInfo){ state.viewingHyroxInfo = false; render(); return true; }
+  if(state.timer){ if(state.timer.handle) clearInterval(state.timer.handle); state.timer = null; render(); return true; }
+  return false;
+}
+
+(function(){
+  const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+  const AppPlugin = isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+  if(!AppPlugin) return;
+  AppPlugin.addListener("backButton", ()=>{
+    if(handleHardwareBack()) return;
+    AppPlugin.exitApp(); // nothing open -- same exit-at-root behavior as before this fix
+  });
+})();
 
 // Reconciles native reminder alarms with current settings on every cold start (handles a
 // fresh install where toggles were already on, and is a cheap no-op otherwise since

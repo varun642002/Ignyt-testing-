@@ -97,6 +97,38 @@ class SharePlugin : com.getcapacitor.Plugin() {
         }
     }
 
+    /** Writes an arbitrary file (PDF, image, any binary blob -- e.g. a Medical Reports upload's
+     *  original file) to the app cache and opens the system share sheet with it. Same
+     *  hand-rolled cache-file + FileProvider + ACTION_SEND approach as shareText()/shareImage()
+     *  above, generalized with a caller-supplied mimeType instead of a hardcoded one, since
+     *  this is the only one of the three that needs to handle more than one file type. */
+    @PluginMethod
+    fun shareFile(call: PluginCall) {
+        try {
+            val base64 = call.getString("base64")
+            if (base64.isNullOrBlank()) { resolveError(call, "base64 file data is required."); return }
+            val mimeType = call.getString("mimeType") ?: "application/octet-stream"
+            val bytes = try { Base64.decode(base64, Base64.DEFAULT) } catch (e: Exception) {
+                resolveError(call, "Invalid file data."); return
+            }
+            val fileName = safeFileName(call)
+            val dir = File(context.cacheDir, "share").apply { mkdirs() }
+            val file = File(dir, fileName)
+            file.writeBytes(bytes)
+
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = mimeType
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            activity.startActivity(Intent.createChooser(send, "Save or share $fileName"))
+            resolveSuccess(call, JSObject().apply { put("shared", true) })
+        } catch (e: Exception) {
+            resolveError(call, "Share failed: ${e.message ?: "unknown error"}")
+        }
+    }
+
     /** Saves the PNG where the user can find it: MediaStore Downloads on API 29+ (no
      *  permission needed), the app's external pictures dir on API 26–28 (also permissionless). */
     @PluginMethod
