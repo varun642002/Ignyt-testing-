@@ -42,8 +42,16 @@
 
 .set-input { font-variant-numeric:tabular-nums; width:100%; min-width:0; box-sizing:border-box; height:38px;
   border-radius:9px; text-align:center; font-size:14px; font-weight:700; padding:0 4px;
-  transition:border-color .15s ease, box-shadow .15s ease; }
+  transition:border-color .15s ease, box-shadow .15s ease;
+  scroll-margin-top:var(--pin-height,0px); scroll-margin-bottom:16px; }
 .set-input:focus { outline:none; border-color:var(--rh-blue,#2563EB); box-shadow:0 0 0 3px rgba(37,99,235,.14); }
+
+/* Sticky exercise header while actively editing a set (keyboard open) -- keeps the name,
+   muscle badge, notes, rest timer and column headers in view while only the set rows scroll
+   underneath, matching a table with a frozen header. Toggled by the keyboard-aware listener
+   in app.js; position:static (i.e. today's normal layout, unchanged) at every other time, so
+   nothing about the resting/idle screen moves or looks different. */
+.wk-ex-card__pin--active { position:sticky; top:0; z-index:5; padding-bottom:6px; }
 /* Locked once the set is checked done -- real values, dimmed to read as "committed", not
    editable until un-checked. Applies to inputs, the RPE button, and the hold-timer button. */
 .set-input:disabled, .rpe-btn:disabled, .rest-toggle:disabled { opacity:.6; cursor:default; }
@@ -213,6 +221,7 @@
    while staying opaque in both themes (mixes into the row's own solid --rh-bg, not into
    whatever's behind it). */
 .wk-light .set-row.done { background:color-mix(in srgb, var(--rh-green,#16A34A) 12%, var(--rh-bg)); }
+.wk-light .wk-ex-card__pin--active { background:var(--rh-card); box-shadow:0 6px 8px -6px rgba(15,23,42,.12); }
 .wk-light .set-num { color:var(--rh-text); }
 .wk-light .set-prev { color:var(--rh-muted); opacity:1; }
 .wk-light .set-input { background:var(--rh-card); border:1px solid var(--rh-border); color:var(--rh-text); }

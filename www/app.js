@@ -9616,8 +9616,9 @@ function renderWorkoutTab(){
         const collapsed = (state.collapsedExercises||[]).includes(exi);
         const notesOpen = (state.notesOpenExercises||[]).includes(exi) || !!ex.notes;
         return `
-        <div class="ex-log-card wk-ex-card">
+        <div class="ex-log-card wk-ex-card" data-ex-card="${exi}">
           ${ex.supersetWithNext ? `<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:var(--rh-blue);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">${svg('link',12)} Superset with next exercise</div>` : ''}
+          <div class="wk-ex-card__pin">
           <div class="row-between" style="margin-bottom:4px;position:relative;">
             <button class="wk-ex-card__collapse-toggle" data-toggle-ex-collapse="${exi}" style="min-width:0;flex:1;text-align:left;background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;">
               <span style="transform:rotate(${collapsed?'-90deg':'0deg'});transition:transform .15s ease;flex:none;color:var(--rh-muted);">${svg('chevronDown',14)}</span>
@@ -9652,15 +9653,16 @@ function renderWorkoutTab(){
           <div class="row-between">
             <button class="rest-toggle" data-rest-toggle="${exi}">${svg('timer',13)} Rest Timer: ${restLabel}</button>
             ${showPlates?`<button class="rest-toggle" data-plate-calc="${exi}" style="color:var(--rh-blue);border:1.5px solid var(--rh-blue);border-radius:var(--radius-xs);padding:3px 10px;">${svg('calc',13)} Plates</button>`:""}
-          </div>`}
-          ${collapsed ? '' : `
+          </div>
           <hr class="divider">
           <div class="set-table-header" style="grid-template-columns:${gridCols};">
             ${logType==="strength" ? `<span>SET</span><span>PREVIOUS</span><span>${wUnit().toUpperCase()}</span><span>REPS</span>${showRPE?"<span>RPE</span>":""}<span></span>`
               : logType==="cardio" ? `<span>SET</span><span>PREVIOUS</span><span>KM</span><span>TIME</span><span>PACE</span><span></span>`
               : logType==="carry" ? `<span>SET</span><span>PREVIOUS</span><span>KM</span><span>${wUnit().toUpperCase()}</span><span>TIME</span><span></span>`
               : `<span>SET</span><span>PREVIOUS</span><span>TIME</span><span></span>`}
+          </div>`}
           </div>
+          ${collapsed ? '' : `
           ${ex.sets.map((set,si)=>{
             const prev = getPreviousSet(ex.name, si);
             const prevLabel = previousSetLabel(logType, prev);
@@ -9678,19 +9680,19 @@ function renderWorkoutTab(){
             // 5s-expiring undo on top of "just tap it again").
             const lock = set.done ? 'disabled' : '';
             const fields = logType==="strength" ? `
-                <input type="number" inputmode="decimal" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–" ${lock}>
-                <input type="text" inputmode="numeric" pattern="[0-9]*" class="mono set-input" value="${set.reps}" data-set-field="${exi}|${si}|reps" placeholder="–" ${lock}>
+                <input type="number" inputmode="decimal" enterkeyhint="next" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–" ${lock}>
+                <input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="${showRPE?'next':'done'}" class="mono set-input" value="${set.reps}" data-set-field="${exi}|${si}|reps" placeholder="–" ${lock}>
                 ${showRPE?`<button class="rpe-btn" data-rpe="${exi}|${si}" ${lock}>${set.rpe||'RPE'}</button>`:""}`
               : logType==="cardio" ? `
-                <input type="number" inputmode="decimal" class="mono set-input" value="${set.distanceKm||''}" data-set-field="${exi}|${si}|distanceKm" placeholder="–" step="0.01" ${lock}>
-                <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss" ${lock}>
+                <input type="number" inputmode="decimal" enterkeyhint="next" class="mono set-input" value="${set.distanceKm||''}" data-set-field="${exi}|${si}|distanceKm" placeholder="–" step="0.01" ${lock}>
+                <input type="text" enterkeyhint="done" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss" ${lock}>
                 <span class="mono set-prev" style="text-align:center;">${fmtPace(set.distanceKm,set.durationSec)||'–'}</span>`
               : logType==="carry" ? `
-                <input type="number" inputmode="decimal" class="mono set-input" value="${set.distanceKm||''}" data-set-field="${exi}|${si}|distanceKm" placeholder="–" step="0.01" ${lock}>
-                <input type="number" inputmode="decimal" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–" ${lock}>
-                <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss" ${lock}>`
+                <input type="number" inputmode="decimal" enterkeyhint="next" class="mono set-input" value="${set.distanceKm||''}" data-set-field="${exi}|${si}|distanceKm" placeholder="–" step="0.01" ${lock}>
+                <input type="number" inputmode="decimal" enterkeyhint="next" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–" ${lock}>
+                <input type="text" enterkeyhint="done" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss" ${lock}>`
               : `
-                <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss" ${lock}>
+                <input type="text" enterkeyhint="done" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss" ${lock}>
                 <button class="rest-toggle" style="padding:0;" data-start-hold-timer="${exi}|${si}" aria-label="Start hold timer" title="Start built-in timer" ${lock}>${svg('timer',15)}</button>`;
             const showSwipeHint = exi===0 && si===0 && !LS.get("hx_swipe_hint_seen", false);
             return `<div class="set-row-wrap${showSwipeHint?' wk-swipe-hint':''}" data-swipe-row="${exi}|${si}">
@@ -12523,46 +12525,97 @@ if(window.IgnytDriveBackup && window.IgnytDriveBackup.isNativeAndroid()){
 }
 
 // Workout set inputs: tapping one selects its existing value (Bug Fix #7 -- replacing a
-// number is the overwhelmingly common intent, not appending to it). Scrolling the row into
-// view above the on-screen keyboard is owned by the keyboard-aware listener below --
-// scrolling here, on focusin, ran before the keyboard had actually opened/resized anything,
-// so the row still ended up hidden underneath it once the keyboard finished animating in.
-// One delegated listener for the app's lifetime, not per-render.
+// number is the overwhelmingly common intent, not appending to it). Positioning the row above
+// the keyboard is owned entirely by the keyboard-aware layout block below.
 document.addEventListener("focusin", (e)=>{
   const el = e.target;
   if(!(el instanceof HTMLInputElement) || !el.classList.contains("set-input")) return;
   el.select();
   if(!window.visualViewport){
-    // No visualViewport support: best effort, timed to land after most on-device keyboard
-    // show animations finish.
-    setTimeout(()=> el.scrollIntoView({ block:"center", behavior:"smooth" }), 300);
+    // No visualViewport support (very old WebViews): best effort, timed to land after most
+    // on-device keyboard show animations finish. scroll-margin-top on .set-input (workout.css)
+    // still keeps it clear of the pinned exercise header even on this fallback path.
+    setTimeout(()=> el.scrollIntoView({ block:"nearest", behavior:"smooth" }), 300);
   }
 });
 
-// Keyboard-aware layout: keeps the focused set-input scrolled above the on-screen keyboard and
-// keeps the fixed bottom nav from sitting on top of the keyboard/editing area (see
-// body.kb-open in index.html). Driven by visualViewport, which reports the real usable screen
-// height under both models mobile platforms use for the keyboard -- native Android resizing
-// the window (windowSoftInputMode="adjustResize", AndroidManifest.xml) and browser/PWA mode,
-// where the layout viewport never resizes and only the visual viewport shrinks. One listener
-// for the app's lifetime, not per-render.
+/* =========================================================
+   KEYBOARD-AWARE WORKOUT LAYOUT
+
+   Root cause of the keyboard covering the set row: MainActivity had no windowSoftInputMode,
+   so the native WebView never resized for the keyboard, and nothing reacted to the browser/PWA
+   case (layout viewport never resizes there either -- only the visual viewport shrinks). This
+   block is driven by visualViewport, the one API that reports the real usable screen height
+   under both models:
+
+   1. body.kb-open (index.html) slides the fixed bottom nav out of the way.
+   2. The focused exercise's header (name / muscle badge / notes / rest timer / column
+      headers -- .wk-ex-card__pin) sticks to the top of the scroll area, so it survives the
+      set list scrolling underneath it -- .set-row:focus-within already highlights the active
+      row itself (workout.css).
+   3. The focused set-input is scrolled so it clears both the pinned header and the keyboard,
+      computed from actual element/viewport geometry (getBoundingClientRect, visualViewport)
+      rather than any fixed pixel guess, so it holds up at any header height or screen size.
+
+   One listener for the app's lifetime, not per-render.
+========================================================= */
 (function(){
   const vv = window.visualViewport;
   if(!vv) return;
+  const main = document.querySelector("main");
   let scrollTimer = null;
+  let pinnedEl = null;
+
+  function activeSetControl(){
+    const a = document.activeElement;
+    return (a instanceof HTMLElement && (a.classList.contains("set-input") || a.classList.contains("rpe-btn"))) ? a : null;
+  }
+
+  // Sticks/unsticks the active exercise's header block and keeps --pin-height (used by
+  // .set-input's scroll-margin-top too) in sync with its real rendered height.
+  function setPin(card){
+    const pin = card ? card.querySelector(".wk-ex-card__pin") : null;
+    if(pin === pinnedEl) return pin;
+    if(pinnedEl) pinnedEl.classList.remove("wk-ex-card__pin--active");
+    if(pin){
+      pin.classList.add("wk-ex-card__pin--active");
+      document.documentElement.style.setProperty("--pin-height", Math.round(pin.getBoundingClientRect().height) + "px");
+    } else {
+      document.documentElement.style.setProperty("--pin-height", "0px");
+    }
+    pinnedEl = pin;
+    return pin;
+  }
+
+  function scrollRowAboveKeyboard(el, pin){
+    if(!main || !el) return;
+    const rect = el.getBoundingClientRect();
+    const visibleTop = Math.max(pin ? pin.getBoundingClientRect().bottom : 0, vv.offsetTop);
+    const visibleBottom = vv.offsetTop + vv.height;
+    let delta = 0;
+    if(rect.bottom > visibleBottom) delta = rect.bottom - visibleBottom;
+    else if(rect.top < visibleTop) delta = rect.top - visibleTop;
+    if(delta) main.scrollBy({ top:Math.round(delta), behavior:"smooth" });
+  }
+
   function onViewportChange(){
     const inset = Math.max(0, Math.round(window.innerHeight - vv.height));
     document.documentElement.style.setProperty("--kb-inset", inset + "px");
     const open = inset > 120; // real keyboards are much taller than URL-bar/chrome height changes
     document.body.classList.toggle("kb-open", open);
-    if(open){
-      const active = document.activeElement;
-      if(active instanceof HTMLInputElement && active.classList.contains("set-input")){
-        clearTimeout(scrollTimer);
-        scrollTimer = setTimeout(()=> active.scrollIntoView({ block:"center", behavior:"smooth" }), 50);
-      }
+    const active = open ? activeSetControl() : null;
+    const pin = setPin(active ? active.closest(".wk-ex-card") : null);
+    if(active){
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(()=> scrollRowAboveKeyboard(active, pin), 50);
     }
   }
+
   vv.addEventListener("resize", onViewportChange);
   vv.addEventListener("scroll", onViewportChange);
+  // Moving focus straight from one exercise's row to another's while the keyboard stays open
+  // doesn't fire a visualViewport resize (the keyboard itself hasn't moved), but still needs
+  // to re-pin/re-scroll for the newly focused row.
+  document.addEventListener("focusin", onViewportChange);
+  document.addEventListener("focusout", ()=> setTimeout(()=>{ if(!activeSetControl()) setPin(null); }, 0));
 })();
