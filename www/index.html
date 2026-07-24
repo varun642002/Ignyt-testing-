@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
 <meta name="theme-color" content="#121216" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -21,7 +21,7 @@
 :root{
     --bg:#121216; --surface:#1C1C22; --surface-alt:#26262E;
     --accent:#FF5A1F; --steel:#4FA8D8; --text:#F2F1ED; --muted:#8B8B94; --mint:#3ECF8E;
-    --border:#33333d;
+    --border:#33333d; --kb-inset:0px;
   }
 
 [data-theme="light"]{
@@ -266,7 +266,14 @@ input,select,textarea{font-family:inherit; background:transparent; color:var(--t
 
 nav.bottom-nav{position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px;
     display:flex; padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px)); gap:2px;
-    background:rgba(23,23,28,.85); backdrop-filter:blur(14px); border-top:1px solid #2a2a32; z-index:40;}
+    background:rgba(23,23,28,.85); backdrop-filter:blur(14px); border-top:1px solid #2a2a32; z-index:40;
+    transition:transform .18s ease;}
+
+/* Keyboard-aware layout: body.kb-open is toggled by the visualViewport listener in app.js
+   whenever the on-screen keyboard is up. Slides the fixed bottom nav out of the way instead of
+   letting it float on top of the keyboard/editing area -- covers browser/PWA mode, where the
+   layout viewport doesn't shrink the way the native WebView does under adjustResize. */
+body.kb-open nav.bottom-nav{transform:translate(-50%, 100%);}
 
 .nav-btn{flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 2px;
     border-radius:10px; background:none; border:none; color:var(--muted); cursor:pointer;}
@@ -527,6 +534,7 @@ try{
 <script src="js/pages/home.js"></script>
 <script src="js/pages/workout.js"></script>
 <script src="js/pages/progress.js"></script>
+<script src="js/storage-utils.js"></script>
 <script src="js/body-photos-db.js"></script>
 <script src="js/bloodwork.js"></script>
 <script src="js/goals.js"></script>
@@ -534,6 +542,7 @@ try{
 <script src="js/health/health-security.js"></script>
 <script src="js/health/health-db.js"></script>
 <script src="js/health/health-models.js"></script>
+<script src="js/health/health-utils.js"></script>
 <script src="js/health/health-stub.js"></script>
 <script src="js/health/health-dashboard.js"></script>
 <script src="js/health/body-scan-ai.js"></script>

@@ -12523,12 +12523,46 @@ if(window.IgnytDriveBackup && window.IgnytDriveBackup.isNativeAndroid()){
 }
 
 // Workout set inputs: tapping one selects its existing value (Bug Fix #7 -- replacing a
-// number is the overwhelmingly common intent, not appending to it) and scrolls it fully into
-// view (Bug Fix #8's "auto scroll into view", since a set row can sit right under the
-// keyboard on short screens). One delegated listener for the app's lifetime, not per-render.
+// number is the overwhelmingly common intent, not appending to it). Scrolling the row into
+// view above the on-screen keyboard is owned by the keyboard-aware listener below --
+// scrolling here, on focusin, ran before the keyboard had actually opened/resized anything,
+// so the row still ended up hidden underneath it once the keyboard finished animating in.
+// One delegated listener for the app's lifetime, not per-render.
 document.addEventListener("focusin", (e)=>{
   const el = e.target;
   if(!(el instanceof HTMLInputElement) || !el.classList.contains("set-input")) return;
   el.select();
-  el.scrollIntoView({ block:"center", behavior:"smooth" });
+  if(!window.visualViewport){
+    // No visualViewport support: best effort, timed to land after most on-device keyboard
+    // show animations finish.
+    setTimeout(()=> el.scrollIntoView({ block:"center", behavior:"smooth" }), 300);
+  }
 });
+
+// Keyboard-aware layout: keeps the focused set-input scrolled above the on-screen keyboard and
+// keeps the fixed bottom nav from sitting on top of the keyboard/editing area (see
+// body.kb-open in index.html). Driven by visualViewport, which reports the real usable screen
+// height under both models mobile platforms use for the keyboard -- native Android resizing
+// the window (windowSoftInputMode="adjustResize", AndroidManifest.xml) and browser/PWA mode,
+// where the layout viewport never resizes and only the visual viewport shrinks. One listener
+// for the app's lifetime, not per-render.
+(function(){
+  const vv = window.visualViewport;
+  if(!vv) return;
+  let scrollTimer = null;
+  function onViewportChange(){
+    const inset = Math.max(0, Math.round(window.innerHeight - vv.height));
+    document.documentElement.style.setProperty("--kb-inset", inset + "px");
+    const open = inset > 120; // real keyboards are much taller than URL-bar/chrome height changes
+    document.body.classList.toggle("kb-open", open);
+    if(open){
+      const active = document.activeElement;
+      if(active instanceof HTMLInputElement && active.classList.contains("set-input")){
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(()=> active.scrollIntoView({ block:"center", behavior:"smooth" }), 50);
+      }
+    }
+  }
+  vv.addEventListener("resize", onViewportChange);
+  vv.addEventListener("scroll", onViewportChange);
+})();
