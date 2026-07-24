@@ -44,6 +44,9 @@
   border-radius:9px; text-align:center; font-size:14px; font-weight:700; padding:0 4px;
   transition:border-color .15s ease, box-shadow .15s ease; }
 .set-input:focus { outline:none; border-color:var(--rh-blue,#2563EB); box-shadow:0 0 0 3px rgba(37,99,235,.14); }
+/* Locked once the set is checked done -- real values, dimmed to read as "committed", not
+   editable until un-checked. Applies to inputs, the RPE button, and the hold-timer button. */
+.set-input:disabled, .rpe-btn:disabled, .rest-toggle:disabled { opacity:.6; cursor:default; }
 
 /* Active row: highlighted the moment any of its own inputs has focus -- no extra JS state
    needed, :focus-within tracks it for free and clears itself the instant focus leaves (Bug #8). */

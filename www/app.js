@@ -9672,21 +9672,26 @@ function renderWorkoutTab(){
             const typeMeta = SET_TYPE_META[set.type||"working"];
             const numBtn = `<button class="mono set-num" data-cycle-set-type="${exi}|${si}" style="color:${typeMeta.color};background:none;border:none;cursor:pointer;font-weight:800;" title="Tap to mark warm-up / drop / failure set">${typeMeta.badge}${si+1}</button>`;
             const doneBtn = `<button class="set-check ${set.done?'done':''}" data-set-done="${exi}|${si}" aria-label="${set.done?'Mark set incomplete':'Mark set complete'}">${set.done?svg('check',13):''}</button>`;
+            // Locked once done: real inputs, not fake ones -- values stay exactly as logged
+            // until the user explicitly un-checks the set (tap the check again, any time, no
+            // countdown -- unlike delete this never destroys data, so there's no need for a
+            // 5s-expiring undo on top of "just tap it again").
+            const lock = set.done ? 'disabled' : '';
             const fields = logType==="strength" ? `
-                <input type="number" inputmode="decimal" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–">
-                <input type="text" inputmode="numeric" pattern="[0-9]*" class="mono set-input" value="${set.reps}" data-set-field="${exi}|${si}|reps" placeholder="–">
-                ${showRPE?`<button class="rpe-btn" data-rpe="${exi}|${si}">${set.rpe||'RPE'}</button>`:""}`
+                <input type="number" inputmode="decimal" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–" ${lock}>
+                <input type="text" inputmode="numeric" pattern="[0-9]*" class="mono set-input" value="${set.reps}" data-set-field="${exi}|${si}|reps" placeholder="–" ${lock}>
+                ${showRPE?`<button class="rpe-btn" data-rpe="${exi}|${si}" ${lock}>${set.rpe||'RPE'}</button>`:""}`
               : logType==="cardio" ? `
-                <input type="number" inputmode="decimal" class="mono set-input" value="${set.distanceKm||''}" data-set-field="${exi}|${si}|distanceKm" placeholder="–" step="0.01">
-                <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss">
+                <input type="number" inputmode="decimal" class="mono set-input" value="${set.distanceKm||''}" data-set-field="${exi}|${si}|distanceKm" placeholder="–" step="0.01" ${lock}>
+                <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss" ${lock}>
                 <span class="mono set-prev" style="text-align:center;">${fmtPace(set.distanceKm,set.durationSec)||'–'}</span>`
               : logType==="carry" ? `
-                <input type="number" inputmode="decimal" class="mono set-input" value="${set.distanceKm||''}" data-set-field="${exi}|${si}|distanceKm" placeholder="–" step="0.01">
-                <input type="number" inputmode="decimal" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–">
-                <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss">`
+                <input type="number" inputmode="decimal" class="mono set-input" value="${set.distanceKm||''}" data-set-field="${exi}|${si}|distanceKm" placeholder="–" step="0.01" ${lock}>
+                <input type="number" inputmode="decimal" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–" ${lock}>
+                <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss" ${lock}>`
               : `
-                <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss">
-                <button class="rest-toggle" style="padding:0;" data-start-hold-timer="${exi}|${si}" aria-label="Start hold timer" title="Start built-in timer">${svg('timer',15)}</button>`;
+                <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss" ${lock}>
+                <button class="rest-toggle" style="padding:0;" data-start-hold-timer="${exi}|${si}" aria-label="Start hold timer" title="Start built-in timer" ${lock}>${svg('timer',15)}</button>`;
             const showSwipeHint = exi===0 && si===0 && !LS.get("hx_swipe_hint_seen", false);
             return `<div class="set-row-wrap${showSwipeHint?' wk-swipe-hint':''}" data-swipe-row="${exi}|${si}">
               <button class="swipe-dup-btn" data-dup-set="${exi}|${si}" aria-label="Duplicate set ${si+1}" tabindex="-1">${svg('copy',18)}</button>
