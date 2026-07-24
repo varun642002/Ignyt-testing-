@@ -15,29 +15,13 @@
    (css/tokens.css :root) so these screens match the rest of the app's
    dark mode instead of inventing a second, disconnected palette.
 
-   UI/UX audit note: --rh-* remains a second, parallel token layer to
-   tokens.css's --color-*/--space-*/--radius-* -- dark mode is bridged
-   (this file), but each *-light screen's LIGHT values are still hardcoded
-   per file rather than derived from tokens.css's own [data-theme="light"]
-   block. Fully unifying the two layers is real future work (would touch
-   home.css/workout.css/progress.css/tools.css/profile.css), intentionally
-   not done in this pass to avoid a wide, high-risk mechanical refactor;
-   documented here so it isn't rediscovered from scratch later.
+   Phase 1 (design system consolidation) moved --rh-* to a single definition in
+   tokens.css and fixed a real specificity bug found there (dark mode's override
+   for --rh-* never actually won the cascade -- see tokens.css for the full
+   writeup). The --rh-* block that used to live here is gone; tokens.css now
+   owns both the dark-default and [data-theme="light"] override for it,
+   mirroring how --color-* itself is structured.
 ========================================================= */
-
-[data-theme="dark"] .home-light,
-[data-theme="dark"] .pg-light,
-[data-theme="dark"] .wk-light {
-  --rh-bg: var(--color-bg);
-  --rh-card: var(--color-surface-elevated);
-  --rh-blue: var(--color-interactive);
-  --rh-text: var(--color-text-primary);
-  --rh-muted: var(--color-text-secondary);
-  --rh-border: var(--color-border);
-  --rh-purple: #A78BFA;
-  --rh-green: var(--color-success);
-  --rh-red: var(--color-error);
-}
 
 /* Shared header/bottom-nav "light tab" modifier classes (applied by app.js while any
    pg-light/wk-light/home-light screen is the active tab) hardcode their own hex values

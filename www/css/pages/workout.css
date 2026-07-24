@@ -73,13 +73,11 @@
    WORKOUT (idle list) — light "premium reference" redesign, matching Home's design
    language. Reuses several of Home's shared class names (.rh-btn, .rh-card,
    .rh-section-head, .rh-view-all, .rh-quick-card) which read their colors from
-   --rh-* custom properties -- redeclared on .wk-light exactly like .home-light does
-   so this module doesn't depend on Home's CSS having loaded/rendered first.
+   --rh-* custom properties -- defined once in tokens.css (Phase 1 consolidation),
+   shared with .home-light/.pg-light rather than redeclared per file.
 ========================================================= */
 
 .wk-light {
-  --rh-bg:#F7F9FC; --rh-card:#FFFFFF; --rh-blue:#2563EB; --rh-text:#0F172A; --rh-muted:#64748B;
-  --rh-border:#E9EDF3; --rh-purple:#7C3AED; --rh-green:#16A34A; --rh-red:#EF4444;
   background:var(--rh-bg); color:var(--rh-text);
   margin:0 -16px -100px; padding:12px 16px 100px;
   min-height:calc(100% + 100px);

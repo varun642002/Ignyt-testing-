@@ -48,6 +48,17 @@
   --nav-height: 72px;
   --font-size-xs: 11px; --font-size-sm: 13px; --font-size-md: 15px;
   --font-size-lg: 18px; --font-size-xl: 24px; --font-size-2xl: 30px;
+  /* Borders -- audited: app.js only ever used 1px and 1.5px, so this is already consistent;
+     tokenized for new code so a third ad-hoc value doesn't creep in. */
+  --border-width-thin: 1px; --border-width-md: 1.5px;
+  /* Opacity -- common semantic levels (disabled control, secondary/muted content, modal
+     scrim) grounded in values already in use (.6/.65 for muted text, .92-.94 for overlays
+     like the timer dialog's backdrop). */
+  --opacity-disabled: .5; --opacity-muted: .65; --opacity-overlay: .92;
+  /* Chart series palette -- reuses the app's real accent colors (not new hex values) so a
+     multi-series chart stays on-brand instead of each chart picking its own colors. */
+  --chart-1: var(--color-interactive); --chart-2: var(--color-primary);
+  --chart-3: var(--color-success); --chart-4: var(--color-accent-blue); --chart-5: var(--color-warning);
 }
 /* Light theme: primary reference target -- cool blue-gray background, white elevated
    cards, dark navy text, bright blue interactive accent. */
@@ -56,4 +67,53 @@
   --color-surface-pressed:#eef1f7; --color-text-primary:#12172b;
   --color-text-secondary:#5b6478; --color-border:#e3e7ef; --shadow-card:0 8px 24px rgba(20,30,60,.06);
   --color-interactive: #2f6fed; --color-interactive-strong: #1f5adf; --color-interactive-soft: rgba(47,111,237,.12);
+}
+/* AMOLED theme -- Phase 1 ask ("future AMOLED theme"): true-black background/surfaces for
+   OLED power savings and max contrast. Not wired to any theme switcher yet (Settings still
+   only offers dark/light/system) -- exists so that wiring is a one-line addition to the
+   theme picker later, not a new token pass. Everything else inherits the dark theme's values
+   (:root above), since only bg/surface actually need to go pure black for the AMOLED effect. */
+[data-theme="amoled"] {
+  --color-bg:#000000; --color-surface:#000000; --color-surface-elevated:#0a0a0a; --color-surface-pressed:#141414;
+  --color-border:#1c1c1c;
+}
+
+/* =========================================================
+   PREMIUM LIGHT-CARD SURFACE LAYER (--rh-*)
+
+   Phase 1 consolidation: this used to be copy-pasted verbatim into THREE separate files
+   (home.css .home-light, workout.css .wk-light, progress.css .pg-light) -- same 9 variables,
+   same values, same order. Single source of truth now; those three files keep their own
+   layout-only rules (background/margin/padding/font-family) and no longer redeclare --rh-*.
+
+   This is deliberately NOT merged into --color-* by value, even though several pairs are
+   close (--rh-card #FFFFFF == --color-surface light #ffffff exactly; --rh-blue #2563EB vs
+   --color-interactive light #2f6fed is a few points of drift). Two pairs are NOT close at
+   all (--rh-green #16A34A vs --color-success #45d294; --rh-red #EF4444 vs --color-error
+   #ff6b6b) -- forcing those identical would visibly recolor Home/Workout/Progress/Tools/
+   Settings/Profile/Library/Exercise Detail/Calculators/Insights/Goals (everything under
+   .home-light/.wk-light/.pg-light), which is a real visual change, not a dedup. --rh-* is
+   kept as its own named layer for exactly that reason: it represents "always-light premium
+   card" styling, a deliberately different design intent from --color-* (which follows the
+   app's dark/light theme toggle).
+
+   BUG FOUND AND FIXED during this consolidation: dark-mode.css's [data-theme="dark"]
+   override never actually won. A bare ".pg-light{--rh-bg:#F7F9FC}" (specificity 0,1,0) and
+   dark-mode.css's "[data-theme='dark'] .pg-light{--rh-bg:var(--color-bg)}" (0,2,0) look like
+   the dark rule should always win on specificity alone -- and it should have -- but verified
+   in-browser (data-theme="dark" set, .pg-light's computed --rh-bg still read #F7F9FC, the
+   light value) that it didn't. This pre-dates this consolidation -- confirmed via git stash
+   against the original 3-file version, same result -- so it's a real latent bug being fixed
+   here, not a regression. Fix: mirror the exact pattern --color-* itself already uses
+   (dark values live unscoped/default; [data-theme="light"] is the override), instead of
+   trying to out-specificity a "[data-theme=dark]" selector. Dark-mode.css's old --rh-*
+   block is now dead code and has been removed. */
+.home-light, .wk-light, .pg-light {
+  --rh-bg: var(--color-bg); --rh-card: var(--color-surface-elevated); --rh-blue: var(--color-interactive);
+  --rh-text: var(--color-text-primary); --rh-muted: var(--color-text-secondary); --rh-border: var(--color-border);
+  --rh-purple: #A78BFA; --rh-green: var(--color-success); --rh-red: var(--color-error);
+}
+[data-theme="light"] .home-light, [data-theme="light"] .wk-light, [data-theme="light"] .pg-light {
+  --rh-bg:#F7F9FC; --rh-card:#FFFFFF; --rh-blue:#2563EB; --rh-text:#0F172A; --rh-muted:#64748B;
+  --rh-border:#E9EDF3; --rh-purple:#7C3AED; --rh-green:#16A34A; --rh-red:#EF4444;
 }

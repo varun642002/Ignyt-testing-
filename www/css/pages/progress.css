@@ -7,14 +7,13 @@
    Progress home/dashboard (www/js/pages/progress.js). Detail views
    (Achievements, Habit Tracker, Analytics, etc.) are unchanged and stay
    dark-themed, reached the same way as before via data-progress-view.
-   Reuses Home/Workout's shared .rh-* classes (--rh-* tokens redeclared
-   on .pg-light exactly like .home-light/.wk-light do) plus its own
-   pg-* classes for the pieces unique to this dashboard.
+   Reuses Home/Workout's shared .rh-* classes (--rh-* tokens defined once in
+   tokens.css -- Phase 1 consolidation -- shared with .home-light/.wk-light
+   rather than redeclared here) plus its own pg-* classes for the pieces
+   unique to this dashboard.
 ========================================================= */
 
 .pg-light {
-  --rh-bg:#F7F9FC; --rh-card:#FFFFFF; --rh-blue:#2563EB; --rh-text:#0F172A; --rh-muted:#64748B;
-  --rh-border:#E9EDF3; --rh-purple:#7C3AED; --rh-green:#16A34A; --rh-red:#EF4444;
   background:var(--rh-bg); color:var(--rh-text);
   margin:0 -16px -100px; padding:12px 16px 100px;
   min-height:calc(100% + 100px);

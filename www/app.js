@@ -1738,6 +1738,12 @@ function calcPlates(target, barWeight){
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 
 function svg(name, size=19){ return `<svg width="${size}" height="${size}" viewBox="0 0 24 24">${ICONS[name]}</svg>`; }
+// Icon-size scale (Phase 1 design tokens): svg() takes a raw pixel number, not a CSS custom
+// property, so this is the JS-side equivalent of a token -- the 5 sizes that already cover
+// the vast majority of the ~300 existing svg() call sites (audited), named for new call
+// sites to reference instead of picking another one-off number. Existing calls are left as
+// literal numbers; retyping ~300 call sites for a purely cosmetic rename isn't done here.
+const ICON_SIZE = { xs:13, sm:16, md:18, lg:20, xl:24 };
 
 // Consistent empty state: icon + message + optional action, one shared shape instead of
 // each screen inventing its own "No X yet" text block (Design System, Step 10). actionHtml
