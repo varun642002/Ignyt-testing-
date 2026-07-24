@@ -1,9 +1,11 @@
 import { test } from '../fixtures/app.fixture.js';
-import { AiCoachPage, BodyPage, ExerciseLibraryPage, HealthPage, PlanPage, SettingsPage, ToolsPage } from '../pages/RoutedPage.js';
+import { BodyPage, ExerciseLibraryPage, HealthPage, PlanPage, SettingsPage, ToolsPage } from '../pages/RoutedPage.js';
 
+// AI Coach was intentionally removed (app.js redirects any persisted "ai-coach" tab to Home;
+// no nav entry reaches it) -- not a regression, so it isn't covered here.
 const routes = [
   ['tools', ToolsPage], ['library', ExerciseLibraryPage], ['body', BodyPage], ['plan', PlanPage],
-  ['health', HealthPage], ['settings', SettingsPage], ['ai coach', AiCoachPage]
+  ['health', HealthPage], ['settings', SettingsPage]
 ];
 
 for (const [name, PageObject] of routes) {
