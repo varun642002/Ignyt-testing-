@@ -10596,6 +10596,11 @@ function attachHandlers(){
       render();
     });
   });
+  const routineSortSelect = document.getElementById("workout-routine-sort");
+  if(routineSortSelect) routineSortSelect.addEventListener("change", ()=>{
+    state.workoutRoutineSort = routineSortSelect.value;
+    render();
+  });
 
   // Routines — every routine write goes through the editor lifecycle helpers above, so
   // `editingRoutineId` can never be left pointing at a stale record (which is exactly what

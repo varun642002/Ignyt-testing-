@@ -14,7 +14,6 @@
   window.IgnytPages = window.IgnytPages || {};
 
   const CATEGORY_COLOR = { Push:'#2563EB', Pull:'#16A34A', Legs:'#7C3AED', Upper:'#EA580C', Lower:'#0891B2' };
-  const WORKOUT_MIN_PER_SET = 3.5; // documented estimate convention (work + rest), not measured data
 
   function daysAgoLabel(dateStr) {
     if (!dateStr) return null;
