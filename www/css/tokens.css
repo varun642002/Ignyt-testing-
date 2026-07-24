@@ -25,8 +25,24 @@
   --color-border: #262b35;
   --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px;
   --space-lg: 24px; --space-xl: 32px;
-  --radius-sm: 10px; --radius-md: 14px; --radius-card: 18px; --radius-pill: 999px;
-  --shadow-card: 0 10px 28px rgba(0,0,0,.24);
+  /* Radius scale covers the actual spread of ad-hoc values already in use across app.js
+     (audited: 2/4/6/8/10/13/14/16/20px) -- new code should reference these instead of a
+     bare px value; existing inline styles migrate to them incrementally, not in one pass. */
+  --radius-2xs: 4px; --radius-xs: 6px; --radius-sm: 10px; --radius-md: 14px;
+  --radius-card: 18px; --radius-lg: 20px; --radius-pill: 999px;
+  /* Elevation scale -- --shadow-card kept as-is (widely referenced already) and now aliases
+     the mid level so existing callers are unaffected. */
+  --shadow-sm: 0 1px 4px rgba(0,0,0,.12);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.24);
+  --shadow-lg: 0 16px 40px rgba(0,0,0,.32);
+  --shadow-card: var(--shadow-md);
+  /* Motion -- Material-style standard easing, already the curve used by the timer overlay
+     and card entrance animations; durations follow Material Motion's small/medium/large scale. */
+  --duration-fast: 150ms; --duration-base: 250ms; --duration-slow: 400ms;
+  --ease-standard: cubic-bezier(.2,.8,.2,1);
+  /* Minimum interactive touch target, matching the size already established by
+     .page-tools-btn/.nav-btn and used throughout -- new compact controls should not go below this. */
+  --touch-target-min: 44px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --nav-height: 72px;

@@ -1739,6 +1739,18 @@ function todayStr(){ return new Date().toISOString().slice(0,10); }
 
 function svg(name, size=19){ return `<svg width="${size}" height="${size}" viewBox="0 0 24 24">${ICONS[name]}</svg>`; }
 
+// Consistent empty state: icon + message + optional action, one shared shape instead of
+// each screen inventing its own "No X yet" text block (Design System, Step 10). actionHtml
+// is a fully-formed button/link -- callers keep whatever button class fits their screen's
+// theme (rh-btn, btn-accent, etc.) rather than this helper hardcoding one.
+function emptyState(icon, message, actionHtml){
+  return `<div class="empty-state">
+    <div class="empty-state__icon">${svg(icon,26)}</div>
+    <div class="empty-state__message">${message}</div>
+    ${actionHtml||''}
+  </div>`;
+}
+
 /* =========================================================
    STORAGE — localStorage wrapper, app state, persistence, migrations,
    onboarding-status resolution, and JSON/CSV backup export & import.
@@ -3050,9 +3062,9 @@ function renderBodyDistribution(weekOffset){
 
   return `
     <div class="row-between" style="margin-bottom:14px;">
-      <button class="rh-btn rh-btn--ghost" style="flex:none;width:32px;height:32px;padding:0;" data-bodydist-nav="1">‹</button>
+      <button class="rh-btn rh-btn--ghost" style="flex:none;width:44px;height:44px;padding:0;" data-bodydist-nav="1">‹</button>
       <span style="font-size:13px;font-weight:800;">${rangeLabel}</span>
-      <button class="rh-btn rh-btn--ghost" style="flex:none;width:32px;height:32px;padding:0;" data-bodydist-nav="-1" ${weekOffset<=0?'disabled':''}>›</button>
+      <button class="rh-btn rh-btn--ghost" style="flex:none;width:44px;height:44px;padding:0;" data-bodydist-nav="-1" ${weekOffset<=0?'disabled':''}>›</button>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:18px;">${strip}</div>
     <div style="display:flex;justify-content:space-between;padding:8px 2px;border-bottom:1px solid var(--rh-border);font-size:11px;font-weight:700;color:var(--rh-muted);text-transform:uppercase;">
@@ -3247,9 +3259,9 @@ function renderCalendarMonth(monthOffset){
   }
   return `
     <div class="row-between" style="margin-bottom:14px;">
-      <button class="rh-btn rh-btn--ghost" style="flex:none;width:32px;height:32px;padding:0;" data-cal-nav="-1">‹</button>
+      <button class="rh-btn rh-btn--ghost" style="flex:none;width:44px;height:44px;padding:0;" data-cal-nav="-1">‹</button>
       <span style="font-weight:800;font-size:15px;">${monthName}</span>
-      <button class="rh-btn rh-btn--ghost" style="flex:none;width:32px;height:32px;padding:0;" data-cal-nav="1" ${monthOffset>=0?'disabled':''}>›</button>
+      <button class="rh-btn rh-btn--ghost" style="flex:none;width:44px;height:44px;padding:0;" data-cal-nav="1" ${monthOffset>=0?'disabled':''}>›</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:11px;color:var(--rh-muted);font-weight:700;text-align:center;margin-bottom:8px;">
       <div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div><div>S</div>
@@ -8163,8 +8175,8 @@ function renderBodyPhotoViewer(id, photoList){
     <div class="dialog-box" id="body-photo-viewer-wrap" style="max-width:460px;padding:14px;z-index:191;">
       <div id="body-photo-viewer-img-wrap" style="position:relative;width:100%;max-height:56vh;overflow:hidden;border-radius:10px;background:#000;display:flex;align-items:center;justify-content:center;touch-action:${zoom>1?'none':'pan-y'};" data-body-photo-zoom-target>
         ${url ? `<img src="${url}" alt="" draggable="false" style="max-width:100%;max-height:56vh;object-fit:contain;display:block;transform:rotate(${ph.rotation||0}deg) scale(${zoom}) translate(${(state.bodyPhotoPan&&state.bodyPhotoPan.x)||0}px, ${(state.bodyPhotoPan&&state.bodyPhotoPan.y)||0}px);cursor:${zoom>1?'grab':'zoom-in'};" data-body-photo-img>` : `<div style="color:#888;font-size:12px;padding:40px;">Loading…</div>`}
-        ${prevPh?`<button data-body-photo-nav="${prevPh.id}" aria-label="Previous" style="position:absolute;left:6px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);border:none;color:#fff;width:32px;height:32px;border-radius:50%;">‹</button>`:''}
-        ${nextPh?`<button data-body-photo-nav="${nextPh.id}" aria-label="Next" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);border:none;color:#fff;width:32px;height:32px;border-radius:50%;">›</button>`:''}
+        ${prevPh?`<button data-body-photo-nav="${prevPh.id}" aria-label="Previous" style="position:absolute;left:6px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:18px;">‹</button>`:''}
+        ${nextPh?`<button data-body-photo-nav="${nextPh.id}" aria-label="Next" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:18px;">›</button>`:''}
       </div>
       <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
         <button class="rh-btn rh-btn--ghost" style="flex:1;padding:8px;font-size:12px;" data-action="body-photo-zoom-toggle">${svg('search',13)} ${zoom>1?'Zoom Out':'Zoom In'}</button>
@@ -8518,7 +8530,7 @@ function renderBodyTab(){
           <input type="file" id="body-photo-file" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
         </label>
       </div>
-      ${state.bodyPhotos.length===0 ? `<div class="wk-empty" style="margin-top:8px;">No progress photos yet.</div>` : `
+      ${state.bodyPhotos.length===0 ? emptyState('body', 'No progress photos yet — add your first one above to start your archive.') : `
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0;">
         ${state.bodyPhotos.slice(0,9).map(ph=>{
           const url = photoThumbUrl(ph.id);
@@ -9492,7 +9504,7 @@ function renderWorkoutTab(){
     <div class="rh-section-head" style="margin-top:18px;"><span>Add Exercise</span></div>
     <button class="wk-add-exercise-btn" data-action="open-exercise-picker">${svg('plus',18)} Add Exercise</button>
 
-    ${s.exercises.length===0?`<div class="rh-card wk-empty" style="margin-top:10px;">No exercises added yet.</div>`:
+    ${s.exercises.length===0?`<div class="rh-card">${emptyState('dumbbell', 'No exercises added yet — tap Add Exercise above to build this workout.')}</div>`:
       s.exercises.map((ex,exi)=>{
         const muscle = getMuscle(ex.name);
         const restLabel = ex.restDuration ? `${ex.restDuration}s` : "OFF";

@@ -14,6 +14,15 @@
    The dark values reuse the app's REAL existing dark theme tokens
    (css/tokens.css :root) so these screens match the rest of the app's
    dark mode instead of inventing a second, disconnected palette.
+
+   UI/UX audit note: --rh-* remains a second, parallel token layer to
+   tokens.css's --color-*/--space-*/--radius-* -- dark mode is bridged
+   (this file), but each *-light screen's LIGHT values are still hardcoded
+   per file rather than derived from tokens.css's own [data-theme="light"]
+   block. Fully unifying the two layers is real future work (would touch
+   home.css/workout.css/progress.css/tools.css/profile.css), intentionally
+   not done in this pass to avoid a wide, high-risk mechanical refactor;
+   documented here so it isn't rediscovered from scratch later.
 ========================================================= */
 
 [data-theme="dark"] .home-light,

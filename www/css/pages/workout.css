@@ -180,8 +180,6 @@
   border:1.5px dashed var(--rh-blue); border-radius:14px; background:rgba(37,99,235,.05); color:var(--rh-blue);
   font-weight:800; font-size:15px; padding:16px; cursor:pointer; margin-top:4px; }
 
-.wk-empty { color:var(--rh-muted); font-size:13px; text-align:center; padding:20px 16px; }
-
 /* Exercise log card + its interactive set table -- structure/attributes unchanged, colors only. */
 .wk-light .ex-log-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px; margin-bottom:12px; box-shadow:0 1px 4px rgba(15,23,42,.05); }
 .wk-ex-card__name { font-weight:800; color:var(--rh-text); font-size:18px; line-height:1.25; }

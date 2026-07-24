@@ -1,3 +1,12 @@
+/* Shared empty state (icon + message + optional action) -- see emptyState() in app.js.
+   Global, not page-scoped: every *-light screen's --rh-muted-style text still reads through
+   fine since this only sets layout/sizing, not color (color inherits from the surrounding
+   screen's own text color token). */
+.empty-state { display:flex; flex-direction:column; align-items:center; text-align:center; gap:var(--space-sm); padding:var(--space-xl) var(--space-lg); }
+.empty-state__icon { width:56px; height:56px; border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center;
+  background:var(--color-surface-elevated); color:var(--color-text-secondary); }
+.empty-state__message { font-size:var(--font-size-sm); color:var(--color-text-secondary); max-width:280px; line-height:1.5; }
+
 .premium-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); box-shadow:var(--shadow-card); }
 .premium-card--elevated { background:var(--color-surface-elevated); }
 .section-heading { display:flex; align-items:center; justify-content:space-between; gap:var(--space-sm); margin:var(--space-lg) 0 var(--space-xs); }
