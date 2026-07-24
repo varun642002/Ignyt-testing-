@@ -2870,11 +2870,8 @@ function ensureElapsedTimerRunning(){
   if(elapsedTimerHandle) return;
   elapsedTimerHandle = setInterval(()=>{
     if(!state.session){ clearInterval(elapsedTimerHandle); elapsedTimerHandle = null; return; }
-    const label = formatDuration(Date.now()-state.session.startedAt);
     const el = document.getElementById("session-elapsed");
-    if(el) el.textContent = label;
-    const stickyEl = document.getElementById("sticky-session-elapsed"); // bottom sticky bar's own copy
-    if(stickyEl) stickyEl.textContent = label;
+    if(el) el.textContent = formatDuration(Date.now()-state.session.startedAt);
   }, 1000);
 }
 
@@ -3797,6 +3794,16 @@ function getPreviousSet(exerciseName, setIndex){
   return null;
 }
 
+/* True only if the session getPreviousSet() would read from is itself the exact session a
+   real weight/1RM PR was recorded on -- reuses the exact same "most recent session that
+   logged this exercise" search rather than approximating from the set's raw numbers, so the
+   🏆 badge can never show for a coincidentally-matching weight that wasn't actually a PR. */
+function isPreviousSetPR(exerciseName){
+  const sess = state.workoutLog.find(s=> s.exercises.some(e=>e.name===exerciseName));
+  if(!sess) return false;
+  return state.prs.some(p=> p.exerciseName===exerciseName && p.workoutId===sess.id && (p.type==="weight"||p.type==="1rm"));
+}
+
 function sessionMuscles(exercises){
   const set = new Set();
   exercises.forEach(ex=> set.add(getMuscle(ex.name)));
@@ -4705,7 +4712,7 @@ function renderDriveBackupsListView(){
     <div class="eyebrow-label" style="margin-top:0;">Manage Backups</div>
     ${state.driveBackupsBusy ? skeletonList(3) :
       !list ? `<div class="info-box" style="padding:14px;"><div style="font-size:13px;color:var(--accent);">Couldn't load backups. ${driveEsc(drive ? drive.getStatus().lastError||"" : "")}</div></div>` :
-      list.length===0 ? `<div class="info-box" style="padding:14px;"><div style="font-size:13px;color:var(--muted);">No backups yet — use Back Up Now in Settings.</div></div>` :
+      list.length===0 ? emptyState('cloud', 'No backups yet — use Back Up Now in Settings to create your first one.') :
       list.map(b=>`
         <div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
           <div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${driveEsc(b.name)}</div>
@@ -8246,7 +8253,7 @@ function renderBodyScanArchive(){
   </div>`;
 
   function gridView(){
-    if(!photos.length) return `<div class="wk-empty">No photos in this category yet.</div>`;
+    if(!photos.length) return emptyState('body', 'No photos in this category yet — add one from the Body tab.');
     return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
       ${photos.map(ph=>{
         const url = photoThumbUrl(ph.id);
@@ -8260,7 +8267,7 @@ function renderBodyScanArchive(){
   }
 
   function timelineView(){
-    if(!photos.length) return `<div class="wk-empty">No photos in this category yet.</div>`;
+    if(!photos.length) return emptyState('body', 'No photos in this category yet — add one from the Body tab.');
     // Group by "Month Year" -- covers both "Monthly Gallery" and (via the section list itself)
     // a de-facto yearly view, without a full interactive calendar grid.
     const groups = {};
@@ -9402,7 +9409,7 @@ async function copyWorkoutSummary(s){
 function closeSwipe(wrap){
   if(!wrap) return;
   const row = wrap.querySelector(".set-row");
-  wrap.classList.remove("swiped");
+  wrap.classList.remove("swiped","swiped-right");
   if(row) row.style.transform = "";
   if(_openSwipeEl===wrap) _openSwipeEl = null;
 }
@@ -9426,7 +9433,7 @@ function attachSwipeToDelete(){
     row.addEventListener("pointerdown", (e)=>{
       if(e.pointerType==="mouse" && e.button!==0) return;
       startX=e.clientX; startY=e.clientY; swiping=false; dead=false;
-      startOffset = wrap.classList.contains("swiped") ? -SWIPE_OPEN : 0;
+      startOffset = wrap.classList.contains("swiped") ? -SWIPE_OPEN : wrap.classList.contains("swiped-right") ? SWIPE_OPEN : 0;
     });
     row.addEventListener("pointermove", (e)=>{
       if(dead || (e.pointerType==="mouse" && e.buttons===0)) return;
@@ -9441,7 +9448,8 @@ function attachSwipeToDelete(){
         }
       }
       if(swiping){
-        const off = Math.max(-SWIPE_OPEN-14, Math.min(0, startOffset+dx));
+        // Left reveals Delete (negative), right reveals Duplicate (positive) -- symmetric clamp.
+        const off = Math.max(-SWIPE_OPEN-14, Math.min(SWIPE_OPEN+14, startOffset+dx));
         row.style.transition = "none";
         row.style.transform = `translateX(${off}px)`;
       }
@@ -9452,8 +9460,12 @@ function attachSwipeToDelete(){
       row.style.transition = "";
       const off = startOffset + (e.clientX-startX);
       if(off < -SWIPE_OPEN/2){
-        wrap.classList.add("swiped");
+        wrap.classList.add("swiped"); wrap.classList.remove("swiped-right");
         row.style.transform = `translateX(-${SWIPE_OPEN}px)`;
+        _openSwipeEl = wrap;
+      } else if(off > SWIPE_OPEN/2){
+        wrap.classList.add("swiped-right"); wrap.classList.remove("swiped");
+        row.style.transform = `translateX(${SWIPE_OPEN}px)`;
         _openSwipeEl = wrap;
       } else {
         closeSwipe(wrap);
@@ -9497,9 +9509,6 @@ function renderWorkoutTab(){
   const isEditing = !!state.editingSessionId;
   const liveVolume = Math.round(computeSessionVolume(s.exercises));
   const liveSets = computeCompletedSets(s.exercises);
-  // Only ever a real sum of what was actually typed into a Calories field (cardio sets) --
-  // never an estimate, so it honestly reads blank/0 rather than guessing for strength work.
-  const liveCalories = s.exercises.reduce((sum,ex)=> sum + ex.sets.reduce((a,set)=> a+(Number(set.calories)||0), 0), 0);
   return `
     <div class="wk-light wk-light--session">
     <div class="row-between" style="margin-bottom:4px;">
@@ -9578,6 +9587,7 @@ function renderWorkoutTab(){
           </div>
           ${state.plateCalcOpen===String(exi) ? renderPlatePopover(exi) : ""}
 
+          <hr class="divider">
           <div class="set-table-header" style="grid-template-columns:${gridCols};">
             ${logType==="strength" ? `<span>SET</span><span>PREVIOUS</span><span>${wUnit().toUpperCase()}</span><span>REPS</span>${showRPE?"<span>RPE</span>":""}<span></span>`
               : logType==="cardio" ? `<span>SET</span><span>PREVIOUS</span><span>KM</span><span>TIME</span><span>PACE</span><span></span>`
@@ -9587,30 +9597,32 @@ function renderWorkoutTab(){
           ${ex.sets.map((set,si)=>{
             const prev = getPreviousSet(ex.name, si);
             const prevLabel = previousSetLabel(logType, prev);
+            const prevIsPR = si===0 && prev && isPreviousSetPR(ex.name); // one badge per exercise, not per set row
             const typeMeta = SET_TYPE_META[set.type||"working"];
             const numBtn = `<button class="mono set-num" data-cycle-set-type="${exi}|${si}" style="color:${typeMeta.color};background:none;border:none;cursor:pointer;font-weight:800;" title="Tap to mark warm-up / drop / failure set">${typeMeta.badge}${si+1}</button>`;
             const doneBtn = `<button class="set-check ${set.done?'done':''}" data-set-done="${exi}|${si}" aria-label="${set.done?'Mark set incomplete':'Mark set complete'}">${set.done?svg('check',13):''}</button>`;
             const fields = logType==="strength" ? `
-                <input type="number" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–">
-                <input type="text" class="mono set-input" value="${set.reps}" data-set-field="${exi}|${si}|reps" placeholder="–">
+                <input type="number" inputmode="decimal" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–">
+                <input type="text" inputmode="numeric" pattern="[0-9]*" class="mono set-input" value="${set.reps}" data-set-field="${exi}|${si}|reps" placeholder="–">
                 ${showRPE?`<button class="rpe-btn" data-rpe="${exi}|${si}">${set.rpe||'RPE'}</button>`:""}`
               : logType==="cardio" ? `
-                <input type="number" class="mono set-input" value="${set.distanceKm||''}" data-set-field="${exi}|${si}|distanceKm" placeholder="–" step="0.01">
+                <input type="number" inputmode="decimal" class="mono set-input" value="${set.distanceKm||''}" data-set-field="${exi}|${si}|distanceKm" placeholder="–" step="0.01">
                 <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss">
                 <span class="mono set-prev" style="text-align:center;">${fmtPace(set.distanceKm,set.durationSec)||'–'}</span>`
               : logType==="carry" ? `
-                <input type="number" class="mono set-input" value="${set.distanceKm||''}" data-set-field="${exi}|${si}|distanceKm" placeholder="–" step="0.01">
-                <input type="number" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–">
+                <input type="number" inputmode="decimal" class="mono set-input" value="${set.distanceKm||''}" data-set-field="${exi}|${si}|distanceKm" placeholder="–" step="0.01">
+                <input type="number" inputmode="decimal" class="mono set-input" value="${displayW(set.weight)}" data-set-field="${exi}|${si}|weight" placeholder="–">
                 <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss">`
               : `
                 <input type="text" class="mono set-input" value="${fmtDurationSec(set.durationSec)}" data-set-field="${exi}|${si}|durationSec" placeholder="mm:ss">
                 <button class="rest-toggle" style="padding:0;" data-start-hold-timer="${exi}|${si}" aria-label="Start hold timer" title="Start built-in timer">${svg('timer',15)}</button>`;
             const showSwipeHint = exi===0 && si===0 && !LS.get("hx_swipe_hint_seen", false);
             return `<div class="set-row-wrap${showSwipeHint?' wk-swipe-hint':''}" data-swipe-row="${exi}|${si}">
+              <button class="swipe-dup-btn" data-dup-set="${exi}|${si}" aria-label="Duplicate set ${si+1}" tabindex="-1">${svg('copy',18)}</button>
               <button class="swipe-del-btn" data-del-set="${exi}|${si}" aria-label="Delete set ${si+1}" tabindex="-1">${svg('trash',18)}</button>
               <div class="set-row ${set.done?'done':''}" style="grid-template-columns:${gridCols};">
                 ${numBtn}
-                <span class="mono set-prev">${prevLabel}</span>
+                <span class="mono set-prev">${prevLabel}${prevIsPR?' <span class="pr-badge" title="Personal record">🏆</span>':''}</span>
                 ${fields}
                 ${doneBtn}
               </div>
@@ -9624,12 +9636,7 @@ function renderWorkoutTab(){
         </div>
       `;}).join("")}
     </div>
-    <div class="wk-sticky-bar">
-      <div class="wk-sticky-bar__stat"><div class="wk-sticky-bar__stat-value mono" id="sticky-session-elapsed">${formatDuration(Date.now()-s.startedAt)}</div><div class="wk-sticky-bar__stat-label">Time</div></div>
-      <div class="wk-sticky-bar__stat"><div class="wk-sticky-bar__stat-value">${liveSets}</div><div class="wk-sticky-bar__stat-label">Sets</div></div>
-      <div class="wk-sticky-bar__stat"><div class="wk-sticky-bar__stat-value">${liveCalories||'–'}</div><div class="wk-sticky-bar__stat-label">Calories</div></div>
-      <button class="rh-btn rh-btn--primary wk-sticky-bar__finish" data-action="finish-session">${isEditing?'Save':'Finish'}</button>
-    </div>
+    <button class="wk-finish-fab" data-action="finish-session" aria-label="${isEditing?'Save workout':'Finish workout'}">${svg('check',22)}</button>
   `;
 }
 
@@ -10717,6 +10724,17 @@ function attachHandlers(){
       render();
       return;
     }
+    // Real finish (not editing, has completed work): confirm before locking it in, same
+    // pattern as the empty-workout branch above -- a tap on Finish is otherwise irreversible
+    // the instant commitFinishedWorkout() runs.
+    if(!state.editingSessionId){
+      const proceed = await confirmDialog(
+        "Finish this workout? You won't be able to add more sets after this.",
+        render,
+        { title:"Finish Workout", confirmLabel:"Finish", cancelLabel:"Keep Going" }
+      );
+      if(!proceed) return;
+    }
     if(_finishingSession || !state.session) return; // re-check after the await
     _finishingSession = true;
     // UI protection: lock every "Finish" button the instant work starts (there can be two --
@@ -11058,6 +11076,20 @@ function attachHandlers(){
       }});
     });
   });
+  document.querySelectorAll("[data-dup-set]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const [exi,si] = el.dataset.dupSet.split("|").map(Number);
+      const ex = state.session && state.session.exercises[exi];
+      const src = ex && ex.sets[si];
+      if(!src) return;
+      // Sets have no id field (matches newSet()'s own shape) -- array position is identity.
+      // Copies every logged value (weight/reps/distance/etc.) but never "done", matching
+      // "duplicate this set's numbers to log another one", not "duplicate it as already done".
+      const copy = Object.assign({}, src, { done:false });
+      ex.sets.splice(si+1, 0, copy);
+      render();
+    });
+  });
   // Accessible non-swipe fallback (inside the existing ⋮ menu — no permanent delete button on rows).
   document.querySelectorAll("[data-remove-last-set]").forEach(el=>{
     el.addEventListener("click", ()=>{
@@ -11085,6 +11117,22 @@ function attachHandlers(){
       persist();
     });
   });
+  // Enter key on a set-input advances to the next focusable control in the same row (Weight
+  // -> Reps -> RPE button, or straight to the Complete checkbox if RPE isn't shown) --
+  // deliberately keyed off Enter/Next, not blur, so tapping away to scroll doesn't also
+  // trigger an unwanted focus jump.
+  document.querySelectorAll(".set-row .set-input").forEach(el=>{
+    el.addEventListener("keydown", (e)=>{
+      if(e.key!=="Enter") return;
+      e.preventDefault();
+      const row = el.closest(".set-row");
+      if(!row) return;
+      const focusables = Array.from(row.querySelectorAll(".set-input, .rpe-btn, .set-check"));
+      const idx = focusables.indexOf(el);
+      const next = focusables[idx+1];
+      if(next) next.focus(); else el.blur();
+    });
+  });
   document.querySelectorAll("[data-rpe]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const [exi,si] = el.dataset.rpe.split("|").map(Number);
@@ -11101,6 +11149,7 @@ function attachHandlers(){
       const ex = state.session.exercises[exi];
       const set = ex.sets[si];
       set.done = !set.done;
+      if(set.done) vibrate(30); // light haptic on complete only, not on un-checking
       render();
       if(set.done && ex.restDuration>0 && state.settings.autoStartRest && !ex.supersetWithNext) startTimer(ex.restDuration, ex.name);
     });
