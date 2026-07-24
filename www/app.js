@@ -9613,21 +9613,30 @@ function renderWorkoutTab(){
           : logType==="carry" ? "36px minmax(0,1fr) 52px 52px 62px 40px"
           : "36px minmax(0,1fr) minmax(64px,1.3fr) 36px 40px"; // hold: SET|PREVIOUS|TIME|timer-btn|check
         const menuOpen = state.exerciseMenuOpen===exi;
+        const collapsed = (state.collapsedExercises||[]).includes(exi);
+        const notesOpen = (state.notesOpenExercises||[]).includes(exi) || !!ex.notes;
         return `
         <div class="ex-log-card wk-ex-card">
           ${ex.supersetWithNext ? `<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:var(--rh-blue);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">${svg('link',12)} Superset with next exercise</div>` : ''}
           <div class="row-between" style="margin-bottom:4px;position:relative;">
-            <div style="min-width:0;flex:1;">
-              <div class="wk-ex-card__name">${ex.name}</div>
-              <span class="muscle-chip">${muscle}</span>
-            </div>
+            <button class="wk-ex-card__collapse-toggle" data-toggle-ex-collapse="${exi}" style="min-width:0;flex:1;text-align:left;background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;">
+              <span style="transform:rotate(${collapsed?'-90deg':'0deg'});transition:transform .15s ease;flex:none;color:var(--rh-muted);">${svg('chevronDown',14)}</span>
+              <span style="min-width:0;">
+                <span class="wk-ex-card__name" style="display:block;">${ex.name}</span>
+                <span class="muscle-chip">${muscle}</span>
+              </span>
+            </button>
             <button class="del" data-toggle-ex-menu="${exi}" aria-label="Exercise options">${svg('moreVert',17)}</button>
             ${menuOpen ? `
               <div class="ex-menu-backdrop" data-close-ex-menu></div>
               <div class="ex-menu">
+                <button class="ex-menu-item" data-replace-exercise="${exi}">${svg('swap',15)} Replace Exercise</button>
                 <button class="ex-menu-item" data-move-exercise-up="${exi}" ${exi===0?'disabled':''}>${svg('chevronUp',15)} Move Up</button>
                 <button class="ex-menu-item" data-move-exercise-down="${exi}" ${exi===s.exercises.length-1?'disabled':''}>${svg('chevronDown',15)} Move Down</button>
-                <button class="ex-menu-item" data-replace-exercise="${exi}">${svg('swap',15)} Replace Exercise</button>
+                <button class="ex-menu-item" data-dup-exercise="${exi}">${svg('copy',15)} Duplicate Exercise</button>
+                <button class="ex-menu-item" data-menu-rest-timer="${exi}">${svg('timer',15)} Rest Timer Settings</button>
+                <button class="ex-menu-item" data-menu-notes="${exi}">${svg('pencil',15)} Notes</button>
+                <button class="ex-menu-item" data-toggle-ex-collapse="${exi}">${svg(collapsed?'chevronDown':'chevronUp',15)} ${collapsed?'Expand':'Collapse'} Exercise</button>
                 ${exi<s.exercises.length-1 ? `<button class="ex-menu-item" data-toggle-superset="${exi}">${svg('link',15)} ${ex.supersetWithNext?'Remove Superset':'Add to Superset'}</button>` : ''}
                 <button class="ex-menu-item" data-view-history="${encodeURIComponent(ex.name)}">${svg('progress',15)} View History</button>
                 <button class="ex-menu-item" data-view-instructions="${encodeURIComponent(ex.name)}">${svg('book',15)} View Instructions</button>
@@ -9636,12 +9645,15 @@ function renderWorkoutTab(){
               </div>
             ` : ''}
           </div>
-          <input type="text" class="notes-inline" placeholder="Add notes here…" value="${ex.notes||''}" data-notes-exercise="${exi}">
+          ${collapsed ? `<div style="font-size:12px;color:var(--rh-muted);">${ex.sets.length} set${ex.sets.length!==1?'s':''}${ex.sets.some(x=>x.done)?' · '+ex.sets.filter(x=>x.done).length+' done':''}</div>` : `
+          ${notesOpen
+            ? `<input type="text" class="notes-inline" placeholder="Add notes here…" value="${escHtml(ex.notes||'')}" data-notes-exercise="${exi}" autofocus>`
+            : `<button class="notes-inline-collapsed" data-menu-notes="${exi}" style="background:none;border:none;cursor:pointer;color:var(--rh-muted);font-size:13px;padding:4px 0;text-align:left;display:flex;align-items:center;gap:6px;">${svg('pencil',12)} Add notes here…</button>`}
           <div class="row-between">
             <button class="rest-toggle" data-rest-toggle="${exi}">${svg('timer',13)} Rest Timer: ${restLabel}</button>
-            ${showPlates?`<button class="rest-toggle" data-plate-calc="${exi}" style="color:var(--rh-blue);">Plates</button>`:""}
-          </div>
-
+            ${showPlates?`<button class="rest-toggle" data-plate-calc="${exi}" style="color:var(--rh-blue);border:1.5px solid var(--rh-blue);border-radius:var(--radius-xs);padding:3px 10px;">${svg('calc',13)} Plates</button>`:""}
+          </div>`}
+          ${collapsed ? '' : `
           <hr class="divider">
           <div class="set-table-header" style="grid-template-columns:${gridCols};">
             ${logType==="strength" ? `<span>SET</span><span>PREVIOUS</span><span>${wUnit().toUpperCase()}</span><span>REPS</span>${showRPE?"<span>RPE</span>":""}<span></span>`
@@ -9653,6 +9665,10 @@ function renderWorkoutTab(){
             const prev = getPreviousSet(ex.name, si);
             const prevLabel = previousSetLabel(logType, prev);
             const prevIsPR = si===0 && prev && isPreviousSetPR(ex.name); // one badge per exercise, not per set row
+            // Estimated 1RM (Epley, same formula PR detection already uses) under Previous --
+            // strength sets only, only when there's a real weight+reps to derive it from.
+            const prevOneRM = (logType==="strength" && prev && prev.weight && prev.reps)
+              ? Math.round(displayW(estimatedOneRM(parseFloat(prev.weight), parseFloat(prev.reps)))) : null;
             const typeMeta = SET_TYPE_META[set.type||"working"];
             const numBtn = `<button class="mono set-num" data-cycle-set-type="${exi}|${si}" style="color:${typeMeta.color};background:none;border:none;cursor:pointer;font-weight:800;" title="Tap to mark warm-up / drop / failure set">${typeMeta.badge}${si+1}</button>`;
             const doneBtn = `<button class="set-check ${set.done?'done':''}" data-set-done="${exi}|${si}" aria-label="${set.done?'Mark set incomplete':'Mark set complete'}">${set.done?svg('check',13):''}</button>`;
@@ -9677,7 +9693,10 @@ function renderWorkoutTab(){
               <button class="swipe-del-btn" data-del-set="${exi}|${si}" aria-label="Delete set ${si+1}" tabindex="-1">${svg('trash',18)}</button>
               <div class="set-row ${set.done?'done':''}" style="grid-template-columns:${gridCols};">
                 ${numBtn}
-                <span class="mono set-prev">${prevLabel}${prevIsPR?' <span class="pr-badge" title="Personal record">🏆</span>':''}</span>
+                <span class="set-prev-stack">
+                  <span class="mono set-prev">${prevLabel}${prevIsPR?' <span class="pr-badge" title="Personal record">🏆</span>':''}</span>
+                  ${prevOneRM?`<span class="mono set-prev-1rm">1RM: ${prevOneRM}${wUnit()}</span>`:''}
+                </span>
                 ${fields}
                 ${doneBtn}
               </div>
@@ -9687,7 +9706,7 @@ function renderWorkoutTab(){
             <span style="font-size:11px;color:var(--rh-muted);">Calories (optional)</span>
             <input type="number" class="mono" style="width:70px;background:var(--rh-bg,var(--surface-alt));border-radius:var(--radius-xs);padding:6px 8px;text-align:right;color:var(--rh-text,var(--text));border:1px solid var(--rh-border,transparent);" value="${ex.sets[0]&&ex.sets[0].calories||''}" data-set-field="${exi}|0|calories" placeholder="–">
           </div>` : ''}
-          <button class="add-set-btn" data-add-set="${exi}">${svg('plus',14)} Add Set</button>
+          <button class="add-set-btn" data-add-set="${exi}">${svg('plus',14)} Add Set</button>`}
         </div>
       `;}).join("")}
     </div>
@@ -11053,6 +11072,45 @@ function attachHandlers(){
       const ex = state.session.exercises;
       if(i>=ex.length-1) return;
       [ex[i], ex[i+1]] = [ex[i+1], ex[i]];
+      state.exerciseMenuOpen = null;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-dup-exercise]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const i = Number(el.dataset.dupExercise);
+      const src = state.session.exercises[i];
+      if(!src) return;
+      // Deep-clone sets so the copy's inputs are independent from the original's, all marked
+      // not-done (a duplicated exercise is a fresh block to log, not a copy of completed work).
+      const copy = { ...src, notes:"", sets: src.sets.map(s=>({ ...s, done:false })) };
+      state.session.exercises.splice(i+1, 0, copy);
+      state.exerciseMenuOpen = null;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-menu-rest-timer]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.restTimerSheetExi = el.dataset.menuRestTimer;
+      state.restCustomOpen = false;
+      state.exerciseMenuOpen = null;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-menu-notes]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const i = Number(el.dataset.menuNotes);
+      state.notesOpenExercises = (state.notesOpenExercises||[]).includes(i) ? state.notesOpenExercises : [...(state.notesOpenExercises||[]), i];
+      state.collapsedExercises = (state.collapsedExercises||[]).filter(x=>x!==i); // expanding notes implies the card itself is expanded
+      state.exerciseMenuOpen = null;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-toggle-ex-collapse]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const i = Number(el.dataset.toggleExCollapse);
+      const list = state.collapsedExercises||[];
+      state.collapsedExercises = list.includes(i) ? list.filter(x=>x!==i) : [...list, i];
       state.exerciseMenuOpen = null;
       render();
     });

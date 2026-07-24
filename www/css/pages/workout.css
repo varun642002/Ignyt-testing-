@@ -37,6 +37,8 @@
 
 .set-num { width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:9px; font-size:13px; }
 .set-prev { text-align:center; font-size:11px; padding:0 2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.set-prev-stack { display:flex; flex-direction:column; align-items:center; gap:1px; min-width:0; }
+.set-prev-1rm { font-size:9px; color:var(--rh-green,#16A34A); font-weight:700; }
 
 .set-input { font-variant-numeric:tabular-nums; width:100%; min-width:0; box-sizing:border-box; height:38px;
   border-radius:9px; text-align:center; font-size:14px; font-weight:700; padding:0 4px;
@@ -209,7 +211,7 @@
 .wk-light .rpe-btn { background:var(--rh-card); border:1px solid var(--rh-border); color:var(--rh-muted); }
 .wk-light .set-check { border-color:var(--rh-border); color:var(--rh-muted); }
 .wk-light .set-check.done { background:var(--rh-blue); border-color:var(--rh-blue); color:#fff; }
-.wk-light .add-set-btn { color:var(--rh-blue); background:rgba(37,99,235,.06); border-radius:var(--radius-pill); border:1.5px solid var(--rh-blue); }
+.wk-light .add-set-btn { color:var(--rh-blue); background:rgba(37,99,235,.06); border-radius:var(--radius-md); border:1.5px solid var(--rh-blue); }
 
 /* Live stats bar: reused as-is (structure), restyled to the light card + icon row + dividers. */
 .wk-light .live-stats-bar { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; box-shadow:0 2px 10px rgba(15,23,42,.06); margin:12px 0 4px; }
