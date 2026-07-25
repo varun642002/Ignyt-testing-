@@ -1,3 +1,173 @@
+# IGNYT 🔥
+
+A modern fitness and workout tracking application built to help users plan workouts, monitor progress, and stay consistent with their fitness goals.
+
+---
+
+## Features
+
+- 💪 Workout planner
+- 📅 Training schedules
+- 📊 Progress tracking
+- 📈 Weekly analytics
+- 🍎 Nutrition & food database
+- 📥 CSV import support
+- 🏋️ 1000+ exercise library
+- 🎯 Hyrox training plans
+- 📱 Android application (Capacitor)
+- 🌐 Offline support
+
+---
+
+## Technology Stack
+
+- HTML5
+- CSS3
+- JavaScript (ES6)
+- Capacitor
+- Android Studio
+- Gradle
+
+---
+
+## Project Structure
+
+```
+IGNYT/
+│
+├── android/
+├── assets/
+├── css/
+├── js/
+├── images/
+├── data/
+├── index.html
+└── README.md
+```
+
+---
+
+## Installation
+
+Clone the repository
+
+```bash
+git clone https://github.com/varun642002/Ignyt-testing-.git
+```
+
+Open the project
+
+```bash
+cd Ignyt-testing-
+```
+
+Install dependencies
+
+```bash
+npm install
+```
+
+Run locally
+
+```bash
+npm start
+```
+
+---
+
+## Android Build
+
+Build Android APK
+
+```bash
+npx cap sync
+```
+
+```bash
+cd android
+```
+
+```bash
+gradlew assembleDebug
+```
+
+Build Google Play Bundle
+
+```bash
+gradlew bundleRelease
+```
+
+---
+
+## Screenshots
+
+(Add screenshots here)
+
+| Home | Workout | Progress |
+|------|----------|-----------|
+| Image | Image | Image |
+
+---
+
+## Current Version
+
+Version: **1.0**
+
+Status: **Production Ready**
+
+Google Play Bundle: ✅
+
+---
+
+## Roadmap
+
+- AI Workout Recommendations
+- AI Nutrition Coach
+- Wearable Device Integration
+- Exercise Form Detection
+- Cloud Backup
+- Social Challenges
+- Personal Records
+- Custom Workout Builder
+
+---
+
+## Contributing
+
+Contributions are welcome.
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Open a Pull Request
+
+---
+
+## License
+
+MIT License
+
+---
+
+## Developer
+
+**Varun S**
+
+MBA Business Analytics
+
+GitHub
+
+https://github.com/varun642002
+
+LinkedIn
+
+(Add your LinkedIn profile)
+
+---
+
+## Support
+
+If you encounter issues or have feature requests, please open a GitHub Issue.
 # IGNYT
 
 IGNYT is an offline-first fitness application for workouts, nutrition, body tracking, progress, HYROX planning, goals, health records, and Android Health Connect integration.
