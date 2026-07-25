@@ -7340,7 +7340,7 @@ function renderSessionDetail(s){
       <div class="mono" style="font-size:12px;color:var(--muted);margin-top:2px;">${new Date(s.date).toLocaleDateString('default',{weekday:'long',month:'long',day:'numeric'})}${startTime&&endTime?` · ${startTime}–${endTime}`:''}</div>
     </div>
     ${muscles.length? `<div style="margin:8px 0 4px;">${muscles.map(m=>`<span class="muscle-chip active">${m}</span>`).join("")}</div>`:""}
-    ${s.notes? `<div class="info-box" style="padding:10px 14px;margin:8px 0;font-size:12px;font-style:italic;color:var(--text);">"${s.notes}"</div>`:""}
+    ${s.notes? `<div class="info-box" style="padding:10px 14px;margin:8px 0;font-size:12px;font-style:italic;color:var(--text);">"${escHtml(s.notes)}"</div>`:""}
 
     <div class="grid2" style="margin-top:12px;margin-bottom:8px;">
       <div class="stat-card"><div class="stat-label">Duration</div><div class="stat-value">${s.durationMin||'–'}<span class="stat-unit">min</span></div></div>
@@ -7355,9 +7355,9 @@ function renderSessionDetail(s){
 
     <div class="eyebrow-label">Exercises</div>
     ${s.exercises.map(ex=>`<div class="ex-log-card">
-      <div style="font-weight:800;color:var(--steel);font-size:15px;">${ex.name}</div>
+      <div style="font-weight:800;color:var(--steel);font-size:15px;">${escHtml(ex.name)}</div>
       <span class="muscle-chip">${getMuscle(ex.name)}</span>
-      ${ex.notes?`<div style="font-size:12px;color:var(--muted);margin-top:6px;font-style:italic;">"${ex.notes}"</div>`:""}
+      ${ex.notes?`<div style="font-size:12px;color:var(--muted);margin-top:6px;font-style:italic;">"${escHtml(ex.notes)}"</div>`:""}
       <div style="margin-top:8px;">
         ${ex.sets.map((set,i)=>`<div class="row-between" style="padding:5px 0;border-top:1px solid var(--border);">
           <span class="mono" style="font-size:12px;color:var(--muted);">Set ${i+1}</span>
@@ -9271,7 +9271,7 @@ function renderWorkoutComplete(s){
     <div class="share-card-title">${sessionTitle(s)}</div>
     <div class="share-mini-stats">${workoutDurationLabel(s)} · ${displayW(s.volume||0,0).toLocaleString()}${wUnit()} · ${completedSets} sets</div>
     <div class="share-ex-list">
-      ${breakdown.slice(0,8).map(b=>`<div><b>${b.sets}×</b> ${b.name}</div>`).join("")}
+      ${breakdown.slice(0,8).map(b=>`<div><b>${b.sets}×</b> ${escHtml(b.name)}</div>`).join("")}
       ${breakdown.length>8?`<div style="color:inherit;opacity:.6;">+ ${breakdown.length-8} more</div>`:""}
     </div>`);
 
@@ -9282,7 +9282,7 @@ function renderWorkoutComplete(s){
       ? `<div class="share-muscle-chips">${muscles.map(m=>`<span>${m}</span>`).join("")}</div>`
       : `<div class="share-mini-stats" style="margin-top:14px;">No muscle data for these exercises</div>`}
     <div class="share-ex-list" style="margin-top:12px;">
-      ${breakdown.filter(b=>b.sets>0).slice(0,6).map(b=>`<div>${b.name}</div>`).join("")}
+      ${breakdown.filter(b=>b.sets>0).slice(0,6).map(b=>`<div>${escHtml(b.name)}</div>`).join("")}
     </div>`);
 
   // No real exercise photos exist anywhere in this app (every EXERCISE_DETAILS.thumbnailUrl
@@ -9322,7 +9322,7 @@ function renderWorkoutComplete(s){
         ${breakdown.length ? breakdown.map(b=>`<div class="row-between" style="padding:9px 0;border-top:1px solid var(--rh-border);">
           <div style="display:flex;align-items:center;gap:10px;min-width:0;">
             <span class="tl-card__icon" style="width:32px;height:32px;flex:none;">${svg(exIcon(b.name),16)}</span>
-            <span style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${b.name}</span>
+            <span style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(b.name)}</span>
           </div>
           <span style="font-size:13px;font-weight:700;color:${b.sets>0?'var(--rh-blue)':'var(--rh-muted)'};flex-shrink:0;">${b.sets} set${b.sets!==1?'s':''}</span>
         </div>`).join("") : `<div class="wk-empty">No exercises</div>`}
@@ -9655,7 +9655,7 @@ function renderWorkoutTab(){
             <button class="wk-ex-card__collapse-toggle" data-toggle-ex-collapse="${exi}" style="min-width:0;flex:1;text-align:left;background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;">
               <span style="transform:rotate(${collapsed?'-90deg':'0deg'});transition:transform .15s ease;flex:none;color:var(--rh-muted);">${svg('chevronDown',14)}</span>
               <span style="min-width:0;">
-                <span class="wk-ex-card__name" style="display:block;">${ex.name}</span>
+                <span class="wk-ex-card__name" style="display:block;">${escHtml(ex.name)}</span>
                 <span class="muscle-chip">${muscle}</span>
               </span>
             </button>
@@ -9958,21 +9958,21 @@ function renderLibraryTab(){
       ${items.map(ex=>{
         const saved = state.savedExercises.includes(ex.name);
         const equip = equipMeta(ex.cat);
-        return `<div class="pg-card lib-ex-row" data-view-exercise="${ex.name}">
+        return `<div class="pg-card lib-ex-row" data-view-exercise="${escHtml(ex.name)}">
           <span class="tl-card__icon" style="flex:none;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg(rowIcon(ex.muscle),20)}</span>
           <div class="lib-ex-row__body">
-            <div class="lib-ex-row__name">${ex.name}${ex.custom?' <span style="color:var(--rh-blue);font-size:10px;font-weight:800;">CUSTOM</span>':''}</div>
+            <div class="lib-ex-row__name">${escHtml(ex.name)}${ex.custom?' <span style="color:var(--rh-blue);font-size:10px;font-weight:800;">CUSTOM</span>':''}</div>
             <div class="lib-tags">
               <span class="lib-tag" style="background:${muscleTagColor(ex.muscle)}1a;color:${muscleTagColor(ex.muscle)};">${ex.muscle}</span>
               <span class="lib-tag" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg(equip.icon,11)} ${ex.cat}</span>
             </div>
-            <div class="lib-ex-row__meta">${ex.cat} · ${ex.presc}${ex.custom?` · <span style="color:var(--rh-red);cursor:pointer;" data-del-custom-exercise="${ex.name}">Remove</span>`:''}</div>
+            <div class="lib-ex-row__meta">${ex.cat} · ${ex.presc}${ex.custom?` · <span style="color:var(--rh-red);cursor:pointer;" data-del-custom-exercise="${escHtml(ex.name)}">Remove</span>`:''}</div>
           </div>
           <div class="lib-ex-row__actions">
             <button class="lib-guide-btn">${svg('workout',13)} Guide</button>
             <span class="lib-chev">›</span>
           </div>
-          <button class="lib-bookmark ${saved?'is-saved':''}" data-toggle-saved-exercise="${ex.name}" title="${saved?'Remove from saved':'Save exercise'}" aria-label="${saved?'Remove from saved':'Save exercise'}">${svg(saved?'starFilled':'star',16)}</button>
+          <button class="lib-bookmark ${saved?'is-saved':''}" data-toggle-saved-exercise="${escHtml(ex.name)}" title="${saved?'Remove from saved':'Save exercise'}" aria-label="${saved?'Remove from saved':'Save exercise'}">${svg(saved?'starFilled':'star',16)}</button>
         </div>`;
       }).join("")}
       ${items.length===0?`<div class="empty-note">No exercises match.</div>`:""}
@@ -10684,7 +10684,7 @@ function attachHandlers(){
       const id = el.dataset.delRoutine;
       const r = state.routines.find(x=>String(x.id) === String(id));
       if(!r) return;
-      if(!(await confirmDialog(`Delete “${r.name}”? This can't be undone.`, render,
+      if(!(await confirmDialog(`Delete “${escHtml(r.name)}”? This can't be undone.`, render,
         { title:"Delete routine", confirmLabel:"Delete", danger:true }))) return;
       state.routines = state.routines.filter(x=>String(x.id) !== String(id)); // only this record
       if(String(state.editingRoutineId) === String(id)) closeRoutineEditor(); // never leave the editor on a deleted routine

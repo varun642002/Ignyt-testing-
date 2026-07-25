@@ -113,13 +113,13 @@
             const last = lastSessionForRoutine(state, r.name);
             const pct = last ? sessionCompletionPct(last) : null;
             const color = r.category ? CATEGORY_COLOR[r.category] : '#64748B';
-            const preview = r.exercises.slice(0, 3).map(e => e.name).join(' • ') + (r.exercises.length > 3 ? ` • +${r.exercises.length - 3} more` : '');
+            const preview = r.exercises.slice(0, 3).map(e => escHtml(e.name)).join(' • ') + (r.exercises.length > 3 ? ` • +${r.exercises.length - 3} more` : '');
             return `<div class="wk-routine-card" data-routine-card="${r.id}">
               <button class="rt-drag" data-routine-drag="${r.id}" aria-label="Reorder ${escHtml(r.name)}" title="Drag to reorder">${svg('drag',16)}</button>
               <div class="wk-routine-card__badge" style="background:${color}1a;color:${color};">${svg('dumbbell', 20)}</div>
               <div class="wk-routine-card__body">
                 <div class="wk-routine-card__top">
-                  <span class="wk-routine-card__name">${r.name}</span>
+                  <span class="wk-routine-card__name">${escHtml(r.name)}</span>
                   ${plannedDay && plannedDay.session===r.name ? `<span class="wk-badge-today">Today</span>` : ''}
                 </div>
                 <div class="wk-routine-card__meta">
@@ -142,7 +142,7 @@
                 <button class="del" data-dup-routine="${r.id}" aria-label="Duplicate routine">${svg('copy',16)}</button>
                 <button class="del" data-del-routine="${r.id}" aria-label="Delete routine">${svg('x',16)}</button>
               </div>
-              <button class="wk-routine-card__start" data-start-routine="${r.id}" aria-label="Start ${r.name}">▶</button>
+              <button class="wk-routine-card__start" data-start-routine="${r.id}" aria-label="Start ${escHtml(r.name)}">▶</button>
             </div>`;
           }).join('') + `</div>`}
 
