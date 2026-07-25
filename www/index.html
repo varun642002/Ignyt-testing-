@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
 <meta name="theme-color" content="#121216" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Ignyt" />
 <link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Ignyt</title>
 <style>
@@ -20,7 +21,7 @@
 :root{
     --bg:#121216; --surface:#1C1C22; --surface-alt:#26262E;
     --accent:#FF5A1F; --steel:#4FA8D8; --text:#F2F1ED; --muted:#8B8B94; --mint:#3ECF8E;
-    --border:#33333d;
+    --border:#33333d; --kb-inset:0px; --pin-height:0px;
   }
 
 [data-theme="light"]{
@@ -201,16 +202,78 @@ input,select,textarea{font-family:inherit; background:transparent; color:var(--t
 
 .lib-add-btn{font-size:18px; color:var(--accent); font-weight:900; padding:0 6px;}
 
-.timer-overlay{position:fixed; inset:0; background:rgba(10,10,12,.92); backdrop-filter:blur(6px);
-    display:flex; align-items:center; justify-content:center; z-index:50; flex-direction:column; gap:20px;}
+.timer-overlay{position:fixed; inset:0; background:rgba(10,10,12,.94); backdrop-filter:blur(10px);
+    display:flex; align-items:center; justify-content:center; z-index:50; flex-direction:column; gap:18px;
+    padding:24px 20px calc(24px + env(safe-area-inset-bottom,0px)); overflow-y:auto;
+    animation:timer-overlay-in .28s cubic-bezier(.2,.8,.2,1);}
+@keyframes timer-overlay-in{ from{ opacity:0; } to{ opacity:1; } }
+@media (prefers-reduced-motion: reduce){ .timer-overlay{ animation:none; } }
 
-.timer-ring{font-family:'SF Mono',monospace; font-weight:900; font-size:64px; color:var(--accent);}
+.timer-ring{font-family:'SF Mono',monospace; font-weight:900; font-size:clamp(52px,15vw,86px); color:var(--accent);
+    line-height:1; letter-spacing:-.01em; transition:color .2s ease;}
+.timer-ring--countdown{ color:#fff; animation:timer-pulse .5s ease infinite; }
+@keyframes timer-pulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
 
 .timer-label{font-size:13px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); font-weight:700;}
 
+/* ---------- Header: exercise context above the ring (Bug Fix #4) ---------- */
+.timer-header{ display:flex; flex-direction:column; align-items:center; gap:10px; max-width:340px; text-align:center; }
+.timer-header__thumb{ width:72px; height:72px; border-radius:18px; overflow:hidden; background:var(--surface); flex:none; }
+.timer-header__thumb img, .timer-header__thumb video{ width:100%; height:100%; object-fit:cover; }
+.timer-header__name{ font-size:19px; font-weight:800; color:var(--text); }
+.timer-header__meta{ font-size:12px; color:var(--muted); font-weight:600; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+
+/* ---------- Progress ring (Bug Fix #6) -- conic-gradient, same technique already used by
+   .wk-ring/.pg-ring elsewhere in the app, kept visually consistent with those. Updated on
+   every tick via a --pct custom property (app.js writes it directly, no full re-render, so
+   the existing tickRestTimer()/tickHoldTimer() performance characteristics are unchanged). ---------- */
+.timer-progress-ring{ width:min(72vw,260px); height:min(72vw,260px); border-radius:50%; flex:none;
+    display:grid; place-items:center; background:conic-gradient(var(--accent) calc(var(--pct,0) * 1%), rgba(255,255,255,.08) 0);
+    transition:background .3s linear; }
+.timer-progress-ring__inner{ width:calc(100% - 14px); height:calc(100% - 14px); border-radius:50%; background:#0A0A0C;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+.timer-progress-ring--indeterminate{ background:none; border:3px solid rgba(255,255,255,.12); position:relative; }
+.timer-progress-ring--indeterminate::before{ content:""; position:absolute; inset:-3px; border-radius:50%;
+    border:3px solid transparent; border-top-color:var(--accent); animation:timer-spin 1.4s linear infinite; }
+@keyframes timer-spin{ to{ transform:rotate(360deg); } }
+@media (prefers-reduced-motion: reduce){ .timer-progress-ring--indeterminate::before{ animation:none; } }
+
+/* ---------- Unified bottom action bar (Bug Fix #2) -- equal-width, equal-height,
+   consistent spacing, replaces the previous two disconnected flex rows. ---------- */
+.timer-action-bar{ display:flex; gap:8px; width:100%; max-width:340px; }
+.timer-action-bar__btn{ flex:1; min-height:52px; border-radius:14px; border:none; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    font-size:12px; font-weight:700; background:var(--surface); color:var(--text); transition:transform .1s ease, opacity .15s ease; }
+.timer-action-bar__btn:active{ transform:scale(.95); }
+.timer-action-bar__btn--primary{ background:var(--accent); color:#fff; }
+.timer-action-bar__btn--danger{ color:#ff6b6b; }
+.timer-action-bar__btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+/* ---------- 5-4-3-2-1-GO countdown flash (Bug Fix #8) ---------- */
+.timer-countdown-flash{ position:fixed; inset:0; z-index:51; display:flex; align-items:center; justify-content:center;
+    background:rgba(10,10,12,.55); pointer-events:none; }
+.timer-countdown-flash__num{ font-family:'SF Mono',monospace; font-weight:900; font-size:min(40vw,220px); color:#fff;
+    animation:timer-countdown-pop .5s cubic-bezier(.2,.8,.2,1); }
+@keyframes timer-countdown-pop{ 0%{ transform:scale(.4); opacity:0; } 40%{ transform:scale(1.15); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
+@media (prefers-reduced-motion: reduce){ .timer-countdown-flash__num{ animation:none; } }
+
+@media (orientation:landscape) and (max-height:480px){
+  .timer-overlay{ flex-direction:row; gap:28px; padding:16px 24px; }
+  .timer-header{ max-width:180px; }
+  .timer-progress-ring{ width:min(38vh,200px); height:min(38vh,200px); }
+  .timer-action-bar{ flex-direction:column; max-width:150px; }
+}
+
 nav.bottom-nav{position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px;
     display:flex; padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px)); gap:2px;
-    background:rgba(23,23,28,.85); backdrop-filter:blur(14px); border-top:1px solid #2a2a32; z-index:40;}
+    background:rgba(23,23,28,.85); backdrop-filter:blur(14px); border-top:1px solid #2a2a32; z-index:40;
+    transition:transform .18s ease;}
+
+/* Keyboard-aware layout: body.kb-open is toggled by the visualViewport listener in app.js
+   whenever the on-screen keyboard is up. Slides the fixed bottom nav out of the way instead of
+   letting it float on top of the keyboard/editing area -- covers browser/PWA mode, where the
+   layout viewport doesn't shrink the way the native WebView does under adjustResize. */
+body.kb-open nav.bottom-nav{transform:translate(-50%, 100%);}
 
 .nav-btn{flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 2px;
     border-radius:10px; background:none; border:none; color:var(--muted); cursor:pointer;}
@@ -220,23 +283,6 @@ nav.bottom-nav{position:fixed; bottom:0; left:50%; transform:translateX(-50%); w
 .nav-btn svg{width:19px; height:19px;}
 
 .nav-btn span{font-size:9px; font-weight:700;}
-
-.more-sheet-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:60; display:flex; align-items:flex-end; justify-content:center;}
-
-.more-sheet{width:100%; max-width:480px; background:var(--surface); border-radius:20px 20px 0 0; padding:10px 16px calc(20px + env(safe-area-inset-bottom,0px)); animation:sheetUp .2s cubic-bezier(.2,.8,.2,1);}
-
-.more-sheet-handle{width:36px; height:4px; background:var(--border); border-radius:2px; margin:8px auto 14px;}
-
-.more-sheet-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
-
-.more-sheet-card{display:flex; flex-direction:column; align-items:flex-start; background:var(--surface-alt); border:1px solid var(--border);
-    border-radius:14px; padding:16px; cursor:pointer; color:var(--text); text-align:left; min-height:104px;}
-
-.more-sheet-card:active{background:#2e2e38;}
-
-.more-sheet-icon-badge{width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
-
-@keyframes sheetUp{from{transform:translateY(24px); opacity:0;} to{transform:translateY(0); opacity:1;}}
 
 .history-row{background:var(--surface); border-radius:10px; padding:10px 14px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;}
 
@@ -326,7 +372,7 @@ textarea.note-input{background:var(--surface); border-radius:10px; padding:10px 
 .live-stats-bar{display:flex; background:var(--surface); border-radius:14px; padding:14px 16px; margin:8px 0 4px; justify-content:space-between; gap:10px;}
 .live-stat{flex:1; min-width:0;}
 .live-stat-label{font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--muted);}
-.live-stat-value{font-size:24px; font-weight:900; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.live-stat-value{font-size:27px; font-weight:900; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .live-stat-unit{font-size:13px; font-weight:600; color:var(--muted); margin-left:3px;}
 
 /* Post-workout share cards: horizontal scroll-snap carousel + dots. Cards keep their own
@@ -424,6 +470,20 @@ main{overflow-x:hidden;}
 @media (prefers-reduced-motion: reduce){
     *{animation-duration:0.001s !important; animation-iteration-count:1 !important; transition-duration:0.001s !important;}
   }
+
+/* Boot splash: takes over from the native Android splash (MainActivity.java) the instant
+   the WebView paints, and owns the rest of the ~2s branded cold-start hold (logo, app name,
+   loading spinner) plus the fade-out. Lives in this first inline <style> block, not an
+   external stylesheet, so it is guaranteed to be ready for the very first paint. */
+#boot-splash{position:fixed; inset:0; z-index:9999; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:14px; background:var(--bg);
+    transition:opacity .4s ease;}
+#boot-splash img{width:72px; height:72px; border-radius:18px;}
+#boot-splash .boot-name{font-weight:900; font-size:22px; letter-spacing:.1em; color:var(--text);}
+#boot-splash .boot-spinner{width:26px; height:26px; border-radius:50%; border:3px solid var(--surface-alt);
+    border-top-color:var(--accent); animation:boot-spin .8s linear infinite;}
+@keyframes boot-spin{ to{transform:rotate(360deg);} }
+#boot-splash.hide{opacity:0; pointer-events:none;}
 </style>
 <!-- New modular stylesheet layers intentionally follow legacy inline CSS so migrated
      design tokens and components take precedence without changing legacy screens. -->
@@ -436,19 +496,63 @@ main{overflow-x:hidden;}
 <link rel="stylesheet" href="css/pages/workout.css" />
 <link rel="stylesheet" href="css/pages/nutrition.css" />
 <link rel="stylesheet" href="css/pages/progress.css" />
+<link rel="stylesheet" href="css/pages/tools.css" />
 <link rel="stylesheet" href="css/pages/profile.css" />
 <link rel="stylesheet" href="css/pages/ai-coach.css" />
+<link rel="stylesheet" href="css/pages/dark-mode.css" />
 <link rel="stylesheet" href="health-connect.css">
 </head>
 <body>
 <div id="app"></div>
+<div id="boot-splash"><img src="icon-192.png" alt="" /><div class="boot-name">IGNYT</div><div class="boot-spinner"></div></div>
+<script>
+// Only once per cold start: sessionStorage survives Activity recreation (rotation) within
+// the same app process but is gone on a real cold start, which is exactly the "once per
+// cold start" rule asked for. window.__hideBootSplash is called by app.js right after its
+// first successful render() -- see the bottom of app.js.
+window.__bootSplashStart = Date.now();
+window.__hideBootSplash = function(){
+  var el = document.getElementById("boot-splash");
+  if(!el) return;
+  var minVisibleMs = 1600; // combined with the native splash's own hold, totals ~2s
+  var wait = Math.max(0, minVisibleMs - (Date.now() - window.__bootSplashStart));
+  setTimeout(function(){
+    el.classList.add("hide");
+    setTimeout(function(){ el.remove(); }, 420);
+  }, wait);
+};
+try{
+  if(sessionStorage.getItem("ignyt_boot_splash_shown_v1")){
+    var already = document.getElementById("boot-splash");
+    if(already) already.remove();
+    window.__hideBootSplash = function(){};
+  } else {
+    sessionStorage.setItem("ignyt_boot_splash_shown_v1", "1");
+  }
+}catch(e){ /* sessionStorage unavailable -- splash just always shows, harmless */ }
+</script>
 <script src="js/pages/home.js"></script>
 <script src="js/pages/workout.js"></script>
+<script src="js/pages/progress.js"></script>
+<script src="js/storage-utils.js"></script>
 <script src="js/body-photos-db.js"></script>
+<script src="js/bloodwork.js"></script>
+<script src="js/goals.js"></script>
+<script src="js/health-uploads.js"></script>
+<script src="js/health/health-security.js"></script>
+<script src="js/health/health-db.js"></script>
+<script src="js/health/health-models.js"></script>
+<script src="js/health/health-utils.js"></script>
+<script src="js/health/health-stub.js"></script>
+<script src="js/health/health-dashboard.js"></script>
+<script src="js/health/body-scan-ai.js"></script>
+<script src="js/ai-coach.js"></script>
 <script src="app.js"></script>
 <script src="health-connect.js"></script>
 <script src="health-settings-integration.js"></script>
 <script src="auth.js"></script>
 <script src="cloud-sync.js"></script>
+<script src="backup-encryption.js"></script>
+<script src="drive-backup.js"></script>
 </body>
 </html>

@@ -44,6 +44,35 @@ class SharePlugin : com.getcapacitor.Plugin() {
         return raw.replace(Regex("[^A-Za-z0-9._-]"), "_")
     }
 
+    /** Writes real text content (JSON/CSV export data) to the app cache and opens the system
+     *  share sheet with it -- same hand-rolled approach as shareImage() above, generalized
+     *  beyond PNGs so Settings > Export Data (backup JSON, workout/measurement/nutrition CSV)
+     *  actually produces a file on-device instead of silently no-oping, which is what the
+     *  browser-only <a download> blob trick did inside this native WebView. */
+    @PluginMethod
+    fun shareText(call: PluginCall) {
+        try {
+            val content = call.getString("content")
+            if (content.isNullOrEmpty()) { resolveError(call, "content is required."); return }
+            val mimeType = call.getString("mimeType") ?: "text/plain"
+            val fileName = safeFileName(call)
+            val dir = File(context.cacheDir, "share").apply { mkdirs() }
+            val file = File(dir, fileName)
+            file.writeText(content)
+
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = mimeType
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            activity.startActivity(Intent.createChooser(send, "Save or share $fileName"))
+            resolveSuccess(call, JSObject().apply { put("shared", true) })
+        } catch (e: Exception) {
+            resolveError(call, "Share failed: ${e.message ?: "unknown error"}")
+        }
+    }
+
     /** Writes the PNG to the app cache and opens the system share sheet with it. */
     @PluginMethod
     fun shareImage(call: PluginCall) {
@@ -62,6 +91,38 @@ class SharePlugin : com.getcapacitor.Plugin() {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             activity.startActivity(Intent.createChooser(send, "Share workout"))
+            resolveSuccess(call, JSObject().apply { put("shared", true) })
+        } catch (e: Exception) {
+            resolveError(call, "Share failed: ${e.message ?: "unknown error"}")
+        }
+    }
+
+    /** Writes an arbitrary file (PDF, image, any binary blob -- e.g. a Medical Reports upload's
+     *  original file) to the app cache and opens the system share sheet with it. Same
+     *  hand-rolled cache-file + FileProvider + ACTION_SEND approach as shareText()/shareImage()
+     *  above, generalized with a caller-supplied mimeType instead of a hardcoded one, since
+     *  this is the only one of the three that needs to handle more than one file type. */
+    @PluginMethod
+    fun shareFile(call: PluginCall) {
+        try {
+            val base64 = call.getString("base64")
+            if (base64.isNullOrBlank()) { resolveError(call, "base64 file data is required."); return }
+            val mimeType = call.getString("mimeType") ?: "application/octet-stream"
+            val bytes = try { Base64.decode(base64, Base64.DEFAULT) } catch (e: Exception) {
+                resolveError(call, "Invalid file data."); return
+            }
+            val fileName = safeFileName(call)
+            val dir = File(context.cacheDir, "share").apply { mkdirs() }
+            val file = File(dir, fileName)
+            file.writeBytes(bytes)
+
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = mimeType
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            activity.startActivity(Intent.createChooser(send, "Save or share $fileName"))
             resolveSuccess(call, JSObject().apply { put("shared", true) })
         } catch (e: Exception) {
             resolveError(call, "Share failed: ${e.message ?: "unknown error"}")

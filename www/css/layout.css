@@ -1,7 +1,25 @@
 #app { max-width: 480px; background: var(--color-bg); }
 header.app-header { padding: calc(var(--safe-top) + var(--space-sm)) var(--space-md) var(--space-sm); }
 .page-title-row { display:flex; align-items:center; justify-content:space-between; gap:var(--space-sm); }
-.page-tools-btn { min-height:44px; min-width:44px; border:1px solid var(--color-border); border-radius:var(--radius-sm); color:var(--color-text-primary); background:var(--color-surface); }
+.page-tools-btn { min-height:44px; min-width:44px; border:1px solid var(--color-border); border-radius:var(--radius-sm); color:var(--color-text-primary); background:var(--color-surface); position:relative; }
+
+/* Header notifications (bell + dropdown). Uses the same theme-aware --color-* tokens as
+   .page-tools-btn so it looks correct on both light-tab and dark-tab headers -- unlike the
+   .home-light/.wk-light/.pg-light per-screen light system, the header itself sits outside
+   those wrappers and is shared by every tab. */
+.hdr-badge-dot { position:absolute; top:8px; right:8px; width:8px; height:8px; border-radius:50%; background:var(--color-interactive); border:1.5px solid var(--color-surface); }
+.hdr-notif-backdrop { position:fixed; inset:0; z-index:70; background:transparent; }
+.hdr-notif-panel { position:absolute; top:52px; right:0; z-index:71; width:290px; max-height:360px; overflow-y:auto;
+  background:var(--color-surface-elevated); border:1px solid var(--color-border); border-radius:14px;
+  padding:6px; box-shadow:0 8px 28px rgba(0,0,0,.28); }
+.hdr-notif-panel__title { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--color-text-secondary); padding:8px 10px 6px; }
+.hdr-notif-empty { font-size:12px; color:var(--color-text-secondary); padding:14px 10px; line-height:1.4; }
+.hdr-notif-item { display:flex; align-items:flex-start; gap:10px; padding:9px 10px; border-radius:9px; }
+.hdr-notif-item + .hdr-notif-item { border-top:1px solid var(--color-border); }
+.hdr-notif-item__icon { flex:none; width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+  background:var(--color-interactive-soft); color:var(--color-interactive); }
+.hdr-notif-item__text { font-size:13px; font-weight:600; color:var(--color-text-primary); line-height:1.35; }
+.hdr-notif-item__time { font-size:11px; color:var(--color-text-secondary); margin-top:2px; }
 nav.bottom-nav { min-height:var(--nav-height); background:rgba(18,20,24,.95); border-color:var(--color-border); }
 [data-theme="light"] nav.bottom-nav { background:rgba(255,255,255,.95); }
 .nav-btn { min-height:52px; }

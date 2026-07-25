@@ -39,6 +39,7 @@ import androidx.health.connect.client.units.Volume
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
+import java.time.Duration
 import java.time.Instant
 import java.time.Period
 import java.time.ZoneId
@@ -138,25 +139,33 @@ class HealthConnectManager(private val context: Context) {
      *  Returns null (not 0) when there's genuinely no data, so the UI can tell "no data"
      *  apart from a real zero -- that distinction is the aggregate API's own behavior, not
      *  something this code fakes. */
-    suspend fun getTodaySteps(): JSONObject {
-        val range = todayRange()
-        Log.d(TAG, "getTodaySteps: range=$range")
+    suspend fun getTodaySteps(): JSONObject = stepsFor(todayRange())
+
+    /** Range-parameterized so both getTodaySteps() (unchanged behavior/callers) and the
+     *  Insights Day/Week/Month/Year aggregates below share one real implementation instead
+     *  of two copies that could drift. */
+    private suspend fun stepsFor(range: TimeRangeFilter): JSONObject {
+        Log.d(TAG, "stepsFor: range=$range")
         val result = client.aggregate(AggregateRequest(metrics = setOf(StepsRecord.COUNT_TOTAL), timeRangeFilter = range))
         val total = result[StepsRecord.COUNT_TOTAL]
-        Log.d(TAG, "getTodaySteps: aggregate result=$total")
+        Log.d(TAG, "stepsFor: aggregate result=$total")
         return JSONObject().apply { put("steps", total ?: JSONObject.NULL) }
     }
 
-    /** Same fix as getTodaySteps -- aggregate instead of raw-record summation. */
-    suspend fun getTodayActiveCalories(): JSONObject {
-        val result = client.aggregate(AggregateRequest(metrics = setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL), timeRangeFilter = todayRange()))
+    /** Same fix as steps -- aggregate instead of raw-record summation. */
+    suspend fun getTodayActiveCalories(): JSONObject = activeCaloriesFor(todayRange())
+
+    private suspend fun activeCaloriesFor(range: TimeRangeFilter): JSONObject {
+        val result = client.aggregate(AggregateRequest(metrics = setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL), timeRangeFilter = range))
         val kcal = result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories
         return JSONObject().apply { put("kcal", kcal ?: JSONObject.NULL) }
     }
 
-    /** Same fix as getTodaySteps -- aggregate instead of raw-record summation. */
-    suspend fun getTodayDistance(): JSONObject {
-        val result = client.aggregate(AggregateRequest(metrics = setOf(DistanceRecord.DISTANCE_TOTAL), timeRangeFilter = todayRange()))
+    /** Same fix as steps -- aggregate instead of raw-record summation. */
+    suspend fun getTodayDistance(): JSONObject = distanceFor(todayRange())
+
+    private suspend fun distanceFor(range: TimeRangeFilter): JSONObject {
+        val result = client.aggregate(AggregateRequest(metrics = setOf(DistanceRecord.DISTANCE_TOTAL), timeRangeFilter = range))
         val meters = result[DistanceRecord.DISTANCE_TOTAL]?.inMeters
         return JSONObject().apply {
             put("meters", meters ?: JSONObject.NULL)
@@ -168,8 +177,10 @@ class HealthConnectManager(private val context: Context) {
      *  you aggregate) plus today's min/max/average via aggregate, which IS the correct
      *  aggregate use for heart rate (BPM_MIN/BPM_MAX/BPM_AVG are real Health Connect
      *  aggregate metrics, distinct from summing, since heart rate isn't additive). */
-    suspend fun getHeartRate(): JSONObject {
-        val response = client.readRecords(ReadRecordsRequest(HeartRateRecord::class, timeRangeFilter = todayRange()))
+    suspend fun getHeartRate(): JSONObject = heartRateFor(todayRange())
+
+    private suspend fun heartRateFor(range: TimeRangeFilter): JSONObject {
+        val response = client.readRecords(ReadRecordsRequest(HeartRateRecord::class, timeRangeFilter = range))
         // Track which RECORD each sample came from -- Sample itself carries no metadata,
         // the source/dataOrigin belongs to the containing HeartRateRecord.
         val samplesWithSource = response.records.flatMap { record -> record.samples.map { it to record } }
@@ -179,7 +190,7 @@ class HealthConnectManager(private val context: Context) {
 
         val agg = client.aggregate(AggregateRequest(
             metrics = setOf(HeartRateRecord.BPM_MIN, HeartRateRecord.BPM_MAX, HeartRateRecord.BPM_AVG),
-            timeRangeFilter = todayRange()
+            timeRangeFilter = range
         ))
 
         return JSONObject().apply {
@@ -298,8 +309,10 @@ class HealthConnectManager(private val context: Context) {
      *  logged in IGNYT today will correctly show up in this count too, not just ones from
      *  other apps. That's a read of what's already in Health Connect, not a new export --
      *  no sync loop, since reading never triggers a write. */
-    suspend fun getTodayExerciseSessionCount(): JSONObject {
-        val response = client.readRecords(ReadRecordsRequest(ExerciseSessionRecord::class, timeRangeFilter = todayRange()))
+    suspend fun getTodayExerciseSessionCount(): JSONObject = workoutCountFor(todayRange())
+
+    private suspend fun workoutCountFor(range: TimeRangeFilter): JSONObject {
+        val response = client.readRecords(ReadRecordsRequest(ExerciseSessionRecord::class, timeRangeFilter = range))
         return JSONObject().apply {
             put("count", response.records.size)
         }
@@ -414,8 +427,10 @@ class HealthConnectManager(private val context: Context) {
      *  glass/bottle from ONE source app (IGNYT itself, if hydration logging is ever added),
      *  not the kind of multi-source-overlap risk that motivated the steps/distance/calories
      *  aggregate fix above. */
-    suspend fun getTodayHydration(): JSONObject {
-        val response = client.readRecords(ReadRecordsRequest(HydrationRecord::class, timeRangeFilter = todayRange()))
+    suspend fun getTodayHydration(): JSONObject = hydrationFor(todayRange())
+
+    private suspend fun hydrationFor(range: TimeRangeFilter): JSONObject {
+        val response = client.readRecords(ReadRecordsRequest(HydrationRecord::class, timeRangeFilter = range))
         if (response.records.isEmpty()) return JSONObject().apply { put("liters", JSONObject.NULL) }
         val totalLiters = response.records.sumOf { it.volume.inLiters }
         return JSONObject().apply { put("liters", totalLiters) }
@@ -424,8 +439,10 @@ class HealthConnectManager(private val context: Context) {
     /** Today's total nutrition -- same summation reasoning as Hydration above. Returns the
      *  full macro breakdown the task asked for (protein/carbs/fat/fiber/sugar/sodium), each
      *  independently null-safe since not every logged entry fills in every optional field. */
-    suspend fun getTodayNutrition(): JSONObject {
-        val response = client.readRecords(ReadRecordsRequest(NutritionRecord::class, timeRangeFilter = todayRange()))
+    suspend fun getTodayNutrition(): JSONObject = nutritionFor(todayRange())
+
+    private suspend fun nutritionFor(range: TimeRangeFilter): JSONObject {
+        val response = client.readRecords(ReadRecordsRequest(NutritionRecord::class, timeRangeFilter = range))
         if (response.records.isEmpty()) return JSONObject().apply { put("kcal", JSONObject.NULL) }
         return JSONObject().apply {
             put("kcal", response.records.mapNotNull { it.energy?.inKilocalories }.sum())
@@ -472,5 +489,92 @@ class HealthConnectManager(private val context: Context) {
         )
         val result = client.insertRecords(listOf(record))
         return result.recordIdsList.firstOrNull() ?: ""
+    }
+
+    // ---------------------------------------------------------------------
+    // INSIGHTS -- real Day/Week/Month/Year aggregates for the Insights page.
+    // Rolling windows (last N days ending now), not calendar-aligned periods --
+    // simplest genuine definition, and consistent with the existing 7-day
+    // steps/90-day weight history windows already used elsewhere in this file.
+    // ---------------------------------------------------------------------
+
+    private fun periodRange(period: String): TimeRangeFilter {
+        val now = Instant.now()
+        return when (period) {
+            "week" -> TimeRangeFilter.between(now.minus(Duration.ofDays(7)), now)
+            "month" -> TimeRangeFilter.between(now.minus(Duration.ofDays(30)), now)
+            "year" -> TimeRangeFilter.between(now.minus(Duration.ofDays(365)), now)
+            else -> todayRange() // "day" and any unrecognized value
+        }
+    }
+
+    /** Total + average sleep across every session that ended within the period -- distinct
+     *  from getLatestSleepSession() above (single most-recent night, with stage breakdown),
+     *  which stays untouched since Home's sleep card still wants "last night" specifically. */
+    private suspend fun sleepPeriodFor(range: TimeRangeFilter): JSONObject {
+        val response = client.readRecords(ReadRecordsRequest(SleepSessionRecord::class, timeRangeFilter = range))
+        val sessions = response.records.filter { it.endTime <= Instant.now() }
+        if (sessions.isEmpty()) return JSONObject().apply { put("totalMinutes", JSONObject.NULL); put("avgMinutesPerNight", JSONObject.NULL); put("nights", 0) }
+        val totalMinutes = sessions.sumOf { Duration.between(it.startTime, it.endTime).toMinutes() }
+        return JSONObject().apply {
+            put("totalMinutes", totalMinutes)
+            put("avgMinutesPerNight", totalMinutes / sessions.size)
+            put("nights", sessions.size)
+        }
+    }
+
+    /** Weight change across the period (earliest vs. latest reading within the range) --
+     *  distinct from getLatestWeight() above (single latest-ever reading over a fixed 90-day
+     *  lookback), which stays untouched since Home's weight card still wants "latest" only. */
+    private suspend fun weightPeriodFor(range: TimeRangeFilter): JSONObject {
+        val response = client.readRecords(ReadRecordsRequest(WeightRecord::class, timeRangeFilter = range))
+        if (response.records.isEmpty()) {
+            return JSONObject().apply { put("latestKg", JSONObject.NULL); put("earliestKg", JSONObject.NULL); put("changeKg", JSONObject.NULL); put("readingCount", 0) }
+        }
+        val sorted = response.records.sortedBy { it.time }
+        val first = sorted.first(); val last = sorted.last()
+        return JSONObject().apply {
+            put("latestKg", last.weight.inKilograms)
+            put("earliestKg", first.weight.inKilograms)
+            put("changeKg", last.weight.inKilograms - first.weight.inKilograms)
+            put("readingCount", sorted.size)
+        }
+    }
+
+    private suspend fun <T> safeOrNull(block: suspend () -> T): T? = try { block() } catch (e: Exception) { null }
+
+    /** One call for the Insights page: real period-scoped totals for Steps, Active Calories,
+     *  Distance, Workouts, Heart Rate (min/max/avg), Sleep, Hydration, Nutrition and Weight
+     *  change -- genuinely different numbers per Day/Week/Month/Year tab, not the same
+     *  "today" snapshot relabeled four times. The remaining metrics (respiratory rate,
+     *  oxygen saturation, blood pressure, body temperature, body fat, height, lean body mass,
+     *  BMR) are point-in-time vitals, not period totals -- they report the same genuinely
+     *  "latest known reading" on every tab (reusing the existing getLatestX() readers
+     *  unchanged), which is the honest behavior, not a bug: there's no such thing as a "sum"
+     *  of blood pressure over a month. Every field is independently try/catch-guarded so one
+     *  failing read (missing permission, no data) never blanks the rest of the page. */
+    suspend fun getInsights(periodRaw: String): JSONObject {
+        val period = if (periodRaw in setOf("day", "week", "month", "year")) periodRaw else "day"
+        val range = periodRange(period)
+        return JSONObject().apply {
+            put("period", period)
+            put("steps", safeOrNull { stepsFor(range) })
+            put("activeCalories", safeOrNull { activeCaloriesFor(range) })
+            put("distance", safeOrNull { distanceFor(range) })
+            put("workouts", safeOrNull { workoutCountFor(range) })
+            put("heartRate", safeOrNull { heartRateFor(range) })
+            put("sleep", safeOrNull { sleepPeriodFor(range) })
+            put("hydration", safeOrNull { hydrationFor(range) })
+            put("nutrition", safeOrNull { nutritionFor(range) })
+            put("weight", safeOrNull { weightPeriodFor(range) })
+            put("respiratoryRate", safeOrNull { getLatestRespiratoryRate() })
+            put("oxygenSaturation", safeOrNull { getLatestOxygenSaturation() })
+            put("bloodPressure", safeOrNull { getLatestBloodPressure() })
+            put("bodyTemperature", safeOrNull { getLatestBodyTemperature() })
+            put("bodyFat", safeOrNull { getLatestBodyFat() })
+            put("height", safeOrNull { getLatestHeight() })
+            put("leanBodyMass", safeOrNull { getLatestLeanBodyMass() })
+            put("basalMetabolicRate", safeOrNull { getLatestBasalMetabolicRate() })
+        }
     }
 }

@@ -312,6 +312,31 @@ class HealthConnectPlugin : com.getcapacitor.Plugin() {
 
     private suspend fun <T> safeOrNull(block: suspend () -> T): T? = try { block() } catch (e: Exception) { null }
 
+    /** Backs the Insights page's Day/Week/Month/Year tabs with genuine period-scoped
+     *  aggregates (see HealthConnectManager.getInsights) instead of relabeling the same
+     *  "today" sync snapshot four times. Same no-ensurePermissions-gate pattern as syncNow:
+     *  each field inside getInsights is independently guarded, so a partial grant still
+     *  returns whatever the user has actually permitted, and grantedPermissions is attached
+     *  here the same way so the JS side's existing "Permission required" tile logic works. */
+    @PluginMethod
+    fun getInsights(call: PluginCall) {
+        val period = call.getString("period", "day") ?: "day"
+        pluginScope.launch {
+            if (!manager.isAvailable()) {
+                resolveError(call, "Health Connect is not available on this device.")
+                return@launch
+            }
+            try {
+                val granted = manager.grantedPermissions()
+                val data = manager.getInsights(period)
+                data.put("grantedPermissions", JSONArray(granted.toList()))
+                resolveSuccess(call, JSObject.fromJSONObject(data))
+            } catch (e: Exception) {
+                resolveError(call, "getInsights failed: ${e.message}")
+            }
+        }
+    }
+
     /** ignytWorkoutId is required, not optional -- it's what makes duplicate-export
      *  prevention actually work (see HealthConnectManager's clientRecordId comment). */
     @PluginMethod

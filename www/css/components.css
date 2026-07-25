@@ -1,3 +1,85 @@
+/* Shared Skeleton loading (RC1 Phase 4). Audit found only 4 "Loading…" text occurrences in
+   the whole app (1 list, 3 identical image-tile placeholders) -- small surface, but a text
+   label is the wrong pattern for "waiting on an image/list to appear" versus a shaped
+   placeholder that previews the eventual layout. Shimmer uses --duration-slow/--ease-standard
+   (Phase 1 motion tokens) rather than new ad-hoc timing values. */
+.skeleton { position:relative; overflow:hidden; background:var(--color-surface-elevated); border-radius:var(--radius-sm); }
+.skeleton::after {
+  content:""; position:absolute; inset:0; transform:translateX(-100%);
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
+  animation:skeleton-shimmer 1.6s var(--ease-standard) infinite;
+}
+@keyframes skeleton-shimmer { 100% { transform:translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .skeleton::after { animation:none; } }
+.skeleton-text { height:14px; border-radius:var(--radius-2xs); margin-bottom:6px; }
+.skeleton-text:last-child { margin-bottom:0; width:60%; }
+.skeleton-row { display:flex; flex-direction:column; padding:12px 14px; margin-bottom:8px; border-radius:var(--radius-md); background:var(--color-surface); border:1px solid var(--color-border); }
+
+/* Shared Bottom Sheet (Rest Timer / RPE / Plates on the Workout screen). Audit note: a
+   .more-sheet class already existed (health-uploads.js's upload-source picker) but only ever
+   had border-radius set -- no position/backdrop/animation anywhere in any stylesheet, so it
+   was never a real bottom sheet, just inline-flowed content. Not fixed here (out of scope for
+   this task) but flagged rather than silently reused, which is why this is a new .sheet-*
+   namespace instead of building on top of the incomplete one. */
+.sheet-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100; animation:sheet-fade-in .2s var(--ease-standard); }
+.sheet { position:fixed; left:50%; bottom:0; transform:translateX(-50%); width:100%; max-width:480px;
+  z-index:101; background:var(--rh-card,var(--color-surface-elevated)); border-radius:var(--radius-card) var(--radius-card) 0 0;
+  padding:10px 18px calc(18px + env(safe-area-inset-bottom,0px)); max-height:75vh; overflow-y:auto; box-sizing:border-box;
+  animation:sheet-slide-up .25s var(--ease-standard); }
+.sheet__handle { width:36px; height:4px; border-radius:var(--radius-pill); background:var(--rh-border,var(--color-border)); margin:0 auto 14px; }
+.sheet__title { font-size:16px; font-weight:800; color:var(--rh-text,var(--color-text-primary)); margin-bottom:12px; }
+@keyframes sheet-fade-in { from{ opacity:0; } to{ opacity:1; } }
+@keyframes sheet-slide-up { from{ transform:translateX(-50%) translateY(100%); } to{ transform:translateX(-50%) translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .sheet-backdrop, .sheet { animation:none; } }
+
+/* Option grid used by the Rest Timer / RPE sheets -- equal-size tappable chips, selected one
+   filled solid instead of outlined. */
+.sheet-options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:6px; }
+.sheet-option { padding:14px 8px; text-align:center; border-radius:var(--radius-sm); border:1.5px solid var(--rh-border,var(--color-border));
+  background:none; color:var(--rh-text,var(--color-text-primary)); font-weight:700; font-size:14px; cursor:pointer; transition:transform .1s ease; }
+.sheet-option:active { transform:scale(.95); }
+.sheet-option.active { background:var(--rh-blue,var(--color-interactive)); border-color:var(--rh-blue,var(--color-interactive)); color:#fff; }
+
+/* Plate visualizer -- proportionally-sized colored blocks, biggest plate closest to the bar. */
+.plate-stack { display:flex; align-items:center; gap:2px; height:64px; margin:14px 0; padding:0 4px; }
+.plate-stack__bar { width:10px; height:8px; background:var(--rh-muted,var(--color-text-secondary)); border-radius:2px; flex:none; }
+.plate-block { border-radius:3px; flex:none; display:flex; align-items:center; justify-content:center; color:#fff; font-size:9px; font-weight:800; }
+
+/* Shared empty state (icon + message + optional action) -- see emptyState() in app.js.
+   Global, not page-scoped: every *-light screen's --rh-muted-style text still reads through
+   fine since this only sets layout/sizing, not color (color inherits from the surrounding
+   screen's own text color token). */
+.empty-state { display:flex; flex-direction:column; align-items:center; text-align:center; gap:var(--space-sm); padding:var(--space-xl) var(--space-lg); }
+.empty-state__icon { width:56px; height:56px; border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center;
+  background:var(--color-surface-elevated); color:var(--color-text-secondary); }
+.empty-state__message { font-size:var(--font-size-sm); color:var(--color-text-secondary); max-width:280px; line-height:1.5; }
+
+/* Shared Badge/Chip/Tag (Phase 2, RC1 component standardization) -- consolidates the visual
+   pattern behind .tl-card__badge/.pi-tag/.lib-tag/.lib-guide-btn (three-plus near-identical
+   "small rounded pill, tinted background, colored text" rules found on audit). Those existing
+   classes are left in place (real call sites depend on them) -- new code should reach for
+   .badge instead of writing a fourth copy of the same 6 CSS properties. Color modifiers use
+   the same --rh-*/--color-* values already used by the patterns above, not new hex. */
+.badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; padding:3px 9px; border-radius:var(--radius-pill); white-space:nowrap; }
+.badge--blue { background:rgba(37,99,235,.1); color:var(--rh-blue,var(--color-interactive)); }
+.badge--green { background:rgba(22,163,74,.12); color:var(--rh-green,var(--color-success)); }
+.badge--red { background:rgba(239,68,68,.1); color:var(--rh-red,var(--color-error)); }
+.badge--purple { background:rgba(124,58,237,.1); color:var(--rh-purple,#7C3AED); }
+.badge--muted { background:var(--color-surface-elevated); color:var(--color-text-secondary); }
+
+/* Shared Divider -- there was no dedicated divider component anywhere (audited); every
+   screen that needed one used an ad-hoc inline border-top on some other element instead. */
+.divider { border:none; border-top:1px solid var(--rh-border,var(--color-border)); margin:var(--space-sm) 0; }
+.divider--vertical { border:none; border-left:1px solid var(--rh-border,var(--color-border)); width:1px; align-self:stretch; margin:0 var(--space-sm); }
+
+/* Audit note (Phase 2): buttons and progress bars each have two parallel systems, same
+   shape as tokens.css's --rh-*/--color-* split -- .btn/.btn-ghost/.btn-accent/.btn-steel
+   (index.html inline <style>, dark legacy screens) vs .rh-btn/.rh-btn--ghost/.rh-btn--primary
+   (home.css, *-light premium screens); .progress-track/.progress-fill vs .rh-progress-track/
+   .rh-progress-fill likewise. Not merged here for the same reason --rh-*/--color-* weren't
+   value-merged in Phase 1: they're two different screens' design languages, not accidental
+   duplication of one. Flagged so it isn't rediscovered from scratch. */
+
 .premium-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); box-shadow:var(--shadow-card); }
 .premium-card--elevated { background:var(--color-surface-elevated); }
 .section-heading { display:flex; align-items:center; justify-content:space-between; gap:var(--space-sm); margin:var(--space-lg) 0 var(--space-xs); }
@@ -51,3 +133,56 @@
 .toast { border-radius:var(--radius-md); }
 .ex-picker-avatar { border-radius:var(--radius-pill); }
 .timer-overlay .timer-ring { text-shadow:0 4px 18px rgba(255,90,31,.25); }
+
+/* ---- Blood Work (bloodwork.js) ---- */
+.bw-disclaimer { font-size:12px; line-height:1.5; color:var(--color-text-secondary); background:var(--color-surface); border:1px solid var(--color-border); border-left:3px solid #e5484d; border-radius:var(--radius-md); padding:10px 12px; margin:8px 0; }
+.bw-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:var(--space-md); margin-bottom:10px; box-shadow:var(--shadow-card); }
+.bw-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-bottom:6px; }
+.bw-metric { text-align:left; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px; cursor:pointer; color:var(--color-text-primary); min-width:0; }
+.bw-metric:active { background:var(--color-surface-pressed); }
+.bw-metric__name { font-size:12px; font-weight:700; color:var(--color-text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bw-metric__val { font-size:20px; font-weight:900; margin-top:3px; }
+.bw-metric__unit { font-size:11px; font-weight:600; color:var(--color-text-secondary); }
+.bw-metric__range { font-size:11px; color:var(--color-text-secondary); margin-top:2px; }
+.bw-row { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; text-align:left; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:6px; cursor:pointer; color:var(--color-text-primary); }
+.bw-row:active { background:var(--color-surface-pressed); }
+.bw-label { display:block; font-size:12px; font-weight:700; color:var(--color-text-secondary); margin:10px 0 4px; }
+.bw-input { width:100%; background:var(--color-surface-secondary,var(--color-surface-pressed)); border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:10px 12px; font-size:15px; color:var(--color-text-primary); }
+.bw-mini { width:90px; font-family:monospace; font-weight:700; }
+.bw-review { display:flex; gap:10px; align-items:flex-start; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px; margin-bottom:8px; }
+.bw-check input { width:20px; height:20px; }
+
+/* ---- Smart Goal Engine (goals.js) ---- */
+.goal-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:var(--space-md); margin-bottom:10px; box-shadow:var(--shadow-card); }
+.goal-label { display:block; font-size:12px; font-weight:700; color:var(--color-text-secondary); margin:10px 0 4px; }
+.goal-input { width:100%; background:var(--color-surface-pressed); border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:10px 12px; font-size:15px; color:var(--color-text-primary); }
+.goal-two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.goal-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-bottom:6px; }
+.goal-metric { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px; min-width:0; }
+.goal-metric__l { font-size:12px; font-weight:700; color:var(--color-text-secondary); }
+.goal-metric__v { font-size:20px; font-weight:900; margin-top:3px; }
+.goal-metric__u { font-size:11px; font-weight:600; color:var(--color-text-secondary); margin-left:3px; }
+.goal-bar { margin-top:10px; height:8px; border-radius:4px; background:var(--color-surface-pressed); overflow:hidden; }
+.goal-bar span { display:block; height:100%; border-radius:4px; background:var(--color-interactive); }
+.goal-row { display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:6px; }
+
+/* ---- Health Report Upload Center (health-uploads.js) ---- */
+.hu-row { display:flex; align-items:center; gap:12px; width:100%; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:6px; cursor:pointer; color:var(--color-text-primary); }
+.hu-row:active { background:var(--color-surface-pressed); }
+.hu-thumb { font-size:22px; flex:none; width:36px; text-align:center; }
+.hu-preview { display:flex; align-items:center; justify-content:center; min-height:120px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:12px; margin-bottom:10px; }
+
+/* ---- Adaptive AI Coach (ai-coach.js) ---- */
+.coach-rec { display:flex; gap:10px; align-items:flex-start; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:8px; }
+.coach-rec__dot { width:8px; height:8px; border-radius:50%; margin-top:6px; flex:none; }
+.coach-chip { font-size:11px; font-weight:700; color:var(--color-text-secondary); background:var(--color-surface-pressed); border-radius:var(--radius-pill); padding:3px 9px; }
+.coach-q { display:block; width:100%; text-align:left; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:11px 14px; margin-bottom:6px; font-size:14px; font-weight:600; color:var(--color-text-primary); cursor:pointer; }
+.coach-q:active { background:var(--color-surface-pressed); }
+
+/* ---- Medical Reports summary + source sheet (health-uploads.js) ---- */
+.hu-sum-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-bottom:6px; }
+.hu-sum { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:10px 6px; text-align:center; min-width:0; }
+.hu-sum__v { font-size:22px; font-weight:900; }
+.hu-sum__l { font-size:10px; font-weight:700; color:var(--color-text-secondary); margin-top:2px; }
+.hu-src { display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:var(--color-surface-elevated); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:14px; margin-bottom:8px; font-size:15px; font-weight:600; color:var(--color-text-primary); cursor:pointer; }
+.hu-src:active { background:var(--color-surface-pressed); }

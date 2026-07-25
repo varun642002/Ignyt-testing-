@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>IGNYT — Privacy Policy</title>
+<style>
+  body{background:#08090d;color:#f7f4ef;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:680px;margin:0 auto;padding:32px 20px 80px;line-height:1.6;}
+  h1{font-size:26px;font-weight:800;margin-bottom:4px;}
+  .updated{color:#aaa9b0;font-size:13px;margin-bottom:32px;}
+  h2{font-size:18px;font-weight:800;margin-top:32px;margin-bottom:8px;color:#3e82f7;}
+  p,li{color:#d8d6d0;font-size:14px;}
+  ul{padding-left:20px;}
+  a{color:#3e82f7;}
+  .placeholder{background:rgba(255,187,69,.12);color:#f5bb45;padding:1px 6px;border-radius:4px;font-size:12px;font-weight:700;}
+  .box{background:#171b24;border:1px solid #262b35;border-radius:12px;padding:16px;margin:16px 0;}
+</style>
+</head>
+<body>
+<h1>IGNYT Privacy Policy</h1>
+<div class="updated">Effective date: <span class="placeholder">[FILL IN — e.g. 24 July 2026]</span></div>
+
+<p>IGNYT ("the app", "we", "our") is a fitness and health tracking application. This policy explains what data the app handles, where it lives, and what control you have over it. It covers the app only — not any third-party service you separately choose to connect (Google, Health Connect), which has its own privacy policy.</p>
+
+<h2>1. Data storage — local-first by design</h2>
+<p>By default, everything you enter — workouts, routines, nutrition logs, body measurements, progress photos, goals, settings — is stored <strong>only on your device</strong> (local app storage / on-device database). Nothing is sent anywhere unless you explicitly take one of the actions below.</p>
+
+<h2>2. Data you can optionally share</h2>
+<div class="box">
+<p><strong>Google Sign-In (optional).</strong> If you sign in, we receive your Google account's name, email address, and profile photo, used only to identify your account inside the app.</p>
+<p><strong>Cloud Sync (optional, requires sign-in).</strong> If enabled, your profile and settings sync to a private cloud database (Firestore) tied to your account, so your data follows you across devices. Workout/nutrition/measurement history is not synced this way by default — see Cloud Backup below.</p>
+<p><strong>Google Drive Backup (optional, requires sign-in).</strong> If you choose to back up, the app writes a backup file containing your app data to a folder in <em>your own</em> Google Drive. We never see or store this file — it goes directly from your device to your Drive. You can enable end-to-end encryption (a passphrase only you know) before backing up; if you do, we — and Google — cannot read the backup's contents.</p>
+<p><strong>Health Connect (optional).</strong> If you connect Health Connect, the app reads and writes specific data categories (steps, heart rate, sleep, weight, exercise, nutrition, and similar) through Android's Health Connect framework. This exchange happens entirely on-device via the Android OS; we do not operate a server that receives this data.</p>
+</div>
+
+<h2>3. What we do not do</h2>
+<ul>
+<li>No advertising, and no ad-tracking SDKs.</li>
+<li>No third-party analytics or behavioral tracking.</li>
+<li>We do not sell, rent, or share your data with data brokers.</li>
+<li>We do not read the contents of your Drive backups (and cannot, if you encrypt them).</li>
+</ul>
+
+<h2>4. Third-party services</h2>
+<p>Where you opt in, the app uses Google services (Sign-In, Drive, Firestore, Health Connect). Your use of those is also governed by <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>. We only request the minimum access each feature needs, and every one of these connections is off by default until you turn it on.</p>
+
+<h2>5. Your control over your data</h2>
+<ul>
+<li><strong>Export:</strong> Settings → Export Data (full JSON backup, or CSV per data type) at any time.</li>
+<li><strong>Delete everything:</strong> Settings → Danger Zone → Reset All App Data — permanently erases all local data on this device immediately.</li>
+<li><strong>Disconnect a service:</strong> Sign out, disconnect Health Connect, or disable Cloud Sync/Drive Backup independently at any time in Settings; disconnecting does not delete data already on your device.</li>
+</ul>
+
+<h2>6. Data security</h2>
+<p>Local data lives in your device's app-sandboxed storage. Cloud Sync data is protected by your Google account's own access controls. Drive backups are stored in your personal Drive; the optional passphrase encryption uses AES-256-GCM performed entirely on-device — the passphrase itself is never stored or transmitted.</p>
+
+<h2>7. Children's privacy</h2>
+<p>IGNYT is not directed at children under 13, and we do not knowingly collect data from them.</p>
+
+<h2>8. Changes to this policy</h2>
+<p>If this policy changes materially, the "Effective date" above will be updated and, where required, you'll be notified in-app.</p>
+
+<h2>9. Contact</h2>
+<p>Questions about this policy or your data: <span class="placeholder">[FILL IN — support email, e.g. support@yourdomain.com]</span></p>
+
+<hr style="border-color:#262b35;margin-top:40px;">
+<p style="color:#6b6b76;font-size:11px;">This document is a draft prepared for review, not legal advice. Replace the placeholders above and have it reviewed before publishing or submitting to Google Play.</p>
+</body>
+</html>

@@ -33,6 +33,8 @@
 
   const HC_STATE_KEY = "hx_hc_state";           // {connected, lastSyncAt}
   const HC_EXPORTED_KEY = "hx_hc_exported_ids";  // {workouts:[...ids], weights:[...ids]}
+  const HC_INSIGHTS_KEY = "hx_hc_insights_cache"; // {day:{...,fetchedAt}, week:{...}, month:{...}, year:{...}}
+  const INSIGHTS_PERIODS = ["day", "week", "month", "year"];
 
   function loadHcState() {
     try { return JSON.parse(localStorage.getItem(HC_STATE_KEY) || "null") || { connected: false, lastSyncAt: null }; }
@@ -273,6 +275,60 @@
     injectCard(); notifyDashboard();
   }
 
+  // ---------------------------------------------------------------------
+  // Insights (Day/Week/Month/Year real period aggregates) -- cached the same
+  // way as the dashboard snapshot: an in-memory copy for the current session
+  // plus a localStorage fallback so the Insights page never has to block on
+  // (or trigger) a native call just to paint whatever was last fetched.
+  // ---------------------------------------------------------------------
+
+  let _insightsData = {};   // period -> latest fetched payload (in-memory)
+  let _insightsBusy = {};   // period -> bool, so a slow fetch can't overlap itself
+
+  function loadInsightsCache() {
+    try { return JSON.parse(localStorage.getItem(HC_INSIGHTS_KEY) || "null") || {}; }
+    catch (e) { return {}; }
+  }
+  function saveInsightsCache(cache) {
+    try { localStorage.setItem(HC_INSIGHTS_KEY, JSON.stringify(cache)); } catch (e) { /* non-fatal */ }
+  }
+
+  function getInsightsData(period) {
+    if (!INSIGHTS_PERIODS.includes(period)) period = "day";
+    if (_insightsData[period]) return _insightsData[period];
+    return loadInsightsCache()[period] || null;
+  }
+
+  /** Real native fetch for one period. Never requests permissions (same rule as sync);
+   *  no-ops quietly if not connected or a permission grant no longer holds -- the Insights
+   *  page just keeps showing whatever's cached (or the honest empty state) instead. */
+  async function fetchInsights(period) {
+    if (!INSIGHTS_PERIODS.includes(period)) period = "day";
+    if (!window.HealthConnect || !HealthConnect.isNativeAndroid()) return null;
+    if (_insightsBusy[period]) return null;
+    const hcState = loadHcState();
+    if (!hcState.connected) return null;
+
+    _insightsBusy[period] = true;
+    try {
+      const status = await HealthConnect.getPermissionStatus();
+      if (!status.success || !status.data.granted) return null;
+      const result = await HealthConnect.getInsights(period);
+      if (result.success) {
+        result.data.fetchedAt = Date.now();
+        _insightsData[period] = result.data;
+        const cache = loadInsightsCache();
+        cache[period] = result.data;
+        saveInsightsCache(cache);
+        if (typeof state !== "undefined" && typeof render === "function" && state.tab === "insights") render();
+        return result.data;
+      }
+      return null;
+    } finally {
+      _insightsBusy[period] = false;
+    }
+  }
+
   async function handleDisconnect() {
     if (_busy) return;
     _busy = true; injectCard(); notifyDashboard();
@@ -295,7 +351,7 @@
    *  one source of truth. No-ops harmlessly if neither Home nor Health is the current tab. */
   function notifyDashboard() {
     if (typeof state === "undefined" || typeof render !== "function") return;
-    if (state.tab === "health" || state.tab === "home" || state.tab === "nutrition") render();
+    if (state.tab === "health" || state.tab === "home" || state.tab === "nutrition" || state.tab === "insights") render();
   }
 
   // Exposed so app.js's renderHealthDashboard() can drive the exact same connect/sync/
@@ -307,14 +363,27 @@
     getError: () => _errorMsg,
     connect: handleConnect,
     sync: handleSync,
-    disconnect: handleDisconnect
+    disconnect: handleDisconnect,
+    // Insights (Day/Week/Month/Year real period aggregates)
+    getInsightsData: getInsightsData,
+    isInsightsBusy: (period) => !!_insightsBusy[period],
+    refreshInsights: fetchInsights
   };
 
-  // Reads never request permissions.  These refreshes only run after the user explicitly
+  // Reads never request permissions. These refreshes only run after the user explicitly
   // connected Health Connect, and a revoked grant is surfaced as "Permission required".
+  // Covers: app launch, foreground resume (visibilitychange), the 5-minute active-app
+  // interval below, and explicit navigation to Home/Health/Nutrition(Food Log)/Insights
+  // (the ignyt:health-connect-navigation event, dispatched from app.js's nav handler).
+  // When Insights is the open tab, also refreshes real period data for whichever
+  // Day/Week/Month/Year range is currently selected -- not just the "today" snapshot.
   function refreshWhenConnected() {
     const hcState = loadHcState();
-    if (hcState.connected && !_busy) handleSync();
+    if (!hcState.connected) return;
+    if (!_busy) handleSync();
+    if (typeof state !== "undefined" && state.tab === "insights") {
+      fetchInsights(state.insightsRange || "day");
+    }
   }
 
   window.addEventListener("ignyt:health-connect-navigation", refreshWhenConnected);

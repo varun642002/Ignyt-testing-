@@ -70,6 +70,10 @@ const HealthConnect = (() => {
     getTodayHydration:        () => callNative("getTodayHydration"),
     getTodayNutrition:        () => callNative("getTodayNutrition"),
     syncNow:                  () => callNative("syncNow"),
+    // period: "day" | "week" | "month" | "year" -- real period-scoped aggregates for the
+    // Insights page (steps/calories/distance/workouts/heart-rate/sleep/hydration/nutrition/
+    // weight totals), plus the same point-in-time vitals syncNow already returns.
+    getInsights:              (period = "day") => callNative("getInsights", { period }),
 
     /** ignytWorkoutId/ignytBodyLogId are required -- they're what lets Health Connect's own
      *  upsert-by-clientRecordId mechanism prevent duplicate writes if this ever gets called
