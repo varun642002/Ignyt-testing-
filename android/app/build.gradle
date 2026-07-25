@@ -33,7 +33,7 @@ android {
     signingConfigs {
         if (releaseSigningConfigured) {
             release {
-                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storeFile file(keystoreProperties['storeFile']) // resolved relative to android/app/, same dir as keystore.properties itself
                 storePassword keystoreProperties['storePassword']
                 keyAlias keystoreProperties['keyAlias']
                 keyPassword keystoreProperties['keyPassword']
