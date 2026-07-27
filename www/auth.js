@@ -21,7 +21,7 @@
 
 const IgnytAuth = (() => {
 
-  const ACCOUNT_KEY = "hx_auth_account"; // {uid, displayName, email, photoUrl, signedInAt}
+  const ACCOUNT_KEY = "hx_auth_account"; // {uid, displayName, email, photoUrl, provider, emailVerified, signedInAt}
 
   let _busy = false;
   let _errorMsg = null;
@@ -63,6 +63,8 @@ const IgnytAuth = (() => {
         displayName: user.displayName || "",
         email: user.email || "",
         photoUrl: user.photoUrl || "",
+        provider: user.provider || "google",
+        emailVerified: !!user.emailVerified,
         signedInAt: Date.now()
       }));
     } catch (e) { /* storage full/unavailable — non-fatal, UI just re-checks native next time */ }
@@ -103,6 +105,58 @@ const IgnytAuth = (() => {
     return result;
   }
 
+  async function signUpWithEmail(email, password) {
+    if (_busy) return;
+    _busy = true; _errorMsg = null; notifyUI();
+    const result = await callNative("signUpWithEmail", { email: email, password: password });
+    _busy = false;
+    if (result.success && result.data && result.data.user) {
+      saveAccount(result.data.user);
+      _errorMsg = null;
+    } else {
+      _errorMsg = result.error || "Sign-up failed.";
+    }
+    notifyUI();
+    return result;
+  }
+
+  async function signInWithEmail(email, password) {
+    if (_busy) return;
+    _busy = true; _errorMsg = null; notifyUI();
+    const result = await callNative("signInWithEmail", { email: email, password: password });
+    _busy = false;
+    if (result.success && result.data && result.data.user) {
+      saveAccount(result.data.user);
+      _errorMsg = null;
+    } else {
+      _errorMsg = result.error || "Sign-in failed.";
+    }
+    notifyUI();
+    return result;
+  }
+
+  /** Does not touch busy/account state -- this can be called while signed out, and never
+   *  signs anyone in itself. Caller decides how to surface success (e.g. a toast). */
+  async function sendPasswordReset(email) {
+    return await callNative("sendPasswordReset", { email: email });
+  }
+
+  /** Resends the verification email to the current user. */
+  async function resendVerificationEmail() {
+    return await callNative("sendEmailVerification");
+  }
+
+  /** Network refresh of emailVerified (and other fields) for the current user -- e.g. after
+   *  the user taps the link in their inbox and comes back to check. Updates the cached
+   *  snapshot on success so the UI reflects it immediately. */
+  async function reloadUser() {
+    const result = await callNative("reloadUser");
+    if (result.success && result.data && result.data.signedIn && result.data.user) {
+      saveAccount(result.data.user);
+    }
+    return result;
+  }
+
   async function signOut() {
     if (_busy) return;
     _busy = true; _errorMsg = null; notifyUI();
@@ -134,6 +188,16 @@ const IgnytAuth = (() => {
     notifyUI();
   }
 
+  /** Returns a short-lived Firebase ID token for backend calls (IGNYT Integration Service),
+   *  or null if unavailable (not native, not signed in, not configured, or plugin too old).
+   *  The token is NEVER cached in JS — it is fetched on demand and handed straight to the
+   *  single request that needs it. `forceRefresh` re-mints after a 401. */
+  async function getIdToken(forceRefresh) {
+    const result = await callNative("getIdToken", { forceRefresh: !!forceRefresh });
+    if (result && result.success && result.data && result.data.token) return result.data.token;
+    return null;
+  }
+
   function boot() {
     // One reconciliation pass per launch; no polling, no retry loop.
     refreshFromNative();
@@ -151,8 +215,14 @@ const IgnytAuth = (() => {
     getError: () => _errorMsg,
     clearError: () => { _errorMsg = null; },
     signIn,
+    signUpWithEmail,
+    signInWithEmail,
+    sendPasswordReset,
+    resendVerificationEmail,
+    reloadUser,
     signOut,
-    refreshFromNative
+    refreshFromNative,
+    getIdToken   // short-lived Firebase ID token for backend (Integration Service) calls
   };
 })();
 

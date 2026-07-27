@@ -1874,6 +1874,7 @@ const state = {
     heightUnit:"cm", dateFormat:"DD MMM YYYY", timeFormat:"12h"
   }, LS.get("hx_settings", {})),
   notificationsOpen: false, // transient — not persisted, matches other dropdown/menu UI state
+  authFormMode: null, // transient — null|"signin"|"signup"|"forgot" when the email auth form is open in Settings
   nativeNotifPermissionGranted: null, // transient — null=unknown yet, refreshed from IgnytNotify at boot
   plateCalcOpen: null, // element id string when plate calc popover open
   restDuration: LS.get("hx_rest_duration",90),
@@ -4435,14 +4436,44 @@ function renderAccountSection(){
   const errorHtml = errorMsg ? `<div style="font-size:12px;color:var(--rh-red);margin-top:10px;">${esc(errorMsg)}</div>` : "";
 
   if(!account){
+    const mode = state.authFormMode;
+    const emailForm = mode ? `
+      <div style="margin-top:12px;">
+        ${mode==="forgot" ? `
+          <div style="font-size:12px;color:var(--rh-muted);margin-bottom:8px;">Enter your account email and we'll send a link to reset your password.</div>
+          <input type="email" id="auth-email-input" class="pi-input" placeholder="Email" style="width:100%;box-sizing:border-box;margin-bottom:8px;">
+          ${errorHtml}
+          <button class="rh-btn rh-btn--primary" style="width:100%;padding:11px;margin-top:${errorHtml?'10px':'0'};" data-action="auth-forgot-submit" ${busy?'disabled':''}>${busy?'Sending…':'Send Reset Link'}</button>
+          <button class="btn btn-ghost btn-block" style="margin-top:8px;" data-action="auth-form-mode" data-auth-mode="signin">Back to Sign In</button>
+        ` : `
+          <input type="email" id="auth-email-input" class="pi-input" placeholder="Email" style="width:100%;box-sizing:border-box;margin-bottom:8px;">
+          <input type="password" id="auth-password-input" class="pi-input" placeholder="Password" style="width:100%;box-sizing:border-box;margin-bottom:${mode==='signup'?'8px':'0'};">
+          ${mode==="signup" ? `<input type="password" id="auth-password-confirm-input" class="pi-input" placeholder="Confirm password" style="width:100%;box-sizing:border-box;">` : ''}
+          ${errorHtml}
+          <button class="rh-btn rh-btn--primary" style="width:100%;padding:11px;margin-top:${errorHtml||mode==='signup'?'10px':'10px'};" data-action="${mode==='signup'?'auth-signup-submit':'auth-signin-submit'}" ${busy?'disabled':''}>${busy?(mode==='signup'?'Creating account…':'Signing in…'):(mode==='signup'?'Create Account':'Sign In')}</button>
+          <div style="display:flex;justify-content:space-between;margin-top:10px;">
+            <button class="btn-link" style="font-size:12px;background:none;border:none;color:var(--accent);padding:0;cursor:pointer;" data-action="auth-form-mode" data-auth-mode="${mode==='signup'?'signin':'signup'}">${mode==='signup'?'Have an account? Sign in':'Need an account? Sign up'}</button>
+            ${mode==="signin" ? `<button class="btn-link" style="font-size:12px;background:none;border:none;color:var(--rh-muted);padding:0;cursor:pointer;" data-action="auth-form-mode" data-auth-mode="forgot">Forgot password?</button>` : ''}
+          </div>
+        `}
+      </div>` : "";
+
     return `<div class="pg-card">
-      <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Sign in to securely back up your fitness data and enable future multi-device sync.</div>
-      ${errorHtml}
-      <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:${errorHtml?'10px':'0'};padding:12px;" data-action="account-signin" ${busy?'disabled':''}>${busy?'Signing in…':'Continue with Google'}</button>
+      <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Sign in to securely back up your fitness data and enable multi-device sync.</div>
+      ${!mode ? errorHtml : ""}
+      <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:${(!mode && errorHtml)?'10px':'0'};padding:12px;" data-action="account-signin" ${busy?'disabled':''}>${busy?'Signing in…':'Continue with Google'}</button>
+      ${!mode ? `<button class="btn btn-ghost btn-block" style="margin-top:8px;" data-action="auth-form-mode" data-auth-mode="signin">Use Email Instead</button>` : ''}
+      ${emailForm}
     </div>`;
   }
 
   const initial = esc((account.displayName || account.email || "?").trim().charAt(0).toUpperCase() || "?");
+  const providerLabel = account.provider === "password" ? "Signed in with email" : "Signed in with Google";
+  const verifyBanner = (account.provider === "password" && account.emailVerified === false) ? `
+    <div style="font-size:11px;color:var(--rh-amber,#d97706);margin-top:8px;padding:8px;background:rgba(217,119,6,.1);border-radius:8px;">
+      Email not verified.
+      <button class="btn-link" style="background:none;border:none;color:inherit;text-decoration:underline;padding:0;font-size:11px;cursor:pointer;" data-action="auth-resend-verification" ${busy?'disabled':''}>Resend verification email</button>
+    </div>` : "";
 
   return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;">
     <div class="pf-avatar" style="width:52px;height:52px;flex:none;">
@@ -4450,9 +4481,10 @@ function renderAccountSection(){
       <span class="pf-avatar__initial" style="font-size:18px;">${initial}</span>
     </div>
     <div style="min-width:0;flex:1;">
-      <div style="font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(account.displayName) || "Google Account"}</div>
+      <div style="font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(account.displayName) || esc(account.email) || "Account"}</div>
       <div style="font-size:12px;color:var(--rh-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(account.email)}</div>
-      <div style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--rh-green);margin-top:6px;">${svg('check',11)} Signed in with Google</div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--rh-green);margin-top:6px;">${svg('check',11)} ${providerLabel}</div>
+      ${verifyBanner}
       ${renderCloudSyncRow()}
       ${errorHtml}
       <button class="btn btn-ghost btn-block" data-action="account-signout" ${busy?'disabled':''}>${busy?'Signing out…':'Sign Out'}</button>
@@ -10120,6 +10152,56 @@ function attachHandlers(){
   if(accountSigninBtn) accountSigninBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signIn(); });
   const accountSignoutBtn = document.querySelector('[data-action="account-signout"]');
   if(accountSignoutBtn) accountSignoutBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signOut(); });
+  document.querySelectorAll('[data-action="auth-form-mode"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(window.IgnytAuth) IgnytAuth.clearError();
+      state.authFormMode = el.dataset.authMode;
+      render();
+    });
+  });
+  const authSigninBtn = document.querySelector('[data-action="auth-signin-submit"]');
+  if(authSigninBtn) authSigninBtn.addEventListener("click", async ()=>{
+    const email = (document.getElementById("auth-email-input")||{}).value || "";
+    const password = (document.getElementById("auth-password-input")||{}).value || "";
+    if(!window.IgnytAuth) return;
+    const res = await IgnytAuth.signInWithEmail(email, password);
+    if(res && res.success) state.authFormMode = null;
+    render();
+  });
+  const authSignupBtn = document.querySelector('[data-action="auth-signup-submit"]');
+  if(authSignupBtn) authSignupBtn.addEventListener("click", async ()=>{
+    const email = (document.getElementById("auth-email-input")||{}).value || "";
+    const password = (document.getElementById("auth-password-input")||{}).value || "";
+    const confirm = (document.getElementById("auth-password-confirm-input")||{}).value || "";
+    if(!window.IgnytAuth) return;
+    if(password !== confirm){
+      showToast("Passwords don't match.", "error", render);
+      return;
+    }
+    const res = await IgnytAuth.signUpWithEmail(email, password);
+    if(res && res.success){
+      state.authFormMode = null;
+      showToast("Account created — check your email to verify it.", "success", render);
+    }
+    render();
+  });
+  const authForgotBtn = document.querySelector('[data-action="auth-forgot-submit"]');
+  if(authForgotBtn) authForgotBtn.addEventListener("click", async ()=>{
+    const email = (document.getElementById("auth-email-input")||{}).value || "";
+    if(!window.IgnytAuth) return;
+    const res = await IgnytAuth.sendPasswordReset(email);
+    if(res && res.success){
+      state.authFormMode = "signin";
+      showToast("Password reset email sent.", "success", render);
+    }
+    render();
+  });
+  const authResendBtn = document.querySelector('[data-action="auth-resend-verification"]');
+  if(authResendBtn) authResendBtn.addEventListener("click", async ()=>{
+    if(!window.IgnytAuth) return;
+    const res = await IgnytAuth.resendVerificationEmail();
+    showToast(res && res.success ? "Verification email sent." : "Couldn't send verification email: "+(res&&res.error||"unknown error"), res&&res.success?"success":"error", render);
+  });
   const cloudSyncNowBtn = document.querySelector('[data-action="cloud-sync-now"]');
   if(cloudSyncNowBtn) cloudSyncNowBtn.addEventListener("click", ()=>{ if(window.IgnytCloudSync) IgnytCloudSync.syncNow(); });
   const closeSettingsBtn = document.querySelector('[data-action="close-settings"]');

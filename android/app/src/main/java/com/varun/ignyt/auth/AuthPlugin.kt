@@ -18,6 +18,7 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -81,6 +82,23 @@ class AuthPlugin : com.getcapacitor.Plugin() {
         put("displayName", user.displayName ?: "")
         put("email", user.email ?: "")
         put("photoUrl", user.photoUrl?.toString() ?: "")
+        put("emailVerified", user.isEmailVerified)
+        put("provider", if (user.providerData.any { it.providerId == "google.com" }) "google" else "password")
+    }
+
+    /** Maps Firebase Auth's error codes to short, user-facing text. Falls back to the raw
+     *  message for codes not worth a bespoke string. Never exposes stack traces or internal
+     *  detail to the JS layer. */
+    private fun authErrorMessage(e: FirebaseAuthException): String = when (e.errorCode) {
+        "ERROR_INVALID_EMAIL" -> "That doesn't look like a valid email address."
+        "ERROR_EMAIL_ALREADY_IN_USE" -> "An account already exists for this email. Try signing in instead."
+        "ERROR_WEAK_PASSWORD" -> "Password is too weak — use at least 6 characters."
+        "ERROR_WRONG_PASSWORD", "ERROR_INVALID_CREDENTIAL" -> "Incorrect email or password."
+        "ERROR_USER_NOT_FOUND" -> "No account found for this email."
+        "ERROR_USER_DISABLED" -> "This account has been disabled."
+        "ERROR_TOO_MANY_REQUESTS" -> "Too many attempts. Please wait a moment and try again."
+        "ERROR_NETWORK_REQUEST_FAILED" -> "Network error. Check your connection and try again."
+        else -> e.message ?: "Something went wrong. Please try again."
     }
 
     /** Reports whether sign-in can work at all on this build/device, without side effects. */
@@ -112,6 +130,53 @@ class AuthPlugin : com.getcapacitor.Plugin() {
             })
         } catch (e: Exception) {
             resolveError(call, "getCurrentUser failed: ${e.message}")
+        }
+    }
+
+    /**
+     * Returns a short-lived Firebase ID token (JWT) for the currently signed-in user, for
+     * authenticating requests to the IGNYT Integration Service backend. The backend verifies
+     * this token with the Firebase Admin SDK, so it can trust the uid without the client ever
+     * asserting one.
+     *
+     * Security: this returns ONLY the short-lived ID token (default ~1h expiry), minted on
+     * demand. No long-lived secret (refresh token, credential) is ever exposed to JS. The
+     * token is never logged. `forceRefresh` is accepted so the JS layer can retry once with a
+     * fresh token after a 401 without a full re-auth.
+     */
+    @PluginMethod
+    fun getIdToken(call: PluginCall) {
+        val auth = firebaseAuthOrNull()
+        if (auth == null) {
+            resolveError(call, "Sign-in isn't configured in this build (missing Firebase configuration).")
+            return
+        }
+        val user = auth.currentUser
+        if (user == null) {
+            resolveSuccess(call, JSObject().apply { put("signedIn", false) })
+            return
+        }
+        val forceRefresh = call.getBoolean("forceRefresh", false) ?: false
+        pluginScope.launch {
+            try {
+                // Plain network call when a refresh is needed -> bounded timeout so a hung
+                // request never leaves the caller waiting forever. Cached token returns instantly.
+                val result = withTimeout(30_000L) { user.getIdToken(forceRefresh).await() }
+                val token = result?.token
+                if (token.isNullOrBlank()) {
+                    resolveError(call, "Could not obtain an ID token. Please sign in again.")
+                    return@launch
+                }
+                resolveSuccess(call, JSObject().apply {
+                    put("signedIn", true)
+                    put("uid", user.uid)
+                    put("token", token)
+                })
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                resolveError(call, "Fetching sign-in token timed out. Check your connection and try again.")
+            } catch (e: Exception) {
+                resolveError(call, "Could not obtain an ID token: ${e.message ?: "unknown error"}")
+            }
         }
     }
 
@@ -185,6 +250,147 @@ class AuthPlugin : com.getcapacitor.Plugin() {
             } catch (e: Exception) {
                 // Firebase network failures land here (FirebaseNetworkException etc.).
                 resolveError(call, "Sign-in failed: ${e.message ?: "unknown error"}")
+            }
+        }
+    }
+
+    @PluginMethod
+    fun signUpWithEmail(call: PluginCall) {
+        val auth = firebaseAuthOrNull()
+        if (auth == null) {
+            resolveError(call, "Sign-in isn't configured in this build yet (missing Firebase configuration).")
+            return
+        }
+        val email = call.getString("email")?.trim() ?: ""
+        val password = call.getString("password") ?: ""
+        if (email.isEmpty() || password.isEmpty()) {
+            resolveError(call, "Enter an email and password.")
+            return
+        }
+        pluginScope.launch {
+            try {
+                val authResult = withTimeout(30_000L) { auth.createUserWithEmailAndPassword(email, password).await() }
+                val user = authResult.user
+                if (user == null) {
+                    resolveError(call, "Account creation completed but no user was returned. Please try again.")
+                    return@launch
+                }
+                // Best-effort: a signup should still succeed locally even if the verification
+                // email fails to send (e.g. transient network blip right after account creation).
+                try { withTimeout(15_000L) { user.sendEmailVerification().await() } } catch (e: Exception) {
+                    Log.w("IgnytAuth", "sendEmailVerification after signup failed: ${e.message}")
+                }
+                resolveSuccess(call, JSObject().apply { put("signedIn", true); put("user", userJson(user)) })
+            } catch (e: FirebaseAuthException) {
+                resolveError(call, authErrorMessage(e))
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                resolveError(call, "Sign-up timed out. Check your internet connection and try again.")
+            } catch (e: Exception) {
+                resolveError(call, "Sign-up failed: ${e.message ?: "unknown error"}")
+            }
+        }
+    }
+
+    @PluginMethod
+    fun signInWithEmail(call: PluginCall) {
+        val auth = firebaseAuthOrNull()
+        if (auth == null) {
+            resolveError(call, "Sign-in isn't configured in this build yet (missing Firebase configuration).")
+            return
+        }
+        val email = call.getString("email")?.trim() ?: ""
+        val password = call.getString("password") ?: ""
+        if (email.isEmpty() || password.isEmpty()) {
+            resolveError(call, "Enter an email and password.")
+            return
+        }
+        pluginScope.launch {
+            try {
+                val authResult = withTimeout(30_000L) { auth.signInWithEmailAndPassword(email, password).await() }
+                val user = authResult.user
+                if (user == null) {
+                    resolveError(call, "Sign-in completed but no user was returned. Please try again.")
+                    return@launch
+                }
+                resolveSuccess(call, JSObject().apply { put("signedIn", true); put("user", userJson(user)) })
+            } catch (e: FirebaseAuthException) {
+                resolveError(call, authErrorMessage(e))
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                resolveError(call, "Sign-in timed out. Check your internet connection and try again.")
+            } catch (e: Exception) {
+                resolveError(call, "Sign-in failed: ${e.message ?: "unknown error"}")
+            }
+        }
+    }
+
+    @PluginMethod
+    fun sendPasswordReset(call: PluginCall) {
+        val auth = firebaseAuthOrNull()
+        if (auth == null) {
+            resolveError(call, "Sign-in isn't configured in this build yet (missing Firebase configuration).")
+            return
+        }
+        val email = call.getString("email")?.trim() ?: ""
+        if (email.isEmpty()) {
+            resolveError(call, "Enter your email address.")
+            return
+        }
+        pluginScope.launch {
+            try {
+                withTimeout(30_000L) { auth.sendPasswordResetEmail(email).await() }
+                resolveSuccess(call, JSObject().apply { put("sent", true) })
+            } catch (e: FirebaseAuthException) {
+                resolveError(call, authErrorMessage(e))
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                resolveError(call, "Request timed out. Check your internet connection and try again.")
+            } catch (e: Exception) {
+                resolveError(call, "Could not send reset email: ${e.message ?: "unknown error"}")
+            }
+        }
+    }
+
+    /** Resends the verification email to the currently signed-in user. */
+    @PluginMethod
+    fun sendEmailVerification(call: PluginCall) {
+        val auth = firebaseAuthOrNull()
+        val user = auth?.currentUser
+        if (user == null) {
+            resolveError(call, "You need to be signed in to verify your email.")
+            return
+        }
+        pluginScope.launch {
+            try {
+                withTimeout(15_000L) { user.sendEmailVerification().await() }
+                resolveSuccess(call, JSObject().apply { put("sent", true) })
+            } catch (e: FirebaseAuthException) {
+                resolveError(call, authErrorMessage(e))
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                resolveError(call, "Request timed out. Check your internet connection and try again.")
+            } catch (e: Exception) {
+                resolveError(call, "Could not send verification email: ${e.message ?: "unknown error"}")
+            }
+        }
+    }
+
+    /** Network call to refresh the current user's data from Firebase (e.g. to pick up
+     *  emailVerified turning true after the user taps the link in their inbox). Deliberately
+     *  separate from getCurrentUser, which stays instant/offline-safe for the boot path. */
+    @PluginMethod
+    fun reloadUser(call: PluginCall) {
+        val auth = firebaseAuthOrNull()
+        val user = auth?.currentUser
+        if (user == null) {
+            resolveSuccess(call, JSObject().apply { put("signedIn", false) })
+            return
+        }
+        pluginScope.launch {
+            try {
+                withTimeout(15_000L) { user.reload().await() }
+                resolveSuccess(call, JSObject().apply { put("signedIn", true); put("user", userJson(user)) })
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                resolveError(call, "Request timed out. Check your internet connection and try again.")
+            } catch (e: Exception) {
+                resolveError(call, "Could not refresh account status: ${e.message ?: "unknown error"}")
             }
         }
     }
