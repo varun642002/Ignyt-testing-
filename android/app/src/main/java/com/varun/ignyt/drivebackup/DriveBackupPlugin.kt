@@ -86,7 +86,10 @@ class DriveBackupPlugin : com.getcapacitor.Plugin() {
         if (act == null) { resolveError(call, "Drive connect requires the app to be in the foreground."); return }
         pluginScope.launch {
             val token = authorize(act)
-            if (token == null) { resolveError(call, "Google Drive access was not granted."); return@launch }
+            if (token == null) {
+                android.util.Log.e("IgnytDrive", "connect(): authorize() returned null, resolving error to caller")
+                resolveError(call, "Google Drive access was not granted."); return@launch
+            }
             // The Authorization API alone doesn't return profile info -- reuse Firebase Auth's
             // current user if already signed in via IgnytAuth (same Google account in virtually
             // all cases); otherwise fall back to a generic label rather than guessing.
@@ -165,7 +168,10 @@ class DriveBackupPlugin : com.getcapacitor.Plugin() {
         if (act == null) { resolveError(call, "Drive backup requires the app to be in the foreground."); return }
         pluginScope.launch {
             try {
-                val token = authorize(act) ?: run { resolveError(call, "Google Drive access was not granted."); return@launch }
+                val token = authorize(act) ?: run {
+                    android.util.Log.e("IgnytDrive", "backupNow(): authorize() returned null, resolving error to caller")
+                    resolveError(call, "Google Drive access was not granted."); return@launch
+                }
                 val uploaded = withContext(Dispatchers.IO) {
                     val folderId = DriveRestClient.ensureBackupFolder(token)
                     val result = DriveRestClient.uploadFile(token, folderId, fileName, content)
@@ -196,7 +202,10 @@ class DriveBackupPlugin : com.getcapacitor.Plugin() {
         if (act == null) { resolveError(call, "Requires the app to be in the foreground."); return }
         pluginScope.launch {
             try {
-                val token = authorize(act) ?: run { resolveError(call, "Google Drive access was not granted."); return@launch }
+                val token = authorize(act) ?: run {
+                    android.util.Log.e("IgnytDrive", "listBackups(): authorize() returned null, resolving error to caller")
+                    resolveError(call, "Google Drive access was not granted."); return@launch
+                }
                 val arr = withContext(Dispatchers.IO) {
                     val folderId = DriveRestClient.ensureBackupFolder(token)
                     val files = DriveRestClient.listFilesInFolder(token, folderId)
@@ -227,7 +236,10 @@ class DriveBackupPlugin : com.getcapacitor.Plugin() {
         if (act == null) { resolveError(call, "Requires the app to be in the foreground."); return }
         pluginScope.launch {
             try {
-                val token = authorize(act) ?: run { resolveError(call, "Google Drive access was not granted."); return@launch }
+                val token = authorize(act) ?: run {
+                    android.util.Log.e("IgnytDrive", "downloadBackup(): authorize() returned null, resolving error to caller")
+                    resolveError(call, "Google Drive access was not granted."); return@launch
+                }
                 val content = withContext(Dispatchers.IO) { DriveRestClient.downloadFile(token, fileId) }
                 resolveSuccess(call, JSObject().apply { put("content", content) })
             } catch (e: Exception) {
@@ -244,7 +256,10 @@ class DriveBackupPlugin : com.getcapacitor.Plugin() {
         if (act == null) { resolveError(call, "Requires the app to be in the foreground."); return }
         pluginScope.launch {
             try {
-                val token = authorize(act) ?: run { resolveError(call, "Google Drive access was not granted."); return@launch }
+                val token = authorize(act) ?: run {
+                    android.util.Log.e("IgnytDrive", "deleteBackup(): authorize() returned null, resolving error to caller")
+                    resolveError(call, "Google Drive access was not granted."); return@launch
+                }
                 withContext(Dispatchers.IO) { DriveRestClient.deleteFile(token, fileId) }
                 resolveSuccess(call, JSObject().apply { put("deleted", true) })
             } catch (e: Exception) {
@@ -257,34 +272,81 @@ class DriveBackupPlugin : com.getcapacitor.Plugin() {
      *  access token, or null if it couldn't be obtained / the user declined. Suspends across
      *  any consent UI, which is launched via MainActivity.launchDriveAuthorization (an
      *  IntentSender, so it can't go through Capacitor's own Intent-only activity-result
-     *  helper). */
+     *  helper).
+     *
+     *  DIAGNOSTIC LOGGING (tag "IgnytDrive"): every path that can end in a null token logs the
+     *  real reason before returning, since the caller only ever sees the generic "Google Drive
+     *  access was not granted." -- this is the single place that swallowed the actual Google
+     *  error before. Access tokens themselves are never logged (only whether one was received
+     *  and its length) -- they're bearer credentials, logging the value would leak it into
+     *  logcat/bug reports. */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private suspend fun authorize(act: MainActivity): String? {
+        android.util.Log.i("IgnytDrive", "Starting authorization")
         val request = AuthorizationRequest.builder().setRequestedScopes(listOf(DRIVE_FILE_SCOPE)).build()
         val client = Identity.getAuthorizationClient(act)
         return suspendCancellableCoroutine { cont ->
             client.authorize(request)
                 .addOnSuccessListener { result: AuthorizationResult ->
+                    android.util.Log.i("IgnytDrive", "client.authorize() completed: hasResolution=${result.hasResolution()}")
                     if (result.hasResolution()) {
                         val pending = result.pendingIntent
-                        if (pending == null) { cont.resume(null, null); return@addOnSuccessListener }
+                        if (pending == null) {
+                            android.util.Log.e("IgnytDrive", "PendingIntent is null")
+                            cont.resume(null, null); return@addOnSuccessListener
+                        }
+                        android.util.Log.i("IgnytDrive", "AuthorizationActivity launching")
                         act.launchDriveAuthorization(pending.intentSender) { resultCode, data ->
+                            android.util.Log.i("IgnytDrive", "Returned from AuthorizationActivity: resultCode=$resultCode (RESULT_OK=${Activity.RESULT_OK}, RESULT_CANCELED=${Activity.RESULT_CANCELED}), dataPresent=${data != null}")
                             if (resultCode != Activity.RESULT_OK || data == null) {
+                                if (resultCode == Activity.RESULT_CANCELED) {
+                                    android.util.Log.e("IgnytDrive", "Activity cancelled. resultCode=$resultCode")
+                                } else {
+                                    android.util.Log.e("IgnytDrive", "AuthorizationActivity did not return OK. resultCode=$resultCode, dataPresent=${data != null}")
+                                }
                                 cont.resume(null, null)
                             } else {
                                 try {
                                     val finalResult = client.getAuthorizationResultFromIntent(data)
-                                    cont.resume(finalResult.accessToken, null)
+                                    val token = finalResult.accessToken
+                                    if (token == null) {
+                                        android.util.Log.e("IgnytDrive", "Access token missing from AuthorizationResult despite RESULT_OK")
+                                    } else {
+                                        android.util.Log.i("IgnytDrive", "Access token received successfully (length=${token.length})")
+                                    }
+                                    cont.resume(token, null)
                                 } catch (e: ApiException) {
+                                    android.util.Log.e(
+                                        "IgnytDrive",
+                                        "getAuthorizationResultFromIntent failed. statusCode=${e.statusCode}, statusMessage=${e.status.statusMessage}, message=${e.message}",
+                                        e
+                                    )
                                     cont.resume(null, null)
                                 }
                             }
                         }
                     } else {
-                        cont.resume(result.accessToken, null)
+                        val token = result.accessToken
+                        if (token == null) {
+                            android.util.Log.e("IgnytDrive", "Token missing: AuthorizationResult had no resolution and no accessToken")
+                        } else {
+                            android.util.Log.i("IgnytDrive", "Access token received successfully (length=${token.length})")
+                        }
+                        cont.resume(token, null)
                     }
                 }
-                .addOnFailureListener { cont.resume(null, null) }
+                .addOnFailureListener { e ->
+                    if (e is ApiException) {
+                        android.util.Log.e(
+                            "IgnytDrive",
+                            "Authorization failed. statusCode=${e.statusCode}, statusMessage=${e.status.statusMessage}, message=${e.message}",
+                            e
+                        )
+                    } else {
+                        android.util.Log.e("IgnytDrive", "Authorization failed with non-API exception: ${e.javaClass.simpleName}: ${e.message}", e)
+                    }
+                    cont.resume(null, null)
+                }
         }
     }
 
