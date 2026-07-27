@@ -139,7 +139,10 @@ class CloudSyncPlugin : com.getcapacitor.Plugin() {
 
     /** Only these subcollections exist in the IGNYT schema; anything else is refused even
      *  if a compromised/buggy JS layer asks for it. */
-    private val allowedCollections = setOf("workouts", "routines", "prs", "bodylog", "races", "customExercises")
+    private val allowedCollections = setOf(
+        "workouts", "routines", "prs", "bodylog", "races", "customExercises",
+        "foodLog", "waterLog", "goals", "achievements"
+    )
 
     /** Incremental pull: every record in users/{uid}/{collection} whose updatedAt is greater
      *  than sinceMs (JS passes lastPulledAt minus an overlap window to tolerate clock skew
