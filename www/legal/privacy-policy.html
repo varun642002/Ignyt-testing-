@@ -28,8 +28,7 @@
 <h2>2. Data you can optionally share</h2>
 <div class="box">
 <p><strong>Google Sign-In (optional).</strong> If you sign in, we receive your Google account's name, email address, and profile photo, used only to identify your account inside the app.</p>
-<p><strong>Cloud Sync (optional, requires sign-in).</strong> If enabled, your profile and settings sync to a private cloud database (Firestore) tied to your account, so your data follows you across devices. Workout/nutrition/measurement history is not synced this way by default — see Cloud Backup below.</p>
-<p><strong>Google Drive Backup (optional, requires sign-in).</strong> If you choose to back up, the app writes a backup file containing your app data to a folder in <em>your own</em> Google Drive. We never see or store this file — it goes directly from your device to your Drive. You can enable end-to-end encryption (a passphrase only you know) before backing up; if you do, we — and Google — cannot read the backup's contents.</p>
+<p><strong>Cloud Sync (optional, requires sign-in).</strong> If enabled, your data — profile, settings, goals, workouts, routines, nutrition and hydration logs, body measurements, personal records, achievements, and more — syncs to a private cloud database (Firestore) tied to your account, so it follows you across devices. Only you can read or write it; see Data security below.</p>
 <p><strong>Health Connect (optional).</strong> If you connect Health Connect, the app reads and writes specific data categories (steps, heart rate, sleep, weight, exercise, nutrition, and similar) through Android's Health Connect framework. This exchange happens entirely on-device via the Android OS; we do not operate a server that receives this data.</p>
 </div>
 
@@ -38,21 +37,20 @@
 <li>No advertising, and no ad-tracking SDKs.</li>
 <li>No third-party analytics or behavioral tracking.</li>
 <li>We do not sell, rent, or share your data with data brokers.</li>
-<li>We do not read the contents of your Drive backups (and cannot, if you encrypt them).</li>
 </ul>
 
 <h2>4. Third-party services</h2>
-<p>Where you opt in, the app uses Google services (Sign-In, Drive, Firestore, Health Connect). Your use of those is also governed by <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>. We only request the minimum access each feature needs, and every one of these connections is off by default until you turn it on.</p>
+<p>Where you opt in, the app uses Google services (Sign-In, Firestore, Health Connect). Your use of those is also governed by <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>. We only request the minimum access each feature needs, and every one of these connections is off by default until you turn it on.</p>
 
 <h2>5. Your control over your data</h2>
 <ul>
 <li><strong>Export:</strong> Settings → Export Data (full JSON backup, or CSV per data type) at any time.</li>
 <li><strong>Delete everything:</strong> Settings → Danger Zone → Reset All App Data — permanently erases all local data on this device immediately.</li>
-<li><strong>Disconnect a service:</strong> Sign out, disconnect Health Connect, or disable Cloud Sync/Drive Backup independently at any time in Settings; disconnecting does not delete data already on your device.</li>
+<li><strong>Disconnect a service:</strong> Sign out, or disconnect Health Connect or Cloud Sync independently at any time in Settings; disconnecting does not delete data already on your device.</li>
 </ul>
 
 <h2>6. Data security</h2>
-<p>Local data lives in your device's app-sandboxed storage. Cloud Sync data is protected by your Google account's own access controls. Drive backups are stored in your personal Drive; the optional passphrase encryption uses AES-256-GCM performed entirely on-device — the passphrase itself is never stored or transmitted.</p>
+<p>Local data lives in your device's app-sandboxed storage. Cloud Sync data is protected by your Google account's own access controls and Firestore security rules that restrict every user's data to that user alone.</p>
 
 <h2>7. Children's privacy</h2>
 <p>IGNYT is not directed at children under 13, and we do not knowingly collect data from them.</p>
