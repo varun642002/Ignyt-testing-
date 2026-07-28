@@ -4600,6 +4600,12 @@ const state = {
   foodEntryOpen: null,
   // Quick Add panel (transient). quickAddMeal is which meal one-tap items land in.
   quickAddOpen: false, quickAddMeal: null,
+  /* The two full-screen food routes. null means the dashboard.
+     { screen:"search"|"detail", meal, foodId, notes } — all transient, so a fresh visit to
+     the tab always lands on the dashboard rather than resuming a half-finished entry. */
+  foodFlow: null,
+  // Id of the entry just logged, so the dashboard can highlight it once and forget it.
+  justAddedFoodId: null,
   raceActive: LS.get("hx_race_active", null),
   raceLog: LS.get("hx_race_log", []),
   viewingRaceMode: !!LS.get("hx_race_active", null),
@@ -7451,12 +7457,10 @@ function foodSearchResultsHtml(meal){
         ? cat.byCategory(browsing).slice().sort((a,b)=>a.name.localeCompare(b.name))
         : []);
 
-  const portion = sel ? renderFoodDetail(lookupFood(sel.id, sel.name), meal) : "";
-
+  // No inline detail panel any more: picking a food opens the Food Details route instead,
+  // so this container only ever shows ways of FINDING a food.
   return `
       ${loading ? `<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Loading the full food database…</div>` : ""}
-
-      ${portion}
 
       ${idle && recentSearches.length ? `
         <div class="row-between" style="margin-bottom:5px;">
@@ -7469,7 +7473,7 @@ function foodSearchResultsHtml(meal){
 
       ${idle ? renderFoodCategoryGrid() : ""}
 
-      ${!sel && (q.trim() || browsing) ? (results.length
+      ${(q.trim() || browsing) ? (results.length
         ? renderFoodList(results, browsing ? state.foodBrowsePage : state.foodResultPage)
         : `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">No foods match "${escHtml(q)}"${browsing?` in ${escHtml(browsing)}`:""} — enter it manually below.</div>`) : ""}`;
 }
@@ -12523,7 +12527,243 @@ function renderBodyTab(){
    NUTRITION TAB — meals, macro budgets, insights
 ========================================================= */
 
+/* ---- Food logging flow (full-screen routes) ------------------------------------------
+   Dashboard → tap a meal's + → Food Search → tap a food → Food Details → Add → back to the
+   dashboard with that meal expanded and the new entry highlighted.
+
+   These are routes rather than panels because the old inline accordion put a search box, a
+   result list, a detail panel and a nutrition table inside a card inside a scrolling page.
+   Each step now owns the screen, which is what makes the flow legible — and it means the
+   search input is the only focusable thing on its screen, so the keyboard has nowhere to
+   push anything to.
+
+   State is transient by design: leaving and returning to the tab lands on the dashboard
+   rather than resuming a half-finished entry someone forgot about. */
+
+/* Voice search.
+
+   Uses the Web Speech API where the WebView exposes it, and says so plainly where it does
+   not, rather than shipping a button that silently does nothing. No Capacitor plugin and no
+   new permission in the manifest — Android prompts for the microphone itself on first use,
+   and if the user declines, the error path below explains what happened.
+
+   Availability genuinely varies: Chrome-backed WebViews usually have it, and it needs a
+   network round-trip on most Android builds. Both failure modes are reported. */
+function startFoodVoiceSearch(){
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!Rec){
+    showToast("Voice search isn't available on this device — type the food name instead.", "error", render);
+    return;
+  }
+  try{
+    const rec = new Rec();
+    rec.lang = navigator.language || "en-US";
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    showToast("Listening…", "success", render);
+    rec.onresult = (e)=>{
+      const said = e.results && e.results[0] && e.results[0][0] && e.results[0][0].transcript;
+      if(!said) return;
+      state.foodSearchQuery = String(said).trim();
+      state.foodResultPage = 1;
+      state.foodSearchSelected = null;
+      render();
+    };
+    rec.onerror = (e)=>{
+      const why = e && e.error === "not-allowed" ? "Microphone access was denied."
+                : e && e.error === "network" ? "Voice search needs a network connection."
+                : "Voice search didn't catch that.";
+      showToast(why, "error", render);
+    };
+    rec.start();
+  }catch(err){
+    showToast("Voice search couldn't start on this device.", "error", render);
+  }
+}
+
+function openFoodSearch(meal){
+  state.foodFlow = { screen:"search", meal: meal || mealForNow(), foodId:null, notes:"" };
+  state.foodSearchQuery = "";
+  state.foodSearchSelected = null;
+  state.foodBrowseCategory = null;
+  state.foodResultPage = 1;
+  state.foodBrowsePage = 1;
+}
+
+function openFoodDetail(foodId){
+  if(!state.foodFlow) return;
+  const food = lookupFood(foodId, state.foodSearchQuery);
+  if(!food) return;
+  // Carry the search that found it, so Back returns to a populated list rather than a blank
+  // screen the user has to retype.
+  if(state.foodSearchQuery && IgnytFoodSearch.rememberSearch) IgnytFoodSearch.rememberSearch(state.foodSearchQuery);
+  state.foodFlow.screen = "detail";
+  state.foodFlow.foodId = foodId;
+  state.foodSearchSelected = { id: food.id, name: food.name };
+  const d = defaultFoodPortion(food);
+  state.foodSearchAmount = d.amount;
+  state.foodSearchUnit = d.unit;
+}
+
+function closeFoodFlow(){
+  state.foodFlow = null;
+  state.foodSearchSelected = null;
+  state.foodSearchQuery = "";
+  state.foodBrowseCategory = null;
+}
+
+/** Header shared by both routes: back arrow, title, optional trailing control. */
+function foodPageHeader(title, subtitle, trailing){
+  return `<div class="food-page__head">
+    <button class="food-page__back" data-food-flow-back="1" aria-label="Back">←</button>
+    <div style="flex:1;min-width:0;text-align:center;">
+      <div class="food-page__title">${escHtml(title)}</div>
+      ${subtitle?`<div class="food-page__sub">${escHtml(subtitle)}</div>`:""}
+    </div>
+    ${trailing || `<span style="width:36px;flex-shrink:0;"></span>`}
+  </div>`;
+}
+
+function renderFoodSearchPage(){
+  const flow = state.foodFlow;
+  const meal = flow.meal;
+  const cat = window.IgnytFoodCatalogue;
+  if(cat && cat.status() === "idle") cat.onReady(()=>render());
+
+  const dayEntries = foodsForDate(nutritionDateStr());
+  const mealKcal = Math.round(dayEntries.filter(f=>(f.meal||"Lunch")===meal)
+    .reduce((a,f)=>a+Number(f.calories||0),0));
+  const total = cat ? cat.count() : IgnytFoodDB.count();
+
+  return `<div class="food-page">
+    ${foodPageHeader(meal, `${mealKcal} kcal logged`,
+      `<button class="food-page__icon" data-food-scan="1" aria-label="Scan barcode">▤</button>`)}
+
+    <div class="food-search-bar">
+      <span class="food-search-bar__icon" aria-hidden="true">⌕</span>
+      <input type="text" id="food-search-input" autocomplete="off"
+        placeholder="Search ${total.toLocaleString()} foods…" value="${escHtml(state.foodSearchQuery||"")}">
+      ${state.foodSearchQuery?`<button class="food-search-bar__clear" data-food-clear="1" aria-label="Clear search">✕</button>`:""}
+      <button class="food-search-bar__voice" data-food-voice="1" aria-label="Voice search">🎙</button>
+    </div>
+
+    <div id="food-search-results">${foodSearchResultsHtml(meal)}</div>
+  </div>`;
+}
+
+function renderFoodDetailPage(){
+  const flow = state.foodFlow;
+  const food = lookupFood(flow.foodId, state.foodSearchSelected && state.foodSearchSelected.name);
+  if(!food){ closeFoodFlow(); return renderNutritionTab(); }
+
+  const N = window.IgnytNutrition;
+  const conv = window.IgnytServingConverter;
+  const scalable = food.per != null;
+  const p = resolveFoodPortion(food);
+  const shownAmount = currentFoodAmount(food);
+  const check = scalable ? N.validateQuantity(food, shownAmount, p.unit)
+                         : { ok:true, grams:1, amount:1, unit:"g", error:null };
+  const grams = check.ok ? check.grams : 0;
+  const calc = scalable ? N.compute(food, grams) : N.compute({ ...food, per:1 }, 1);
+  const isFav = (state.favoriteFoods||[]).some(x=>x && String(x.name).toLowerCase()===String(food.name).toLowerCase());
+  const units = (scalable && conv) ? conv.unitsFor(food) : ["g"];
+  const row = k => calc.rows.find(r=>r.key===k);
+
+  return `<div class="food-page">
+    ${foodPageHeader("Food details", null,
+      `<button class="food-page__icon${isFav?' is-on':''}" data-food-fav="${escHtml(food.id)}"
+        aria-label="${isFav?'Remove from favourites':'Save to favourites'}">${isFav?'★':'☆'}</button>`)}
+
+    <div class="food-hero">
+      ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(food, 92) : ""}
+      <div style="flex:1;min-width:0;">
+        <div class="food-hero__name">${escHtml(food.name)}</div>
+        <div class="food-hero__cat">${escHtml(food.category||"")}</div>
+        ${food.source==="usda"?`<div class="food-hero__verified">✓ USDA measured</div>`:""}
+      </div>
+      <div class="food-hero__kcal">
+        <div class="nut-value nut-value--lg" style="color:var(--accent);">${N.format("calories", row("calories").serving).replace(" kcal","")}</div>
+        <div class="nut-label">kcal</div>
+        <div class="nut-note">${scalable?escHtml(N.describeServing(food, check.amount, check.unit)):"per portion"}</div>
+      </div>
+    </div>
+
+    ${scalable ? `
+    <div class="nut-card nut-card--tight">
+      ${renderServingPresets(food, grams)}
+      <div class="row-between" style="margin-top:var(--space-xs);">
+        <span class="nut-label">Quantity</span>
+        <div class="qty-stepper">
+          <button data-food-step="-1" aria-label="Decrease">−</button>
+          <input type="number" id="food-search-amount" value="${escHtml(String(shownAmount))}" min="0" step="any" inputmode="decimal">
+          <button data-food-step="1" aria-label="Increase">+</button>
+        </div>
+      </div>
+      <div class="row-between" style="margin-top:var(--space-xs);">
+        <span class="nut-label">Unit</span>
+        <select id="food-search-unit" class="food-select" style="max-width:60%;">
+          ${units.map(u=>`<option value="${u}" ${p.unit===u?'selected':''}>${escHtml(conv?conv.labelFor(u,shownAmount):u)}</option>`).join("")}
+        </select>
+      </div>
+      ${check.ok?"":`<div style="font-size:11px;color:var(--accent);margin-top:6px;">${escHtml(check.error)}</div>`}
+    </div>` : `<div class="nut-card nut-card--tight"><div class="nut-note">Saved favourite — logged as one portion.</div></div>`}
+
+    <div class="macro-row">
+      ${[["calories","kcal","energy"],["protein","Protein","protein"],["carbs","Carbs","carbs"],
+         ["fat","Fat","fat"],["fibre","Fibre","fibre"]].map(([k,label,key])=>`
+        <div class="macro-row__cell">
+          <div class="nut-value nut-value--md">${N.format(k, row(k).serving).replace(/ (kcal|g|mg)$/,"")}<span class="nut-unit">${k==="calories"?"":"g"}</span></div>
+          <div class="macro-row__label" style="color:var(--n-${key});">${label}</div>
+        </div>`).join("")}
+    </div>
+
+    <div class="nut-card nut-card--tight">
+      <button class="row-between" data-action="toggle-micros" style="width:100%;background:none;border:0;padding:0;cursor:pointer;color:inherit;">
+        <span style="font-size:13px;font-weight:800;">Micronutrients</span>
+        <span style="font-size:11px;color:var(--steel);">% Daily Value ${state.microExpanded?"⌃":"⌄"}</span>
+      </button>
+      ${state.microExpanded?`
+        <div class="divide" style="margin:var(--space-sm) 0;"></div>
+        <div class="micro-grid">
+          ${calc.rows.filter(r=>!["calories","protein","carbs","fat"].includes(r.key)).map(r=>`
+            <div class="micro-row">
+              <span>${escHtml(r.label)}</span>
+              <span>
+                <span class="micro-row__value${r.present?"":" is-absent"}">${N.format(r.key, r.serving)}</span>
+                ${r.percentDV!=null?`<span style="color:var(--steel);font-size:10px;margin-left:6px;">${r.percentDV}%</span>`:""}
+              </span>
+            </div>`).join("")}
+        </div>
+        <div class="nut-note" style="margin-top:var(--space-xs);">
+          An em dash means the value was never measured for this food, not that it is zero.
+          Vitamins beyond these are in USDA's source data but not in this build's import.
+        </div>` : ""}
+    </div>
+
+    <div class="nut-card nut-card--tight">
+      <div class="nut-label" style="margin-bottom:var(--space-2xs);">Meal</div>
+      <select id="food-flow-meal" class="food-select">
+        ${mealTypes().map(m=>`<option value="${escHtml(m)}" ${m===flow.meal?'selected':''}>${MEAL_ICONS[m]||"🍽️"} ${escHtml(m)}</option>`).join("")}
+      </select>
+      <div class="nut-label" style="margin:var(--space-sm) 0 var(--space-2xs);">Note (optional)</div>
+      <input type="text" id="food-flow-notes" class="food-input" placeholder="Add a note…" value="${escHtml(flow.notes||"")}">
+    </div>
+
+    <div class="food-page__spacer"></div>
+
+    <div class="food-sticky">
+      <button class="btn btn-accent food-sticky__btn" data-food-flow-add="1" ${check.ok?"":"disabled"}>
+        <span>Add to ${escHtml(flow.meal)}</span>
+        <span class="food-sticky__kcal">${N.format("calories", row("calories").serving)}</span>
+      </button>
+    </div>
+  </div>`;
+}
+
 function renderNutritionTab(){
+  if(state.foodFlow && state.foodFlow.screen === "search") return renderFoodSearchPage();
+  if(state.foodFlow && state.foodFlow.screen === "detail") return renderFoodDetailPage();
+
   const n = state.nutrition;
   const targets = macroTargets();
   const weeklyLoss = (Math.abs(state.profile.goalDelta)*7)/7700;
@@ -12820,7 +13060,10 @@ function renderNutritionTab(){
             <span class="nut-value nut-value--sm" style="display:block;color:${mealKcal>budget?'var(--accent)':'var(--text)'};">${mealKcal} kcal</span>
             <span class="meal-macros"><span class="p">P${mp}</span><span class="c">C${mc}</span><span class="f">F${mf}</span></span>
           </span>
-          <span class="meal-toggle">${isOpen?'−':'+'}</span>
+          <span class="meal-toggle">${isOpen?'⌃':'⌄'}</span>
+          <!-- Sits inside the header for layout, but stops propagation in its handler so a
+               tap on + opens the search route instead of also toggling the card. -->
+          <button class="meal-add" data-meal-add="${escHtml(meal)}" aria-label="Add food to ${escHtml(meal)}">+</button>
         </div>
         ${mealFoods.map(f=>{
           const open = String(state.foodEntryOpen) === String(f.id);
@@ -12831,8 +13074,9 @@ function renderNutritionTab(){
               (window.IgnytServingConverter ? IgnytServingConverter.labelFor(f.servingUnit, f.quantity) : f.servingUnit) +
               (f.servingUnit !== "g" && f.grams ? ` · ${f.grams} g` : "")
             : (f.grams ? `${f.grams} g` : "");
+          const justAdded = state.justAddedFoodId != null && String(state.justAddedFoodId) === String(f.id);
           return `<div style="margin-top:8px;">
-            <div class="history-row" data-entry-toggle="${f.id}" style="cursor:pointer;">
+            <div class="history-row${justAdded?' is-just-added':''}" data-entry-toggle="${f.id}" style="cursor:pointer;">
               <div style="min-width:0;flex:1;margin-right:8px;">
                 <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(f.name)}</div>
                 <div class="mono" style="font-size:10px;color:var(--muted);">
@@ -16938,6 +17182,71 @@ function attachHandlers(){
   // survives the swap, and rebinding it would make every keystroke fire twice.
   bindFoodResultHandlers();
 
+  /* ---- Food logging flow routes ---- */
+  document.querySelectorAll("[data-meal-add]").forEach(el=>{
+    el.addEventListener("click", (ev)=>{
+      ev.stopPropagation();          // the whole header toggles; the + must not do both
+      openFoodSearch(el.dataset.mealAdd);
+      render();
+      setTimeout(()=>{ const s=document.getElementById("food-search-input"); if(s) s.focus(); }, 60);
+    });
+  });
+  const flowBack = document.querySelector("[data-food-flow-back]");
+  if(flowBack) flowBack.addEventListener("click", ()=>{
+    // Detail steps back to the search it came from; search steps back to the dashboard.
+    if(state.foodFlow && state.foodFlow.screen === "detail"){
+      state.foodFlow.screen = "search";
+      state.foodFlow.foodId = null;
+      state.foodSearchSelected = null;
+    }else{
+      closeFoodFlow();
+    }
+    render();
+  });
+  const flowClear = document.querySelector("[data-food-clear]");
+  if(flowClear) flowClear.addEventListener("click", ()=>{
+    state.foodSearchQuery = ""; state.foodResultPage = 1; render();
+    setTimeout(()=>{ const s=document.getElementById("food-search-input"); if(s) s.focus(); }, 40);
+  });
+  const flowMeal = document.getElementById("food-flow-meal");
+  if(flowMeal) flowMeal.addEventListener("change", ()=>{
+    if(state.foodFlow) state.foodFlow.meal = flowMeal.value;
+    render();
+  });
+  const flowNotes = document.getElementById("food-flow-notes");
+  // Captured on input WITHOUT a re-render, so the keyboard and caret stay put while typing.
+  if(flowNotes) flowNotes.addEventListener("input", ()=>{
+    if(state.foodFlow) state.foodFlow.notes = flowNotes.value;
+  });
+  const flowAdd = document.querySelector("[data-food-flow-add]");
+  if(flowAdd) flowAdd.addEventListener("click", ()=>{
+    const flow = state.foodFlow;
+    if(!flow) return;
+    const meal = flow.meal;
+    const note = (flow.notes||"").trim();
+    if(!commitSelectedFood(meal)) return;      // shows its own error and keeps the screen
+    // commitSelectedFood unshifts the new record, so it is at index 0.
+    const added = state.foodLog[0];
+    if(added && note) added.note = note;
+    closeFoodFlow();
+    // Land back on the dashboard with that meal open and the new row highlighted once.
+    state.mealOpen = meal;
+    state.justAddedFoodId = added ? added.id : null;
+    render();
+    setTimeout(()=>{
+      const el = document.querySelector("[data-entry-toggle='" + (added && added.id) + "']");
+      if(el) el.scrollIntoView({behavior:"smooth", block:"center"});
+      // The highlight is a one-shot: clear it so a later render does not replay it.
+      state.justAddedFoodId = null;
+    }, 400);
+  });
+  const voiceBtn = document.querySelector("[data-food-voice]");
+  if(voiceBtn) voiceBtn.addEventListener("click", ()=>startFoodVoiceSearch());
+  const scanBtn2 = document.querySelector("[data-food-scan]");
+  if(scanBtn2) scanBtn2.addEventListener("click", ()=>{
+    showToast("Barcode scanning needs a camera plugin, which isn't in this build. Search instead.", "error", render);
+  });
+
   // Lives in the panel header, outside the swapped container, so it is bound once per full
   // render rather than once per keystroke.
   const browseBack = document.querySelector("[data-food-browse-back]");
@@ -17422,10 +17731,74 @@ document.addEventListener("focusin", (e)=>{
    container's HTML on every keystroke, which discards these nodes and their listeners.
    Re-running this against the fresh nodes re-binds them; it can never double-bind, because
    the elements it binds to did not exist a moment ago. */
+
+/* Commits the selected food to a meal. Shared by the main Add button and the quick-add
+   meal chips so both paths validate and record identically. Returns false if the entry was
+   rejected, so the caller knows not to close the panel. */
+function commitSelectedFood(meal){
+  const sel = state.foodSearchSelected;
+  if(!sel) return false;
+  const food = lookupFood(sel.id, sel.name);
+  if(!food) return false;
+
+  const N = window.IgnytNutrition;
+  const scalable = food.per != null;
+  let v;
+
+  if(scalable && N){
+    const p = resolveFoodPortion(food);
+    const check = N.validateQuantity(food, currentFoodAmount(food), p.unit);
+    // Refuse rather than log something the user did not ask for. The panel already shows
+    // the reason and disables the button; this is the guard for every other route in.
+    if(!check.ok){ showToast(check.error, "error", render); return false; }
+    v = N.logValues(food, check.grams);
+    N.rememberServing(food.id, check.amount, check.unit);
+  }else{
+    // A favourite is already one absolute portion, and the seed path is unchanged.
+    v = scalable ? IgnytFoodDB.scaleFood(food, resolveFoodPortion(food).grams) : food;
+  }
+
+  // Identical record shape to the quick-add chips — nothing downstream can tell the
+  // difference between a searched food and a manually entered one.
+  const record = {
+    id: nextId(), date: state.nutritionDate || todayStr(), meal: meal,
+    name: v.name,
+    calories: Number(v.calories)||0, protein: Number(v.protein)||0,
+    carbs: Number(v.carbs)||0, fat: Number(v.fat)||0, fibre: Number(v.fibre)||0
+  };
+  // Micronutrients are written only where the food actually has them. An absent key means
+  // "unknown for this food", which the dashboard reports as incomplete coverage rather
+  // than counting as zero.
+  if(N) N.MICRO_LOG_FIELDS.forEach(k=>{ if(v[k] != null) record[k] = Number(v[k]); });
+
+  // Provenance. Recording which catalogue food and which serving produced these numbers is
+  // what makes an entry EDITABLE later: without it, changing "150 g" to "200 g" would mean
+  // guessing what the original 150 g referred to. Purely additive — an entry without these
+  // still renders and totals exactly as before, it just cannot be re-scaled.
+  if(scalable){
+    const p2 = resolveFoodPortion(food);
+    record.foodId = food.id;
+    record.category = food.category || null;
+    record.quantity = Number(currentFoodAmount(food));
+    record.servingUnit = p2.unit;
+    record.grams = Number(v.grams) || null;
+  }
+  record.at = Date.now();
+
+  state.foodLog.unshift(record);
+  state.foodSearchSelected = null; state.foodSearchQuery = "";
+  state.foodSearchAmount = null; state.foodSearchUnit = "g";
+  return true;
+}
+
 function bindFoodResultHandlers(){
     document.querySelectorAll("[data-food-pick]").forEach(el=>{
       el.addEventListener("click", ()=>{
         const id = el.dataset.foodPick;
+        // Inside the flow this advances to the Food Details route rather than expanding an
+        // inline panel. openFoodDetail() records the search and picks the default serving.
+        if(state.foodFlow){ openFoodDetail(id); render(); return; }
+
         const food = lookupFood(id, state.foodSearchQuery);
         if(!food) return;
         // Picking a result is the signal that the query was useful, so it is worth remembering.
@@ -17520,64 +17893,6 @@ function bindFoodResultHandlers(){
     if(foodCancelBtn) foodCancelBtn.addEventListener("click", ()=>{
       state.foodSearchSelected = null; state.foodSearchAmount = null; state.foodSearchUnit = "g"; render();
     });
-    /* Commits the selected food to a meal. Shared by the main Add button and the quick-add
-       meal chips so both paths validate and record identically. Returns false if the entry was
-       rejected, so the caller knows not to close the panel. */
-    function commitSelectedFood(meal){
-      const sel = state.foodSearchSelected;
-      if(!sel) return false;
-      const food = lookupFood(sel.id, sel.name);
-      if(!food) return false;
-
-      const N = window.IgnytNutrition;
-      const scalable = food.per != null;
-      let v;
-
-      if(scalable && N){
-        const p = resolveFoodPortion(food);
-        const check = N.validateQuantity(food, currentFoodAmount(food), p.unit);
-        // Refuse rather than log something the user did not ask for. The panel already shows
-        // the reason and disables the button; this is the guard for every other route in.
-        if(!check.ok){ showToast(check.error, "error", render); return false; }
-        v = N.logValues(food, check.grams);
-        N.rememberServing(food.id, check.amount, check.unit);
-      }else{
-        // A favourite is already one absolute portion, and the seed path is unchanged.
-        v = scalable ? IgnytFoodDB.scaleFood(food, resolveFoodPortion(food).grams) : food;
-      }
-
-      // Identical record shape to the quick-add chips — nothing downstream can tell the
-      // difference between a searched food and a manually entered one.
-      const record = {
-        id: nextId(), date: state.nutritionDate || todayStr(), meal: meal,
-        name: v.name,
-        calories: Number(v.calories)||0, protein: Number(v.protein)||0,
-        carbs: Number(v.carbs)||0, fat: Number(v.fat)||0, fibre: Number(v.fibre)||0
-      };
-      // Micronutrients are written only where the food actually has them. An absent key means
-      // "unknown for this food", which the dashboard reports as incomplete coverage rather
-      // than counting as zero.
-      if(N) N.MICRO_LOG_FIELDS.forEach(k=>{ if(v[k] != null) record[k] = Number(v[k]); });
-
-      // Provenance. Recording which catalogue food and which serving produced these numbers is
-      // what makes an entry EDITABLE later: without it, changing "150 g" to "200 g" would mean
-      // guessing what the original 150 g referred to. Purely additive — an entry without these
-      // still renders and totals exactly as before, it just cannot be re-scaled.
-      if(scalable){
-        const p2 = resolveFoodPortion(food);
-        record.foodId = food.id;
-        record.category = food.category || null;
-        record.quantity = Number(currentFoodAmount(food));
-        record.servingUnit = p2.unit;
-        record.grams = Number(v.grams) || null;
-      }
-      record.at = Date.now();
-
-      state.foodLog.unshift(record);
-      state.foodSearchSelected = null; state.foodSearchQuery = "";
-      state.foodSearchAmount = null; state.foodSearchUnit = "g";
-      return true;
-    }
 
     const foodAddBtn = document.querySelector("[data-food-search-add]");
     if(foodAddBtn) foodAddBtn.addEventListener("click", ()=>{

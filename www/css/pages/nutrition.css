@@ -333,15 +333,203 @@
 @keyframes nut-ring-in{ from{ opacity: 0; } to{ opacity: 1; } }
 .nut-ring circle.fill{ animation: nut-ring-in .3s ease both; }
 
+/* The row that was just logged pulses its background once, then settles. It is how the
+   dashboard answers "did that work" after the flow returns — the number changing is easy to
+   miss in a list. One-shot: the state that drives the class is cleared after 400 ms. */
+@keyframes nut-just-added{
+  0%   { background: color-mix(in srgb, var(--accent) 26%, transparent); }
+  100% { background: transparent; }
+}
+.history-row.is-just-added{
+  animation: nut-just-added 1.4s ease-out both;
+  border-radius: var(--radius-sm);
+}
+
 @media (prefers-reduced-motion: reduce){
   .nut-bar > i,
   .nut-ring circle.fill,
   .srv,
   .meal-body,
   .meal-head,
-  .food-row{
+  .food-row,
+  .history-row.is-just-added,
+  .food-page{
     transition: none !important;
     animation: none !important;
     transform: none !important;
   }
 }
+
+/* =========================================================
+   FOOD LOGGING ROUTES (search + details)
+
+   Full screens rather than panels. Each step owns the viewport, which is what makes the
+   flow legible — and on the search route the input is the only focusable thing on screen,
+   so the soft keyboard has nothing to push around.
+========================================================= */
+.food-page{
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  animation: food-page-in .2s cubic-bezier(.4,0,.2,1) both;
+}
+@keyframes food-page-in{
+  from{ opacity: 0; transform: translateX(10px); }
+  to{ opacity: 1; transform: none; }
+}
+
+.food-page__head{
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-2xs) 0 var(--space-xs);
+}
+.food-page__back,
+.food-page__icon{
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  border: 0;
+  color: var(--text);
+  font-size: 16px;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.food-page__icon.is-on{ color: var(--accent); }
+.food-page__title{ font-size: 16px; font-weight: 800; letter-spacing: -.01em; }
+.food-page__sub{ font-size: 11px; color: var(--muted); }
+/* Keeps the sticky footer from covering the last card. */
+.food-page__spacer{ height: 72px; }
+
+/* --- search bar --- */
+.food-search-bar{
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: var(--surface);
+  border-radius: var(--radius-pill);
+  padding: 4px 6px 4px 14px;
+  margin-bottom: var(--space-xs);
+}
+.food-search-bar__icon{ color: var(--muted); font-size: 15px; }
+.food-search-bar input{
+  flex: 1; min-width: 0;
+  background: none; border: 0; outline: none;
+  color: var(--text);
+  font-size: 15px;              /* 16px-ish keeps iOS from zooming the viewport on focus */
+  padding: 11px 0;
+}
+.food-search-bar__clear,
+.food-search-bar__voice{
+  width: 36px; height: 36px;
+  border: 0; border-radius: var(--radius-pill);
+  background: none; color: var(--muted);
+  font-size: 14px; cursor: pointer;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.food-search-bar__voice{ background: var(--surface-alt); color: var(--accent); }
+
+/* --- detail hero --- */
+.food-hero{
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  padding: var(--space-md);
+  margin-bottom: var(--space-xs);
+}
+.food-hero__name{ font-size: 17px; font-weight: 800; line-height: 1.25; letter-spacing: -.01em; }
+.food-hero__cat{ font-size: 12px; color: var(--muted); margin-top: 2px; }
+.food-hero__verified{ font-size: 11px; color: var(--mint); margin-top: 4px; font-weight: 700; }
+.food-hero__kcal{ text-align: right; flex-shrink: 0; }
+
+/* --- macro row --- */
+.macro-row{
+  display: flex;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  padding: var(--space-sm) var(--space-2xs);
+  margin-bottom: var(--space-xs);
+}
+.macro-row__cell{
+  flex: 1; text-align: center; min-width: 0;
+  padding: 0 2px;
+}
+.macro-row__cell + .macro-row__cell{ border-left: 1px solid var(--surface-alt); }
+.macro-row__label{ font-size: 10px; font-weight: 700; margin-top: 2px; }
+
+/* --- form controls --- */
+.food-select,
+.food-input{
+  width: 100%;
+  background: var(--surface-alt);
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 11px 12px;
+  font-size: 14px;
+  color: var(--text);
+  min-height: 44px;
+}
+.qty-stepper{ display: flex; align-items: center; gap: var(--space-xs); }
+.qty-stepper button{
+  width: 36px; height: 36px;
+  border: 0; border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-size: 18px; font-weight: 800;
+  cursor: pointer;
+}
+.qty-stepper input{
+  width: 66px; min-height: 40px;
+  background: var(--surface-alt);
+  border: 0; border-radius: var(--radius-sm);
+  text-align: center;
+  font-size: 15px; font-weight: 700;
+  color: var(--text);
+  font-family: 'SF Mono', ui-monospace, monospace;
+}
+
+/* --- sticky action --- */
+.food-sticky{
+  position: fixed;
+  left: 0; right: 0;
+  /* Sits above the safe area and above the keyboard inset the app already tracks. */
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--kb-inset, 0px));
+  padding: var(--space-sm) var(--space-md) var(--space-md);
+  background: linear-gradient(to top, var(--bg) 62%, transparent);
+  z-index: 40;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.food-sticky__btn{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-height: 52px;
+  font-size: 15px;
+}
+.food-sticky__kcal{
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-weight: 800;
+  opacity: .8;
+  padding-left: var(--space-sm);
+  border-left: 1px solid rgba(0,0,0,.22);
+}
+
+/* --- the + on a meal card --- */
+.meal-add{
+  width: 32px; height: 32px;
+  border: 0; border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  color: var(--accent);
+  font-size: 18px; font-weight: 800;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: grid; place-items: center;
+}
+.meal-add:active{ transform: scale(.92); }
