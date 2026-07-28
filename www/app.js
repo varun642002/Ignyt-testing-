@@ -4600,6 +4600,8 @@ const state = {
   quickAddOpen: false, quickAddMeal: null,
   // Whether the coach / recovery card detail is expanded (transient).
   coachExpanded: false, recoveryExpanded: false,
+  // Manual food entry on the search route (transient).
+  manualEntryOpen: false,
   /* The two full-screen food routes. null means the dashboard.
      { screen:"search"|"detail", meal, foodId, notes } — all transient, so a fresh visit to
      the tab always lands on the dashboard rather than resuming a half-finished entry. */
@@ -12646,6 +12648,37 @@ function renderFoodSearchPage(){
     </div>
 
     <div id="food-search-results">${foodSearchResultsHtml(meal)}</div>
+
+    <!-- Manual entry. It used to live inside the meal card, gated behind the accordion that
+         Part 1 removed; it is not superseded by anything, so it moves here rather than being
+         deleted — without it there is no way to log a food the database does not have.
+         Collapsed by default so the search screen does not open with a form in your face. -->
+    <div class="nut-card nut-card--tight" style="margin-top:var(--space-sm);">
+      <button class="row-between" data-action="toggle-manual-entry"
+        style="width:100%;background:none;border:0;padding:0;cursor:pointer;color:inherit;min-height:44px;">
+        <span style="text-align:left;">
+          <span style="font-size:13px;font-weight:700;display:block;">Can't find it?</span>
+          <span style="font-size:11px;color:var(--muted);">Enter the food manually</span>
+        </span>
+        <span style="color:var(--primary);font-size:18px;font-weight:800;">${state.manualEntryOpen?'−':'+'}</span>
+      </button>
+
+      ${state.manualEntryOpen ? `
+        <div style="margin-top:var(--space-sm);">
+          <input type="text" id="food-name" class="food-input" placeholder="Food name" style="margin-bottom:var(--space-xs);">
+          <div style="display:flex;gap:var(--space-2xs);margin-bottom:var(--space-xs);">
+            <input type="number" id="food-cal" class="food-input" placeholder="kcal*" style="text-align:center;color:var(--accent);padding:11px 4px;">
+            <input type="number" id="food-protein" class="food-input" placeholder="P" style="text-align:center;padding:11px 4px;">
+            <input type="number" id="food-carbs" class="food-input" placeholder="C" style="text-align:center;padding:11px 4px;">
+            <input type="number" id="food-fat" class="food-input" placeholder="F" style="text-align:center;padding:11px 4px;">
+            <input type="number" id="food-fibre" class="food-input" placeholder="Fb" style="text-align:center;padding:11px 4px;">
+          </div>
+          <div style="display:flex;gap:var(--space-2xs);">
+            <button class="btn btn-accent" style="flex:1;" data-log-meal-food="${escHtml(meal)}">Add to ${escHtml(meal)}</button>
+            <button class="btn btn-ghost" style="width:48px;flex-shrink:0;" data-action="save-as-favorite" title="Save as favourite">★</button>
+          </div>
+        </div>` : ""}
+    </div>
   </div>`;
 }
 
@@ -13162,14 +13195,15 @@ function renderNutritionTab(){
       const mealFoods = dayEntries.filter(f=>(f.meal||"Lunch")===meal);
       const mealKcal = Math.round(mealFoods.reduce((a,f)=>a+Number(f.calories||0),0));
       const budget = Math.round(targets.kcal * mealShare(meal));
-      const isOpen = state.mealOpen===meal;
       // Per-meal macro roll-up, so each row answers "what did this meal give me" without
       // expanding it.
       const mp = Math.round(mealFoods.reduce((a,f)=>a+Number(f.protein||0),0));
       const mc = Math.round(mealFoods.reduce((a,f)=>a+Number(f.carbs||0),0));
       const mf = Math.round(mealFoods.reduce((a,f)=>a+Number(f.fat||0),0));
       return `<div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
-        <div class="meal-head" data-meal-toggle="${meal}">
+        <!-- No chevron and no accordion: meals are always expanded, so their foods are
+             visible without a tap. The header is icon, name, count, calories and +. -->
+        <div class="meal-head">
           <span class="meal-icon">${MEAL_ICONS[meal]||"🍽️"}</span>
           <span style="min-width:0;flex:1;">
             <span class="meal-name">${escHtml(meal)}</span>
@@ -13183,7 +13217,6 @@ function renderNutritionTab(){
           </span>
           <!-- One glyph, rotated. Swapping ⌄ for ⌃ would jump; rotating the same node lets
                the arrow turn in step with the rows unfolding. -->
-          <span class="meal-toggle" style="transform:rotate(${isOpen?'180deg':'0deg'});">⌄</span>
           <!-- Sits inside the header for layout, but stops propagation in its handler so a
                tap on + opens the search route instead of also toggling the card. -->
           <button class="meal-add" data-meal-add="${escHtml(meal)}" aria-label="Add food to ${escHtml(meal)}">+</button>
@@ -13209,31 +13242,6 @@ function renderNutritionTab(){
             <span class="log-row__chev" aria-hidden="true">›</span>
           </div>`;
         }).join("")}
-        ${isOpen?`<div style="margin-top:10px;">
-          ${renderFoodSearchPanel(meal)}
-          ${recentFoodEntries(6).length ? `
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Recent</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
-              ${recentFoodEntries(6).map(f=>`<button class="cat-chip" data-quick-add-food="${meal}" data-food-name="${f.name.replace(/"/g,'&quot;')}" data-food-cal="${f.calories||0}" data-food-protein="${f.protein||0}" data-food-carbs="${f.carbs||0}" data-food-fat="${f.fat||0}" data-food-fibre="${f.fibre||0}">${f.name} · ${f.calories||0}kcal</button>`).join("")}
-            </div>` : ""}
-          ${state.favoriteFoods.length ? `
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">★ Favorites</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
-              ${state.favoriteFoods.map(f=>`<button class="cat-chip active" data-quick-add-food="${meal}" data-food-name="${f.name.replace(/"/g,'&quot;')}" data-food-cal="${f.calories||0}" data-food-protein="${f.protein||0}" data-food-carbs="${f.carbs||0}" data-food-fat="${f.fat||0}" data-food-fibre="${f.fibre||0}">${f.name} · ${f.calories||0}kcal</button>`).join("")}
-            </div>` : ""}
-          <input type="text" id="food-name" placeholder="Food name" style="width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:13px;color:var(--text);margin-bottom:6px;">
-          <div style="display:flex;gap:6px;margin-bottom:6px;">
-            <input type="number" id="food-cal" placeholder="kcal*" style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:12px;color:var(--accent);text-align:center;">
-            <input type="number" id="food-protein" placeholder="P g" style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:12px;color:var(--text);text-align:center;">
-            <input type="number" id="food-carbs" placeholder="C g" style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:12px;color:var(--text);text-align:center;">
-            <input type="number" id="food-fat" placeholder="F g" style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:12px;color:var(--text);text-align:center;">
-            <input type="number" id="food-fibre" placeholder="Fb g" style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:12px;color:var(--text);text-align:center;">
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-accent" style="flex:1;" data-log-meal-food="${meal}">Add to ${meal}</button>
-            <button class="btn btn-ghost" style="width:44px;flex-shrink:0;" data-action="save-as-favorite" title="Save as favorite">★</button>
-          </div>
-        </div>`:""}
       </div>`;
     }).join("")}
 
@@ -17393,12 +17401,13 @@ function attachHandlers(){
   });
 
   // Nutrition tab — meals & food log
-  document.querySelectorAll("[data-meal-toggle]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      const meal = el.dataset.mealToggle;
-      state.mealOpen = state.mealOpen===meal ? null : meal;
-      render();
-    });
+  /* The meal accordion is gone — meals are always expanded, so there is nothing to toggle.
+     state.mealOpen survives as "which meal is the user working in", which the search route
+     and quick-add still read; it just no longer controls visibility. */
+  const manualToggle = document.querySelector('[data-action="toggle-manual-entry"]');
+  if(manualToggle) manualToggle.addEventListener("click", ()=>{
+    state.manualEntryOpen = !state.manualEntryOpen;
+    render();
   });
   document.querySelectorAll("[data-log-meal-food]").forEach(el=>{
     el.addEventListener("click", ()=>{
