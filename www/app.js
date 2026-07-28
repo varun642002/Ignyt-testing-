@@ -4241,11 +4241,30 @@ function renderCalendarMonth(monthOffset){
       ${selected ? 'box-shadow:0 0 0 2px var(--rh-blue);':''}
       ${isToday && !active ? 'box-shadow:inset 0 0 0 1.5px var(--rh-blue);color:var(--rh-blue);':''}">${d}</div>`;
   }
+  // Month summary. "Days elapsed" stops at today for the current month so completion isn't
+  // diluted by days that haven't happened yet.
+  const now = new Date();
+  const isCurrentMonth = (year===now.getFullYear() && month===now.getMonth());
+  const elapsed = isCurrentMonth ? now.getDate() : daysInMonth;
+  let trainedThisMonth = 0;
+  for(let d=1; d<=daysInMonth; d++){
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if(dates.has(ds)) trainedThisMonth++;
+  }
+  const completionPct = elapsed>0 ? Math.round(trainedThisMonth/elapsed*100) : 0;
+  const stat = (label, value) => `<div class="ex-prog__cell"><div class="ex-prog__k">${label}</div><div class="ex-prog__v">${value}</div></div>`;
+
   return `
     <div class="row-between" style="margin-bottom:14px;">
       <button class="rh-btn rh-btn--ghost" style="flex:none;width:44px;height:44px;padding:0;" data-cal-nav="-1">‹</button>
       <span style="font-weight:800;font-size:15px;">${monthName}</span>
       <button class="rh-btn rh-btn--ghost" style="flex:none;width:44px;height:44px;padding:0;" data-cal-nav="1" ${monthOffset>=0?'disabled':''}>›</button>
+    </div>
+    <div class="ex-prog" style="margin-bottom:14px;">
+      ${stat("Current streak", computeStreak()+"d")}
+      ${stat("Longest streak", computeLongestStreak()+"d")}
+      ${stat("Trained", trainedThisMonth+"/"+elapsed)}
+      ${stat("Completion", completionPct+"%")}
     </div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:11px;color:var(--rh-muted);font-weight:700;text-align:center;margin-bottom:8px;">
       <div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div><div>S</div>
