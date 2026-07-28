@@ -87,21 +87,21 @@ const LIBRARY = {
   "Barbell":[["Back Squat","4x6","reps","Quadriceps"],["Front Squat","4x6","reps","Quadriceps"],["Deadlift","4x5","reps","Hamstrings"],
     ["Romanian Deadlift","3x8","reps","Hamstrings"],["Sumo Deadlift","4x5","reps","Glutes"],["Bench Press","4x6","reps","Chest"],
     ["Incline Bench Press","4x8","reps","Chest"],["Overhead Press","3x8","reps","Shoulders"],["Push Press","3x6","reps","Shoulders"],
-    ["Bent-Over Row","4x8","reps","Lats"],["Barbell Curl","3x10","reps","Biceps"],["Hip Thrust","3x10","reps","Glutes"],["Barbell Bench Press","3x10","reps","Chest"],["Decline Barbell Bench Press","3x10","reps","Chest"],["Meadows Row","3x10","reps","Lats"],["Barbell Bent-Over Row","3x10","reps","Lats"],["Landmine Press","3x10","reps","Shoulders"],["Reverse-Grip Barbell Curl","3x10","reps","Biceps"],["Dumbbell EZ-Bar Curl","3x10","reps","Biceps"],["Resistance Band Preacher Curl","3x10","reps","Biceps"],["Dumbbell Close-Grip Bench Press","3x10","reps","Triceps"],["Barbell Close-Grip Bench Press","3x10","reps","Triceps"],["Kettlebell Skull Crusher","3x10","reps","Triceps"],["Cable Close-Grip Bench Press","3x10","reps","Triceps"],["Resistance Band Skull Crusher","3x10","reps","Triceps"],["Barbell Back Squat","3x10","reps","Quadriceps"],["Pin Barbell Back Squat","3x10","reps","Quadriceps"],["Tempo Front Squat","3x10","reps","Quadriceps"],["Single-Leg Dumbbell Romanian Deadlift","3x10","reps","Hamstrings"],["Snatch-Grip Romanian Deadlift","3x10","reps","Hamstrings"],["Good Morning","3x10","reps","Hamstrings"],["Barbell Romanian Deadlift","3x10","reps","Hamstrings"],["Barbell Good Morning","3x10","reps","Hamstrings"],["Cable Stiff-Leg Deadlift","3x10","reps","Hamstrings"],["Resistance Band Romanian Deadlift","3x10","reps","Hamstrings"],["Barbell Hip Thrust","3x10","reps","Glutes"],["Banded Barbell Hip Thrust","3x10","reps","Glutes"],["Conventional Deadlift","3x10","reps","Glutes"],["Paused Conventional Deadlift","3x10","reps","Glutes"],["Deficit Conventional Deadlift","3x10","reps","Glutes"],["Rack Pull Conventional Deadlift","3x10","reps","Glutes"],["Block Pull Conventional Deadlift","3x10","reps","Glutes"],["Snatch-Grip Conventional Deadlift","3x10","reps","Glutes"],["Paused Sumo Deadlift","3x10","reps","Glutes"],["Deficit Sumo Deadlift","3x10","reps","Glutes"],["Block Pull Sumo Deadlift","3x10","reps","Glutes"],["Dumbbell Conventional Deadlift","3x10","reps","Glutes"],["Dumbbell Sumo Deadlift","3x10","reps","Glutes"],["Barbell Conventional Deadlift","3x10","reps","Glutes"],["Barbell Sumo Deadlift","3x10","reps","Glutes"],["Kettlebell Conventional Deadlift","3x10","reps","Glutes"],["Kettlebell Sumo Deadlift","3x10","reps","Glutes"],["Cable Conventional Deadlift","3x10","reps","Glutes"],["Cable Sumo Deadlift","3x10","reps","Glutes"],["Resistance Band Conventional Deadlift","3x10","reps","Glutes"],["Resistance Band Sumo Deadlift","3x10","reps","Glutes"],["Power Clean","3x10","reps","Glutes"],["Hang Power Clean","3x10","reps","Glutes"],["Block Power Clean","3x10","reps","Glutes"],["High-Hang Power Clean","3x10","reps","Glutes"],["Muscle Power Clean","3x10","reps","Glutes"],["Clean and Jerk","3x10","reps","Cardio"],["Snatch","3x10","reps","Cardio"],["Hang Snatch","3x10","reps","Cardio"],["Block Snatch","3x10","reps","Cardio"],["High-Hang Snatch","3x10","reps","Cardio"],["Muscle Snatch","3x10","reps","Cardio"],["Split Snatch","3x10","reps","Cardio"],["Power Snatch","3x10","reps","Cardio"],["Hang Clean","3x10","reps","Glutes"],["Dumbbell Power Clean","3x10","reps","Glutes"],["Dumbbell Clean and Jerk","3x10","reps","Cardio"],["Dumbbell Snatch","3x10","reps","Cardio"],["Dumbbell Power Snatch","3x10","reps","Cardio"],["Dumbbell Hang Clean","3x10","reps","Glutes"],["Dumbbell Push Press","3x10","reps","Shoulders"],["Barbell Power Clean","3x10","reps","Glutes"],["Barbell Clean and Jerk","3x10","reps","Cardio"],["Barbell Snatch","3x10","reps","Cardio"],["Barbell Power Snatch","3x10","reps","Cardio"],["Barbell Hang Clean","3x10","reps","Glutes"],["Barbell Push Press","3x10","reps","Shoulders"],["Kettlebell Power Clean","3x10","reps","Glutes"],["Kettlebell Clean and Jerk","3x10","reps","Cardio"],["Kettlebell Power Snatch","3x10","reps","Cardio"],["Kettlebell Hang Clean","3x10","reps","Glutes"],["Kettlebell Push Press","3x10","reps","Shoulders"],["Cable Power Clean","3x10","reps","Glutes"],["Cable Clean and Jerk","3x10","reps","Cardio"],["Cable Snatch","3x10","reps","Cardio"],["Cable Power Snatch","3x10","reps","Cardio"],["Cable Hang Clean","3x10","reps","Glutes"],["Cable Push Press","3x10","reps","Shoulders"],["Resistance Band Power Clean","3x10","reps","Glutes"],["Resistance Band Clean and Jerk","3x10","reps","Cardio"],["Resistance Band Snatch","3x10","reps","Cardio"],["Resistance Band Power Snatch","3x10","reps","Cardio"],["Resistance Band Hang Clean","3x10","reps","Glutes"],["Resistance Band Push Press","3x10","reps","Shoulders"],["Jefferson Curl","3x10","reps","Abdominals"],["Trap-Bar Deadlift","3x10","reps","Glutes"],["Dumbbell Trap-Bar Deadlift","3x10","reps","Glutes"],["Barbell Trap-Bar Deadlift","3x10","reps","Glutes"],["Kettlebell Trap-Bar Deadlift","3x10","reps","Glutes"],["Cable Trap-Bar Deadlift","3x10","reps","Glutes"],["Resistance Band Trap-Bar Deadlift","3x10","reps","Glutes"]],
+    ["Bent-Over Row","4x8","reps","Lats"],["Barbell Curl","3x10","reps","Biceps"],["Hip Thrust","3x10","reps","Glutes"],["Barbell Bench Press","3x10","reps","Chest"],["Decline Barbell Bench Press","3x10","reps","Chest"],["Meadows Row","3x10","reps","Lats"],["Barbell Bent-Over Row","3x10","reps","Lats"],["Landmine Press","3x10","reps","Shoulders"],["Reverse-Grip Barbell Curl","3x10","reps","Biceps"],["Dumbbell EZ-Bar Curl","3x10","reps","Biceps"],["Resistance Band Preacher Curl","3x10","reps","Biceps"],["Dumbbell Close-Grip Bench Press","3x10","reps","Triceps"],["Barbell Close-Grip Bench Press","3x10","reps","Triceps"],["Kettlebell Skull Crusher","3x10","reps","Triceps"],["Cable Close-Grip Bench Press","3x10","reps","Triceps"],["Resistance Band Skull Crusher","3x10","reps","Triceps"],["Barbell Back Squat","3x10","reps","Quadriceps"],["Pin Barbell Back Squat","3x10","reps","Quadriceps"],["Tempo Front Squat","3x10","reps","Quadriceps"],["Single-Leg Dumbbell Romanian Deadlift","3x10","reps","Hamstrings"],["Snatch-Grip Romanian Deadlift","3x10","reps","Hamstrings"],["Good Morning","3x10","reps","Hamstrings"],["Barbell Romanian Deadlift","3x10","reps","Hamstrings"],["Barbell Good Morning","3x10","reps","Hamstrings"],["Cable Stiff-Leg Deadlift","3x10","reps","Hamstrings"],["Resistance Band Romanian Deadlift","3x10","reps","Hamstrings"],["Barbell Hip Thrust","3x10","reps","Glutes"],["Banded Barbell Hip Thrust","3x10","reps","Glutes"],["Conventional Deadlift","3x10","reps","Glutes"],["Paused Conventional Deadlift","3x10","reps","Glutes"],["Deficit Conventional Deadlift","3x10","reps","Glutes"],["Rack Pull Conventional Deadlift","3x10","reps","Glutes"],["Block Pull Conventional Deadlift","3x10","reps","Glutes"],["Snatch-Grip Conventional Deadlift","3x10","reps","Glutes"],["Paused Sumo Deadlift","3x10","reps","Glutes"],["Deficit Sumo Deadlift","3x10","reps","Glutes"],["Block Pull Sumo Deadlift","3x10","reps","Glutes"],["Dumbbell Conventional Deadlift","3x10","reps","Glutes"],["Dumbbell Sumo Deadlift","3x10","reps","Glutes"],["Barbell Conventional Deadlift","3x10","reps","Glutes"],["Barbell Sumo Deadlift","3x10","reps","Glutes"],["Kettlebell Conventional Deadlift","3x10","reps","Glutes"],["Kettlebell Sumo Deadlift","3x10","reps","Glutes"],["Cable Conventional Deadlift","3x10","reps","Glutes"],["Cable Sumo Deadlift","3x10","reps","Glutes"],["Resistance Band Conventional Deadlift","3x10","reps","Glutes"],["Resistance Band Sumo Deadlift","3x10","reps","Glutes"],["Power Clean","3x10","reps","Glutes"],["Hang Power Clean","3x10","reps","Glutes"],["Block Power Clean","3x10","reps","Glutes"],["High-Hang Power Clean","3x10","reps","Glutes"],["Muscle Power Clean","3x10","reps","Glutes"],["Clean and Jerk","3x10","reps","Cardio"],["Snatch","3x10","reps","Cardio"],["Hang Snatch","3x10","reps","Cardio"],["Block Snatch","3x10","reps","Cardio"],["High-Hang Snatch","3x10","reps","Cardio"],["Muscle Snatch","3x10","reps","Cardio"],["Split Snatch","3x10","reps","Cardio"],["Power Snatch","3x10","reps","Cardio"],["Hang Clean","3x10","reps","Glutes"],["Dumbbell Power Clean","3x10","reps","Glutes"],["Dumbbell Clean and Jerk","3x10","reps","Cardio"],["Dumbbell Snatch","3x10","reps","Cardio"],["Dumbbell Power Snatch","3x10","reps","Cardio"],["Dumbbell Hang Clean","3x10","reps","Glutes"],["Dumbbell Push Press","3x10","reps","Shoulders"],["Barbell Power Clean","3x10","reps","Glutes"],["Barbell Clean and Jerk","3x10","reps","Cardio"],["Barbell Snatch","3x10","reps","Cardio"],["Barbell Power Snatch","3x10","reps","Cardio"],["Barbell Hang Clean","3x10","reps","Glutes"],["Barbell Push Press","3x10","reps","Shoulders"],["Kettlebell Power Clean","3x10","reps","Glutes"],["Kettlebell Clean and Jerk","3x10","reps","Cardio"],["Kettlebell Power Snatch","3x10","reps","Cardio"],["Kettlebell Hang Clean","3x10","reps","Glutes"],["Kettlebell Push Press","3x10","reps","Shoulders"],["Cable Power Clean","3x10","reps","Glutes"],["Cable Clean and Jerk","3x10","reps","Cardio"],["Cable Snatch","3x10","reps","Cardio"],["Cable Power Snatch","3x10","reps","Cardio"],["Cable Hang Clean","3x10","reps","Glutes"],["Cable Push Press","3x10","reps","Shoulders"],["Resistance Band Power Clean","3x10","reps","Glutes"],["Resistance Band Clean and Jerk","3x10","reps","Cardio"],["Resistance Band Snatch","3x10","reps","Cardio"],["Resistance Band Power Snatch","3x10","reps","Cardio"],["Resistance Band Hang Clean","3x10","reps","Glutes"],["Resistance Band Push Press","3x10","reps","Shoulders"],["Jefferson Curl","3x10","reps","Abdominals"],["Trap-Bar Deadlift","3x10","reps","Glutes"],["Dumbbell Trap-Bar Deadlift","3x10","reps","Glutes"],["Barbell Trap-Bar Deadlift","3x10","reps","Glutes"],["Kettlebell Trap-Bar Deadlift","3x10","reps","Glutes"],["Cable Trap-Bar Deadlift","3x10","reps","Glutes"],["Resistance Band Trap-Bar Deadlift","3x10","reps","Glutes"],["Wide-Grip Barbell Bench Press","3x10","reps","Chest"],["Feet-Up Barbell Bench Press","3x10","reps","Chest"],["Barbell Floor Press","3x10","reps","Chest"]],
   "Dumbbell":[["DB Bench Press","4x8","reps","Chest"],["DB Row","4x10","reps","Lats"],["DB Shoulder Press","3x10","reps","Shoulders"],
     ["Goblet Squat","3x12","reps","Quadriceps"],["Walking Lunges","3x12/leg","reps","Quadriceps"],["Bulgarian Split Squat","3x10/leg","reps","Quadriceps"],
     ["Farmer's Carry","4x40m","distance","Forearms"],["DB Curl","3x12","reps","Biceps"],["Lateral Raise","3x12","reps","Shoulders"],
-    ["DB RDL","3x10","reps","Hamstrings"],["Renegade Row","3x8/side","reps","Lats"],["Dumbbell Bench Press","3x10","reps","Chest"],["Dumbbell Fly","3x10","reps","Chest"],["Incline Dumbbell Press","3x10","reps","Chest"],["One-Arm Dumbbell Row","3x10","reps","Lats"],["Dumbbell Lateral Raise","3x10","reps","Shoulders"],["One-Arm Dumbbell Lateral Raise","3x10","reps","Shoulders"],["Kettlebell Arnold Press","3x10","reps","Shoulders"],["Dumbbell Rear Delt Fly","3x10","reps","Shoulders"],["Cable Arnold Press","3x10","reps","Shoulders"],["Alternating Dumbbell Curl","3x10","reps","Biceps"],["Zottman Dumbbell Curl","3x10","reps","Biceps"],["Rope Cable Hammer Curl","3x10","reps","Biceps"],["Dumbbell Concentration Curl","3x10","reps","Biceps"],["Barbell Hammer Curl","3x10","reps","Biceps"],["Incline Dumbbell Curl","3x10","reps","Biceps"],["Kettlebell Hammer Curl","3x10","reps","Biceps"],["Cable Hammer Curl","3x10","reps","Biceps"],["Front-Rack Walking Lunge","3x10","reps","Quadriceps"],["Front-Rack Reverse Lunge","3x10","reps","Quadriceps"],["High-Box Step-Up","3x10","reps","Quadriceps"]],
+    ["DB RDL","3x10","reps","Hamstrings"],["Renegade Row","3x8/side","reps","Lats"],["Dumbbell Bench Press","3x10","reps","Chest"],["Dumbbell Fly","3x10","reps","Chest"],["Incline Dumbbell Press","3x10","reps","Chest"],["One-Arm Dumbbell Row","3x10","reps","Lats"],["Dumbbell Lateral Raise","3x10","reps","Shoulders"],["One-Arm Dumbbell Lateral Raise","3x10","reps","Shoulders"],["Kettlebell Arnold Press","3x10","reps","Shoulders"],["Dumbbell Rear Delt Fly","3x10","reps","Shoulders"],["Cable Arnold Press","3x10","reps","Shoulders"],["Alternating Dumbbell Curl","3x10","reps","Biceps"],["Zottman Dumbbell Curl","3x10","reps","Biceps"],["Rope Cable Hammer Curl","3x10","reps","Biceps"],["Dumbbell Concentration Curl","3x10","reps","Biceps"],["Barbell Hammer Curl","3x10","reps","Biceps"],["Incline Dumbbell Curl","3x10","reps","Biceps"],["Kettlebell Hammer Curl","3x10","reps","Biceps"],["Cable Hammer Curl","3x10","reps","Biceps"],["Front-Rack Walking Lunge","3x10","reps","Quadriceps"],["Front-Rack Reverse Lunge","3x10","reps","Quadriceps"],["High-Box Step-Up","3x10","reps","Quadriceps"],["Decline DB Bench Press","3x10","reps","Chest"],["Decline DB Chest Fly","3x12","reps","Chest"],["Incline DB Chest Fly","3x12","reps","Chest"],["DB Floor Press","3x10","reps","Chest"],["DB Hex Press","3x10","reps","Chest"],["DB Squeeze Press","3x10","reps","Chest"],["DB Chest Fly","3x12","reps","Chest"],["Around The World","3x10","reps","Chest"]],
   "Machine":[["Leg Press","4x10","reps","Quadriceps"],["Hack Squat","4x10","reps","Quadriceps"],["Leg Extension","3x12","reps","Quadriceps"],
     ["Leg Curl","3x12","reps","Hamstrings"],["Lat Pulldown","4x10","reps","Lats"],["Seated Cable Row","4x10","reps","Lats"],
     ["Chest Press Machine","4x10","reps","Chest"],["Shoulder Press Machine","3x10","reps","Shoulders"],["Pec Deck","3x12","reps","Chest"],
     ["Cable Crossover","3x12","reps","Chest"],["Smith Machine Squat","4x8","reps","Quadriceps"],["Assisted Pull-up","3x8","reps","Lats"],
     ["Assisted Dip","3x8","reps","Triceps"],["Cable Tricep Pushdown","3x12","reps","Triceps"],["Cable Face Pull","3x15","reps","Traps"],
-    ["Hip Abductor Machine","3x15","reps","Abductors"],["Hip Adductor Machine","3x15","reps","Adductors"],["Calf Raise Machine","4x15","reps","Calves"],["Cable Pec Deck Fly","3x10","reps","Chest"],["Resistance Band Pec Deck Fly","3x10","reps","Chest"],["T-Bar Row","3x10","reps","Lats"],["Cable Lat Pulldown","3x10","reps","Lats"],["Cable Straight-Arm Pulldown","3x10","reps","Lats"],["Resistance Band Straight-Arm Pulldown","3x10","reps","Lats"],["Face Pull","3x10","reps","Shoulders"],["Cuff Cable Lateral Raise","3x10","reps","Shoulders"],["Dumbbell Reverse Pec Deck Fly","3x10","reps","Shoulders"],["Cable Curl","3x10","reps","Biceps"],["Triceps Pushdown","3x10","reps","Triceps"],["Straight-Bar Triceps Pushdown","3x10","reps","Triceps"],["Reverse-Grip Triceps Pushdown","3x10","reps","Triceps"],["Overhead Cable Triceps Extension","3x10","reps","Triceps"],["Barbell Triceps Pushdown","3x10","reps","Triceps"],["Kettlebell Triceps Pushdown","3x10","reps","Triceps"],["Resistance Band Triceps Pushdown","3x10","reps","Triceps"],["Kettlebell Leg Press","3x10","reps","Quadriceps"],["Cable Leg Extension","3x10","reps","Quadriceps"],["Resistance Band Leg Extension","3x10","reps","Quadriceps"],["Seated Leg Curl","3x10","reps","Hamstrings"],["Dumbbell Seated Leg Curl","3x10","reps","Hamstrings"],["Barbell Lying Leg Curl","3x10","reps","Hamstrings"],["Kettlebell Lying Leg Curl","3x10","reps","Hamstrings"],["Resistance Band Seated Leg Curl","3x10","reps","Hamstrings"],["Cable Glute Kickback","3x10","reps","Glutes"],["Hip Abduction Machine","3x10","reps","Glutes"],["Cable Pull-Through","3x10","reps","Glutes"],["Standing Calf Raise","3x10","reps","Calves"],["Single-Leg Standing Calf Raise","3x10","reps","Calves"],["Dumbbell Standing Calf Raise","3x10","reps","Calves"],["Smith Machine Standing Calf Raise","3x10","reps","Calves"],["Donkey Standing Calf Raise","3x10","reps","Calves"],["Dumbbell Seated Calf Raise","3x10","reps","Calves"],["Kettlebell Standing Calf Raise","3x10","reps","Calves"],["Cable Standing Calf Raise","3x10","reps","Calves"],["Cable Seated Calf Raise","3x10","reps","Calves"],["Resistance Band Standing Calf Raise","3x10","reps","Calves"],["Resistance Band Seated Calf Raise","3x10","reps","Calves"],["Tall-Kneeling Pallof Press","3x10","reps","Abdominals"],["Reverse Hyperextension","3x10","reps","Glutes"],["Back Extension","3x10","reps","Abdominals"],["Dumbbell Reverse Hyperextension","3x10","reps","Glutes"],["Dumbbell Back Extension","3x10","reps","Abdominals"],["Barbell Reverse Hyperextension","3x10","reps","Glutes"],["Barbell Back Extension","3x10","reps","Abdominals"],["Kettlebell Reverse Hyperextension","3x10","reps","Glutes"],["Kettlebell Back Extension","3x10","reps","Abdominals"],["Cable Reverse Hyperextension","3x10","reps","Glutes"],["Cable Back Extension","3x10","reps","Abdominals"],["Resistance Band Reverse Hyperextension","3x10","reps","Glutes"],["Resistance Band Back Extension","3x10","reps","Abdominals"],["Hip Adduction Machine","3x10","reps","Adductors"]],
+    ["Hip Abductor Machine","3x15","reps","Abductors"],["Hip Adductor Machine","3x15","reps","Adductors"],["Calf Raise Machine","4x15","reps","Calves"],["Cable Pec Deck Fly","3x10","reps","Chest"],["Resistance Band Pec Deck Fly","3x10","reps","Chest"],["T-Bar Row","3x10","reps","Lats"],["Cable Lat Pulldown","3x10","reps","Lats"],["Cable Straight-Arm Pulldown","3x10","reps","Lats"],["Resistance Band Straight-Arm Pulldown","3x10","reps","Lats"],["Face Pull","3x10","reps","Shoulders"],["Cuff Cable Lateral Raise","3x10","reps","Shoulders"],["Dumbbell Reverse Pec Deck Fly","3x10","reps","Shoulders"],["Cable Curl","3x10","reps","Biceps"],["Triceps Pushdown","3x10","reps","Triceps"],["Straight-Bar Triceps Pushdown","3x10","reps","Triceps"],["Reverse-Grip Triceps Pushdown","3x10","reps","Triceps"],["Overhead Cable Triceps Extension","3x10","reps","Triceps"],["Barbell Triceps Pushdown","3x10","reps","Triceps"],["Kettlebell Triceps Pushdown","3x10","reps","Triceps"],["Resistance Band Triceps Pushdown","3x10","reps","Triceps"],["Kettlebell Leg Press","3x10","reps","Quadriceps"],["Cable Leg Extension","3x10","reps","Quadriceps"],["Resistance Band Leg Extension","3x10","reps","Quadriceps"],["Seated Leg Curl","3x10","reps","Hamstrings"],["Dumbbell Seated Leg Curl","3x10","reps","Hamstrings"],["Barbell Lying Leg Curl","3x10","reps","Hamstrings"],["Kettlebell Lying Leg Curl","3x10","reps","Hamstrings"],["Resistance Band Seated Leg Curl","3x10","reps","Hamstrings"],["Cable Glute Kickback","3x10","reps","Glutes"],["Hip Abduction Machine","3x10","reps","Glutes"],["Cable Pull-Through","3x10","reps","Glutes"],["Standing Calf Raise","3x10","reps","Calves"],["Single-Leg Standing Calf Raise","3x10","reps","Calves"],["Dumbbell Standing Calf Raise","3x10","reps","Calves"],["Smith Machine Standing Calf Raise","3x10","reps","Calves"],["Donkey Standing Calf Raise","3x10","reps","Calves"],["Dumbbell Seated Calf Raise","3x10","reps","Calves"],["Kettlebell Standing Calf Raise","3x10","reps","Calves"],["Cable Standing Calf Raise","3x10","reps","Calves"],["Cable Seated Calf Raise","3x10","reps","Calves"],["Resistance Band Standing Calf Raise","3x10","reps","Calves"],["Resistance Band Seated Calf Raise","3x10","reps","Calves"],["Tall-Kneeling Pallof Press","3x10","reps","Abdominals"],["Reverse Hyperextension","3x10","reps","Glutes"],["Back Extension","3x10","reps","Abdominals"],["Dumbbell Reverse Hyperextension","3x10","reps","Glutes"],["Dumbbell Back Extension","3x10","reps","Abdominals"],["Barbell Reverse Hyperextension","3x10","reps","Glutes"],["Barbell Back Extension","3x10","reps","Abdominals"],["Kettlebell Reverse Hyperextension","3x10","reps","Glutes"],["Kettlebell Back Extension","3x10","reps","Abdominals"],["Cable Reverse Hyperextension","3x10","reps","Glutes"],["Cable Back Extension","3x10","reps","Abdominals"],["Resistance Band Reverse Hyperextension","3x10","reps","Glutes"],["Resistance Band Back Extension","3x10","reps","Abdominals"],["Hip Adduction Machine","3x10","reps","Adductors"],["Cable Bench Press","3x10","reps","Chest"],["Smith Machine Bench Press","3x10","reps","Chest"],["Decline Bench Press Machine","3x10","reps","Chest"],["Decline Smith Machine Bench Press","3x10","reps","Chest"],["Incline Smith Machine Bench Press","3x10","reps","Chest"],["Incline Chest Press Machine","3x10","reps","Chest"],["Cable Fly Crossovers","3x12","reps","Chest"],["Low Cable Fly Crossovers","3x12","reps","Chest"],["Single-Arm Cable Crossover","3x12/side","reps","Chest"],["Band Chest Fly","3x12","reps","Chest"],["Chest Fly Machine","3x12","reps","Chest"],["Seated Cable Chest Fly","3x12","reps","Chest"],["Band Chest Press","3x12","reps","Chest"],["Iso-Lateral Chest Press Machine","3x10","reps","Chest"]],
   "Bodyweight":[["Push-up","3x15","reps","Chest"],["Pull-up","3x8","reps","Lats"],["Chin-up","3x8","reps","Biceps"],
     ["Dip","3x10","reps","Triceps"],["Plank","3x45s","time","Abdominals"],["Sit-up","3x15","reps","Abdominals"],["Air Squat","3x20","reps","Quadriceps"],
     ["Burpee","3x10","reps","Cardio"],["Mountain Climbers","3x30s","time","Abdominals"],["Jump Squat","3x12","reps","Quadriceps"],
-    ["Handstand Hold","3x20s","time","Shoulders"],["Pistol Squat","3x5/leg","reps","Quadriceps"],["Close-Grip Push-Up","3x10","reps","Chest"],["Deficit Push-Up","3x10","reps","Chest"],["Commando Pull-Up","3x10","reps","Lats"],["Weighted Chin-Up","3x10","reps","Lats"],["Barbell Pull-Up","3x10","reps","Lats"],["Barbell Inverted Row","3x10","reps","Traps"],["Kettlebell Chin-Up","3x10","reps","Lats"],["Kettlebell Inverted Row","3x10","reps","Traps"],["Bench Dip","3x10","reps","Triceps"],["Kettlebell Bench Dip","3x10","reps","Triceps"],["Barbell Sissy Squat","3x10","reps","Quadriceps"],["Kettlebell Sissy Squat","3x10","reps","Quadriceps"],["Kettlebell Nordic Hamstring Curl","3x10","reps","Hamstrings"],["Cable Nordic Hamstring Curl","3x10","reps","Hamstrings"],["Glute Bridge","3x10","reps","Glutes"],["Weighted Glute Bridge","3x10","reps","Glutes"],["Dumbbell Glute Bridge","3x10","reps","Glutes"],["Dumbbell Frog Pump","3x10","reps","Glutes"],["Kettlebell Frog Pump","3x10","reps","Glutes"],["Cable Glute Bridge","3x10","reps","Glutes"],["Tibialis Raise","3x10","reps","Calves"],["Dumbbell Tibialis Raise","3x10","reps","Calves"],["Barbell Tibialis Raise","3x10","reps","Calves"],["Kettlebell Tibialis Raise","3x10","reps","Calves"],["Stability Ball Plank","3x10","reps","Abdominals"],["Hip Dip Side Plank","3x10","reps","Abdominals"],["Toes-to-Bar Hanging Leg Raise","3x10","reps","Abdominals"],["Dead Bug","3x10","reps","Abdominals"],["Dragon Flag","3x10","reps","Abdominals"],["Dumbbell Dead Bug","3x10","reps","Abdominals"],["Dumbbell Hollow Body Hold","3x10","reps","Abdominals"],["Barbell Bird Dog","3x10","reps","Abdominals"],["Kettlebell Side Plank","3x10","reps","Abdominals"],["Cable Hanging Leg Raise","3x10","reps","Abdominals"],["Cable Dragon Flag","3x10","reps","Abdominals"],["Resistance Band Dead Bug","3x10","reps","Abdominals"],["Muscle-Up","3x10","reps","Lats"],["Front Lever","3x10","reps","Lats"],["Dumbbell Handstand Push-Up","3x10","reps","Shoulders"],["Dumbbell L-Sit","3x10","reps","Abdominals"],["Barbell Muscle-Up","3x10","reps","Lats"],["Barbell Pistol Squat","3x10","reps","Quadriceps"],["Barbell Front Lever","3x10","reps","Lats"],["Kettlebell Handstand Push-Up","3x10","reps","Shoulders"],["Kettlebell L-Sit","3x10","reps","Abdominals"],["Cable Muscle-Up","3x10","reps","Lats"],["Cable Pistol Squat","3x10","reps","Quadriceps"],["Cable Front Lever","3x10","reps","Lats"],["Resistance Band Handstand Push-Up","3x10","reps","Shoulders"],["Resistance Band L-Sit","3x10","reps","Abdominals"],["Outdoor Running","3x30s","time","Cardio"],["Zone 2 Outdoor Running","3x30s","time","Cardio"],["Tempo Outdoor Running","3x30s","time","Cardio"],["Interval Outdoor Running","3x30s","time","Cardio"],["Hill Sprint Outdoor Running","3x30s","time","Cardio"],["Fartlek Outdoor Running","3x30s","time","Cardio"],["Long Run Outdoor Running","3x30s","time","Cardio"],["Recovery Outdoor Running","3x30s","time","Cardio"],["Cat-Cow Stretch","3x10","reps","Abdominals"],["Cossack Squat","3x10","reps","Adductors"],["Dumbbell Cossack Squat","3x10","reps","Adductors"],["Barbell Cossack Squat","3x10","reps","Adductors"],["Kettlebell Cossack Squat","3x10","reps","Adductors"],["Cable Cossack Squat","3x10","reps","Adductors"],["Resistance Band Cossack Squat","3x10","reps","Adductors"],["Bear Crawl","3x10","reps","Abdominals"],["Crab Walk","3x10","reps","Triceps"],["Dumbbell Bear Crawl","3x10","reps","Abdominals"],["Dumbbell Crab Walk","3x10","reps","Triceps"],["Barbell Bear Crawl","3x10","reps","Abdominals"],["Barbell Crab Walk","3x10","reps","Triceps"],["Kettlebell Bear Crawl","3x10","reps","Abdominals"],["Kettlebell Crab Walk","3x10","reps","Triceps"],["Cable Bear Crawl","3x10","reps","Abdominals"],["Cable Crab Walk","3x10","reps","Triceps"],["Resistance Band Bear Crawl","3x10","reps","Abdominals"],["Resistance Band Crab Walk","3x10","reps","Triceps"],["Broad Jump","3x10","reps","Glutes"],["Skater Jump","3x10","reps","Glutes"],["Dumbbell Broad Jump","3x10","reps","Glutes"],["Dumbbell Skater Jump","3x10","reps","Glutes"],["Barbell Broad Jump","3x10","reps","Glutes"],["Barbell Skater Jump","3x10","reps","Glutes"],["Kettlebell Broad Jump","3x10","reps","Glutes"],["Kettlebell Skater Jump","3x10","reps","Glutes"],["Cable Broad Jump","3x10","reps","Glutes"],["Cable Skater Jump","3x10","reps","Glutes"],["Resistance Band Broad Jump","3x10","reps","Glutes"],["Resistance Band Skater Jump","3x10","reps","Glutes"]],
+    ["Handstand Hold","3x20s","time","Shoulders"],["Pistol Squat","3x5/leg","reps","Quadriceps"],["Close-Grip Push-Up","3x10","reps","Chest"],["Deficit Push-Up","3x10","reps","Chest"],["Commando Pull-Up","3x10","reps","Lats"],["Weighted Chin-Up","3x10","reps","Lats"],["Barbell Pull-Up","3x10","reps","Lats"],["Barbell Inverted Row","3x10","reps","Traps"],["Kettlebell Chin-Up","3x10","reps","Lats"],["Kettlebell Inverted Row","3x10","reps","Traps"],["Bench Dip","3x10","reps","Triceps"],["Kettlebell Bench Dip","3x10","reps","Triceps"],["Barbell Sissy Squat","3x10","reps","Quadriceps"],["Kettlebell Sissy Squat","3x10","reps","Quadriceps"],["Kettlebell Nordic Hamstring Curl","3x10","reps","Hamstrings"],["Cable Nordic Hamstring Curl","3x10","reps","Hamstrings"],["Glute Bridge","3x10","reps","Glutes"],["Weighted Glute Bridge","3x10","reps","Glutes"],["Dumbbell Glute Bridge","3x10","reps","Glutes"],["Dumbbell Frog Pump","3x10","reps","Glutes"],["Kettlebell Frog Pump","3x10","reps","Glutes"],["Cable Glute Bridge","3x10","reps","Glutes"],["Tibialis Raise","3x10","reps","Calves"],["Dumbbell Tibialis Raise","3x10","reps","Calves"],["Barbell Tibialis Raise","3x10","reps","Calves"],["Kettlebell Tibialis Raise","3x10","reps","Calves"],["Stability Ball Plank","3x10","reps","Abdominals"],["Hip Dip Side Plank","3x10","reps","Abdominals"],["Toes-to-Bar Hanging Leg Raise","3x10","reps","Abdominals"],["Dead Bug","3x10","reps","Abdominals"],["Dragon Flag","3x10","reps","Abdominals"],["Dumbbell Dead Bug","3x10","reps","Abdominals"],["Dumbbell Hollow Body Hold","3x10","reps","Abdominals"],["Barbell Bird Dog","3x10","reps","Abdominals"],["Kettlebell Side Plank","3x10","reps","Abdominals"],["Cable Hanging Leg Raise","3x10","reps","Abdominals"],["Cable Dragon Flag","3x10","reps","Abdominals"],["Resistance Band Dead Bug","3x10","reps","Abdominals"],["Muscle-Up","3x10","reps","Lats"],["Front Lever","3x10","reps","Lats"],["Dumbbell Handstand Push-Up","3x10","reps","Shoulders"],["Dumbbell L-Sit","3x10","reps","Abdominals"],["Barbell Muscle-Up","3x10","reps","Lats"],["Barbell Pistol Squat","3x10","reps","Quadriceps"],["Barbell Front Lever","3x10","reps","Lats"],["Kettlebell Handstand Push-Up","3x10","reps","Shoulders"],["Kettlebell L-Sit","3x10","reps","Abdominals"],["Cable Muscle-Up","3x10","reps","Lats"],["Cable Pistol Squat","3x10","reps","Quadriceps"],["Cable Front Lever","3x10","reps","Lats"],["Resistance Band Handstand Push-Up","3x10","reps","Shoulders"],["Resistance Band L-Sit","3x10","reps","Abdominals"],["Outdoor Running","3x30s","time","Cardio"],["Zone 2 Outdoor Running","3x30s","time","Cardio"],["Tempo Outdoor Running","3x30s","time","Cardio"],["Interval Outdoor Running","3x30s","time","Cardio"],["Hill Sprint Outdoor Running","3x30s","time","Cardio"],["Fartlek Outdoor Running","3x30s","time","Cardio"],["Long Run Outdoor Running","3x30s","time","Cardio"],["Recovery Outdoor Running","3x30s","time","Cardio"],["Cat-Cow Stretch","3x10","reps","Abdominals"],["Cossack Squat","3x10","reps","Adductors"],["Dumbbell Cossack Squat","3x10","reps","Adductors"],["Barbell Cossack Squat","3x10","reps","Adductors"],["Kettlebell Cossack Squat","3x10","reps","Adductors"],["Cable Cossack Squat","3x10","reps","Adductors"],["Resistance Band Cossack Squat","3x10","reps","Adductors"],["Bear Crawl","3x10","reps","Abdominals"],["Crab Walk","3x10","reps","Triceps"],["Dumbbell Bear Crawl","3x10","reps","Abdominals"],["Dumbbell Crab Walk","3x10","reps","Triceps"],["Barbell Bear Crawl","3x10","reps","Abdominals"],["Barbell Crab Walk","3x10","reps","Triceps"],["Kettlebell Bear Crawl","3x10","reps","Abdominals"],["Kettlebell Crab Walk","3x10","reps","Triceps"],["Cable Bear Crawl","3x10","reps","Abdominals"],["Cable Crab Walk","3x10","reps","Triceps"],["Resistance Band Bear Crawl","3x10","reps","Abdominals"],["Resistance Band Crab Walk","3x10","reps","Triceps"],["Broad Jump","3x10","reps","Glutes"],["Skater Jump","3x10","reps","Glutes"],["Dumbbell Broad Jump","3x10","reps","Glutes"],["Dumbbell Skater Jump","3x10","reps","Glutes"],["Barbell Broad Jump","3x10","reps","Glutes"],["Barbell Skater Jump","3x10","reps","Glutes"],["Kettlebell Broad Jump","3x10","reps","Glutes"],["Kettlebell Skater Jump","3x10","reps","Glutes"],["Cable Broad Jump","3x10","reps","Glutes"],["Cable Skater Jump","3x10","reps","Glutes"],["Resistance Band Broad Jump","3x10","reps","Glutes"],["Resistance Band Skater Jump","3x10","reps","Glutes"],["Plate Press","3x12","reps","Chest"],["Svend Press","3x12","reps","Chest"],["Chest Dip","3x10","reps","Chest"],["Weighted Chest Dip","3x8","reps","Chest"],["Ring Dip","3x8","reps","Chest"],["Incline Push-up","3x15","reps","Chest"],["Decline Push-up","3x12","reps","Chest"],["Kneeling Push-up","3x15","reps","Chest"],["Weighted Push-up","3x10","reps","Chest"],["Clap Push-up","3x8","reps","Chest"],["One-Arm Push-up","3x6/side","reps","Chest"],["Ring Push-up","3x10","reps","Chest"],["Plank Push-up","3x12","reps","Chest"],["Suspension Chest Fly","3x12","reps","Chest"]],
   "Cardio Machine":[["Treadmill","20 min","time","Cardio"],["Rowing Machine","2000m","distance","Cardio"],
     ["Ski Erg","1000m","distance","Cardio"],["Assault Bike","15 min","time","Cardio"],["Stationary Bike","30 min","time","Cardio"],
     ["Elliptical","25 min","time","Cardio"],["Stairmaster","20 min","time","Cardio"],["Jacob's Ladder","10 min","time","Cardio"],["Treadmill Running","15 min","time","Cardio"],["Zone 2 Treadmill Running","15 min","time","Cardio"],["Tempo Treadmill Running","15 min","time","Cardio"],["Interval Treadmill Running","15 min","time","Cardio"],["Incline Treadmill Running","15 min","time","Cardio"],["Sprint Treadmill Running","15 min","time","Cardio"],["Recovery Treadmill Running","15 min","time","Cardio"],["Stationary Cycling","15 min","time","Cardio"],["Stair Climber","15 min","time","Cardio"],["Elliptical Trainer","15 min","time","Cardio"]],
@@ -220,7 +220,7 @@ const EXERCISE_DETAILS = {
     ],
     animationWebmUrl: null,
     animationMp4Url: null,
-    thumbnailUrl: null,
+    thumbnailUrl: "assets/images/exercises/bench-press-barbell.jpg",
     animationAvailable: false
   },
   "Conventional Deadlift": {
@@ -316,7 +316,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Lie on the bench with eyes roughly under the bar, feet flat on the floor.", "Grip the bar slightly wider than shoulder-width and unrack it over your chest.", "Lower the bar under control to the mid-chest, keeping elbows at roughly a 45\u00b0 angle to your torso.", "Press the bar back up to full lockout in a slight arc back toward the rack position."],
     formTips: ["Keep your shoulder blades pulled back and down against the bench throughout.", "Keep a slight, natural arch in your lower back.", "Drive your feet into the floor for stability, not to bounce the bar."],
     commonMistakes: ["Flaring the elbows out to 90\u00b0, which stresses the shoulders.", "Bouncing the bar off the chest.", "Losing shoulder blade retraction partway through the set."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/bench-press-barbell.jpg", animationAvailable: false
   },
   "Incline Bench Press": {
     primaryMuscle: "Chest",
@@ -327,7 +327,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Set the bench to a 30\u201345\u00b0 incline and lie back with eyes under the bar.", "Grip slightly wider than shoulder-width and unrack the bar over your upper chest.", "Lower to the upper chest with control, elbows at roughly 45\u00b0.", "Press back up to lockout, keeping the bar path slightly back toward your face."],
     formTips: ["A steeper incline shifts more work to the front delts \u2014 30\u201345\u00b0 keeps it chest-focused.", "Keep shoulder blades retracted throughout, same as flat bench.", "Don't let the bar drift too far forward over your face."],
     commonMistakes: ["Setting the incline too steep, turning it into a shoulder press.", "Bouncing the bar off the chest.", "Flaring the elbows excessively."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/incline-bench-press-barbell.jpg", animationAvailable: false
   },
   "Overhead Press": {
     primaryMuscle: "Shoulders",
@@ -459,7 +459,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Lie back on a bench holding a dumbbell in each hand at chest level, palms forward.", "Press both dumbbells up until your arms are extended, without locking the elbows harshly.", "Lower under control until the dumbbells are level with your chest, elbows at roughly 45\u00b0.", "Press back up, keeping both sides moving evenly."],
     formTips: ["The extra range of motion versus a barbell is a benefit \u2014 use it, but stay controlled.", "Keep your shoulder blades retracted throughout.", "Bring the dumbbells together slightly at the top rather than clanking them."],
     commonMistakes: ["Letting the dumbbells drift out wide, stressing the shoulders.", "Uneven pressing between arms.", "Losing control on the descent."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/bench-press-dumbbell.jpg", animationAvailable: false
   },
   "DB Row": {
     primaryMuscle: "Lats",
@@ -569,7 +569,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Set a bench to a 30\u201345\u00b0 incline and lie back holding a dumbbell in each hand at shoulder level.", "Press both dumbbells up until arms are extended.", "Lower under control to the upper chest, elbows at roughly 45\u00b0.", "Press back up, keeping both sides moving evenly."],
     formTips: ["A moderate incline keeps this chest-focused \u2014 too steep shifts it to the shoulders.", "Keep shoulder blades retracted throughout.", "Control the descent rather than dropping the weight."],
     commonMistakes: ["Incline set too steep.", "Letting the dumbbells drift too wide.", "Uneven pressing between arms."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/incline-bench-press-dumbbell.jpg", animationAvailable: false
   },
   "Leg Press": {
     primaryMuscle: "Quadriceps",
@@ -646,7 +646,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Adjust the seat so the handles line up with mid-chest height.", "Grip the handles and press forward until your arms are extended.", "Control the return, allowing your elbows to travel back without banging the stack.", "Repeat for reps, keeping shoulder blades pinned to the pad."],
     formTips: ["Keep your shoulder blades pressed into the pad throughout.", "Adjust seat height before you start so the handles match your chest level.", "Control both the press and the return."],
     commonMistakes: ["Letting the shoulder blades lift off the pad.", "Locking the elbows out harshly at the top.", "Using a seat height that turns this into a shoulder press."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/chest-press-machine.jpg", animationAvailable: false
   },
   "Shoulder Press Machine": {
     primaryMuscle: "Shoulders",
@@ -668,7 +668,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Sit with your back flat against the pad, forearms or hands on the pads/handles.", "Bring your arms together in front of your chest in a hugging motion.", "Squeeze your chest at full contraction.", "Return under control, allowing a stretch across the chest."],
     formTips: ["Keep the movement slow and controlled \u2014 this exercise is easy to cheat with momentum.", "Squeeze and briefly pause at the point of full contraction.", "Don't let the pads slam together."],
     commonMistakes: ["Using momentum instead of a squeeze.", "Arching the back off the pad.", "Going too heavy and using partial range."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/butterfly-pec-deck.jpg", animationAvailable: false
   },
   "Assisted Pull-up": {
     primaryMuscle: "Lats",
@@ -734,7 +734,458 @@ const EXERCISE_DETAILS = {
     instructions: ["Start in a plank position, hands slightly wider than shoulder-width.", "Keep your body in a straight line from head to heels.", "Lower your chest toward the floor, elbows at roughly 45\u00b0.", "Press back up to full arm extension."],
     formTips: ["Keep your core braced so your hips don't sag or pike.", "Lower until your chest nearly touches the floor for full range.", "Keep your elbows at roughly 45\u00b0, not flared to 90\u00b0."],
     commonMistakes: ["Letting the hips sag toward the floor.", "Only performing a partial range of motion.", "Flaring the elbows straight out to the sides."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/push-up.jpg", animationAvailable: false
+  },
+  "Wide-Grip Barbell Bench Press": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids"],
+    equipment: "Barbell",
+    difficulty: "Intermediate",
+    movementPattern: "Horizontal Push",
+    instructions: ["Grip the bar significantly wider than shoulder-width and unrack it over your chest.", "Lower under control to the chest — expect a shorter range of motion than a standard-grip bench.", "Press back up to lockout, keeping the bar path vertical."],
+    formTips: ["The wider grip shifts more emphasis onto the chest and less onto the triceps.", "Keep shoulder blades retracted throughout, same as standard bench.", "Don't go wider than feels stable on your shoulders."],
+    commonMistakes: ["Gripping wide enough to strain the shoulder joint.", "Losing the shortened range of motion by bouncing off the chest.", "Uneven bar path."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/bench-press-wide-grip-barbell.jpg", animationAvailable: false
+  },
+  "Cable Bench Press": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids"],
+    equipment: "Cable",
+    difficulty: "Intermediate",
+    movementPattern: "Horizontal Push",
+    instructions: ["Lie on a bench positioned between two low cable pulleys, handle in each hand at chest level.", "Press both handles up and together until your arms are extended.", "Lower under control back to chest level, feeling a stretch across the chest."],
+    formTips: ["The cables keep constant tension through the whole range, unlike free weights.", "Keep shoulder blades retracted throughout.", "Press in a straight, even line with both arms."],
+    commonMistakes: ["Letting one arm lead the press.", "Losing tension by not lowering fully.", "Flaring the elbows too wide."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/bench-press-cable.jpg", animationAvailable: false
+  },
+  "Smith Machine Bench Press": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids"],
+    equipment: "Smith Machine",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Push",
+    instructions: ["Lie on the bench under the fixed bar path, eyes roughly under the bar.", "Unrack and lower the bar under control to your mid-chest.", "Press back up to lockout, rotating the bar to re-rack when finished."],
+    formTips: ["The fixed bar path removes the stabilization demand — good for isolating the chest at higher fatigue.", "Keep shoulder blades retracted throughout.", "Position the bench so the bar path lines up with your natural pressing groove."],
+    commonMistakes: ["Bench positioned so the fixed path doesn't match a natural pressing line, stressing the shoulders.", "Bouncing the bar off the chest.", "Forgetting to rotate and re-rack safely."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/bench-press-smith-machine.jpg", animationAvailable: false
+  },
+  "Feet-Up Barbell Bench Press": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids", "Core"],
+    equipment: "Barbell",
+    difficulty: "Intermediate",
+    movementPattern: "Horizontal Push",
+    instructions: ["Lie on the bench with feet raised off the floor, either crossed or resting on the bench.", "Unrack the bar and lower it under control to your mid-chest.", "Press back up to lockout, keeping your lower back from arching off the bench."],
+    formTips: ["Removing leg drive forces the chest and core to do more of the stabilizing work.", "Brace your core hard since you can't drive through your feet.", "Keep the bar path controlled — no leg drive means less forgiveness for a sloppy path."],
+    commonMistakes: ["Letting the lower back arch up off the bench to compensate.", "Losing core brace partway through the set.", "Using too much weight for a set-up that removes leg drive."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/feet-up-bench-press-barbell.jpg", animationAvailable: false
+  },
+  "Decline Barbell Bench Press": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids"],
+    equipment: "Barbell",
+    difficulty: "Intermediate",
+    movementPattern: "Horizontal Push",
+    instructions: ["Secure your legs at the top of a decline bench and lie back, head lower than your hips.", "Unrack the bar and lower it to your lower chest.", "Press back up to lockout, keeping the bar path controlled on a decline."],
+    formTips: ["This angle emphasizes the lower chest fibers.", "Keep shoulder blades retracted throughout.", "Have a spotter or use a rack designed for decline work — re-racking is trickier on a decline."],
+    commonMistakes: ["Lowering to the wrong spot on the torso (should be lower chest, not mid-chest).", "Losing control of the bar path on the way up.", "Skipping the leg lock-in, risking sliding on the bench."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/decline-bench-press-barbell.jpg", animationAvailable: false
+  },
+  "Decline DB Bench Press": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids"],
+    equipment: "Dumbbell",
+    difficulty: "Intermediate",
+    movementPattern: "Horizontal Push",
+    instructions: ["Secure your legs at the top of a decline bench, a dumbbell in each hand at chest level.", "Press both dumbbells up until arms are extended.", "Lower under control to your lower chest, elbows at roughly 45°."],
+    formTips: ["Get the dumbbells into position carefully on a decline — use your knees to help hoist them up at the start.", "Keep shoulder blades retracted throughout.", "Control the descent rather than dropping the weight."],
+    commonMistakes: ["Letting the dumbbells drift wide.", "Uneven pressing between arms.", "Rushing the setup and losing control of the dumbbells."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/decline-bench-press-dumbbell.jpg", animationAvailable: false
+  },
+  "Decline Bench Press Machine": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids"],
+    equipment: "Machine",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Push",
+    instructions: ["Sit or lie into the decline press machine so the handles line up with your lower chest.", "Press forward until your arms are extended.", "Control the return, feeling a stretch across the lower chest."],
+    formTips: ["Adjust the seat so the handles match your lower-chest line before loading weight.", "Keep shoulder blades pinned to the pad throughout.", "Control both the press and the return."],
+    commonMistakes: ["Wrong seat height, changing the target from lower chest to mid-chest.", "Locking the elbows out harshly at the top.", "Letting the shoulder blades lift off the pad."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/decline-bench-press-machine.jpg", animationAvailable: false
+  },
+  "Decline Smith Machine Bench Press": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids"],
+    equipment: "Smith Machine",
+    difficulty: "Intermediate",
+    movementPattern: "Horizontal Push",
+    instructions: ["Set a decline bench under the Smith machine bar, securing your legs at the top.", "Unrack and lower the bar under control to your lower chest.", "Press back up to lockout, then rotate to re-rack."],
+    formTips: ["The fixed bar path adds stability while still targeting the lower chest.", "Keep shoulder blades retracted throughout.", "Line the bench up carefully so the fixed path matches your lower-chest line."],
+    commonMistakes: ["Bench misaligned with the fixed bar path, stressing the shoulders.", "Bouncing the bar off the chest.", "Rushing the re-rack rotation."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/decline-bench-press-smith-machine.jpg", animationAvailable: false
+  },
+  "Decline DB Chest Fly": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Anterior Deltoids"],
+    equipment: "Dumbbell",
+    difficulty: "Intermediate",
+    movementPattern: "Horizontal Adduction",
+    instructions: ["Secure your legs at the top of a decline bench, dumbbells held above your chest, palms facing in.", "With a slight bend in the elbows, lower the dumbbells out to the sides in an arc.", "Bring the dumbbells back together above your chest, squeezing at the top."],
+    formTips: ["Keep the same slight elbow bend throughout — don't turn it into a press.", "Lower only as far as a comfortable stretch allows.", "Squeeze the chest at the top rather than just meeting the dumbbells."],
+    commonMistakes: ["Bending the elbows more as the set fatigues, turning it into a press.", "Lowering too far and straining the shoulder joint.", "Using momentum to swing the weights back up."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/decline-chest-fly-dumbbell.jpg", animationAvailable: false
+  },
+  "Incline Smith Machine Bench Press": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Anterior Deltoids", "Triceps"],
+    equipment: "Smith Machine",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Push",
+    instructions: ["Set an incline bench (30–45°) under the Smith machine bar.", "Unrack and lower the bar under control to your upper chest.", "Press back up to lockout, then rotate to re-rack."],
+    formTips: ["A moderate incline keeps this chest-focused rather than shoulder-focused.", "Keep shoulder blades retracted throughout.", "Line the bench up so the fixed path matches your upper-chest line."],
+    commonMistakes: ["Incline set too steep, shifting emphasis to the front delts.", "Bouncing the bar off the chest.", "Bench misaligned with the fixed bar path."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/incline-bench-press-smith-machine.jpg", animationAvailable: false
+  },
+  "Incline DB Chest Fly": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Anterior Deltoids"],
+    equipment: "Dumbbell",
+    difficulty: "Intermediate",
+    movementPattern: "Horizontal Adduction",
+    instructions: ["Set a bench to a 30–45° incline, dumbbells held above your chest, palms facing in.", "With a slight bend in the elbows, lower the dumbbells out to the sides in an arc.", "Bring the dumbbells back together above your chest, squeezing at the top."],
+    formTips: ["This angle emphasizes the upper chest fibers.", "Keep the same slight elbow bend throughout — don't turn it into a press.", "Lower only as far as a comfortable stretch allows."],
+    commonMistakes: ["Bending the elbows more as the set fatigues, turning it into a press.", "Lowering too far and straining the shoulder joint.", "Using momentum to swing the weights back up."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/incline-chest-fly-dumbbell.jpg", animationAvailable: false
+  },
+  "Incline Chest Press Machine": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Anterior Deltoids", "Triceps"],
+    equipment: "Machine",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Push",
+    instructions: ["Adjust the seat so the handles line up with your upper-chest height.", "Press forward until your arms are extended.", "Control the return, keeping shoulder blades pinned to the pad."],
+    formTips: ["Set seat height before loading weight so the handles match your upper chest.", "Keep shoulder blades pressed into the pad throughout.", "Control both the press and the return."],
+    commonMistakes: ["Wrong seat height, turning it into a shoulder press.", "Letting the shoulder blades lift off the pad.", "Locking the elbows out harshly at the top."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/incline-chest-press-machine.jpg", animationAvailable: false
+  },
+  "Barbell Floor Press": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids"],
+    equipment: "Barbell",
+    difficulty: "Intermediate",
+    movementPattern: "Horizontal Push",
+    instructions: ["Lie on the floor with knees bent, bar held above your chest at arm's length.", "Lower the bar under control until your upper arms touch the floor.", "Pause briefly, then press back up to lockout."],
+    formTips: ["The floor cuts range of motion short, which unloads the shoulder joint and emphasizes lockout strength.", "Pause at the bottom rather than bouncing your arms off the floor.", "Keep your feet flat and core braced throughout."],
+    commonMistakes: ["Bouncing the elbows off the floor instead of pausing.", "Arching excessively to fake more range of motion.", "Flaring the elbows out to 90°."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/floor-press-barbell.jpg", animationAvailable: false
+  },
+  "DB Floor Press": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids"],
+    equipment: "Dumbbell",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Push",
+    instructions: ["Lie on the floor with knees bent, a dumbbell in each hand at chest level.", "Press both dumbbells up until arms are extended.", "Lower under control until your upper arms touch the floor, then press back up."],
+    formTips: ["Pause briefly at the bottom rather than bouncing off the floor.", "Keep both dumbbells moving evenly.", "This is a good shoulder-friendly alternative to a full-range bench press."],
+    commonMistakes: ["Bouncing the elbows off the floor.", "Letting the dumbbells drift wide.", "Uneven pressing between arms."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/floor-press-dumbbell.jpg", animationAvailable: false
+  },
+  "DB Hex Press": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps"],
+    equipment: "Dumbbell",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Push",
+    instructions: ["Lie on a bench holding two hex dumbbells pressed together, palms facing each other.", "Press the dumbbells straight up while squeezing them together throughout.", "Lower under control back to chest level, maintaining the squeeze."],
+    formTips: ["The constant inward squeeze is what makes this a chest-focused variation — don't let it relax.", "Keep the dumbbells pressed together for the entire set.", "Use a lighter weight than a standard press — the squeeze adds difficulty."],
+    commonMistakes: ["Letting the dumbbells separate mid-set, losing the squeeze.", "Going too heavy and sacrificing the inward pressure.", "Rushing the tempo."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/hex-press-dumbbell.jpg", animationAvailable: false
+  },
+  "DB Squeeze Press": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps"],
+    equipment: "Dumbbell",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Push",
+    instructions: ["Lie on a bench with two dumbbells held together at chest level, pressing your palms into the weights.", "Press upward while squeezing the dumbbells together throughout the entire rep.", "Lower under control, maintaining the inward squeeze."],
+    formTips: ["The squeeze is the whole point of this exercise — keep constant inward pressure.", "Use lighter weight than you'd use for a standard press.", "Slow the tempo down to maximize the contraction."],
+    commonMistakes: ["Losing the squeeze partway through the set.", "Using too much weight, making it hard to maintain pressure.", "Rushing through reps."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/dumbbell-squeeze-press.jpg", animationAvailable: false
+  },
+  "Plate Press": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps"],
+    equipment: "Plate",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Push",
+    instructions: ["Stand or lie holding a weight plate between both palms at chest height, pressing the plate faces together.", "Press the plate straight out in front of you while maintaining the squeeze.", "Bring it back to your chest under control, keeping constant pressure."],
+    formTips: ["Constant inward squeeze is what makes this work — never let the plate faces separate.", "Keep your elbows roughly level with your shoulders.", "A lighter plate held with maximal squeeze beats a heavy plate held loosely."],
+    commonMistakes: ["Letting the squeeze relax between reps.", "Using a plate too heavy to press with both palms pushing inward.", "Rushing the tempo."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/plate-press.jpg", animationAvailable: false
+  },
+  "Svend Press": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps"],
+    equipment: "Plate",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Push",
+    instructions: ["Stand holding a weight plate between both palms at chest height, arms extended slightly, plate faces squeezed together.", "Press the plate straight out away from your chest while maintaining the squeeze.", "Bring it back to your chest under control, never letting the pressure release."],
+    formTips: ["This is done standing, unlike the flat Plate Press — keep your core braced.", "The squeeze between your palms is the entire point of the exercise.", "Use a light plate; this is about contraction quality, not load."],
+    commonMistakes: ["Letting the plate faces separate mid-rep.", "Leaning back to help press the weight instead of using the chest.", "Using too heavy a plate to maintain the squeeze."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/plate-squeeze-svend-press.jpg", animationAvailable: false
+  },
+  "Around The World": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Anterior Deltoids", "Triceps"],
+    equipment: "Dumbbell",
+    difficulty: "Intermediate",
+    movementPattern: "Horizontal Adduction",
+    instructions: ["Lie on a bench holding a dumbbell in each hand at your sides, arms extended, palms facing up.", "In one continuous arc, sweep the dumbbells up and around until they meet above your chest.", "Reverse the same arcing path back down to the start."],
+    formTips: ["Keep a slight bend in the elbows throughout the whole circular path.", "Use lighter dumbbells than you would for a press or fly — this is a longer lever, higher-demand movement.", "Move slowly and under control; this is not a movement to rush."],
+    commonMistakes: ["Using too much weight and losing control of the arc.", "Locking the elbows straight, stressing the joint.", "Rushing the tempo instead of a smooth, continuous sweep."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/around-the-world.jpg", animationAvailable: false
+  },
+  "Cable Fly Crossovers": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Anterior Deltoids"],
+    equipment: "Cable",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Adduction",
+    instructions: ["Stand centered between two high cable pulleys, a handle in each hand, slight forward lean.", "With a slight bend in the elbows, bring your hands together in front of your chest in an arcing motion.", "Return under control, feeling a stretch across the chest."],
+    formTips: ["Keep the same slight elbow bend throughout — don't turn it into a press.", "Cross your hands slightly at the bottom for a fuller squeeze, if comfortable.", "Take a small step forward to keep tension on the chest at the start."],
+    commonMistakes: ["Using the arms/shoulders to muscle the weight instead of the chest.", "Straightening the elbows too much, turning it into a different movement.", "Standing too far back, losing tension at the start."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/cable-fly-crossovers.jpg", animationAvailable: false
+  },
+  "Low Cable Fly Crossovers": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Anterior Deltoids"],
+    equipment: "Cable",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Adduction",
+    instructions: ["Stand centered between two low cable pulleys, a handle in each hand, slight forward lean.", "With a slight bend in the elbows, sweep your hands up and together in front of your upper chest.", "Return under control, feeling a stretch across the lower/mid chest."],
+    formTips: ["The low-to-high path emphasizes the upper chest fibers.", "Keep the same slight elbow bend throughout the movement.", "Squeeze and briefly pause at the top of each rep."],
+    commonMistakes: ["Turning it into a press by bending the elbows more as the set fatigues.", "Using too much weight and losing the arc path.", "Standing too close, losing range of motion."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/low-cable-fly-crossovers.jpg", animationAvailable: false
+  },
+  "Single-Arm Cable Crossover": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Anterior Deltoids", "Core"],
+    equipment: "Cable",
+    difficulty: "Intermediate",
+    movementPattern: "Horizontal Adduction",
+    instructions: ["Stand side-on to a high cable pulley, handle in the far hand, slight forward lean.", "With a slight bend in the elbow, sweep your arm down and across your body.", "Return under control, feeling a stretch across the chest, then repeat before switching sides."],
+    formTips: ["Brace your core — working one side at a time challenges anti-rotation stability.", "Keep the same slight elbow bend throughout.", "Match reps and effort on both sides."],
+    commonMistakes: ["Rotating the torso to help move the weight instead of isolating the chest.", "Using too much weight for one-arm control.", "Rushing through reps without a controlled return."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/single-arm-cable-crossover.jpg", animationAvailable: false
+  },
+  "DB Chest Fly": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Anterior Deltoids"],
+    equipment: "Dumbbell",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Adduction",
+    instructions: ["Lie on a flat bench holding a dumbbell in each hand above your chest, palms facing in.", "With a slight bend in the elbows, lower the dumbbells out to the sides in an arc.", "Bring the dumbbells back together above your chest, squeezing at the top."],
+    formTips: ["Keep the same slight elbow bend throughout — don't turn it into a press.", "Lower only as far as a comfortable stretch allows.", "Squeeze the chest at the top of each rep."],
+    commonMistakes: ["Bending the elbows more as the set fatigues, turning it into a press.", "Lowering too far and straining the shoulder joint.", "Using momentum to swing the weights back up."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/chest-fly-dumbbell.jpg", animationAvailable: false
+  },
+  "Band Chest Fly": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Anterior Deltoids"],
+    equipment: "Band",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Adduction",
+    instructions: ["Anchor a resistance band behind you at chest height and hold one end in each hand, arms extended out to the sides.", "With a slight bend in the elbows, bring your hands together in front of your chest.", "Return under control, resisting the band's pull back."],
+    formTips: ["Keep the same slight elbow bend throughout the movement.", "Control the return — the band wants to snap your arms back, don't let it.", "Step forward from the anchor to increase resistance as you get stronger."],
+    commonMistakes: ["Letting the band yank your arms back uncontrolled.", "Turning it into a press by bending the elbows more.", "Standing too close to the anchor, losing resistance."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/chest-fly-band.jpg", animationAvailable: false
+  },
+  "Suspension Chest Fly": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Anterior Deltoids", "Core"],
+    equipment: "Suspension Trainer",
+    difficulty: "Intermediate",
+    movementPattern: "Horizontal Adduction",
+    instructions: ["Hold the suspension trainer handles and lean forward with arms extended out to the sides, body in a straight line.", "With a slight bend in the elbows, bring your hands together in front of your chest as your body rises.", "Return under control back to the extended position."],
+    formTips: ["Adjust your foot position — further back/more horizontal increases difficulty.", "Keep your core and glutes braced for a straight body line throughout.", "Keep the same slight elbow bend throughout the movement."],
+    commonMistakes: ["Letting the hips sag out of a straight line.", "Standing too upright, removing most of the resistance.", "Rushing the return instead of controlling it."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/chest-fly-suspension.jpg", animationAvailable: false
+  },
+  "Chest Fly Machine": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Anterior Deltoids"],
+    equipment: "Machine",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Adduction",
+    instructions: ["Sit with your back flat against the pad, gripping the handles with arms out to the sides.", "Bring your arms together in front of your chest in an arcing motion.", "Return under control, feeling a stretch across the chest."],
+    formTips: ["Set the seat so the handles line up with chest height before loading weight.", "Keep the movement slow and controlled — this machine is easy to cheat with momentum.", "Squeeze and briefly pause at full contraction."],
+    commonMistakes: ["Using momentum instead of a controlled squeeze.", "Wrong seat height, changing the angle of resistance.", "Letting the weight stack slam on the way down."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/chest-fly-machine.jpg", animationAvailable: false
+  },
+  "Seated Cable Chest Fly": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Anterior Deltoids"],
+    equipment: "Cable",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Adduction",
+    instructions: ["Sit on a bench centered between two cable pulleys set at chest height, a handle in each hand.", "With a slight bend in the elbows, bring your hands together in front of your chest.", "Return under control, feeling a stretch across the chest."],
+    formTips: ["Sitting removes leg drive/momentum, keeping the tension purely on the chest.", "Keep the same slight elbow bend throughout.", "Squeeze and briefly pause at the point of full contraction."],
+    commonMistakes: ["Leaning back to add momentum.", "Turning it into a press by bending the elbows more.", "Standing up mid-set to cheat the weight."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/seated-chest-fly-cable.jpg", animationAvailable: false
+  },
+  "Band Chest Press": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids"],
+    equipment: "Band",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Push",
+    instructions: ["Anchor a resistance band behind you at chest height and hold one end in each hand at your chest.", "Press both hands forward until your arms are extended.", "Return under control, resisting the band's pull back to your chest."],
+    formTips: ["Control the return just as much as the press — the band wants to snap back.", "Keep your core braced, especially standing.", "Step forward from the anchor to increase resistance as you progress."],
+    commonMistakes: ["Letting the band yank your arms back uncontrolled.", "Leaning your whole body into the press instead of using your chest and arms.", "Standing too close to the anchor, losing resistance."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/chest-press-band.jpg", animationAvailable: false
+  },
+  "Iso-Lateral Chest Press Machine": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids"],
+    equipment: "Machine",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Push",
+    instructions: ["Adjust the seat so the handles line up with mid-chest height, one handle in each hand.", "Press both handles forward independently until your arms are extended.", "Control the return on both sides evenly, keeping shoulder blades pinned to the pad."],
+    formTips: ["The independent arms let you correct side-to-side strength imbalances — don't let a stronger side dominate.", "Keep shoulder blades pressed into the pad throughout.", "Control both the press and the return."],
+    commonMistakes: ["Letting one arm do more of the work.", "Locking the elbows out harshly at the top.", "Letting the shoulder blades lift off the pad."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/iso-lateral-chest-press-machine.jpg", animationAvailable: false
+  },
+  "Chest Dip": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids"],
+    equipment: "Bodyweight",
+    difficulty: "Intermediate",
+    movementPattern: "Horizontal Push",
+    instructions: ["Grip parallel dip bars and support your bodyweight with arms extended, leaning your torso forward.", "Lower under control until your shoulders drop below your elbows.", "Press back up to lockout, keeping the forward lean to target the chest."],
+    formTips: ["Leaning forward (versus staying upright) is what shifts emphasis onto the chest over triceps.", "Keep your descent controlled rather than dropping quickly.", "Go as deep as your shoulder mobility comfortably allows."],
+    commonMistakes: ["Staying too upright, which shifts the work to the triceps instead of the chest.", "Dropping too fast and losing control at the bottom.", "Only performing partial-depth reps."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/chest-dip.jpg", animationAvailable: false
+  },
+  "Weighted Chest Dip": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids"],
+    equipment: "Bodyweight",
+    difficulty: "Advanced",
+    movementPattern: "Horizontal Push",
+    instructions: ["Attach weight via a dip belt or hold a dumbbell between your feet, then grip the parallel bars and support yourself with arms extended, leaning forward.", "Lower under control until your shoulders drop below your elbows.", "Press back up to lockout, maintaining the forward lean."],
+    formTips: ["Only add weight once bodyweight dips are controlled and pain-free for multiple reps.", "Keep the same forward lean as an unweighted chest dip.", "Control the descent — added weight makes an uncontrolled drop riskier on the shoulders."],
+    commonMistakes: ["Adding weight before bodyweight dips are solid.", "Staying too upright, shifting emphasis to the triceps.", "Dropping too fast under the extra load."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/weighted-chest-dip.jpg", animationAvailable: false
+  },
+  "Ring Dip": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids", "Core"],
+    equipment: "Rings",
+    difficulty: "Advanced",
+    movementPattern: "Horizontal Push",
+    instructions: ["Support yourself on gymnastic rings with arms extended, leaning your torso forward.", "Lower under control until your shoulders drop below your elbows, controlling the rings' instability.", "Press back up to lockout, keeping the rings steady."],
+    formTips: ["The instability of the rings demands far more shoulder stability than fixed dip bars — build up on bars first.", "Keep the forward lean to emphasize the chest.", "Turn the rings out slightly at the top (a false grip or ring turnout) if you have the mobility."],
+    commonMistakes: ["Attempting ring dips before fixed-bar dips are solid.", "Letting the rings swing/wobble excessively.", "Staying too upright, shifting emphasis to the triceps."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/ring-dips.jpg", animationAvailable: false
+  },
+  "Incline Push-up": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids", "Core"],
+    equipment: "Bodyweight",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Push",
+    instructions: ["Place your hands on a raised, stable surface (bench, box, or step), body in a straight line.", "Lower your chest toward the surface, elbows at roughly 45°.", "Press back up to full arm extension."],
+    formTips: ["The higher the surface, the easier the push-up — a good regression while building strength.", "Keep your core braced so your hips don't sag or pike.", "Lower for full range rather than stopping halfway."],
+    commonMistakes: ["Letting the hips sag toward the floor.", "Using a surface so high the exercise becomes too easy to be useful.", "Only performing a partial range of motion."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/incline-push-up.jpg", animationAvailable: false
+  },
+  "Decline Push-up": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids", "Core"],
+    equipment: "Bodyweight",
+    difficulty: "Intermediate",
+    movementPattern: "Horizontal Push",
+    instructions: ["Place your feet on a raised, stable surface (bench or box), hands on the floor, body in a straight line.", "Lower your chest toward the floor, elbows at roughly 45°.", "Press back up to full arm extension."],
+    formTips: ["Elevating the feet increases the load on the upper chest and shoulders versus a standard push-up.", "Keep your core braced so your hips don't sag.", "The higher your feet, the harder the exercise — progress gradually."],
+    commonMistakes: ["Using a surface too high for your current strength, breaking form.", "Letting the hips sag or pike.", "Only performing a partial range of motion."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/decline-push-up.jpg", animationAvailable: false
+  },
+  "Kneeling Push-up": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids", "Core"],
+    equipment: "Bodyweight",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Push",
+    instructions: ["Start on your hands and knees, hands slightly wider than shoulder-width, body in a straight line from head to knees.", "Lower your chest toward the floor, elbows at roughly 45°.", "Press back up to full arm extension."],
+    formTips: ["A great regression for building push-up strength before moving to full push-ups.", "Keep your core braced so your hips don't sag.", "Lower until your chest nearly touches the floor for full range."],
+    commonMistakes: ["Letting the hips sag or pike out of a straight line.", "Only performing a partial range of motion.", "Flaring the elbows straight out to the sides."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/kneeling-push-up.jpg", animationAvailable: false
+  },
+  "Close-Grip Push-Up": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids", "Core"],
+    equipment: "Bodyweight",
+    difficulty: "Intermediate",
+    movementPattern: "Horizontal Push",
+    instructions: ["Start in a plank position with hands close together, roughly under your chest.", "Keep your body in a straight line and lower your chest toward your hands, elbows tracking close to your torso.", "Press back up to full arm extension."],
+    formTips: ["The narrow hand position shifts more emphasis onto the triceps while still working the chest.", "Keep your elbows tucked close rather than flaring.", "Keep your core braced so your hips don't sag."],
+    commonMistakes: ["Flaring the elbows out, which defeats the purpose of the narrow grip.", "Letting the hips sag toward the floor.", "Hands too close together, straining the wrists."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/close-grip-push-up.jpg", animationAvailable: false
+  },
+  "Weighted Push-up": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids", "Core"],
+    equipment: "Bodyweight",
+    difficulty: "Advanced",
+    movementPattern: "Horizontal Push",
+    instructions: ["Have a partner place a weight plate on your upper back, or wear a weighted vest, then get into a plank position.", "Keep your body in a straight line and lower your chest toward the floor.", "Press back up to full arm extension, keeping the weight stable."],
+    formTips: ["Only add weight once bodyweight push-ups are easy for high reps.", "Keep your core extra braced — added weight makes hip sag more likely.", "Have someone place/remove the weight safely rather than balancing it yourself."],
+    commonMistakes: ["Adding weight before bodyweight push-ups are solid.", "Letting the hips sag under the extra load.", "Using unstable/unsecured weight that can slide off."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/weighted-push-up.jpg", animationAvailable: false
+  },
+  "Clap Push-up": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids", "Core"],
+    equipment: "Bodyweight",
+    difficulty: "Advanced",
+    movementPattern: "Horizontal Push",
+    instructions: ["Start in a plank position, hands slightly wider than shoulder-width.", "Lower your chest toward the floor, then explosively press up hard enough for your hands to leave the ground.", "Clap once in the air, then land with soft elbows and immediately absorb into the next rep."],
+    formTips: ["Master strict push-ups for high reps before attempting this — it's a genuine plyometric movement.", "Land with bent elbows to absorb the impact rather than landing stiff-armed.", "Keep your core braced throughout the explosive phase."],
+    commonMistakes: ["Attempting this before having real push-up strength, risking a hard fall.", "Landing with locked elbows, jarring the joints.", "Letting the hips sag during the explosive phase."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/clap-push-up.jpg", animationAvailable: false
+  },
+  "One-Arm Push-up": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids", "Core"],
+    equipment: "Bodyweight",
+    difficulty: "Advanced",
+    movementPattern: "Horizontal Push",
+    instructions: ["Start in a plank position with one hand on the floor roughly under your chest, feet set wide for stability.", "Lower your chest toward the floor under control on the single arm, resisting rotation.", "Press back up to full arm extension, then repeat before switching sides."],
+    formTips: ["Set your feet wider than normal to build a stable base against the rotational demand.", "Brace your core hard to resist twisting toward the working arm.", "Build up with a hand-elevated or assisted version before attempting the full floor version."],
+    commonMistakes: ["Twisting the torso to help push instead of resisting rotation.", "Attempting this before having solid two-arm push-up strength.", "Letting the hips sag or rotate out of line."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/one-arm-push-up.jpg", animationAvailable: false
+  },
+  "Ring Push-up": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids", "Core"],
+    equipment: "Rings",
+    difficulty: "Advanced",
+    movementPattern: "Horizontal Push",
+    instructions: ["Set gymnastic rings low to the ground and grip them in a plank position, body in a straight line.", "Lower your chest toward the rings, controlling their instability, elbows at roughly 45°.", "Press back up to full arm extension, keeping the rings steady."],
+    formTips: ["The instability demands far more shoulder and core stabilization than a floor push-up.", "Keep your core braced hard throughout to control the rings.", "Build up on a stable surface first before progressing to rings."],
+    commonMistakes: ["Letting the rings wobble excessively from poor stabilization.", "Attempting this before standard push-ups are solid.", "Letting the hips sag out of a straight line."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/ring-push-up.jpg", animationAvailable: false
+  },
+  "Plank Push-up": {
+    primaryMuscle: "Chest",
+    secondaryMuscles: ["Triceps", "Anterior Deltoids", "Core"],
+    equipment: "Bodyweight",
+    difficulty: "Intermediate",
+    movementPattern: "Horizontal Push",
+    instructions: ["Start in a forearm plank, body in a straight line.", "Press up one arm at a time into a full push-up (hand) plank.", "Lower back down one arm at a time to forearms, alternating the leading arm each rep."],
+    formTips: ["Keep your hips as level and still as possible — minimizing rock is the real challenge here.", "Brace your core hard throughout the transitions.", "Move at a controlled pace rather than rushing the up-down transitions."],
+    commonMistakes: ["Letting the hips rock side to side during transitions.", "Letting the hips sag or pike.", "Rushing the transitions and losing control."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/plank-push-up.jpg", animationAvailable: false
   },
   "Pull-up": {
     primaryMuscle: "Lats",
@@ -9096,10 +9547,10 @@ function renderWorkoutComplete(s){
       ${breakdown.filter(b=>b.sets>0).slice(0,6).map(b=>`<div>${escHtml(b.name)}</div>`).join("")}
     </div>`);
 
-  // No real exercise photos exist anywhere in this app (every EXERCISE_DETAILS.thumbnailUrl
-  // is null) -- an icon badge per row, not a fabricated photo, matches the honest-assets
-  // approach used everywhere else this session (Tools/Profile/Plan all use icon badges
-  // where the reference showed photography this app has no real asset for).
+  // Most exercises still have no real photo (EXERCISE_DETAILS.thumbnailUrl null) -- an icon
+  // badge per row for those, not a fabricated photo, matches the honest-assets approach used
+  // everywhere else this session (Tools/Profile/Plan all use icon badges where the reference
+  // showed photography this app has no real asset for).
   const exIcon = (name) => {
     const m = getMuscle(name);
     return ["Chest","Shoulders","Triceps"].includes(m) ? "dumbbell" : ["Back","Biceps","Lats"].includes(m) ? "workout" : "body";
@@ -9733,8 +10184,8 @@ function renderLibraryTab(){
   const customCount = state.customExercises.length;
   const totalCount = allLibraryExercises().length;
 
-  // No real exercise photos exist anywhere in this app (every EXERCISE_DETAILS.thumbnailUrl
-  // is null) -- an icon badge per row, colored by muscle group, not a fabricated photo.
+  // Most exercises still have no real photo (EXERCISE_DETAILS.thumbnailUrl null) -- those
+  // rows fall back to an icon badge, colored by muscle group, rather than a fabricated photo.
   const rowIcon = (muscle) => {
     const g = FINE_TO_BROAD[muscle];
     return (g==='Chest'||g==='Shoulders'||g==='Arms') ? 'dumbbell' : (g==='Back') ? 'workout' : 'body';
