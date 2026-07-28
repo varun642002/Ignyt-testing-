@@ -1,0 +1,471 @@
+{
+ "version": 1,
+ "generated": "2026-07-28T12:33:30.429Z",
+ "durationSeconds": 2.1,
+ "datasets": [
+  {
+   "file": "FoodData_Central_foundation_food_json_2026-04-30.json",
+   "dataset": "Foundation",
+   "rank": 40,
+   "rawRecords": 395,
+   "malformed": 32,
+   "usableRecords": 363,
+   "converted": 346
+  },
+  {
+   "file": "FoodData_Central_sr_legacy_food_json_2018-04.json",
+   "dataset": "SR Legacy",
+   "rank": 20,
+   "rawRecords": 7793,
+   "malformed": 0,
+   "usableRecords": 7793,
+   "converted": 7448
+  }
+ ],
+ "totals": {
+  "rawRecords": 8188,
+  "malformedOrNull": 32,
+  "converted": 7794,
+  "excludedByCategory": {
+   "analytical dry-matter records (0% moisture)": 17,
+   "Baby Foods": 345
+  },
+  "excludedTotal": 362,
+  "missingName": 0,
+  "duplicateGroups": 97,
+  "mergedAway": 97,
+  "rejectedByValidation": 0,
+  "finalFoodCount": 7697
+ },
+ "energyResolution": {
+  "measured": 7543,
+  "none": 9,
+  "atwater-standard": 2,
+  "atwater-specific": 199,
+  "atwater-general": 27,
+  "computed-factors": 14
+ },
+ "categoryAssignment": {
+  "usda-map": 6346,
+  "refined:Sausages and Luncheon Meats": 107,
+  "refined:Dairy and Egg Products": 38,
+  "refined:Fruits and Fruit Juices": 87,
+  "refined:Poultry Products": 390,
+  "refined:Baked Products": 285,
+  "refined:Cereal Grains and Pasta": 90,
+  "refined:Finfish and Shellfish Products": 61,
+  "refined:American Indian/Alaska Native Foods": 124,
+  "refined:Legumes and Legume Products": 37,
+  "refined:Meals, Entrees, and Side Dishes": 33,
+  "refined:Soups, Sauces, and Gravies": 181,
+  "global-keyword": 15
+ },
+ "categoryCounts": {
+  "Beans & Legumes": 304,
+  "Beef": 1014,
+  "Beverages": 447,
+  "Bread & Bakery": 239,
+  "Chicken": 233,
+  "Dairy": 279,
+  "Desserts": 580,
+  "Eggs": 33,
+  "Fast Food": 312,
+  "Fish": 261,
+  "Fruits": 311,
+  "Game & Other Meats": 581,
+  "Grains & Cereals": 327,
+  "Meals & Entrees": 89,
+  "Nuts & Seeds": 156,
+  "Oils & Fats": 228,
+  "Pasta": 81,
+  "Pork": 407,
+  "Protein Supplements": 15,
+  "Restaurant Foods": 109,
+  "Rice": 40,
+  "Sauces & Condiments": 73,
+  "Seafood": 62,
+  "Snacks": 239,
+  "Soups": 183,
+  "Spices & Herbs": 64,
+  "Turkey": 144,
+  "Vegetables": 886
+ },
+ "portions": {
+  "foodsWithHouseholdPortions": 6103,
+  "totalPortions": 7789
+ },
+ "validation": {
+  "rejected": [],
+  "warningCount": 72,
+  "warningSample": [
+   {
+    "id": "usda:749420",
+    "name": "Pork, Cured, Bacon, Cooked, Restaurant",
+    "warnings": [
+     "sugar (3.14 g) exceeds carbohydrate (2.1 g)"
+    ]
+   },
+   {
+    "id": "usda:167681",
+    "name": "Beverages, Fruit-Flavored Drink, Dry Powdered Mix, Low Calorie, with Aspartame",
+    "warnings": [
+     "energy drift: stated 218 kcal vs Atwater 352"
+    ]
+   },
+   {
+    "id": "usda:167707",
+    "name": "Beverages, Fruit-Flavored Drink, Powder, with High Vitamin C with Other Added Vitamins, Low Calorie",
+    "warnings": [
+     "energy drift: stated 227 kcal vs Atwater 366"
+    ]
+   },
+   {
+    "id": "usda:167723",
+    "name": "Alcoholic Beverage, Rice (sake)",
+    "warnings": [
+     "energy drift: stated 134 kcal vs Atwater 22"
+    ]
+   },
+   {
+    "id": "usda:168753",
+    "name": "Alcoholic Beverage, Tequila Sunrise, Canned",
+    "warnings": [
+     "energy drift: stated 110 kcal vs Atwater 47"
+    ]
+   },
+   {
+    "id": "usda:168872",
+    "name": "Oat Bran, Raw",
+    "warnings": [
+     "energy drift: stated 246 kcal vs Atwater 397"
+    ]
+   },
+   {
+    "id": "usda:169058",
+    "name": "Jams and Preserves, No Sugar (with Sodium Saccharin), Any Flavor",
+    "warnings": [
+     "energy drift: stated 132 kcal vs Atwater 217"
+    ]
+   },
+   {
+    "id": "usda:169573",
+    "name": "Alcoholic Beverage, Daiquiri, Canned",
+    "warnings": [
+     "energy drift: stated 125 kcal vs Atwater 63"
+    ]
+   },
+   {
+    "id": "usda:169574",
+    "name": "Alcoholic Beverage, Daiquiri, Prepared-From-Recipe",
+    "warnings": [
+     "energy drift: stated 186 kcal vs Atwater 29"
+    ]
+   },
+   {
+    "id": "usda:169593",
+    "name": "Cocoa, Dry Powder, Unsweetened",
+    "warnings": [
+     "energy drift: stated 228 kcal vs Atwater 433"
+    ]
+   },
+   {
+    "id": "usda:169594",
+    "name": "Cocoa, Dry Powder, Unsweetened, Processed with Alkali",
+    "warnings": [
+     "energy drift: stated 220 kcal vs Atwater 424"
+    ]
+   },
+   {
+    "id": "usda:169597",
+    "name": "Gelatin Desserts, Dry Mix, Reduced Calorie, with Aspartame",
+    "warnings": [
+     "energy drift: stated 198 kcal vs Atwater 384"
+    ]
+   },
+   {
+    "id": "usda:169722",
+    "name": "Wheat Bran, Crude",
+    "warnings": [
+     "energy drift: stated 216 kcal vs Atwater 359"
+    ]
+   },
+   {
+    "id": "usda:169882",
+    "name": "Chewing Gum, Sugarless",
+    "warnings": [
+     "energy drift: stated 268 kcal vs Atwater 383"
+    ]
+   },
+   {
+    "id": "usda:170289",
+    "name": "Corn Bran, Crude",
+    "warnings": [
+     "energy drift: stated 224 kcal vs Atwater 384"
+    ]
+   },
+   {
+    "id": "usda:170679",
+    "name": "Sweetener, Herbal Extract Powder from Stevia Leaf",
+    "warnings": [
+     "zero calories but 100.0 g of macros (USDA-measured zero — sugar alcohol or similar)"
+    ]
+   },
+   {
+    "id": "usda:170922",
+    "name": "Spices, Coriander Seed",
+    "warnings": [
+     "energy drift: stated 298 kcal vs Atwater 430"
+    ]
+   },
+   {
+    "id": "usda:171315",
+    "name": "Spices, Allspice, Ground",
+    "warnings": [
+     "energy drift: stated 263 kcal vs Atwater 391"
+    ]
+   },
+   {
+    "id": "usda:171320",
+    "name": "Spices, Cinnamon, Ground",
+    "warnings": [
+     "energy drift: stated 247 kcal vs Atwater 350"
+    ]
+   },
+   {
+    "id": "usda:171321",
+    "name": "Spices, Cloves, Ground",
+    "warnings": [
+     "energy drift: stated 274 kcal vs Atwater 403"
+    ]
+   },
+   {
+    "id": "usda:171627",
+    "name": "Ham, Chopped, Not Canned",
+    "warnings": [
+     "sugar (5 g) exceeds carbohydrate (0 g)"
+    ]
+   },
+   {
+    "id": "usda:171872",
+    "name": "Alcoholic Beverage, Wine, Table, Red, Gamay",
+    "warnings": [
+     "energy drift: stated 78 kcal vs Atwater 10"
+    ]
+   },
+   {
+    "id": "usda:171908",
+    "name": "Alcoholic Beverages, Wine, Rose",
+    "warnings": [
+     "energy drift: stated 83 kcal vs Atwater 17"
+    ]
+   },
+   {
+    "id": "usda:171919",
+    "name": "Alcoholic Beverage, Distilled, All (gin, Rum, Vodka, Whiskey) 86 Proof",
+    "warnings": [
+     "energy drift: stated 250 kcal vs Atwater 0"
+    ]
+   },
+   {
+    "id": "usda:171925",
+    "name": "Alcoholic Beverage, Wine, Table, Red, Merlot",
+    "warnings": [
+     "energy drift: stated 83 kcal vs Atwater 10"
+    ]
+   },
+   {
+    "id": "usda:172235",
+    "name": "Vanilla Extract, Imitation, Alcohol",
+    "warnings": [
+     "energy drift: stated 237 kcal vs Atwater 10"
+    ]
+   },
+   {
+    "id": "usda:172805",
+    "name": "Leavening Agents, Baking Powder, Low-Sodium",
+    "warnings": [
+     "energy drift: stated 97 kcal vs Atwater 192"
+    ]
+   },
+   {
+    "id": "usda:173164",
+    "name": "Alcoholic Beverage, Whiskey Sour, Prepared with Water, Whiskey and Powder Mix",
+    "warnings": [
+     "energy drift: stated 164 kcal vs Atwater 64"
+    ]
+   },
+   {
+    "id": "usda:173168",
+    "name": "Alcoholic Beverage, Creme De Menthe, 72 Proof",
+    "warnings": [
+     "energy drift: stated 371 kcal vs Atwater 169"
+    ]
+   },
+   {
+    "id": "usda:173176",
+    "name": "Alcoholic Beverage, Wine, Dessert, Sweet",
+    "warnings": [
+     "energy drift: stated 160 kcal vs Atwater 56"
+    ]
+   },
+   {
+    "id": "usda:173185",
+    "name": "Alcoholic Beverage, Wine, Table, All",
+    "warnings": [
+     "energy drift: stated 83 kcal vs Atwater 11"
+    ]
+   },
+   {
+    "id": "usda:173190",
+    "name": "Alcoholic Beverage, Wine, Table, Red",
+    "warnings": [
+     "energy drift: stated 85 kcal vs Atwater 11"
+    ]
+   },
+   {
+    "id": "usda:173191",
+    "name": "Alcoholic Beverage, Wine, Table, Red, Barbera",
+    "warnings": [
+     "energy drift: stated 85 kcal vs Atwater 11"
+    ]
+   },
+   {
+    "id": "usda:173192",
+    "name": "Alcoholic Beverage, Wine, Table, Red, Zinfandel",
+    "warnings": [
+     "energy drift: stated 88 kcal vs Atwater 12"
+    ]
+   },
+   {
+    "id": "usda:173193",
+    "name": "Alcoholic Beverage, Wine, Table, Red, Petite Sirah",
+    "warnings": [
+     "energy drift: stated 85 kcal vs Atwater 11"
+    ]
+   },
+   {
+    "id": "usda:173194",
+    "name": "Alcoholic Beverage, Wine, Table, Red, Claret",
+    "warnings": [
+     "energy drift: stated 83 kcal vs Atwater 12"
+    ]
+   },
+   {
+    "id": "usda:173195",
+    "name": "Alcoholic Beverage, Wine, Table, White, Chenin Blanc",
+    "warnings": [
+     "energy drift: stated 80 kcal vs Atwater 14"
+    ]
+   },
+   {
+    "id": "usda:173196",
+    "name": "Alcoholic Beverage, Wine, Table, White, Fume Blanc",
+    "warnings": [
+     "energy drift: stated 82 kcal vs Atwater 9"
+    ]
+   },
+   {
+    "id": "usda:173198",
+    "name": "Alcoholic Beverage, Wine, Table, White, Muller Thurgau",
+    "warnings": [
+     "energy drift: stated 76 kcal vs Atwater 14"
+    ]
+   },
+   {
+    "id": "usda:173200",
+    "name": "Alcoholic Beverage, Wine, Table, White, Riesling",
+    "warnings": [
+     "energy drift: stated 80 kcal vs Atwater 15"
+    ]
+   },
+   {
+    "id": "usda:173201",
+    "name": "Alcoholic Beverage, Wine, Table, White, Sauvignon Blanc",
+    "warnings": [
+     "energy drift: stated 81 kcal vs Atwater 8"
+    ]
+   },
+   {
+    "id": "usda:173208",
+    "name": "Alcoholic Beverage, Wine, Table, Red, Burgundy",
+    "warnings": [
+     "energy drift: stated 86 kcal vs Atwater 15"
+    ]
+   },
+   {
+    "id": "usda:173237",
+    "name": "Beverages, Orange-flavor Drink, Breakfast Type, Low Calorie, Powder",
+    "warnings": [
+     "energy drift: stated 217 kcal vs Atwater 358"
+    ]
+   },
+   {
+    "id": "usda:173471",
+    "name": "Vanilla Extract",
+    "warnings": [
+     "energy drift: stated 288 kcal vs Atwater 51"
+    ]
+   },
+   {
+    "id": "usda:173662",
+    "name": "Alcoholic Beverage, Whiskey Sour",
+    "warnings": [
+     "energy drift: stated 149 kcal vs Atwater 53"
+    ]
+   },
+   {
+    "id": "usda:173665",
+    "name": "Alcoholic Beverage, Liqueur, Coffee, 63 Proof",
+    "warnings": [
+     "energy drift: stated 308 kcal vs Atwater 132"
+    ]
+   },
+   {
+    "id": "usda:173755",
+    "name": "Carob Flour",
+    "warnings": [
+     "energy drift: stated 222 kcal vs Atwater 380"
+    ]
+   },
+   {
+    "id": "usda:173858",
+    "name": "Chicken Spread",
+    "warnings": [
+     "energy drift: stated 158 kcal vs Atwater 247"
+    ]
+   },
+   {
+    "id": "usda:174109",
+    "name": "Alcoholic Beverage, Wine, Table, Red, Mouvedre",
+    "warnings": [
+     "energy drift: stated 88 kcal vs Atwater 11"
+    ]
+   },
+   {
+    "id": "usda:174110",
+    "name": "Alcoholic Beverage, Wine, Table, White, Chardonnay",
+    "warnings": [
+     "energy drift: stated 84 kcal vs Atwater 9"
+    ]
+   }
+  ]
+ },
+ "outputs": {
+  "clean_foods": {
+   "path": "www\\data\\food\\clean_foods.json",
+   "size": "3.23 MB"
+  },
+  "food_categories": {
+   "path": "www\\data\\food\\food_categories.json",
+   "size": "0.00 MB"
+  },
+  "food_index": {
+   "path": "tools\\food-import\\reports\\food_index.json",
+   "size": "1.52 MB"
+  },
+  "duplicate_report": {
+   "path": "tools\\food-import\\reports\\duplicate_report.json",
+   "size": "0.05 MB"
+  }
+ }
+}

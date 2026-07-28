@@ -1,0 +1,2143 @@
+{
+ "version": 1,
+ "generated": "2026-07-28T12:33:30.429Z",
+ "groups": 97,
+ "recordsMergedAway": 97,
+ "note": "Canonical key is the lowercase, punctuation-stripped, token-SORTED name. Survivor is chosen by newest dataset, then publication date, then nutrient completeness, then fdcId.",
+ "duplicates": [
+  {
+   "canonicalKey": "commercial hummus",
+   "kept": {
+    "fdcId": 321358,
+    "name": "Hummus, Commercial",
+    "dataset": "Foundation",
+    "category": "Beans & Legumes",
+    "calories": 229,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 174289,
+     "name": "Hummus, Commercial",
+     "dataset": "SR Legacy",
+     "category": "Beans & Legumes",
+     "calories": 237,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "beans canned drained green pack regular snap solids",
+   "kept": {
+    "fdcId": 321611,
+    "name": "Beans, Snap, Green, Canned, Regular Pack, Drained Solids",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 21,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 169143,
+     "name": "Beans, Snap, Green, Canned, Regular Pack, Drained Solids",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 21,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "beef frankfurter unheated",
+   "kept": {
+    "fdcId": 323121,
+    "name": "Frankfurter, Beef, Unheated",
+    "dataset": "Foundation",
+    "category": "Beef",
+    "calories": 314,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 173862,
+     "name": "Frankfurter, Beef, Unheated",
+     "dataset": "SR Legacy",
+     "category": "Beef",
+     "calories": 315,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "added almonds dry nuts roasted salt with",
+   "kept": {
+    "fdcId": 323294,
+    "name": "Nuts, Almonds, Dry Roasted, with Salt Added",
+    "dataset": "Foundation",
+    "category": "Nuts & Seeds",
+    "calories": 620,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 168596,
+     "name": "Nuts, Almonds, Dry Roasted, with Salt Added",
+     "dataset": "SR Legacy",
+     "category": "Nuts & Seeds",
+     "calories": 598,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "kale raw",
+   "kept": {
+    "fdcId": 323505,
+    "name": "Kale, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 35,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 168421,
+     "name": "Kale, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 35,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "egg frozen pasteurized raw white",
+   "kept": {
+    "fdcId": 323697,
+    "name": "Egg, White, Raw, Frozen, Pasteurized",
+    "dataset": "Foundation",
+    "category": "Eggs",
+    "calories": 48,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 172203,
+     "name": "Egg, White, Raw, Frozen, Pasteurized",
+     "dataset": "SR Legacy",
+     "category": "Eggs",
+     "calories": 48,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "dried egg white",
+   "kept": {
+    "fdcId": 323793,
+    "name": "Egg, White, Dried",
+    "dataset": "Foundation",
+    "category": "Eggs",
+    "calories": 376,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 172204,
+     "name": "Egg, White, Dried",
+     "dataset": "SR Legacy",
+     "category": "Eggs",
+     "calories": 382,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "breaded fried frozen heated in onion oven par prepared rings",
+   "kept": {
+    "fdcId": 324317,
+    "name": "Onion Rings, Breaded, Par Fried, Frozen, Prepared, Heated in Oven",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 288,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 170415,
+     "name": "Onion Rings, Breaded, Par Fried, Frozen, Prepared, Heated in Oven",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 276,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "cucumber dill dill kosher or pickles",
+   "kept": {
+    "fdcId": 324653,
+    "name": "Pickles, Cucumber, Dill or Kosher Dill",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 12,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 168558,
+     "name": "Pickles, Cucumber, Dill or Kosher Dill",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 12,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "cheese grated parmesan",
+   "kept": {
+    "fdcId": 325036,
+    "name": "Cheese, Parmesan, Grated",
+    "dataset": "Foundation",
+    "category": "Dairy",
+    "calories": 421,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 171247,
+     "name": "Cheese, Parmesan, Grated",
+     "dataset": "SR Legacy",
+     "category": "Dairy",
+     "calories": 420,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "bottled canned grapefruit juice or unsweetened white",
+   "kept": {
+    "fdcId": 325287,
+    "name": "Grapefruit Juice, White, Canned or Bottled, Unsweetened",
+    "dataset": "Foundation",
+    "category": "Beverages",
+    "calories": 37,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 174678,
+     "name": "Grapefruit Juice, White, Canned or Bottled, Unsweetened",
+     "dataset": "SR Legacy",
+     "category": "Beverages",
+     "calories": 37,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "peaches raw yellow",
+   "kept": {
+    "fdcId": 325430,
+    "name": "Peaches, Yellow, Raw",
+    "dataset": "Foundation",
+    "category": "Fruits",
+    "calories": 42,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 169928,
+     "name": "Peaches, Yellow, Raw",
+     "dataset": "SR Legacy",
+     "category": "Fruits",
+     "calories": 39,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "added dry kernels roasted salt seed seeds sunflower with",
+   "kept": {
+    "fdcId": 325524,
+    "name": "Seeds, Sunflower Seed Kernels, Dry Roasted, with Salt Added",
+    "dataset": "Foundation",
+    "category": "Nuts & Seeds",
+    "calories": 612,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 169418,
+     "name": "Seeds, Sunflower Seed Kernels, Dry Roasted, with Salt Added",
+     "dataset": "SR Legacy",
+     "category": "Nuts & Seeds",
+     "calories": 582,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "boiled cooked drained frozen kale salt without",
+   "kept": {
+    "fdcId": 326196,
+    "name": "Kale, Frozen, Cooked, Boiled, Drained, without Salt",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 36,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 169240,
+     "name": "Kale, Frozen, Cooked, Boiled, Drained, without Salt",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 36,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "mustard prepared yellow",
+   "kept": {
+    "fdcId": 326698,
+    "name": "Mustard, Prepared, Yellow",
+    "dataset": "Foundation",
+    "category": "Spices & Herbs",
+    "calories": 61,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 172234,
+     "name": "Mustard, Prepared, Yellow",
+     "dataset": "SR Legacy",
+     "category": "Spices & Herbs",
+     "calories": 60,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "green kiwifruit raw",
+   "kept": {
+    "fdcId": 327046,
+    "name": "Kiwifruit, Green, Raw",
+    "dataset": "Foundation",
+    "category": "Fruits",
+    "calories": 58,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 168153,
+     "name": "Kiwifruit, Green, Raw",
+     "dataset": "SR Legacy",
+     "category": "Fruits",
+     "calories": 61,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "nectarines raw",
+   "kept": {
+    "fdcId": 327357,
+    "name": "Nectarines, Raw",
+    "dataset": "Foundation",
+    "category": "Fruits",
+    "calories": 39,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 169914,
+     "name": "Nectarines, Raw",
+     "dataset": "SR Legacy",
+     "category": "Fruits",
+     "calories": 44,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "2% cheese cottage lowfat milkfat",
+   "kept": {
+    "fdcId": 328841,
+    "name": "Cheese, Cottage, Lowfat, 2% Milkfat",
+    "dataset": "Foundation",
+    "category": "Dairy",
+    "calories": 84,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 172182,
+     "name": "Cheese, Cottage, Lowfat, 2% Milkfat",
+     "dataset": "SR Legacy",
+     "category": "Dairy",
+     "calories": 81,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "cheese low moisture mozzarella part skim",
+   "kept": {
+    "fdcId": 329370,
+    "name": "Cheese, Mozzarella, Low Moisture, Part-Skim",
+    "dataset": "Foundation",
+    "category": "Dairy",
+    "calories": 298,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 171244,
+     "name": "Cheese, Mozzarella, Low Moisture, Part-Skim",
+     "dataset": "SR Legacy",
+     "category": "Dairy",
+     "calories": 295,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "dried egg whole",
+   "kept": {
+    "fdcId": 329490,
+    "name": "Egg, Whole, Dried",
+    "dataset": "Foundation",
+    "category": "Eggs",
+    "calories": 575,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 172188,
+     "name": "Egg, Whole, Dried",
+     "dataset": "SR Legacy",
+     "category": "Eggs",
+     "calories": 592,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "egg frozen pasteurized raw yolk",
+   "kept": {
+    "fdcId": 329596,
+    "name": "Egg, Yolk, Raw, Frozen, Pasteurized",
+    "dataset": "Foundation",
+    "category": "Eggs",
+    "calories": 296,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 173421,
+     "name": "Egg, Yolk, Raw, Frozen, Pasteurized",
+     "dataset": "SR Legacy",
+     "category": "Eggs",
+     "calories": 296,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "dried egg yolk",
+   "kept": {
+    "fdcId": 329716,
+    "name": "Egg, Yolk, Dried",
+    "dataset": "Foundation",
+    "category": "Eggs",
+    "calories": 654,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 173428,
+     "name": "Egg, Yolk, Dried",
+     "dataset": "SR Legacy",
+     "category": "Eggs",
+     "calories": 669,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "greek nonfat strawberry yogurt",
+   "kept": {
+    "fdcId": 330415,
+    "name": "Yogurt, Greek, Strawberry, Nonfat",
+    "dataset": "Foundation",
+    "category": "Dairy",
+    "calories": 83,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 170901,
+     "name": "Yogurt, Greek, Strawberry, Nonfat",
+     "dataset": "SR Legacy",
+     "category": "Dairy",
+     "calories": 82,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "coconut oil",
+   "kept": {
+    "fdcId": 330458,
+    "name": "Oil, Coconut",
+    "dataset": "Foundation",
+    "category": "Oils & Fats",
+    "calories": 833,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 171412,
+     "name": "Oil, Coconut",
+     "dataset": "SR Legacy",
+     "category": "Oils & Fats",
+     "calories": 892,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "boneless braised breast broiler chicken cooked fryers meat only or skinless",
+   "kept": {
+    "fdcId": 331960,
+    "name": "Chicken, Broiler or Fryers, Breast, Skinless, Boneless, Meat Only, Cooked, Braised",
+    "dataset": "Foundation",
+    "category": "Chicken",
+    "calories": 166,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 171140,
+     "name": "Chicken, Broiler or Fryers, Breast, Skinless, Boneless, Meat Only, Cooked, Braised",
+     "dataset": "SR Legacy",
+     "category": "Chicken",
+     "calories": 157,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "marinara pasta ready sauce serve spaghetti to",
+   "kept": {
+    "fdcId": 332282,
+    "name": "Sauce, Pasta, Spaghetti/Marinara, Ready-To-Serve",
+    "dataset": "Foundation",
+    "category": "Sauces & Condiments",
+    "calories": 45,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 171192,
+     "name": "Sauce, Pasta, Spaghetti/Marinara, Ready-To-Serve",
+     "dataset": "SR Legacy",
+     "category": "Sauces & Condiments",
+     "calories": 50,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "96%fat added deli free ham meat packaged pre sliced water",
+   "kept": {
+    "fdcId": 332397,
+    "name": "Ham, Sliced, Pre-Packaged, Deli Meat (96%fat Free, Water Added)",
+    "dataset": "Foundation",
+    "category": "Pork",
+    "calories": 106,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 173863,
+     "name": "Ham, Sliced, Pre-Packaged, Deli Meat (96%fat Free, Water Added)",
+     "dataset": "SR Legacy",
+     "category": "Pork",
+     "calories": 107,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "fish haddock raw",
+   "kept": {
+    "fdcId": 333374,
+    "name": "Fish, Haddock, Raw",
+    "dataset": "Foundation",
+    "category": "Fish",
+    "calories": 74,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 171964,
+     "name": "Fish, Haddock, Raw",
+     "dataset": "SR Legacy",
+     "category": "Fish",
+     "calories": 74,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "chinese fried meat restaurant rice without",
+   "kept": {
+    "fdcId": 334536,
+    "name": "Restaurant, Chinese, Fried Rice, without Meat",
+    "dataset": "Foundation",
+    "category": "Restaurant Foods",
+    "calories": 174,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 167668,
+     "name": "Restaurant, Chinese, Fried Rice, without Meat",
+     "dataset": "SR Legacy",
+     "category": "Restaurant Foods",
+     "calories": 174,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "latino pork restaurant tamale",
+   "kept": {
+    "fdcId": 334628,
+    "name": "Restaurant, Latino, Tamale, Pork",
+    "dataset": "Foundation",
+    "category": "Restaurant Foods",
+    "calories": 174,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 168067,
+     "name": "Restaurant, Latino, Tamale, Pork",
+     "dataset": "SR Legacy",
+     "category": "Restaurant Foods",
+     "calories": 174,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "bean con frijoles latino pupusas pupusas restaurant",
+   "kept": {
+    "fdcId": 334720,
+    "name": "Restaurant, Latino, Pupusas Con Frijoles (pupusas, Bean)",
+    "dataset": "Foundation",
+    "category": "Restaurant Foods",
+    "calories": 229,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 167661,
+     "name": "Restaurant, Latino, Pupusas Con Frijoles (pupusas, Bean)",
+     "dataset": "SR Legacy",
+     "category": "Restaurant Foods",
+     "calories": 229,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "0 beef boneless cooked fat lean loin only roast roasted select separable tenderloin to trimmed",
+   "kept": {
+    "fdcId": 746758,
+    "name": "Beef, Loin, Tenderloin Roast, Separable Lean Only, Boneless, Trimmed to 0\" Fat, Select, Cooked, Roasted",
+    "dataset": "Foundation",
+    "category": "Beef",
+    "calories": 176,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 174006,
+     "name": "Beef, Loin, Tenderloin Roast, Separable Lean Only, Boneless, Trimmed to 0\" Fat, Select, Cooked, Roasted",
+     "dataset": "SR Legacy",
+     "category": "Beef",
+     "calories": 169,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "1 8 beef boneless choice fat lean lip loin loin on only raw separable steak to top trimmed",
+   "kept": {
+    "fdcId": 746759,
+    "name": "Beef, Loin, Top Loin Steak, Boneless, Lip-On, Separable Lean Only, Trimmed to 1/8\" Fat, Choice, Raw",
+    "dataset": "Foundation",
+    "category": "Beef",
+    "calories": 155,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 174010,
+     "name": "Beef, Loin, Top Loin Steak, Boneless, Lip-On, Separable Lean Only, Trimmed to 1/8\" Fat, Choice, Raw",
+     "dataset": "SR Legacy",
+     "category": "Beef",
+     "calories": 149,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "0 beef boneless eye fat lean of only raw roast round round select separable to trimmed",
+   "kept": {
+    "fdcId": 746760,
+    "name": "Beef, Round, Eye of Round Roast, Boneless, Separable Lean Only, Trimmed to 0\" Fat, Select, Raw",
+    "dataset": "Foundation",
+    "category": "Beef",
+    "calories": 122,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 171761,
+     "name": "Beef, Round, Eye of Round Roast, Boneless, Separable Lean Only, Trimmed to 0\" Fat, Select, Raw",
+     "dataset": "SR Legacy",
+     "category": "Beef",
+     "calories": 116,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "0 beef boneless fat lean only raw roast round round select separable to top trimmed",
+   "kept": {
+    "fdcId": 746761,
+    "name": "Beef, Round, Top Round Roast, Boneless, Separable Lean Only, Trimmed to 0\" Fat, Select, Raw",
+    "dataset": "Foundation",
+    "category": "Beef",
+    "calories": 123,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 173997,
+     "name": "Beef, Round, Top Round Roast, Boneless, Separable Lean Only, Trimmed to 0\" Fat, Select, Raw",
+     "dataset": "SR Legacy",
+     "category": "Beef",
+     "calories": 116,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "1 8 beef fat lean loin only porterhouse raw select separable short steak to trimmed",
+   "kept": {
+    "fdcId": 746762,
+    "name": "Beef, Short Loin, Porterhouse Steak, Separable Lean Only, Trimmed to 1/8\" Fat, Select, Raw",
+    "dataset": "Foundation",
+    "category": "Beef",
+    "calories": 145,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 168640,
+     "name": "Beef, Short Loin, Porterhouse Steak, Separable Lean Only, Trimmed to 1/8\" Fat, Select, Raw",
+     "dataset": "SR Legacy",
+     "category": "Beef",
+     "calories": 145,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "1 8 beef bone bone choice cooked fat grilled in lean loin only separable short steak t to trimmed",
+   "kept": {
+    "fdcId": 746763,
+    "name": "Beef, Short Loin, T-Bone Steak, Bone-In, Separable Lean Only, Trimmed to 1/8\" Fat, Choice, Cooked, Grilled",
+    "dataset": "Foundation",
+    "category": "Beef",
+    "calories": 219,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 168620,
+     "name": "Beef, Short Loin, T-Bone Steak, Bone-In, Separable Lean Only, Trimmed to 1/8\" Fat, Choice, Cooked, Grilled",
+     "dataset": "SR Legacy",
+     "category": "Beef",
+     "calories": 217,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "cheese dry queso seco white",
+   "kept": {
+    "fdcId": 746765,
+    "name": "Cheese, Dry White, Queso Seco",
+    "dataset": "Foundation",
+    "category": "Dairy",
+    "calories": 326,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 172222,
+     "name": "Cheese, Dry White, Queso Seco",
+     "dataset": "SR Legacy",
+     "category": "Dairy",
+     "calories": 325,
+     "completeness": 10
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "cheese milk ricotta whole",
+   "kept": {
+    "fdcId": 746766,
+    "name": "Cheese, Ricotta, Whole Milk",
+    "dataset": "Foundation",
+    "category": "Dairy",
+    "calories": 157,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 170851,
+     "name": "Cheese, Ricotta, Whole Milk",
+     "dataset": "SR Legacy",
+     "category": "Dairy",
+     "calories": 150,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "cheese swiss",
+   "kept": {
+    "fdcId": 746767,
+    "name": "Cheese, Swiss",
+    "dataset": "Foundation",
+    "category": "Dairy",
+    "calories": 393,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 171251,
+     "name": "Cheese, Swiss",
+     "dataset": "SR Legacy",
+     "category": "Dairy",
+     "calories": 393,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "dried figs uncooked",
+   "kept": {
+    "fdcId": 746768,
+    "name": "Figs, Dried, Uncooked",
+    "dataset": "Foundation",
+    "category": "Fruits",
+    "calories": 249,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 174665,
+     "name": "Figs, Dried, Uncooked",
+     "dataset": "SR Legacy",
+     "category": "Fruits",
+     "calories": 249,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "cos lettuce or raw romaine",
+   "kept": {
+    "fdcId": 746769,
+    "name": "Lettuce, Cos or Romaine, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 17,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 169247,
+     "name": "Lettuce, Cos or Romaine, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 17,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "cantaloupe melons raw",
+   "kept": {
+    "fdcId": 746770,
+    "name": "Melons, Cantaloupe, Raw",
+    "dataset": "Foundation",
+    "category": "Fruits",
+    "calories": 34,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 169092,
+     "name": "Melons, Cantaloupe, Raw",
+     "dataset": "SR Legacy",
+     "category": "Fruits",
+     "calories": 34,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "1% a added and d fluid lowfat milk milkfat vitamin vitamin with",
+   "kept": {
+    "fdcId": 746772,
+    "name": "Milk, Lowfat, Fluid, 1% Milkfat, with Added Vitamin a and Vitamin D",
+    "dataset": "Foundation",
+    "category": "Dairy",
+    "calories": 43,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 170872,
+     "name": "Milk, Lowfat, Fluid, 1% Milkfat, with Added Vitamin a and Vitamin D",
+     "dataset": "SR Legacy",
+     "category": "Dairy",
+     "calories": 42,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "and chinese pork restaurant sour sweet",
+   "kept": {
+    "fdcId": 746774,
+    "name": "Restaurant, Chinese, Sweet and Sour Pork",
+    "dataset": "Foundation",
+    "category": "Restaurant Foods",
+    "calories": 260,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 168082,
+     "name": "Restaurant, Chinese, Sweet and Sour Pork",
+     "dataset": "SR Legacy",
+     "category": "Restaurant Foods",
+     "calories": 270,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "a added and d fat fluid free milk nonfat or skim vitamin vitamin with",
+   "kept": {
+    "fdcId": 746776,
+    "name": "Milk, Nonfat, Fluid, with Added Vitamin a and Vitamin D (fat Free or Skim)",
+    "dataset": "Foundation",
+    "category": "Dairy",
+    "calories": 34,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 171269,
+     "name": "Milk, Nonfat, Fluid, with Added Vitamin a and Vitamin D (fat Free or Skim)",
+     "dataset": "SR Legacy",
+     "category": "Dairy",
+     "calories": 34,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "ready salsa sauce serve to",
+   "kept": {
+    "fdcId": 746777,
+    "name": "Sauce, Salsa, Ready-To-Serve",
+    "dataset": "Foundation",
+    "category": "Sauces & Condiments",
+    "calories": 29,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 174524,
+     "name": "Sauce, Salsa, Ready-To-Serve",
+     "dataset": "SR Legacy",
+     "category": "Sauces & Condiments",
+     "calories": 29,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "2% a added and d fat fluid milk milkfat reduced vitamin vitamin with",
+   "kept": {
+    "fdcId": 746778,
+    "name": "Milk, Reduced Fat, Fluid, 2% Milkfat, with Added Vitamin a and Vitamin D",
+    "dataset": "Foundation",
+    "category": "Dairy",
+    "calories": 50,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 171267,
+     "name": "Milk, Reduced Fat, Fluid, 2% Milkfat, with Added Vitamin a and Vitamin D",
+     "dataset": "SR Legacy",
+     "category": "Dairy",
+     "calories": 50,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "beef breakfast cooked pre sausage sausage unprepared",
+   "kept": {
+    "fdcId": 746779,
+    "name": "Sausage, Breakfast Sausage, Beef, Pre-Cooked, Unprepared",
+    "dataset": "Foundation",
+    "category": "Beef",
+    "calories": 328,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 174616,
+     "name": "Sausage, Breakfast Sausage, Beef, Pre-Cooked, Unprepared",
+     "dataset": "SR Legacy",
+     "category": "Beef",
+     "calories": 327,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "cooked fried italian mild pan pork sausage",
+   "kept": {
+    "fdcId": 746780,
+    "name": "Sausage, Italian, Pork, Mild, Cooked, Pan-Fried",
+    "dataset": "Foundation",
+    "category": "Pork",
+    "calories": 322,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 174586,
+     "name": "Sausage, Italian, Pork, Mild, Cooked, Pan-Fried",
+     "dataset": "SR Legacy",
+     "category": "Pork",
+     "calories": 324,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "25% 3 added d milk milkfat vitamin whole with",
+   "kept": {
+    "fdcId": 746782,
+    "name": "Milk, Whole, 3.25% Milkfat, with Added Vitamin D",
+    "dataset": "Foundation",
+    "category": "Dairy",
+    "calories": 60,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 171265,
+     "name": "Milk, Whole, 3.25% Milkfat, with Added Vitamin D",
+     "dataset": "SR Legacy",
+     "category": "Dairy",
+     "calories": 61,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "breakfast links mild raw sausage turkey",
+   "kept": {
+    "fdcId": 746783,
+    "name": "Sausage, Turkey, Breakfast Links, Mild, Raw",
+    "dataset": "Foundation",
+    "category": "Turkey",
+    "calories": 169,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 174600,
+     "name": "Sausage, Turkey, Breakfast Links, Mild, Raw",
+     "dataset": "SR Legacy",
+     "category": "Turkey",
+     "calories": 174,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "granulated sugars",
+   "kept": {
+    "fdcId": 746784,
+    "name": "Sugars, Granulated",
+    "dataset": "Foundation",
+    "category": "Desserts",
+    "calories": 385,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 169655,
+     "name": "Sugars, Granulated",
+     "dataset": "SR Legacy",
+     "category": "Desserts",
+     "calories": 387,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "7% 93% broiled crumbles fat ground lean pan turkey",
+   "kept": {
+    "fdcId": 746785,
+    "name": "Turkey, Ground, 93% Lean, 7% Fat, Pan-Broiled Crumbles",
+    "dataset": "Foundation",
+    "category": "Turkey",
+    "calories": 220,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 172851,
+     "name": "Turkey, Ground, 93% Lean, 7% Fat, Pan-Broiled Crumbles",
+     "dataset": "SR Legacy",
+     "category": "Turkey",
+     "calories": 213,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "broccoli raw",
+   "kept": {
+    "fdcId": 747447,
+    "name": "Broccoli, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 31,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 170379,
+     "name": "Broccoli, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 34,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "canola oil",
+   "kept": {
+    "fdcId": 748278,
+    "name": "Oil, Canola",
+    "dataset": "Foundation",
+    "category": "Oils & Fats",
+    "calories": 0,
+    "completeness": 0
+   },
+   "dropped": [
+    {
+     "fdcId": 172336,
+     "name": "Oil, Canola",
+     "dataset": "SR Legacy",
+     "category": "Oils & Fats",
+     "calories": 884,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "flour rice unenriched white",
+   "kept": {
+    "fdcId": 790214,
+    "name": "Flour, Rice, White, Unenriched",
+    "dataset": "Foundation",
+    "category": "Rice",
+    "calories": 359,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 169714,
+     "name": "Rice Flour, White, Unenriched",
+     "dataset": "SR Legacy",
+     "category": "Rice",
+     "calories": 366,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "garlic raw",
+   "kept": {
+    "fdcId": 1104647,
+    "name": "Garlic, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 143,
+    "completeness": 6
+   },
+   "dropped": [
+    {
+     "fdcId": 169230,
+     "name": "Garlic, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 149,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "defatted flour soy",
+   "kept": {
+    "fdcId": 1104705,
+    "name": "Flour, Soy, Defatted",
+    "dataset": "Foundation",
+    "category": "Beans & Legumes",
+    "calories": 366,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 174275,
+     "name": "Soy Flour, Defatted",
+     "dataset": "SR Legacy",
+     "category": "Beans & Legumes",
+     "calories": 327,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "brown flour rice",
+   "kept": {
+    "fdcId": 1104812,
+    "name": "Flour, Rice, Brown",
+    "dataset": "Foundation",
+    "category": "Rice",
+    "calories": 365,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 168898,
+     "name": "Rice Flour, Brown",
+     "dataset": "SR Legacy",
+     "category": "Rice",
+     "calories": 363,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "baby carrots raw",
+   "kept": {
+    "fdcId": 2258587,
+    "name": "Carrots, Baby, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 38,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 168568,
+     "name": "Carrots, Baby, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 35,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "milk plain whole yogurt",
+   "kept": {
+    "fdcId": 2259793,
+    "name": "Yogurt, Plain, Whole Milk",
+    "dataset": "Foundation",
+    "category": "Dairy",
+    "calories": 77,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 171284,
+     "name": "Yogurt, Plain, Whole Milk",
+     "dataset": "SR Legacy",
+     "category": "Dairy",
+     "calories": 61,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "greek milk plain whole yogurt",
+   "kept": {
+    "fdcId": 2259794,
+    "name": "Yogurt, Greek, Plain, Whole Milk",
+    "dataset": "Foundation",
+    "category": "Dairy",
+    "calories": 95,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 171304,
+     "name": "Yogurt, Greek, Plain, Whole Milk",
+     "dataset": "SR Legacy",
+     "category": "Dairy",
+     "calories": 97,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "flour potato",
+   "kept": {
+    "fdcId": 2261422,
+    "name": "Flour, Potato",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 353,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 168446,
+     "name": "Potato Flour",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 357,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "leaf lettuce raw red",
+   "kept": {
+    "fdcId": 2346390,
+    "name": "Lettuce, Leaf, Red, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 15,
+    "completeness": 8
+   },
+   "dropped": [
+    {
+     "fdcId": 168431,
+     "name": "Lettuce, Red Leaf, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 13,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "green leaf lettuce raw",
+   "kept": {
+    "fdcId": 2346391,
+    "name": "Lettuce, Leaf, Green, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 19,
+    "completeness": 8
+   },
+   "dropped": [
+    {
+     "fdcId": 169249,
+     "name": "Lettuce, Green Leaf, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 15,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "beans green raw snap",
+   "kept": {
+    "fdcId": 2346400,
+    "name": "Beans, Snap, Green, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 34,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 169961,
+     "name": "Beans, Snap, Green, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 31,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "celery raw",
+   "kept": {
+    "fdcId": 2346405,
+    "name": "Celery, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 15,
+    "completeness": 8
+   },
+   "dropped": [
+    {
+     "fdcId": 169988,
+     "name": "Celery, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 14,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "cucumber peel raw with",
+   "kept": {
+    "fdcId": 2346406,
+    "name": "Cucumber, with Peel, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 14,
+    "completeness": 8
+   },
+   "dropped": [
+    {
+     "fdcId": 168409,
+     "name": "Cucumber, with Peel, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 15,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "cabbage raw red",
+   "kept": {
+    "fdcId": 2346408,
+    "name": "Cabbage, Red, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 30,
+    "completeness": 8
+   },
+   "dropped": [
+    {
+     "fdcId": 169977,
+     "name": "Cabbage, Red, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 31,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "raw strawberries",
+   "kept": {
+    "fdcId": 2346409,
+    "name": "Strawberries, Raw",
+    "dataset": "Foundation",
+    "category": "Fruits",
+    "calories": 33,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 167762,
+     "name": "Strawberries, Raw",
+     "dataset": "SR Legacy",
+     "category": "Fruits",
+     "calories": 32,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "raspberries raw",
+   "kept": {
+    "fdcId": 2346410,
+    "name": "Raspberries, Raw",
+    "dataset": "Foundation",
+    "category": "Fruits",
+    "calories": 51,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 167755,
+     "name": "Raspberries, Raw",
+     "dataset": "SR Legacy",
+     "category": "Fruits",
+     "calories": 52,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "blueberries raw",
+   "kept": {
+    "fdcId": 2346411,
+    "name": "Blueberries, Raw",
+    "dataset": "Foundation",
+    "category": "Fruits",
+    "calories": 57,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 171711,
+     "name": "Blueberries, Raw",
+     "dataset": "SR Legacy",
+     "category": "Fruits",
+     "calories": 57,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "10% 90% beef fat ground lean meat raw",
+   "kept": {
+    "fdcId": 2514743,
+    "name": "Beef, Ground, 90% Lean Meat / 10% Fat, Raw",
+    "dataset": "Foundation",
+    "category": "Beef",
+    "calories": 190,
+    "completeness": 8
+   },
+   "dropped": [
+    {
+     "fdcId": 174030,
+     "name": "Beef, Ground, 90% Lean Meat / 10% Fat, Raw",
+     "dataset": "SR Legacy",
+     "category": "Beef",
+     "calories": 176,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "20% 80% beef fat ground lean meat raw",
+   "kept": {
+    "fdcId": 2514744,
+    "name": "Beef, Ground, 80% Lean Meat / 20% Fat, Raw",
+    "dataset": "Foundation",
+    "category": "Beef",
+    "calories": 248,
+    "completeness": 8
+   },
+   "dropped": [
+    {
+     "fdcId": 174036,
+     "name": "Beef, Ground, 80% Lean Meat / 20% Fat, Raw",
+     "dataset": "SR Legacy",
+     "category": "Beef",
+     "calories": 254,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "7% 93% fat ground lean raw turkey",
+   "kept": {
+    "fdcId": 2514747,
+    "name": "Turkey, Ground, 93% Lean/ 7% Fat, Raw",
+    "dataset": "Foundation",
+    "category": "Turkey",
+    "calories": 158,
+    "completeness": 8
+   },
+   "dropped": [
+    {
+     "fdcId": 172850,
+     "name": "Turkey, Ground, 93% Lean, 7% Fat, Raw",
+     "dataset": "SR Legacy",
+     "category": "Turkey",
+     "calories": 150,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "cashew nuts nuts raw",
+   "kept": {
+    "fdcId": 2515374,
+    "name": "Nuts, Cashew Nuts, Raw",
+    "dataset": "Foundation",
+    "category": "Nuts & Seeds",
+    "calories": 533,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 170162,
+     "name": "Nuts, Cashew Nuts, Raw",
+     "dataset": "SR Legacy",
+     "category": "Nuts & Seeds",
+     "calories": 553,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "macadamia nuts nuts raw",
+   "kept": {
+    "fdcId": 2515378,
+    "name": "Nuts, Macadamia Nuts, Raw",
+    "dataset": "Foundation",
+    "category": "Nuts & Seeds",
+    "calories": 669,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 170178,
+     "name": "Nuts, Macadamia Nuts, Raw",
+     "dataset": "SR Legacy",
+     "category": "Nuts & Seeds",
+     "calories": 718,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "nuts nuts pistachio raw",
+   "kept": {
+    "fdcId": 2515379,
+    "name": "Nuts, Pistachio Nuts, Raw",
+    "dataset": "Foundation",
+    "category": "Nuts & Seeds",
+    "calories": 561,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 170184,
+     "name": "Nuts, Pistachio Nuts, Raw",
+     "dataset": "SR Legacy",
+     "category": "Nuts & Seeds",
+     "calories": 560,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "butternut raw squash winter",
+   "kept": {
+    "fdcId": 2685570,
+    "name": "Squash, Winter, Butternut, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 42,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 169295,
+     "name": "Squash, Winter, Butternut, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 45,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "acorn raw squash winter",
+   "kept": {
+    "fdcId": 2685571,
+    "name": "Squash, Winter, Acorn, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 42,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 168472,
+     "name": "Squash, Winter, Acorn, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 40,
+     "completeness": 10
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "cauliflower raw",
+   "kept": {
+    "fdcId": 2685573,
+    "name": "Cauliflower, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 23,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 169986,
+     "name": "Cauliflower, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 25,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "collards raw",
+   "kept": {
+    "fdcId": 2685574,
+    "name": "Collards, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 39,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 170406,
+     "name": "Collards, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 32,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "brussels raw sprouts",
+   "kept": {
+    "fdcId": 2685575,
+    "name": "Brussels Sprouts, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 49,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 170383,
+     "name": "Brussels Sprouts, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 43,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "beets raw",
+   "kept": {
+    "fdcId": 2685576,
+    "name": "Beets, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 41,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 169145,
+     "name": "Beets, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 43,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "eggplant raw",
+   "kept": {
+    "fdcId": 2685577,
+    "name": "Eggplant, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 22,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 169228,
+     "name": "Eggplant, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 25,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "canned crushed tomatoes",
+   "kept": {
+    "fdcId": 2685581,
+    "name": "Tomatoes, Crushed, Canned",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 32,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 170501,
+     "name": "Tomatoes, Crushed, Canned",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 32,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "honeydew melons raw",
+   "kept": {
+    "fdcId": 2710816,
+    "name": "Melons, Honeydew, Raw",
+    "dataset": "Foundation",
+    "category": "Fruits",
+    "calories": 33,
+    "completeness": 9
+   },
+   "dropped": [
+    {
+     "fdcId": 169911,
+     "name": "Melons, Honeydew, Raw",
+     "dataset": "SR Legacy",
+     "category": "Fruits",
+     "calories": 36,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "ground lamb raw",
+   "kept": {
+    "fdcId": 2727570,
+    "name": "Lamb, Ground, Raw",
+    "dataset": "Foundation",
+    "category": "Game & Other Meats",
+    "calories": 242,
+    "completeness": 7
+   },
+   "dropped": [
+    {
+     "fdcId": 174370,
+     "name": "Lamb, Ground, Raw",
+     "dataset": "SR Legacy",
+     "category": "Game & Other Meats",
+     "calories": 282,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "blackberries raw",
+   "kept": {
+    "fdcId": 2727581,
+    "name": "Blackberries, Raw",
+    "dataset": "Foundation",
+    "category": "Fruits",
+    "calories": 5,
+    "completeness": 8
+   },
+   "dropped": [
+    {
+     "fdcId": 173946,
+     "name": "Blackberries, Raw",
+     "dataset": "SR Legacy",
+     "category": "Fruits",
+     "calories": 43,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "beet greens raw",
+   "kept": {
+    "fdcId": 2747653,
+    "name": "Beet Greens, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 26,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 170375,
+     "name": "Beet Greens, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 22,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "bulb fennel raw",
+   "kept": {
+    "fdcId": 2747655,
+    "name": "Fennel, Bulb, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 27,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 169385,
+     "name": "Fennel, Bulb, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 31,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "parsnips raw",
+   "kept": {
+    "fdcId": 2747659,
+    "name": "Parsnips, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 87,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 170417,
+     "name": "Parsnips, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 75,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "radicchio raw",
+   "kept": {
+    "fdcId": 2747664,
+    "name": "Radicchio, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 26,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 168564,
+     "name": "Radicchio, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 23,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "raw turnips",
+   "kept": {
+    "fdcId": 2747674,
+    "name": "Turnips, Raw",
+    "dataset": "Foundation",
+    "category": "Vegetables",
+    "calories": 34,
+    "completeness": 10
+   },
+   "dropped": [
+    {
+     "fdcId": 170465,
+     "name": "Turnips, Raw",
+     "dataset": "SR Legacy",
+     "category": "Vegetables",
+     "calories": 28,
+     "completeness": 11
+    }
+   ],
+   "reason": "newer dataset"
+  },
+  {
+   "canonicalKey": "added mixed nuts nuts oil peanuts roasted salt with without",
+   "kept": {
+    "fdcId": 170587,
+    "name": "Nuts, Mixed Nuts, Oil Roasted, with Peanuts, without Salt Added",
+    "dataset": "SR Legacy",
+    "category": "Nuts & Seeds",
+    "calories": 607,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 169423,
+     "name": "Nuts, Mixed Nuts, Oil Roasted, without Peanuts, with Salt Added",
+     "dataset": "SR Legacy",
+     "category": "Nuts & Seeds",
+     "calories": 615,
+     "completeness": 11
+    }
+   ],
+   "reason": "higher fdcId"
+  },
+  {
+   "canonicalKey": "dry incomplete mix pancakes wheat whole",
+   "kept": {
+    "fdcId": 171853,
+    "name": "Pancakes, Whole Wheat, Dry Mix, Incomplete",
+    "dataset": "SR Legacy",
+    "category": "Bread & Bakery",
+    "calories": 350,
+    "completeness": 11
+   },
+   "dropped": [
+    {
+     "fdcId": 172776,
+     "name": "Pancakes, Whole-Wheat, Dry Mix, Incomplete",
+     "dataset": "SR Legacy",
+     "category": "Bread & Bakery",
+     "calories": 344,
+     "completeness": 9
+    }
+   ],
+   "reason": "more complete nutrition"
+  }
+ ]
+}

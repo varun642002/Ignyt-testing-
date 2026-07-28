@@ -32,13 +32,16 @@
   "use strict";
 
   var _index = null;        // [{food, name, words}]
-  var _favSignature = "";   // cheap change-detector for the favourites portion
+  var _favSignature = "";   // cheap change-detector for the favourites + imported portions
 
   function norm(s) { return String(s == null ? "" : s).trim().toLowerCase(); }
 
   function favSignature() {
     var favs = (typeof state !== "undefined" && Array.isArray(state.favoriteFoods)) ? state.favoriteFoods : [];
-    return favs.length + "|" + favs.map(function (f) { return f && f.name; }).join(",");
+    // Imported foods only change on an explicit import/clear, so their count is a
+    // sufficient (and cheap) change signal -- no need to hash thousands of names.
+    var impCount = window.IgnytFoodImporter ? window.IgnytFoodImporter.count() : 0;
+    return favs.length + "|" + favs.map(function (f) { return f && f.name; }).join(",") + "|i" + impCount;
   }
 
   function buildIndex() {
