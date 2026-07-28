@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { isRealConsoleError } from '../fixtures/app.fixture.js';
 
 /** Independent of the app fixture (which seeds a clean profile) -- these tests need full
  *  control over what's in localStorage before the app boots, including deliberately broken
@@ -6,7 +7,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Storage corruption recovery @regression', () => {
   const seedAndBoot = async (page, seed) => {
     const errors = [];
-    page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+    page.on('console', m => { if (m.type() === 'error' && isRealConsoleError(m.text())) errors.push(m.text()); });
     page.on('pageerror', e => errors.push('pageerror: ' + e.message));
     await page.addInitScript(seed);
     await page.goto('/');

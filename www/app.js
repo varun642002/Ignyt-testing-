@@ -2856,6 +2856,8 @@ const state = {
   replacingExerciseIndex: null,
   exerciseDetailTab: "summary",
   exerciseSectionsOpen: null, // transient — {sectionKey: bool} for the collapsible guide sections
+  editingWorkout: null,       // transient — edit draft for a saved workout (see buildWorkoutEditDraft)
+  viewingWorkoutAuditId: null, // transient — workout id whose edit history is open
   raceActive: LS.get("hx_race_active", null),
   raceLog: LS.get("hx_race_log", []),
   viewingRaceMode: !!LS.get("hx_race_active", null),
@@ -8079,7 +8081,158 @@ function renderCalculators(){
    breakdown, and an exercise's chronological history table.
 ========================================================= */
 
+/* Full-screen editor for a saved workout. Driven by state.editingWorkout (a draft), so
+   typing never mutates the stored record -- only Save does. */
+function renderWorkoutEditor(draft, s){
+  const durMin = draft.startTime && draft.endTime
+    ? (() => { const st=combineLocalDateTime(draft.date,draft.startTime), et=combineLocalDateTime(draft.date,draft.endTime);
+        return (st!=null&&et!=null&&et>st) ? Math.round((et-st)/60000) : null; })()
+    : workoutEditDraftDurationMin(draft);
+  const timesLinked = !!(draft.startTime && draft.endTime);
+  const num = (v)=> v===""||v==null ? "" : String(v);
+  const scale = (field, max) => `<select class="pi-input" data-wedit-field="${field}" style="width:100%;">
+      <option value="">–</option>
+      ${Array.from({length:max},(_,i)=>i+1).map(n=>`<option value="${n}" ${String(draft[field])===String(n)?'selected':''}>${n}</option>`).join("")}
+    </select>`;
+
+  return `
+    <div class="row-between" style="margin-bottom:4px;">
+      <button class="btn btn-ghost" data-action="cancel-workout-edit" style="padding:6px 12px;font-size:12px;">← Cancel</button>
+    </div>
+    <div style="margin:12px 0 10px;">
+      <div style="font-size:18px;font-weight:900;">Edit Workout</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">${escHtml(sessionTitle(s))}</div>
+    </div>
+
+    ${draft.error ? `<div class="info-box" style="padding:10px 14px;margin-bottom:10px;border-color:var(--accent);">
+      <div style="font-size:12px;color:var(--accent);font-weight:700;">${escHtml(draft.error)}</div></div>` : ""}
+
+    <div class="eyebrow-label">Title</div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:10px;">
+      <input type="text" class="pi-input" data-wedit-field="title" value="${escHtml(draft.title)}" placeholder="Workout" style="width:100%;box-sizing:border-box;">
+    </div>
+
+    <div class="eyebrow-label">Date &amp; Time</div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Workout date</div>
+      <input type="date" class="pi-input" data-wedit-field="date" value="${escHtml(draft.date)}" style="width:100%;box-sizing:border-box;margin-bottom:10px;">
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Start</div>
+          <input type="time" class="pi-input" data-wedit-field="startTime" value="${escHtml(draft.startTime)}" style="width:100%;box-sizing:border-box;">
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">End</div>
+          <input type="time" class="pi-input" data-wedit-field="endTime" value="${escHtml(draft.endTime)}" style="width:100%;box-sizing:border-box;">
+        </div>
+      </div>
+      ${timesLinked ? `<div style="font-size:11px;color:var(--muted);margin-top:8px;">Duration is calculated from these times${durMin!=null?` — currently <b style="color:var(--text);">${durMin} min</b>`:''}.</div>` : ""}
+    </div>
+
+    <div class="eyebrow-label">Duration</div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:10px;${timesLinked?'opacity:.55;':''}">
+      <div style="display:flex;gap:8px;">
+        ${[["hours","Hours"],["minutes","Minutes"],["seconds","Seconds"]].map(([f,label])=>`
+          <div style="flex:1;">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">${label}</div>
+            <input type="number" min="0" class="pi-input" data-wedit-field="${f}" value="${num(draft[f])}" ${timesLinked?'disabled':''} style="width:100%;box-sizing:border-box;">
+          </div>`).join("")}
+      </div>
+      ${timesLinked ? `<div style="font-size:11px;color:var(--muted);margin-top:8px;">Clear the start/end times to set duration directly.</div>` : `
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">
+        ${[["5","+5 min"],["10","+10 min"],["15","+15 min"],["-5","−5 min"]].map(([v,label])=>`
+          <button class="cat-chip" data-wedit-dur="${v}">${label}</button>`).join("")}
+        <button class="cat-chip" data-wedit-dur="reset">Reset (${draft.originalDurationMin} min)</button>
+      </div>`}
+    </div>
+
+    <div class="eyebrow-label">How It Felt</div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:10px;">
+      <div style="display:flex;gap:10px;margin-bottom:10px;">
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Session rating (1–10)</div>
+          ${scale("rating",10)}
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">RPE (1–10)</div>
+          ${scale("rpe",10)}
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Mood</div>
+          <select class="pi-input" data-wedit-field="mood" style="width:100%;">
+            <option value="">–</option>
+            ${["Great","Good","Okay","Tired","Rough"].map(m=>`<option value="${m}" ${draft.mood===m?'selected':''}>${m}</option>`).join("")}
+          </select>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Energy</div>
+          <select class="pi-input" data-wedit-field="energy" style="width:100%;">
+            <option value="">–</option>
+            ${["High","Moderate","Low"].map(m=>`<option value="${m}" ${draft.energy===m?'selected':''}>${m}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="eyebrow-label">Notes</div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:10px;">
+      <textarea class="pi-input" data-wedit-field="notes" rows="3" placeholder="How did the session go?" style="width:100%;box-sizing:border-box;resize:vertical;">${escHtml(draft.notes)}</textarea>
+    </div>
+
+    <div class="eyebrow-label">Reason for edit (optional)</div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:14px;">
+      <input type="text" class="pi-input" data-wedit-field="reason" value="${escHtml(draft.reason)}" placeholder="e.g. forgot to stop the timer" style="width:100%;box-sizing:border-box;">
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;">Saved to this workout's edit history along with the original values.</div>
+    </div>
+
+    <button class="btn btn-accent btn-block" data-action="save-workout-edit" style="margin-bottom:8px;">Save Changes</button>
+    <button class="btn btn-ghost btn-block" data-action="cancel-workout-edit" style="margin-bottom:16px;">Cancel</button>
+  `;
+}
+
+/** Read-only view of a workout's edit history, opened from the "Edited" badge. */
+function renderWorkoutAuditLog(s){
+  const hist = Array.isArray(s.editHistory) ? s.editHistory.slice().reverse() : [];
+  const fmtVal = (k,v) => {
+    if(v==null || v==="") return "–";
+    if(k==="startedAt"||k==="finishedAt") return new Date(Number(v)).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    if(k==="durationMin") return v+" min";
+    return String(v);
+  };
+  const LABELS = { date:"Date", startedAt:"Start", finishedAt:"End", durationMin:"Duration",
+    notes:"Notes", title:"Title", mood:"Mood", energy:"Energy", rating:"Rating", rpe:"RPE" };
+  return `
+    <div class="row-between" style="margin-bottom:4px;">
+      <button class="btn btn-ghost" data-action="close-workout-audit" style="padding:6px 12px;font-size:12px;">← Back</button>
+    </div>
+    <div style="margin:12px 0 10px;">
+      <div style="font-size:18px;font-weight:900;">Edit History</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">${escHtml(sessionTitle(s))}</div>
+    </div>
+    ${hist.length===0 ? `<div class="info-box" style="padding:14px;font-size:13px;color:var(--muted);">This workout hasn't been edited.</div>` :
+      hist.map(h=>{
+        const changed = Object.keys(h.after||{}).filter(k => String((h.before||{})[k] ?? "") !== String((h.after||{})[k] ?? ""));
+        return `<div class="info-box" style="padding:12px 14px;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:700;">${new Date(h.at).toLocaleString([], {month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+          ${h.reason?`<div style="font-size:12px;color:var(--muted);font-style:italic;margin-top:3px;">"${escHtml(h.reason)}"</div>`:''}
+          <div style="margin-top:8px;">
+            ${changed.map(k=>`<div class="row-between" style="padding:5px 0;border-top:1px solid var(--border);font-size:12px;">
+              <span style="color:var(--muted);">${LABELS[k]||k}</span>
+              <span style="text-align:right;"><span style="color:var(--muted);text-decoration:line-through;">${escHtml(fmtVal(k,(h.before||{})[k]))}</span>
+                <span style="margin:0 4px;color:var(--muted);">→</span>
+                <b>${escHtml(fmtVal(k,(h.after||{})[k]))}</b></span>
+            </div>`).join("")}
+          </div>
+        </div>`;
+      }).join("")}
+    <div style="height:16px;"></div>
+  `;
+}
+
 function renderSessionDetail(s){
+  if(state.viewingWorkoutAuditId === s.id) return renderWorkoutAuditLog(s);
   const muscles = sessionMuscles(s.exercises);
   const workingSets = s.exercises.reduce((a,e)=>a+e.sets.filter(hasSetValues).length, 0);
   const prs = state.prs.filter(p=>p.workoutId===s.id);
@@ -8088,12 +8241,20 @@ function renderSessionDetail(s){
   return `
     <div class="row-between" style="margin-bottom:4px;">
       <button class="btn btn-ghost" data-action="close-session-detail" style="padding:6px 12px;font-size:12px;">← Back</button>
+      <button class="btn btn-ghost" data-action="edit-workout" data-workout-id="${s.id}" style="padding:6px 12px;font-size:12px;">${svg('pencil',13)} Edit</button>
     </div>
     <div style="margin:12px 0 4px;">
-      <div style="font-size:18px;font-weight:900;">${sessionTitle(s)}</div>
+      <div style="font-size:18px;font-weight:900;">${escHtml(sessionTitle(s))}</div>
       <div style="font-size:12px;color:var(--muted);margin-top:1px;">${s.exercises.length} exercise${s.exercises.length!==1?'s':''}</div>
       <div class="mono" style="font-size:12px;color:var(--muted);margin-top:2px;">${new Date(s.date).toLocaleDateString('default',{weekday:'long',month:'long',day:'numeric'})}${startTime&&endTime?` · ${startTime}–${endTime}`:''}</div>
+      ${s.edited ? `<button class="cat-chip" data-action="open-workout-audit" data-workout-id="${s.id}" style="margin-top:6px;">${svg('info',11)} Edited — view history</button>` : ""}
     </div>
+    ${(s.rating||s.rpe||s.mood||s.energy) ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px;">
+      ${s.rating?`<span class="muscle-chip">Rating ${escHtml(String(s.rating))}/10</span>`:""}
+      ${s.rpe?`<span class="muscle-chip">RPE ${escHtml(String(s.rpe))}</span>`:""}
+      ${s.mood?`<span class="muscle-chip">${escHtml(s.mood)}</span>`:""}
+      ${s.energy?`<span class="muscle-chip">${escHtml(s.energy)} energy</span>`:""}
+    </div>` : ""}
     ${muscles.length? `<div style="margin:8px 0 4px;">${muscles.map(m=>`<span class="muscle-chip active">${m}</span>`).join("")}</div>`:""}
     ${s.notes? `<div class="info-box" style="padding:10px 14px;margin:8px 0;font-size:12px;font-style:italic;color:var(--text);">"${escHtml(s.notes)}"</div>`:""}
 
@@ -10319,10 +10480,186 @@ function attachSwipeToDelete(){
   });
 }
 
+/* =========================================================
+   POST-WORKOUT EDITING
+
+   A finished workout is a plain record in state.workoutLog, and every statistic in the app
+   (weekly totals, streaks, calendar, muscle distribution, calorie estimates, progress
+   charts) is derived from that array at render time rather than cached. So correcting a
+   record and calling persist() + render() updates every downstream surface automatically --
+   there is no separate analytics store to invalidate.
+
+   Cloud sync needs no special handling either: cloud-sync.js diffs each record by content
+   hash against the last-synced value, keyed on the record's own id. An edited workout keeps
+   its id, so it re-uploads as an update rather than a new row, and offline edits queue and
+   flush through the existing mechanism.
+
+   Every edit writes an audit entry (before/after + timestamp + optional reason) to
+   editHistory, so the original recorded values are never destroyed.
+========================================================= */
+
+const WORKOUT_EDIT_MIN_MIN = 1;
+const WORKOUT_EDIT_MAX_MIN = 12 * 60;
+
+/** Local-time "YYYY-MM-DD" for a Date/ms value. Deliberately NOT toISOString(), which
+ *  converts to UTC and can shift the date across midnight for non-UTC users. */
+function localDateStr(ms){
+  const d = new Date(ms);
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+/** Local-time "HH:MM" for a Date/ms value. */
+function localTimeStr(ms){
+  const d = new Date(ms);
+  return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+}
+/** Combines a "YYYY-MM-DD" + "HH:MM" into a local-time epoch, or null if either is missing
+ *  or malformed. Built from explicit components so it can't be reinterpreted as UTC. */
+function combineLocalDateTime(dateStr, timeStr){
+  if(!dateStr || !timeStr) return null;
+  const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  const tm = /^(\d{1,2}):(\d{2})$/.exec(timeStr);
+  if(!dm || !tm) return null;
+  const ms = new Date(Number(dm[1]), Number(dm[2])-1, Number(dm[3]), Number(tm[1]), Number(tm[2]), 0, 0).getTime();
+  return isFinite(ms) ? ms : null;
+}
+
+/** Seeds the edit form from a saved workout. Falls back sensibly for legacy records that
+ *  predate startedAt/finishedAt (older entries only carry date + durationMin). */
+function buildWorkoutEditDraft(s){
+  const dur = Number(s.durationMin) || 0;
+  const started = s.startedAt != null ? s.startedAt : null;
+  const finished = s.finishedAt != null ? s.finishedAt
+    : (started != null && dur ? started + dur*60000 : null);
+  const totalSec = dur * 60;
+  return {
+    id: s.id,
+    date: s.date || (started != null ? localDateStr(started) : localDateStr(Date.now())),
+    startTime: started != null ? localTimeStr(started) : "",
+    endTime: finished != null ? localTimeStr(finished) : "",
+    hours: Math.floor(totalSec/3600),
+    minutes: Math.floor((totalSec%3600)/60),
+    seconds: totalSec%60,
+    notes: s.notes || "",
+    title: s.title || "",
+    mood: s.mood || "",
+    energy: s.energy || "",
+    rating: s.rating || "",
+    rpe: s.rpe || "",
+    reason: "",
+    // Kept so "Reset to recorded duration" restores the value actually recorded, even after
+    // several unsaved tweaks in the form.
+    originalDurationMin: dur,
+    error: null
+  };
+}
+
+function workoutEditDraftDurationMin(d){
+  return Math.round(((Number(d.hours)||0)*3600 + (Number(d.minutes)||0)*60 + (Number(d.seconds)||0)) / 60);
+}
+
+/** Returns an error string, or null when the draft is valid and safe to save. */
+function validateWorkoutEdit(draft){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(draft.date || "")) return "Enter a valid workout date.";
+  const dayStart = combineLocalDateTime(draft.date, "00:00");
+  if(dayStart == null) return "Enter a valid workout date.";
+  // Compare against end-of-today so a workout logged earlier today is never rejected.
+  const endOfToday = new Date(); endOfToday.setHours(23,59,59,999);
+  if(dayStart > endOfToday.getTime()) return "Workout date can't be in the future.";
+
+  const hasStart = !!draft.startTime, hasEnd = !!draft.endTime;
+  if(hasStart !== hasEnd) return "Enter both a start and an end time, or leave both blank.";
+
+  let durationMin;
+  if(hasStart && hasEnd){
+    const st = combineLocalDateTime(draft.date, draft.startTime);
+    const et = combineLocalDateTime(draft.date, draft.endTime);
+    if(st == null || et == null) return "Enter valid start and end times.";
+    if(et <= st) return "End time must be after start time.";
+    durationMin = Math.round((et - st)/60000);
+  } else {
+    // Validate the raw seconds, not the rounded minutes: 30s would otherwise round UP to
+    // 1 and slip past the minimum-duration check.
+    const h = Number(draft.hours)||0, m = Number(draft.minutes)||0, sec = Number(draft.seconds)||0;
+    if(h < 0 || m < 0 || sec < 0) return "Duration can't be negative.";
+    const totalSec = h*3600 + m*60 + sec;
+    if(totalSec < WORKOUT_EDIT_MIN_MIN*60) return "Duration must be at least 1 minute.";
+    durationMin = Math.round(totalSec/60);
+  }
+  if(!isFinite(durationMin) || durationMin < WORKOUT_EDIT_MIN_MIN) return "Duration must be at least 1 minute.";
+  if(durationMin > WORKOUT_EDIT_MAX_MIN) return "Duration can't be longer than 12 hours.";
+
+  const r = draft.rating === "" ? null : Number(draft.rating);
+  if(r != null && (!isFinite(r) || r < 1 || r > 10)) return "Session rating must be between 1 and 10.";
+  const rpe = draft.rpe === "" ? null : Number(draft.rpe);
+  if(rpe != null && (!isFinite(rpe) || rpe < 1 || rpe > 10)) return "RPE must be between 1 and 10.";
+  return null;
+}
+
+/** Applies a validated draft to the stored workout, writing an audit entry. Returns
+ *  {ok:true} or {ok:false, error}. Never mutates the record on a validation failure. */
+function saveWorkoutEdit(draft){
+  const err = validateWorkoutEdit(draft);
+  if(err) return { ok:false, error: err };
+  const idx = state.workoutLog.findIndex(w => w.id === draft.id);
+  if(idx === -1) return { ok:false, error:"That workout no longer exists." };
+  const s = state.workoutLog[idx];
+
+  const hasTimes = !!(draft.startTime && draft.endTime);
+  let startedAt = s.startedAt, finishedAt = s.finishedAt, durationMin;
+  if(hasTimes){
+    startedAt = combineLocalDateTime(draft.date, draft.startTime);
+    finishedAt = combineLocalDateTime(draft.date, draft.endTime);
+    durationMin = Math.round((finishedAt - startedAt)/60000);
+  } else {
+    durationMin = workoutEditDraftDurationMin(draft);
+    // Keep the timeline coherent when only the duration was corrected.
+    if(startedAt != null) finishedAt = startedAt + durationMin*60000;
+  }
+
+  const before = { date:s.date, startedAt:s.startedAt ?? null, finishedAt:s.finishedAt ?? null,
+    durationMin:s.durationMin ?? null, notes:s.notes || "", title:s.title || "",
+    mood:s.mood || "", energy:s.energy || "", rating:s.rating || "", rpe:s.rpe || "" };
+  const after = { date:draft.date, startedAt:startedAt ?? null, finishedAt:finishedAt ?? null,
+    durationMin, notes:draft.notes || "", title:draft.title || "",
+    mood:draft.mood || "", energy:draft.energy || "", rating:draft.rating || "", rpe:draft.rpe || "" };
+
+  // No-op guard: don't record an audit entry (or dirty the record for cloud sync) when
+  // nothing actually changed.
+  if(stableCompare(before, after)) return { ok:true, unchanged:true };
+
+  Object.assign(s, {
+    date: after.date, startedAt: after.startedAt, finishedAt: after.finishedAt,
+    durationMin: after.durationMin, notes: after.notes, title: after.title,
+    mood: after.mood, energy: after.energy, rating: after.rating, rpe: after.rpe,
+    edited: true,
+    editHistory: (Array.isArray(s.editHistory) ? s.editHistory : []).concat([{
+      at: Date.now(), reason: (draft.reason || "").trim(), before, after
+    }])
+  });
+
+  // Re-assert the write-time uniqueness invariant: an edit could in principle move a record
+  // onto the same start instant + signature as another one.
+  state.workoutLog = enforceWorkoutLogIntegrity(state.workoutLog);
+  persist(); // instant local save -- works offline; cloud sync picks it up on its next pass
+  return { ok:true };
+}
+
+/** Shallow value-compare for the flat audit objects above. */
+function stableCompare(a, b){
+  const ks = Object.keys(a);
+  if(ks.length !== Object.keys(b).length) return false;
+  return ks.every(k => String(a[k] ?? "") === String(b[k] ?? ""));
+}
+
 function renderWorkoutTab(){
   if(state.session && state.showExercisePicker) return renderExercisePicker();
   if(state.routineBuilder && state.showExercisePicker && isRoutinePickerContext()) return renderExercisePicker();
   if(!state.session){
+    if(state.editingWorkout){
+      const target = state.workoutLog.find(x=>x.id===state.editingWorkout.id);
+      if(target) return renderWorkoutEditor(state.editingWorkout, target);
+      state.editingWorkout = null; // stale (deleted elsewhere) — fall through
+    }
     if(state.workoutCompleteId){
       const done = state.workoutLog.find(x=>x.id===state.workoutCompleteId);
       if(done) return renderWorkoutComplete(done);
@@ -12384,6 +12721,67 @@ function attachHandlers(){
       state.exerciseSectionsOpen[key] = nowOpen; // survives tab switches / re-renders
     });
   });
+  /* ---- Post-workout editing ---- */
+  document.querySelectorAll('[data-action="edit-workout"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const w = state.workoutLog.find(x=>x.id===Number(el.dataset.workoutId));
+      if(!w) return;
+      state.editingWorkout = buildWorkoutEditDraft(w);
+      render();
+    });
+  });
+  document.querySelectorAll('[data-action="open-workout-audit"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.viewingWorkoutAuditId = Number(el.dataset.workoutId); render(); });
+  });
+  const closeAuditBtn = document.querySelector('[data-action="close-workout-audit"]');
+  if(closeAuditBtn) closeAuditBtn.addEventListener("click", ()=>{ state.viewingWorkoutAuditId = null; render(); });
+  document.querySelectorAll('[data-action="cancel-workout-edit"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.editingWorkout = null; render(); });
+  });
+  // Field edits are captured on input/change WITHOUT a re-render, so the keyboard never
+  // closes mid-typing; the draft is the single source of truth read back on save.
+  document.querySelectorAll("[data-wedit-field]").forEach(el=>{
+    const commit = ()=>{
+      if(!state.editingWorkout) return;
+      state.editingWorkout[el.dataset.weditField] = el.value;
+    };
+    el.addEventListener("input", commit);
+    el.addEventListener("change", ()=>{
+      commit();
+      // Start/end times drive duration, so re-render to reflect the linked/unlinked state.
+      if(el.dataset.weditField==="startTime" || el.dataset.weditField==="endTime" || el.dataset.weditField==="date") render();
+    });
+  });
+  document.querySelectorAll("[data-wedit-dur]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const d = state.editingWorkout;
+      if(!d) return;
+      const v = el.dataset.weditDur;
+      if(v === "reset"){
+        const t = d.originalDurationMin*60;
+        d.hours = Math.floor(t/3600); d.minutes = Math.floor((t%3600)/60); d.seconds = t%60;
+      } else {
+        const totalSec = Math.max(0, workoutEditDraftDurationMin(d)*60 + Number(v)*60);
+        d.hours = Math.floor(totalSec/3600); d.minutes = Math.floor((totalSec%3600)/60); d.seconds = totalSec%60;
+      }
+      d.error = null;
+      render();
+    });
+  });
+  const saveEditBtn = document.querySelector('[data-action="save-workout-edit"]');
+  if(saveEditBtn) saveEditBtn.addEventListener("click", ()=>{
+    const d = state.editingWorkout;
+    if(!d) return;
+    const res = saveWorkoutEdit(d);
+    if(!res.ok){ d.error = res.error; render(); return; }
+    state.editingWorkout = null;
+    render(); // every derived statistic recomputes from state.workoutLog on this pass
+    showToast(res.unchanged ? "No changes to save." : "Workout updated.", res.unchanged ? "info" : "success", render);
+    // Push the correction to Firestore right away when signed in; offline it stays queued
+    // locally and the existing sync triggers pick it up on reconnect.
+    if(window.IgnytCloudSync && IgnytCloudSync.isNativeAndroid()) IgnytCloudSync.syncNow();
+  });
+
   const closeExDetailBtn = document.querySelector('[data-action="close-exercise-detail"]');
   if(closeExDetailBtn) closeExDetailBtn.addEventListener("click", ()=>{
     state.viewingExerciseDetail = null;
@@ -13400,6 +13798,8 @@ function handleHardwareBack(){
   if(state.exerciseMenuOpen!=null){ state.exerciseMenuOpen = null; render(); return true; }
   if(state.notificationsOpen){ state.notificationsOpen = false; render(); return true; }
   if(state.viewingPrivacyInfo){ state.viewingPrivacyInfo = false; render(); return true; }
+  if(state.editingWorkout){ state.editingWorkout = null; render(); return true; }
+  if(state.viewingWorkoutAuditId!=null){ state.viewingWorkoutAuditId = null; render(); return true; }
   if(state.viewingSessionId!=null){ state.viewingSessionId = null; render(); return true; }
   if(state.viewingHyroxSchedule){ state.viewingHyroxSchedule = false; render(); return true; }
   if(state.viewingHyroxInfo){ state.viewingHyroxInfo = false; render(); return true; }
