@@ -10,7 +10,7 @@ const SCHEMA_VERSION = 1; // bump when localStorage shape changes; add a migrate
 /* ---------- Storage ---------- */
 
 const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_profile","hx_nutrition","hx_bodylog","hx_custom_exercises",
-  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history"];
+  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history","hx_deleted_workouts"];
 
 // Single source of truth for every trackable body measurement beyond weight -- the entry
 // form, CSV export/import, and the chart metric switcher all read this list instead of each
@@ -2860,7 +2860,7 @@ const state = {
   viewingWorkoutAuditId: null, // transient — workout id whose edit history is open
   // Workout History view filters (transient — a fresh visit starts unfiltered)
   historySearch: "", historyRange: "all", historyMuscle: "", historySort: "newest",
-  historyPRsOnly: false, historyPage: 1,
+  historyPRsOnly: false, historyPage: 1, historyArchived: false, historyBinOpen: false,
   raceActive: LS.get("hx_race_active", null),
   raceLog: LS.get("hx_race_log", []),
   viewingRaceMode: !!LS.get("hx_race_active", null),
@@ -8244,7 +8244,7 @@ function renderSessionDetail(s){
   return `
     <div class="row-between" style="margin-bottom:4px;">
       <button class="btn btn-ghost" data-action="close-session-detail" style="padding:6px 12px;font-size:12px;">← Back</button>
-      <button class="btn btn-ghost" data-action="edit-workout" data-workout-id="${s.id}" style="padding:6px 12px;font-size:12px;">${svg('pencil',13)} Edit</button>
+      <button class="btn btn-ghost" data-action="edit-workout-details" data-workout-id="${s.id}" style="padding:6px 12px;font-size:12px;">${svg('pencil',13)} Details</button>
     </div>
     <div style="margin:12px 0 4px;">
       <div style="font-size:18px;font-weight:900;">${escHtml(sessionTitle(s))}</div>
@@ -8290,6 +8290,10 @@ function renderSessionDetail(s){
       <button class="btn btn-steel" data-action="edit-workout" data-session-id="${s.id}">Edit Workout</button>
     </div>
     <button class="btn btn-ghost btn-block" data-action="save-session-as-routine" data-session-id="${s.id}" style="margin-top:8px;">Save as Routine</button>
+    <div class="grid2" style="margin-top:8px;">
+      <button class="btn btn-ghost" data-action="duplicate-workout" data-workout-id="${s.id}">${svg('copy',14)} Duplicate</button>
+      <button class="btn btn-ghost" data-action="archive-workout" data-workout-id="${s.id}">${svg('box',14)} ${s.archived?'Unarchive':'Archive'}</button>
+    </div>
     <button class="btn btn-ghost btn-block" data-action="delete-session-confirmed" data-session-id="${s.id}" style="margin-top:8px;color:#ff6b6b;">Delete Workout</button>
   `;
 }
@@ -8902,6 +8906,77 @@ function renderProgressNutrition(){
 
 const HISTORY_PAGE_SIZE = 20;
 
+/* ---------- Recycle bin, archive and workout actions ----------
+   Deleting a workout moves it to a recycle bin (hx_deleted_workouts) instead of destroying
+   it. Entries carry deletedAt and are purged automatically after RECYCLE_BIN_DAYS, so the
+   bin can't grow without bound. Restoring puts the record back into state.workoutLog with
+   its original id, which means cloud sync sees it as the same record returning rather than
+   a new one -- and because the id is preserved, its PRs still resolve.
+
+   Archiving is separate and non-destructive: an archived workout stays in workoutLog with
+   archived:true and is simply filtered out of the default history view. */
+
+const RECYCLE_BIN_KEY = "hx_deleted_workouts";
+const RECYCLE_BIN_DAYS = 30;
+
+function loadRecycleBin(){
+  const raw = LS.get(RECYCLE_BIN_KEY, []);
+  const list = Array.isArray(raw) ? raw : [];
+  // Purge on read so expiry happens without needing a scheduled job.
+  const cutoff = Date.now() - RECYCLE_BIN_DAYS*86400000;
+  const kept = list.filter(e => e && e.workout && Number(e.deletedAt||0) >= cutoff);
+  if(kept.length !== list.length) LS.set(RECYCLE_BIN_KEY, kept);
+  return kept;
+}
+function saveRecycleBin(list){ LS.set(RECYCLE_BIN_KEY, list); }
+
+/** Moves a workout to the recycle bin. Returns the removed record, or null if not found. */
+function softDeleteWorkout(id){
+  const w = state.workoutLog.find(s=>s.id===id);
+  if(!w) return null;
+  state.workoutLog = state.workoutLog.filter(s=>s.id!==id);
+  const bin = loadRecycleBin();
+  bin.unshift({ deletedAt: Date.now(), workout: w });
+  saveRecycleBin(bin);
+  persist();
+  return w;
+}
+
+/** Puts a workout back from the bin, keeping its original id. */
+function restoreWorkout(id){
+  const bin = loadRecycleBin();
+  const entry = bin.find(e=>e.workout && e.workout.id===id);
+  if(!entry) return false;
+  saveRecycleBin(bin.filter(e=>e!==entry));
+  // Guard against a record that somehow still exists (double-restore, or an import that
+  // re-added it while it sat in the bin).
+  if(!state.workoutLog.some(s=>s.id===id)){
+    state.workoutLog.unshift(entry.workout);
+    state.workoutLog = enforceWorkoutLogIntegrity(state.workoutLog);
+  }
+  persist();
+  return true;
+}
+
+function purgeWorkoutFromBin(id){
+  saveRecycleBin(loadRecycleBin().filter(e=>!(e.workout && e.workout.id===id)));
+}
+
+/** Deep-copies a workout onto a new id/date. Sets keep their logged values but are marked
+ *  incomplete when `asTemplate`, so "repeat today" starts an empty session to fill in. */
+function duplicateWorkoutRecord(src, opts){
+  const o = opts || {};
+  const when = o.date ? new Date(o.date+"T12:00:00") : new Date();
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id = nextId();
+  copy.date = localDateStr(when.getTime());
+  copy.startedAt = when.getTime();
+  copy.finishedAt = when.getTime() + (Number(src.durationMin)||0)*60000;
+  copy.title = o.title || src.title || "";
+  delete copy.edited; delete copy.editHistory; // a copy has its own edit history
+  return copy;
+}
+
 const HISTORY_RANGES = {
   all:  { label:"All time", days:null },
   "30": { label:"30 days",  days:30 },
@@ -8935,6 +9010,8 @@ function filteredWorkoutHistory(){
 
   let list = state.workoutLog.filter(s=>{
     if(!s || !Array.isArray(s.exercises)) return false; // malformed/legacy record — never crash the list
+    // Archived workouts are hidden unless the archive filter is explicitly on.
+    if(!!s.archived !== !!state.historyArchived) return false;
     if(cutoff != null && historySortKeyDate(s) < cutoff) return false;
     if(prWorkoutIds && !prWorkoutIds.has(s.id)) return false;
     if(muscle && !sessionMuscles(s.exercises).includes(muscle)) return false;
@@ -8948,9 +9025,37 @@ function filteredWorkoutHistory(){
   return list.slice().sort(HISTORY_SORTS[sort].cmp);
 }
 
+/* Recycle bin: restore or permanently remove soft-deleted workouts. */
+function renderRecycleBin(){
+  const bin = loadRecycleBin();
+  return `
+    <button class="btn btn-ghost" data-history-bin-back="1" style="padding:6px 12px;font-size:12px;margin-bottom:10px;">← Back to history</button>
+    <div class="pg-card" style="margin-bottom:12px;background:rgba(37,99,235,.06);display:flex;gap:8px;align-items:flex-start;">
+      <span style="flex:none;color:var(--rh-blue);">${svg('info',14)}</span>
+      <span style="font-size:12px;line-height:1.4;">Deleted workouts stay here for ${RECYCLE_BIN_DAYS} days, then are removed automatically. Restoring keeps the original workout and its records intact.</span>
+    </div>
+    ${bin.length===0 ? `<div class="empty-note">Recycle bin is empty.</div>` : bin.map(e=>{
+      const w = e.workout;
+      const daysLeft = Math.max(0, RECYCLE_BIN_DAYS - Math.floor((Date.now()-Number(e.deletedAt||0))/86400000));
+      return `<div class="pg-card" style="margin-bottom:10px;">
+        <div style="font-size:15px;font-weight:800;">${escHtml(sessionTitle(w))}</div>
+        <div style="font-size:12px;color:var(--rh-muted);margin-top:2px;">${escHtml(w.date||"")} · ${workoutDurationLabel(w)} · ${displayW(w.volume||0,0).toLocaleString()} ${wUnit()}</div>
+        <div style="font-size:11px;color:var(--rh-muted);margin-top:4px;">Deleted ${new Date(Number(e.deletedAt||0)).toLocaleDateString()} · ${daysLeft} day${daysLeft!==1?'s':''} left</div>
+        <div class="grid2" style="margin-top:10px;">
+          <button class="btn btn-steel" data-bin-restore="${w.id}">Restore</button>
+          <button class="btn btn-ghost" data-bin-purge="${w.id}" style="color:#ff6b6b;">Delete forever</button>
+        </div>
+      </div>`;
+    }).join("")}
+    <div style="height:16px;"></div>`;
+}
+
 function renderProgressWorkouts(){
+  if(state.historyBinOpen) return renderRecycleBin();
   const all = state.workoutLog.filter(s=>s && Array.isArray(s.exercises));
-  if(all.length === 0){
+  const archivedCount = all.filter(s=>s.archived).length;
+  const binCount = loadRecycleBin().length;
+  if(all.length === 0 && binCount === 0){
     return `<div class="pg-card" style="text-align:center;padding:28px 18px;">
       <span class="tl-card__icon" style="width:44px;height:44px;margin:0 auto 12px;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('workout',22)}</span>
       <div style="font-size:15px;font-weight:800;">No workouts logged yet</div>
@@ -8966,7 +9071,7 @@ function renderProgressWorkouts(){
   const muscleOpts = Array.from(new Set(all.flatMap(s=>sessionMuscles(s.exercises)))).filter(Boolean).sort();
   const range = HISTORY_RANGES[state.historyRange] ? state.historyRange : "all";
   const sort = HISTORY_SORTS[state.historySort] ? state.historySort : "newest";
-  const filtersActive = !!((state.historySearch||"").trim()) || range!=="all" || !!state.historyMuscle || !!state.historyPRsOnly;
+  const filtersActive = !!((state.historySearch||"").trim()) || range!=="all" || !!state.historyMuscle || !!state.historyPRsOnly || !!state.historyArchived;
 
   const totalVolume = matches.reduce((a,s)=>a+(s.volume||0),0);
   const totalMin = matches.reduce((a,s)=>a+(s.durationMin||0),0);
@@ -8994,6 +9099,8 @@ function renderProgressWorkouts(){
 
     <div class="lib-cats" style="margin-bottom:10px;">
       <button class="cat-chip ${state.historyPRsOnly?'active':''}" data-history-prs="1">${svg('trophy',12)} With PRs</button>
+      <button class="cat-chip ${state.historyArchived?'active':''}" data-history-archived="1">${svg('box',12)} Archived${archivedCount?` (${archivedCount})`:''}</button>
+      ${binCount?`<button class="cat-chip" data-history-bin="1">${svg('trash',12)} Recycle bin (${binCount})</button>`:''}
       ${filtersActive?`<button class="cat-chip" data-history-clear="1">Clear filters</button>`:''}
     </div>
 
@@ -12458,17 +12565,20 @@ function attachHandlers(){
   });
   const delConfirmedBtn = document.querySelector('[data-action="delete-session-confirmed"]');
   if(delConfirmedBtn) delConfirmedBtn.addEventListener("click", async ()=>{
-    if(!(await confirmDialog("Delete this workout permanently? This can't be undone.", render))) return;
+    if(!(await confirmDialog(`Delete this workout? It moves to the recycle bin and can be restored for ${RECYCLE_BIN_DAYS} days.`, render))) return;
     const id = Number(delConfirmedBtn.dataset.sessionId);
-    state.workoutLog = state.workoutLog.filter(s=>s.id !== id);
+    if(!softDeleteWorkout(id)) return;
     state.viewingSessionId = null;
     render();
+    showToast("Workout deleted.", "info", render, { label:"Undo", onClick: ()=>{ restoreWorkout(id); render(); } });
   });
   document.querySelectorAll("[data-del-session]").forEach(el=>{
     el.addEventListener("click", async (e)=>{
       e.stopPropagation(); // don't also trigger the row's data-view-session click
-      if(!(await confirmDialog("Delete this workout permanently? This can't be undone.", render))) return;
-      state.workoutLog = state.workoutLog.filter(s=>s.id !== Number(el.dataset.delSession));
+      if(!(await confirmDialog(`Delete this workout? It moves to the recycle bin and can be restored for ${RECYCLE_BIN_DAYS} days.`, render))) return;
+      const delId = Number(el.dataset.delSession);
+      softDeleteWorkout(delId);
+      setTimeout(()=> showToast("Workout deleted.", "info", render, { label:"Undo", onClick: ()=>{ restoreWorkout(delId); render(); } }), 0);
       render();
     });
   });
@@ -12857,7 +12967,26 @@ function attachHandlers(){
   const histClear = document.querySelector("[data-history-clear]");
   if(histClear) histClear.addEventListener("click", ()=>{
     state.historySearch = ""; state.historyRange = "all"; state.historyMuscle = "";
-    state.historyPRsOnly = false; state.historyPage = 1; render();
+    state.historyPRsOnly = false; state.historyArchived = false; state.historyPage = 1; render();
+  });
+  const histArchived = document.querySelector("[data-history-archived]");
+  if(histArchived) histArchived.addEventListener("click", ()=>{ state.historyArchived = !state.historyArchived; state.historyPage = 1; render(); });
+  const histBin = document.querySelector("[data-history-bin]");
+  if(histBin) histBin.addEventListener("click", ()=>{ state.historyBinOpen = true; render(); });
+  const histBinBack = document.querySelector("[data-history-bin-back]");
+  if(histBinBack) histBinBack.addEventListener("click", ()=>{ state.historyBinOpen = false; render(); });
+  document.querySelectorAll("[data-bin-restore]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = Number(el.dataset.binRestore);
+      if(restoreWorkout(id)){ render(); showToast("Workout restored.", "success", render); }
+    });
+  });
+  document.querySelectorAll("[data-bin-purge]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      if(!(await confirmDialog("Permanently delete this workout? This can't be undone.", render, { danger:true, confirmLabel:"Delete forever" }))) return;
+      purgeWorkoutFromBin(Number(el.dataset.binPurge));
+      render();
+    });
   });
   const histMore = document.querySelector("[data-history-more]");
   if(histMore) histMore.addEventListener("click", ()=>{ state.historyPage = (state.historyPage||1) + 1; render(); });
@@ -12890,12 +13019,34 @@ function attachHandlers(){
     });
   });
   /* ---- Post-workout editing ---- */
-  document.querySelectorAll('[data-action="edit-workout"]').forEach(el=>{
+  document.querySelectorAll('[data-action="edit-workout-details"]').forEach(el=>{
     el.addEventListener("click", ()=>{
       const w = state.workoutLog.find(x=>x.id===Number(el.dataset.workoutId));
       if(!w) return;
       state.editingWorkout = buildWorkoutEditDraft(w);
       render();
+    });
+  });
+  document.querySelectorAll('[data-action="duplicate-workout"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const src = state.workoutLog.find(x=>x.id===Number(el.dataset.workoutId));
+      if(!src) return;
+      const copy = duplicateWorkoutRecord(src);
+      state.workoutLog.unshift(copy);
+      state.workoutLog = enforceWorkoutLogIntegrity(state.workoutLog);
+      persist();
+      state.viewingSessionId = copy.id;
+      render();
+      showToast("Workout duplicated to today.", "success", render);
+    });
+  });
+  document.querySelectorAll('[data-action="archive-workout"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const w = state.workoutLog.find(x=>x.id===Number(el.dataset.workoutId));
+      if(!w) return;
+      w.archived = !w.archived;
+      persist(); render();
+      showToast(w.archived ? "Workout archived." : "Workout unarchived.", "info", render);
     });
   });
   document.querySelectorAll('[data-action="open-workout-audit"]').forEach(el=>{
