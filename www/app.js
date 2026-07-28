@@ -2858,6 +2858,9 @@ const state = {
   exerciseSectionsOpen: null, // transient — {sectionKey: bool} for the collapsible guide sections
   editingWorkout: null,       // transient — edit draft for a saved workout (see buildWorkoutEditDraft)
   viewingWorkoutAuditId: null, // transient — workout id whose edit history is open
+  // Workout History view filters (transient — a fresh visit starts unfiltered)
+  historySearch: "", historyRange: "all", historyMuscle: "", historySort: "newest",
+  historyPRsOnly: false, historyPage: 1,
   raceActive: LS.get("hx_race_active", null),
   raceLog: LS.get("hx_race_log", []),
   viewingRaceMode: !!LS.get("hx_race_active", null),
@@ -6032,7 +6035,7 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","calendar"].includes(state.progressView)))
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","workouts","calendar"].includes(state.progressView)))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || state.bodyView==="calculators" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
@@ -8336,7 +8339,10 @@ function renderExerciseDetailHistory(history, exerciseName){
 
 const PROGRESS_VIEWS = {
   achievements: { icon:"🎖️", title:"Achievements & Records", sub:"Milestones, streaks and unlocked achievements." },
-  history:      { icon:"📄", title:"Workout History",   sub:"Every personal record you've ever set." },
+  // `history` has always rendered the PR list, despite its old "Workout History" title --
+  // renamed to match what it actually shows. Real workout history is the `workouts` view.
+  history:      { icon:"📄", title:"Personal Records",  sub:"Every personal record you've ever set." },
+  workouts:     { icon:"🗂️", title:"Workout History",   sub:"Search, filter and review every workout you've logged." },
   habits:       { icon:"🔁", title:"Habit Tracker",      sub:"Daily habits, streaks, and completion history." },
   analytics:    { icon:"📊", title:"Workout Analytics",  sub:"Training frequency, volume, duration, and muscle distribution." },
   exercise:     { icon:"📈", title:"Exercise Progress",  sub:"Weight and estimated 1RM trends for individual exercises." },
@@ -8368,7 +8374,8 @@ function renderProgressTab(){
   const view = state.progressView;
   if(view && PROGRESS_VIEWS[view]){
     const detailFns = {
-      achievements: renderProgressAchievements, history: renderProgressPRs, habits: renderProgressHabits,
+      achievements: renderProgressAchievements, history: renderProgressPRs, workouts: renderProgressWorkouts,
+      habits: renderProgressHabits,
       analytics: renderProgressAnalytics, exercise: renderProgressExercise,
       nutrition: renderProgressNutrition,
       body: renderProgressBody,
@@ -8393,6 +8400,8 @@ function renderProgressTab(){
       achievements: { icon:'trophy', bg:'rgba(217,119,6,.1)', color:'#D97706' },
       history:      { icon:'file', bg:'var(--rh-bg)', color:'var(--rh-muted)',
         sub:"Dates show when each achievement was unlocked in IGNYT. For imported workout history, that's the day of the import — the counts themselves are always genuine." },
+      workouts:     { icon:'calendar', bg:'rgba(37,99,235,.1)', color:'var(--rh-blue)',
+        sub:'Search, filter and review every workout you’ve logged.' },
       calendar:     { icon:'calendar', bg:'rgba(239,68,68,.1)', color:'var(--rh-red)', sub:'Track your training days and stay consistent.' }
     };
     if(LIGHT_VIEW_HEADERS[view]){
@@ -8881,6 +8890,137 @@ function renderProgressNutrition(){
       ${sparklineChart(ct.map(d=>({date:d.date,value:Math.round(d.protein)})), {color:"var(--steel)", unit:"g"})}
     </div>
     <div style="font-size:12px;color:var(--muted);margin-top:8px;">Averages cover only days with logged food (${ct.length} of the last ${days}).</div>
+  `;
+}
+
+/* ---------- Workout History ----------
+   Browsable, searchable list of every logged workout. Filtering and sorting run over
+   state.workoutLog directly (the same array every other statistic derives from), so the
+   list is always consistent with the rest of the app and needs no separate index to
+   invalidate. Rendering is paginated -- HISTORY_PAGE_SIZE rows at a time behind a
+   "Load more" button -- so a multi-year log doesn't build thousands of DOM nodes at once. */
+
+const HISTORY_PAGE_SIZE = 20;
+
+const HISTORY_RANGES = {
+  all:  { label:"All time", days:null },
+  "30": { label:"30 days",  days:30 },
+  "90": { label:"90 days",  days:90 },
+  "365":{ label:"1 year",   days:365 }
+};
+
+const HISTORY_SORTS = {
+  newest:   { label:"Newest",   cmp:(a,b)=> historySortKeyDate(b) - historySortKeyDate(a) },
+  oldest:   { label:"Oldest",   cmp:(a,b)=> historySortKeyDate(a) - historySortKeyDate(b) },
+  duration: { label:"Longest",  cmp:(a,b)=> (b.durationMin||0) - (a.durationMin||0) },
+  volume:   { label:"Volume",   cmp:(a,b)=> (b.volume||0) - (a.volume||0) }
+};
+
+/** Sort key that tolerates legacy records with no startedAt (falls back to the date). */
+function historySortKeyDate(s){
+  if(s.startedAt != null) return Number(s.startedAt);
+  const t = new Date((s.date||"") + "T12:00:00").getTime();
+  return isFinite(t) ? t : 0;
+}
+
+/** Applies the current search/filter/sort state and returns the matching workouts. */
+function filteredWorkoutHistory(){
+  const q = (state.historySearch || "").trim().toLowerCase();
+  const range = HISTORY_RANGES[state.historyRange] ? state.historyRange : "all";
+  const muscle = state.historyMuscle || "";
+  const prsOnly = !!state.historyPRsOnly;
+  const days = HISTORY_RANGES[range].days;
+  const cutoff = days ? Date.now() - days*86400000 : null;
+  const prWorkoutIds = prsOnly ? new Set(state.prs.map(p=>p.workoutId)) : null;
+
+  let list = state.workoutLog.filter(s=>{
+    if(!s || !Array.isArray(s.exercises)) return false; // malformed/legacy record — never crash the list
+    if(cutoff != null && historySortKeyDate(s) < cutoff) return false;
+    if(prWorkoutIds && !prWorkoutIds.has(s.id)) return false;
+    if(muscle && !sessionMuscles(s.exercises).includes(muscle)) return false;
+    if(q){
+      const hay = [sessionTitle(s), s.notes || "", ...s.exercises.map(e=>e.name||"")].join(" ").toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  const sort = HISTORY_SORTS[state.historySort] ? state.historySort : "newest";
+  return list.slice().sort(HISTORY_SORTS[sort].cmp);
+}
+
+function renderProgressWorkouts(){
+  const all = state.workoutLog.filter(s=>s && Array.isArray(s.exercises));
+  if(all.length === 0){
+    return `<div class="pg-card" style="text-align:center;padding:28px 18px;">
+      <span class="tl-card__icon" style="width:44px;height:44px;margin:0 auto 12px;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('workout',22)}</span>
+      <div style="font-size:15px;font-weight:800;">No workouts logged yet</div>
+      <div style="font-size:12px;color:var(--rh-muted);margin-top:4px;">Finish a workout and it'll show up here.</div>
+    </div>`;
+  }
+
+  const matches = filteredWorkoutHistory();
+  const page = Math.max(1, state.historyPage || 1);
+  const shown = matches.slice(0, page*HISTORY_PAGE_SIZE);
+  // Muscle options come from what's actually in the log, so the filter never offers a
+  // muscle group with zero results.
+  const muscleOpts = Array.from(new Set(all.flatMap(s=>sessionMuscles(s.exercises)))).filter(Boolean).sort();
+  const range = HISTORY_RANGES[state.historyRange] ? state.historyRange : "all";
+  const sort = HISTORY_SORTS[state.historySort] ? state.historySort : "newest";
+  const filtersActive = !!((state.historySearch||"").trim()) || range!=="all" || !!state.historyMuscle || !!state.historyPRsOnly;
+
+  const totalVolume = matches.reduce((a,s)=>a+(s.volume||0),0);
+  const totalMin = matches.reduce((a,s)=>a+(s.durationMin||0),0);
+
+  return `
+    <div class="lib-search-wrap" style="margin-bottom:10px;">
+      ${svg('search',17)}
+      <input type="text" id="history-search" class="pi-input" placeholder="Search workouts, exercises or notes…" value="${escHtml(state.historySearch||"")}">
+    </div>
+
+    <div class="lib-cats" style="margin-bottom:8px;">
+      ${Object.entries(HISTORY_RANGES).map(([k,v])=>`
+        <button class="cat-chip ${range===k?'active':''}" data-history-range="${k}">${v.label}</button>`).join("")}
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <select id="history-muscle" class="pi-input" style="flex:1;">
+        <option value="">All muscles</option>
+        ${muscleOpts.map(m=>`<option value="${escHtml(m)}" ${state.historyMuscle===m?'selected':''}>${escHtml(m)}</option>`).join("")}
+      </select>
+      <select id="history-sort" class="pi-input" style="flex:1;">
+        ${Object.entries(HISTORY_SORTS).map(([k,v])=>`<option value="${k}" ${sort===k?'selected':''}>${v.label}</option>`).join("")}
+      </select>
+    </div>
+
+    <div class="lib-cats" style="margin-bottom:10px;">
+      <button class="cat-chip ${state.historyPRsOnly?'active':''}" data-history-prs="1">${svg('trophy',12)} With PRs</button>
+      ${filtersActive?`<button class="cat-chip" data-history-clear="1">Clear filters</button>`:''}
+    </div>
+
+    <div class="lib-count-row">
+      <span><b>${matches.length}</b> workout${matches.length!==1?'s':''}${filtersActive?` of ${all.length}`:''}</span>
+      <span style="font-size:12px;color:var(--rh-muted);">${fmtMinutes(totalMin)} · ${displayW(totalVolume,0).toLocaleString()} ${wUnit()}</span>
+    </div>
+
+    ${matches.length===0 ? `<div class="empty-note">No workouts match these filters.</div>` : shown.map(s=>{
+      const prCount = state.prs.filter(p=>p.workoutId===s.id).length;
+      const doneSets = computeCompletedSets(s.exercises);
+      const muscles = sessionMuscles(s.exercises).slice(0,3);
+      return `<div class="pg-card" style="margin-bottom:10px;cursor:pointer;position:relative;" data-view-session="${s.id}">
+        <div class="row-between" style="align-items:flex-start;gap:8px;">
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:15px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(sessionTitle(s))}</div>
+            <div style="font-size:12px;color:var(--rh-muted);margin-top:2px;">${new Date((s.date||"")+"T12:00:00").toLocaleDateString('default',{weekday:'short',month:'short',day:'numeric',year:'numeric'})}</div>
+          </div>
+          ${prCount?`<span class="lib-tag" style="background:rgba(217,119,6,.12);color:#D97706;flex:none;">${svg('trophy',10)} ${prCount}</span>`:''}
+          ${s.edited?`<span class="lib-tag" style="background:var(--rh-bg);color:var(--rh-muted);flex:none;">Edited</span>`:''}
+        </div>
+        <div style="font-size:12px;color:var(--rh-muted);margin-top:6px;">${workoutDurationLabel(s)} · ${displayW(s.volume||0,0).toLocaleString()} ${wUnit()} · ${s.exercises.length} exercise${s.exercises.length!==1?'s':''} · ${doneSets} set${doneSets!==1?'s':''}</div>
+        ${muscles.length?`<div style="margin-top:6px;">${muscles.map(m=>`<span class="lib-tag" style="background:${muscleTagColor(m)}1a;color:${muscleTagColor(m)};margin-right:4px;">${escHtml(m)}</span>`).join("")}</div>`:''}
+      </div>`;
+    }).join("")}
+
+    ${shown.length < matches.length ? `<button class="btn btn-ghost btn-block" data-history-more="1" style="margin-bottom:16px;">Load ${Math.min(HISTORY_PAGE_SIZE, matches.length-shown.length)} more (${shown.length} of ${matches.length})</button>` : `<div style="height:16px;"></div>`}
   `;
 }
 
@@ -12693,6 +12833,34 @@ function attachHandlers(){
   document.querySelectorAll("[data-cat]").forEach(el=>{
     el.addEventListener("click", ()=>{ state.libCategory = el.dataset.cat; render(); });
   });
+
+  /* ---- Workout History filters ---- */
+  const histSearch = document.getElementById("history-search");
+  if(histSearch) histSearch.addEventListener("input", (e)=>{
+    state.historySearch = e.target.value;
+    state.historyPage = 1; // a new query always starts from the first page
+    debounce("history-search", ()=>{
+      render();
+      // Same focus-restore as the library search: render() replaces the input node.
+      setTimeout(()=>{ const s=document.getElementById("history-search"); if(s){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
+    }, 150);
+  });
+  document.querySelectorAll("[data-history-range]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.historyRange = el.dataset.historyRange; state.historyPage = 1; render(); });
+  });
+  const histMuscle = document.getElementById("history-muscle");
+  if(histMuscle) histMuscle.addEventListener("change", ()=>{ state.historyMuscle = histMuscle.value; state.historyPage = 1; render(); });
+  const histSort = document.getElementById("history-sort");
+  if(histSort) histSort.addEventListener("change", ()=>{ state.historySort = histSort.value; state.historyPage = 1; render(); });
+  const histPRs = document.querySelector("[data-history-prs]");
+  if(histPRs) histPRs.addEventListener("click", ()=>{ state.historyPRsOnly = !state.historyPRsOnly; state.historyPage = 1; render(); });
+  const histClear = document.querySelector("[data-history-clear]");
+  if(histClear) histClear.addEventListener("click", ()=>{
+    state.historySearch = ""; state.historyRange = "all"; state.historyMuscle = "";
+    state.historyPRsOnly = false; state.historyPage = 1; render();
+  });
+  const histMore = document.querySelector("[data-history-more]");
+  if(histMore) histMore.addEventListener("click", ()=>{ state.historyPage = (state.historyPage||1) + 1; render(); });
   document.querySelectorAll("[data-view-exercise]").forEach(el=>{
     el.addEventListener("click", ()=>{
       state.viewingExerciseDetail = el.dataset.viewExercise;
