@@ -4596,8 +4596,6 @@ const state = {
   foodBrowseCategory: null, foodBrowsePage: 1, foodResultPage: 1,
   // Which day the nutrition dashboard is showing. Transient: a fresh visit opens on today.
   nutritionDate: null, microExpanded: false, insightsExpanded: false,
-  // Which logged entry has its editor expanded (transient).
-  foodEntryOpen: null,
   // Quick Add panel (transient). quickAddMeal is which meal one-tap items land in.
   quickAddOpen: false, quickAddMeal: null,
   /* The two full-screen food routes. null means the dashboard.
@@ -7460,7 +7458,19 @@ function foodSearchResultsHtml(meal){
   // No inline detail panel any more: picking a food opens the Food Details route instead,
   // so this container only ever shows ways of FINDING a food.
   return `
-      ${loading ? `<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Loading the full food database…</div>` : ""}
+      ${loading ? `
+        <!-- Skeleton rather than a text notice: the panel keeps its shape while the
+             catalogue lands, so nothing jumps when the real rows replace these. -->
+        <div style="display:flex;flex-direction:column;gap:var(--space-xs);margin-bottom:var(--space-sm);">
+          ${[0,1,2,3].map(()=>`<div style="display:flex;gap:var(--space-xs);align-items:center;padding:9px 0;">
+            <div class="nut-skeleton" style="width:34px;height:34px;border-radius:var(--radius-sm);flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;">
+              <div class="nut-skeleton" style="height:11px;width:62%;"></div>
+              <div class="nut-skeleton" style="height:9px;width:38%;margin-top:6px;"></div>
+            </div>
+            <div class="nut-skeleton" style="height:11px;width:42px;flex-shrink:0;"></div>
+          </div>`).join("")}
+        </div>` : ""}
 
       ${idle && recentSearches.length ? `
         <div class="row-between" style="margin-bottom:5px;">
@@ -7601,43 +7611,6 @@ function rescaleFoodEntry(entry, amount, unit){
   return { ok:true, error:null };
 }
 
-/** The row of controls shown when an entry is expanded. */
-function renderFoodEntryEditor(entry, meal){
-  const N = window.IgnytNutrition;
-  const scalable = foodEntryIsScalable(entry);
-  const food = scalable ? lookupFood(entry.foodId, entry.name) : null;
-  const conv = window.IgnytServingConverter;
-  const units = (scalable && conv) ? conv.unitsFor(food) : [];
-  const qty = entry.quantity != null ? entry.quantity : (entry.grams || 100);
-  const unit = entry.servingUnit || "g";
-
-  return `<div style="background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:10px;margin:6px 0 8px;">
-    ${scalable ? `
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Serving</div>
-      <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
-        <input type="number" class="entry-qty" data-entry-qty="${entry.id}" value="${escHtml(String(qty))}" min="0" step="any" inputmode="decimal"
-          style="width:64px;background:var(--surface);border-radius:var(--radius-xs-plus);padding:7px;font-size:13px;color:var(--text);text-align:center;">
-        <select data-entry-unit="${entry.id}" style="flex:1;min-width:0;background:var(--surface);border-radius:var(--radius-xs-plus);padding:7px;font-size:13px;color:var(--text);">
-          ${units.map(u=>`<option value="${u}" ${unit===u?'selected':''}>${escHtml(conv?conv.labelFor(u,qty):u)}</option>`).join("")}
-        </select>
-        <button class="btn btn-accent" style="padding:7px 12px;font-size:12px;" data-entry-save="${entry.id}">Save</button>
-      </div>`
-    : `<div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.4;">
-        Entered manually, so there is no source food to re-scale from. It can still be moved,
-        duplicated or deleted.
-      </div>`}
-
-    <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Move to</div>
-    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
-      ${mealTypes().filter(m=>m!==meal).map(m=>`<button class="cat-chip" data-entry-move="${entry.id}" data-entry-meal="${escHtml(m)}" style="margin:0;">${escHtml(m)}</button>`).join("")}
-    </div>
-
-    <div style="display:flex;gap:6px;">
-      <button class="btn btn-ghost" style="flex:1;padding:7px;font-size:12px;" data-entry-duplicate="${entry.id}">Duplicate</button>
-      <button class="btn btn-ghost" style="flex:1;padding:7px;font-size:12px;color:var(--accent);" data-entry-delete="${entry.id}">Delete</button>
-    </div>
-  </div>`;
-}
 
 /* ---- Repeat / most-used (Phase 5) ---------------------------------------------------
    Re-logging what you already ate is the single most common nutrition action, so it should
@@ -12605,6 +12578,29 @@ function openFoodDetail(foodId){
   state.foodSearchUnit = d.unit;
 }
 
+/* Opens Food Details for an entry ALREADY in the log.
+   Same screen as adding, in "edit" mode: the serving controls start from what was logged,
+   and the primary action saves instead of adding. Every edit action that used to sit in the
+   inline panel — move, duplicate, delete — lives here now. */
+function openLoggedFoodDetail(entryId){
+  const entry = foodEntryById(entryId);
+  if(!entry) return;
+  const food = entry.foodId != null ? lookupFood(entry.foodId, entry.name) : null;
+
+  state.foodFlow = {
+    screen: "detail",
+    mode: "edit",
+    meal: entry.meal || mealTypes()[0],
+    foodId: entry.foodId != null ? entry.foodId : null,
+    entryId: entry.id,
+    notes: entry.note || ""
+  };
+  state.foodSearchSelected = food ? { id: food.id, name: food.name } : null;
+  // Start the controls from what was actually logged, not from a default.
+  state.foodSearchAmount = entry.quantity != null ? entry.quantity : (entry.grams || null);
+  state.foodSearchUnit = entry.servingUnit || "g";
+}
+
 function closeFoodFlow(){
   state.foodFlow = null;
   state.foodSearchSelected = null;
@@ -12653,8 +12649,19 @@ function renderFoodSearchPage(){
 
 function renderFoodDetailPage(){
   const flow = state.foodFlow;
-  const food = lookupFood(flow.foodId, state.foodSearchSelected && state.foodSearchSelected.name);
-  if(!food){ closeFoodFlow(); return renderNutritionTab(); }
+  const editing = flow.mode === "edit";
+  const entry = editing ? foodEntryById(flow.entryId) : null;
+  if(editing && !entry){ closeFoodFlow(); return renderNutritionTab(); }
+
+  const food = flow.foodId != null
+    ? lookupFood(flow.foodId, state.foodSearchSelected && state.foodSearchSelected.name)
+    : null;
+
+  // A manually entered food has no catalogue record to re-scale from, so the screen shows
+  // the numbers as logged and offers move/duplicate/delete/notes instead of serving
+  // controls. It says nothing about why — the absent controls are the whole message.
+  if(!food && !editing){ closeFoodFlow(); return renderNutritionTab(); }
+  if(!food) return renderLoggedEntryDetailPage(entry, flow);
 
   const N = window.IgnytNutrition;
   const conv = window.IgnytServingConverter;
@@ -12749,13 +12756,107 @@ function renderFoodDetailPage(){
       <input type="text" id="food-flow-notes" class="food-input" placeholder="Add a note…" value="${escHtml(flow.notes||"")}">
     </div>
 
+    ${editing ? renderEntryActionsCard(entry) : ""}
+
     <div class="food-page__spacer"></div>
 
     <div class="food-sticky">
-      <button class="btn btn-accent food-sticky__btn" data-food-flow-add="1" ${check.ok?"":"disabled"}>
-        <span>Add to ${escHtml(flow.meal)}</span>
-        <span class="food-sticky__kcal">${N.format("calories", row("calories").serving)}</span>
-      </button>
+      ${editing ? `
+        <div style="display:flex;gap:var(--space-xs);">
+          <button class="btn btn-ghost" style="flex:1;min-height:52px;" data-food-flow-cancel="1">Cancel</button>
+          <button class="btn btn-accent food-sticky__btn" style="flex:1.6;" data-food-flow-save="1" ${check.ok?"":"disabled"}>
+            <span>Save</span>
+            <span class="food-sticky__kcal">${N.format("calories", row("calories").serving)}</span>
+          </button>
+        </div>`
+      : `<button class="btn btn-accent food-sticky__btn" data-food-flow-add="1" ${check.ok?"":"disabled"}>
+          <span>Add to ${escHtml(flow.meal)}</span>
+          <span class="food-sticky__kcal">${N.format("calories", row("calories").serving)}</span>
+        </button>`}
+    </div>
+  </div>`;
+}
+
+/** Duplicate / delete for an entry being edited. Move is handled by the meal selector above,
+ *  so it is not repeated here as a second way to do the same thing. */
+function renderEntryActionsCard(entry){
+  return `<div class="nut-card nut-card--tight">
+    <div class="nut-label" style="margin-bottom:var(--space-xs);">Manage entry</div>
+    <div style="display:flex;gap:var(--space-xs);">
+      <button class="btn btn-ghost" style="flex:1;padding:10px;font-size:13px;" data-entry-duplicate="${entry.id}">Duplicate</button>
+      <button class="btn btn-ghost" style="flex:1;padding:10px;font-size:13px;color:var(--accent);" data-entry-delete="${entry.id}">Delete</button>
+    </div>
+  </div>`;
+}
+
+/** Food Details for a hand-entered log row: no source food, so no serving maths. It can
+ *  still be moved to another meal, annotated, duplicated or deleted. */
+function renderLoggedEntryDetailPage(entry, flow){
+  const N = window.IgnytNutrition;
+  const macro = (label, value, key, unit) => `
+    <div class="macro-row__cell">
+      <div class="nut-value nut-value--md">${value == null ? "—" : value}<span class="nut-unit">${unit||""}</span></div>
+      <div class="macro-row__label" style="color:var(--n-${key});">${label}</div>
+    </div>`;
+
+  return `<div class="food-page">
+    ${foodPageHeader("Food details", null, `<span style="width:36px;flex-shrink:0;"></span>`)}
+
+    <div class="food-hero">
+      ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(entry, 92) : ""}
+      <div style="flex:1;min-width:0;">
+        <div class="food-hero__name">${escHtml(entry.name)}</div>
+        <div class="food-hero__cat">${escHtml(entry.category || entry.meal || "")}</div>
+      </div>
+      <div class="food-hero__kcal">
+        <div class="nut-value nut-value--lg" style="color:var(--accent);">${Math.round(entry.calories||0)}</div>
+        <div class="nut-label">kcal</div>
+      </div>
+    </div>
+
+    <div class="macro-row">
+      ${macro("kcal", Math.round(entry.calories||0), "energy", "")}
+      ${macro("Protein", entry.protein ?? 0, "protein", "g")}
+      ${macro("Carbs", entry.carbs ?? 0, "carbs", "g")}
+      ${macro("Fat", entry.fat ?? 0, "fat", "g")}
+      ${macro("Fibre", entry.fibre ?? 0, "fibre", "g")}
+    </div>
+
+    ${(function(){
+      const micro = (N ? N.MICRO_LOG_FIELDS : []).filter(k=>entry[k] != null);
+      if(!micro.length) return "";
+      return `<div class="nut-card nut-card--tight">
+        <div class="nut-label" style="margin-bottom:var(--space-xs);">Micronutrients</div>
+        <div class="micro-grid">
+          ${micro.map(k=>`<div class="micro-row">
+            <span>${escHtml(k.charAt(0).toUpperCase()+k.slice(1))}</span>
+            <span class="micro-row__value">${N.format(k, entry[k])}</span>
+          </div>`).join("")}
+        </div>
+      </div>`;
+    })()}
+
+    <div class="nut-card nut-card--tight">
+      <div class="nut-label" style="margin-bottom:var(--space-2xs);">Meal</div>
+      <select id="food-flow-meal" class="food-select">
+        ${mealTypes().map(m=>`<option value="${escHtml(m)}" ${m===flow.meal?'selected':''}>${MEAL_ICONS[m]||"🍽️"} ${escHtml(m)}</option>`).join("")}
+      </select>
+      <div class="nut-label" style="margin:var(--space-sm) 0 var(--space-2xs);">Note (optional)</div>
+      <input type="text" id="food-flow-notes" class="food-input" placeholder="Add a note…" value="${escHtml(flow.notes||"")}">
+    </div>
+
+    ${renderEntryActionsCard(entry)}
+
+    <div class="food-page__spacer"></div>
+
+    <div class="food-sticky">
+      <div style="display:flex;gap:var(--space-xs);">
+        <button class="btn btn-ghost" style="flex:1;min-height:52px;" data-food-flow-cancel="1">Cancel</button>
+        <button class="btn btn-accent food-sticky__btn" style="flex:1.6;" data-food-flow-save="1">
+          <span>Save</span>
+          <span class="food-sticky__kcal">${Math.round(entry.calories||0)} kcal</span>
+        </button>
+      </div>
     </div>
   </div>`;
 }
@@ -13056,17 +13157,23 @@ function renderNutritionTab(){
             <span class="meal-name">${escHtml(meal)}</span>
             <span class="meal-count">${mealFoods.length} food${mealFoods.length===1?"":"s"}</span>
           </span>
+          <!-- Calories only. The meal-level P/C/F roll-up was three more numbers competing
+               with the one that matters, and the per-food rows below already carry macros
+               for anyone who wants them. -->
           <span class="meal-kcal">
-            <span class="nut-value nut-value--sm" style="display:block;color:${mealKcal>budget?'var(--accent)':'var(--text)'};">${mealKcal} kcal</span>
-            <span class="meal-macros"><span class="p">P${mp}</span><span class="c">C${mc}</span><span class="f">F${mf}</span></span>
+            <span class="nut-value nut-value--md" style="color:${mealKcal>budget?'var(--accent)':'var(--text)'};">${mealKcal}<span class="nut-unit"> kcal</span></span>
           </span>
-          <span class="meal-toggle">${isOpen?'⌃':'⌄'}</span>
+          <!-- One glyph, rotated. Swapping ⌄ for ⌃ would jump; rotating the same node lets
+               the arrow turn in step with the rows unfolding. -->
+          <span class="meal-toggle" style="transform:rotate(${isOpen?'180deg':'0deg'});">⌄</span>
           <!-- Sits inside the header for layout, but stops propagation in its handler so a
                tap on + opens the search route instead of also toggling the card. -->
           <button class="meal-add" data-meal-add="${escHtml(meal)}" aria-label="Add food to ${escHtml(meal)}">+</button>
         </div>
+        <!-- A logged food is a link to its own detail screen, nothing more. Tapping used to
+             expand an inline editor with move/duplicate/delete inside the meal card; all of
+             that now lives on the Food Details route, so this list stays scannable. -->
         ${mealFoods.map(f=>{
-          const open = String(state.foodEntryOpen) === String(f.id);
           // The serving is shown when the entry recorded one, so "Rice 205 kcal" reads as
           // "1 cup" rather than leaving the user to guess what they logged.
           const servingText = f.quantity != null && f.servingUnit
@@ -13075,18 +13182,13 @@ function renderNutritionTab(){
               (f.servingUnit !== "g" && f.grams ? ` · ${f.grams} g` : "")
             : (f.grams ? `${f.grams} g` : "");
           const justAdded = state.justAddedFoodId != null && String(state.justAddedFoodId) === String(f.id);
-          return `<div style="margin-top:8px;">
-            <div class="history-row${justAdded?' is-just-added':''}" data-entry-toggle="${f.id}" style="cursor:pointer;">
-              <div style="min-width:0;flex:1;margin-right:8px;">
-                <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(f.name)}</div>
-                <div class="mono" style="font-size:10px;color:var(--muted);">
-                  ${servingText?escHtml(servingText)+" · ":""}P${f.protein||0} C${f.carbs||0} F${f.fat||0}
-                </div>
-              </div>
-              <span class="mono" style="font-size:12px;color:var(--accent);flex-shrink:0;">${f.calories} kcal</span>
-              <span style="color:var(--muted);font-size:12px;margin-left:8px;flex-shrink:0;">${open?'−':'⋯'}</span>
+          return `<div class="log-row${justAdded?' is-just-added':''}" data-entry-open="${f.id}">
+            <div class="log-row__body">
+              <div class="log-row__name">${escHtml(f.name)}</div>
+              <div class="log-row__meta">${servingText?escHtml(servingText)+" · ":""}P${f.protein||0} C${f.carbs||0} F${f.fat||0}</div>
             </div>
-            ${open?renderFoodEntryEditor(f, meal):""}
+            <span class="log-row__kcal">${f.calories}<span class="nut-unit"> kcal</span></span>
+            <span class="log-row__chev" aria-hidden="true">›</span>
           </div>`;
         }).join("")}
         ${isOpen?`<div style="margin-top:10px;">
@@ -17191,6 +17293,42 @@ function attachHandlers(){
       setTimeout(()=>{ const s=document.getElementById("food-search-input"); if(s) s.focus(); }, 60);
     });
   });
+  document.querySelectorAll("[data-entry-open]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      openLoggedFoodDetail(el.dataset.entryOpen);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-food-flow-cancel]").forEach(el=>{
+    el.addEventListener("click", ()=>{ closeFoodFlow(); render(); });
+  });
+  const flowSave = document.querySelector("[data-food-flow-save]");
+  if(flowSave) flowSave.addEventListener("click", ()=>{
+    const flow = state.foodFlow;
+    const entry = flow && foodEntryById(flow.entryId);
+    if(!entry) return;
+
+    // Re-scale only when there is a source food to re-scale from; a hand-entered row keeps
+    // its numbers and just picks up the meal and note.
+    if(flow.foodId != null && lookupFood(flow.foodId, entry.name)){
+      const food = lookupFood(flow.foodId, entry.name);
+      const res = rescaleFoodEntry(entry, currentFoodAmount(food), state.foodSearchUnit);
+      if(!res.ok){ showToast(res.error, "error", render); return; }
+    }
+    entry.meal = flow.meal;
+    const note = (flow.notes||"").trim();
+    if(note) entry.note = note; else delete entry.note;
+    entry.editedAt = Date.now();
+
+    const meal = entry.meal;
+    closeFoodFlow();
+    state.mealOpen = meal;
+    state.justAddedFoodId = entry.id;      // reuse the highlight to show what changed
+    showToast("Saved.", "success", render);
+    render();
+    setTimeout(()=>{ state.justAddedFoodId = null; }, 400);
+  });
+
   const flowBack = document.querySelector("[data-food-flow-back]");
   if(flowBack) flowBack.addEventListener("click", ()=>{
     // Detail steps back to the search it came from; search steps back to the dashboard.
@@ -17308,37 +17446,8 @@ function attachHandlers(){
   });
 
   /* ---- Logged-entry editing (Phase 5) ---- */
-  document.querySelectorAll("[data-entry-toggle]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      const id = el.dataset.entryToggle;
-      state.foodEntryOpen = String(state.foodEntryOpen) === String(id) ? null : id;
-      render();
-    });
-  });
-  document.querySelectorAll("[data-entry-save]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      const entry = foodEntryById(el.dataset.entrySave);
-      if(!entry) return;
-      const qtyEl = document.querySelector(`[data-entry-qty="${entry.id}"]`);
-      const unitEl = document.querySelector(`[data-entry-unit="${entry.id}"]`);
-      const res = rescaleFoodEntry(entry, qtyEl ? qtyEl.value : entry.quantity, unitEl ? unitEl.value : entry.servingUnit);
-      if(!res.ok){ showToast(res.error, "error", render); return; }
-      state.foodEntryOpen = null;
-      showToast("Updated to " + entry.calories + " kcal.", "success", render);
-      render();
-    });
-  });
-  document.querySelectorAll("[data-entry-move]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      const entry = foodEntryById(el.dataset.entryMove);
-      if(!entry) return;
-      entry.meal = el.dataset.entryMeal;
-      entry.editedAt = Date.now();
-      state.foodEntryOpen = null;
-      showToast("Moved to " + entry.meal + ".", "success", render);
-      render();
-    });
-  });
+  /* Duplicate and delete now live on the Food Details route rather than an inline panel, so
+     both close the route on the way out. The behaviour is otherwise unchanged. */
   document.querySelectorAll("[data-entry-duplicate]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const entry = foodEntryById(el.dataset.entryDuplicate);
@@ -17348,9 +17457,13 @@ function attachHandlers(){
       const copy = Object.assign({}, entry, { id: nextId(), at: Date.now() });
       delete copy.editedAt;
       state.foodLog.unshift(copy);
-      state.foodEntryOpen = null;
+      const meal = copy.meal;
+      closeFoodFlow();
+      state.mealOpen = meal;
+      state.justAddedFoodId = copy.id;
       showToast("Duplicated.", "success", render);
       render();
+      setTimeout(()=>{ state.justAddedFoodId = null; }, 400);
     });
   });
   document.querySelectorAll("[data-entry-delete]").forEach(el=>{
@@ -17362,7 +17475,9 @@ function attachHandlers(){
       // lastDeletedFood for why this is deliberately not a persisted recycle bin.
       lastDeletedFood = { entry: entry, index: state.foodLog.indexOf(entry) };
       state.foodLog = state.foodLog.filter(f=>String(f.id) !== String(id));
-      state.foodEntryOpen = null;
+      const meal = entry.meal;
+      closeFoodFlow();
+      state.mealOpen = meal;
       render();
     });
   });
@@ -17934,7 +18049,11 @@ function bindFoodResultHandlers(){
       el.addEventListener("click", ()=>{
         state.foodSearchAmount = Number(el.dataset.srvAmount);
         state.foodSearchUnit = el.dataset.srvUnit;
-        updateFoodSearchResults();
+        // On the detail route there is no #food-search-results to swap, so a container
+        // update would leave the calorie figure and the sticky button showing the old
+        // serving. Only the search route can take the cheap path.
+        if(state.foodFlow && state.foodFlow.screen === "detail") render();
+        else updateFoodSearchResults();
       });
     });
     const foodShareBtn = document.querySelector("[data-food-share]");

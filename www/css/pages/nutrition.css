@@ -52,15 +52,63 @@
 }
 
 /* ---------------------------------------------------------
+   Motion primitives
+
+   Two curves, used everywhere, so the whole module moves with one personality:
+     --ease-out    things arriving — decelerate into place
+     --ease-spring a gentle overshoot for things the user pressed
+   Durations stay in the 180-300 ms band. Below that motion reads as a glitch; above it the
+   interface feels like it is making you wait.
+--------------------------------------------------------- */
+:root{
+  --ease-out: cubic-bezier(.22,.61,.36,1);
+  --ease-spring: cubic-bezier(.34,1.4,.64,1);
+  --dur-fast: .18s;
+  --dur-base: .24s;
+  --dur-slow: .3s;
+
+  /* Depth. Three steps only — more than that and "elevation" stops meaning anything.
+     Tuned for a dark ground: a black shadow does almost nothing on #121216, so lift comes
+     from a hairline top highlight as much as from the shadow below. */
+  --lift-1: 0 1px 2px rgba(0,0,0,.28);
+  --lift-2: 0 2px 10px rgba(0,0,0,.32), 0 1px 2px rgba(0,0,0,.24);
+  --lift-3: 0 10px 30px rgba(0,0,0,.42), 0 2px 6px rgba(0,0,0,.28);
+  --sheen: rgba(255,255,255,.055);
+}
+[data-theme="light"]{
+  /* On white the shadow does the work and the highlight would be invisible, so it is
+     dropped to near-nothing rather than left to make cards look milky. */
+  --lift-1: 0 1px 2px rgba(16,16,26,.06);
+  --lift-2: 0 2px 10px rgba(16,16,26,.07), 0 1px 2px rgba(16,16,26,.05);
+  --lift-3: 0 12px 32px rgba(16,16,26,.11), 0 2px 6px rgba(16,16,26,.06);
+  --sheen: rgba(255,255,255,.6);
+}
+
+/* ---------------------------------------------------------
    Cards
+
+   A card reads as a floating surface through three cues layered together: a shadow beneath,
+   a one-pixel light edge along the top, and a barely-there vertical gradient. Each is almost
+   invisible alone; together they give depth without a border.
+
+   No backdrop-filter. Real glass blur on a scrolling list of 8,000 foods costs more frame
+   time than it is worth on a mid-range phone, and the brief asked for premium, not frosted.
 --------------------------------------------------------- */
 .nut-card{
-  background: var(--surface);
-  border-radius: var(--radius-card);
+  position: relative;
+  background:
+    linear-gradient(180deg, var(--sheen) 0%, transparent 42%),
+    var(--surface);
+  border-radius: var(--radius-lg);
   padding: var(--space-md);
-  margin-bottom: var(--space-xs);
+  margin-bottom: var(--space-sm);
+  box-shadow: var(--lift-2);
+  /* The hairline that sells the edge. inset keeps it inside the radius on every corner. */
+  outline: 1px solid rgba(255,255,255,.03);
+  outline-offset: -1px;
 }
-.nut-card--tight{ padding: var(--space-sm); }
+[data-theme="light"] .nut-card{ outline-color: rgba(16,16,26,.05); }
+.nut-card--tight{ padding: var(--space-sm) var(--space-md); }
 
 /* A row of small equal cards that scrolls sideways rather than wrapping, because a wrapped
    half-row reads as broken rather than as more content. */
@@ -519,6 +567,219 @@
   opacity: .8;
   padding-left: var(--space-sm);
   border-left: 1px solid rgba(0,0,0,.22);
+}
+
+/* --- a logged food inside a meal card ---
+   A link to its own detail screen, nothing more. The chevron is the affordance; there is no
+   inline editor behind it any more, so the row can be quiet. --- */
+.log-row{
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 10px var(--space-2xs);
+  margin-top: var(--space-2xs);
+  min-height: 48px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+.log-row + .log-row{ border-top: 1px solid var(--surface-alt); }
+.log-row:active{ background: var(--surface-alt); }
+.log-row__body{ min-width: 0; flex: 1; }
+.log-row__name{
+  font-size: 14px; font-weight: 600; line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.log-row__meta{
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 11px; color: var(--muted); margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.log-row__kcal{
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 14px; font-weight: 800; color: var(--accent);
+  flex-shrink: 0; font-variant-numeric: tabular-nums;
+}
+.log-row__chev{ color: var(--muted); font-size: 15px; flex-shrink: 0; width: 12px; text-align: center; }
+
+/* The just-added pulse applies to whichever row shape is on screen. */
+.log-row.is-just-added{
+  animation: nut-just-added 1.4s ease-out both;
+}
+
+/* =========================================================
+   POLISH PASS
+
+   Layout is unchanged. What changes is how things move, how deep they sit, and how the
+   type is set. Every animation below is transform or opacity only — both composited on the
+   GPU, neither triggering layout — so none of this costs frame time on a scrolling list.
+========================================================= */
+
+/* --- press feedback -------------------------------------------------------------------
+   The tap target scales down and loses a little lift on press, then springs back. Kept to
+   0.98: below about 0.96 a press reads as the element breaking rather than responding. --- */
+.log-row,
+.food-row,
+.srv,
+.meal-head,
+.nut-stat,
+[data-food-browse],
+.meal-add,
+.qty-stepper button{
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+  will-change: transform;
+}
+.log-row:active,
+.food-row:active,
+.meal-head:active{ transform: scale(.985); }
+.srv:active,
+[data-food-browse]:active,
+.nut-stat:active{ transform: scale(.96); }
+.meal-add:active,
+.qty-stepper button:active{ transform: scale(.9); }
+
+/* Release overshoots very slightly, which is what makes a press feel answered. */
+.srv,
+.meal-add,
+.qty-stepper button{ transition-timing-function: var(--ease-spring); }
+
+/* --- buttons --- */
+.btn{
+  transition:
+    transform var(--dur-fast) var(--ease-spring),
+    box-shadow var(--dur-fast) var(--ease-out),
+    filter var(--dur-fast) var(--ease-out);
+}
+.btn-accent{
+  /* A gradient of the accent against itself: enough to catch light across the face without
+     turning into a second colour. */
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent) 88%, white) 0%,
+    var(--accent) 55%,
+    color-mix(in srgb, var(--accent) 92%, black) 100%);
+  box-shadow: var(--lift-2);
+}
+.btn-accent:active{ transform: scale(.975); box-shadow: var(--lift-1); filter: brightness(.96); }
+.btn-ghost{ box-shadow: var(--lift-1); }
+.btn-ghost:active{ transform: scale(.975); box-shadow: none; }
+.btn:disabled{ box-shadow: none; transform: none; }
+
+/* --- meal card: arrow rotation, synchronised with the expansion --- */
+.meal-toggle{
+  display: inline-block;
+  transition: transform var(--dur-base) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+/* --- expanding a meal ---
+   Rows arrive on a short stagger so the list unfolds rather than appearing all at once.
+   Capped at six: past that the last row would land after the animation has stopped being
+   interesting. --- */
+@keyframes log-row-in{
+  from{ opacity: 0; transform: translateY(-5px); }
+  to{ opacity: 1; transform: none; }
+}
+.log-row{ animation: log-row-in var(--dur-base) var(--ease-out) both; }
+.log-row:nth-child(2){ animation-delay: 20ms; }
+.log-row:nth-child(3){ animation-delay: 40ms; }
+.log-row:nth-child(4){ animation-delay: 60ms; }
+.log-row:nth-child(5){ animation-delay: 80ms; }
+.log-row:nth-child(n+6){ animation-delay: 100ms; }
+
+/* --- food details: sections stagger in ---
+   Each card enters slightly after the one above it, so the eye is led down the screen
+   instead of being handed the whole page at once. --- */
+.food-page > *{ animation: nut-rise var(--dur-base) var(--ease-out) both; }
+.food-page > *:nth-child(1){ animation-delay: 0ms; }
+.food-page > *:nth-child(2){ animation-delay: 30ms; }
+.food-page > *:nth-child(3){ animation-delay: 60ms; }
+.food-page > *:nth-child(4){ animation-delay: 90ms; }
+.food-page > *:nth-child(5){ animation-delay: 110ms; }
+.food-page > *:nth-child(n+6){ animation-delay: 130ms; }
+/* The sticky footer is fixed; animating it would detach it from the bottom edge. */
+.food-page > .food-sticky{ animation: none; }
+
+.food-hero{
+  background: linear-gradient(180deg, var(--sheen) 0%, transparent 42%), var(--surface);
+  box-shadow: var(--lift-2);
+  border-radius: var(--radius-lg);
+}
+.food-hero .food-thumb{
+  box-shadow: var(--lift-2);
+  animation: nut-rise var(--dur-slow) var(--ease-spring) both;
+}
+.macro-row{
+  background: linear-gradient(180deg, var(--sheen) 0%, transparent 42%), var(--surface);
+  box-shadow: var(--lift-2);
+  border-radius: var(--radius-lg);
+}
+
+/* --- search bar: the focus ring grows rather than snapping on --- */
+.food-search-bar{
+  box-shadow: var(--lift-2);
+  transition: box-shadow var(--dur-base) var(--ease-out);
+}
+.food-search-bar:focus-within{
+  box-shadow: var(--lift-2), 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* --- category tiles --- */
+[data-food-browse]{ box-shadow: var(--lift-1); }
+
+/* --- serving presets: the selected one lifts slightly off the grid --- */
+.srv.is-on{ box-shadow: var(--lift-2); }
+
+/* --- sticky footer --- */
+.food-sticky__btn{ box-shadow: var(--lift-3); }
+
+/* --- scrolling ---
+   Momentum scrolling on iOS/WebKit, and a contain hint so a long list does not invalidate
+   layout for the whole page as it scrolls. --- */
+main{ -webkit-overflow-scrolling: touch; }
+.nut-strip{ scroll-behavior: smooth; overscroll-behavior-x: contain; }
+
+/* --- typography ---
+   Tightened tracking on the large numbers (large type needs less letter-spacing than small
+   type to read as evenly set) and opened it slightly on the small uppercase labels, which
+   need the opposite. --- */
+.nut-value--hero{ letter-spacing: -.03em; }
+.nut-value--lg{ letter-spacing: -.025em; }
+.nut-label{ letter-spacing: .09em; }
+.food-page__title{ letter-spacing: -.015em; }
+.food-hero__name{ letter-spacing: -.015em; text-wrap: balance; }
+
+/* --- loading ---
+   A skeleton shimmer for the moment before the catalogue lands, so the panel does not flash
+   from empty to full. --- */
+@keyframes nut-shimmer{
+  from{ background-position: -160px 0; }
+  to{ background-position: 160px 0; }
+}
+.nut-skeleton{
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg,
+    var(--surface-alt) 0%,
+    color-mix(in srgb, var(--surface-alt) 70%, var(--text) 6%) 50%,
+    var(--surface-alt) 100%);
+  background-size: 320px 100%;
+  animation: nut-shimmer 1.1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .log-row,
+  .food-page > *,
+  .food-hero .food-thumb,
+  .nut-skeleton,
+  .btn,
+  .meal-toggle,
+  .nut-stat,
+  [data-food-browse]{
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
 }
 
 /* --- the + on a meal card --- */
