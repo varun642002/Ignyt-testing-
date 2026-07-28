@@ -370,3 +370,74 @@
   color:var(--color-text-secondary); opacity:.55;
 }
 .ex-picker-fav.is-fav { color:var(--color-warning); opacity:1; }
+
+
+/* =========================================================
+   COACH CARD — today's recommendation on the workout tab
+
+   Built on the --rh-* palette the rest of this screen uses rather than the nutrition
+   module's tokens, so it belongs to the workout tab visually instead of looking imported.
+========================================================= */
+.coach-card { padding:16px; margin-bottom:14px; }
+
+.coach-card__head { display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; }
+.coach-card__title { font-size:17px; font-weight:800; letter-spacing:-.01em; line-height:1.25; color:var(--rh-text); }
+.coach-card__sub { font-size:12px; color:var(--rh-muted); margin-top:3px; }
+
+/* Recovery score. Colour carries the band and the number carries the detail — the number is
+   always shown, so the badge never depends on colour alone to be readable. */
+.coach-badge {
+  flex-shrink:0; font-family:'SF Mono',ui-monospace,monospace; font-weight:800;
+  font-size:16px; padding:5px 10px; border-radius:10px; line-height:1;
+}
+.coach-badge__unit { font-size:9px; font-weight:600; opacity:.7; }
+.coach-badge--high   { background:rgba(22,163,74,.12); color:var(--rh-green); }
+.coach-badge--normal { background:rgba(37,99,235,.12); color:var(--rh-blue); }
+.coach-badge--reduced{ background:rgba(217,119,6,.14); color:#D97706; }
+.coach-badge--low    { background:rgba(239,68,68,.12); color:var(--rh-red); }
+
+.coach-ex { display:flex; flex-direction:column; }
+.coach-ex__row {
+  display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+  padding:8px 0; border-bottom:1px solid var(--rh-border);
+}
+.coach-ex__row:last-child { border-bottom:0; }
+.coach-ex__name {
+  font-size:14px; font-weight:600; color:var(--rh-text); min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.coach-ex__dose {
+  font-family:'SF Mono',ui-monospace,monospace; font-size:12px;
+  color:var(--rh-muted); flex-shrink:0; font-variant-numeric:tabular-nums;
+}
+
+.coach-list { margin:0; padding-left:18px; }
+.coach-list li { font-size:13px; color:var(--rh-text); margin:6px 0; line-height:1.45; }
+
+.coach-note {
+  font-size:12px; color:#D97706; background:rgba(217,119,6,.10);
+  border-radius:9px; padding:8px 10px; margin-top:10px;
+}
+.coach-why { font-size:12.5px; color:var(--rh-muted); margin-top:10px; line-height:1.5; }
+
+.coach-start { width:100%; margin-top:12px; }
+
+.coach-toggle {
+  width:100%; margin-top:10px; padding:9px; border:0; cursor:pointer;
+  background:transparent; color:var(--rh-blue); font-size:13px; font-weight:700;
+  font-family:inherit; border-radius:9px; min-height:44px;
+}
+.coach-toggle:active { background:rgba(37,99,235,.08); }
+
+.coach-detail { border-top:1px solid var(--rh-border); margin-top:6px; padding-top:12px; }
+.coach-detail p { font-size:13px; line-height:1.55; color:var(--rh-text); margin:0 0 8px; }
+.coach-detail p:last-child { margin-bottom:0; }
+.coach-detail__muted { color:var(--rh-muted) !important; font-size:12px !important; }
+
+.coach-insights { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+.coach-insight { font-size:12.5px; line-height:1.45; padding:9px 11px; border-radius:10px; color:var(--rh-text); }
+.coach-insight b { display:block; margin-bottom:2px; }
+.coach-insight--good { background:rgba(22,163,74,.10); }
+.coach-insight--info { background:rgba(37,99,235,.09); }
+.coach-insight--warn { background:rgba(217,119,6,.11); }
+.coach-insight--bad  { background:rgba(239,68,68,.10); }

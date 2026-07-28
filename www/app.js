@@ -4598,6 +4598,8 @@ const state = {
   nutritionDate: null, microExpanded: false, insightsExpanded: false,
   // Quick Add panel (transient). quickAddMeal is which meal one-tap items land in.
   quickAddOpen: false, quickAddMeal: null,
+  // Whether the coach card's reasoning is expanded (transient).
+  coachExpanded: false,
   /* The two full-screen food routes. null means the dashboard.
      { screen:"search"|"detail", meal, foodId, notes } — all transient, so a fresh visit to
      the tab always lands on the dashboard rather than resuming a half-finished entry. */
@@ -14187,6 +14189,63 @@ function stableCompare(a, b){
   return ks.every(k => String(a[k] ?? "") === String(b[k] ?? ""));
 }
 
+/* Bridges the app's data shapes into the coach engine.
+
+   LIBRARY is keyed BY EQUIPMENT, so the equipment for an exercise comes from the key rather
+   than from its detail entry — which is why this flattens rather than passing LIBRARY
+   straight through, and why detailsFor() folds the key back in.
+
+   Wrapped in try/catch and cached: a recommendation is a nice-to-have on this screen, and an
+   engine fault must never take the workout tab down with it. */
+let _coachLibCache = null;
+
+function coachRecommendation(){
+  if(!window.IgnytCoachEngine) return null;
+  try{
+    if(!_coachLibCache){
+      const lib = [];
+      Object.keys(LIBRARY).forEach(eq=>{
+        (LIBRARY[eq]||[]).forEach(t=>lib.push({ name:t[0], presc:t[1], unit:t[2], muscle:t[3], equipment:eq }));
+      });
+      const byName = Object.create(null);
+      lib.forEach(e=>{ byName[e.name] = e; });
+      _coachLibCache = { lib, byName };
+    }
+    const { lib, byName } = _coachLibCache;
+    return IgnytCoachEngine.get({
+      state,
+      library: lib,
+      detailsFor: (n)=>{
+        const d = (typeof EXERCISE_DETAILS !== "undefined" && EXERCISE_DETAILS[n]) || {};
+        return d.equipment ? d : Object.assign({}, d, { equipment: (byName[n]||{}).equipment });
+      },
+      muscleOf: getMuscle
+    });
+  }catch(e){
+    console.warn("Ignyt: coach engine unavailable —", e);
+    return null;
+  }
+}
+
+/** Turns a coach session into a live workout the existing logger understands. */
+function startCoachWorkout(rec){
+  if(!rec || rec.today.type !== "training" || !rec.today.exercises.length) return false;
+  state.session = {
+    id: nextId(),
+    startedAt: new Date().toISOString(),
+    title: rec.today.label,
+    exercises: rec.today.exercises.map(e=>({
+      name: e.name,
+      notes: "",
+      restDuration: e.restSeconds || state.settings.defaultRest,
+      // Same set shape the manual logger creates, so nothing downstream can tell the
+      // difference between a recommended session and one built by hand.
+      sets: Array.from({length: e.sets}, ()=>newSet(e.name))
+    }))
+  };
+  return true;
+}
+
 function renderWorkoutTab(){
   if(state.session && state.showExercisePicker) return renderExercisePicker();
   if(state.routineBuilder && state.showExercisePicker && isRoutinePickerContext()) return renderExercisePicker();
@@ -14217,7 +14276,8 @@ function renderWorkoutTab(){
       workoutDurationLabel, displayW, wUnit, week, plannedDay, weekStats, prsThisWeek,
       volumeTrend: comparisonLabel(weekStats.weeklyVolume, prevWeekVolume),
       todayMuscles: plannedDay ? Array.from(new Set(plannedDay.exercises.map(ex=>getMuscle(ex.name)))).filter(m=>m && m!=="Other").slice(0,3) : [],
-      getMuscle, ROUTINE_CATEGORIES, routineEstimatedMinutes, escHtml
+      getMuscle, ROUTINE_CATEGORIES, routineEstimatedMinutes, escHtml,
+      coach: coachRecommendation()
     });
   }
   const s = state.session;
@@ -17181,6 +17241,36 @@ function attachHandlers(){
       if(next>=0) state.bodyDistWeekOffset = next;
       render();
     });
+  });
+
+  /* ---- Coach card (workout tab) ---- */
+  const coachToggleBtn = document.querySelector('[data-action="coach-toggle"]');
+  if(coachToggleBtn) coachToggleBtn.addEventListener("click", ()=>{
+    state.coachExpanded = !state.coachExpanded;
+    render();
+  });
+  const coachRegenBtn = document.querySelector('[data-action="coach-regenerate"]');
+  if(coachRegenBtn) coachRegenBtn.addEventListener("click", (ev)=>{
+    ev.preventDefault();
+    // The plan is deterministic and cached per day, so a regenerate has to clear the cache
+    // or it would hand back the identical object. Exercise selection rotates against recent
+    // sessions, so the result genuinely differs once something has been logged.
+    if(window.IgnytCoachEngine) IgnytCoachEngine.invalidate();
+    showToast("Plan regenerated.", "success", render);
+    render();
+  });
+  const coachStartBtn = document.querySelector('[data-action="coach-start"]');
+  if(coachStartBtn) coachStartBtn.addEventListener("click", ()=>{
+    const rec = coachRecommendation();
+    if(!rec) return;
+    if(state.session){
+      showToast("Finish or discard the current workout first.", "error", render);
+      return;
+    }
+    if(startCoachWorkout(rec)){
+      showToast("Session loaded — " + rec.today.exercises.length + " exercises.", "success", render);
+      render();
+    }
   });
 
   // Nutrition dashboard — date navigation and card controls

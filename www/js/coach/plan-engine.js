@@ -169,6 +169,36 @@
     // Compounds first: they need the most from a fresh nervous system.
     exercises.sort(function (a, b) { return (b.isCompound ? 1 : 0) - (a.isCompound ? 1 : 0); });
 
+    /* Fit the time the user actually has.
+
+       Weekly volume targets and a session time budget are two independent constraints, and
+       nothing was reconciling them: a per-muscle weekly target could produce 30 sets, which
+       is 83 minutes of work no matter that the user said they had 55. Volume is trimmed
+       until the estimate fits, because a session someone cannot finish delivers less than a
+       slightly smaller one they can.
+
+       Sets come off the LAST exercises first — those are the accessories. Compounds were
+       sorted to the front precisely because they matter most, so they are the last thing to
+       lose volume. Nothing drops below 2 sets; below that an exercise is not worth its
+       warm-up. */
+    var budget = minutes;
+    var perSetMinutes = (intent.restSeconds + 40) / 60;
+    var estimate = function () {
+      return 10 + exercises.reduce(function (a, e) { return a + e.sets; }, 0) * perSetMinutes;
+    };
+    var guard = 0;
+    while (estimate() > budget && guard++ < 60) {
+      var trimmed = false;
+      for (var i = exercises.length - 1; i >= 0; i--) {
+        if (exercises[i].sets > 2) { exercises[i].sets--; trimmed = true; break; }
+      }
+      // Every exercise is already at its floor — drop the last accessory instead.
+      if (!trimmed) {
+        if (exercises.length > 3) exercises.pop();
+        else break;                       // three exercises at two sets is the minimum session
+      }
+    }
+
     var totalSets = exercises.reduce(function (a, e) { return a + e.sets; }, 0);
     return {
       muscles: trainable,
