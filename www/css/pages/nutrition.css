@@ -282,11 +282,66 @@
 .micro-row__value.is-absent{ opacity: .55; }
 
 /* ---------------------------------------------------------
-   Motion — short, functional, fully removable. Everything here responds to something the
-   user just did; nothing animates on its own.
+   Motion (Phase 10)
+
+   Short, functional and fully removable. Every animation here is a response to something the
+   user just did — nothing animates on its own, nothing loops, nothing draws attention to
+   itself. The brief asked for "smooth, professional, minimal, subtle", and the fastest thing
+   an interface can do is not animate at all, so the durations stay under a quarter second
+   except the bars, where the sweep is the point.
 --------------------------------------------------------- */
+
+/* Newly rendered result rows fade up rather than snapping in. Capped at eight children:
+   past that the stagger becomes a queue the user is waiting on rather than a flourish. */
+@keyframes nut-rise{
+  from{ opacity: 0; transform: translateY(4px); }
+  to{ opacity: 1; transform: none; }
+}
+#food-search-results .food-row{
+  animation: nut-rise .18s cubic-bezier(.4,0,.2,1) both;
+}
+#food-search-results .food-row:nth-child(1){ animation-delay: 0ms; }
+#food-search-results .food-row:nth-child(2){ animation-delay: 15ms; }
+#food-search-results .food-row:nth-child(3){ animation-delay: 30ms; }
+#food-search-results .food-row:nth-child(4){ animation-delay: 45ms; }
+#food-search-results .food-row:nth-child(5){ animation-delay: 60ms; }
+#food-search-results .food-row:nth-child(6){ animation-delay: 75ms; }
+#food-search-results .food-row:nth-child(7){ animation-delay: 90ms; }
+#food-search-results .food-row:nth-child(n+8){ animation-delay: 105ms; }
+
+/* Meal expansion. Uses grid-template-rows 0fr -> 1fr rather than max-height, which needs a
+   guessed ceiling and clips whenever the guess is too small. */
+.meal-body{
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .22s cubic-bezier(.4,0,.2,1);
+}
+.meal-body > *{ overflow: hidden; min-height: 0; }
+.meal-body.is-open{ grid-template-rows: 1fr; }
+
+/* Press feedback on the controls that log something, so a tap reads as received on a slow
+   device before the re-render lands. */
+.srv:active,
+.meal-head:active,
+.food-row:active{
+  transform: scale(.985);
+  transition: transform .06s ease;
+}
+
+/* The ring sweeps to its value on first paint. One second, once, on a number the user came
+   to the screen to read. */
+@keyframes nut-ring-in{ from{ opacity: 0; } to{ opacity: 1; } }
+.nut-ring circle.fill{ animation: nut-ring-in .3s ease both; }
+
 @media (prefers-reduced-motion: reduce){
   .nut-bar > i,
   .nut-ring circle.fill,
-  .srv{ transition: none !important; }
+  .srv,
+  .meal-body,
+  .meal-head,
+  .food-row{
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
 }

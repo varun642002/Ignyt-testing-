@@ -7113,7 +7113,12 @@ const FOOD_CATEGORY_ICONS = {
   "Restaurant Foods":"🍽️", "Protein Supplements":"💪", "Indian Foods":"🍛",
   "Custom Foods":"✏️"
 };
-function foodCategoryIcon(name){ return FOOD_CATEGORY_ICONS[name] || "🍴"; }
+/* Reads through the image service when it is loaded, so a category's glyph is defined in one
+   place; falls back to the local table if that module failed to load. */
+function foodCategoryIcon(name){
+  if(window.IgnytFoodImages) return IgnytFoodImages.categoryGlyph(name);
+  return FOOD_CATEGORY_ICONS[name] || "🍴";
+}
 
 /** One search/browse result. Shows enough to choose without opening anything. */
 function renderFoodResultCard(f){
@@ -7124,7 +7129,7 @@ function renderFoodResultCard(f){
   const serving = (f.servingSize && f.servingUnit && f.servingUnit !== "g")
     ? `${f.servingSize}g per ${escHtml(f.servingUnit)}` : "";
   return `<div class="food-row" data-food-pick="${escHtml(f.id)}">
-    <span class="food-thumb">${foodCategoryIcon(f.category)}</span>
+    ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(f) : `<span class="food-thumb">${foodCategoryIcon(f.category)}</span>`}
     <div class="food-row__body">
       <div class="food-row__name">${escHtml(f.name)}</div>
       <div class="food-row__meta">${escHtml(f.category||"")}${serving?` · ${serving}`:""} · P${f.protein??0} C${f.carbs??0} F${f.fat??0}</div>
@@ -7307,7 +7312,8 @@ function renderFoodDetail(food, meal){
   return `
     <div class="info-box" style="padding:12px;margin-bottom:8px;">
       <div class="row-between" style="align-items:flex-start;margin-bottom:8px;">
-        <div style="min-width:0;flex:1;">
+        ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(food, 44) : ""}
+        <div style="min-width:0;flex:1;margin-left:${window.IgnytFoodImages?'10px':'0'};">
           <div style="font-size:14px;font-weight:800;line-height:1.3;">${escHtml(food.name)}</div>
           <div class="mono" style="font-size:10px;color:var(--muted);margin-top:3px;">
             ${escHtml(food.category||"")}${food.brand?` · ${escHtml(food.brand)}`:""}${scalable?` · per ${food.per} g basis`:" · saved portion"}
