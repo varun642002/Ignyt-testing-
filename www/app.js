@@ -822,7 +822,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Set a decline bench under the Smith machine bar, securing your legs at the top.", "Unrack and lower the bar under control to your lower chest.", "Press back up to lockout, then rotate to re-rack."],
     formTips: ["The fixed bar path adds stability while still targeting the lower chest.", "Keep shoulder blades retracted throughout.", "Line the bench up carefully so the fixed path matches your lower-chest line."],
     commonMistakes: ["Bench misaligned with the fixed bar path, stressing the shoulders.", "Bouncing the bar off the chest.", "Rushing the re-rack rotation."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/decline-bench-press-smith-machine.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Decline DB Chest Fly": {
     primaryMuscle: "Chest",
