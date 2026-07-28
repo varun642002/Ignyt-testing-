@@ -132,19 +132,53 @@
     var catalogue = window.IgnytFoodCatalogue ? window.IgnytFoodCatalogue.all()
       : (window.IgnytFoodDB ? window.IgnytFoodDB.all() : []);
 
+    /* Curation context, built once per index rather than per food — tierOf() needs to know
+       what the user favourites and logs, and recomputing that 8,000 times would be waste. */
+    var CUR = window.IgnytFoodCuration;
+    var curCtx = null;
+    if (CUR) {
+      var favNames = Object.create(null), freqNames = Object.create(null);
+      favourites().forEach(function (f) { if (f && f.name) favNames[norm(f.name)] = 1; });
+      var counts = Object.create(null);
+      if (typeof state !== "undefined" && Array.isArray(state.foodLog)) {
+        state.foodLog.forEach(function (e) {
+          if (e && e.name) { var k = norm(e.name); counts[k] = (counts[k] || 0) + 1; }
+        });
+      }
+      Object.keys(counts).forEach(function (k) { if (counts[k] >= 3) freqNames[k] = 1; });
+      curCtx = { favouriteNames: favNames, frequentNames: freqNames, recentNames: recent };
+    }
+
     catalogue.forEach(function (f) {
       var key = norm(f.name);
+
+      /* Aliases are indexed as extra words on the SAME entry, so "beans" finds
+         "Beans, Snap, Green, Canned" without duplicating the record in results. */
+      var aliasWords = [];
+      var tierInfo = null;
+      if (CUR) {
+        CUR.aliasesFor(f).forEach(function (a) {
+          wordsOf(norm(a)).forEach(function (w) { if (aliasWords.indexOf(w) === -1) aliasWords.push(w); });
+        });
+        tierInfo = CUR.tierOf(f, curCtx);
+      }
+
       entries.push({
         food: f,
         key: key,
-        words: wordsOf(key),
+        words: wordsOf(key).concat(aliasWords.filter(function (w) { return key.indexOf(w) === -1; })),
         fav: false,
+        tier: tierInfo ? tierInfo.tier : null,
+        hidden: CUR ? CUR.hidden(f) : false,
         // A static per-food bonus, folded in once so the hot path never recomputes it.
         // Seed foods carry short familiar names ("Chicken Breast") against USDA's inverted
         // laboratory phrasing, so they lead on ties. Recently logged foods lead outright.
+        // Tier does the ranking work now — see food-curation.js. The seed bonus stays
+        // because short familiar names still deserve to lead among equals.
         boost: (recent[key] ? 150 : 0) +
                (f.source === "seed" ? 80 : 0) +
-               (f.source === "import" ? 60 : 0)
+               (f.source === "import" ? 60 : 0) +
+               (tierInfo ? tierInfo.boost : 0)
       });
     });
 
@@ -289,6 +323,11 @@
     var passesFilter = function (e) {
       if (o.category && e.food.category !== o.category) return false;
       if (o.source && e.food.source !== o.source) return false;
+      /* Hidden records — laboratory and incomplete entries — stay out of browsing and of
+         short queries, but a specific search still finds them. Three characters is the line:
+         someone typing that much is looking for something particular, and silently
+         withholding a real food from a real search would be the worse failure. */
+      if (e.hidden && !o.includeHidden && q.length < 3) return false;
       return true;
     };
 

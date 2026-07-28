@@ -7139,7 +7139,7 @@ function renderFoodResultCard(f){
   return `<div class="food-row" data-food-pick="${escHtml(f.id)}">
     ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(f) : `<span class="food-thumb">${foodCategoryIcon(f.category)}</span>`}
     <div class="food-row__body">
-      <div class="food-row__name">${escHtml(f.name)}</div>
+      <div class="food-row__name">${escHtml(window.IgnytFoodCuration ? IgnytFoodCuration.displayName(f) : f.name)}</div>
       <div class="food-row__meta">${escHtml(f.category||"")}${serving?` · ${serving}`:""} · P${f.protein??0} C${f.carbs??0} F${f.fat??0}</div>
     </div>
     <span class="food-row__kcal">${f.calories??0}<span class="nut-unit"> kcal${basis}</span></span>
