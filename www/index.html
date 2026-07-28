@@ -571,6 +571,14 @@ try{
 <script src="js/ai-coach.js"></script>
 <!-- Food modules load in dependency order: seed data and the importer first, then the
      catalogue that merges them, then search which indexes the catalogue. -->
+<!-- Coach engine. Pure modules with no DOM access, loaded in dependency order; coach.js
+     orchestrates them and is the only entry point the app calls. -->
+<script src="js/coach/profile-engine.js"></script>
+<script src="js/coach/goal-engine.js"></script>
+<script src="js/coach/recovery-engine.js"></script>
+<script src="js/coach/exercise-engine.js"></script>
+<script src="js/coach/plan-engine.js"></script>
+<script src="js/coach/coach.js"></script>
 <script src="js/food/food-db.js"></script>
 <script src="js/food/serving-converter.js"></script>
 <script src="js/food/food-importer.js"></script>
