@@ -1,0 +1,273 @@
+/* =========================================================
+   IGNYT NUTRITION ENGINE — scaling, formatting and validation for a food serving
+
+   Responsibilities are split deliberately:
+     serving-converter.js   household measure -> grams   (how much food)
+     nutrition-engine.js    grams -> nutrients           (what is in it)
+   This module never touches the DOM or storage beyond the small serving-memory helper at
+   the bottom, so every calculation here is testable in isolation.
+
+   NULL IS NOT ZERO.
+   USDA reports "not measured" and "measured as zero" differently, and the importer preserves
+   that distinction. Butter, Stick, Salted has no protein figure at all; Salt, Table has a
+   measured 0 g. Rendering both as "0 g" would invent a fact, so a missing value formats as
+   an em dash and is excluded from any total. This is the single most important rule in this
+   file — every function below is written to carry null through rather than coerce it.
+
+   PERCENT DAILY VALUE uses the FDA 2016 adult reference values. Sugar deliberately has none:
+   the 50 g DV is for ADDED sugars, while USDA's field is TOTAL sugars, so a percentage
+   against it would compare two different quantities and read as far worse than reality for
+   fruit and milk.
+========================================================= */
+(function () {
+  "use strict";
+
+  var SERVING_MEMORY_KEY = "hx_food_serving_memory";
+  var SERVING_MEMORY_MAX = 60;      // per-food entries kept; bounded so storage cannot creep
+
+  /* Guards against a quantity that would overflow the display or the log. 10 kg of one food
+     in one entry is already absurd; beyond it the arithmetic stops being meaningful. */
+  var MAX_GRAMS = 10000;
+  var MAX_AMOUNT = 100000;
+
+  /* The gram steps offered as one-tap presets. */
+  var GRAM_PRESETS = [1, 5, 10, 25, 50, 75, 100, 125, 150, 200, 250, 500, 1000];
+
+  /* Fractions offered for volume and countable units, where "half a cup" is how people
+     actually measure. Grams get presets instead — nobody asks for a quarter of a gram. */
+  var AMOUNT_FRACTIONS = [
+    { value: 0.25, label: "¼" },
+    { value: 0.5,  label: "½" },
+    { value: 0.75, label: "¾" },
+    { value: 1,    label: "1" },
+    { value: 2,    label: "2" },
+    { value: 3,    label: "3" }
+  ];
+
+  /* Display order matches a nutrition label: energy, macros, then micros. */
+  var NUTRIENTS = [
+    { key: "calories",  label: "Calories",      unit: "kcal", decimals: 0, dv: 2000, major: true },
+    { key: "protein",   label: "Protein",       unit: "g",    decimals: 1, dv: 50,   major: true },
+    { key: "carbs",     label: "Carbohydrates", unit: "g",    decimals: 1, dv: 275,  major: true },
+    { key: "fat",       label: "Fat",           unit: "g",    decimals: 1, dv: 78,   major: true },
+    { key: "fibre",     label: "Fibre",         unit: "g",    decimals: 1, dv: 28 },
+    { key: "sugar",     label: "Sugar",         unit: "g",    decimals: 1, dv: null },
+    { key: "sodium",    label: "Sodium",        unit: "mg",   decimals: 0, dv: 2300 },
+    { key: "potassium", label: "Potassium",     unit: "mg",   decimals: 0, dv: 4700 },
+    { key: "calcium",   label: "Calcium",       unit: "mg",   decimals: 0, dv: 1300 },
+    { key: "iron",      label: "Iron",          unit: "mg",   decimals: 1, dv: 18 }
+  ];
+
+  var BY_KEY = {};
+  NUTRIENTS.forEach(function (n) { BY_KEY[n.key] = n; });
+
+  /* ---------------------------------------------------------
+     Validation
+  --------------------------------------------------------- */
+
+  /**
+   * Validates a quantity the user typed and resolves it to grams.
+   * @param {object} food
+   * @param {number|string} amount
+   * @param {string} unit
+   * @returns {{ok:boolean, grams:number, amount:number, unit:string, error:string|null}}
+   */
+  function validateQuantity(food, amount, unit) {
+    var fail = function (msg) {
+      return { ok: false, grams: 0, amount: 0, unit: unit || "g", error: msg };
+    };
+
+    var n = Number(amount);
+    // Number("") is 0 and Number(" ") is 0, so an empty box must be rejected explicitly
+    // rather than silently logging a zero-gram entry.
+    if (amount === "" || amount === null || amount === undefined) return fail("Enter an amount.");
+    if (!isFinite(n)) return fail("That isn't a number.");
+    if (n < 0) return fail("Amount can't be negative.");
+    if (n === 0) return fail("Amount must be more than zero.");
+    if (n > MAX_AMOUNT) return fail("That amount is too large.");
+
+    var u = unit || "g";
+    var grams = n;
+    if (u !== "g") {
+      var conv = window.IgnytServingConverter;
+      var g = conv ? conv.toGrams(food, n, u) : null;
+      if (g == null || !isFinite(g) || g <= 0) return fail("That unit doesn't apply to this food.");
+      grams = g;
+    }
+
+    if (grams > MAX_GRAMS) return fail("That works out to over " + MAX_GRAMS + " g.");
+
+    return { ok: true, grams: Math.round(grams * 10) / 10, amount: n, unit: u, error: null };
+  }
+
+  /* ---------------------------------------------------------
+     Calculation
+  --------------------------------------------------------- */
+
+  function scaleValue(raw, factor, decimals) {
+    if (raw === null || raw === undefined) return null;      // absent stays absent
+    var n = Number(raw);
+    if (!isFinite(n)) return null;
+    var f = Math.pow(10, decimals);
+    return Math.round(n * factor * f) / f;
+  }
+
+  /**
+   * Every retained nutrient, both per 100 g and for the requested amount.
+   * One pass, no DOM, no allocation beyond the result — safe to call on every keystroke.
+   * @returns {{grams:number, factor:number, rows:Array}}
+   */
+  function compute(food, grams) {
+    var basis = (food && food.per) || 100;
+    var g = Number(grams);
+    if (!isFinite(g) || g <= 0) g = basis;
+    var factor = g / basis;
+
+    var rows = NUTRIENTS.map(function (n) {
+      var raw = food ? food[n.key] : null;
+      var per100 = scaleValue(raw, 1, n.decimals);
+      var serving = scaleValue(raw, factor, n.decimals);
+      return {
+        key: n.key, label: n.label, unit: n.unit, major: !!n.major,
+        per100: per100,
+        serving: serving,
+        percentDV: (n.dv && serving !== null) ? Math.round((serving / n.dv) * 100) : null,
+        present: raw !== null && raw !== undefined
+      };
+    });
+
+    return { grams: Math.round(g * 10) / 10, factor: factor, rows: rows };
+  }
+
+  /** Convenience: just the five fields the food log stores. */
+  function logValues(food, grams) {
+    var c = compute(food, grams);
+    var out = { name: food.name, grams: c.grams };
+    ["calories", "protein", "carbs", "fat", "fibre"].forEach(function (k) {
+      var row = c.rows.find(function (r) { return r.key === k; });
+      // The log has always stored numbers, so an absent nutrient becomes 0 HERE and only
+      // here — at the boundary where a record is written, not in the display path.
+      out[k] = row && row.serving !== null ? row.serving : 0;
+    });
+    out.calories = Math.round(out.calories);
+    return out;
+  }
+
+  /* ---------------------------------------------------------
+     Formatting
+  --------------------------------------------------------- */
+
+  var EM_DASH = "—";
+
+  /** "31 g", "165 kcal", or an em dash when the nutrient was never measured. */
+  function format(key, value) {
+    var meta = BY_KEY[key];
+    if (value === null || value === undefined) return EM_DASH;
+    var n = Number(value);
+    if (!isFinite(n)) return EM_DASH;
+    var text = meta && meta.decimals === 0 ? String(Math.round(n)) : String(n);
+    return meta ? text + " " + meta.unit : text;
+  }
+
+  /** A short human description of the chosen serving: "1 cup (140 g)" or "150 g". */
+  function describeServing(food, amount, unit) {
+    if (!unit || unit === "g") return (Math.round(Number(amount) * 10) / 10) + " g";
+    var conv = window.IgnytServingConverter;
+    var grams = conv ? conv.toGrams(food, amount, unit) : null;
+    var label = conv ? conv.labelFor(unit, amount) : unit;
+    var amountText = formatAmount(amount);
+    return amountText + " " + label + (grams ? " (" + (Math.round(grams * 10) / 10) + " g)" : "");
+  }
+
+  /** Renders 0.25 as a fraction glyph so the serving row reads like a recipe. */
+  function formatAmount(amount) {
+    var n = Number(amount);
+    for (var i = 0; i < AMOUNT_FRACTIONS.length; i++) {
+      if (Math.abs(n - AMOUNT_FRACTIONS[i].value) < 0.001 && AMOUNT_FRACTIONS[i].value < 1) {
+        return AMOUNT_FRACTIONS[i].label;
+      }
+    }
+    return String(Math.round(n * 100) / 100);
+  }
+
+  /** One-line summary for sharing or a meal preview.
+   *  Uses format() so an unmeasured nutrient shares as an em dash rather than "0g" — the
+   *  same rule the detail table follows. Only logValues() collapses null to zero, because
+   *  the stored record has always held numbers. */
+  function summaryText(food, amount, unit) {
+    var v = validateQuantity(food, amount, unit);
+    var c = compute(food, v.ok ? v.grams : (food.per || 100));
+    var cell = function (k) {
+      var r = c.rows.find(function (x) { return x.key === k; });
+      return format(k, r ? r.serving : null);
+    };
+    return food.name + " — " + describeServing(food, amount, unit) + "\n" +
+      cell("calories") + " · P " + cell("protein") + " · C " + cell("carbs") +
+      " · F " + cell("fat");
+  }
+
+  /* ---------------------------------------------------------
+     Recent serving memory
+
+     People log the same food the same way repeatedly. Remembering the last amount and unit
+     per food turns a repeat entry into one tap. Bounded and best-effort: this is a
+     convenience, so a storage failure must never block logging.
+  --------------------------------------------------------- */
+
+  function loadMemory() {
+    try {
+      var raw = JSON.parse(localStorage.getItem(SERVING_MEMORY_KEY) || "{}");
+      return (raw && typeof raw === "object" && !Array.isArray(raw)) ? raw : {};
+    } catch (e) { return {}; }
+  }
+
+  function rememberServing(foodId, amount, unit) {
+    if (!foodId) return;
+    try {
+      var mem = loadMemory();
+      mem[foodId] = { amount: Number(amount), unit: unit || "g", at: Date.now() };
+
+      var keys = Object.keys(mem);
+      if (keys.length > SERVING_MEMORY_MAX) {
+        // Drop the least recently used, so the cap never evicts a food still in rotation.
+        keys.sort(function (a, b) { return (mem[a].at || 0) - (mem[b].at || 0); })
+          .slice(0, keys.length - SERVING_MEMORY_MAX)
+          .forEach(function (k) { delete mem[k]; });
+      }
+      localStorage.setItem(SERVING_MEMORY_KEY, JSON.stringify(mem));
+    } catch (e) { /* convenience only */ }
+  }
+
+  /** @returns {{amount:number, unit:string}|null} */
+  function recallServing(foodId) {
+    var mem = loadMemory();
+    var hit = foodId ? mem[foodId] : null;
+    if (!hit || !(Number(hit.amount) > 0)) return null;
+    return { amount: Number(hit.amount), unit: hit.unit || "g" };
+  }
+
+  function clearServingMemory() {
+    try { localStorage.removeItem(SERVING_MEMORY_KEY); } catch (e) { /* non-fatal */ }
+  }
+
+  window.IgnytNutrition = Object.freeze({
+    NUTRIENTS: NUTRIENTS,
+    GRAM_PRESETS: GRAM_PRESETS,
+    AMOUNT_FRACTIONS: AMOUNT_FRACTIONS,
+    MAX_GRAMS: MAX_GRAMS,
+    SERVING_MEMORY_KEY: SERVING_MEMORY_KEY,
+
+    validateQuantity: validateQuantity,
+    compute: compute,
+    logValues: logValues,
+
+    format: format,
+    formatAmount: formatAmount,
+    describeServing: describeServing,
+    summaryText: summaryText,
+
+    rememberServing: rememberServing,
+    recallServing: recallServing,
+    clearServingMemory: clearServingMemory
+  });
+}());
