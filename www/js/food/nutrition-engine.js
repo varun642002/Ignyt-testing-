@@ -139,18 +139,65 @@
     return { grams: Math.round(g * 10) / 10, factor: factor, rows: rows };
   }
 
-  /** Convenience: just the five fields the food log stores. */
+  /* The five fields the food log has always stored. Every existing entry has them, so they
+     are always written as numbers. */
+  var CORE_LOG_FIELDS = ["calories", "protein", "carbs", "fat", "fibre"];
+
+  /* Micronutrients, added later. These are written only when the food actually has a value:
+     an entry that omits `sodium` means "unknown for this food", which is different from
+     "contains no sodium". Totals must therefore sum what is present and report coverage
+     rather than pretending a missing field is a zero. Entries logged before this existed
+     simply have none of these keys, which is the same case and needs no migration. */
+  var MICRO_LOG_FIELDS = ["sugar", "sodium", "potassium", "calcium", "iron"];
+
+  /** The record shape the food log stores for one serving. */
   function logValues(food, grams) {
     var c = compute(food, grams);
     var out = { name: food.name, grams: c.grams };
-    ["calories", "protein", "carbs", "fat", "fibre"].forEach(function (k) {
-      var row = c.rows.find(function (r) { return r.key === k; });
-      // The log has always stored numbers, so an absent nutrient becomes 0 HERE and only
-      // here — at the boundary where a record is written, not in the display path.
+    var byKey = {};
+    c.rows.forEach(function (r) { byKey[r.key] = r; });
+
+    CORE_LOG_FIELDS.forEach(function (k) {
+      var row = byKey[k];
+      // Null collapses to zero HERE and only here — at the boundary where a record is
+      // written, never in the display path.
       out[k] = row && row.serving !== null ? row.serving : 0;
     });
     out.calories = Math.round(out.calories);
+
+    MICRO_LOG_FIELDS.forEach(function (k) {
+      var row = byKey[k];
+      if (row && row.serving !== null) out[k] = row.serving;   // omitted when unmeasured
+    });
     return out;
+  }
+
+  /**
+   * Totals a set of logged entries.
+   * @returns {{totals:object, coverage:object}} `coverage` is how many entries carried each
+   *          micronutrient, so the UI can say a figure is a floor rather than a total.
+   */
+  function totalEntries(entries) {
+    var totals = {};
+    var coverage = {};
+    var all = CORE_LOG_FIELDS.concat(MICRO_LOG_FIELDS);
+    all.forEach(function (k) { totals[k] = 0; coverage[k] = 0; });
+
+    (entries || []).forEach(function (e) {
+      if (!e) return;
+      all.forEach(function (k) {
+        var v = e[k];
+        if (v === null || v === undefined || v === "") return;
+        var n = Number(v);
+        if (!isFinite(n)) return;
+        totals[k] += n;
+        coverage[k]++;
+      });
+    });
+
+    all.forEach(function (k) { totals[k] = Math.round(totals[k] * 10) / 10; });
+    totals.calories = Math.round(totals.calories);
+    return { totals: totals, coverage: coverage, count: (entries || []).length };
   }
 
   /* ---------------------------------------------------------
@@ -257,9 +304,13 @@
     MAX_GRAMS: MAX_GRAMS,
     SERVING_MEMORY_KEY: SERVING_MEMORY_KEY,
 
+    CORE_LOG_FIELDS: CORE_LOG_FIELDS,
+    MICRO_LOG_FIELDS: MICRO_LOG_FIELDS,
+
     validateQuantity: validateQuantity,
     compute: compute,
     logValues: logValues,
+    totalEntries: totalEntries,
 
     format: format,
     formatAmount: formatAmount,

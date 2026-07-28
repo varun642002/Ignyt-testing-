@@ -4549,6 +4549,8 @@ const state = {
   foodSearchQuery: "", foodSearchSelected: null, foodSearchAmount: null, foodSearchUnit: "g",
   // Category browser (transient). foodBrowseCategory === null means search mode.
   foodBrowseCategory: null, foodBrowsePage: 1, foodResultPage: 1,
+  // Which day the nutrition dashboard is showing. Transient: a fresh visit opens on today.
+  nutritionDate: null, microExpanded: false, insightsExpanded: false,
   raceActive: LS.get("hx_race_active", null),
   raceLog: LS.get("hx_race_log", []),
   viewingRaceMode: !!LS.get("hx_race_active", null),
@@ -7338,6 +7340,143 @@ function todayMacros(){
   });
   return t;
 }
+
+/* ---- Nutrition dashboard helpers -------------------------------------------------- */
+
+/** The day the dashboard is showing. Defaults to today; the date arrows move it. */
+function nutritionDateStr(){ return state.nutritionDate || todayStr(); }
+
+/** "Today, 18 May 2025" / "Yesterday, ..." / "Sat, 17 May 2025" */
+function nutritionDateLabel(ds){
+  const today = todayStr();
+  const d = new Date(ds + "T00:00:00");
+  const pretty = d.toLocaleDateString(undefined, { day:"numeric", month:"long", year:"numeric" });
+  if(ds === today) return "Today, " + pretty;
+  const y = new Date(); y.setDate(y.getDate()-1);
+  if(ds === localDateStr(y)) return "Yesterday, " + pretty;
+  return d.toLocaleDateString(undefined, { weekday:"short" }) + ", " + pretty;
+}
+
+function shiftNutritionDate(days){
+  const d = new Date(nutritionDateStr() + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  const next = localDateStr(d);
+  // Logging into the future is not a thing anyone wants to do by accident.
+  if(next > todayStr()) return;
+  state.nutritionDate = next === todayStr() ? null : next;
+}
+
+/* Colour per nutrient, shared by the ring, the macro cards and the micro strip so the same
+   nutrient is always the same colour wherever it appears. */
+const NUTRIENT_COLORS = {
+  protein:"var(--mint)", carbs:"var(--steel)", fat:"#FFB020", fibre:"#A98BFF",
+  water:"#4FC3F7", sugar:"#FF8FA3", sodium:"#FFB020", potassium:"#7BD389",
+  calcium:"#9AD5FF", iron:"#FF7A5C", calories:"var(--accent)"
+};
+
+/** Totals for one day, with per-nutrient coverage so partial data can be labelled. */
+function nutritionTotalsFor(ds){
+  const entries = foodsForDate(ds);
+  const N = window.IgnytNutrition;
+  if(N) return N.totalEntries(entries);
+  // Degrade to the five core fields if the engine failed to load.
+  const totals = {calories:0,protein:0,carbs:0,fat:0,fibre:0};
+  entries.forEach(f=>Object.keys(totals).forEach(k=>totals[k]+=Number(f[k]||0)));
+  return { totals, coverage:{}, count: entries.length };
+}
+
+/** Reference intakes for the micronutrient strip (FDA adult daily values). */
+const MICRO_TARGETS = { fibre:30, sugar:null, sodium:2300, potassium:4700, calcium:1300, iron:18 };
+
+/** An SVG donut. `segments` is [{value, color}]; renders a neutral ring when empty. */
+function donutSvg(segments, size, stroke, centerTop, centerSub){
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const total = segments.reduce((a,s)=>a+Math.max(0,s.value),0);
+  let offset = 0;
+  const arcs = total > 0 ? segments.map(s=>{
+    const frac = Math.max(0,s.value) / total;
+    const len = frac * c;
+    const el = `<circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${s.color}"
+      stroke-width="${stroke}" stroke-dasharray="${len} ${c-len}" stroke-dashoffset="${-offset}"
+      transform="rotate(-90 ${size/2} ${size/2})" stroke-linecap="butt"></circle>`;
+    offset += len;
+    return el;
+  }).join("") : `<circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--surface-alt)" stroke-width="${stroke}"></circle>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-hidden="true" style="flex-shrink:0;">
+    ${arcs}
+    ${centerTop!=null?`<text x="${size/2}" y="${size/2-1}" text-anchor="middle" font-size="${Math.round(size*0.19)}" font-weight="900" fill="var(--text)" font-family="'SF Mono',monospace">${escHtml(String(centerTop))}</text>`:""}
+    ${centerSub?`<text x="${size/2}" y="${size/2+Math.round(size*0.15)}" text-anchor="middle" font-size="${Math.round(size*0.11)}" fill="var(--muted)">${escHtml(centerSub)}</text>`:""}
+  </svg>`;
+}
+
+/** A compact labelled progress bar used by the macro strip. */
+function macroMiniCard(label, value, target, color, unit, decimals){
+  const pct = target > 0 ? Math.round((value/target)*100) : 0;
+  const shown = decimals ? (Math.round(value*10)/10) : Math.round(value);
+  const shownTarget = decimals ? (Math.round(target*10)/10) : Math.round(target);
+  return `<div class="stat-card" style="padding:10px;min-width:104px;flex:1;">
+    <div style="font-size:11px;font-weight:700;color:${color};">${escHtml(label)}</div>
+    <div class="mono" style="font-size:15px;font-weight:900;margin-top:2px;">${shown}<span style="font-size:10px;font-weight:600;color:var(--muted);"> / ${shownTarget}${escHtml(unit)}</span></div>
+    <div style="height:4px;border-radius:2px;background:var(--surface);margin-top:6px;overflow:hidden;">
+      <div style="height:100%;width:${Math.min(100,Math.max(0,pct))}%;background:${color};border-radius:2px;"></div>
+    </div>
+    <div class="mono" style="font-size:10px;color:${color};margin-top:4px;">${pct}%</div>
+  </div>`;
+}
+
+/* Distinct hues for the calories-by-meal ring. Kept separate from NUTRIENT_COLORS because
+   these identify meals, not nutrients, and reusing the macro palette would imply a link
+   between "Lunch" and "carbs" that does not exist. */
+const MEAL_DONUT_COLORS = ["var(--mint)", "var(--steel)", "#FFB020", "#A98BFF", "#FF7A5C", "#9AD5FF"];
+
+/* Emoji per meal, matching the meal rows in the design. */
+const MEAL_ICONS = {
+  "Breakfast":"🍳", "Morning Snack":"🍌", "Lunch":"🥗", "Evening Snack":"🍎",
+  "Afternoon Snack":"🍌", "Dinner":"🍛", "Post Workout":"🥤", "Snacks":"🍿"
+};
+
+/** Short observations derived from the day's totals. Only facts, no advice. */
+function nutritionInsights(totals, coverage, targets, waterMl, waterTarget){
+  const out = [];
+  const pct = (v,t)=> t>0 ? Math.round((v/t)*100) : 0;
+
+  const pPct = pct(totals.protein, targets.protein);
+  if(totals.calories > 0){
+    if(pPct >= 100) out.push({ tone:"good", title:"Protein goal hit", body:`${Math.round(totals.protein)} g of ${Math.round(targets.protein)} g.` });
+    else if(pPct >= 70) out.push({ tone:"warn", title:"Protein close", body:`${Math.round(targets.protein - totals.protein)} g to go.` });
+    else out.push({ tone:"info", title:"Protein low", body:`${Math.round(totals.protein)} g of ${Math.round(targets.protein)} g so far.` });
+  }
+
+  const fPct = pct(totals.fibre, targets.fibre);
+  if(totals.calories > 0 && fPct < 100){
+    out.push({ tone:"warn", title:"Fibre", body:`${Math.round(targets.fibre - totals.fibre)} g below your goal.` });
+  }
+
+  // Sodium is only worth flagging when enough entries actually carried a figure — otherwise
+  // the total is a floor and calling it "over" or "under" would be misleading.
+  if(coverage && coverage.sodium > 0){
+    const partial = coverage.sodium < (coverage.calories || 0);
+    if(totals.sodium > MICRO_TARGETS.sodium){
+      out.push({ tone:"bad", title:"Sodium", body:`${Math.round(totals.sodium)} mg${partial?" from foods with data":""} — above 2,300 mg.` });
+    }else if(!partial){
+      out.push({ tone:"good", title:"Sodium", body:`${Math.round(totals.sodium)} mg, within target.` });
+    }
+  }
+
+  const wPct = pct(waterMl, waterTarget);
+  out.push({ tone: wPct>=100?"good":"info", title:"Water",
+    body: wPct>=100 ? "Daily goal reached." : `${wPct}% of goal — ${((waterTarget-waterMl)/1000).toFixed(1)} L to go.` });
+
+  return out;
+}
+
+const INSIGHT_TONES = {
+  good: { bg:"rgba(62,207,142,.10)",  fg:"var(--mint)" },
+  warn: { bg:"rgba(255,176,32,.10)",  fg:"#FFB020" },
+  bad:  { bg:"rgba(255,90,31,.10)",   fg:"var(--accent)" },
+  info: { bg:"rgba(79,168,216,.10)",  fg:"var(--steel)" }
+};
 
 function macroTargets(){
   const n = state.nutrition;
@@ -11956,59 +12095,232 @@ function renderNutritionTab(){
   const activityKcal = Math.round(todayActivityKcal());
   const macros = todayMacros();
   const macroPctTotal = (n.proteinPct||0)+(n.carbPct||0)+(n.fatPct||0);
-  const todaysFood = foodsForDate(todayStr());
   const week = last7DaysCalories();
   const weekTotal = week.reduce((a,d)=>a+d.kcal,0);
   const weekAvg = Math.round(weekTotal/7);
   const maxKcal = Math.max(targets.kcal, ...week.map(d=>d.kcal), 1);
 
+  /* ---- Dashboard data, all derived from the selected day ---- */
+  const ds = nutritionDateStr();
+  const isToday = ds === todayStr();
+  const dayEntries = foodsForDate(ds);
+  const agg = nutritionTotalsFor(ds);
+  const T = agg.totals;
+  const cov = agg.coverage;
+  const waterMl = waterForDate(ds);
+  const waterTarget = state.settings.waterTargetMl || 2500;
+  const dayKcal = Math.round(T.calories);
+  const dayRemaining = calorieBudget - dayKcal;
+  const kcalPct = calorieBudget > 0 ? Math.round((dayKcal/calorieBudget)*100) : 0;
+
+  // Ring segments are the ENERGY each macro contributed, not its gram weight — 1 g of fat
+  // carries more than twice the calories of 1 g of protein, so plotting grams would draw a
+  // chart that disagrees with the calorie total sitting next to it.
+  const kcalFromProtein = T.protein*4, kcalFromCarbs = T.carbs*4, kcalFromFat = T.fat*9;
+  const macroKcal = kcalFromProtein + kcalFromCarbs + kcalFromFat;
+  const sharePct = v => macroKcal > 0 ? Math.round((v/macroKcal)*100) : 0;
+
+  const mealRows = MEALS.map(meal=>{
+    const foods = dayEntries.filter(f=>(f.meal||"Lunch")===meal);
+    return { meal, foods, kcal: Math.round(foods.reduce((a,f)=>a+Number(f.calories||0),0)) };
+  });
+  const mealsWithFood = mealRows.filter(m=>m.kcal>0);
+
+  const insights = nutritionInsights(T, cov, targets, waterMl, waterTarget);
+  const glasses = 8;
+  const glassesFilled = waterTarget>0 ? Math.min(glasses, Math.round((waterMl/waterTarget)*glasses)) : 0;
+
+  // Coverage: how many of the day's entries carried micronutrient data at all. Foods logged
+  // by hand and pre-USDA entries have none, and a total that silently ignores them would
+  // read as a complete figure when it is really a floor.
+  const microCoverage = (key)=>{
+    const have = cov[key]||0, total = agg.count;
+    return { have, total, partial: total>0 && have<total };
+  };
+
   return `
-    <div class="eyebrow-label" style="margin-top:4px;">Today</div>
-    <div class="grid2" style="margin-bottom:8px;">
-      <div class="stat-card"><div class="stat-label">Eaten</div><div class="stat-value" style="color:var(--text);">${Math.round(eaten)}<span class="stat-unit">/ ${calorieBudget} kcal</span></div></div>
-      <div class="stat-card"><div class="stat-label">Burned (est.)</div><div class="stat-value" style="color:var(--steel);">${burned}<span class="stat-unit">kcal</span></div></div>
-    </div>
-    <div class="info-box" style="padding:12px 14px;margin-bottom:16px;">
-      <div class="row-between"><span style="font-size:13px;font-weight:700;">Calories Remaining</span><span class="mono" style="font-weight:900;color:${remainingCalories >= 0 ? 'var(--mint)' : 'var(--accent)'};">${remainingCalories} kcal</span></div>
-      ${useExerciseBudget ? `<div style="font-size:11px;color:var(--muted);margin-top:5px;">${activeCalories == null ? `Health Connect active calories: ${hcConnected ? 'No data' : 'Permission required'}` : `Includes ${Math.round(activeCalories)} kcal from Health Connect today.`}</div>` : ''}
-    </div>
-    <div class="info-box" style="text-align:center;padding:14px;margin-bottom:16px;background:${netDeficit>=0?'rgba(62,207,142,.08)':'rgba(255,90,31,.08)'};">
-      <div class="stat-label">${netDeficit>=0?'Deficit Created':'Surplus (over target)'}</div>
-      <div class="mono" style="font-weight:900;font-size:26px;color:${netDeficit>=0?'var(--mint)':'var(--accent)'};margin-top:2px;">${netDeficit>=0?'':'+'}${Math.abs(netDeficit)}<span style="font-size:13px;font-weight:700;color:var(--muted);margin-left:4px;">kcal</span></div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Burned = ${profileMaintenance()} maintenance + ~${activityKcal} workout est.</div>
-    </div>
-
-    <div class="eyebrow-label">Macronutrients Today</div>
-    <div class="info-box" style="padding:14px;margin-bottom:16px;">
-      ${macroBar("Protein", macros.protein, targets.protein, "var(--accent)", "g")}
-      ${macroBar("Carbs", macros.carbs, targets.carbs, "var(--steel)", "g")}
-      ${macroBar("Fat", macros.fat, targets.fat, "#FFB020", "g")}
-      ${macroBar("Fibre", macros.fibre, targets.fibre, "var(--mint)", "g")}
-    </div>
-
-    <div class="eyebrow-label">Water</div>
-    <div class="info-box" style="padding:14px;margin-bottom:16px;">
-      ${(()=>{
-        const waterMl = todayWater();
-        const waterTarget = state.settings.waterTargetMl || 2500;
-        return macroBar("Water", waterMl, waterTarget, "var(--steel)", "ml");
-      })()}
-      <div style="display:flex;gap:6px;margin-top:4px;">
-        ${[250,500,750].map(ml=>`<button class="cat-chip" data-add-water="${ml}" style="flex:1;text-align:center;">+${ml}ml</button>`).join("")}
-        <button class="cat-chip" data-action="undo-water" style="flex:1;text-align:center;color:var(--muted);">Undo</button>
+    <div class="row-between" style="margin:4px 0 10px;">
+      <button class="cat-chip" data-nutrition-date="-1" style="margin:0;width:34px;justify-content:center;" aria-label="Previous day">‹</button>
+      <div style="text-align:center;flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(nutritionDateLabel(ds))}</div>
+        ${!isToday?`<button class="cat-chip" data-nutrition-date="today" style="margin:3px 0 0;padding:1px 8px;font-size:10px;">Jump to today</button>`:""}
       </div>
+      <button class="cat-chip" data-nutrition-date="1" style="margin:0;width:34px;justify-content:center;${isToday?'opacity:.3;pointer-events:none;':''}" aria-label="Next day">›</button>
+    </div>
+
+    <!-- Calories hero -->
+    <div class="info-box" style="padding:14px;margin-bottom:8px;">
+      <div style="display:flex;gap:12px;align-items:center;">
+        <div style="flex:1;min-width:0;">
+          <div class="stat-label">Calories</div>
+          <div class="mono" style="font-size:28px;font-weight:900;color:var(--mint);line-height:1.1;margin-top:2px;">
+            ${dayKcal.toLocaleString()}<span style="font-size:12px;font-weight:700;color:var(--muted);"> / ${calorieBudget.toLocaleString()} kcal</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+            <div style="flex:1;height:6px;border-radius:3px;background:var(--surface-alt);overflow:hidden;">
+              <div style="height:100%;width:${Math.min(100,Math.max(0,kcalPct))}%;background:${dayKcal>calorieBudget?'var(--accent)':'var(--mint)'};border-radius:3px;"></div>
+            </div>
+            <span class="mono" style="font-size:11px;color:var(--muted);">${kcalPct}%</span>
+          </div>
+          <div class="stat-label" style="margin-top:8px;">${dayRemaining>=0?'Remaining':'Over budget'}</div>
+          <div class="mono" style="font-size:15px;font-weight:900;color:${dayRemaining>=0?'var(--text)':'var(--accent)'};">${Math.abs(dayRemaining).toLocaleString()} kcal</div>
+        </div>
+        ${donutSvg([
+          {value:kcalFromProtein, color:NUTRIENT_COLORS.protein},
+          {value:kcalFromCarbs,   color:NUTRIENT_COLORS.carbs},
+          {value:kcalFromFat,     color:NUTRIENT_COLORS.fat}
+        ], 104, 13, dayKcal.toLocaleString(), "kcal")}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px;">
+        ${[["Protein",kcalFromProtein,T.protein,"protein"],["Carbs",kcalFromCarbs,T.carbs,"carbs"],["Fat",kcalFromFat,T.fat,"fat"]]
+          .map(([label,kc,grams,key])=>`<div class="row-between">
+            <span style="font-size:12px;display:flex;align-items:center;gap:7px;">
+              <span style="width:8px;height:8px;border-radius:50%;background:${NUTRIENT_COLORS[key]};display:inline-block;flex-shrink:0;"></span>
+              ${label} <span style="color:var(--muted);">(${sharePct(kc)}%)</span>
+            </span>
+            <span class="mono" style="font-size:12px;font-weight:700;">${Math.round(grams)} g</span>
+          </div>`).join("")}
+      </div>
+      <div style="font-size:9px;color:var(--muted);margin-top:8px;">Ring shows each macro's share of energy, not grams.</div>
+    </div>
+
+    <!-- Macro + water strip -->
+    <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:8px;padding-bottom:2px;">
+      ${macroMiniCard("Protein", T.protein, targets.protein, NUTRIENT_COLORS.protein, "g")}
+      ${macroMiniCard("Carbs", T.carbs, targets.carbs, NUTRIENT_COLORS.carbs, "g")}
+      ${macroMiniCard("Fat", T.fat, targets.fat, NUTRIENT_COLORS.fat, "g")}
+      ${macroMiniCard("Fibre", T.fibre, targets.fibre, NUTRIENT_COLORS.fibre, "g")}
+      ${macroMiniCard("Water", waterMl/1000, waterTarget/1000, NUTRIENT_COLORS.water, "L", true)}
+    </div>
+
+    <!-- Micronutrients -->
+    <div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
+      <div class="row-between" style="margin-bottom:8px;">
+        <span style="font-size:13px;font-weight:800;">Micronutrients</span>
+        <button class="cat-chip" data-action="toggle-micros" style="margin:0;padding:2px 9px;font-size:11px;color:var(--steel);">${state.microExpanded?"Show less":"View all"}</button>
+      </div>
+      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;">
+        ${[["fibre","Fibre","g","🌿"],["sugar","Sugar","g","🍬"],["sodium","Sodium","mg","🧂"],
+           ["potassium","Potassium","mg","🍌"],["calcium","Calcium","mg","🦴"],["iron","Iron","mg","🩸"]]
+          .map(([key,label,unit,icon])=>{
+            const target = MICRO_TARGETS[key];
+            const val = T[key]||0;
+            const pct = target ? Math.round((val/target)*100) : null;
+            const c = microCoverage(key);
+            const color = NUTRIENT_COLORS[key] || "var(--muted)";
+            return `<div style="min-width:76px;flex:1;text-align:center;">
+              <div style="font-size:16px;line-height:1.2;">${icon}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px;">${label}</div>
+              <div class="mono" style="font-size:12px;font-weight:800;margin-top:1px;">${val>0?Math.round(val).toLocaleString():"—"}${val>0?`<span style="font-size:9px;color:var(--muted);"> ${unit}</span>`:""}</div>
+              <div class="mono" style="font-size:9px;color:${pct!=null?color:'var(--muted)'};margin-top:1px;">${pct!=null?pct+"%":"–"}</div>
+              <div style="height:3px;border-radius:2px;background:var(--surface-alt);margin-top:4px;overflow:hidden;">
+                <div style="height:100%;width:${pct!=null?Math.min(100,Math.max(0,pct)):0}%;background:${color};"></div>
+              </div>
+              ${state.microExpanded&&c.partial?`<div style="font-size:8px;color:var(--muted);margin-top:3px;line-height:1.2;">${c.have}/${c.total} foods</div>`:""}
+            </div>`;
+          }).join("")}
+      </div>
+      ${state.microExpanded?`<div style="font-size:9px;color:var(--muted);margin-top:8px;line-height:1.4;">
+        Totals count only foods that carry a measured value. Manually entered foods and
+        entries logged before micronutrient tracking contribute nothing, so a figure with a
+        partial count is a floor, not a total. Sugar has no percentage: the reference value
+        covers added sugars while these figures are total sugars.
+      </div>`:""}
+    </div>
+
+    <!-- Water -->
+    <div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
+      <div class="row-between" style="margin-bottom:6px;">
+        <span style="font-size:13px;font-weight:800;">Water Intake</span>
+        <span style="font-size:16px;">💧</span>
+      </div>
+      <div class="mono" style="font-size:22px;font-weight:900;color:${NUTRIENT_COLORS.water};">
+        ${(waterMl/1000).toFixed(1)}<span style="font-size:12px;font-weight:700;color:var(--muted);"> L / ${(waterTarget/1000).toFixed(1)} L</span>
+      </div>
+      <div style="font-size:11px;color:${NUTRIENT_COLORS.water};margin-top:2px;">${waterTarget>0?Math.round((waterMl/waterTarget)*100):0}% of daily goal</div>
+      <div style="display:flex;gap:5px;margin:10px 0;">
+        ${Array.from({length:glasses},(_,i)=>`<span style="flex:1;height:22px;border-radius:0 0 5px 5px;border:1.5px solid ${i<glassesFilled?NUTRIENT_COLORS.water:'var(--border)'};background:${i<glassesFilled?NUTRIENT_COLORS.water:'transparent'};opacity:${i<glassesFilled?1:.5};"></span>`).join("")}
+      </div>
+      <div style="display:flex;gap:6px;">
+        ${[250,500,750].map(ml=>`<button class="cat-chip" data-add-water="${ml}" style="flex:1;text-align:center;justify-content:center;margin:0;">+${ml}ml</button>`).join("")}
+        <button class="cat-chip" data-action="undo-water" style="flex:1;text-align:center;justify-content:center;margin:0;color:var(--muted);">Undo</button>
+      </div>
+    </div>
+
+    <!-- Calories by meal -->
+    ${mealsWithFood.length ? `
+    <div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
+      <div style="font-size:13px;font-weight:800;margin-bottom:8px;">Calories by Meal</div>
+      <div style="display:flex;gap:12px;align-items:center;">
+        ${donutSvg(mealsWithFood.map((m,i)=>({value:m.kcal, color:MEAL_DONUT_COLORS[i%MEAL_DONUT_COLORS.length]})), 88, 12, null, null)}
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;">
+          ${mealsWithFood.map((m,i)=>`<div class="row-between">
+            <span style="font-size:11px;display:flex;align-items:center;gap:6px;min-width:0;">
+              <span style="width:8px;height:8px;border-radius:2px;background:${MEAL_DONUT_COLORS[i%MEAL_DONUT_COLORS.length]};flex-shrink:0;"></span>
+              <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(m.meal)}</span>
+            </span>
+            <span class="mono" style="font-size:11px;color:var(--muted);white-space:nowrap;">${dayKcal>0?Math.round((m.kcal/dayKcal)*100):0}% · ${m.kcal}</span>
+          </div>`).join("")}
+        </div>
+      </div>
+    </div>` : ""}
+
+    <!-- Insights -->
+    ${insights.length ? `
+    <div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
+      <div style="font-size:13px;font-weight:800;margin-bottom:8px;">Nutrition Insights</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:6px;">
+        ${insights.map(i=>`<div style="background:${INSIGHT_TONES[i.tone].bg};border-radius:var(--radius-xs-plus);padding:8px 10px;">
+          <div style="font-size:11px;font-weight:800;color:${INSIGHT_TONES[i.tone].fg};">${escHtml(i.title)}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;line-height:1.35;">${escHtml(i.body)}</div>
+        </div>`).join("")}
+      </div>
+    </div>` : ""}
+
+    <!-- Energy balance (kept from the previous dashboard) -->
+    <div class="info-box" style="text-align:center;padding:12px;margin-bottom:8px;background:${netDeficit>=0?'rgba(62,207,142,.08)':'rgba(255,90,31,.08)'};">
+      <div class="stat-label">${netDeficit>=0?'Deficit Created':'Surplus (over target)'}</div>
+      <div class="mono" style="font-weight:900;font-size:22px;color:${netDeficit>=0?'var(--mint)':'var(--accent)'};margin-top:2px;">${netDeficit>=0?'':'+'}${Math.abs(netDeficit)}<span style="font-size:12px;font-weight:700;color:var(--muted);margin-left:4px;">kcal</span></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;">Burned = ${profileMaintenance()} maintenance + ~${activityKcal} workout est.${!isToday?" (today's figures)":""}</div>
+      ${useExerciseBudget ? `<div style="font-size:10px;color:var(--muted);margin-top:4px;">${activeCalories == null ? `Health Connect active calories: ${hcConnected ? 'No data' : 'Permission required'}` : `Budget includes ${Math.round(activeCalories)} kcal from Health Connect.`}</div>` : ''}
+    </div>
+
+    <!-- Add actions -->
+    <div style="display:flex;gap:6px;margin-bottom:12px;">
+      <button class="btn btn-ghost" style="flex:1;padding:11px;font-size:11px;" data-action="scan-barcode">Scan Barcode</button>
+      <button class="btn btn-accent" style="flex:1.3;padding:11px;font-size:13px;" data-action="add-food">+ Add Food</button>
+      <button class="btn btn-ghost" style="flex:1;padding:11px;font-size:11px;" data-action="quick-add-recent">Quick Add</button>
     </div>
 
     <div class="eyebrow-label">Meals</div>
     ${MEALS.map(meal=>{
-      const mealFoods = todaysFood.filter(f=>(f.meal||"Lunch")===meal);
-      const mealKcal = mealFoods.reduce((a,f)=>a+Number(f.calories||0),0);
+      const mealFoods = dayEntries.filter(f=>(f.meal||"Lunch")===meal);
+      const mealKcal = Math.round(mealFoods.reduce((a,f)=>a+Number(f.calories||0),0));
       const budget = Math.round(targets.kcal * MEAL_SHARE[meal]);
       const isOpen = state.mealOpen===meal;
+      // Per-meal macro roll-up, so each row answers "what did this meal give me" without
+      // expanding it.
+      const mp = Math.round(mealFoods.reduce((a,f)=>a+Number(f.protein||0),0));
+      const mc = Math.round(mealFoods.reduce((a,f)=>a+Number(f.carbs||0),0));
+      const mf = Math.round(mealFoods.reduce((a,f)=>a+Number(f.fat||0),0));
       return `<div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
-        <div class="row-between" data-meal-toggle="${meal}" style="cursor:pointer;">
-          <span style="font-weight:800;font-size:15px;">${meal}</span>
-          <span class="mono" style="font-size:12px;color:${mealKcal>budget?'var(--accent)':'var(--muted)'};">${mealKcal} of ${budget} Cal <span style="color:var(--accent);font-weight:900;margin-left:6px;">${isOpen?'−':'+'}</span></span>
+        <div class="row-between" data-meal-toggle="${meal}" style="cursor:pointer;align-items:center;">
+          <span style="display:flex;align-items:center;gap:9px;min-width:0;">
+            <span style="width:32px;height:32px;border-radius:50%;background:var(--surface-alt);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">${MEAL_ICONS[meal]||"🍽️"}</span>
+            <span style="min-width:0;">
+              <span style="font-weight:800;font-size:14px;display:block;">${escHtml(meal)}</span>
+              <span style="font-size:10px;color:var(--muted);">${mealFoods.length} food${mealFoods.length===1?"":"s"}</span>
+            </span>
+          </span>
+          <span style="text-align:right;flex-shrink:0;">
+            <span class="mono" style="font-size:13px;font-weight:800;color:${mealKcal>budget?'var(--accent)':'var(--text)'};display:block;">${mealKcal} kcal</span>
+            <span class="mono" style="font-size:9px;color:var(--muted);">
+              <span style="color:${NUTRIENT_COLORS.protein};">P ${mp}g</span>
+              <span style="color:${NUTRIENT_COLORS.carbs};">C ${mc}g</span>
+              <span style="color:${NUTRIENT_COLORS.fat};">F ${mf}g</span>
+            </span>
+          </span>
+          <span style="color:var(--accent);font-weight:900;margin-left:8px;flex-shrink:0;">${isOpen?'−':'+'}</span>
         </div>
         ${mealFoods.map(f=>`<div class="history-row" style="margin-top:8px;">
           <div style="min-width:0;flex:1;margin-right:8px;"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.name}</div>
@@ -15992,6 +16304,54 @@ function attachHandlers(){
     });
   });
 
+  // Nutrition dashboard — date navigation and card controls
+  document.querySelectorAll("[data-nutrition-date]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const v = el.dataset.nutritionDate;
+      if(v === "today") state.nutritionDate = null;
+      else shiftNutritionDate(Number(v));
+      // Changing day invalidates whatever was open for the previous one.
+      state.mealOpen = null; state.foodSearchSelected = null; state.foodSearchQuery = "";
+      render();
+    });
+  });
+  const microToggle = document.querySelector('[data-action="toggle-micros"]');
+  if(microToggle) microToggle.addEventListener("click", ()=>{ state.microExpanded = !state.microExpanded; render(); });
+
+  const addFoodBtn = document.querySelector('[data-action="add-food"]');
+  if(addFoodBtn) addFoodBtn.addEventListener("click", ()=>{
+    // Opens the meal whose window the current time falls in, so the common case is one tap.
+    const h = new Date().getHours();
+    const meal = h < 11 ? "Breakfast" : h < 12 ? "Morning Snack" : h < 15 ? "Lunch"
+               : h < 18 ? "Evening Snack" : "Dinner";
+    state.mealOpen = MEALS.includes(meal) ? meal : MEALS[0];
+    render();
+    setTimeout(()=>{
+      const input = document.getElementById("food-search-input");
+      if(input){ input.scrollIntoView({behavior:"smooth", block:"center"}); input.focus(); }
+    }, 60);
+  });
+
+  const quickAddBtn = document.querySelector('[data-action="quick-add-recent"]');
+  if(quickAddBtn) quickAddBtn.addEventListener("click", ()=>{
+    // Opens the current meal and scrolls to the Recent / Favourites chips, which are the
+    // existing one-tap re-log path — no new logging mechanism, just a shortcut to it.
+    if(!state.mealOpen) state.mealOpen = MEALS[0];
+    render();
+    setTimeout(()=>{
+      const chip = document.querySelector("[data-quick-add-food]");
+      if(chip) chip.scrollIntoView({behavior:"smooth", block:"center"});
+      else showToast("Nothing logged yet — add a food first and it'll appear here.", "error", render);
+    }, 60);
+  });
+
+  const scanBtn = document.querySelector('[data-action="scan-barcode"]');
+  if(scanBtn) scanBtn.addEventListener("click", ()=>{
+    // Deliberately honest: no camera or barcode lookup exists yet, so this says so instead
+    // of opening something that cannot work.
+    showToast("Barcode scanning isn't built yet — search or add the food manually.", "error", render);
+  });
+
   // Nutrition tab — meals & food log
   document.querySelectorAll("[data-meal-toggle]").forEach(el=>{
     el.addEventListener("click", ()=>{
@@ -16010,7 +16370,7 @@ function attachHandlers(){
       const calStr = document.getElementById("food-cal").value.trim();
       const cal = Number(calStr);
       if(!name || calStr === "" || isNaN(cal) || cal < 0) return;
-      state.foodLog.unshift({ id: nextId(), date: todayStr(), name, calories: cal, meal,
+      state.foodLog.unshift({ id: nextId(), date: nutritionDateStr(), name, calories: cal, meal,
         protein: Number(document.getElementById("food-protein").value)||0,
         carbs: Number(document.getElementById("food-carbs").value)||0,
         fat: Number(document.getElementById("food-fat").value)||0,
@@ -16157,12 +16517,17 @@ function attachHandlers(){
 
     // Identical record shape to the quick-add chips — nothing downstream can tell the
     // difference between a searched food and a manually entered one.
-    state.foodLog.unshift({
-      id: nextId(), date: todayStr(), meal: meal,
+    const record = {
+      id: nextId(), date: state.nutritionDate || todayStr(), meal: meal,
       name: v.name,
       calories: Number(v.calories)||0, protein: Number(v.protein)||0,
       carbs: Number(v.carbs)||0, fat: Number(v.fat)||0, fibre: Number(v.fibre)||0
-    });
+    };
+    // Micronutrients are written only where the food actually has them. An absent key means
+    // "unknown for this food", which the dashboard reports as incomplete coverage rather
+    // than counting as zero.
+    if(N) N.MICRO_LOG_FIELDS.forEach(k=>{ if(v[k] != null) record[k] = Number(v[k]); });
+    state.foodLog.unshift(record);
     state.foodSearchSelected = null; state.foodSearchQuery = "";
     state.foodSearchAmount = null; state.foodSearchUnit = "g";
     return true;
@@ -16227,7 +16592,7 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{
       const meal = el.dataset.quickAddFood;
       state.foodLog.unshift({
-        id: nextId(), date: todayStr(), meal,
+        id: nextId(), date: nutritionDateStr(), meal,
         name: el.dataset.foodName,
         calories: Number(el.dataset.foodCal)||0,
         protein: Number(el.dataset.foodProtein)||0,
@@ -16259,7 +16624,7 @@ function attachHandlers(){
   });
   document.querySelectorAll("[data-add-water]").forEach(el=>{
     el.addEventListener("click", ()=>{
-      state.waterLog.unshift({ id: nextId(), date: todayStr(), ml: Number(el.dataset.addWater) });
+      state.waterLog.unshift({ id: nextId(), date: nutritionDateStr(), ml: Number(el.dataset.addWater) });
       render();
     });
   });
