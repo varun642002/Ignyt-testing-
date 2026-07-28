@@ -213,3 +213,67 @@
 #app .btn-block {
   min-height: 44px;
 }
+
+
+/* =========================================================
+   PRIMARY ACTION COLOUR
+
+   The reference screens use two colours where IGNYT used one: the calorie ring stays orange
+   (it encodes energy — data), while buttons, links and the active nav item are blue (they
+   encode action). --accent keeps every data job it had; --primary takes the interactive
+   ones it was doubling up on.
+
+   Everything below re-points existing classes, so no markup changed and nothing had to be
+   found-and-replaced across ~90 template literals.
+========================================================= */
+
+/* Primary buttons. Keeps the gradient treatment from the polish pass, in blue. */
+.btn-accent{
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--primary) 88%, white) 0%,
+    var(--primary) 55%,
+    var(--primary-strong) 100%);
+  color: var(--on-primary);
+}
+.btn-accent:active{ filter: brightness(.96); }
+
+/* The floating add button and the sticky footer action inherit from .btn-accent, so they
+   follow automatically — this only fixes the divider, which was tuned for a dark label. */
+.food-sticky__kcal{ border-left-color: rgba(255,255,255,.28); }
+
+/* Links and secondary actions. */
+.coach-toggle{ color: var(--primary); }
+.coach-toggle:active{ background: var(--primary-soft); }
+.rh-view-all{ color: var(--primary); }
+
+/* Selected states that were reading as "energy" when they mean "chosen". */
+.cat-chip.active{
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.srv.is-on{
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface-alt));
+}
+.srv.is-on .srv__name::after{ color: var(--primary); }
+.srv.is-on .srv__kcal{ color: var(--primary); }
+
+/* The + on a meal card is an action, not a calorie figure. */
+.meal-add{ color: var(--primary); }
+.meal-toggle{ color: var(--primary); }
+
+/* Search focus ring. */
+.food-search-bar:focus-within{
+  box-shadow: var(--lift-2), 0 0 0 2px color-mix(in srgb, var(--primary) 45%, transparent);
+}
+.food-search-bar__voice{ color: var(--primary); }
+
+/* Row chevrons and the "just added" pulse stay neutral/accent respectively — the pulse
+   marks a data change, not an action. */
+.log-row__chev{ color: var(--muted); }
+
+/* Focus-visible outline should match the action colour rather than the old steel. */
+button:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, [tabindex]:focus-visible{
+  outline-color: var(--primary);
+}

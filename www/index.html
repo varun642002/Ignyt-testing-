@@ -22,6 +22,16 @@
     --bg:#121216; --surface:#1C1C22; --surface-alt:#26262E;
     --accent:#FF5A1F; --steel:#4FA8D8; --text:#F2F1ED; --muted:#8B8B94; --mint:#3ECF8E;
     --border:#33333d; --kb-inset:0px; --pin-height:0px;
+
+    /* PRIMARY vs ACCENT — the split the reference screens actually use.
+       Look closely at them: the calorie ring is ORANGE while the buttons, links and active
+       nav item are BLUE. They are not one colour used twice, they are two colours doing two
+       jobs — accent marks DATA (energy, the ring, calorie figures), primary marks ACTION
+       (the thing you tap).
+       That is why this is not a palette swap. IGNYT's orange keeps every job it had; blue
+       takes over the interactive elements it was doubling up on. */
+    --primary:#3B82F6; --primary-strong:#2563EB; --on-primary:#FFFFFF;
+    --primary-soft:rgba(59,130,246,.14);
   }
 
 /* Light theme.
@@ -39,6 +49,11 @@
     --accent:#E24E15; --steel:#1F6E9C; --mint:#188F5D;
     --text:#1F2937; --text-body:#4B5563; --muted:#6B7280; --placeholder:#9CA3AF;
     --border:#E7EBF0; --divider:#E8ECF2;
+
+    /* The reference blue, tuned for a light ground. Same split as the dark theme: this is
+       action, --accent stays data. */
+    --primary:#2563EB; --primary-strong:#1D4ED8; --on-primary:#FFFFFF;
+    --primary-soft:rgba(37,99,235,.10);
 
     /* Soft and wide rather than dark and tight: 6-8% opacity, 24-32px blur, 6-10px drop.
        A heavy shadow on a light ground reads as dirt under the card instead of lift. */

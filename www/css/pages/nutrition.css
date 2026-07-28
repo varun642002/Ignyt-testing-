@@ -237,7 +237,7 @@
 .meal-macros .c{ color: var(--n-carbs); }
 .meal-macros .f{ color: var(--n-fat); }
 .meal-toggle{
-  color: var(--accent);
+  color: var(--primary);
   font-weight: 900;
   font-size: 15px;
   flex-shrink: 0;
@@ -310,11 +310,11 @@
   font-size: 11px; font-weight: 700; color: var(--muted); margin-top: 2px;
 }
 .srv.is-on{
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, var(--surface-alt));
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-alt));
 }
-.srv.is-on .srv__kcal{ color: var(--accent); }
-.srv.is-on .srv__name::after{ content: " ✓"; color: var(--accent); }
+.srv.is-on .srv__kcal{ color: var(--primary); }
+.srv.is-on .srv__name::after{ content: " ✓"; color: var(--primary); }
 
 /* ---------------------------------------------------------
    Micronutrient grid
@@ -455,7 +455,7 @@
   flex-shrink: 0;
   cursor: pointer;
 }
-.food-page__icon.is-on{ color: var(--accent); }
+.food-page__icon.is-on{ color: var(--primary); }
 .food-page__title{ font-size: 16px; font-weight: 800; letter-spacing: -.01em; }
 .food-page__sub{ font-size: 11px; color: var(--muted); }
 /* Keeps the sticky footer from covering the last card. */
@@ -488,7 +488,7 @@
   display: grid; place-items: center;
   flex-shrink: 0;
 }
-.food-search-bar__voice{ background: var(--surface-alt); color: var(--accent); }
+.food-search-bar__voice{ background: var(--surface-alt); color: var(--primary); }
 
 /* --- detail hero --- */
 .food-hero{
@@ -668,9 +668,9 @@
   /* A gradient of the accent against itself: enough to catch light across the face without
      turning into a second colour. */
   background: linear-gradient(180deg,
-    color-mix(in srgb, var(--accent) 88%, white) 0%,
-    var(--accent) 55%,
-    color-mix(in srgb, var(--accent) 92%, black) 100%);
+    color-mix(in srgb, var(--primary) 88%, white) 0%,
+    var(--primary) 55%,
+    var(--primary-strong) 100%);
   box-shadow: var(--lift-2);
 }
 .btn-accent:active{ transform: scale(.975); box-shadow: var(--lift-1); filter: brightness(.96); }
@@ -754,7 +754,7 @@
   transition: box-shadow var(--dur-base) var(--ease-out);
 }
 .food-search-bar:focus-within{
-  box-shadow: var(--lift-2), 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: var(--lift-2), 0 0 0 2px color-mix(in srgb, var(--primary) 45%, transparent);
 }
 
 /* --- category tiles --- */
@@ -826,7 +826,7 @@ main{ -webkit-overflow-scrolling: touch; }
   width: 32px; height: 32px;
   border: 0; border-radius: var(--radius-sm);
   background: var(--surface-alt);
-  color: var(--accent);
+  color: var(--primary);
   font-size: 18px; font-weight: 800;
   cursor: pointer;
   flex-shrink: 0;
