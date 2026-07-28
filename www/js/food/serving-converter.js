@@ -73,7 +73,29 @@
     "Pork":        { piece: 60,  serving: 120 },
     "Fish":        { piece: 120, serving: 150 },
     "Seafood":     { piece: 20,  serving: 120 },
-    "Eggs":        { piece: 50,  serving: 50 }
+    "Eggs":        { piece: 50,  serving: 50 },
+
+    /* --- canonical category names ---
+       The seed catalogue and the USDA import originally used different names for the same
+       thing ("Nuts" and "Seeds" against "Nuts & Seeds", "Oils" against "Oils & Fats"), which
+       produced duplicate tiles in the category browser. The catalogue now normalises seed
+       categories onto the canonical set, so the canonical names need entries here or those
+       foods would silently lose their household measures. The short names are kept because
+       FOOD_UNITS and any stored data may still reference them. */
+    "Grains & Cereals":    { cup: 90,  bowl: 180, serving: 40, tbsp: 10 },
+    "Bread & Bakery":      { slice: 30, piece: 30, serving: 60 },
+    "Beans & Legumes":     { cup: 180, bowl: 200, serving: 150 },
+    "Nuts & Seeds":        { cup: 140, tbsp: 10, serving: 30 },
+    "Oils & Fats":         { cup: 218, tbsp: 14, tsp: 4.5, serving: 10 },
+    "Sauces & Condiments": { cup: 240, tbsp: 17, tsp: 6, serving: 15 },
+
+    /* USDA-only categories with no seed equivalent. */
+    "Turkey":              { piece: 120, serving: 150 },
+    "Game & Other Meats":  { piece: 120, serving: 150 },
+    "Soups":               { cup: 245, bowl: 250, serving: 245 },
+    "Spices & Herbs":      { tbsp: 6, tsp: 2, serving: 2 },
+    "Meals & Entrees":     { cup: 220, bowl: 250, serving: 250 },
+    "Restaurant Foods":    { piece: 150, serving: 250 }
   };
 
   /* Exact per-food weights. These are the units people actually count in ("2 eggs",
@@ -204,11 +226,34 @@
   function keyOf(food) { return String((food && food.name) || "").trim().toLowerCase(); }
 
   /**
+   * Grams for one unit taken from the food's OWN measured portions, if it has any.
+   *
+   * Foods imported from USDA carry a `portions` array of real laboratory measurements for
+   * that specific food. Those beat every table in this file, because the tables are
+   * necessarily generic: CATEGORY_UNITS says a cup of any vegetable is 100 g, while USDA
+   * measured a cup of raw broccoli at 76 g and a cup of raw kale at 20.6 g. Same category,
+   * a factor of five apart. Preferring the measurement is the difference between a plausible
+   * number and a correct one.
+   */
+  function measuredPortion(food, unit) {
+    var ps = food && food.portions;
+    if (!Array.isArray(ps)) return null;
+    for (var i = 0; i < ps.length; i++) {
+      if (ps[i] && ps[i].unit === unit && ps[i].grams > 0) return ps[i].grams;
+    }
+    return null;
+  }
+
+  /**
    * Grams for ONE of the given unit, for this specific food.
+   * Resolution order: the food's own measurement, then a per-food override, then its
+   * category, then a generic estimate.
    * @returns {number|null} null when the unit doesn't apply to this food
    */
   function gramsPerUnit(food, unit) {
     if (unit === "g") return 1;
+    var measured = measuredPortion(food, unit);
+    if (measured != null) return measured;
     var perFood = FOOD_UNITS[keyOf(food)];
     if (perFood && perFood[unit] != null) return perFood[unit];
     var cat = CATEGORY_UNITS[food && food.category];
@@ -225,6 +270,12 @@
   function unitsFor(food) {
     var perFood = FOOD_UNITS[keyOf(food)] || {};
     var cat = CATEGORY_UNITS[food && food.category] || {};
+    // A unit USDA measured for this food is always worth offering — that is the strongest
+    // possible evidence the unit applies to it.
+    var measured = {};
+    if (food && Array.isArray(food.portions)) {
+      food.portions.forEach(function (p) { if (p && p.unit) measured[p.unit] = 1; });
+    }
     // These only appear when the food (or its category) actually defines them. `slice` is
     // included because a generic fallback would otherwise offer "2 slices of egg".
     var COUNTABLE = { egg:1, banana:1, apple:1, chapati:1, roti:1, idli:1, dosa:1, scoop:1, slice:1 };
@@ -232,7 +283,8 @@
     UNIT_ORDER.forEach(function (u) {
       if (u === "g") { out.push(u); return; }
       // Countable/food-specific units require an explicit definition somewhere.
-      if (COUNTABLE[u]) { if (perFood[u] != null || cat[u] != null) out.push(u); return; }
+      if (COUNTABLE[u]) { if (measured[u] || perFood[u] != null || cat[u] != null) out.push(u); return; }
+      if (measured[u]) { out.push(u); return; }
       // Volume/portion units are broadly applicable, but drop the ones that make no sense
       // for a solid food logged by the piece.
       if (perFood[u] != null || cat[u] != null || GENERIC[u] != null) {

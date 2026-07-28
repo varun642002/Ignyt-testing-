@@ -547,8 +547,12 @@ try{
 <script src="js/health/health-dashboard.js"></script>
 <script src="js/health/body-scan-ai.js"></script>
 <script src="js/ai-coach.js"></script>
+<!-- Food modules load in dependency order: seed data and the importer first, then the
+     catalogue that merges them, then search which indexes the catalogue. -->
 <script src="js/food/food-db.js"></script>
 <script src="js/food/serving-converter.js"></script>
+<script src="js/food/food-importer.js"></script>
+<script src="js/food/food-catalogue.js"></script>
 <script src="js/food/food-search.js"></script>
 <script src="app.js"></script>
 <script src="health-connect.js"></script>

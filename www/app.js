@@ -4547,6 +4547,8 @@ const state = {
   historySelectMode: false, historySelected: [], // transient — bulk multi-select
   // Food search (transient — a fresh visit starts with an empty search)
   foodSearchQuery: "", foodSearchSelected: null, foodSearchAmount: null, foodSearchUnit: "g",
+  // Category browser (transient). foodBrowseCategory === null means search mode.
+  foodBrowseCategory: null, foodBrowsePage: 1, foodResultPage: 1,
   raceActive: LS.get("hx_race_active", null),
   raceLog: LS.get("hx_race_log", []),
   viewingRaceMode: !!LS.get("hx_race_active", null),
@@ -6968,6 +6970,17 @@ function calcBodyType(bust, waist, highHip, hip){
  *  choke point so the panel, the preview and the logged record can never disagree.
  *  Falls back to the food's own 100g basis when nothing is selected yet, and to grams if
  *  the chosen unit doesn't apply (e.g. the unit carried over from a previous food). */
+/** Resolves a search-result id back to its food object.
+ *  Favourites live only in the search index (they are built from state.favoriteFoods, not
+ *  the catalogue), so they are looked up by name; everything else comes from the catalogue.
+ *  Falls back to the seed DB when the catalogue has not finished loading. */
+function lookupFood(id, nameHint){
+  if(String(id).indexOf("fav:") === 0){
+    return IgnytFoodSearch.search(nameHint || "", { limit: 25 }).find(f=>f.id === id) || null;
+  }
+  return (window.IgnytFoodCatalogue && IgnytFoodCatalogue.byId(id)) || IgnytFoodDB.byId(id);
+}
+
 function resolveFoodPortion(food){
   const conv = window.IgnytServingConverter;
   let unit = state.foodSearchUnit || "g";
@@ -6978,17 +6991,111 @@ function resolveFoodPortion(food){
   return { amount, unit, grams: Math.round(grams*10)/10 };
 }
 
+/* ---- Category browser -------------------------------------------------------------
+   The catalogue is ~8,000 foods. Search answers "I know what I want"; the browser answers
+   "show me what's here", which is the only way to discover a food whose USDA name you would
+   never guess ("Beans, Snap, Green, Canned, Regular Pack, Drained Solids").
+
+   Long lists page rather than virtualise. True virtual scrolling needs a stable scroll
+   container that survives re-render, and this app re-renders wholesale from state on every
+   interaction — a windowed list would fight that on every keystroke. Paging costs one tap
+   and reuses the same incremental pattern already used by workout history. */
+const FOOD_PAGE_SIZE = 12;
+
+/* A glyph per category. Purely decorative — the name is always shown next to it. */
+const FOOD_CATEGORY_ICONS = {
+  "Vegetables":"🥦", "Fruits":"🍎", "Grains & Cereals":"🌾", "Bread & Bakery":"🍞",
+  "Rice":"🍚", "Pasta":"🍝", "Beans & Legumes":"🫘", "Nuts & Seeds":"🥜",
+  "Dairy":"🥛", "Eggs":"🥚", "Chicken":"🍗", "Turkey":"🦃", "Beef":"🥩", "Pork":"🥓",
+  "Game & Other Meats":"🍖", "Fish":"🐟", "Seafood":"🦐", "Oils & Fats":"🫒",
+  "Spices & Herbs":"🌿", "Sauces & Condiments":"🥫", "Beverages":"🥤", "Desserts":"🍰",
+  "Snacks":"🍿", "Fast Food":"🍔", "Soups":"🍲", "Meals & Entrees":"🍱",
+  "Restaurant Foods":"🍽️", "Protein Supplements":"💪", "Indian Foods":"🍛",
+  "Custom Foods":"✏️"
+};
+function foodCategoryIcon(name){ return FOOD_CATEGORY_ICONS[name] || "🍴"; }
+
+/** One search/browse result. Shows enough to choose without opening anything. */
+function renderFoodResultCard(f){
+  const isFav = (state.favoriteFoods||[]).some(x=>x && String(x.name).toLowerCase()===String(f.name).toLowerCase());
+  // Favourites are stored as one absolute portion (per === null), so their macros are shown
+  // as-is; catalogue foods are per 100 g and say so.
+  const basis = f.per ? `/${f.per}g` : "";
+  const serving = (f.servingSize && f.servingUnit && f.servingUnit !== "g")
+    ? `${f.servingSize}g per ${escHtml(f.servingUnit)}` : "";
+  return `<div class="history-row" data-food-pick="${escHtml(f.id)}" style="cursor:pointer;align-items:flex-start;padding:9px 10px;">
+    <div style="min-width:0;flex:1;margin-right:8px;">
+      <div style="font-size:13px;font-weight:700;line-height:1.3;">${escHtml(f.name)}</div>
+      <div class="mono" style="font-size:10px;color:var(--muted);margin-top:3px;">
+        ${escHtml(f.category||"")}${serving?` · ${serving}`:""}
+      </div>
+      <div class="mono" style="font-size:10px;color:var(--muted);margin-top:2px;">
+        P${f.protein??0} · C${f.carbs??0} · F${f.fat??0}
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+      <span class="mono" style="font-size:12px;color:var(--accent);font-weight:700;">${f.calories??0} kcal${basis}</span>
+      <button class="cat-chip${isFav?' active':''}" data-food-fav="${escHtml(f.id)}" title="${isFav?'Remove from favourites':'Save to favourites'}"
+        style="margin:0;padding:2px 8px;font-size:11px;">${isFav?'★':'☆'}</button>
+    </div>
+  </div>`;
+}
+
+/** Paged list plus a "show more" control. */
+function renderFoodList(foods, page){
+  const shown = foods.slice(0, page * FOOD_PAGE_SIZE);
+  return `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">
+      ${shown.map(renderFoodResultCard).join("")}
+    </div>
+    ${foods.length > shown.length ? `<button class="btn btn-ghost" data-food-more="1" style="width:100%;padding:7px;font-size:12px;margin-bottom:8px;">
+      Show more (${foods.length - shown.length} remaining)</button>` : ""}`;
+}
+
+function renderFoodCategoryGrid(){
+  const cat = window.IgnytFoodCatalogue;
+  if(!cat) return "";
+  const cats = cat.categories();
+  if(!cats.length) return "";
+  return `
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Browse by category</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;margin-bottom:10px;">
+      ${cats.map(c=>`<button class="cat-chip" data-food-browse="${escHtml(c.name)}"
+        style="margin:0;flex-direction:column;align-items:flex-start;text-align:left;padding:8px;gap:2px;">
+        <span style="font-size:15px;line-height:1;">${foodCategoryIcon(c.name)}</span>
+        <span style="font-size:11px;font-weight:700;line-height:1.2;">${escHtml(c.name)}</span>
+        <span class="mono" style="font-size:9px;color:var(--muted);">${c.count}</span>
+      </button>`).join("")}
+    </div>`;
+}
+
 function renderFoodSearchPanel(meal){
   if(!window.IgnytFoodSearch || !window.IgnytFoodDB) return "";
   const q = state.foodSearchQuery || "";
   const sel = state.foodSearchSelected;
-  const results = q.trim() ? IgnytFoodSearch.search(q, { limit: 8 }) : [];
+  const cat = window.IgnytFoodCatalogue;
+  const browsing = state.foodBrowseCategory;
+
+  // The lazy-load trigger. This panel is the only thing that needs the 3.2 MB catalogue, and
+  // it only renders when a user expands a meal — so the fetch starts here rather than at
+  // boot, and re-renders once when it lands. onReady() is idempotent, so calling it on every
+  // render is safe; until it resolves the panel searches the 273 seed foods, which is
+  // exactly the behaviour that shipped before the catalogue existed.
+  if(cat && cat.status() === "idle") cat.onReady(()=>render());
+
+  // Searching inside a category filters to it; otherwise it is a catalogue-wide search.
+  // Browsing with no query lists the category alphabetically, which is what makes a category
+  // scannable — relevance ordering has nothing to rank against when there is no query.
+  const results = q.trim()
+    ? IgnytFoodSearch.search(q, { limit: 200, category: browsing || undefined })
+    : (browsing && cat
+        ? cat.byCategory(browsing).slice().sort((a,b)=>a.name.localeCompare(b.name))
+        : []);
 
   // Portion row for the selected food. Catalogue foods are per-100g so they scale by grams;
   // a saved favourite is already one logged portion, so it is logged as-is.
   let portion = "";
   if(sel){
-    const food = sel.id.indexOf("fav:")===0 ? IgnytFoodSearch.search(sel.name,{limit:1})[0] : IgnytFoodDB.byId(sel.id);
+    const food = lookupFood(sel.id, sel.name);
     if(food){
       const scalable = food.per != null;
       const p = resolveFoodPortion(food);
@@ -7022,18 +7129,43 @@ function renderFoodSearchPanel(meal){
     }
   }
 
+  const total = cat ? cat.count() : IgnytFoodDB.count();
+  const loading = cat && cat.status() === "loading";
+  const recentSearches = IgnytFoodSearch.recentSearches ? IgnytFoodSearch.recentSearches() : [];
+
+  // Nothing typed, nothing selected, not browsing — the idle state, which is where recent
+  // searches and the category grid earn their place.
+  const idle = !q.trim() && !sel && !browsing;
+
   return `
     <div style="margin-bottom:10px;">
-      <input type="text" id="food-search-input" placeholder="Search ${IgnytFoodDB.count()} foods…" value="${escHtml(q)}"
+      ${browsing ? `<div class="row-between" style="margin-bottom:6px;">
+        <button class="cat-chip" data-food-browse-back="1" style="margin:0;">← All categories</button>
+        <span class="mono" style="font-size:11px;color:var(--muted);">${foodCategoryIcon(browsing)} ${escHtml(browsing)} · ${results.length}</span>
+      </div>` : ""}
+
+      <input type="text" id="food-search-input"
+        placeholder="${browsing?`Search in ${escHtml(browsing)}…`:`Search ${total.toLocaleString()} foods…`}" value="${escHtml(q)}"
         style="width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:13px;color:var(--text);margin-bottom:6px;">
+
+      ${loading ? `<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Loading the full food database…</div>` : ""}
+
       ${portion}
-      ${q.trim() && !sel ? (results.length ? `
-        <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">
-          ${results.map(f=>`<button class="cat-chip" data-food-pick="${escHtml(f.id)}" style="text-align:left;justify-content:flex-start;">
-            <span style="flex:1;">${escHtml(f.name)}</span>
-            <span style="color:var(--muted);font-size:11px;">${f.calories} kcal${f.per?` /${f.per}g`:''}</span>
-          </button>`).join("")}
-        </div>` : `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">No foods match "${escHtml(q)}" — enter it manually below.</div>`) : ""}
+
+      ${idle && recentSearches.length ? `
+        <div class="row-between" style="margin-bottom:5px;">
+          <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Recent searches</span>
+          <button class="cat-chip" data-clear-recent-searches="1" style="margin:0;padding:2px 8px;font-size:10px;color:var(--muted);">Clear</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+          ${recentSearches.slice(0,12).map(s=>`<button class="cat-chip" data-recent-search="${escHtml(s)}" style="margin:0;">${escHtml(s)}</button>`).join("")}
+        </div>` : ""}
+
+      ${idle ? renderFoodCategoryGrid() : ""}
+
+      ${!sel && (q.trim() || browsing) ? (results.length
+        ? renderFoodList(results, browsing ? state.foodBrowsePage : state.foodResultPage)
+        : `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">No foods match "${escHtml(q)}"${browsing?` in ${escHtml(browsing)}`:""} — enter it manually below.</div>`) : ""}
     </div>`;
 }
 
@@ -15769,6 +15901,8 @@ function attachHandlers(){
   if(foodSearchInput) foodSearchInput.addEventListener("input", (e)=>{
     state.foodSearchQuery = e.target.value;
     state.foodSearchSelected = null; // a new query invalidates the current selection
+    state.foodResultPage = 1;        // and its paging
+    state.foodBrowsePage = 1;
     debounce("food-search", ()=>{
       render();
       // render() replaces the input node, so restore focus and caret like the other searches.
@@ -15778,10 +15912,10 @@ function attachHandlers(){
   document.querySelectorAll("[data-food-pick]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const id = el.dataset.foodPick;
-      const food = id.indexOf("fav:")===0
-        ? IgnytFoodSearch.search(state.foodSearchQuery,{limit:25}).find(f=>f.id===id)
-        : IgnytFoodDB.byId(id);
+      const food = lookupFood(id, state.foodSearchQuery);
       if(!food) return;
+      // Picking a result is the signal that the query was useful, so it is worth remembering.
+      if(state.foodSearchQuery && IgnytFoodSearch.rememberSearch) IgnytFoodSearch.rememberSearch(state.foodSearchQuery);
       state.foodSearchSelected = { id: food.id, name: food.name };
       // Reset the portion to the food's own basis; a unit carried over from a previous
       // food may not even apply to this one.
@@ -15810,6 +15944,63 @@ function attachHandlers(){
   document.querySelectorAll("[data-food-amount]").forEach(el=>{
     el.addEventListener("click", ()=>{ state.foodSearchAmount = Number(el.dataset.foodAmount); render(); });
   });
+  /* ---- Category browser + recent searches (Phase 3) ---- */
+  document.querySelectorAll("[data-food-browse]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.foodBrowseCategory = el.dataset.foodBrowse;
+      state.foodBrowsePage = 1;
+      state.foodSearchQuery = "";
+      state.foodSearchSelected = null;
+      render();
+    });
+  });
+  const browseBack = document.querySelector("[data-food-browse-back]");
+  if(browseBack) browseBack.addEventListener("click", ()=>{
+    state.foodBrowseCategory = null; state.foodBrowsePage = 1; state.foodSearchQuery = ""; render();
+  });
+  const foodMore = document.querySelector("[data-food-more]");
+  if(foodMore) foodMore.addEventListener("click", ()=>{
+    if(state.foodBrowseCategory) state.foodBrowsePage++; else state.foodResultPage++;
+    render();
+  });
+  document.querySelectorAll("[data-recent-search]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.foodSearchQuery = el.dataset.recentSearch;
+      state.foodResultPage = 1;
+      render();
+    });
+  });
+  const clearRecent = document.querySelector("[data-clear-recent-searches]");
+  if(clearRecent) clearRecent.addEventListener("click", ()=>{
+    if(IgnytFoodSearch.clearRecentSearches) IgnytFoodSearch.clearRecentSearches();
+    render();
+  });
+  document.querySelectorAll("[data-food-fav]").forEach(el=>{
+    el.addEventListener("click", (ev)=>{
+      ev.stopPropagation();   // the whole card is a pick target; the star is not
+      const food = lookupFood(el.dataset.foodFav, state.foodSearchQuery);
+      if(!food) return;
+      const key = String(food.name).toLowerCase();
+      const existing = (state.favoriteFoods||[]).findIndex(x=>x && String(x.name).toLowerCase()===key);
+      if(existing >= 0){
+        state.favoriteFoods.splice(existing, 1);
+      }else{
+        // Favourites store one absolute portion, so a per-100g catalogue food is saved at
+        // its default serving rather than at an unstated basis.
+        const grams = food.per ? (food.servingSize || food.per) : null;
+        const v = (grams != null && window.IgnytFoodCatalogue)
+          ? IgnytFoodCatalogue.scale(food, grams) : food;
+        state.favoriteFoods.push({
+          id: nextId(), name: food.name,
+          calories: Number(v.calories)||0, protein: Number(v.protein)||0,
+          carbs: Number(v.carbs)||0, fat: Number(v.fat)||0, fibre: Number(v.fibre)||0
+        });
+      }
+      LS.set("hx_favorite_foods", state.favoriteFoods);
+      render();
+    });
+  });
+
   const foodCancelBtn = document.querySelector("[data-food-search-cancel]");
   if(foodCancelBtn) foodCancelBtn.addEventListener("click", ()=>{
     state.foodSearchSelected = null; state.foodSearchAmount = null; state.foodSearchUnit = "g"; render();
@@ -15818,9 +16009,7 @@ function attachHandlers(){
   if(foodAddBtn) foodAddBtn.addEventListener("click", ()=>{
     const sel = state.foodSearchSelected;
     if(!sel) return;
-    const food = sel.id.indexOf("fav:")===0
-      ? IgnytFoodSearch.search(sel.name,{limit:25}).find(f=>f.id===sel.id)
-      : IgnytFoodDB.byId(sel.id);
+    const food = lookupFood(sel.id, sel.name);
     if(!food) return;
     const scalable = food.per != null;
     const v = scalable ? IgnytFoodDB.scaleFood(food, resolveFoodPortion(food).grams) : food;
