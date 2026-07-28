@@ -7195,13 +7195,17 @@ function renderFoodList(foods, page){
 
   return `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">
       ${shown.map(g=>{
-        if(!g.variants.length) return renderFoodResultCard(g.lead);
+        /* The primary card carries the GROUP's name — "Apple", not whichever USDA record
+           happened to rank first. Its foodId is still the lead's, so tapping it logs a real
+           record rather than an abstraction.
+
+           A group of one gets it too. It used to fall through to the raw display name, which
+           is why "Apples, Red Delicious, with Skin, Raw" still reached the screen: whether a
+           record has siblings has nothing to do with what it should be called. */
+        const label = g.label || (window.IgnytFoodCuration ? IgnytFoodCuration.groupLabel(g.lead) : null);
+        if(!g.variants.length) return renderFoodResultCard(g.lead, label);
         const open = !!(state.expandedVariants||{})[g.key];
         const n = g.variants.length;
-        // The primary card carries the CANONICAL name — "Apple", not whichever USDA record
-        // happened to rank first. Its foodId is still the lead's, so tapping it logs a real
-        // record rather than an abstraction.
-        const label = window.IgnytFoodCuration ? IgnytFoodCuration.groupLabel(g.lead) : null;
         return `<div class="variant-group${open?' is-open':''}">
           ${renderFoodResultCard(g.lead, label)}
           <button class="variant-toggle" data-variant-toggle="${escHtml(g.key)}"
@@ -7210,7 +7214,7 @@ function renderFoodList(foods, page){
             <span class="variant-toggle__chev" aria-hidden="true">⌄</span>
           </button>
           <div class="variant-body${open?' is-open':''}">
-            <div>${open ? sortVariants(g.variants).map(renderFoodResultCard).join("") : ""}</div>
+            <div>${open ? sortVariants(g.variants).map(v=>renderFoodResultCard(v, g.labels && g.labels[v.id])).join("") : ""}</div>
           </div>
         </div>`;
       }).join("")}
@@ -12619,36 +12623,53 @@ function startFoodVoiceSearch(){
 }
 
 /* ---- Scroll preservation across the food routes ------------------------------------
-   render() rebuilds <main> wholesale, so the browser has nothing to restore and the page
-   lands at the top. Anyone logging three foods into Dinner would scroll back down three
-   times.
+   render() replaces the contents of #app wholesale, so the browser has nothing to restore
+   and the page lands at the top. Anyone logging three foods into Dinner would scroll back
+   down three times.
 
-   The offset is captured on the way OUT (opening a route) and restored on the way BACK, and
-   the same pair wraps the in-place operations — delete, duplicate, save — which re-render
-   without changing screen at all.
+   The offset is captured on the way OUT (opening a route) and restored on the way BACK, in
+   closeFoodFlow() — which every exit runs through.
 
-   Restored in requestAnimationFrame rather than immediately: the new DOM exists after
-   render() returns but has not been laid out, so <main> has no scrollHeight yet and any
-   assignment would clamp to 0. One frame later the height is real. No smooth behaviour —
-   this is a restoration, and animating it would draw attention to a movement the user
-   should never notice. */
+   THE PAGE SCROLLS ON THE WINDOW. An earlier version of this read main.scrollTop; there is
+   no <main> in this app and #app has overflow:visible, so every call was a silent no-op
+   against a null element. Verified in the browser: window.scrollTo(0,500) moves
+   documentElement.scrollTop to 500 while #app.scrollTop stays 0.
+
+   Restored in requestAnimationFrame rather than immediately: the new DOM exists as soon as
+   render() returns but has not been laid out, so the document has no height yet and any
+   assignment clamps to 0. One frame later the height is real. No smooth behaviour — this is
+   a restoration, and animating it would draw attention to a movement the reader should never
+   notice. */
 let _nutritionScroll = 0;
 
+function nutritionScroller(){
+  // A scrolling container if the layout ever grows one; the document otherwise.
+  return document.querySelector("main") || document.scrollingElement || document.documentElement;
+}
+
 function captureNutritionScroll(){
-  const main = document.querySelector("main");
-  if(main) _nutritionScroll = main.scrollTop;
+  const el = nutritionScroller();
+  if(el) _nutritionScroll = el.scrollTop;
 }
 
 function restoreNutritionScroll(){
   if(!_nutritionScroll) return;
   const target = _nutritionScroll;
-  requestAnimationFrame(()=>{
-    const main = document.querySelector("main");
-    if(!main) return;
-    // Clamp: the list may be shorter now (a deletion), and asking for an offset past the
-    // end would silently land at the bottom instead of where the content actually is.
-    main.scrollTop = Math.min(target, Math.max(0, main.scrollHeight - main.clientHeight));
-  });
+  const apply = ()=>{
+    const el = nutritionScroller();
+    if(!el) return;
+    // Clamp: the list may be shorter now (a deletion), and asking for an offset past the end
+    // would silently land at the bottom instead of where the content actually is.
+    el.scrollTop = Math.min(target, Math.max(0, el.scrollHeight - el.clientHeight));
+  };
+  /* Two attempts, deliberately. rAF is the right moment — one frame after render(), when the
+     new DOM has been laid out and the document finally has a height. But rAF does not fire at
+     all while the page is not compositing frames, which is observable: with the preview pane
+     hidden, a requestAnimationFrame queued here never ran and the restore silently did not
+     happen. That is precisely the failure this function exists to prevent, so the timeout is
+     the floor under it. Applying the same clamped offset twice is a no-op. */
+  requestAnimationFrame(apply);
+  setTimeout(apply, 50);
 }
 
 /** render() that keeps the reader where they were. For anything that changes the food log
@@ -12692,6 +12713,9 @@ function openFoodDetail(foodId){
 function openLoggedFoodDetail(entryId){
   const entry = foodEntryById(entryId);
   if(!entry) return;
+  // Same capture as openFoodSearch: editing a logged row is a round trip off the tab, and the
+  // reader expects to come back to the row they tapped, not to the top.
+  captureNutritionScroll();
   const food = entry.foodId != null ? lookupFood(entry.foodId, entry.name) : null;
 
   state.foodFlow = {
@@ -12708,11 +12732,19 @@ function openLoggedFoodDetail(entryId){
   state.foodSearchUnit = entry.servingUnit || "g";
 }
 
+/* Every exit from the food routes runs through here — cancel, save, add, duplicate, delete,
+   and the two guards that bail out when an entry has vanished underneath the screen. So the
+   scroll restore lives here rather than at eight call sites, where the eighth would be the
+   one somebody forgot.
+
+   It is scheduled, not applied: each caller renders immediately after this returns, and the
+   restore is a requestAnimationFrame that lands once that render has been laid out. */
 function closeFoodFlow(){
   state.foodFlow = null;
   state.foodSearchSelected = null;
   state.foodSearchQuery = "";
   state.foodBrowseCategory = null;
+  restoreNutritionScroll();
 }
 
 /** Header shared by both routes: back arrow, title, optional trailing control. */
@@ -17754,7 +17786,9 @@ function attachHandlers(){
     const at = Math.min(Math.max(0, lastDeletedFood.index), state.foodLog.length);
     state.foodLog.splice(at, 0, lastDeletedFood.entry);
     lastDeletedFood = null;
-    render();
+    // Undo does not leave the tab, so there is no capture to pair with — this one holds the
+    // reader in place across a re-render that changes the list under them.
+    renderKeepingScroll();
   });
 
   // Nutrition tab

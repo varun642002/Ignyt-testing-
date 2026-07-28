@@ -309,8 +309,56 @@
      Order matters: DERIVED products are listed before the base ingredient, so Apple Juice
      and Apple Pie claim their records before the plain /apple/ rule can.
 
-     Each rule may carry a `notIf` guard for the cases a keyword alone gets wrong.
+     A rule is [pattern, name, notIf, headMust]:
+       notIf     a guard for the cases a keyword alone gets wrong
+       headMust  the food's HEAD NOUN must also match this
+
+     headMust exists because a keyword can appear in a USDA name as an INGREDIENT rather than
+     as the food. Measured, without it, "Whole Milk" claimed 30 records that are not milk:
+     ricotta and mozzarella (made FROM whole milk), Greek yogurt, eighteen puddings and
+     custards, mashed potatoes, and an M&M's bar. Before the merge guard existed they were all
+     folded into one row labelled "Whole Milk" — tapping it logged buttermilk and expanding it
+     offered mashed potato as a variant of milk.
+
+     Two things separate a food from its ingredients, and both are USDA conventions rather
+     than guesses about English:
+
+       subjectOf   drops "prepared with X", "made from X", "X added" — clauses that name what
+                   went INTO the food. What a pudding was made with is not what it is.
+       headOf      takes the first comma segment, because USDA writes "Head, qualifier,
+                   qualifier". "Cheese, Ricotta, Whole Milk" is a cheese. Container words
+                   like "Beverages" and "Snacks" are not foods, so those absorb the segment
+                   after them.
   --------------------------------------------------------- */
+
+  /* Heads that classify rather than name — the food is in the next segment. */
+  var GENERIC_HEADS = /^(beverages?|snacks?|fast\s+foods?|restaurant\s+foods?|meals?\s+entrees?[^,]*|cereals?[^,]*|candies|sweets|soups?|sauces?|desserts?|toppings?|frozen\s+novelties|nuts|seeds|spices|puddings?|alcoholic\s+beverages?|baby\s*food)$/i;
+
+  /** The part of a USDA name that says what the food IS. */
+  function subjectOf(name) {
+    var s = String(name || "").replace(/\s*\([^)]*\)/g, " ");
+    // "…, prepared with whole milk" — an ingredient list, not the food.
+    s = s.replace(/,?\s*\b(prepared|made|reconstituted|mixed|diluted|packed|topped|filled|served)\s+(with|from|in)\b.*$/i, "");
+    // "…, with added ascorbic acid", "…, whole milk and butter added"
+    s = s.replace(/,?\s*\bwith\s+[^,]*\badded\b.*$/i, "");
+    s = s.replace(/,?\s*\b[\w\s%'-]*\badded\s*$/i, "");
+    return s.replace(/\s+/g, " ").trim();
+  }
+
+  /** The head noun of a subject, absorbing a generic classifier if that is all it is. */
+  function headOf(subject) {
+    var parts = String(subject || "").split(",").map(function (p) { return p.trim(); }).filter(Boolean);
+    if (!parts.length) return String(subject || "");
+    var head = parts[0];
+    if (GENERIC_HEADS.test(head) && parts[1]) head += ", " + parts[1];
+    return head;
+  }
+
+  /* Heads that count as milk. Plant milks reach it through the "Beverages, Almond Milk"
+     absorption above. */
+  var HEAD_MILK = /\bmilk\b|\bbuttermilk\b|\bcream\b/i;
+  var HEAD_EGG = /\begg/i;
+
   var CANONICAL_RULES = [
     /* --- derived products first --- */
     [/\bapple\s*(juice|cider)\b|\bjuice.*apple\b/i, "Apple Juice"],
@@ -320,17 +368,20 @@
     [/\bbanana\b.*\b(chips|dried)\b/i, "Dried Banana"],
     [/\borange\s*juice\b/i, "Orange Juice"],
 
-    /* --- eggs, by preparation, because the nutrition genuinely differs --- */
-    [/\begg\b.*\b(hard-boiled|boiled)\b/i, "Boiled Egg"],
-    [/\begg\b.*\bfried\b/i, "Fried Egg"],
-    [/\begg\b.*\bscrambled\b/i, "Scrambled Egg"],
-    [/\begg\b.*\bpoached\b/i, "Poached Egg"],
-    [/\begg\b.*\bwhite\b/i, "Egg White"],
-    [/\begg\b.*\byolk\b/i, "Egg Yolk"],
-    [/^eggs?,\s*(whole|grade)\b/i, "Egg"],
+    /* --- eggs, by preparation, because the nutrition genuinely differs.
+           `eggs?` rather than `egg`: USDA writes both "Egg, whole, …" and "Eggs, Grade A, …",
+           and \begg\b silently missed every plural. --- */
+    [/\beggs?\b.*\b(hard-boiled|boiled)\b/i, "Boiled Egg", null, HEAD_EGG],
+    [/\beggs?\b.*\bfried\b/i, "Fried Egg", null, HEAD_EGG],
+    [/\beggs?\b.*\b(scrambled|omelet|omelette)\b/i, "Scrambled Egg", null, HEAD_EGG],
+    [/\beggs?\b.*\bpoached\b/i, "Poached Egg", null, HEAD_EGG],
+    [/\beggs?\b.*\bwhite\b/i, "Egg White", null, HEAD_EGG],
+    [/\beggs?\b.*\byolk\b/i, "Egg Yolk", null, HEAD_EGG],
+    [/^eggs?,\s*(whole|grade|fresh|raw)\b/i, "Egg"],
+    [/^whole eggs?$/i, "Egg"],
 
-    /* --- chicken, by cut then preparation --- */
-    [/\bchicken\b.*\bbreast\b.*\b(roasted|cooked|grilled)\b/i, "Chicken Breast (Cooked)"],
+    /* --- chicken, by cut. NOT by preparation: the state is derived separately, and a
+           canonical name that also spelled it out produced the same food under two keys. --- */
     [/\bchicken\b.*\bbreast\b/i, "Chicken Breast"],
     [/\bchicken\b.*\bthigh\b/i, "Chicken Thigh"],
     [/\bchicken\b.*\b(wing|wings)\b/i, "Chicken Wings"],
@@ -342,18 +393,18 @@
     [/\brice\b.*\bbrown\b|\bbrown\b.*\brice\b/i, "Brown Rice"],
     [/\bbasmati\b/i, "Basmati Rice"],
     [/\bjasmine\b.*\brice\b/i, "Jasmine Rice"],
-    [/\brice\b.*\bwhite\b.*\bcooked\b|\bwhite\b.*\brice\b.*\bcooked\b/i, "White Rice (Cooked)"],
     [/\brice\b.*\bwhite\b/i, "White Rice"],
 
-    /* --- milk. Plant milks first, or /milk/ would swallow them. --- */
-    [/\balmond\b.*\bmilk\b/i, "Almond Milk"],
-    [/\bsoy\b.*\bmilk\b/i, "Soy Milk"],
-    [/\boat\b.*\bmilk\b/i, "Oat Milk"],
-    [/\bcoconut\b.*\bmilk\b/i, "Coconut Milk"],
-    [/\bbuffalo\b.*\bmilk\b/i, "Buffalo Milk"],
-    [/\bmilk\b.*\b(skim|nonfat|fat free)\b/i, "Skim Milk"],
-    [/\bmilk\b.*\b(lowfat|low fat|1%|2%)\b/i, "Low Fat Milk"],
-    [/\bmilk\b.*\bwhole\b|\bwhole\b.*\bmilk\b/i, "Whole Milk"],
+    /* --- milk. Plant milks first, or /milk/ would swallow them.
+           Every rule is head-scoped: "Cheese, Ricotta, Whole Milk" is a cheese. --- */
+    [/\balmond\b.*\bmilk\b/i, "Almond Milk", null, /\bmilk\b|\balmond\b/i],
+    [/\bsoy\b.*\bmilk\b/i, "Soy Milk", null, /\bmilk\b|\bsoy\b/i],
+    [/\boat\b.*\bmilk\b/i, "Oat Milk", null, /\bmilk\b|\boat\b/i],
+    [/\bcoconut\b.*\bmilk\b/i, "Coconut Milk", null, /\bmilk\b|\bcoconut\b/i],
+    [/\bbuffalo\b.*\bmilk\b/i, "Buffalo Milk", null, HEAD_MILK],
+    [/\bmilk\b.*\b(skim|nonfat|fat free)\b|\b(skim|nonfat)\b.*\bmilk\b/i, "Skim Milk", null, HEAD_MILK],
+    [/\bmilk\b.*\b(lowfat|low fat|1%|2%)\b|\b(lowfat|low fat)\b.*\bmilk\b/i, "Low Fat Milk", null, HEAD_MILK],
+    [/\bmilk\b.*\bwhole\b|\bwhole\b.*\bmilk\b/i, "Whole Milk", null, HEAD_MILK],
 
     /* --- protein supplements --- */
     [/\bwhey\b.*\bisolate\b|\bisolate\b.*\bwhey\b/i, "Whey Isolate"],
@@ -380,9 +431,15 @@
   function canonicalFor(food) {
     var n = String((food && food.name) || "");
     if (!n) return null;
+    var subject = subjectOf(n);
+    if (!subject) return null;
+    var head = headOf(subject);
     for (var i = 0; i < CANONICAL_RULES.length; i++) {
       var r = CANONICAL_RULES[i];
-      if (r[0].test(n) && !(r[2] && r[2].test(n))) return r[1];
+      if (!r[0].test(subject)) continue;
+      if (r[2] && r[2].test(subject)) continue;      // notIf
+      if (r[3] && !r[3].test(head)) continue;        // headMust
+      return r[1];
     }
     return null;
   }
@@ -416,55 +473,268 @@
    * things that were the same food, while letting through things that were not. State is
    * the property that actually matters.
    */
-  var PREP_STATES = [
-    [/\b(dehydrated|freeze[- ]dried|dried)\b/i, "dried"],
-    [/\b(concentrate|undiluted)\b/i, "concentrate"],
-    [/\b(cooked|boiled|roasted|grilled|fried|baked|steamed|stewed|braised)\b/i, "cooked"],
-    [/\b(canned|tinned)\b/i, "canned"],
-    [/\b(frozen)\b/i, "frozen"],
-    [/\b(powder|powdered)\b/i, "powder"],
-    [/\b(raw|fresh|uncooked)\b/i, "raw"]
+  /* PREPARATION STATE — four bugs were traced to this table and all four were the same
+     mistake in different clothes: it treated state as a single value chosen by whichever
+     pattern happened to be listed first.
+
+       BUG 1  /concentrate|undiluted/ matched BOTH the frozen concentrate (166 kcal) and the
+              ready-to-drink juice made "from concentrate" (47). Opposite things sharing a
+              keyword. Ready-to-drink phrasings are now matched first and carry no state,
+              because reconstituted juice is just juice.
+
+       BUG 2  "Apples, Dried, Sulfured, Stewed" is BOTH cooked and dried. Returning the first
+              match filed it with plain dried apple at three times its calories. A food can
+              be in more than one state, so every match is collected.
+
+       BUG 3  "prepared" was absent from the cooked pattern, so "Long-Grain White Rice
+              (Prepared)" at 124 kcal grouped with raw rice at 380.
+
+       BUG 4  "Chicken Breast (Cooked)" appeared as two rows — one from a canonical rule that
+              spelled the state into the name, one from the state being appended. Canonical
+              names no longer name states; there is one source for it.
+
+     COOKING METHOD IS PART OF THE STATE. The brief is explicit that boiled must not merge
+     with fried, nor grilled with roasted, and it is right: chicken breast is 187 kcal fried
+     and 151 boiled. So each method is its own state and the generic "cooked" applies only
+     when no method is named — USDA writes "cooked, roasted", and the method is the useful
+     half. */
+
+  /* Phrasings that look like a state but are not one. Checked first; they claim the name and
+     stop the real patterns from seeing it. */
+  var STATE_EXEMPT = [
+    /\bfrom concentrate\b/i,          // reconstituted — this is the drink, not the syrup
+    /\breconstituted\b/i,
+    /\bdiluted\b(?!.*\bundiluted\b)/i,
+    /\bready[- ]to[- ]drink\b/i
   ];
 
+  var COOK_METHODS = [
+    [/\b(deep[- ]fried|pan[- ]fried|stir[- ]fried|fried)\b/i, "fried"],
+    [/\b(roasted|oven[- ]roasted|roast)\b/i, "roasted"],
+    [/\b(grilled|broiled|barbecued|barbequed|tandoori)\b/i, "grilled"],
+    [/\bpoached\b/i, "poached"],
+    [/\b(hard[- ]boiled|soft[- ]boiled|boiled|simmered)\b/i, "boiled"],
+    [/\bbaked\b/i, "baked"],
+    [/\bsteamed\b/i, "steamed"],
+    [/\b(stewed|braised|curried)\b/i, "stewed"],
+    [/\b(sauteed|sautéed)\b/i, "sauteed"],
+    [/\bmicrowaved\b/i, "microwaved"],
+    [/\b(scrambled|omelet|omelette)\b/i, "scrambled"]
+  ];
+
+  /* Everything that is not a cooking method. `dried` before `cooked` is deliberate but no
+     longer load-bearing — every match is kept, so order only affects how the label reads. */
+  var PREP_STATES = [
+    [/\b(concentrate|undiluted)\b/i, "concentrate"],
+    [/\b(dehydrated|freeze[- ]dried|sun[- ]dried|dried)\b/i, "dried"],
+    [/\b(canned|tinned)\b/i, "canned"],
+    [/\bfrozen\b/i, "frozen"],
+    [/\b(powder|powdered)\b/i, "powder"],
+    [/\b(smoked)\b/i, "smoked"],
+    [/\b(raw|fresh|uncooked|unprepared)\b/i, "raw"]
+  ];
+
+  /* The generic. Only reached when no COOK_METHOD named the method.
+     "Commercially prepared" is a manufacturing note, not a preparation — it appears on shelf
+     bread and turned "Chapati or Roti, plain, commercially prepared" into "Chapati (Cooked)",
+     which is both redundant and wrong about what distinguishes it. */
+  var GENERIC_COOKED = /\b(cooked|prepared|home\s*recipe)\b/i;
+  var NOT_COOKED = /\b(commercially|industrially|freshly)\s+prepared\b/i;
+
+  /**
+   * Every preparation state that applies to a food, joined with "+".
+   * @returns {string} "" when the name says nothing about preparation.
+   */
   function preparationState(food) {
     var n = String((food && food.name) || "");
-    for (var i = 0; i < PREP_STATES.length; i++) {
-      if (PREP_STATES[i][0].test(n)) return PREP_STATES[i][1];
+    if (!n) return "";
+    var exempt = STATE_EXEMPT.some(function (re) { return re.test(n); });
+
+    var found = [];
+    var add = function (s) { if (s && found.indexOf(s) === -1) found.push(s); };
+
+    var method = null;
+    for (var m = 0; m < COOK_METHODS.length; m++) {
+      if (COOK_METHODS[m][0].test(n)) { method = COOK_METHODS[m][1]; break; }
     }
-    return "";
+    if (method) add(method);
+    else if (GENERIC_COOKED.test(n) && !NOT_COOKED.test(n)) add("cooked");
+
+    for (var i = 0; i < PREP_STATES.length; i++) {
+      if (exempt && PREP_STATES[i][1] === "concentrate") continue;   // "from concentrate"
+      if (PREP_STATES[i][0].test(n)) add(PREP_STATES[i][1]);
+    }
+
+    /* "raw" alongside a cooking method is contradictory wording in the source name — USDA
+       writes "meat and skin, raw" on records it then also marks cooked. The processing is
+       the real state. */
+    if (found.length > 1) found = found.filter(function (s) { return s !== "raw"; });
+    return found.join("+");
+  }
+
+  /* The state that still needs SAYING, given what the canonical name already says. A rule
+     named "Dried Apple" has already told the user it is dried; repeating it produces
+     "Dried Apple (Dried)". Subtraction is per part, not on the whole string, so
+     "Dried Apple" + "dried+stewed" correctly leaves "stewed" rather than matching nothing. */
+  function residualState(food, canon) {
+    var parts = preparationState(food).split("+").filter(Boolean);
+    if (!canon) return parts;
+    var lc = canon.toLowerCase();
+    return parts.filter(function (p) { return lc.indexOf(p) === -1; });
+  }
+
+  function stateLabel(parts) {
+    return parts.map(function (p) { return p.charAt(0).toUpperCase() + p.slice(1); }).join(" & ");
+  }
+
+  /* The name a group is built around: the canonical one where a rule claims the food, and
+     otherwise the display name with its preparation parenthetical removed — that parenthetical
+     is exactly what the state mechanism is about to re-derive.
+
+     Foods with no canonical rule used to stop there, which meant the state never applied to
+     them: "Whey, Acid, Dried" (339 kcal) and "Whey, Acid, Fluid" (24) both reduced to
+     "Acid Whey" and collided on one key. The state is a property of the FOOD, not of whether
+     someone has written a naming rule for it. */
+  function baseNameFor(food) {
+    return canonicalFor(food) || displayName(food).replace(/\s*\([^)]*\)\s*$/, "").trim();
   }
 
   function groupKey(food) {
-    var canon = canonicalFor(food);
-    if (!canon) return displayName(food).replace(/\s*\([^)]*\)\s*$/, "").trim().toLowerCase();
-    var state = preparationState(food);
-    /* Canonical names that already NAME their state ("White Rice (Cooked)", "Boiled Egg")
-       must not have it appended twice, or the same food splits into two groups. */
-    if (state && canon.toLowerCase().indexOf(state) !== -1) state = "";
-    return canon.toLowerCase() + (state ? "|" + state : "");
+    var base = baseNameFor(food);
+    var parts = residualState(food, base);
+    return base.toLowerCase() + (parts.length ? "|" + parts.join("+") : "");
   }
 
   /** The label for a group. The preparation state is shown when it distinguishes this group
-   *  from another with the same canonical name — "Brown Rice" and "Brown Rice (Cooked)" are
-   *  two rows, and the user needs to be able to tell which is which. */
+   *  from another with the same base name — "Brown Rice" and "Brown Rice (Boiled)" are two
+   *  rows, and the user needs to be able to tell which is which. */
   function groupLabel(food) {
-    var canon = canonicalFor(food);
-    if (!canon) return displayName(food).replace(/\s*\([^)]*\)\s*$/, "").trim();
-    var state = preparationState(food);
-    if (!state || canon.toLowerCase().indexOf(state) !== -1) return canon;
-    return canon + " (" + state.charAt(0).toUpperCase() + state.slice(1) + ")";
+    var base = baseNameFor(food);
+    var parts = residualState(food, base);
+    return parts.length ? base + " (" + stateLabel(parts) + ")" : base;
+  }
+
+  /* ---------------------------------------------------------
+     The merge guard
+
+     A key says two records are the same FOOD in the same STATE. It cannot say they are the
+     same PRODUCT: "Chicken Breast (Roasted)" legitimately covers both a roasted breast at
+     197 kcal and a fat-free sliced deli roll at 79, and folding the second under the first
+     would hide a different product behind a toggle showing the wrong numbers.
+
+     Energy is the check because it is the one field every record has and the one the user is
+     looking at. The tolerance is relative to the lead with an absolute floor, so a 12-vs-18
+     kcal pair of lettuces is not split over 50%.
+
+     Serving unit is deliberately NOT part of the guard. Every record in this database stores
+     nutrition per 100 g and the serving calculator converts through grams, so a group holding
+     both a "piece" portion and a "cup" portion differs in how it is *offered*, not in what it
+     is. Gating on it would split 2,249 gram-portioned foods from 2,210 piece-portioned ones
+     for no nutritional reason. Measured: 82 such groups, all benign.
+  --------------------------------------------------------- */
+  var ENERGY_TOL_PCT = 30;
+  var ENERGY_TOL_ABS = 25;
+
+  var SOURCE_LABELS = { usda: "USDA", ifct: "IFCT", seed: "IGNYT" };
+  function sourceLabel(food) {
+    if (food && food.brand) return String(food.brand);
+    return SOURCE_LABELS[food && food.source] || "Other";
+  }
+
+  function mergeable(lead, food) {
+    var a = lead && typeof lead.calories === "number" ? lead.calories : null;
+    var b = food && typeof food.calories === "number" ? food.calories : null;
+    if (a === null || b === null) return true;          // no basis to object
+    var abs = Math.abs(a - b);
+    if (abs <= ENERGY_TOL_ABS) return true;
+    return (abs / Math.max(a, 1)) * 100 <= ENERGY_TOL_PCT;
   }
 
   /**
    * @param {Array} foods already ranked, best first
-   * @returns {Array<{lead:object, variants:Array, key:string}>}
+   * @returns {Array<{lead:object, variants:Array, key:string, label:string}>}
    */
   function groupVariants(foods) {
-    var order = [], byKey = Object.create(null);
+    var order = [], byKey = Object.create(null), usedLabels = Object.create(null);
+
+    /* Two rows reading the same thing is the same defect whether it came from a canonical
+       rule or from a split, so uniqueness is enforced once, here, over whatever the naming
+       produced. A row the guard split off is by definition not the same product as the one
+       it was split from, and its own name says so better than a numbered canonical does. */
+    function claimLabel(preferred, food) {
+      var candidates = [preferred, displayName(food), String(food && food.name || preferred)];
+      for (var i = 0; i < candidates.length; i++) {
+        var c = candidates[i];
+        if (c && !usedLabels[c.toLowerCase()]) { usedLabels[c.toLowerCase()] = 1; return c; }
+      }
+      return candidates[candidates.length - 1];
+    }
+
+    var byBase = Object.create(null);
     (foods || []).forEach(function (f) {
       var k = groupKey(f);
-      if (!byKey[k]) { byKey[k] = { key: k, lead: f, variants: [] }; order.push(byKey[k]); }
-      else byKey[k].variants.push(f);
+      var bucket = byKey[k] || (byKey[k] = []);
+
+      var target = null;
+      for (var i = 0; i < bucket.length; i++) {
+        if (mergeable(bucket[i].lead, f)) { target = bucket[i]; break; }
+      }
+      if (target) { target.variants.push(f); return; }
+
+      var base = baseNameFor(f);
+      var g = {
+        key: bucket.length ? k + "#" + bucket.length : k,
+        lead: f,
+        variants: [],
+        base: base,
+        split: bucket.length > 0
+      };
+      byBase[base.toLowerCase()] = (byBase[base.toLowerCase()] || 0) + 1;
+      bucket.push(g);
+      order.push(g);
+    });
+
+    /* Labels last, because whether a state needs saying depends on what else is on screen.
+       "(Raw)" on the only banana pepper in the results tells the reader nothing — raw is what
+       a banana pepper is unless something says otherwise. It stays on "Egg (Raw)" because
+       "Egg (Dried)" is right underneath it and the two are 400 kcal apart.
+
+       Only "raw" is ever dropped. A processing state is never implied by the food's name, so
+       hiding "(Cooked)" from the only cooked oats on screen would leave 71 kcal sitting under
+       a label the reader would read as the 379 kcal one. */
+    order.forEach(function (g) {
+      var preferred;
+      if (g.split) {
+        preferred = displayName(g.lead);
+      } else {
+        var parts = residualState(g.lead, g.base);
+        var alone = byBase[g.base.toLowerCase()] === 1;
+        if (alone && parts.length === 1 && parts[0] === "raw") parts = [];
+        preferred = parts.length ? g.base + " (" + stateLabel(parts) + ")" : g.base;
+      }
+      g.label = claimLabel(preferred, g.lead);
+
+      /* Variants need the same treatment inside their own group. displayName keeps only the
+         first two descriptors, so "Chicken, Broiler, Rotisserie, BBQ, Breast, Meat Only" and
+         "…, Meat and Skin" both reduce to "Rotisserie Broiler Chicken" — two rows reading
+         identically, 31 kcal apart, with the words that told them apart discarded. Where the
+         short name is already taken, the full USDA name is used: unlovely, but this is behind
+         "View variants", which is exactly where the brief allows the raw naming to show. */
+      var taken = Object.create(null);
+      taken[g.label.toLowerCase()] = 1;
+      g.labels = Object.create(null);
+      g.labels[g.lead.id] = g.label;
+      g.variants.forEach(function (v) {
+        var short = displayName(v), full = String(v.name || short);
+        var chosen = short && !taken[short.toLowerCase()] ? short : full;
+        /* Last resort: the same food arriving from two datasets — a seed record called
+           "Boiled Egg" and USDA's "Egg, Whole, Cooked, Hard-Boiled", both 155 kcal. No part
+           of either NAME tells them apart, so the only honest distinguisher left is where the
+           number came from. */
+        if (taken[String(chosen).toLowerCase()]) chosen = full + " (" + sourceLabel(v) + ")";
+        taken[String(chosen).toLowerCase()] = 1;
+        g.labels[v.id] = chosen;
+      });
     });
     return order;
   }
@@ -479,6 +749,7 @@
     groupVariants: groupVariants,
     groupKey: groupKey,
     groupLabel: groupLabel,
+    preparationState: preparationState,
     canonicalFor: canonicalFor,
     CANONICAL_RULES: CANONICAL_RULES,
     COMMON_FOODS: COMMON_FOODS,
