@@ -69,9 +69,15 @@
 /* Light theme: primary reference target -- cool blue-gray background, white elevated
    cards, dark navy text, bright blue interactive accent. */
 [data-theme="light"] {
-  --color-bg:#f4f6fa; --color-surface:#ffffff; --color-surface-elevated:#ffffff;
-  --color-surface-pressed:#eef1f7; --color-text-primary:#12172b;
-  --color-text-secondary:#5b6478; --color-border:#e3e7ef; --shadow-card:0 8px 24px rgba(20,30,60,.06);
+  /* Aligned with the [data-theme="light"] block in index.html so the two palettes cannot
+     drift apart — they style the same screens and a mismatch shows up as one card being a
+     slightly different white from its neighbour. */
+  --color-bg:#F3F5F7; --color-surface:#FFFFFF; --color-surface-elevated:#FFFFFF;
+  --color-surface-pressed:#EDF1F6; --color-text-primary:#1F2937;
+  --color-text-body:#4B5563;
+  --color-text-secondary:#6B7280; --color-text-placeholder:#9CA3AF;
+  --color-border:#E7EBF0; --color-divider:#E8ECF2;
+  --shadow-card:0 6px 24px rgba(31,41,55,.07);
   --color-interactive: #2f6fed; --color-interactive-strong: #1f5adf; --color-interactive-soft: rgba(47,111,237,.12);
 }
 /* AMOLED theme -- Phase 1 ask ("future AMOLED theme"): true-black background/surfaces for
@@ -120,6 +126,8 @@
   --rh-purple: #A78BFA; --rh-green: var(--color-success); --rh-red: var(--color-error);
 }
 [data-theme="light"] .home-light, [data-theme="light"] .wk-light, [data-theme="light"] .pg-light {
-  --rh-bg:#F7F9FC; --rh-card:#FFFFFF; --rh-blue:#2563EB; --rh-text:#0F172A; --rh-muted:#64748B;
-  --rh-border:#E9EDF3; --rh-purple:#7C3AED; --rh-green:#16A34A; --rh-red:#EF4444;
+  /* Same ground and text scale as the other two light palettes. Blue is left exactly as it
+     was — it is the interactive colour on these screens and the brief asked not to touch it. */
+  --rh-bg:#F3F5F7; --rh-card:#FFFFFF; --rh-blue:#2563EB; --rh-text:#1F2937; --rh-muted:#6B7280;
+  --rh-border:#E7EBF0; --rh-purple:#7C3AED; --rh-green:#16A34A; --rh-red:#EF4444;
 }

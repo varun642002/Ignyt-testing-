@@ -76,12 +76,16 @@
   --sheen: rgba(255,255,255,.055);
 }
 [data-theme="light"]{
-  /* On white the shadow does the work and the highlight would be invisible, so it is
-     dropped to near-nothing rather than left to make cards look milky. */
-  --lift-1: 0 1px 2px rgba(16,16,26,.06);
-  --lift-2: 0 2px 10px rgba(16,16,26,.07), 0 1px 2px rgba(16,16,26,.05);
-  --lift-3: 0 12px 32px rgba(16,16,26,.11), 0 2px 6px rgba(16,16,26,.06);
-  --sheen: rgba(255,255,255,.6);
+  /* Soft and wide, not dark and tight — 6-8% opacity, 24-32 px blur, 6-10 px drop. A tight
+     dark shadow on a light ground reads as dirt under the card rather than lift. The tint is
+     the heading colour rather than pure black, which keeps the shadow from going grey-green
+     against the cool ground. */
+  --lift-1: 0 1px 3px rgba(31,41,55,.05);
+  --lift-2: 0 6px 24px rgba(31,41,55,.07);
+  --lift-3: 0 10px 32px rgba(31,41,55,.08);
+  /* A white card on a white-ish ground needs no top highlight; it would only make the card
+     look milky. On light, the shadow and the ground do all the separating. */
+  --sheen: transparent;
 }
 
 /* ---------------------------------------------------------
@@ -107,8 +111,15 @@
   outline: 1px solid rgba(255,255,255,.03);
   outline-offset: -1px;
 }
-[data-theme="light"] .nut-card{ outline-color: rgba(16,16,26,.05); }
+/* On light, the border is the specified #E7EBF0 and it is genuinely subtle — it exists to
+   define the card's edge where a shadow alone is too soft to read, not to draw a box. */
+[data-theme="light"] .nut-card{ outline-color: var(--border); }
 .nut-card--tight{ padding: var(--space-sm) var(--space-md); }
+
+/* Sections get room to breathe. The dashboard is a stack of cards, and the gap between them
+   is what separates "calories" from "meals" as ideas, not just as boxes. */
+.nut-card + .eyebrow-label,
+.nut-strip + .nut-card{ margin-top: var(--space-md); }
 
 /* A row of small equal cards that scrolls sideways rather than wrapping, because a wrapped
    half-row reads as broken rather than as more content. */
@@ -701,6 +712,27 @@
 /* The sticky footer is fixed; animating it would detach it from the bottom edge. */
 .food-page > .food-sticky{ animation: none; }
 
+.food-hero,
+.macro-row,
+.food-search-bar{
+  /* Same edge treatment as .nut-card so every floating surface reads as one family. */
+  outline: 1px solid transparent;
+  outline-offset: -1px;
+}
+[data-theme="light"] .food-hero,
+[data-theme="light"] .macro-row,
+[data-theme="light"] .food-search-bar,
+[data-theme="light"] .nut-stat,
+[data-theme="light"] [data-food-browse],
+[data-theme="light"] .log-row.is-just-added{ outline-color: var(--border); }
+
+/* Dividers are lighter than borders: a border separates a card from the page, a divider
+   separates two rows that belong to each other. */
+[data-theme="light"] .divide,
+[data-theme="light"] .log-row + .log-row,
+[data-theme="light"] .food-row + .food-row,
+[data-theme="light"] .macro-row__cell + .macro-row__cell{ border-color: var(--divider); }
+
 .food-hero{
   background: linear-gradient(180deg, var(--sheen) 0%, transparent 42%), var(--surface);
   box-shadow: var(--lift-2);
@@ -744,6 +776,13 @@ main{ -webkit-overflow-scrolling: touch; }
    Tightened tracking on the large numbers (large type needs less letter-spacing than small
    type to read as evenly set) and opened it slightly on the small uppercase labels, which
    need the opposite. --- */
+/* Body copy sits one step lighter than headings. Previously both used --text, so a food
+   name and the paragraph explaining it carried identical weight and nothing led. The token
+   falls back to --text on dark, where the four-step scale is not defined. */
+.log-row__name,
+.food-row__name,
+.micro-row > span:first-child{ color: var(--text-body, var(--text)); }
+
 .nut-value--hero{ letter-spacing: -.03em; }
 .nut-value--lg{ letter-spacing: -.025em; }
 .nut-label{ letter-spacing: .09em; }

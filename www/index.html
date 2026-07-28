@@ -24,11 +24,33 @@
     --border:#33333d; --kb-inset:0px; --pin-height:0px;
   }
 
+/* Light theme.
+
+     The ground is a cool grey rather than white so that white CARDS become the thing you
+     look at. On a white-on-white page a card has to earn its edge with a border; on a grey
+     ground it only needs a shadow, which is why this reads as calmer while using less ink.
+
+     Text runs on four steps rather than two: headings, body, secondary, placeholder. The
+     old palette had only --text and --muted, so body copy and headings shared a near-black
+     and everything competed. --text is now the heading weight; --text-body carries running
+     text; --muted is secondary. */
 [data-theme="light"]{
-    --bg:#F5F5F7; --surface:#FFFFFF; --surface-alt:#ECECF1;
-    --accent:#E24E15; --steel:#1F6E9C; --text:#16161A; --muted:#6B6B76; --mint:#188F5D;
-    --border:#DEDEE4;
+    --bg:#F3F5F7; --surface:#FFFFFF; --surface-alt:#EDF1F6;
+    --accent:#E24E15; --steel:#1F6E9C; --mint:#188F5D;
+    --text:#1F2937; --text-body:#4B5563; --muted:#6B7280; --placeholder:#9CA3AF;
+    --border:#E7EBF0; --divider:#E8ECF2;
+
+    /* Soft and wide rather than dark and tight: 6-8% opacity, 24-32px blur, 6-10px drop.
+       A heavy shadow on a light ground reads as dirt under the card instead of lift. */
+    --shadow-sm: 0 1px 3px rgba(31,41,55,.05);
+    --shadow-md: 0 6px 24px rgba(31,41,55,.07);
+    --shadow-lg: 0 10px 32px rgba(31,41,55,.08);
+    --shadow-card: var(--shadow-md);
   }
+
+/* Placeholders are the lightest step in the scale — present enough to read as a hint,
+   quiet enough never to be mistaken for a filled value. */
+[data-theme="light"] ::placeholder{ color:var(--placeholder); opacity:1; }
 
 [data-theme="light"] .timer-ring{ color:#16161A; }
 
