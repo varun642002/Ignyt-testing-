@@ -833,3 +833,67 @@ main{ -webkit-overflow-scrolling: touch; }
   display: grid; place-items: center;
 }
 .meal-add:active{ transform: scale(.92); }
+
+
+/* =========================================================
+   VARIANT GROUPS
+
+   One primary result with its near-identical siblings folded behind a toggle. The group is a
+   single surface rather than separate cards, so an expanded variant reads as part of its
+   parent rather than as another search result.
+========================================================= */
+.variant-group{
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.variant-group .food-row{ padding-left: var(--space-xs); padding-right: var(--space-xs); }
+
+.variant-toggle{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  min-height: 36px;
+  padding: 8px;
+  border: 0;
+  border-top: 1px solid var(--surface-alt);
+  background: transparent;
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.variant-toggle:active{ background: var(--primary-soft); }
+.variant-toggle__chev{
+  display: inline-block;
+  font-size: 12px;
+  transition: transform .22s cubic-bezier(.34,1.4,.64,1);
+}
+.variant-group.is-open .variant-toggle__chev{ transform: rotate(180deg); }
+
+/* grid-template-rows 0fr -> 1fr rather than max-height: no guessed ceiling, so a group with
+   two variants and one with twenty both animate correctly and neither clips. */
+.variant-body{
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows .22s cubic-bezier(.34,1.4,.64,1),
+    opacity .18s ease;
+}
+.variant-body > *{ overflow: hidden; min-height: 0; }
+.variant-body.is-open{ grid-template-rows: 1fr; opacity: 1; }
+
+/* Variants are visually subordinate to the food they belong to. */
+.variant-body .food-row{
+  background: var(--surface-alt);
+  padding-left: var(--space-md);
+}
+.variant-body .food-row__name{ font-size: 12px; }
+
+@media (prefers-reduced-motion: reduce){
+  .variant-body, .variant-toggle__chev{ transition: none !important; }
+}

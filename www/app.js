@@ -4602,6 +4602,8 @@ const state = {
   coachExpanded: false, recoveryExpanded: false,
   // Manual food entry on the search route (transient).
   manualEntryOpen: false,
+  // Which variant groups are expanded, keyed by group key (transient).
+  expandedVariants: {},
   /* The two full-screen food routes. null means the dashboard.
      { screen:"search"|"detail", meal, foodId, notes } — all transient, so a fresh visit to
      the tab always lands on the dashboard rather than resuming a half-finished entry. */
@@ -7149,14 +7151,67 @@ function renderFoodResultCard(f){
   </div>`;
 }
 
-/** Paged list plus a "show more" control. */
+/* Variant ordering inside an expanded group. Uses the curation tiers rather than a second
+   ranking system, so "what ranks first" has one definition in the codebase. Favourites and
+   recently-used come first because those are the user's own foods, ahead of anything the
+   database thinks is important. */
+function sortVariants(foods){
+  const C = window.IgnytFoodCuration;
+  if(!C) return foods;
+  const favs = Object.create(null);
+  (state.favoriteFoods||[]).forEach(f=>{ if(f && f.name) favs[String(f.name).toLowerCase()] = 1; });
+  const recent = Object.create(null);
+  (state.foodLog||[]).slice(0,60).forEach(e=>{ if(e && e.name) recent[String(e.name).toLowerCase()] = 1; });
+
+  return foods.slice().sort((a,b)=>{
+    const an = String(a.name).toLowerCase(), bn = String(b.name).toLowerCase();
+    if(!!favs[an] !== !!favs[bn]) return favs[an] ? -1 : 1;
+    if(!!recent[an] !== !!recent[bn]) return recent[an] ? -1 : 1;
+    const ar = C.tierOf(a, {}).rank, br = C.tierOf(b, {}).rank;
+    if(ar !== br) return ar - br;
+    return C.displayName(a).localeCompare(C.displayName(b));
+  });
+}
+
+/** Paged list of GROUPS, each collapsing its near-identical variants.
+ *
+ *  Paging counts groups rather than foods — a page of 12 that turned out to be one food and
+ *  eleven of its variants would be a page showing one thing.
+ *
+ *  Grouping runs once here, before render, so expanding a group is a re-render of markup the
+ *  search already produced rather than a second search. */
 function renderFoodList(foods, page){
-  const shown = foods.slice(0, page * FOOD_PAGE_SIZE);
+  const C = window.IgnytFoodCuration;
+  if(!C || !C.groupVariants){
+    const shown = foods.slice(0, page * FOOD_PAGE_SIZE);
+    return `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">
+        ${shown.map(renderFoodResultCard).join("")}
+      </div>`;
+  }
+
+  const groups = C.groupVariants(foods);
+  const shown = groups.slice(0, page * FOOD_PAGE_SIZE);
+
   return `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">
-      ${shown.map(renderFoodResultCard).join("")}
+      ${shown.map(g=>{
+        if(!g.variants.length) return renderFoodResultCard(g.lead);
+        const open = !!(state.expandedVariants||{})[g.key];
+        const n = g.variants.length;
+        return `<div class="variant-group${open?' is-open':''}">
+          ${renderFoodResultCard(g.lead)}
+          <button class="variant-toggle" data-variant-toggle="${escHtml(g.key)}"
+            aria-expanded="${open?'true':'false'}">
+            <span>${open?'Hide':'View'} ${n} variant${n===1?'':'s'}</span>
+            <span class="variant-toggle__chev" aria-hidden="true">⌄</span>
+          </button>
+          <div class="variant-body${open?' is-open':''}">
+            <div>${open ? sortVariants(g.variants).map(renderFoodResultCard).join("") : ""}</div>
+          </div>
+        </div>`;
+      }).join("")}
     </div>
-    ${foods.length > shown.length ? `<button class="btn btn-ghost" data-food-more="1" style="width:100%;padding:7px;font-size:12px;margin-bottom:8px;">
-      Show more (${foods.length - shown.length} remaining)</button>` : ""}`;
+    ${groups.length > shown.length ? `<button class="btn btn-ghost" data-food-more="1" style="width:100%;padding:7px;font-size:12px;margin-bottom:8px;">
+      Show more (${groups.length - shown.length} remaining)</button>` : ""}`;
 }
 
 function renderFoodCategoryGrid(){
@@ -18070,6 +18125,18 @@ function commitSelectedFood(meal){
 }
 
 function bindFoodResultHandlers(){
+    /* Variant expansion. Swaps only the results container, so the search input keeps focus
+       and the keyboard stays up — the same reason typing does not call render(). */
+    document.querySelectorAll("[data-variant-toggle]").forEach(el=>{
+      el.addEventListener("click", (ev)=>{
+        ev.stopPropagation();          // the group contains pickable rows
+        const k = el.dataset.variantToggle;
+        if(!state.expandedVariants) state.expandedVariants = {};
+        if(state.expandedVariants[k]) delete state.expandedVariants[k];
+        else state.expandedVariants[k] = true;
+        updateFoodSearchResults();
+      });
+    });
     document.querySelectorAll("[data-food-pick]").forEach(el=>{
       el.addEventListener("click", ()=>{
         const id = el.dataset.foodPick;
