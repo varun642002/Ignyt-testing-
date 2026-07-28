@@ -60,7 +60,7 @@
       <span style="color:${color};">${svg(icon, 18)}</span>
       <div style="font-size:18px;font-weight:800;margin-top:8px;">${value}${unit ? `<span style="font-size:11px;font-weight:600;color:var(--rh-muted);"> ${unit}</span>` : ''}</div>
       <div style="font-size:11px;color:var(--rh-muted);font-weight:600;margin-top:1px;">${label}</div>
-      <div style="font-size:10px;color:var(--rh-muted);font-weight:600;margin-top:1px;">${goalText}</div>
+      <div style="font-size:11px;color:var(--rh-muted);font-weight:600;margin-top:1px;">${goalText}</div>
     </div>`;
 
     const quickAction = (icon, color, label, attrs) => `<button class="rh-quick-card" style="padding:12px 4px;" ${attrs}>
@@ -83,7 +83,7 @@
               <div style="font-size:17px;font-weight:800;">${weeklyGoalPct}%</div>
             </div>
           </div>
-          <div style="font-size:10px;color:var(--rh-muted);font-weight:700;text-align:center;margin-top:4px;">Weekly Goal</div>
+          <div style="font-size:11px;color:var(--rh-muted);font-weight:700;text-align:center;margin-top:4px;">Weekly Goal</div>
         </div>
       </div>
 
@@ -110,8 +110,8 @@
         ${daysLeft != null ? `<div style="flex:none;border-left:1px solid var(--rh-border);padding-left:14px;text-align:center;">
           <div style="font-size:11px;color:var(--rh-blue);font-weight:700;">Days Left</div>
           <div style="font-size:22px;font-weight:800;margin-top:2px;">${daysLeft}</div>
-          <div style="font-size:10px;color:var(--rh-muted);margin-top:1px;">days left</div>
-          <div style="font-size:10px;color:var(--rh-muted);font-weight:700;margin-top:10px;">Target Date</div>
+          <div style="font-size:11px;color:var(--rh-muted);margin-top:1px;">days left</div>
+          <div style="font-size:11px;color:var(--rh-muted);font-weight:700;margin-top:10px;">Target Date</div>
           <div style="font-size:11px;font-weight:700;margin-top:1px;white-space:nowrap;">${new Date(goalCompute.completion).toLocaleDateString('default',{day:'2-digit',month:'short',year:'numeric'})}</div>
         </div>` : ''}
       </div>` : `
@@ -138,7 +138,7 @@
         const bar = (label, val, target, color) => {
           const pct = target > 0 ? Math.min(100, Math.round((val / target) * 100)) : 0;
           return `<div style="flex:1;min-width:0;">
-            <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">
               <span style="color:${color};font-weight:700;">${label}</span>
               <span style="color:var(--rh-muted);font-family:'SF Mono',monospace;">${Math.round(val)}g</span>
             </div>

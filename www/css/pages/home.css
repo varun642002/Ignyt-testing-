@@ -38,7 +38,7 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 .rh-hero__workout-sub { font-size:12px; color:var(--rh-muted); margin-top:2px; }
 .rh-hero__recovery { flex:none; display:flex; flex-direction:column; align-items:center; }
 .rh-hero__recovery-value { font-size:14px; font-weight:800; margin-top:6px; }
-.rh-hero__recovery-label { font-size:10px; color:var(--rh-blue); font-weight:700; margin-top:1px; white-space:nowrap; }
+.rh-hero__recovery-label { font-size:11px; color:var(--rh-blue); font-weight:700; margin-top:1px; white-space:nowrap; }
 .rh-hero__actions { display:flex; gap:10px; margin-top:16px; }
 .rh-btn { border:none; border-radius:12px; font-weight:700; font-size:14px; padding:13px 16px; cursor:pointer; flex:1; text-align:center; }
 .rh-btn--primary { background:var(--rh-blue); color:#fff; }
@@ -65,8 +65,8 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 .ov-tile__value { font-size:19px; font-weight:800; margin-top:10px; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ov-tile__unit { font-size:11px; font-weight:600; color:var(--rh-muted); margin-left:2px; }
 .ov-tile__label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:2px; }
-.ov-tile__goal { font-size:10px; color:#B6BEC9; font-weight:600; margin-top:1px; }
-.ov-tile__trend { font-size:10px; font-weight:700; margin-top:6px; }
+.ov-tile__goal { font-size:11px; color:#B6BEC9; font-weight:600; margin-top:1px; }
+.ov-tile__trend { font-size:11px; font-weight:700; margin-top:6px; }
 .ov-tile__trend.is-up { color:var(--rh-green); }
 .ov-tile__trend.is-down { color:var(--rh-red); }
 
@@ -91,8 +91,8 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 .rh-habit-card__icon { display:flex; width:30px; height:30px; border-radius:50%; align-items:center; justify-content:center; background:#EEF1F6; color:var(--rh-muted); }
 .rh-habit-card__icon.is-done { background:rgba(22,163,74,.12); color:var(--rh-green); }
 .rh-habit-card__name { font-size:13px; font-weight:700; margin-top:8px; overflow-wrap:anywhere; }
-.rh-habit-card__streak { font-size:10px; color:var(--rh-muted); margin-top:2px; }
-.rh-habit-card__state { font-size:10px; font-weight:700; color:var(--rh-muted); margin-top:6px; }
+.rh-habit-card__streak { font-size:11px; color:var(--rh-muted); margin-top:2px; }
+.rh-habit-card__state { font-size:11px; font-weight:700; color:var(--rh-muted); margin-top:6px; }
 .rh-habits-empty { display:block; width:100%; text-align:left; border:1px solid var(--rh-border); cursor:pointer; }
 .rh-habits-empty__title { font-size:14px; font-weight:800; }
 .rh-habits-empty__sub { font-size:12px; color:var(--rh-muted); margin-top:3px; line-height:1.4; }
@@ -103,7 +103,7 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 .rh-gauge-card { scroll-snap-align:start; flex:none; width:96px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px 10px; display:flex; flex-direction:column; align-items:center; text-align:center; }
 .rh-gauge-card__value { font-size:14px; font-weight:800; margin-top:8px; }
 .rh-gauge-card__label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:1px; }
-.rh-gauge-card__sub { font-size:10px; font-weight:700; margin-top:2px; }
+.rh-gauge-card__sub { font-size:11px; font-weight:700; margin-top:2px; }
 
 /* Ring gauge: conic-gradient donut, --pct (0-100) and --gauge-color set inline per instance. */
 .rh-gauge { width:44px; height:44px; border-radius:50%; flex:none; display:grid; place-items:center;

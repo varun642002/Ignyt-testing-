@@ -41,7 +41,7 @@
 .pg-stat-card__value { font-size:20px; font-weight:800; margin-top:10px; letter-spacing:-.02em; }
 .pg-stat-card__unit { font-size:11px; font-weight:600; color:var(--rh-muted); margin-left:2px; }
 .pg-stat-card__label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:2px; }
-.pg-stat-card__sub { font-size:10px; font-weight:700; color:#B6BEC9; margin-top:5px; }
+.pg-stat-card__sub { font-size:11px; font-weight:700; color:#B6BEC9; margin-top:5px; }
 .pg-stat-card__sub.is-up { color:var(--rh-green); }
 .pg-stat-card__sub.is-down { color:var(--rh-red); }
 
@@ -70,12 +70,12 @@
 
 /* ---------- Heatmap ---------- */
 .pg-heatmap__row { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:4px; }
-.pg-heatmap__row--labels span { font-size:9px; color:var(--rh-muted); text-align:center; font-weight:700; }
+.pg-heatmap__row--labels span { font-size:11px; color:var(--rh-muted); text-align:center; font-weight:700; }
 .pg-heatmap__cell { display:block; width:100%; aspect-ratio:1; border-radius:4px; background:#EEF1F6; }
 .pg-tier-1 { background:#BFDBFE; }
 .pg-tier-2 { background:#60A5FA; }
 .pg-tier-3 { background:#2563EB; }
-.pg-heatmap__legend { display:flex; align-items:center; gap:4px; margin-top:8px; font-size:10px; color:var(--rh-muted); font-weight:600; }
+.pg-heatmap__legend { display:flex; align-items:center; gap:4px; margin-top:8px; font-size:11px; color:var(--rh-muted); font-weight:600; }
 .pg-heatmap__legend .pg-heatmap__cell { width:12px; height:12px; flex:none; }
 
 /* ---------- Weekly goal ring ---------- */
@@ -96,7 +96,7 @@
 .pg-pr-card__name { font-size:12px; color:var(--rh-muted); font-weight:600; margin-top:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pg-pr-card__value { font-size:18px; font-weight:800; margin-top:2px; }
 .pg-pr-card__delta { font-size:11px; font-weight:700; color:var(--rh-green); margin-top:2px; }
-.pg-pr-card__date { font-size:10px; color:var(--rh-muted); margin-top:4px; }
+.pg-pr-card__date { font-size:11px; color:var(--rh-muted); margin-top:4px; }
 
 /* ---------- Quick access grid ---------- */
 .pg-quick-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
@@ -112,7 +112,7 @@
 .pg-quick-card__icon { display:flex; width:34px; height:34px; border-radius:10px; align-items:center; justify-content:center; flex:none; }
 .pg-quick-card__body { flex:1; min-width:0; }
 .pg-quick-card__title { font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.pg-quick-card__sub { font-size:10px; color:var(--rh-muted); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pg-quick-card__sub { font-size:11px; color:var(--rh-muted); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pg-quick-card__chev { color:var(--rh-muted); font-size:16px; flex:none; }
 
 @media (max-width:374px) { .pg-card-row { grid-template-columns:1fr; } }

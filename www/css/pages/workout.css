@@ -10,7 +10,7 @@
    inline flow -- the root cause of the column-misalignment/cramped-input
    reports below. Color/theme stays in the .wk-light block further down;
    this block is the un-themed structural layer every theme sits on top of. */
-.set-table-header { display:grid; align-items:center; gap:6px; padding:2px 6px 6px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+.set-table-header { display:grid; align-items:center; gap:6px; padding:2px 6px 6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
 .set-table-header span:last-child { text-align:center; } /* the empty header cell above the check column */
 
 .set-row-wrap { position:relative; border-radius:10px; overflow:hidden; margin-bottom:6px; touch-action:pan-y; }
@@ -38,7 +38,7 @@
 .set-num { width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:9px; font-size:15px; }
 .set-prev { text-align:center; font-size:11px; padding:0 2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .set-prev-stack { display:flex; flex-direction:column; align-items:center; gap:1px; min-width:0; }
-.set-prev-1rm { font-size:9px; color:var(--rh-green,#16A34A); font-weight:700; }
+.set-prev-1rm { font-size:11px; color:var(--rh-green,#16A34A); font-weight:700; }
 
 .set-input { font-variant-numeric:tabular-nums; width:100%; min-width:0; box-sizing:border-box; height:38px;
   border-radius:9px; text-align:center; font-size:16px; font-weight:700; padding:0 4px;
@@ -126,7 +126,7 @@
 .wk-stat-card__value { font-size:20px; font-weight:800; margin-top:10px; letter-spacing:-.02em; }
 .wk-stat-card__unit { font-size:11px; font-weight:600; color:var(--rh-muted); margin-left:2px; }
 .wk-stat-card__label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:2px; }
-.wk-stat-card__sub { font-size:10px; font-weight:700; color:#B6BEC9; margin-top:3px; }
+.wk-stat-card__sub { font-size:11px; font-weight:700; color:#B6BEC9; margin-top:3px; }
 .wk-stat-card__sub.is-up { color:var(--rh-green); }
 .wk-stat-card__sub.is-down { color:var(--rh-red); }
 
@@ -148,12 +148,12 @@
 .wk-routine-card__body { flex:1; min-width:0; padding-right:76px; }
 .wk-routine-card__top { display:flex; align-items:center; gap:8px; }
 .wk-routine-card__name { font-size:16px; font-weight:800; overflow-wrap:anywhere; }
-.wk-badge-today { font-size:10px; font-weight:800; color:var(--rh-blue); background:rgba(37,99,235,.1); border-radius:6px; padding:2px 6px; flex:none; }
+.wk-badge-today { font-size:11px; font-weight:800; color:var(--rh-blue); background:rgba(37,99,235,.1); border-radius:6px; padding:2px 6px; flex:none; }
 .wk-routine-card__meta { display:flex; gap:12px; flex-wrap:wrap; margin-top:4px; font-size:12px; color:var(--rh-muted); font-weight:600; }
 .wk-routine-card__meta span { display:flex; align-items:center; gap:4px; }
 .wk-routine-card__preview { font-size:12px; color:var(--rh-muted); margin-top:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .wk-routine-card__foot { display:flex; align-items:flex-end; justify-content:space-between; margin-top:12px; }
-.wk-routine-card__last-label { font-size:10px; color:var(--rh-muted); font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+.wk-routine-card__last-label { font-size:11px; color:var(--rh-muted); font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
 .wk-routine-card__last-value { font-size:13px; font-weight:700; margin-top:2px; }
 .wk-routine-card__actions { position:absolute; top:10px; right:10px; display:flex; gap:2px; }
 .wk-routine-card__actions .del { min-width:30px; min-height:30px; padding:4px; color:var(--rh-muted); }
@@ -171,7 +171,7 @@
 .wk-ring { width:40px; height:40px; border-radius:50%; flex:none; display:grid; place-items:center;
   background:conic-gradient(var(--ring-color,#2563EB) calc(var(--pct,0) * 1%), #EEF1F6 0); }
 .wk-ring__inner { width:31px; height:31px; border-radius:50%; background:var(--rh-card); display:flex; align-items:center; justify-content:center;
-  font-size:9px; font-weight:800; color:var(--rh-text); }
+  font-size:11px; font-weight:800; color:var(--rh-text); }
 
 /* ---------- Recent sessions ---------- */
 .wk-session-row { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; cursor:pointer;
@@ -239,7 +239,7 @@
 .wk-light .live-stats-bar { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; box-shadow:0 2px 10px rgba(15,23,42,.06); margin:12px 0 4px; }
 .wk-light .live-stat { display:flex; flex-direction:column; }
 .wk-light .live-stat + .live-stat { border-left:1px solid var(--rh-border); padding-left:14px; }
-.wk-light .live-stat-label { color:var(--rh-muted); font-size:10px; }
+.wk-light .live-stat-label { color:var(--rh-muted); font-size:11px; }
 .wk-light .live-stat-value { color:var(--rh-text); }
 .wk-light .live-stat-unit { color:var(--rh-muted); }
 
@@ -299,7 +299,7 @@
 }
 .rt-set-row--head { margin-bottom:4px; }
 .rt-set-row--head span {
-  font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
   color:var(--color-text-secondary); text-align:center;
 }
 .rt-set-row--head span:first-child { text-align:left; }
@@ -324,7 +324,7 @@
 /* ---- Rest / notes ---- */
 .rt-field-row { display:flex; align-items:center; justify-content:space-between; gap:var(--space-xs); margin-top:12px; }
 .rt-label {
-  display:block; font-size:10px; font-weight:700; letter-spacing:.1em;
+  display:block; font-size:11px; font-weight:700; letter-spacing:.1em;
   text-transform:uppercase; color:var(--color-text-secondary); margin-top:12px;
 }
 .rt-field-row .rt-label { margin-top:0; }
@@ -390,7 +390,7 @@
   flex-shrink:0; font-family:'SF Mono',ui-monospace,monospace; font-weight:800;
   font-size:16px; padding:5px 10px; border-radius:10px; line-height:1;
 }
-.coach-badge__unit { font-size:9px; font-weight:600; opacity:.7; }
+.coach-badge__unit { font-size:11px; font-weight:600; opacity:.7; }
 .coach-badge--high   { background:rgba(22,163,74,.12); color:var(--rh-green); }
 .coach-badge--normal { background:rgba(37,99,235,.12); color:var(--rh-blue); }
 .coach-badge--reduced{ background:rgba(217,119,6,.14); color:#D97706; }
@@ -459,7 +459,7 @@
 .rec-map__bar i[data-status="Recovering"] { background:#D97706; }
 .rec-map__bar i[data-status="Fatigued"]   { background:var(--rh-red); }
 .rec-map__eta {
-  font-family:'SF Mono',ui-monospace,monospace; font-size:10px; color:var(--rh-muted);
+  font-family:'SF Mono',ui-monospace,monospace; font-size:11px; color:var(--rh-muted);
   white-space:nowrap; font-variant-numeric:tabular-nums;
 }
 

@@ -199,7 +199,7 @@
         var n = st[0], active = n <= s, current = n === s;
         var circle = '<div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex:none;' +
           (active ? "background:var(--rh-blue);color:#fff;" : "background:var(--rh-card);color:var(--rh-muted);border:1px solid var(--rh-border);") + '">' + n + '</div>';
-        var label = '<div style="font-size:10px;font-weight:' + (current ? 800 : 600) + ';color:' + (current ? "var(--rh-text)" : "var(--rh-muted)") + ';margin-top:5px;white-space:nowrap;text-align:center;">' + st[1] + '</div>';
+        var label = '<div style="font-size:11px;font-weight:' + (current ? 800 : 600) + ';color:' + (current ? "var(--rh-text)" : "var(--rh-muted)") + ';margin-top:5px;white-space:nowrap;text-align:center;">' + st[1] + '</div>';
         var connector = i < steps.length - 1 ? '<div style="flex:1;height:1px;background:' + (n < s ? "var(--rh-blue)" : "var(--rh-border)") + ';margin:15px 6px 0;"></div>' : '';
         return '<div style="display:flex;flex-direction:column;align-items:center;">' + circle + label + '</div>' + connector;
       }).join('') + '</div>';
@@ -257,8 +257,8 @@
           '<div><div style="font-size:11px;color:var(--rh-muted);">Target date</div><div style="font-size:13px;font-weight:800;margin-top:4px;">' + (cp.completion ? fmtDate(cp.completion) : "—") + '</div></div>' +
           '</div>' +
           '<div style="display:flex;gap:14px;margin-top:14px;border-top:1px solid var(--rh-border);padding-top:12px;">' +
-          '<div style="flex:1;display:flex;align-items:center;gap:8px;"><span style="flex:none;color:var(--rh-green);">' + svg("trend", 16) + '</span><div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Required weekly ' + (tgtW < curW ? "loss" : "gain") + '</div><div style="font-size:13px;font-weight:800;color:var(--rh-green);">' + paceAbs + ' ' + wUnit() + '/week</div></div></div>' +
-          '<div style="flex:1;display:flex;align-items:center;gap:8px;"><span style="flex:none;color:' + paceColor + ';">' + svg("check", 16) + '</span><div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Goal pace</div><div style="font-size:13px;font-weight:800;color:' + paceColor + ';">' + pace + '</div></div></div>' +
+          '<div style="flex:1;display:flex;align-items:center;gap:8px;"><span style="flex:none;color:var(--rh-green);">' + svg("trend", 16) + '</span><div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Required weekly ' + (tgtW < curW ? "loss" : "gain") + '</div><div style="font-size:13px;font-weight:800;color:var(--rh-green);">' + paceAbs + ' ' + wUnit() + '/week</div></div></div>' +
+          '<div style="flex:1;display:flex;align-items:center;gap:8px;"><span style="flex:none;color:' + paceColor + ';">' + svg("check", 16) + '</span><div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Goal pace</div><div style="font-size:13px;font-weight:800;color:' + paceColor + ';">' + pace + '</div></div></div>' +
           '</div>' +
           '<div style="margin-top:14px;background:' + (pace === "Healthy" ? "rgba(22,163,74,.08)" : "rgba(217,119,6,.08)") + ';border-radius:10px;padding:12px;display:flex;gap:10px;align-items:flex-start;">' +
           '<span style="flex:none;font-size:18px;">' + (pace === "Healthy" ? "🚀" : "⚠️") + '</span>' +
@@ -401,7 +401,7 @@
     h += '<div class="pg-card" style="margin-top:12px;display:flex;align-items:center;gap:16px;">' +
       '<div class="pg-ring" style="--pct:' + (pct || 0) + ';--ring-color:var(--rh-blue);width:96px;height:96px;flex:none;">' +
       '<div class="pg-ring__inner" style="width:76px;height:76px;flex-direction:column;">' +
-      '<div style="font-size:20px;font-weight:800;">' + (pct == null ? "—" : pct + "%") + '</div><div style="font-size:9px;color:var(--rh-muted);font-weight:700;">Complete</div></div></div>' +
+      '<div style="font-size:20px;font-weight:800;">' + (pct == null ? "—" : pct + "%") + '</div><div style="font-size:11px;color:var(--rh-muted);font-weight:700;">Complete</div></div></div>' +
       '<div style="flex:1;min-width:0;">' +
       '<div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Current Weight</div><div style="font-size:19px;font-weight:800;margin-bottom:6px;">' + (cur != null ? dW(cur) + " " + wUnit() : "—") + '</div>' +
       '<div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Target Weight</div><div style="font-size:19px;font-weight:800;">' + (g.targetWeight != null ? dW(g.targetWeight) + " " + wUnit() : "—") + '</div>' +
@@ -453,7 +453,7 @@
       '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin-bottom:8px;">Body Metrics</div>' +
       '<div class="pf-progress-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));">' +
       '<div class="pf-progress-item"><div class="pf-progress-item__head">Lean Mass</div><div class="pf-progress-item__value">' + (c.lbm != null ? c.lbm : "—") + '<span class="pf-progress-item__unit"> kg</span></div></div>' +
-      '<div class="pf-progress-item"><div class="pf-progress-item__head">BMI</div><div style="display:flex;align-items:center;gap:8px;"><div class="pf-progress-item__value">' + (c.bmi != null ? c.bmi : "—") + '</div>' + (bmiCat ? '<span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:' + bmiColor + '1a;color:' + bmiColor + ';">' + bmiCat + '</span>' : "") + '</div></div>' +
+      '<div class="pf-progress-item"><div class="pf-progress-item__head">BMI</div><div style="display:flex;align-items:center;gap:8px;"><div class="pf-progress-item__value">' + (c.bmi != null ? c.bmi : "—") + '</div>' + (bmiCat ? '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:' + bmiColor + '1a;color:' + bmiColor + ';">' + bmiCat + '</span>' : "") + '</div></div>' +
       '</div></div>' +
       '<div style="font-size:11px;color:var(--rh-muted);margin:8px 2px 0;">These targets drive your Nutrition and Home calorie/macro goals automatically.</div>';
 

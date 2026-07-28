@@ -43,7 +43,7 @@
 /* Plate visualizer -- proportionally-sized colored blocks, biggest plate closest to the bar. */
 .plate-stack { display:flex; align-items:center; gap:2px; height:64px; margin:14px 0; padding:0 4px; }
 .plate-stack__bar { width:10px; height:8px; background:var(--rh-muted,var(--color-text-secondary)); border-radius:2px; flex:none; }
-.plate-block { border-radius:3px; flex:none; display:flex; align-items:center; justify-content:center; color:#fff; font-size:9px; font-weight:800; }
+.plate-block { border-radius:3px; flex:none; display:flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:800; }
 
 /* Shared empty state (icon + message + optional action) -- see emptyState() in app.js.
    Global, not page-scoped: every *-light screen's --rh-muted-style text still reads through
@@ -183,6 +183,33 @@
 .hu-sum-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-bottom:6px; }
 .hu-sum { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:10px 6px; text-align:center; min-width:0; }
 .hu-sum__v { font-size:22px; font-weight:900; }
-.hu-sum__l { font-size:10px; font-weight:700; color:var(--color-text-secondary); margin-top:2px; }
+.hu-sum__l { font-size:11px; font-weight:700; color:var(--color-text-secondary); margin-top:2px; }
 .hu-src { display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:var(--color-surface-elevated); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:14px; margin-bottom:8px; font-size:15px; font-weight:600; color:var(--color-text-primary); cursor:pointer; }
 .hu-src:active { background:var(--color-surface-pressed); }
+
+
+/* =========================================================
+   TOUCH TARGETS (§33)
+
+   The audit found five controls under 32px tall across the app. 44px is the accessibility
+   guideline and is applied to primary actions; 32px is the floor below which a control is
+   genuinely hard to hit, and is applied broadly — a universal 44 would break the dense chip
+   rows this app relies on for filters and quick-add.
+
+   Scoped to #app so nothing outside the shell is affected.
+========================================================= */
+#app button,
+#app [role="button"],
+#app select,
+#app input[type="checkbox"],
+#app input[type="radio"] {
+  min-height: 32px;
+}
+
+#app .btn,
+#app .wk-primary-btn,
+#app .food-sticky__btn,
+#app .coach-toggle,
+#app .btn-block {
+  min-height: 44px;
+}

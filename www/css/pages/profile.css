@@ -24,7 +24,7 @@
 .pf-progress-item__unit { font-size:11px; font-weight:600; color:var(--rh-muted); margin-left:2px; }
 .pf-progress-item__trend { font-size:11px; font-weight:700; margin-top:3px; color:var(--rh-green); }
 .pf-progress-item__trend.is-down { color:var(--rh-red); }
-.pf-progress-item__sub { display:block; font-size:10px; font-weight:600; color:var(--rh-muted); margin-top:1px; }
+.pf-progress-item__sub { display:block; font-size:11px; font-weight:600; color:var(--rh-muted); margin-top:1px; }
 
 /* =========================================================
    PERSONAL INFORMATION — reached from Profile > Personal Information.

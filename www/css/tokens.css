@@ -52,7 +52,45 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --nav-height: 72px;
-  --font-size-xs: 11px; --font-size-sm: 13px; --font-size-md: 15px;
+  /* =========================================================
+   TYPE SCALE
+
+   AUDIT, 2026-07-28: the app carried 26 distinct pixel font sizes across 1,095
+   declarations, of which 613 were inline styles in app.js. The five tokens below already
+   existed and were almost never used. 130 declarations sat below 11px — 101 at 10px, 26 at
+   9px, 3 at 8px — which is under the floor for comfortable reading on a phone.
+
+   Three weights were doing one job: 600 (96 uses), 700 (234) and 800 (232) are visually
+   near-identical at these sizes, so "semibold or bold?" was decided 562 times with no rule.
+
+   The scale below names a role for every step so the question has an answer. --font-size-*
+   are kept and extended rather than replaced, because a parallel set is exactly the fracture
+   that already happened with colour on this project.
+
+   FLOOR IS 11px. Nothing in the app should render smaller. 10px was being used for
+   metadata that people genuinely need to read — serving sizes, macro splits, timestamps.
+========================================================= */
+--text-caption: 11px;    /* metadata, units, timestamps — the floor */
+--text-label:   12px;    /* uppercase labels, chips, secondary rows */
+--text-body-sm: 13px;    /* dense body text, list rows */
+--text-body:    15px;    /* default reading size */
+--text-title:   17px;    /* card titles */
+--text-heading: 20px;    /* section headings */
+--text-display: 24px;    /* page titles */
+--text-hero:    30px;    /* the one number a screen is about */
+
+/* Two weights, not three. Regular for body, bold for anything that leads. 900 stays for the
+   large numerics where it reads as a different thing rather than a heavier version. */
+--weight-body: 400;
+--weight-bold: 700;
+--weight-numeric: 900;
+
+/* Line height by density, not by guesswork — 12 different values were in use. */
+--leading-tight: 1.25;   /* headings and large numbers */
+--leading-snug:  1.4;    /* card text */
+--leading-body:  1.55;   /* paragraphs */
+
+--font-size-xs: 11px; --font-size-sm: 13px; --font-size-md: 15px;
   --font-size-lg: 18px; --font-size-xl: 24px; --font-size-2xl: 30px;
   /* Borders -- audited: app.js only ever used 1px and 1.5px, so this is already consistent;
      tokenized for new code so a third ad-hoc value doesn't creep in. */

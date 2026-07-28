@@ -5805,7 +5805,7 @@ function renderBodyDistribution(weekOffset){
     const active = dates.has(dStr);
     const isToday = dStr===todayStr0;
     strip += `<div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
-      <span style="font-size:10px;color:var(--rh-muted);font-weight:700;">${dayLabels[i]}</span>
+      <span style="font-size:11px;color:var(--rh-muted);font-weight:700;">${dayLabels[i]}</span>
       <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
         font-size:12px;font-weight:800;font-family:'SF Mono',monospace;
         background:${active?'rgba(217,119,6,.15)':'transparent'};
@@ -5951,7 +5951,7 @@ function weeklyBarChart(buckets, metric){
       const bh = Math.max(val>0?4:0, Math.round((val/max)*90));
       const label = (showAllLabels || isLast) ? fmt(val) : "";
       return `<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;overflow:hidden;">
-        <span class="mono" style="font-size:10px;font-weight:700;color:${isLast?'var(--accent)':'var(--steel)'};min-height:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</span>
+        <span class="mono" style="font-size:11px;font-weight:700;color:${isLast?'var(--accent)':'var(--steel)'};min-height:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</span>
         <div style="width:${buckets.length>20?'85%':'65%'};border-radius:var(--radius-2xs) 4px 0 0;background:${isLast?'#FF5A1F':'#4FA8D8'};height:${bh}px;"></div>
       </div>`;
     }).join("")}
@@ -5977,7 +5977,7 @@ function dailyBarChart(buckets, metric, weekOffset){
       const isToday = i===todayIdx;
       const bh = Math.max(val>0?4:0, Math.round((val/max)*90));
       return `<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;">
-        <span class="mono" style="font-size:10px;font-weight:700;color:var(--rh-text);min-height:12px;">${fmt(val)}</span>
+        <span class="mono" style="font-size:11px;font-weight:700;color:var(--rh-text);min-height:12px;">${fmt(val)}</span>
         <div style="width:60%;border-radius:var(--radius-2xs) 4px 0 0;background:${isToday?'#D97706':'var(--rh-blue)'};height:${bh}px;"></div>
       </div>`;
     }).join("")}
@@ -6115,13 +6115,13 @@ function axisAreaChart(points, opts={}){
   const gridlines = Array.from({length:ySteps+1},(_,i)=>{
     const v = yMin + (yMax-yMin)*(i/ySteps), y = padT + (1-i/ySteps) * (h-padT-padB);
     return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="var(--rh-border)" stroke-width="1"/>
-      <text x="2" y="${(y+3).toFixed(1)}" font-size="9" fill="var(--rh-muted)">${v.toFixed(yDecimals)}</text>`;
+      <text x="2" y="${(y+3).toFixed(1)}" font-size="11" fill="var(--rh-muted)">${v.toFixed(yDecimals)}</text>`;
   }).join('');
   const dots = coords.map((c,i)=>`<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.5" fill="${color}"/>`).join('');
   // Show at most 7 x-axis labels so dense ranges (90D/1Y) never overlap.
   const labelStep = Math.max(1, Math.ceil(points.length/7));
   const xLabels = points.map((p,i)=> (i%labelStep===0 || i===points.length-1) ?
-    `<text x="${coords[i].x.toFixed(1)}" y="${h-6}" font-size="9" fill="var(--rh-muted)" text-anchor="middle">${p.label}</text>` : '').join('');
+    `<text x="${coords[i].x.toFixed(1)}" y="${h-6}" font-size="11" fill="var(--rh-muted)" text-anchor="middle">${p.label}</text>` : '').join('');
   const last = coords[coords.length-1], lastVal = points[points.length-1].value;
   return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
     ${gridlines}
@@ -7163,13 +7163,13 @@ function renderFoodCategoryGrid(){
   const cats = cat.categories();
   if(!cats.length) return "";
   return `
-    <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Browse by category</div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Browse by category</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;margin-bottom:10px;">
       ${cats.map(c=>`<button class="cat-chip" data-food-browse="${escHtml(c.name)}"
         style="margin:0;flex-direction:column;align-items:flex-start;text-align:left;padding:8px;gap:2px;">
         <span style="font-size:15px;line-height:1;">${foodCategoryIcon(c.name)}</span>
         <span style="font-size:11px;font-weight:700;line-height:1.2;">${escHtml(c.name)}</span>
-        <span class="mono" style="font-size:9px;color:var(--muted);">${c.count}</span>
+        <span class="mono" style="font-size:11px;color:var(--muted);">${c.count}</span>
       </button>`).join("")}
     </div>`;
 }
@@ -7189,7 +7189,7 @@ function renderNutritionRow(row, isServing){
     <td style="padding:4px 0;font-size:12px;color:${row.major?'var(--text)':'var(--muted)'};font-weight:${row.major?'700':'400'};">${escHtml(row.label)}</td>
     <td class="mono" style="padding:4px 0;text-align:right;font-size:12px;color:${dim?'var(--muted)':(row.key==='calories'?'var(--accent)':'var(--text)')};font-weight:${row.major?'700':'400'};">${N.format(row.key, row.serving)}</td>
     <td class="mono" style="padding:4px 0 4px 10px;text-align:right;font-size:11px;color:var(--muted);">${N.format(row.key, row.per100)}</td>
-    <td class="mono" style="padding:4px 0 4px 8px;text-align:right;font-size:10px;color:var(--muted);width:38px;">${row.percentDV!=null?row.percentDV+"%":""}</td>
+    <td class="mono" style="padding:4px 0 4px 8px;text-align:right;font-size:11px;color:var(--muted);width:38px;">${row.percentDV!=null?row.percentDV+"%":""}</td>
   </tr>`;
 }
 
@@ -7321,7 +7321,7 @@ function renderFoodDetail(food, meal){
         ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(food, 44) : ""}
         <div style="min-width:0;flex:1;margin-left:${window.IgnytFoodImages?'10px':'0'};">
           <div style="font-size:14px;font-weight:800;line-height:1.3;">${escHtml(food.name)}</div>
-          <div class="mono" style="font-size:10px;color:var(--muted);margin-top:3px;">
+          <div class="mono" style="font-size:11px;color:var(--muted);margin-top:3px;">
             ${escHtml(food.category||"")}${food.brand?` · ${escHtml(food.brand)}`:""}${scalable?` · per ${food.per} g basis`:" · saved portion"}
           </div>
         </div>
@@ -7354,24 +7354,24 @@ function renderFoodDetail(food, meal){
         </div>
       ` : `<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Saved favourite — logged as one portion.</div>`}
 
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:2px;">Nutrition facts</div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:2px;">Nutrition facts</div>
       <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
         <tr>
-          <th style="text-align:left;font-size:9px;text-transform:uppercase;color:var(--muted);font-weight:700;padding-bottom:2px;">Nutrient</th>
-          <th style="text-align:right;font-size:9px;text-transform:uppercase;color:var(--muted);font-weight:700;padding-bottom:2px;">${scalable?"Serving":"Portion"}</th>
-          <th style="text-align:right;font-size:9px;text-transform:uppercase;color:var(--muted);font-weight:700;padding:0 0 2px 10px;">Per 100 g</th>
-          <th style="text-align:right;font-size:9px;text-transform:uppercase;color:var(--muted);font-weight:700;padding:0 0 2px 8px;">%DV</th>
+          <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);font-weight:700;padding-bottom:2px;">Nutrient</th>
+          <th style="text-align:right;font-size:11px;text-transform:uppercase;color:var(--muted);font-weight:700;padding-bottom:2px;">${scalable?"Serving":"Portion"}</th>
+          <th style="text-align:right;font-size:11px;text-transform:uppercase;color:var(--muted);font-weight:700;padding:0 0 2px 10px;">Per 100 g</th>
+          <th style="text-align:right;font-size:11px;text-transform:uppercase;color:var(--muted);font-weight:700;padding:0 0 2px 8px;">%DV</th>
         </tr>
         ${calc.rows.map(r=>renderNutritionRow(r)).join("")}
       </table>
-      <div style="font-size:9px;color:var(--muted);margin-bottom:8px;line-height:1.4;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.4;">
         — means the value was never measured for this food, not zero. %DV against FDA adult
         reference values; sugar has none because USDA reports total sugars and the DV covers added sugars.
       </div>
 
       ${check.ok ? `
         <div style="background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:8px 10px;margin-bottom:8px;">
-          <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:2px;">Adding to ${escHtml(meal)}</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:2px;">Adding to ${escHtml(meal)}</div>
           <div style="font-size:12px;font-weight:700;">${escHtml(food.name)}</div>
           <div class="mono" style="font-size:11px;color:var(--muted);margin-top:2px;">
             ${scalable?escHtml(N.describeServing(food, check.amount, check.unit)):"1 portion"} ·
@@ -7387,7 +7387,7 @@ function renderFoodDetail(food, meal){
       </div>
 
       <div style="display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;">
-        <span style="font-size:10px;color:var(--muted);align-self:center;flex-shrink:0;margin-right:2px;">Quick add:</span>
+        <span style="font-size:11px;color:var(--muted);align-self:center;flex-shrink:0;margin-right:2px;">Quick add:</span>
         ${mealTypes().filter(m=>m!==meal).map(m=>`<button class="cat-chip" data-food-quick-meal="${escHtml(m)}" style="margin:0;flex-shrink:0;" ${check.ok?"":"disabled"}>${escHtml(m)}</button>`).join("")}
       </div>
     </div>`;
@@ -7476,8 +7476,8 @@ function foodSearchResultsHtml(meal){
 
       ${idle && recentSearches.length ? `
         <div class="row-between" style="margin-bottom:5px;">
-          <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Recent searches</span>
-          <button class="cat-chip" data-clear-recent-searches="1" style="margin:0;padding:2px 8px;font-size:10px;color:var(--muted);">Clear</button>
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Recent searches</span>
+          <button class="cat-chip" data-clear-recent-searches="1" style="margin:0;padding:2px 8px;font-size:11px;color:var(--muted);">Clear</button>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
           ${recentSearches.slice(0,12).map(s=>`<button class="cat-chip" data-recent-search="${escHtml(s)}" style="margin:0;">${escHtml(s)}</button>`).join("")}
@@ -7791,7 +7791,7 @@ function calorieRingSvg(consumed, budget, kcalP, kcalC, kcalF){
     ${segs}
     <text x="${size/2}" y="${size/2 - 1}" text-anchor="middle" font-size="21" font-weight="900"
       fill="var(--text)" font-family="'SF Mono',ui-monospace,monospace">${consumed.toLocaleString()}</text>
-    <text x="${size/2}" y="${size/2 + 15}" text-anchor="middle" font-size="9"
+    <text x="${size/2}" y="${size/2 + 15}" text-anchor="middle" font-size="11"
       fill="var(--muted)">kcal eaten</text>
   </svg>`;
 }
@@ -8441,7 +8441,7 @@ function computeAdaptiveRecommendation(){
 function renderAdaptiveRecommendationBanner(rec){
   if(!rec) return "";
   return `<div class="info-box" style="padding:12px 14px;margin-bottom:12px;border-left:3px solid var(--accent);">
-    <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:4px;">Recommendation</div>
+    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:4px;">Recommendation</div>
     <div style="font-size:13px;color:var(--text);line-height:1.4;">${obEsc(rec.text)}</div>
   </div>`;
 }
@@ -9232,13 +9232,13 @@ function hcInsightTile(label, value, unit, period, permissionMissing, icon) {
     return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;padding:14px;">
       <span class="tl-card__icon" style="flex:none;background:${icon.bg};color:${icon.color};">${svg(icon.icon,20)}</span>
       <div style="flex:1;min-width:0;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);letter-spacing:.02em;">${label}</div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);letter-spacing:.02em;">${label}</div>
         <div style="font-size:${dim?'14px':'19px'};font-weight:800;margin-top:3px;color:${dim?'var(--rh-muted)':'var(--rh-text)'};">${rhText}</div>
-        <div style="font-size:10px;font-weight:600;color:var(--rh-muted);text-transform:uppercase;margin-top:2px;">${period}</div>
+        <div style="font-size:11px;font-weight:600;color:var(--rh-muted);text-transform:uppercase;margin-top:2px;">${period}</div>
       </div>
     </div>`;
   }
-  return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value" style="font-size:${dim ? '13px' : '20px'};color:${dim ? 'var(--muted)' : 'var(--text)'};">${text}</div><div style="font-size:10px;color:var(--muted);margin-top:2px;font-weight:700;text-transform:uppercase;">${period}</div></div>`;
+  return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value" style="font-size:${dim ? '13px' : '20px'};color:${dim ? 'var(--muted)' : 'var(--text)'};">${text}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;font-weight:700;text-transform:uppercase;">${period}</div></div>`;
 }
 
 const INSIGHT_ICON_META = {
@@ -9378,9 +9378,9 @@ function renderHealthDashboard() {
         return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;padding:14px;">
           <span class="tl-card__icon" style="flex:none;background:${icon.bg};color:${icon.color};">${svg(icon.icon,20)}</span>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);letter-spacing:.02em;">${label}</div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);letter-spacing:.02em;">${label}</div>
             <div style="font-size:${dim?'14px':'19px'};font-weight:800;margin-top:3px;color:${dim?'var(--rh-muted)':'var(--rh-text)'};">${displayValue}</div>
-            <div style="font-size:10px;font-weight:600;color:var(--rh-muted);text-transform:uppercase;margin-top:2px;">${sub}</div>
+            <div style="font-size:11px;font-weight:600;color:var(--rh-muted);text-transform:uppercase;margin-top:2px;">${sub}</div>
           </div>
         </div>`;
       }).join("")}
@@ -9988,7 +9988,7 @@ function obChipMulti(fieldPath, options){
 }
 
 function obLabel(text, hint){
-  return `<label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;">${obEsc(text)}</label>${hint?`<div style="font-size:11px;color:var(--muted);margin:-2px 0 8px;">${obEsc(hint)}</div>`:''}`;
+  return `<label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;">${obEsc(text)}</label>${hint?`<div style="font-size:11px;color:var(--muted);margin:-2px 0 8px;">${obEsc(hint)}</div>`:''}`;
 }
 
 function obNumberInput(fieldPath, placeholder, unit){
@@ -10475,14 +10475,14 @@ function renderCalculators(){
         <div style="font-size:11px;color:var(--rh-muted);font-weight:700;">${label}</div>
         <div style="font-size:17px;font-weight:800;margin-top:2px;">${Math.round(grams)}<span style="font-size:11px;font-weight:600;color:var(--rh-muted);"> g</span></div>
         <div class="rh-progress-track rh-progress-track--sm" style="margin-top:6px;"><div class="rh-progress-fill" style="width:${pct}%;background:${color};"></div></div>
-        <div style="font-size:10px;color:var(--rh-muted);margin-top:2px;">${pct}%</div>
+        <div style="font-size:11px;color:var(--rh-muted);margin-top:2px;">${pct}%</div>
       </div>`;
       result = `<div class="pg-card" style="margin-top:12px;">
         <div class="row-between">
           <span style="font-size:13px;font-weight:800;text-transform:uppercase;color:var(--rh-muted);">Your Daily Targets</span>
           <span style="display:flex;gap:6px;">
-            <span style="font-size:10px;font-weight:700;background:rgba(37,99,235,.1);color:var(--rh-blue);padding:3px 9px;border-radius:var(--radius-lg);">TDEE</span>
-            <span style="font-size:10px;font-weight:700;background:var(--rh-bg);color:var(--rh-muted);padding:3px 9px;border-radius:var(--radius-lg);">${basis}</span>
+            <span style="font-size:11px;font-weight:700;background:rgba(37,99,235,.1);color:var(--rh-blue);padding:3px 9px;border-radius:var(--radius-lg);">TDEE</span>
+            <span style="font-size:11px;font-weight:700;background:var(--rh-bg);color:var(--rh-muted);padding:3px 9px;border-radius:var(--radius-lg);">${basis}</span>
           </span>
         </div>
         <div style="margin-top:6px;">
@@ -10511,7 +10511,7 @@ function renderCalculators(){
       ${calcInputRow("calc-height","Height",c.height,"cm")}
       ${calcInputRow("calc-weight","Weight",c.weight,"kg")}
     </div>
-    <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
     <select class="select-input" id="calc-activity">
       ${ACTIVITY_MULTIPLIERS.map(a=>`<option value="${a.mult}" ${c.activityMultiplier===a.mult?'selected':''}>${a.label}</option>`).join("")}
     </select>`;
@@ -10532,7 +10532,7 @@ function renderCalculators(){
       ${calcInputRow("calc-height","Height",c.height,"cm")}
       ${calcInputRow("calc-weight","Weight",c.weight,"kg")}
     </div>
-    <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
     <select class="select-input" id="calc-activity">
       ${ACTIVITY_MULTIPLIERS.map(a=>`<option value="${a.mult}" ${c.activityMultiplier===a.mult?'selected':''}>${a.label}</option>`).join("")}
     </select>`;
@@ -10551,7 +10551,7 @@ function renderCalculators(){
       ${calcInputRow("calc-height","Height",c.height,"cm")}
       ${calcInputRow("calc-weight","Weight",c.weight,"kg")}
     </div>
-    <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
     <select class="select-input" id="calc-activity">
       ${ACTIVITY_MULTIPLIERS.map(a=>`<option value="${a.mult}" ${c.activityMultiplier===a.mult?'selected':''}>${a.label}</option>`).join("")}
     </select>`;
@@ -10655,14 +10655,14 @@ function renderCalculators(){
         <div style="display:flex;height:10px;border-radius:var(--radius-xs);overflow:hidden;margin-top:16px;">
           ${c.result.rows.map((z,i)=>`<div style="flex:${z.hi-z.lo};background:${HR_ZONE_META[i].color};"></div>`).join("")}
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--rh-muted);margin-top:4px;"><span>0</span><span>${maxHR} MHR</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--rh-muted);margin-top:4px;"><span>0</span><span>${maxHR} MHR</span></div>
       </div>
 
       <div class="rh-section-head"><span>Your Heart Rate Zones</span></div>
       ${c.result.rows.map((z,i)=>{ const m = HR_ZONE_META[i];
         return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;border-left:4px solid ${m.color};">
         <div style="flex:none;width:46px;height:46px;border-radius:var(--radius-sm);background:${m.color}1a;color:${m.color};display:flex;flex-direction:column;align-items:center;justify-content:center;">
-          <span style="font-size:8px;font-weight:800;letter-spacing:.03em;">ZONE</span><span style="font-size:16px;font-weight:800;">${i+1}</span>
+          <span style="font-size:11px;font-weight:800;letter-spacing:.03em;">ZONE</span><span style="font-size:16px;font-weight:800;">${i+1}</span>
         </div>
         <div style="flex:1;min-width:0;">
           <div style="font-size:14px;font-weight:800;">${m.name}</div>
@@ -11934,38 +11934,38 @@ function renderProfileForm(){
   const target = profileCalorieTarget();
   return `
     <div class="info-box" style="padding:14px;">
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Name</label>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Name</label>
       <input type="text" id="p-name" value="${p.name||''}" placeholder="Optional" style="display:block;width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:10px;margin:4px 0 12px;font-size:16px;color:var(--text);">
       <div class="grid2">
-        <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Weight (${wUnit()})</label>
-          <div style="padding:8px;margin-top:4px;font-size:13px;color:var(--accent);font-weight:700;">${displayW(p.weight)} <span style="font-size:10px;color:var(--muted);font-weight:400;">(from log)</span></div></div>
-        <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Height (cm)</label>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Weight (${wUnit()})</label>
+          <div style="padding:8px;margin-top:4px;font-size:13px;color:var(--accent);font-weight:700;">${displayW(p.weight)} <span style="font-size:11px;color:var(--muted);font-weight:400;">(from log)</span></div></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Height (cm)</label>
           <input type="number" id="p-height" value="${p.height}" style="display:block;width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:10px;margin-top:4px;font-size:16px;color:var(--text);"></div>
-        <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Age</label>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Age</label>
           <input type="number" id="p-age" value="${p.age}" style="display:block;width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:10px;margin-top:4px;font-size:16px;color:var(--text);"></div>
-        <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Gender</label>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Gender</label>
           <div style="display:flex;gap:6px;margin-top:4px;">
             <button class="cat-chip ${p.gender==='male'?'active':''}" data-profile-gender="male" style="flex:1;text-align:center;">Male</button>
             <button class="cat-chip ${p.gender==='female'?'active':''}" data-profile-gender="female" style="flex:1;text-align:center;">Female</button>
           </div></div>
       </div>
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
       <select class="select-input" id="p-activity">
         ${ACTIVITY_MULTIPLIERS.map(a=>`<option value="${a.mult}" ${p.activityMultiplier===a.mult?'selected':''}>${a.label}</option>`).join("")}
       </select>
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:6px 0 4px;">Goal</label>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:6px 0 4px;">Goal</label>
       <select class="select-input" id="p-goal">
         ${GOAL_OPTIONS.map(g=>`<option value="${g.delta}" ${p.goalDelta===g.delta?'selected':''}>${g.label}</option>`).join("")}
       </select>
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:6px 0 4px;">Hyrox Experience</label>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:6px 0 4px;">Hyrox Experience</label>
       <select class="select-input" id="p-hyrox-exp">
         ${HYROX_EXPERIENCE_OPTIONS.map(o=>`<option value="${o.key}" ${p.hyroxExperience===o.key?'selected':''}>${o.label}</option>`).join("")}
       </select>
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:6px 0 4px;">Training Days / Week</label>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:6px 0 4px;">Training Days / Week</label>
       <select class="select-input" id="p-training-days" style="margin-bottom:0;">
         ${[2,3,4,5,6,7].map(n=>`<option value="${n}" ${p.trainingDays===n?'selected':''}>${n} days/week</option>`).join("")}
       </select>
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Available Equipment</label>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Available Equipment</label>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">
         ${EQUIPMENT_OPTIONS.map(eq=>`<button class="cat-chip ${p.equipment.includes(eq)?'active':''}" data-profile-equipment="${eq}">${eq}</button>`).join("")}
       </div>
@@ -12173,7 +12173,7 @@ function renderBodyScanArchive(){
         const url = photoThumbUrl(ph.id);
         return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
           ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : skeletonImage()}
-          <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:var(--radius-2xs);padding:2px 4px;text-align:center;">${ph.date}</span>
+          <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:11px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:var(--radius-2xs);padding:2px 4px;text-align:center;">${ph.date}</span>
           ${ph.milestone?`<span style="position:absolute;top:4px;right:4px;">${svg('star',14)}</span>`:''}
         </button>`;
       }).join("")}
@@ -12348,7 +12348,7 @@ function renderBodyTab(){
               <div style="font-size:11px;color:var(--rh-muted);margin-top:4px;">${goalRemaining!=null?goalRemaining+' '+wUnit()+' remaining':''}${goalCompute&&goalCompute.completion?' · Est. completion: '+new Date(goalCompute.completion).toLocaleDateString('default',{month:'short',year:'numeric'}):''}</div>`
               : `<div style="font-size:11px;color:var(--rh-muted);margin-top:10px;">No active goal — set one in Fitness Goals.</div>`}
           </div>
-          ${goal ? `<div style="flex:none;">${(()=>{ const pct=goalPct||0; return `<div class="pg-ring" style="--pct:${pct};--ring-color:var(--rh-blue);width:76px;height:76px;"><div class="pg-ring__inner" style="width:60px;height:60px;flex-direction:column;"><div style="font-size:16px;font-weight:800;">${pct}%</div><div style="font-size:8px;color:var(--rh-muted);font-weight:700;">Goal</div></div></div>`; })()}</div>` : ''}
+          ${goal ? `<div style="flex:none;">${(()=>{ const pct=goalPct||0; return `<div class="pg-ring" style="--pct:${pct};--ring-color:var(--rh-blue);width:76px;height:76px;"><div class="pg-ring__inner" style="width:60px;height:60px;flex-direction:column;"><div style="font-size:16px;font-weight:800;">${pct}%</div><div style="font-size:11px;color:var(--rh-muted);font-weight:700;">Goal</div></div></div>`; })()}</div>` : ''}
         </div>
         <div class="pg-card" style="display:flex;flex-direction:column;gap:10px;">
           <button class="rh-btn rh-btn--primary" style="padding:10px;font-size:13px;" data-action="add-weight-focus">${svg('plus',14)} Add Weight</button>
@@ -12421,7 +12421,7 @@ function renderBodyTab(){
               <span style="font-size:17px;font-weight:800;">${displayW(e.weight)} ${wUnit()}</span>
               ${d!=null?`<span style="color:${d<=0?'var(--rh-green)':'var(--rh-red)'};font-size:13px;">${d>0?'▲':d<0?'▼':''}</span>`:''}
             </div>
-            <div style="font-size:10px;color:var(--rh-muted);margin-top:4px;">${time}</div>
+            <div style="font-size:11px;color:var(--rh-muted);margin-top:4px;">${time}</div>
           </div>`;
         }).join('')}
       </div>`}
@@ -12487,7 +12487,7 @@ function renderBodyTab(){
           const url = photoThumbUrl(ph.id);
           return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
             ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : skeletonImage()}
-            <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:var(--radius-2xs);padding:2px 4px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(ph.category)}</span>
+            <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:11px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:var(--radius-2xs);padding:2px 4px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(ph.category)}</span>
             ${ph.milestone?`<span style="position:absolute;top:4px;right:4px;">${svg('star',14)}</span>`:''}
           </button>`;
         }).join("")}
@@ -12748,7 +12748,7 @@ function renderFoodDetailPage(){
                 <span>${escHtml(r.label)}</span>
                 <span>
                   <span class="micro-row__value${r.present?"":" is-absent"}">${N.format(r.key, r.serving)}</span>
-                  ${r.percentDV!=null?`<span style="color:var(--steel);font-size:10px;margin-left:6px;">${r.percentDV}%</span>`:""}
+                  ${r.percentDV!=null?`<span style="color:var(--steel);font-size:11px;margin-left:6px;">${r.percentDV}%</span>`:""}
                 </span>
               </div>`).join("")}
             </div>`;
@@ -12951,7 +12951,7 @@ function renderNutritionTab(){
       <button class="cat-chip" data-nutrition-date="-1" style="margin:0;width:34px;justify-content:center;" aria-label="Previous day">‹</button>
       <div style="text-align:center;flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(nutritionDateLabel(ds))}</div>
-        ${!isToday?`<button class="cat-chip" data-nutrition-date="today" style="margin:3px 0 0;padding:1px 8px;font-size:10px;">Jump to today</button>`:""}
+        ${!isToday?`<button class="cat-chip" data-nutrition-date="today" style="margin:3px 0 0;padding:1px 8px;font-size:11px;">Jump to today</button>`:""}
       </div>
       <button class="cat-chip" data-nutrition-date="1" style="margin:0;width:34px;justify-content:center;${isToday?'opacity:.3;pointer-events:none;':''}" aria-label="Next day">›</button>
     </div>
@@ -13020,17 +13020,17 @@ function renderNutritionTab(){
             const color = NUTRIENT_COLORS[key] || "var(--muted)";
             return `<div style="min-width:76px;flex:1;text-align:center;">
               <div style="font-size:16px;line-height:1.2;">${icon}</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:2px;">${label}</div>
-              <div class="mono" style="font-size:12px;font-weight:800;margin-top:1px;">${val>0?Math.round(val).toLocaleString():"—"}${val>0?`<span style="font-size:9px;color:var(--muted);"> ${unit}</span>`:""}</div>
-              <div class="mono" style="font-size:9px;color:${pct!=null?color:'var(--muted)'};margin-top:1px;">${pct!=null?pct+"%":"–"}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;">${label}</div>
+              <div class="mono" style="font-size:12px;font-weight:800;margin-top:1px;">${val>0?Math.round(val).toLocaleString():"—"}${val>0?`<span style="font-size:11px;color:var(--muted);"> ${unit}</span>`:""}</div>
+              <div class="mono" style="font-size:11px;color:${pct!=null?color:'var(--muted)'};margin-top:1px;">${pct!=null?pct+"%":"–"}</div>
               <div style="height:3px;border-radius:2px;background:var(--surface-alt);margin-top:4px;overflow:hidden;">
                 <div style="height:100%;width:${pct!=null?Math.min(100,Math.max(0,pct)):0}%;background:${color};"></div>
               </div>
-              ${state.microExpanded&&c.partial?`<div style="font-size:8px;color:var(--muted);margin-top:3px;line-height:1.2;">${c.have}/${c.total} foods</div>`:""}
+              ${state.microExpanded&&c.partial?`<div style="font-size:11px;color:var(--muted);margin-top:3px;line-height:1.2;">${c.have}/${c.total} foods</div>`:""}
             </div>`;
           }).join("")}
       </div>
-      ${state.microExpanded?`<div style="font-size:9px;color:var(--muted);margin-top:8px;line-height:1.4;">
+      ${state.microExpanded?`<div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.4;">
         Totals count only foods that carry a measured value. Manually entered foods and
         entries logged before micronutrient tracking contribute nothing, so a figure with a
         partial count is a floor, not a total. Sugar has no percentage: the reference value
@@ -13082,7 +13082,7 @@ function renderNutritionTab(){
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:6px;">
         ${insights.map(i=>`<div style="background:${INSIGHT_TONES[i.tone].bg};border-radius:var(--radius-xs-plus);padding:8px 10px;">
           <div style="font-size:11px;font-weight:800;color:${INSIGHT_TONES[i.tone].fg};">${escHtml(i.title)}</div>
-          <div style="font-size:10px;color:var(--muted);margin-top:2px;line-height:1.35;">${escHtml(i.body)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35;">${escHtml(i.body)}</div>
         </div>`).join("")}
       </div>
     </div>` : ""}
@@ -13091,8 +13091,8 @@ function renderNutritionTab(){
     <div class="info-box" style="text-align:center;padding:12px;margin-bottom:8px;background:${netDeficit>=0?'rgba(62,207,142,.08)':'rgba(255,90,31,.08)'};">
       <div class="stat-label">${netDeficit>=0?'Deficit Created':'Surplus (over target)'}</div>
       <div class="mono" style="font-weight:900;font-size:22px;color:${netDeficit>=0?'var(--mint)':'var(--accent)'};margin-top:2px;">${netDeficit>=0?'':'+'}${Math.abs(netDeficit)}<span style="font-size:12px;font-weight:700;color:var(--muted);margin-left:4px;">kcal</span></div>
-      <div style="font-size:10px;color:var(--muted);margin-top:4px;">Burned = ${profileMaintenance()} maintenance + ~${activityKcal} workout est.${!isToday?" (today's figures)":""}</div>
-      ${useExerciseBudget ? `<div style="font-size:10px;color:var(--muted);margin-top:4px;">${activeCalories == null ? `Health Connect active calories: ${hcConnected ? 'No data' : 'Permission required'}` : `Budget includes ${Math.round(activeCalories)} kcal from Health Connect.`}</div>` : ''}
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Burned = ${profileMaintenance()} maintenance + ~${activityKcal} workout est.${!isToday?" (today's figures)":""}</div>
+      ${useExerciseBudget ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">${activeCalories == null ? `Health Connect active calories: ${hcConnected ? 'No data' : 'Permission required'}` : `Budget includes ${Math.round(activeCalories)} kcal from Health Connect.`}</div>` : ''}
     </div>
 
     <!-- Add actions -->
@@ -13123,7 +13123,7 @@ function renderNutritionTab(){
         </div>` : ""}
 
         ${yEntries.length ? `
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Repeat yesterday</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Repeat yesterday</div>
           <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
             <button class="cat-chip" data-repeat-day="${escHtml(yesterday)}" style="margin:0;">Entire day · ${yEntries.length} item${yEntries.length===1?"":"s"}</button>
             ${yMeals.map(m=>{
@@ -13133,24 +13133,24 @@ function renderNutritionTab(){
           </div>` : ""}
 
         ${used.length ? `
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Most logged</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Most logged</div>
           <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
             ${used.map(u=>`<button class="cat-chip" data-repeat-entry="${u.entry.id}" style="margin:0;">${escHtml(u.entry.name)} · ${u.entry.calories||0}kcal <span style="color:var(--muted);">×${u.count}</span></button>`).join("")}
           </div>` : ""}
 
         ${recents.length ? `
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Recent</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Recent</div>
           <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
             ${recents.map(f=>`<button class="cat-chip" data-repeat-entry="${f.id}" style="margin:0;">${escHtml(f.name)} · ${f.calories||0}kcal</button>`).join("")}
           </div>` : ""}
 
         ${favs.length ? `
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">★ Favourites</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">★ Favourites</div>
           <div style="display:flex;gap:5px;flex-wrap:wrap;">
             ${favs.map(f=>`<button class="cat-chip active" data-quick-add-food="${escHtml(state.mealOpen||mealTypes()[0])}" data-food-name="${escHtml(f.name)}" data-food-cal="${f.calories||0}" data-food-protein="${f.protein||0}" data-food-carbs="${f.carbs||0}" data-food-fat="${f.fat||0}" data-food-fibre="${f.fibre||0}" style="margin:0;">${escHtml(f.name)} · ${f.calories||0}kcal</button>`).join("")}
           </div>` : ""}
 
-        ${!nothing ? `<div style="font-size:9px;color:var(--muted);margin-top:8px;">Items are added to ${escHtml(state.quickAddMeal || mealTypes()[0])}. Repeated meals keep their original meal.</div>` : ""}
+        ${!nothing ? `<div style="font-size:11px;color:var(--muted);margin-top:8px;">Items are added to ${escHtml(state.quickAddMeal || mealTypes()[0])}. Repeated meals keep their original meal.</div>` : ""}
       </div>`;
     })() : ""}
 
@@ -13212,12 +13212,12 @@ function renderNutritionTab(){
         ${isOpen?`<div style="margin-top:10px;">
           ${renderFoodSearchPanel(meal)}
           ${recentFoodEntries(6).length ? `
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Recent</div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Recent</div>
             <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
               ${recentFoodEntries(6).map(f=>`<button class="cat-chip" data-quick-add-food="${meal}" data-food-name="${f.name.replace(/"/g,'&quot;')}" data-food-cal="${f.calories||0}" data-food-protein="${f.protein||0}" data-food-carbs="${f.carbs||0}" data-food-fat="${f.fat||0}" data-food-fibre="${f.fibre||0}">${f.name} · ${f.calories||0}kcal</button>`).join("")}
             </div>` : ""}
           ${state.favoriteFoods.length ? `
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">★ Favorites</div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">★ Favorites</div>
             <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
               ${state.favoriteFoods.map(f=>`<button class="cat-chip active" data-quick-add-food="${meal}" data-food-name="${f.name.replace(/"/g,'&quot;')}" data-food-cal="${f.calories||0}" data-food-protein="${f.protein||0}" data-food-carbs="${f.carbs||0}" data-food-fat="${f.fat||0}" data-food-fibre="${f.fibre||0}">${f.name} · ${f.calories||0}kcal</button>`).join("")}
             </div>` : ""}
@@ -13246,12 +13246,12 @@ function renderNutritionTab(){
       <div style="position:relative;height:110px;display:flex;align-items:flex-end;gap:6px;">
         <div style="position:absolute;left:0;right:0;top:${100-Math.min(100,targets.kcal/maxKcal*100)}%;border-top:1.5px dashed var(--accent);opacity:.6;"></div>
         ${week.map(d=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end;">
-          ${d.kcal>0?`<span class="mono" style="font-size:9px;color:var(--muted);">${d.kcal}</span>`:""}
+          ${d.kcal>0?`<span class="mono" style="font-size:11px;color:var(--muted);">${d.kcal}</span>`:""}
           <div style="width:70%;border-radius:var(--radius-2xs) 4px 0 0;background:${d.kcal>targets.kcal?'var(--accent)':'#FFB020'};height:${Math.max(2,Math.round(d.kcal/maxKcal*80))}px;"></div>
-          <span style="font-size:9px;color:var(--muted);font-weight:700;">${d.label}</span>
+          <span style="font-size:11px;color:var(--muted);font-weight:700;">${d.label}</span>
         </div>`).join("")}
       </div>
-      <div style="font-size:10px;color:var(--muted);margin-top:6px;">Dashed line = your ${targets.kcal} kcal daily target.</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;">Dashed line = your ${targets.kcal} kcal daily target.</div>
     </div>
 
     <div class="eyebrow-label">Calorie & Macro Budget</div>
@@ -13388,9 +13388,9 @@ function renderPlanTab(){
           ${Object.entries(LEVELS).map(([key,lv])=>`<button class="cat-chip ${state.activeLevel===key?'active':''}" data-level="${key}" style="flex:1;text-align:center;">${lv.label}</button>`).join("")}
         </div>
         <div class="pi-grid2" style="grid-template-columns:repeat(3,minmax(0,1fr));padding-top:12px;border-top:1px solid var(--rh-border);">
-          <div style="text-align:center;"><span style="color:var(--rh-blue);">${svg('calendar',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">Week ${state.activeWeek} of 8</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Current Week</div></div>
-          <div style="text-align:center;"><span style="color:var(--rh-blue);">${svg('dumbbell',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">${sessionsThisWeek} Sessions</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">This Week</div></div>
-          <div style="text-align:center;"><span style="color:var(--rh-blue);">${svg('timer',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">60 min/day</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Est. Time</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-blue);">${svg('calendar',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">Week ${state.activeWeek} of 8</div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Current Week</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-blue);">${svg('dumbbell',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">${sessionsThisWeek} Sessions</div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">This Week</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-blue);">${svg('timer',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">60 min/day</div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Est. Time</div></div>
         </div>
         <div style="margin-top:14px;">
           <span style="font-size:12px;color:var(--rh-muted);font-weight:600;">Progress</span>
@@ -13413,10 +13413,10 @@ function renderPlanTab(){
           </div>
         </div>
         <div class="pi-grid2" style="grid-template-columns:repeat(4,minmax(0,1fr));padding-top:12px;margin-top:12px;border-top:1px solid var(--rh-border);">
-          <div style="text-align:center;"><span style="color:var(--rh-green);">${svg('run',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">8</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Runs</div></div>
-          <div style="text-align:center;"><span style="color:var(--rh-green);">${svg('target',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">8</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Stations</div></div>
-          <div style="text-align:center;"><span style="color:var(--rh-green);">${svg('timer',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">90 min</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Est. Time</div></div>
-          <div style="text-align:center;"><span style="color:var(--rh-red);">${svg('health',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">High</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Intensity</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-green);">${svg('run',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">8</div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Runs</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-green);">${svg('target',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">8</div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Stations</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-green);">${svg('timer',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">90 min</div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Est. Time</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-red);">${svg('health',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">High</div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Intensity</div></div>
         </div>
         ${best!=null ? `<div style="font-size:12px;color:var(--rh-muted);margin-top:12px;">Personal best: <span style="color:var(--rh-green);font-weight:800;">${formatDuration(best)}</span></div>` : ''}
         <button class="rh-btn" style="width:100%;margin-top:14px;padding:14px;font-size:15px;background:rgba(22,163,74,.15);color:var(--rh-green);" data-action="open-race-mode">${svg('workout',16)} Open Race Mode</button>
@@ -13537,7 +13537,7 @@ function renderRaceStart(){
         ${recentRaces.map(race=>`<div class="row-between" style="padding:8px 0;border-bottom:1px solid var(--border);">
           <div>
             <div style="font-size:13px;font-weight:700;">${new Date(race.date).toLocaleDateString('default',{month:'short',day:'numeric',year:'numeric'})}</div>
-            ${race.totalMs===best?`<div style="font-size:10px;color:var(--mint);font-weight:700;">PERSONAL BEST</div>`:''}
+            ${race.totalMs===best?`<div style="font-size:11px;color:var(--mint);font-weight:700;">PERSONAL BEST</div>`:''}
           </div>
           <span class="mono" style="font-size:14px;font-weight:800;color:var(--accent);">${formatDuration(race.totalMs)}</span>
         </div>`).join("")}
@@ -14380,7 +14380,7 @@ function renderWorkoutTab(){
         const notesOpen = (state.notesOpenExercises||[]).includes(exi) || !!ex.notes;
         return `
         <div class="ex-log-card wk-ex-card" data-ex-card="${exi}">
-          ${ex.supersetWithNext ? `<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:var(--rh-blue);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">${svg('link',12)} Superset with next exercise</div>` : ''}
+          ${ex.supersetWithNext ? `<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:var(--rh-blue);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">${svg('link',12)} Superset with next exercise</div>` : ''}
           <div class="wk-ex-card__pin">
           <div class="row-between" style="margin-bottom:4px;position:relative;">
             <button class="wk-ex-card__collapse-toggle" data-toggle-ex-collapse="${exi}" style="min-width:0;flex:1;text-align:left;background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;">
@@ -14835,7 +14835,7 @@ function renderLibraryTab(){
         return `<div class="pg-card lib-ex-row" data-view-exercise="${escHtml(ex.name)}">
           <span class="tl-card__icon" style="flex:none;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg(rowIcon(ex.muscle),20)}</span>
           <div class="lib-ex-row__body">
-            <div class="lib-ex-row__name">${escHtml(ex.name)}${ex.custom?' <span style="color:var(--rh-blue);font-size:10px;font-weight:800;">CUSTOM</span>':''}</div>
+            <div class="lib-ex-row__name">${escHtml(ex.name)}${ex.custom?' <span style="color:var(--rh-blue);font-size:11px;font-weight:800;">CUSTOM</span>':''}</div>
             <div class="lib-tags">
               <span class="lib-tag" style="background:${muscleTagColor(ex.muscle)}1a;color:${muscleTagColor(ex.muscle)};">${ex.muscle}</span>
               <span class="lib-tag" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg(equip.icon,11)} ${ex.cat}</span>

@@ -23,7 +23,7 @@ header.app-header { padding: calc(var(--safe-top) + var(--space-sm)) var(--space
 nav.bottom-nav { min-height:var(--nav-height); background:rgba(18,20,24,.95); border-color:var(--color-border); }
 [data-theme="light"] nav.bottom-nav { background:rgba(255,255,255,.95); }
 .nav-btn { min-height:52px; }
-.nav-btn span { font-size:10px; }
+.nav-btn span { font-size:11px; }
 /* Reference: "blue primary accent for active tab" -- overrides the legacy orange active
    state (.nav-btn.active{color:var(--accent)} in the inline stylesheet) for the primary
    bottom nav specifically. Deliberately NOT a blanket --accent token redefinition: --accent
