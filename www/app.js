@@ -2861,6 +2861,7 @@ const state = {
   // Workout History view filters (transient — a fresh visit starts unfiltered)
   historySearch: "", historyRange: "all", historyMuscle: "", historySort: "newest",
   historyPRsOnly: false, historyPage: 1, historyArchived: false, historyBinOpen: false,
+  historySelectMode: false, historySelected: [], // transient — bulk multi-select
   raceActive: LS.get("hx_race_active", null),
   raceLog: LS.get("hx_race_log", []),
   viewingRaceMode: !!LS.get("hx_race_active", null),
@@ -3412,6 +3413,19 @@ function applyBackupPayload(staged, mode){
   Object.entries(staged).forEach(([k,backupRaw])=>{
     localStorage.setItem(k, mode==="merge" ? mergeStoredValue(localStorage.getItem(k), backupRaw) : backupRaw);
   });
+}
+
+/** Exports a specific set of workouts as JSON. Uses the same envelope shape as the full
+ *  backup (app/version/exportedAt) so the file is self-describing, but carries only the
+ *  selected records -- it is a subset export, deliberately not a restorable full backup. */
+function exportWorkoutsJSON(workouts, filename){
+  const payload = {
+    app: "ignyt", type: "workout-export", version: 1,
+    exportedAt: new Date().toISOString(),
+    count: workouts.length,
+    workouts: workouts
+  };
+  downloadFile(filename || ("ignyt-workouts-"+todayStr()+".json"), JSON.stringify(payload, null, 2), "application/json");
 }
 
 function exportWorkoutsCSV(){
@@ -9072,6 +9086,14 @@ function renderProgressWorkouts(){
   const range = HISTORY_RANGES[state.historyRange] ? state.historyRange : "all";
   const sort = HISTORY_SORTS[state.historySort] ? state.historySort : "newest";
   const filtersActive = !!((state.historySearch||"").trim()) || range!=="all" || !!state.historyMuscle || !!state.historyPRsOnly || !!state.historyArchived;
+  const selectMode = !!state.historySelectMode;
+  if(!Array.isArray(state.historySelected)) state.historySelected = [];
+  // Selection is scoped to what's currently matched, so a filter change can't leave
+  // invisible rows selected and acted on by mistake.
+  const matchIds = matches.map(s=>s.id);
+  state.historySelected = state.historySelected.filter(id=>matchIds.includes(id));
+  const selectedCount = state.historySelected.length;
+  const allVisibleSelected = matches.length>0 && selectedCount===matches.length;
 
   const totalVolume = matches.reduce((a,s)=>a+(s.volume||0),0);
   const totalMin = matches.reduce((a,s)=>a+(s.durationMin||0),0);
@@ -9106,15 +9128,35 @@ function renderProgressWorkouts(){
 
     <div class="lib-count-row">
       <span><b>${matches.length}</b> workout${matches.length!==1?'s':''}${filtersActive?` of ${all.length}`:''}</span>
-      <span style="font-size:12px;color:var(--rh-muted);">${fmtMinutes(totalMin)} · ${displayW(totalVolume,0).toLocaleString()} ${wUnit()}</span>
+      <span style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:12px;color:var(--rh-muted);">${fmtMinutes(totalMin)} · ${displayW(totalVolume,0).toLocaleString()} ${wUnit()}</span>
+        ${matches.length?`<button class="lib-add-link" data-history-select-mode="1">${selectMode?'Done':'Select'}</button>`:''}
+      </span>
     </div>
+
+    ${selectMode ? `<div class="pg-card" style="margin-bottom:10px;padding:12px 14px;">
+      <div class="row-between" style="margin-bottom:${selectedCount?'10px':'0'};">
+        <span style="font-size:13px;font-weight:800;">${selectedCount} selected</span>
+        <span style="display:flex;gap:8px;">
+          <button class="lib-add-link" data-history-select-all="1">${allVisibleSelected?'Clear all':'Select all'}</button>
+        </span>
+      </div>
+      ${selectedCount?`<div style="display:flex;flex-wrap:wrap;gap:6px;">
+        <button class="cat-chip" data-bulk-action="export">${svg('download',12)} Export</button>
+        <button class="cat-chip" data-bulk-action="archive">${svg('box',12)} ${state.historyArchived?'Unarchive':'Archive'}</button>
+        <button class="cat-chip" data-bulk-action="duplicate">${svg('copy',12)} Duplicate</button>
+        <button class="cat-chip" data-bulk-action="delete" style="color:#ff6b6b;">${svg('trash',12)} Delete</button>
+      </div>`:''}
+    </div>` : ""}
 
     ${matches.length===0 ? `<div class="empty-note">No workouts match these filters.</div>` : shown.map(s=>{
       const prCount = state.prs.filter(p=>p.workoutId===s.id).length;
       const doneSets = computeCompletedSets(s.exercises);
       const muscles = sessionMuscles(s.exercises).slice(0,3);
-      return `<div class="pg-card" style="margin-bottom:10px;cursor:pointer;position:relative;" data-view-session="${s.id}">
+      const picked = selectMode && state.historySelected.includes(s.id);
+      return `<div class="pg-card" style="margin-bottom:10px;cursor:pointer;position:relative;${picked?'border-color:var(--rh-blue);':''}" ${selectMode?`data-history-pick="${s.id}"`:`data-view-session="${s.id}"`}>
         <div class="row-between" style="align-items:flex-start;gap:8px;">
+          ${selectMode?`<span style="flex:none;color:${picked?'var(--rh-blue)':'var(--rh-border)'};">${svg(picked?'check':'plus',18)}</span>`:''}
           <div style="min-width:0;flex:1;">
             <div style="font-size:15px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(sessionTitle(s))}</div>
             <div style="font-size:12px;color:var(--rh-muted);margin-top:2px;">${new Date((s.date||"")+"T12:00:00").toLocaleDateString('default',{weekday:'short',month:'short',day:'numeric',year:'numeric'})}</div>
@@ -12969,6 +13011,62 @@ function attachHandlers(){
     state.historySearch = ""; state.historyRange = "all"; state.historyMuscle = "";
     state.historyPRsOnly = false; state.historyArchived = false; state.historyPage = 1; render();
   });
+  /* ---- Bulk selection ---- */
+  const histSelectMode = document.querySelector("[data-history-select-mode]");
+  if(histSelectMode) histSelectMode.addEventListener("click", ()=>{
+    state.historySelectMode = !state.historySelectMode;
+    if(!state.historySelectMode) state.historySelected = [];
+    render();
+  });
+  const histSelectAll = document.querySelector("[data-history-select-all]");
+  if(histSelectAll) histSelectAll.addEventListener("click", ()=>{
+    const ids = filteredWorkoutHistory().map(s=>s.id);
+    state.historySelected = (state.historySelected||[]).length===ids.length ? [] : ids;
+    render();
+  });
+  document.querySelectorAll("[data-history-pick]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = Number(el.dataset.historyPick);
+      const sel = state.historySelected || [];
+      state.historySelected = sel.includes(id) ? sel.filter(x=>x!==id) : sel.concat([id]);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-bulk-action]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const ids = (state.historySelected||[]).slice();
+      if(!ids.length) return;
+      const action = el.dataset.bulkAction;
+      const picked = () => state.workoutLog.filter(s=>ids.includes(s.id));
+
+      if(action === "export"){
+        exportWorkoutsJSON(picked(), `ignyt-workouts-${ids.length}-${todayStr()}.json`);
+        return;
+      }
+      if(action === "archive"){
+        const target = !state.historyArchived; // in the archived view this un-archives
+        picked().forEach(s=>{ s.archived = target; });
+        persist(); state.historySelected = []; render();
+        showToast(`${ids.length} workout${ids.length!==1?'s':''} ${target?'archived':'unarchived'}.`, "info", render);
+        return;
+      }
+      if(action === "duplicate"){
+        picked().forEach(s=>{ state.workoutLog.unshift(duplicateWorkoutRecord(s)); });
+        state.workoutLog = enforceWorkoutLogIntegrity(state.workoutLog);
+        persist(); state.historySelected = []; render();
+        showToast(`${ids.length} workout${ids.length!==1?'s':''} duplicated to today.`, "success", render);
+        return;
+      }
+      if(action === "delete"){
+        if(!(await confirmDialog(`Delete ${ids.length} workout${ids.length!==1?'s':''}? They move to the recycle bin and can be restored for ${RECYCLE_BIN_DAYS} days.`, render, { danger:true, confirmLabel:"Delete" }))) return;
+        ids.forEach(id=> softDeleteWorkout(id));
+        state.historySelected = []; render();
+        showToast(`${ids.length} workout${ids.length!==1?'s':''} deleted.`, "info", render,
+          { label:"Undo", onClick: ()=>{ ids.forEach(id=> restoreWorkout(id)); render(); } });
+      }
+    });
+  });
+
   const histArchived = document.querySelector("[data-history-archived]");
   if(histArchived) histArchived.addEventListener("click", ()=>{ state.historyArchived = !state.historyArchived; state.historyPage = 1; render(); });
   const histBin = document.querySelector("[data-history-bin]");
