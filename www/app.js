@@ -256,14 +256,27 @@ const EXERCISE_DETAILS = {
     animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Bench Press": {
-    primaryMuscle: "Chest",
+    description: "The benchmark horizontal pressing lift and the standard measure of upper-body pushing strength. Loading the barbell bilaterally allows the heaviest absolute load of any chest movement, making it the primary driver of chest, front-delt and triceps strength in most programs.",
+    primaryMuscles: ["Chest"],
     secondaryMuscles: ["Triceps", "Anterior Deltoids"],
     equipment: "Barbell",
     difficulty: "Intermediate",
-    movementPattern: "Horizontal Push",
-    instructions: ["Lie on the bench with eyes roughly under the bar, feet flat on the floor.", "Grip the bar slightly wider than shoulder-width and unrack it over your chest.", "Lower the bar under control to the mid-chest, keeping elbows at roughly a 45\u00b0 angle to your torso.", "Press the bar back up to full lockout in a slight arc back toward the rack position."],
+    movementType: "Horizontal Push",
+    exerciseType: "Compound",
+    setup: ["Lie on the bench with your eyes roughly under the bar.", "Plant both feet flat on the floor and pull your shoulder blades back and down into the bench.", "Grip the bar slightly wider than shoulder-width with the bar sitting over the base of your palm, not your fingers."],
+    execution: ["Unrack the bar and bring it to a stable position over your chest with arms extended.", "Lower the bar under control to your mid-chest, keeping your elbows at roughly 45\u00b0 to your torso.", "Touch the chest without bouncing, then press the bar back up in a slight arc toward the rack position.", "Lock out with the bar stacked over your shoulders and repeat."],
+    breathing: "Take a big breath and brace at the top, hold it through the descent and press, then exhale once the bar passes the hardest part of the lift.",
     formTips: ["Keep your shoulder blades pulled back and down against the bench throughout.", "Keep a slight, natural arch in your lower back.", "Drive your feet into the floor for stability, not to bounce the bar."],
     commonMistakes: ["Flaring the elbows out to 90\u00b0, which stresses the shoulders.", "Bouncing the bar off the chest.", "Losing shoulder blade retraction partway through the set."],
+    safety: ["Use a spotter or safety pins whenever you train near failure.", "Never use a thumbless grip \u2014 the bar can roll out of your hands onto your chest.", "Stop the set if you feel a sharp pinch at the front of the shoulder."],
+    beginnerModifications: ["Press an empty bar or dumbbells until the groove feels repeatable.", "Use a Smith machine or chest press machine to learn the pattern with less stabilization demand."],
+    intermediateProgressions: ["Add pauses on the chest to remove the stretch reflex.", "Rotate in incline and close-grip variants to train the same pattern at different angles."],
+    advancedProgressions: ["Add bands or chains for accommodating resistance.", "Use spoto presses or board presses to overload a specific sticking point."],
+    recommendedSets: "3\u20135",
+    recommendedReps: "5\u201310",
+    recommendedRest: "2\u20133 min",
+    recommendedTempo: "2-0-1",
+    notes: "Bar path is a shallow arc, not a straight vertical line \u2014 the bar touches the mid-chest and finishes over the shoulders.",
     animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Incline Bench Press": {
@@ -2842,6 +2855,7 @@ const state = {
   exerciseMenuOpen: null,
   replacingExerciseIndex: null,
   exerciseDetailTab: "summary",
+  exerciseSectionsOpen: null, // transient — {sectionKey: bool} for the collapsible guide sections
   raceActive: LS.get("hx_race_active", null),
   raceLog: LS.get("hx_race_log", []),
   viewingRaceMode: !!LS.get("hx_race_active", null),
@@ -10522,6 +10536,89 @@ function renderExerciseAnimation(detail){
 /* Every session that contains this exercise, newest first, with that session's
    PR status for this exercise (if any) attached for a quick indicator. */
 
+/* =========================================================
+   EXERCISE DETAIL SCHEMA (expanded)
+
+   EXERCISE_DETAILS entries were originally written with a small field set
+   (primaryMuscle / secondaryMuscles / equipment / difficulty / movementPattern /
+   instructions / formTips / commonMistakes). The expanded schema adds description,
+   setup, execution, breathing, safety, the three progression tiers, and the
+   programming block (sets/reps/rest/tempo) plus notes.
+
+   normalizeExerciseDetail() is the single compatibility layer between the two: every
+   consumer reads through it, so an entry written in EITHER shape renders correctly and
+   a partially-filled entry simply omits the sections it has no data for. Nothing here
+   invents content -- a missing field stays missing and its section is not rendered.
+
+   Field aliases accepted (old -> new):
+     primaryMuscle   -> primaryMuscles (string or array; always normalized to an array)
+     movementPattern -> movementType
+     instructions    -> execution
+========================================================= */
+function asList(v){
+  if(Array.isArray(v)) return v.filter(x=>x!=null && String(x).trim()!=="");
+  if(typeof v === "string" && v.trim()) return [v.trim()];
+  return [];
+}
+
+function normalizeExerciseDetail(detail, libEntry){
+  if(!detail) return null;
+  const d = detail;
+  return {
+    description: (typeof d.description === "string" && d.description.trim()) ? d.description.trim() : "",
+    primaryMuscles: asList(d.primaryMuscles != null ? d.primaryMuscles : d.primaryMuscle),
+    secondaryMuscles: asList(d.secondaryMuscles),
+    equipment: d.equipment || (libEntry ? libEntry.cat : ""),
+    difficulty: d.difficulty || "",
+    movementType: d.movementType || d.movementPattern || "",
+    exerciseType: d.exerciseType || "",
+    setup: asList(d.setup),
+    execution: asList(d.execution != null ? d.execution : d.instructions),
+    breathing: (typeof d.breathing === "string" && d.breathing.trim()) ? d.breathing.trim() : "",
+    formTips: asList(d.formTips),
+    commonMistakes: asList(d.commonMistakes),
+    safety: asList(d.safety),
+    beginnerModifications: asList(d.beginnerModifications),
+    intermediateProgressions: asList(d.intermediateProgressions),
+    advancedProgressions: asList(d.advancedProgressions),
+    recommendedSets: d.recommendedSets || "",
+    recommendedReps: d.recommendedReps || "",
+    recommendedRest: d.recommendedRest || "",
+    recommendedTempo: d.recommendedTempo || "",
+    notes: (typeof d.notes === "string" && d.notes.trim()) ? d.notes.trim() : "",
+    // media fields pass through untouched
+    animationWebmUrl: d.animationWebmUrl || null,
+    animationMp4Url: d.animationMp4Url || null,
+    thumbnailUrl: d.thumbnailUrl || null,
+    animationAvailable: !!d.animationAvailable
+  };
+}
+
+/* Collapsible section card used by the exercise detail screen. `open` drives both the
+   aria-expanded state and the max-height transition, so expand/collapse animates rather
+   than snapping. Sections with no content are never emitted by the caller. */
+function exDetailSection(key, title, icon, bodyHtml, open){
+  return `<div class="ex-sec ${open?'is-open':''}">
+    <button class="ex-sec__head" data-ex-section="${key}" aria-expanded="${open?'true':'false'}">
+      <span class="ex-sec__icon">${svg(icon,15)}</span>
+      <span class="ex-sec__title">${title}</span>
+      <span class="ex-sec__chev">${svg('chevronDown',16)}</span>
+    </button>
+    <div class="ex-sec__body"><div class="ex-sec__inner">${bodyHtml}</div></div>
+  </div>`;
+}
+
+function exDetailBadge(label, value, color){
+  if(!value) return "";
+  return `<span class="ex-badge" style="background:${color}1a;color:${color};">
+    <span class="ex-badge__k">${escHtml(label)}</span>${escHtml(value)}</span>`;
+}
+
+/* Bulleted list block with a leading glyph (✓ tips, ✕ mistakes, ! safety). */
+function exDetailList(items, glyph, color){
+  return items.map(t=>`<div class="ex-li"><span class="ex-li__g" style="color:${color};">${glyph}</span><span>${escHtml(t)}</span></div>`).join("");
+}
+
 function renderExerciseDetail(name){
   const detail = EXERCISE_DETAILS[name];
   const all = allLibraryExercises();
@@ -10535,14 +10632,27 @@ function renderExerciseDetail(name){
   const rowIcon = (() => { const g = FINE_TO_BROAD[muscle]; return (g==='Chest'||g==='Shoulders'||g==='Arms') ? 'dumbbell' : (g==='Back') ? 'workout' : 'body'; })();
   const muscleColor = muscleTagColor(muscle);
 
+  const nd = normalizeExerciseDetail(detail, libEntry);
+  // Badge row: only badges with real data are emitted, so a sparse entry doesn't render
+  // a row of empty chips.
+  const badges = nd ? [
+    exDetailBadge("", nd.difficulty, "var(--rh-amber, #d97706)"),
+    exDetailBadge("", nd.equipment, "var(--rh-blue)"),
+    exDetailBadge("", nd.movementType, "var(--rh-green)"),
+    exDetailBadge("", nd.exerciseType, "var(--rh-muted)")
+  ].filter(Boolean).join("") : "";
+
   return `<div class="pg-light">
-    <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:12px;" data-action="close-exercise-detail">← Back</button>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
-      <span class="tl-card__icon" style="width:52px;height:52px;flex:none;background:${muscleColor}1a;color:${muscleColor};">${svg(rowIcon,26)}</span>
-      <div>
-        <div style="font-size:20px;font-weight:800;">${name}</div>
-        <span class="lib-tag" style="background:${muscleColor}1a;color:${muscleColor};margin-top:4px;">${muscle}</span>
+    <div class="ex-hero">
+      <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:12px;" data-action="close-exercise-detail">← Back</button>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="tl-card__icon" style="width:52px;height:52px;flex:none;background:${muscleColor}1a;color:${muscleColor};">${svg(rowIcon,26)}</span>
+        <div style="min-width:0;flex:1;">
+          <div class="ex-hero__name">${escHtml(name)}</div>
+          <span class="lib-tag" style="background:${muscleColor}1a;color:${muscleColor};margin-top:4px;">${escHtml(muscle)}</span>
+        </div>
       </div>
+      ${badges ? `<div class="ex-badges">${badges}</div>` : ""}
     </div>
 
     <div class="lib-cats" style="margin:14px 0;">
@@ -10553,9 +10663,9 @@ function renderExerciseDetail(name){
 
     ${tab==="summary" ? renderExerciseDetailSummary(name, detail, libEntry, prs) : ""}
     ${tab==="history" ? renderExerciseDetailHistory(history, name) : ""}
-    ${tab==="howto" ? renderExerciseDetailHowTo(name, detail, libEntry) : ""}
+    ${tab==="howto" ? renderExerciseDetailHowTo(name, nd, libEntry) : ""}
 
-    <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:8px;" data-action="add-detail-to-workout" data-exercise-name="${name}">${svg('plus',16)} Add to Workout</button>
+    <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:8px;" data-action="add-detail-to-workout" data-exercise-name="${escHtml(name)}">${svg('plus',16)} Add to Workout</button>
   </div>`;
 }
 
@@ -10603,35 +10713,82 @@ function renderExerciseDetailSummary(name, detail, libEntry, prs){
   `;
 }
 
-function renderExerciseDetailHowTo(name, detail, libEntry){
-  if(!detail){
+/* The coaching guide, as five collapsible sections. `nd` is an already-normalized detail
+   (see normalizeExerciseDetail) so both the original and expanded schemas render here.
+   Every section is omitted entirely when it has no data -- there are no empty shells. */
+function renderExerciseDetailHowTo(name, nd, libEntry){
+  if(!nd){
     return `<div class="pg-card" style="text-align:center;padding:28px 18px;">
       <span class="tl-card__icon" style="width:44px;height:44px;margin:0 auto 12px;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('info',22)}</span>
       <div style="font-size:15px;font-weight:800;">Instructions not available yet</div>
-      ${libEntry?`<div style="font-size:12px;color:var(--rh-muted);margin-top:4px;">Suggested: <span style="color:var(--rh-text);font-weight:700;">${libEntry.presc}</span></div>`:''}
+      ${libEntry?`<div style="font-size:12px;color:var(--rh-muted);margin-top:4px;">Suggested: <span style="color:var(--rh-text);font-weight:700;">${escHtml(libEntry.presc)}</span></div>`:''}
     </div>`;
   }
-  return `
-    ${renderExerciseAnimation(detail)}
+  const open = state.exerciseSectionsOpen || {};
+  const isOpen = (k, dflt) => (open[k] === undefined ? dflt : open[k]);
+  const sub = (label) => `<div class="ex-sub">${label}</div>`;
+  const out = [];
 
-    <div class="rh-section-head" style="margin-top:16px;"><span>Step-by-Step</span></div>
-    <div class="pg-card">
-      ${detail.instructions.map((s,i)=>`<div style="display:flex;gap:10px;padding:6px 0;${i>0?'border-top:1px solid var(--rh-border);':''}">
-        <span style="color:var(--rh-blue);font-weight:900;font-size:13px;flex-shrink:0;">${i+1}</span>
-        <span style="font-size:13px;line-height:1.5;">${s}</span>
-      </div>`).join("")}
-    </div>
+  /* ---- Overview: description, muscles, equipment, difficulty ---- */
+  const overview = [];
+  if(nd.description) overview.push(`<p class="ex-desc">${escHtml(nd.description)}</p>`);
+  if(nd.primaryMuscles.length){
+    overview.push(sub("Primary Muscles") + `<div class="ex-chips">${nd.primaryMuscles.map(m=>`<span class="ex-chip ex-chip--primary">${escHtml(m)}</span>`).join("")}</div>`);
+  }
+  if(nd.secondaryMuscles.length){
+    overview.push(sub("Secondary Muscles") + `<div class="ex-chips">${nd.secondaryMuscles.map(m=>`<span class="ex-chip">${escHtml(m)}</span>`).join("")}</div>`);
+  }
+  const facts = [["Equipment", nd.equipment], ["Difficulty", nd.difficulty], ["Movement", nd.movementType], ["Type", nd.exerciseType]].filter(f=>f[1]);
+  if(facts.length){
+    overview.push(`<div class="ex-facts">${facts.map(([k,v])=>`<div class="ex-fact"><span class="ex-fact__k">${k}</span><span class="ex-fact__v">${escHtml(v)}</span></div>`).join("")}</div>`);
+  }
+  if(overview.length) out.push(exDetailSection("overview","Overview","info", overview.join(""), isOpen("overview", true)));
 
-    <div class="rh-section-head"><span>Form Tips</span></div>
-    <div class="pg-card">
-      ${detail.formTips.map(t=>`<div style="display:flex;gap:8px;padding:4px 0;font-size:13px;"><span style="color:var(--rh-green);">✓</span> ${t}</div>`).join("")}
-    </div>
+  /* ---- How To: setup, execution, breathing ---- */
+  const howto = [];
+  if(nd.setup.length) howto.push(sub("Setup") + exDetailList(nd.setup, "•", "var(--rh-blue)"));
+  if(nd.execution.length){
+    howto.push(sub("Execution") + nd.execution.map((s,i)=>`<div class="ex-step">
+      <span class="ex-step__n">${i+1}</span><span class="ex-step__t">${escHtml(s)}</span></div>`).join(""));
+  }
+  if(nd.breathing) howto.push(sub("Breathing") + `<div class="ex-li"><span class="ex-li__g" style="color:var(--rh-blue);">${svg('lungs',13)}</span><span>${escHtml(nd.breathing)}</span></div>`);
+  if(howto.length) out.push(exDetailSection("howto","How To","workout", howto.join(""), isOpen("howto", true)));
 
-    <div class="rh-section-head"><span>Common Mistakes</span></div>
-    <div class="pg-card" style="margin-bottom:16px;">
-      ${detail.commonMistakes.map(t=>`<div style="display:flex;gap:8px;padding:4px 0;font-size:13px;"><span style="color:var(--rh-red);">✕</span> ${t}</div>`).join("")}
-    </div>
-  `;
+  /* ---- Technique: form tips, mistakes, safety ---- */
+  const tech = [];
+  if(nd.formTips.length) tech.push(sub("Form Tips") + exDetailList(nd.formTips, "✓", "var(--rh-green)"));
+  if(nd.commonMistakes.length) tech.push(sub("Common Mistakes") + exDetailList(nd.commonMistakes, "✕", "var(--rh-red)"));
+  if(nd.safety.length) tech.push(sub("Safety") + exDetailList(nd.safety, "!", "var(--rh-amber, #d97706)"));
+  if(tech.length) out.push(exDetailSection("technique","Technique","shield", tech.join(""), isOpen("technique", false)));
+
+  /* ---- Progressions: beginner / intermediate / advanced ---- */
+  const prog = [];
+  if(nd.beginnerModifications.length) prog.push(sub("Beginner Modifications") + exDetailList(nd.beginnerModifications, "•", "var(--rh-green)"));
+  if(nd.intermediateProgressions.length) prog.push(sub("Intermediate Progressions") + exDetailList(nd.intermediateProgressions, "•", "var(--rh-blue)"));
+  if(nd.advancedProgressions.length) prog.push(sub("Advanced Progressions") + exDetailList(nd.advancedProgressions, "•", "var(--rh-amber, #d97706)"));
+  if(prog.length) out.push(exDetailSection("progressions","Progressions","progress", prog.join(""), isOpen("progressions", false)));
+
+  /* ---- Programming: sets / reps / rest / tempo ---- */
+  const program = [["Sets", nd.recommendedSets], ["Reps", nd.recommendedReps], ["Rest", nd.recommendedRest], ["Tempo", nd.recommendedTempo]].filter(p=>p[1]);
+  if(program.length || nd.notes){
+    let body = "";
+    if(program.length){
+      body += `<div class="ex-prog">${program.map(([k,v])=>`<div class="ex-prog__cell">
+        <div class="ex-prog__k">${k}</div><div class="ex-prog__v">${escHtml(v)}</div></div>`).join("")}</div>`;
+    }
+    if(nd.notes) body += sub("Notes") + `<p class="ex-desc">${escHtml(nd.notes)}</p>`;
+    out.push(exDetailSection("programming","Programming","timer", body, isOpen("programming", false)));
+  }
+
+  // A library entry always carries a suggested prescription; show it when the entry itself
+  // has no programming block so the user still gets a starting point.
+  const fallbackPresc = (!program.length && libEntry)
+    ? `<div class="pg-card" style="margin-top:10px;font-size:12px;color:var(--rh-muted);">Suggested: <span style="color:var(--rh-text);font-weight:700;">${escHtml(libEntry.presc)}</span></div>` : "";
+
+  return `${renderExerciseAnimation(nd)}
+    <div class="ex-sections">${out.join("")}</div>
+    ${fallbackPresc}
+    <div style="height:16px;"></div>`;
 }
 
 // Broad-group color coding for the muscle tag on each row -- reuses the real FINE_TO_BROAD
@@ -12210,6 +12367,21 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{
       state.exerciseDetailTab = el.dataset.exDetailTab;
       render();
+    });
+  });
+  // Collapsible guide sections. Toggled in-place (class swap, no re-render) so the CSS
+  // max-height transition actually animates -- a full render() would replace the node and
+  // the browser would snap straight to the end state with no transition.
+  document.querySelectorAll("[data-ex-section]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const key = el.dataset.exSection;
+      const card = el.closest(".ex-sec");
+      if(!card) return;
+      const nowOpen = !card.classList.contains("is-open");
+      card.classList.toggle("is-open", nowOpen);
+      el.setAttribute("aria-expanded", nowOpen ? "true" : "false");
+      if(!state.exerciseSectionsOpen) state.exerciseSectionsOpen = {};
+      state.exerciseSectionsOpen[key] = nowOpen; // survives tab switches / re-renders
     });
   });
   const closeExDetailBtn = document.querySelector('[data-action="close-exercise-detail"]');
