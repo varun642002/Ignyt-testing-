@@ -4546,7 +4546,7 @@ const state = {
   historyPRsOnly: false, historyPage: 1, historyArchived: false, historyBinOpen: false,
   historySelectMode: false, historySelected: [], // transient — bulk multi-select
   // Food search (transient — a fresh visit starts with an empty search)
-  foodSearchQuery: "", foodSearchSelected: null, foodSearchGrams: null,
+  foodSearchQuery: "", foodSearchSelected: null, foodSearchAmount: null, foodSearchUnit: "g",
   raceActive: LS.get("hx_race_active", null),
   raceLog: LS.get("hx_race_log", []),
   viewingRaceMode: !!LS.get("hx_race_active", null),
@@ -6964,6 +6964,20 @@ function calcBodyType(bust, waist, highHip, hip){
 
    Degrades silently if either food module failed to load -- the manual macro form below it
    has always been the fallback and still works on its own. */
+/** Resolves the current portion selection to {amount, unit, grams} for a food. Single
+ *  choke point so the panel, the preview and the logged record can never disagree.
+ *  Falls back to the food's own 100g basis when nothing is selected yet, and to grams if
+ *  the chosen unit doesn't apply (e.g. the unit carried over from a previous food). */
+function resolveFoodPortion(food){
+  const conv = window.IgnytServingConverter;
+  let unit = state.foodSearchUnit || "g";
+  if(conv && conv.gramsPerUnit(food, unit) == null) unit = "g";
+  const rawAmount = Number(state.foodSearchAmount);
+  const amount = rawAmount > 0 ? rawAmount : (unit === "g" ? (food.per || 100) : 1);
+  const grams = (conv && unit !== "g") ? (conv.toGrams(food, amount, unit) || (food.per || 100)) : amount;
+  return { amount, unit, grams: Math.round(grams*10)/10 };
+}
+
 function renderFoodSearchPanel(meal){
   if(!window.IgnytFoodSearch || !window.IgnytFoodDB) return "";
   const q = state.foodSearchQuery || "";
@@ -6977,18 +6991,25 @@ function renderFoodSearchPanel(meal){
     const food = sel.id.indexOf("fav:")===0 ? IgnytFoodSearch.search(sel.name,{limit:1})[0] : IgnytFoodDB.byId(sel.id);
     if(food){
       const scalable = food.per != null;
-      const grams = Number(state.foodSearchGrams) > 0 ? Number(state.foodSearchGrams) : (food.per || 100);
-      const scaled = scalable ? IgnytFoodDB.scaleFood(food, grams)
+      const p = resolveFoodPortion(food);
+      const scaled = scalable ? IgnytFoodDB.scaleFood(food, p.grams)
         : { name:food.name, calories:food.calories, protein:food.protein, carbs:food.carbs, fat:food.fat, fibre:food.fibre };
+      const conv = window.IgnytServingConverter;
+      const units = (scalable && conv) ? conv.unitsFor(food) : ["g"];
+      // Countable units step in whole numbers; grams step in useful chunks.
+      const presets = p.unit==="g" ? [50,100,150,200] : [1,2,3];
       portion = `
         <div class="info-box" style="padding:10px 12px;margin-bottom:8px;">
           <div style="font-size:13px;font-weight:800;margin-bottom:6px;">${escHtml(food.name)}</div>
-          ${scalable?`<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
-            <input type="number" id="food-search-grams" value="${grams}" min="1" style="width:80px;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:8px;font-size:13px;color:var(--text);text-align:center;">
-            <span style="font-size:12px;color:var(--muted);">grams</span>
-            <span style="display:flex;gap:4px;margin-left:auto;">
-              ${[50,100,150,200].map(g=>`<button class="cat-chip" data-food-grams="${g}" style="margin:0;">${g}g</button>`).join("")}
-            </span>
+          ${scalable?`<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+            <input type="number" id="food-search-amount" value="${p.amount}" min="0" step="any" style="width:70px;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:8px;font-size:13px;color:var(--text);text-align:center;">
+            <select id="food-search-unit" style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:8px;font-size:13px;color:var(--text);">
+              ${units.map(u=>`<option value="${u}" ${p.unit===u?'selected':''}>${escHtml(conv?conv.labelFor(u,p.amount):u)}</option>`).join("")}
+            </select>
+            ${p.unit!=="g"?`<span style="font-size:12px;color:var(--muted);white-space:nowrap;">= ${p.grams}g</span>`:''}
+          </div>
+          <div style="display:flex;gap:4px;margin-bottom:8px;">
+            ${presets.map(v=>`<button class="cat-chip" data-food-amount="${v}" style="margin:0;">${v}${p.unit==="g"?'g':''}</button>`).join("")}
           </div>`:`<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Saved favourite — logged as one portion.</div>`}
           <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">
             <b style="color:var(--accent);">${scaled.calories} kcal</b> · P ${scaled.protein}g · C ${scaled.carbs}g · F ${scaled.fat}g · Fb ${scaled.fibre}g
@@ -15762,24 +15783,36 @@ function attachHandlers(){
         : IgnytFoodDB.byId(id);
       if(!food) return;
       state.foodSearchSelected = { id: food.id, name: food.name };
-      state.foodSearchGrams = food.per || null; // default to the catalogue's own basis (100g)
+      // Reset the portion to the food's own basis; a unit carried over from a previous
+      // food may not even apply to this one.
+      state.foodSearchAmount = food.per || null;
+      state.foodSearchUnit = "g";
       render();
     });
   });
-  const gramsInput = document.getElementById("food-search-grams");
-  if(gramsInput) gramsInput.addEventListener("input", ()=>{
-    state.foodSearchGrams = gramsInput.value;
-    debounce("food-grams", ()=>{
+  const amountInput = document.getElementById("food-search-amount");
+  if(amountInput) amountInput.addEventListener("input", ()=>{
+    state.foodSearchAmount = amountInput.value;
+    debounce("food-amount", ()=>{
       render();
-      setTimeout(()=>{ const g=document.getElementById("food-search-grams"); if(g){ g.focus(); g.setSelectionRange(g.value.length,g.value.length); } },0);
+      setTimeout(()=>{ const g=document.getElementById("food-search-amount"); if(g){ g.focus(); g.setSelectionRange(g.value.length,g.value.length); } },0);
     }, 200);
   });
-  document.querySelectorAll("[data-food-grams]").forEach(el=>{
-    el.addEventListener("click", ()=>{ state.foodSearchGrams = Number(el.dataset.foodGrams); render(); });
+  const unitSelect = document.getElementById("food-search-unit");
+  if(unitSelect) unitSelect.addEventListener("change", ()=>{
+    const prev = state.foodSearchUnit;
+    state.foodSearchUnit = unitSelect.value;
+    // Switching between grams and a countable unit makes the old number meaningless
+    // (150 grams -> 150 chapatis), so reset to a sensible default for the new unit.
+    if((prev === "g") !== (unitSelect.value === "g")) state.foodSearchAmount = null;
+    render();
+  });
+  document.querySelectorAll("[data-food-amount]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.foodSearchAmount = Number(el.dataset.foodAmount); render(); });
   });
   const foodCancelBtn = document.querySelector("[data-food-search-cancel]");
   if(foodCancelBtn) foodCancelBtn.addEventListener("click", ()=>{
-    state.foodSearchSelected = null; state.foodSearchGrams = null; render();
+    state.foodSearchSelected = null; state.foodSearchAmount = null; state.foodSearchUnit = "g"; render();
   });
   const foodAddBtn = document.querySelector("[data-food-search-add]");
   if(foodAddBtn) foodAddBtn.addEventListener("click", ()=>{
@@ -15790,8 +15823,7 @@ function attachHandlers(){
       : IgnytFoodDB.byId(sel.id);
     if(!food) return;
     const scalable = food.per != null;
-    const grams = Number(state.foodSearchGrams) > 0 ? Number(state.foodSearchGrams) : (food.per || 100);
-    const v = scalable ? IgnytFoodDB.scaleFood(food, grams) : food;
+    const v = scalable ? IgnytFoodDB.scaleFood(food, resolveFoodPortion(food).grams) : food;
     // Identical record shape to the quick-add chips — nothing downstream can tell the
     // difference between a searched food and a manually entered one.
     state.foodLog.unshift({
@@ -15800,7 +15832,7 @@ function attachHandlers(){
       calories: Number(v.calories)||0, protein: Number(v.protein)||0,
       carbs: Number(v.carbs)||0, fat: Number(v.fat)||0, fibre: Number(v.fibre)||0
     });
-    state.foodSearchSelected = null; state.foodSearchQuery = ""; state.foodSearchGrams = null;
+    state.foodSearchSelected = null; state.foodSearchQuery = ""; state.foodSearchAmount = null; state.foodSearchUnit = "g";
     render();
   });
 
