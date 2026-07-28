@@ -23,6 +23,7 @@
   window.IgnytPages.renderHome = function renderHome(ctx) {
     const { state, week, streak, greeting, displayW, wUnit, svg,
       weekStats, targets, eaten, burned, dayDone, dayTotal, plannedDay,
+      water, waterTarget, nutritionToday,
       renderAchievementCelebration, renderPRCelebration } = ctx;
 
     let health = null;
@@ -127,6 +128,52 @@
         ${summaryTile('footprints', 'rgba(217,119,6,.08)', '#D97706', steps == null ? '—' : Number(steps).toLocaleString(), '', 'Steps', `/ ${DEFAULT_STEPS_GOAL.toLocaleString()}`)}
         ${summaryTile('timer', 'rgba(37,99,235,.08)', 'var(--rh-blue)', workoutMinutes == null ? '—' : workoutMinutes, '', 'Active Minutes', `/ ${DEFAULT_WORKOUT_MINUTES_GOAL} min`)}
       </div>
+
+      ${(() => {
+        /* Nutrition card. Only shown once something has been logged today — an empty card of
+           zeros is noise on a home screen, and the Nutrition tab is one tap away regardless. */
+        const n = nutritionToday;
+        if (!n || !n.entryCount) return '';
+        const remaining = Math.round(targets.kcal) - n.kcal;
+        const bar = (label, val, target, color) => {
+          const pct = target > 0 ? Math.min(100, Math.round((val / target) * 100)) : 0;
+          return `<div style="flex:1;min-width:0;">
+            <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px;">
+              <span style="color:${color};font-weight:700;">${label}</span>
+              <span style="color:var(--rh-muted);font-family:'SF Mono',monospace;">${Math.round(val)}g</span>
+            </div>
+            <div style="height:4px;border-radius:2px;background:rgba(128,128,128,.18);overflow:hidden;">
+              <div style="height:100%;width:${pct}%;background:${color};border-radius:2px;"></div>
+            </div>
+          </div>`;
+        };
+        return `
+        <div class="rh-section-head"><span>Nutrition</span><a href="#" class="rh-view-all" data-nav="nutrition">View All</a></div>
+        <div class="pg-card" style="padding:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+            <div>
+              <div style="font-size:11px;color:var(--rh-muted);font-weight:700;text-transform:uppercase;">Eaten</div>
+              <div style="font-family:'SF Mono',monospace;font-size:22px;font-weight:900;">${n.kcal.toLocaleString()}<span style="font-size:11px;font-weight:600;color:var(--rh-muted);"> / ${Math.round(targets.kcal).toLocaleString()} kcal</span></div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:11px;color:var(--rh-muted);font-weight:700;text-transform:uppercase;">${remaining >= 0 ? 'Remaining' : 'Over'}</div>
+              <div style="font-family:'SF Mono',monospace;font-size:22px;font-weight:900;color:${remaining >= 0 ? 'var(--rh-green)' : '#DC2626'};">${Math.abs(remaining).toLocaleString()}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:10px;">
+            ${bar('Protein', n.protein, targets.protein, 'var(--rh-green)')}
+            ${bar('Carbs', n.carbs, targets.carbs, 'var(--rh-blue)')}
+            ${bar('Fat', n.fat, targets.fat, '#D97706')}
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--rh-muted);border-top:1px solid rgba(128,128,128,.15);padding-top:9px;">
+            <span>💧 ${(water / 1000).toFixed(1)} / ${(waterTarget / 1000).toFixed(1)} L</span>
+            <span>${n.mealCount} meal${n.mealCount === 1 ? '' : 's'} · ${n.entryCount} item${n.entryCount === 1 ? '' : 's'}</span>
+          </div>
+          ${n.latestName ? `<div style="font-size:11px;color:var(--rh-muted);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            Last: <span style="color:var(--rh-text,inherit);font-weight:600;">${n.latestName}</span> · ${n.latestKcal} kcal · ${n.latestMeal}
+          </div>` : ''}
+        </div>`;
+      })()}
 
       <div class="rh-section-head"><span>Quick Actions</span></div>
       <div class="rh-quick-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));">

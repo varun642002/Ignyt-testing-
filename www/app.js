@@ -3993,10 +3993,55 @@ const GOAL_OPTIONS = [
 
 const ACTIVITY_KCAL_PER_MIN = 8; // rough estimate for mixed strength/conditioning work
 
-const MEALS = ["Breakfast","Morning Snack","Lunch","Evening Snack","Dinner"];
+/* Meal types.
+
+   "Evening Snack" was the original name for the afternoon slot. It is renamed to
+   "Afternoon Snack" by a flag-guarded migration rather than kept alongside it, because two
+   meals meaning the same thing is a worse outcome than one rename — but see
+   mealTypesInUse() below: the UI never relies on the migration having run. Any entry whose
+   meal name is not in this list still gets its own section, so a log entry can never become
+   invisible because of a naming change.
+
+   The list is stored so custom meal names can be added later without touching code. It is
+   read through mealTypes(), never captured in a const, so a change takes effect on the next
+   render. */
+const DEFAULT_MEALS = ["Breakfast","Morning Snack","Lunch","Afternoon Snack","Dinner","Post Workout"];
+const MEAL_TYPES_KEY = "hx_meal_types";
+
+function mealTypes(){
+  const stored = LS.get(MEAL_TYPES_KEY, null);
+  if(Array.isArray(stored) && stored.length && stored.every(m=>typeof m === "string" && m.trim())){
+    return stored;
+  }
+  return DEFAULT_MEALS;
+}
+
+/** Every meal that needs a section: the configured types, plus any name found in the day's
+ *  entries that is not among them. Guarantees nothing logged is ever hidden. */
+function mealTypesInUse(entries){
+  const known = mealTypes();
+  const extra = [];
+  (entries||[]).forEach(f=>{
+    const m = (f && f.meal) || "Lunch";
+    if(!known.includes(m) && !extra.includes(m)) extra.push(m);
+  });
+  return known.concat(extra);
+}
 // Default share of daily calories per meal (matches typical 25/12.5/25/12.5/25 split)
 
-const MEAL_SHARE = {"Breakfast":0.25,"Morning Snack":0.125,"Lunch":0.25,"Evening Snack":0.125,"Dinner":0.25};
+/* Share of the daily calorie target apportioned to each meal, used only to colour a meal's
+   total when it runs over. Sums to 1.00 across the defaults. A custom or legacy meal name
+   absent from this table falls back to an even split rather than a budget of zero, which
+   would otherwise paint every entry in it as over-budget. */
+const MEAL_SHARE = {"Breakfast":0.25,"Morning Snack":0.10,"Lunch":0.27,"Afternoon Snack":0.10,"Dinner":0.25,"Post Workout":0.03,
+  /* legacy name, kept so a log that predates the migration still gets a sane budget */
+  "Evening Snack":0.10};
+
+function mealShare(meal){
+  if(MEAL_SHARE[meal] != null) return MEAL_SHARE[meal];
+  const n = mealTypes().length || 1;
+  return 1 / n;
+}
 
 const HYROX_EXPERIENCE_OPTIONS = [
   {key:"first-timer", label:"Never raced Hyrox"},
@@ -4551,6 +4596,10 @@ const state = {
   foodBrowseCategory: null, foodBrowsePage: 1, foodResultPage: 1,
   // Which day the nutrition dashboard is showing. Transient: a fresh visit opens on today.
   nutritionDate: null, microExpanded: false, insightsExpanded: false,
+  // Which logged entry has its editor expanded (transient).
+  foodEntryOpen: null,
+  // Quick Add panel (transient). quickAddMeal is which meal one-tap items land in.
+  quickAddOpen: false, quickAddMeal: null,
   raceActive: LS.get("hx_race_active", null),
   raceLog: LS.get("hx_race_log", []),
   viewingRaceMode: !!LS.get("hx_race_active", null),
@@ -5017,6 +5066,20 @@ function runMigrations(){
       if(added > 0) LS.set("hx_favorite_foods", list);
     }catch(e){ /* a migration must never break boot */ }
     LS.set("hx_favfoods_id_migrated_v1", true);
+  }
+
+  // "Evening Snack" -> "Afternoon Snack". A rename, not a data change: only the label moves,
+  // every nutrition value and id stays put. Guarded and idempotent like the rest. Even if
+  // this never runs, mealTypesInUse() still renders a section for the old name, so no entry
+  // can be orphaned by the rename.
+  if(!LS.get("hx_meal_rename_migrated_v1", false)){
+    try{
+      const log = Array.isArray(state.foodLog) ? state.foodLog : [];
+      let moved = 0;
+      log.forEach(f=>{ if(f && f.meal === "Evening Snack"){ f.meal = "Afternoon Snack"; moved++; } });
+      if(moved > 0) LS.set("hx_food_log", log);
+    }catch(e){ /* a migration must never break boot */ }
+    LS.set("hx_meal_rename_migrated_v1", true);
   }
 
   const stored = LS.get("hx_schema_version", null);
@@ -7222,7 +7285,7 @@ function renderFoodDetail(food, meal){
 
       <div style="display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;">
         <span style="font-size:10px;color:var(--muted);align-self:center;flex-shrink:0;margin-right:2px;">Quick add:</span>
-        ${MEALS.filter(m=>m!==meal).map(m=>`<button class="cat-chip" data-food-quick-meal="${escHtml(m)}" style="margin:0;flex-shrink:0;" ${check.ok?"":"disabled"}>${escHtml(m)}</button>`).join("")}
+        ${mealTypes().filter(m=>m!==meal).map(m=>`<button class="cat-chip" data-food-quick-meal="${escHtml(m)}" style="margin:0;flex-shrink:0;" ${check.ok?"":"disabled"}>${escHtml(m)}</button>`).join("")}
       </div>
     </div>`;
 }
@@ -7339,6 +7402,171 @@ function todayMacros(){
     t.fibre += Number(f.fibre||0);
   });
   return t;
+}
+
+/* ---- Logged-entry editing (Phase 5) ------------------------------------------------
+   A logged entry can be re-scaled, moved to another meal, duplicated or deleted.
+
+   Re-scaling needs the food it came from, which is why commitSelectedFood() records
+   foodId/quantity/servingUnit/grams. An entry without them — anything entered by hand, or
+   logged before this existed — can still be moved, duplicated and deleted; only the serving
+   controls are withheld, because re-scaling numbers whose basis is unknown would be
+   guesswork presented as arithmetic.
+
+   Deletion keeps the removed entry in memory so it can be undone. It is deliberately NOT
+   persisted: an undo that survives an app restart implies a recycle bin, and food entries
+   are cheap to re-add. The workout recycle bin exists because a lost session is expensive. */
+
+/** The last deleted food entry, for one-step undo. Transient by design. */
+let lastDeletedFood = null;
+
+/** The meal whose window the current time falls in, so a one-tap add lands sensibly.
+ *  Falls back to the first configured meal if the usual names have been customised away. */
+function mealForNow(){
+  const h = new Date().getHours();
+  const want = h < 11 ? "Breakfast" : h < 12 ? "Morning Snack" : h < 15 ? "Lunch"
+             : h < 18 ? "Afternoon Snack" : "Dinner";
+  const types = mealTypes();
+  return types.includes(want) ? want : types[0];
+}
+
+function foodEntryById(id){
+  return state.foodLog.find(f=>f && String(f.id) === String(id)) || null;
+}
+
+/** True when this entry carries enough provenance to be re-scaled. */
+function foodEntryIsScalable(entry){
+  if(!entry || entry.foodId == null) return false;
+  return !!lookupFood(entry.foodId, entry.name);
+}
+
+/**
+ * Rewrites a logged entry at a new quantity/unit, recomputing every nutrient from the
+ * source food rather than scaling the stored numbers — stored values are rounded, and
+ * re-scaling rounded values compounds the error on every edit.
+ * @returns {{ok:boolean, error:string|null}}
+ */
+function rescaleFoodEntry(entry, amount, unit){
+  const N = window.IgnytNutrition;
+  const food = entry && entry.foodId != null ? lookupFood(entry.foodId, entry.name) : null;
+  if(!N || !food) return { ok:false, error:"This entry can't be re-scaled." };
+
+  const check = N.validateQuantity(food, amount, unit || entry.servingUnit || "g");
+  if(!check.ok) return { ok:false, error:check.error };
+
+  const v = N.logValues(food, check.grams);
+  entry.calories = Number(v.calories)||0;
+  entry.protein = Number(v.protein)||0;
+  entry.carbs = Number(v.carbs)||0;
+  entry.fat = Number(v.fat)||0;
+  entry.fibre = Number(v.fibre)||0;
+  // Re-derive micronutrients too, and drop any that the food no longer reports so a stale
+  // figure can never survive an edit.
+  N.MICRO_LOG_FIELDS.forEach(k=>{ if(v[k] != null) entry[k] = Number(v[k]); else delete entry[k]; });
+  entry.quantity = check.amount;
+  entry.servingUnit = check.unit;
+  entry.grams = check.grams;
+  entry.editedAt = Date.now();
+  return { ok:true, error:null };
+}
+
+/** The row of controls shown when an entry is expanded. */
+function renderFoodEntryEditor(entry, meal){
+  const N = window.IgnytNutrition;
+  const scalable = foodEntryIsScalable(entry);
+  const food = scalable ? lookupFood(entry.foodId, entry.name) : null;
+  const conv = window.IgnytServingConverter;
+  const units = (scalable && conv) ? conv.unitsFor(food) : [];
+  const qty = entry.quantity != null ? entry.quantity : (entry.grams || 100);
+  const unit = entry.servingUnit || "g";
+
+  return `<div style="background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:10px;margin:6px 0 8px;">
+    ${scalable ? `
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Serving</div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+        <input type="number" class="entry-qty" data-entry-qty="${entry.id}" value="${escHtml(String(qty))}" min="0" step="any" inputmode="decimal"
+          style="width:64px;background:var(--surface);border-radius:var(--radius-xs-plus);padding:7px;font-size:13px;color:var(--text);text-align:center;">
+        <select data-entry-unit="${entry.id}" style="flex:1;min-width:0;background:var(--surface);border-radius:var(--radius-xs-plus);padding:7px;font-size:13px;color:var(--text);">
+          ${units.map(u=>`<option value="${u}" ${unit===u?'selected':''}>${escHtml(conv?conv.labelFor(u,qty):u)}</option>`).join("")}
+        </select>
+        <button class="btn btn-accent" style="padding:7px 12px;font-size:12px;" data-entry-save="${entry.id}">Save</button>
+      </div>`
+    : `<div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.4;">
+        Entered manually, so there is no source food to re-scale from. It can still be moved,
+        duplicated or deleted.
+      </div>`}
+
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Move to</div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+      ${mealTypes().filter(m=>m!==meal).map(m=>`<button class="cat-chip" data-entry-move="${entry.id}" data-entry-meal="${escHtml(m)}" style="margin:0;">${escHtml(m)}</button>`).join("")}
+    </div>
+
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-ghost" style="flex:1;padding:7px;font-size:12px;" data-entry-duplicate="${entry.id}">Duplicate</button>
+      <button class="btn btn-ghost" style="flex:1;padding:7px;font-size:12px;color:var(--accent);" data-entry-delete="${entry.id}">Delete</button>
+    </div>
+  </div>`;
+}
+
+/* ---- Repeat / most-used (Phase 5) ---------------------------------------------------
+   Re-logging what you already ate is the single most common nutrition action, so it should
+   never require going back through search.
+
+   Copies are made field-by-field from the stored entry rather than recomputed from the
+   catalogue: the point of "repeat" is to reproduce what was actually logged, including a
+   manual entry that has no source food at all. */
+
+/** Fields worth carrying when an entry is repeated. `id`, `date` and `at` are always fresh. */
+function copyFoodEntry(src, date, meal){
+  const N = window.IgnytNutrition;
+  const out = {
+    id: nextId(), date: date, meal: meal || src.meal || mealTypes()[0],
+    name: src.name,
+    calories: Number(src.calories)||0, protein: Number(src.protein)||0,
+    carbs: Number(src.carbs)||0, fat: Number(src.fat)||0, fibre: Number(src.fibre)||0,
+    at: Date.now()
+  };
+  if(N) N.MICRO_LOG_FIELDS.forEach(k=>{ if(src[k] != null) out[k] = Number(src[k]); });
+  ["foodId","category","quantity","servingUnit","grams"].forEach(k=>{ if(src[k] != null) out[k] = src[k]; });
+  return out;
+}
+
+function dayOffsetStr(ds, days){
+  const d = new Date(ds + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return localDateStr(d);
+}
+
+/**
+ * Copies entries from one day to another.
+ * @param {string} fromDate @param {string} toDate @param {string|null} meal only this meal
+ * @returns {number} how many entries were copied
+ */
+function repeatFoodEntries(fromDate, toDate, meal){
+  const src = foodsForDate(fromDate).filter(f=>!meal || (f.meal||"Lunch") === meal);
+  if(!src.length) return 0;
+  // Oldest first, so the copied day preserves the order the original was logged in
+  // (foodLog is newest-first, and unshift would otherwise reverse it).
+  src.slice().reverse().forEach(f=>state.foodLog.unshift(copyFoodEntry(f, toDate, f.meal)));
+  return src.length;
+}
+
+/** Distinct foods by how often they have been logged, most frequent first. */
+function mostUsedFoods(limit=8){
+  const counts = Object.create(null);
+  (state.foodLog||[]).forEach(f=>{
+    if(!f || !f.name) return;
+    const k = String(f.name).trim().toLowerCase();
+    if(!counts[k]) counts[k] = { entry: f, count: 0 };
+    counts[k].count++;
+    // Keep the most recent instance as the template — it reflects the serving the user
+    // settled on, not whatever they tried first.
+    if((f.at||0) > (counts[k].entry.at||0)) counts[k].entry = f;
+  });
+  return Object.values(counts)
+    .filter(x=>x.count > 1)          // "most used" means more than once
+    .sort((a,b)=> b.count - a.count || String(a.entry.name).localeCompare(String(b.entry.name)))
+    .slice(0, limit);
 }
 
 /* ---- Nutrition dashboard helpers -------------------------------------------------- */
@@ -7469,6 +7697,31 @@ function nutritionInsights(totals, coverage, targets, waterMl, waterTarget){
     body: wPct>=100 ? "Daily goal reached." : `${wPct}% of goal — ${((waterTarget-waterMl)/1000).toFixed(1)} L to go.` });
 
   return out;
+}
+
+/** Per-meal observations: which meal carried the most protein, the most calories, the least.
+ *  Only meaningful once more than one meal has food in it — with a single meal these three
+ *  are all the same row and say nothing. */
+function mealInsights(entries){
+  const byMeal = Object.create(null);
+  (entries||[]).forEach(f=>{
+    const m = (f && f.meal) || "Lunch";
+    if(!byMeal[m]) byMeal[m] = { meal:m, kcal:0, protein:0 };
+    byMeal[m].kcal += Number(f.calories||0);
+    byMeal[m].protein += Number(f.protein||0);
+  });
+  const rows = Object.values(byMeal).filter(r=>r.kcal > 0);
+  if(rows.length < 2) return [];
+
+  const topProtein = rows.slice().sort((a,b)=>b.protein-a.protein)[0];
+  const topKcal = rows.slice().sort((a,b)=>b.kcal-a.kcal)[0];
+  const lowKcal = rows.slice().sort((a,b)=>a.kcal-b.kcal)[0];
+
+  return [
+    { tone:"good", title:"Most protein", body:`${topProtein.meal} — ${Math.round(topProtein.protein)} g.` },
+    { tone:"info", title:"Biggest meal", body:`${topKcal.meal} — ${Math.round(topKcal.kcal)} kcal.` },
+    { tone:"info", title:"Smallest meal", body:`${lowKcal.meal} — ${Math.round(lowKcal.kcal)} kcal.` }
+  ];
 }
 
 const INSIGHT_TONES = {
@@ -8050,6 +8303,23 @@ function renderHomeTab(){
     state, week, plannedDay, planPct: overallPlanProgress(), streak: computeStreak(), targets: macroTargets(),
     eaten: Math.round(todayEaten()), proteinToday: Math.round(todayMacros().protein), latestWeight: state.bodylog[0],
     burned: todayBurned(), water: Math.round(todayWater()), waterTarget: state.settings.waterTargetMl || 2500,
+    // Computed here rather than in home.js so the date and meal helpers stay in one place —
+    // home.js deriving its own "today" risks disagreeing with the nutrition tab across a
+    // timezone boundary.
+    nutritionToday: (()=>{
+      const entries = foodsForDate(todayStr());
+      const t = nutritionTotalsFor(todayStr()).totals;
+      const meals = new Set(entries.map(f=>(f && f.meal) || "Lunch"));
+      // "Latest" by explicit timestamp where present, else by log position (newest-first).
+      const latest = entries.slice().sort((a,b)=>(b.at||0)-(a.at||0))[0] || entries[0] || null;
+      return {
+        kcal: Math.round(t.calories), protein: Math.round(t.protein),
+        carbs: Math.round(t.carbs), fat: Math.round(t.fat),
+        entryCount: entries.length, mealCount: meals.size,
+        latestName: latest ? latest.name : null, latestKcal: latest ? Math.round(latest.calories||0) : null,
+        latestMeal: latest ? (latest.meal || "Lunch") : null
+      };
+    })(),
     dayDone, dayTotal, weekStats: thisWeekStats(),
     todayMuscles: plannedDay ? Array.from(new Set(plannedDay.exercises.map(ex=>getMuscle(ex.name)))).filter(m=>m && m!=="Other").slice(0,3) : [],
     greeting, displayW, wUnit, svg, habitStreak, habitDateStr, renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed, renderHomeHabits
@@ -12120,13 +12390,14 @@ function renderNutritionTab(){
   const macroKcal = kcalFromProtein + kcalFromCarbs + kcalFromFat;
   const sharePct = v => macroKcal > 0 ? Math.round((v/macroKcal)*100) : 0;
 
-  const mealRows = MEALS.map(meal=>{
+  const mealRows = mealTypesInUse(dayEntries).map(meal=>{
     const foods = dayEntries.filter(f=>(f.meal||"Lunch")===meal);
     return { meal, foods, kcal: Math.round(foods.reduce((a,f)=>a+Number(f.calories||0),0)) };
   });
   const mealsWithFood = mealRows.filter(m=>m.kcal>0);
 
-  const insights = nutritionInsights(T, cov, targets, waterMl, waterTarget);
+  const insights = nutritionInsights(T, cov, targets, waterMl, waterTarget)
+    .concat(mealInsights(dayEntries));
   const glasses = 8;
   const glassesFilled = waterTarget>0 ? Math.min(glasses, Math.round((waterMl/waterTarget)*glasses)) : 0;
 
@@ -12286,17 +12557,72 @@ function renderNutritionTab(){
     </div>
 
     <!-- Add actions -->
-    <div style="display:flex;gap:6px;margin-bottom:12px;">
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
       <button class="btn btn-ghost" style="flex:1;padding:11px;font-size:11px;" data-action="scan-barcode">Scan Barcode</button>
       <button class="btn btn-accent" style="flex:1.3;padding:11px;font-size:13px;" data-action="add-food">+ Add Food</button>
-      <button class="btn btn-ghost" style="flex:1;padding:11px;font-size:11px;" data-action="quick-add-recent">Quick Add</button>
+      <button class="btn btn-ghost" style="flex:1;padding:11px;font-size:11px;${state.quickAddOpen?'color:var(--accent);':''}" data-action="quick-add-recent">Quick Add</button>
     </div>
 
-    <div class="eyebrow-label">Meals</div>
-    ${MEALS.map(meal=>{
+    ${state.quickAddOpen ? (()=>{
+      const yesterday = dayOffsetStr(ds, -1);
+      const yEntries = foodsForDate(yesterday);
+      const yMeals = mealTypesInUse(yEntries).filter(m=>yEntries.some(f=>(f.meal||"Lunch")===m));
+      const used = mostUsedFoods(8);
+      const favs = state.favoriteFoods || [];
+      const recents = recentFoodEntries(8);
+      const nothing = !yEntries.length && !used.length && !favs.length && !recents.length;
+
+      return `<div class="info-box" style="padding:12px 14px;margin-bottom:12px;">
+        <div class="row-between" style="margin-bottom:8px;">
+          <span style="font-size:13px;font-weight:800;">Quick Add</span>
+          <button class="cat-chip" data-action="quick-add-recent" style="margin:0;padding:2px 9px;font-size:11px;">Close</button>
+        </div>
+
+        ${nothing ? `<div style="font-size:11px;color:var(--muted);line-height:1.4;">
+          Nothing to repeat yet. Once you have logged a few foods they will show up here for
+          one-tap re-logging.
+        </div>` : ""}
+
+        ${yEntries.length ? `
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Repeat yesterday</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
+            <button class="cat-chip" data-repeat-day="${escHtml(yesterday)}" style="margin:0;">Entire day · ${yEntries.length} item${yEntries.length===1?"":"s"}</button>
+            ${yMeals.map(m=>{
+              const n = yEntries.filter(f=>(f.meal||"Lunch")===m).length;
+              return `<button class="cat-chip" data-repeat-meal="${escHtml(m)}" data-repeat-from="${escHtml(yesterday)}" style="margin:0;">${escHtml(m)} · ${n}</button>`;
+            }).join("")}
+          </div>` : ""}
+
+        ${used.length ? `
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Most logged</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
+            ${used.map(u=>`<button class="cat-chip" data-repeat-entry="${u.entry.id}" style="margin:0;">${escHtml(u.entry.name)} · ${u.entry.calories||0}kcal <span style="color:var(--muted);">×${u.count}</span></button>`).join("")}
+          </div>` : ""}
+
+        ${recents.length ? `
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Recent</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
+            ${recents.map(f=>`<button class="cat-chip" data-repeat-entry="${f.id}" style="margin:0;">${escHtml(f.name)} · ${f.calories||0}kcal</button>`).join("")}
+          </div>` : ""}
+
+        ${favs.length ? `
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">★ Favourites</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+            ${favs.map(f=>`<button class="cat-chip active" data-quick-add-food="${escHtml(state.mealOpen||mealTypes()[0])}" data-food-name="${escHtml(f.name)}" data-food-cal="${f.calories||0}" data-food-protein="${f.protein||0}" data-food-carbs="${f.carbs||0}" data-food-fat="${f.fat||0}" data-food-fibre="${f.fibre||0}" style="margin:0;">${escHtml(f.name)} · ${f.calories||0}kcal</button>`).join("")}
+          </div>` : ""}
+
+        ${!nothing ? `<div style="font-size:9px;color:var(--muted);margin-top:8px;">Items are added to ${escHtml(state.quickAddMeal || mealTypes()[0])}. Repeated meals keep their original meal.</div>` : ""}
+      </div>`;
+    })() : ""}
+
+    <div class="row-between" style="align-items:center;">
+      <div class="eyebrow-label">Meals</div>
+      ${lastDeletedFood ? `<button class="cat-chip" data-action="undo-food-delete" style="margin:0;padding:2px 10px;font-size:11px;">Undo delete</button>` : ""}
+    </div>
+    ${mealTypesInUse(dayEntries).map(meal=>{
       const mealFoods = dayEntries.filter(f=>(f.meal||"Lunch")===meal);
       const mealKcal = Math.round(mealFoods.reduce((a,f)=>a+Number(f.calories||0),0));
-      const budget = Math.round(targets.kcal * MEAL_SHARE[meal]);
+      const budget = Math.round(targets.kcal * mealShare(meal));
       const isOpen = state.mealOpen===meal;
       // Per-meal macro roll-up, so each row answers "what did this meal give me" without
       // expanding it.
@@ -12322,12 +12648,29 @@ function renderNutritionTab(){
           </span>
           <span style="color:var(--accent);font-weight:900;margin-left:8px;flex-shrink:0;">${isOpen?'−':'+'}</span>
         </div>
-        ${mealFoods.map(f=>`<div class="history-row" style="margin-top:8px;">
-          <div style="min-width:0;flex:1;margin-right:8px;"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.name}</div>
-          ${(f.protein||f.carbs||f.fat)?`<div class="mono" style="font-size:10px;color:var(--muted);">P${f.protein||0} C${f.carbs||0} F${f.fat||0}</div>`:""}</div>
-          <span class="mono" style="font-size:12px;color:var(--accent);flex-shrink:0;">${f.calories} kcal</span>
-          <button class="del" data-del-food="${f.id}" aria-label="Delete food entry">${svg('x',12)}</button>
-        </div>`).join("")}
+        ${mealFoods.map(f=>{
+          const open = String(state.foodEntryOpen) === String(f.id);
+          // The serving is shown when the entry recorded one, so "Rice 205 kcal" reads as
+          // "1 cup" rather than leaving the user to guess what they logged.
+          const servingText = f.quantity != null && f.servingUnit
+            ? (window.IgnytNutrition ? IgnytNutrition.formatAmount(f.quantity) : f.quantity) + " " +
+              (window.IgnytServingConverter ? IgnytServingConverter.labelFor(f.servingUnit, f.quantity) : f.servingUnit) +
+              (f.servingUnit !== "g" && f.grams ? ` · ${f.grams} g` : "")
+            : (f.grams ? `${f.grams} g` : "");
+          return `<div style="margin-top:8px;">
+            <div class="history-row" data-entry-toggle="${f.id}" style="cursor:pointer;">
+              <div style="min-width:0;flex:1;margin-right:8px;">
+                <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(f.name)}</div>
+                <div class="mono" style="font-size:10px;color:var(--muted);">
+                  ${servingText?escHtml(servingText)+" · ":""}P${f.protein||0} C${f.carbs||0} F${f.fat||0}
+                </div>
+              </div>
+              <span class="mono" style="font-size:12px;color:var(--accent);flex-shrink:0;">${f.calories} kcal</span>
+              <span style="color:var(--muted);font-size:12px;margin-left:8px;flex-shrink:0;">${open?'−':'⋯'}</span>
+            </div>
+            ${open?renderFoodEntryEditor(f, meal):""}
+          </div>`;
+        }).join("")}
         ${isOpen?`<div style="margin-top:10px;">
           ${renderFoodSearchPanel(meal)}
           ${recentFoodEntries(6).length ? `
@@ -16321,10 +16664,8 @@ function attachHandlers(){
   const addFoodBtn = document.querySelector('[data-action="add-food"]');
   if(addFoodBtn) addFoodBtn.addEventListener("click", ()=>{
     // Opens the meal whose window the current time falls in, so the common case is one tap.
-    const h = new Date().getHours();
-    const meal = h < 11 ? "Breakfast" : h < 12 ? "Morning Snack" : h < 15 ? "Lunch"
-               : h < 18 ? "Evening Snack" : "Dinner";
-    state.mealOpen = MEALS.includes(meal) ? meal : MEALS[0];
+    state.mealOpen = mealForNow();
+    state.quickAddOpen = false;
     render();
     setTimeout(()=>{
       const input = document.getElementById("food-search-input");
@@ -16332,17 +16673,42 @@ function attachHandlers(){
     }, 60);
   });
 
-  const quickAddBtn = document.querySelector('[data-action="quick-add-recent"]');
-  if(quickAddBtn) quickAddBtn.addEventListener("click", ()=>{
-    // Opens the current meal and scrolls to the Recent / Favourites chips, which are the
-    // existing one-tap re-log path — no new logging mechanism, just a shortcut to it.
-    if(!state.mealOpen) state.mealOpen = MEALS[0];
-    render();
-    setTimeout(()=>{
-      const chip = document.querySelector("[data-quick-add-food]");
-      if(chip) chip.scrollIntoView({behavior:"smooth", block:"center"});
-      else showToast("Nothing logged yet — add a food first and it'll appear here.", "error", render);
-    }, 60);
+  document.querySelectorAll('[data-action="quick-add-recent"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.quickAddOpen = !state.quickAddOpen;
+      // Default the destination to the meal for the current time, so a one-tap item lands
+      // somewhere sensible without asking.
+      if(state.quickAddOpen && !state.quickAddMeal) state.quickAddMeal = mealForNow();
+      render();
+    });
+  });
+  document.querySelectorAll("[data-repeat-day]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const n = repeatFoodEntries(el.dataset.repeatDay, nutritionDateStr(), null);
+      if(!n){ showToast("Nothing logged that day.", "error", render); return; }
+      state.quickAddOpen = false;
+      showToast("Copied " + n + " item" + (n===1?"":"s") + ".", "success", render);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-repeat-meal]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const n = repeatFoodEntries(el.dataset.repeatFrom, nutritionDateStr(), el.dataset.repeatMeal);
+      if(!n){ showToast("Nothing logged for that meal.", "error", render); return; }
+      state.quickAddOpen = false;
+      showToast("Copied " + n + " item" + (n===1?"":"s") + " to " + el.dataset.repeatMeal + ".", "success", render);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-repeat-entry]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const src = foodEntryById(el.dataset.repeatEntry);
+      if(!src) return;
+      const meal = state.quickAddMeal || mealForNow();
+      state.foodLog.unshift(copyFoodEntry(src, nutritionDateStr(), meal));
+      showToast(src.name + " added to " + meal + ".", "success", render);
+      render();
+    });
   });
 
   const scanBtn = document.querySelector('[data-action="scan-barcode"]');
@@ -16527,6 +16893,21 @@ function attachHandlers(){
     // "unknown for this food", which the dashboard reports as incomplete coverage rather
     // than counting as zero.
     if(N) N.MICRO_LOG_FIELDS.forEach(k=>{ if(v[k] != null) record[k] = Number(v[k]); });
+
+    // Provenance. Recording which catalogue food and which serving produced these numbers is
+    // what makes an entry EDITABLE later: without it, changing "150 g" to "200 g" would mean
+    // guessing what the original 150 g referred to. Purely additive — an entry without these
+    // still renders and totals exactly as before, it just cannot be re-scaled.
+    if(scalable){
+      const p2 = resolveFoodPortion(food);
+      record.foodId = food.id;
+      record.category = food.category || null;
+      record.quantity = Number(currentFoodAmount(food));
+      record.servingUnit = p2.unit;
+      record.grams = Number(v.grams) || null;
+    }
+    record.at = Date.now();
+
     state.foodLog.unshift(record);
     state.foodSearchSelected = null; state.foodSearchQuery = "";
     state.foodSearchAmount = null; state.foodSearchUnit = "g";
@@ -16639,6 +17020,75 @@ function attachHandlers(){
       state.foodLog = state.foodLog.filter(f=>f.id !== Number(el.dataset.delFood));
       render();
     });
+  });
+
+  /* ---- Logged-entry editing (Phase 5) ---- */
+  document.querySelectorAll("[data-entry-toggle]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.entryToggle;
+      state.foodEntryOpen = String(state.foodEntryOpen) === String(id) ? null : id;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-entry-save]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const entry = foodEntryById(el.dataset.entrySave);
+      if(!entry) return;
+      const qtyEl = document.querySelector(`[data-entry-qty="${entry.id}"]`);
+      const unitEl = document.querySelector(`[data-entry-unit="${entry.id}"]`);
+      const res = rescaleFoodEntry(entry, qtyEl ? qtyEl.value : entry.quantity, unitEl ? unitEl.value : entry.servingUnit);
+      if(!res.ok){ showToast(res.error, "error", render); return; }
+      state.foodEntryOpen = null;
+      showToast("Updated to " + entry.calories + " kcal.", "success", render);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-entry-move]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const entry = foodEntryById(el.dataset.entryMove);
+      if(!entry) return;
+      entry.meal = el.dataset.entryMeal;
+      entry.editedAt = Date.now();
+      state.foodEntryOpen = null;
+      showToast("Moved to " + entry.meal + ".", "success", render);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-entry-duplicate]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const entry = foodEntryById(el.dataset.entryDuplicate);
+      if(!entry) return;
+      // A fresh id and timestamp; everything else copied. Cloning the id would make the two
+      // entries indistinguishable to cloud sync, which keys records on their own id.
+      const copy = Object.assign({}, entry, { id: nextId(), at: Date.now() });
+      delete copy.editedAt;
+      state.foodLog.unshift(copy);
+      state.foodEntryOpen = null;
+      showToast("Duplicated.", "success", render);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-entry-delete]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.entryDelete;
+      const entry = foodEntryById(id);
+      if(!entry) return;
+      // Keep it in memory (not storage) so the undo chip can put it back. See the note on
+      // lastDeletedFood for why this is deliberately not a persisted recycle bin.
+      lastDeletedFood = { entry: entry, index: state.foodLog.indexOf(entry) };
+      state.foodLog = state.foodLog.filter(f=>String(f.id) !== String(id));
+      state.foodEntryOpen = null;
+      render();
+    });
+  });
+  const undoFoodBtn = document.querySelector("[data-action='undo-food-delete']");
+  if(undoFoodBtn) undoFoodBtn.addEventListener("click", ()=>{
+    if(!lastDeletedFood) return;
+    // Restore at its original position so the day's ordering is unchanged.
+    const at = Math.min(Math.max(0, lastDeletedFood.index), state.foodLog.length);
+    state.foodLog.splice(at, 0, lastDeletedFood.entry);
+    lastDeletedFood = null;
+    render();
   });
 
   // Nutrition tab
