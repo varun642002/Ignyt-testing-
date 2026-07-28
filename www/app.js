@@ -12729,22 +12729,38 @@ function renderFoodDetailPage(){
         <span style="font-size:13px;font-weight:800;">Micronutrients</span>
         <span style="font-size:11px;color:var(--steel);">% Daily Value ${state.microExpanded?"⌃":"⌄"}</span>
       </button>
-      ${state.microExpanded?`
-        <div class="divide" style="margin:var(--space-sm) 0;"></div>
-        <div class="micro-grid">
-          ${calc.rows.filter(r=>!["calories","protein","carbs","fat"].includes(r.key)).map(r=>`
-            <div class="micro-row">
-              <span>${escHtml(r.label)}</span>
-              <span>
-                <span class="micro-row__value${r.present?"":" is-absent"}">${N.format(r.key, r.serving)}</span>
-                ${r.percentDV!=null?`<span style="color:var(--steel);font-size:10px;margin-left:6px;">${r.percentDV}%</span>`:""}
-              </span>
-            </div>`).join("")}
-        </div>
-        <div class="nut-note" style="margin-top:var(--space-xs);">
-          An em dash means the value was never measured for this food, not that it is zero.
-          Vitamins beyond these are in USDA's source data but not in this build's import.
-        </div>` : ""}
+      ${state.microExpanded?(()=>{
+        // Grouped by kind rather than listed flat: 24 rows in one column is a wall, and
+        // "is my iron low" is a different question from "am I short on B12".
+        const section = (title, group) => {
+          const rows = calc.rows.filter(r=>r.group===group && r.key!=="calories" &&
+            !["protein","carbs","fat"].includes(r.key));
+          if(!rows.length) return "";
+          const measured = rows.filter(r=>r.present).length;
+          return `
+            <div class="nut-label" style="margin:var(--space-sm) 0 var(--space-2xs);">
+              ${title} <span style="color:var(--muted);font-weight:600;">· ${measured}/${rows.length} measured</span>
+            </div>
+            <div class="micro-grid">
+              ${rows.map(r=>`<div class="micro-row">
+                <span>${escHtml(r.label)}</span>
+                <span>
+                  <span class="micro-row__value${r.present?"":" is-absent"}">${N.format(r.key, r.serving)}</span>
+                  ${r.percentDV!=null?`<span style="color:var(--steel);font-size:10px;margin-left:6px;">${r.percentDV}%</span>`:""}
+                </span>
+              </div>`).join("")}
+            </div>`;
+        };
+        return `
+          <div class="divide" style="margin:var(--space-sm) 0 0;"></div>
+          ${section("Macronutrients","macro")}
+          ${section("Minerals","mineral")}
+          ${section("Vitamins","vitamin")}
+          <div class="nut-note" style="margin-top:var(--space-sm);">
+            An em dash means the value was never measured for this food, not that it is zero.
+            Vitamin A is µg RAE and folate is µg DFE, which is the basis the daily values are set on.
+          </div>`;
+      })() : ""}
     </div>
 
     <div class="nut-card nut-card--tight">

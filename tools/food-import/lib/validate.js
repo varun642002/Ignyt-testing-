@@ -32,8 +32,19 @@ var LIMITS = {
   iron:      1000
 };
 
+/* Ceilings for the micronutrients, all per 100 g and all deliberately generous — these exist
+   to catch a mis-scaled record (a value in the thousands where milligrams were expected),
+   not to second-guess USDA. Brazil nuts really do carry ~2,000 µg of selenium per 100 g. */
+var MICRO_LIMITS = {
+  magnesium: 10000, phosphorus: 10000, zinc: 1000, copper: 500, manganese: 500,
+  selenium: 10000, vitaminA: 100000, vitaminC: 10000, vitaminD: 5000, vitaminE: 5000,
+  vitaminK: 20000, thiamin: 500, riboflavin: 500, niacin: 1000, pantothenic: 500,
+  vitaminB6: 500, folate: 10000, vitaminB12: 500
+};
+Object.keys(MICRO_LIMITS).forEach(function (k) { LIMITS[k] = MICRO_LIMITS[k]; });
+
 var NUTRIENT_FIELDS = ["calories", "protein", "carbs", "fat", "fibre", "sugar",
-  "sodium", "potassium", "calcium", "iron"];
+  "sodium", "potassium", "calcium", "iron"].concat(Object.keys(MICRO_LIMITS));
 
 /**
  * @returns {{errors:string[], warnings:string[]}}

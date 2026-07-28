@@ -44,18 +44,47 @@
     { value: 3,    label: "3" }
   ];
 
-  /* Display order matches a nutrition label: energy, macros, then micros. */
+  /* Display order matches a nutrition label: energy, macros, then minerals, then vitamins.
+     `group` drives the section headings on the detail screen.
+
+     Reference values are the FDA 2016 adult Daily Values. Two are deliberately matched to
+     the basis the importer stores rather than the commoner unit:
+       vitaminA  µg RAE, not IU — the IU conversion differs by the form of the vitamin, so a
+                 percentage against a µg reference would be wrong.
+       folate    µg DFE for the same reason.
+     Sugar still has no DV: the 50 g figure covers ADDED sugars while USDA reports TOTAL
+     sugars, so a percentage would compare two different quantities. */
   var NUTRIENTS = [
-    { key: "calories",  label: "Calories",      unit: "kcal", decimals: 0, dv: 2000, major: true },
-    { key: "protein",   label: "Protein",       unit: "g",    decimals: 1, dv: 50,   major: true },
-    { key: "carbs",     label: "Carbohydrates", unit: "g",    decimals: 1, dv: 275,  major: true },
-    { key: "fat",       label: "Fat",           unit: "g",    decimals: 1, dv: 78,   major: true },
-    { key: "fibre",     label: "Fibre",         unit: "g",    decimals: 1, dv: 28 },
-    { key: "sugar",     label: "Sugar",         unit: "g",    decimals: 1, dv: null },
-    { key: "sodium",    label: "Sodium",        unit: "mg",   decimals: 0, dv: 2300 },
-    { key: "potassium", label: "Potassium",     unit: "mg",   decimals: 0, dv: 4700 },
-    { key: "calcium",   label: "Calcium",       unit: "mg",   decimals: 0, dv: 1300 },
-    { key: "iron",      label: "Iron",          unit: "mg",   decimals: 1, dv: 18 }
+    { key: "calories",  label: "Calories",      unit: "kcal", decimals: 0, dv: 2000, major: true, group: "macro" },
+    { key: "protein",   label: "Protein",       unit: "g",    decimals: 1, dv: 50,   major: true, group: "macro" },
+    { key: "carbs",     label: "Carbohydrates", unit: "g",    decimals: 1, dv: 275,  major: true, group: "macro" },
+    { key: "fat",       label: "Fat",           unit: "g",    decimals: 1, dv: 78,   major: true, group: "macro" },
+    { key: "fibre",     label: "Fibre",         unit: "g",    decimals: 1, dv: 28,   group: "macro" },
+    { key: "sugar",     label: "Sugar",         unit: "g",    decimals: 1, dv: null, group: "macro" },
+
+    { key: "sodium",     label: "Sodium",     unit: "mg", decimals: 0, dv: 2300, group: "mineral" },
+    { key: "potassium",  label: "Potassium",  unit: "mg", decimals: 0, dv: 4700, group: "mineral" },
+    { key: "calcium",    label: "Calcium",    unit: "mg", decimals: 0, dv: 1300, group: "mineral" },
+    { key: "iron",       label: "Iron",       unit: "mg", decimals: 1, dv: 18,   group: "mineral" },
+    { key: "magnesium",  label: "Magnesium",  unit: "mg", decimals: 0, dv: 420,  group: "mineral" },
+    { key: "phosphorus", label: "Phosphorus", unit: "mg", decimals: 0, dv: 1250, group: "mineral" },
+    { key: "zinc",       label: "Zinc",       unit: "mg", decimals: 1, dv: 11,   group: "mineral" },
+    { key: "copper",     label: "Copper",     unit: "mg", decimals: 2, dv: 0.9,  group: "mineral" },
+    { key: "manganese",  label: "Manganese",  unit: "mg", decimals: 2, dv: 2.3,  group: "mineral" },
+    { key: "selenium",   label: "Selenium",   unit: "µg", decimals: 1, dv: 55,   group: "mineral" },
+
+    { key: "vitaminA",    label: "Vitamin A",        unit: "µg", decimals: 0, dv: 900,  group: "vitamin" },
+    { key: "vitaminC",    label: "Vitamin C",        unit: "mg", decimals: 1, dv: 90,   group: "vitamin" },
+    { key: "vitaminD",    label: "Vitamin D",        unit: "µg", decimals: 1, dv: 20,   group: "vitamin" },
+    { key: "vitaminE",    label: "Vitamin E",        unit: "mg", decimals: 1, dv: 15,   group: "vitamin" },
+    { key: "vitaminK",    label: "Vitamin K",        unit: "µg", decimals: 1, dv: 120,  group: "vitamin" },
+    { key: "thiamin",     label: "Thiamin (B1)",     unit: "mg", decimals: 2, dv: 1.2,  group: "vitamin" },
+    { key: "riboflavin",  label: "Riboflavin (B2)",  unit: "mg", decimals: 2, dv: 1.3,  group: "vitamin" },
+    { key: "niacin",      label: "Niacin (B3)",      unit: "mg", decimals: 1, dv: 16,   group: "vitamin" },
+    { key: "pantothenic", label: "Pantothenic (B5)", unit: "mg", decimals: 2, dv: 5,    group: "vitamin" },
+    { key: "vitaminB6",   label: "Vitamin B6",       unit: "mg", decimals: 2, dv: 1.7,  group: "vitamin" },
+    { key: "folate",      label: "Folate",           unit: "µg", decimals: 0, dv: 400,  group: "vitamin" },
+    { key: "vitaminB12",  label: "Vitamin B12",      unit: "µg", decimals: 1, dv: 2.4,  group: "vitamin" }
   ];
 
   var BY_KEY = {};
@@ -129,6 +158,7 @@
       var serving = scaleValue(raw, factor, n.decimals);
       return {
         key: n.key, label: n.label, unit: n.unit, major: !!n.major,
+        group: n.group || "macro",   // carried through so callers can section the list
         per100: per100,
         serving: serving,
         percentDV: (n.dv && serving !== null) ? Math.round((serving / n.dv) * 100) : null,
@@ -148,6 +178,11 @@
      "contains no sodium". Totals must therefore sum what is present and report coverage
      rather than pretending a missing field is a zero. Entries logged before this existed
      simply have none of these keys, which is the same case and needs no migration. */
+  /* Deliberately still five, not twenty-eight. These are what the dashboard totals, and a
+     total is only meaningful where most foods carry the value. Writing all 22 into every log
+     entry would multiply the size of hx_food_log — the single largest thing this app keeps in
+     localStorage — for figures nothing currently sums. The detail screen shows the full set
+     computed live from the catalogue, which needs no per-entry storage at all. */
   var MICRO_LOG_FIELDS = ["sugar", "sodium", "potassium", "calcium", "iron"];
 
   /** The record shape the food log stores for one serving. */

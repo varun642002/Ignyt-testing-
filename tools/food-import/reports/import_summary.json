@@ -1,7 +1,7 @@
 {
  "version": 1,
- "generated": "2026-07-28T12:33:30.429Z",
- "durationSeconds": 2.1,
+ "generated": "2026-07-28T16:06:36.390Z",
+ "durationSeconds": 1.9,
  "datasets": [
   {
    "file": "FoodData_Central_foundation_food_json_2026-04-30.json",
@@ -453,7 +453,7 @@
  "outputs": {
   "clean_foods": {
    "path": "www\\data\\food\\clean_foods.json",
-   "size": "3.23 MB"
+   "size": "4.95 MB"
   },
   "food_categories": {
    "path": "www\\data\\food\\food_categories.json",

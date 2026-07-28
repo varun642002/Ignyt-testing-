@@ -1,6 +1,6 @@
 {
  "version": 1,
- "generated": "2026-07-28T12:33:30.429Z",
+ "generated": "2026-07-28T16:06:36.389Z",
  "groups": 97,
  "recordsMergedAway": 97,
  "note": "Canonical key is the lowercase, punctuation-stripped, token-SORTED name. Survivor is chosen by newest dataset, then publication date, then nutrient completeness, then fdcId.",
@@ -13,7 +13,7 @@
     "dataset": "Foundation",
     "category": "Beans & Legumes",
     "calories": 229,
-    "completeness": 11
+    "completeness": 27
    },
    "dropped": [
     {
@@ -22,7 +22,7 @@
      "dataset": "SR Legacy",
      "category": "Beans & Legumes",
      "calories": 237,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -35,7 +35,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 21,
-    "completeness": 10
+    "completeness": 15
    },
    "dropped": [
     {
@@ -44,7 +44,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 21,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -57,7 +57,7 @@
     "dataset": "Foundation",
     "category": "Beef",
     "calories": 314,
-    "completeness": 10
+    "completeness": 24
    },
    "dropped": [
     {
@@ -66,7 +66,7 @@
      "dataset": "SR Legacy",
      "category": "Beef",
      "calories": 315,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -79,7 +79,7 @@
     "dataset": "Foundation",
     "category": "Nuts & Seeds",
     "calories": 620,
-    "completeness": 11
+    "completeness": 27
    },
    "dropped": [
     {
@@ -88,7 +88,7 @@
      "dataset": "SR Legacy",
      "category": "Nuts & Seeds",
      "calories": 598,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -101,7 +101,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 35,
-    "completeness": 11
+    "completeness": 26
    },
    "dropped": [
     {
@@ -110,7 +110,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 35,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -123,7 +123,7 @@
     "dataset": "Foundation",
     "category": "Eggs",
     "calories": 48,
-    "completeness": 9
+    "completeness": 15
    },
    "dropped": [
     {
@@ -132,7 +132,7 @@
      "dataset": "SR Legacy",
      "category": "Eggs",
      "calories": 48,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -145,7 +145,7 @@
     "dataset": "Foundation",
     "category": "Eggs",
     "calories": 376,
-    "completeness": 9
+    "completeness": 15
    },
    "dropped": [
     {
@@ -154,7 +154,7 @@
      "dataset": "SR Legacy",
      "category": "Eggs",
      "calories": 382,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -167,7 +167,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 288,
-    "completeness": 11
+    "completeness": 25
    },
    "dropped": [
     {
@@ -176,7 +176,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 276,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -189,7 +189,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 12,
-    "completeness": 11
+    "completeness": 26
    },
    "dropped": [
     {
@@ -198,7 +198,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 12,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -211,7 +211,7 @@
     "dataset": "Foundation",
     "category": "Dairy",
     "calories": 421,
-    "completeness": 10
+    "completeness": 26
    },
    "dropped": [
     {
@@ -220,7 +220,7 @@
      "dataset": "SR Legacy",
      "category": "Dairy",
      "calories": 420,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -233,7 +233,7 @@
     "dataset": "Foundation",
     "category": "Beverages",
     "calories": 37,
-    "completeness": 11
+    "completeness": 24
    },
    "dropped": [
     {
@@ -242,7 +242,7 @@
      "dataset": "SR Legacy",
      "category": "Beverages",
      "calories": 37,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -255,7 +255,7 @@
     "dataset": "Foundation",
     "category": "Fruits",
     "calories": 42,
-    "completeness": 11
+    "completeness": 26
    },
    "dropped": [
     {
@@ -264,7 +264,7 @@
      "dataset": "SR Legacy",
      "category": "Fruits",
      "calories": 39,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -277,7 +277,7 @@
     "dataset": "Foundation",
     "category": "Nuts & Seeds",
     "calories": 612,
-    "completeness": 11
+    "completeness": 27
    },
    "dropped": [
     {
@@ -286,7 +286,7 @@
      "dataset": "SR Legacy",
      "category": "Nuts & Seeds",
      "calories": 582,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -299,7 +299,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 36,
-    "completeness": 10
+    "completeness": 25
    },
    "dropped": [
     {
@@ -308,7 +308,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 36,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -321,7 +321,7 @@
     "dataset": "Foundation",
     "category": "Spices & Herbs",
     "calories": 61,
-    "completeness": 11
+    "completeness": 27
    },
    "dropped": [
     {
@@ -330,7 +330,7 @@
      "dataset": "SR Legacy",
      "category": "Spices & Herbs",
      "calories": 60,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -343,7 +343,7 @@
     "dataset": "Foundation",
     "category": "Fruits",
     "calories": 58,
-    "completeness": 11
+    "completeness": 27
    },
    "dropped": [
     {
@@ -352,7 +352,7 @@
      "dataset": "SR Legacy",
      "category": "Fruits",
      "calories": 61,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -365,7 +365,7 @@
     "dataset": "Foundation",
     "category": "Fruits",
     "calories": 39,
-    "completeness": 11
+    "completeness": 27
    },
    "dropped": [
     {
@@ -374,7 +374,7 @@
      "dataset": "SR Legacy",
      "category": "Fruits",
      "calories": 44,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -387,7 +387,7 @@
     "dataset": "Foundation",
     "category": "Dairy",
     "calories": 84,
-    "completeness": 10
+    "completeness": 25
    },
    "dropped": [
     {
@@ -396,7 +396,7 @@
      "dataset": "SR Legacy",
      "category": "Dairy",
      "calories": 81,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -409,7 +409,7 @@
     "dataset": "Foundation",
     "category": "Dairy",
     "calories": 298,
-    "completeness": 10
+    "completeness": 26
    },
    "dropped": [
     {
@@ -418,7 +418,7 @@
      "dataset": "SR Legacy",
      "category": "Dairy",
      "calories": 295,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -431,7 +431,7 @@
     "dataset": "Foundation",
     "category": "Eggs",
     "calories": 575,
-    "completeness": 9
+    "completeness": 15
    },
    "dropped": [
     {
@@ -440,7 +440,7 @@
      "dataset": "SR Legacy",
      "category": "Eggs",
      "calories": 592,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -453,7 +453,7 @@
     "dataset": "Foundation",
     "category": "Eggs",
     "calories": 296,
-    "completeness": 9
+    "completeness": 15
    },
    "dropped": [
     {
@@ -462,7 +462,7 @@
      "dataset": "SR Legacy",
      "category": "Eggs",
      "calories": 296,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -475,7 +475,7 @@
     "dataset": "Foundation",
     "category": "Eggs",
     "calories": 654,
-    "completeness": 9
+    "completeness": 15
    },
    "dropped": [
     {
@@ -484,7 +484,7 @@
      "dataset": "SR Legacy",
      "category": "Eggs",
      "calories": 669,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -497,7 +497,7 @@
     "dataset": "Foundation",
     "category": "Dairy",
     "calories": 83,
-    "completeness": 11
+    "completeness": 26
    },
    "dropped": [
     {
@@ -506,7 +506,7 @@
      "dataset": "SR Legacy",
      "category": "Dairy",
      "calories": 82,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -519,7 +519,7 @@
     "dataset": "Foundation",
     "category": "Oils & Fats",
     "calories": 833,
-    "completeness": 9
+    "completeness": 16
    },
    "dropped": [
     {
@@ -528,7 +528,7 @@
      "dataset": "SR Legacy",
      "category": "Oils & Fats",
      "calories": 892,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -541,7 +541,7 @@
     "dataset": "Foundation",
     "category": "Chicken",
     "calories": 166,
-    "completeness": 9
+    "completeness": 22
    },
    "dropped": [
     {
@@ -550,7 +550,7 @@
      "dataset": "SR Legacy",
      "category": "Chicken",
      "calories": 157,
-     "completeness": 11
+     "completeness": 28
     }
    ],
    "reason": "newer dataset"
@@ -563,7 +563,7 @@
     "dataset": "Foundation",
     "category": "Sauces & Condiments",
     "calories": 45,
-    "completeness": 11
+    "completeness": 17
    },
    "dropped": [
     {
@@ -572,7 +572,7 @@
      "dataset": "SR Legacy",
      "category": "Sauces & Condiments",
      "calories": 50,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -585,7 +585,7 @@
     "dataset": "Foundation",
     "category": "Pork",
     "calories": 106,
-    "completeness": 9
+    "completeness": 14
    },
    "dropped": [
     {
@@ -594,7 +594,7 @@
      "dataset": "SR Legacy",
      "category": "Pork",
      "calories": 107,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -607,7 +607,7 @@
     "dataset": "Foundation",
     "category": "Fish",
     "calories": 74,
-    "completeness": 9
+    "completeness": 23
    },
    "dropped": [
     {
@@ -616,7 +616,7 @@
      "dataset": "SR Legacy",
      "category": "Fish",
      "calories": 74,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -629,7 +629,7 @@
     "dataset": "Foundation",
     "category": "Restaurant Foods",
     "calories": 174,
-    "completeness": 10
+    "completeness": 17
    },
    "dropped": [
     {
@@ -638,7 +638,7 @@
      "dataset": "SR Legacy",
      "category": "Restaurant Foods",
      "calories": 174,
-     "completeness": 11
+     "completeness": 28
     }
    ],
    "reason": "newer dataset"
@@ -651,7 +651,7 @@
     "dataset": "Foundation",
     "category": "Restaurant Foods",
     "calories": 174,
-    "completeness": 11
+    "completeness": 26
    },
    "dropped": [
     {
@@ -660,7 +660,7 @@
      "dataset": "SR Legacy",
      "category": "Restaurant Foods",
      "calories": 174,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -673,7 +673,7 @@
     "dataset": "Foundation",
     "category": "Restaurant Foods",
     "calories": 229,
-    "completeness": 11
+    "completeness": 24
    },
    "dropped": [
     {
@@ -682,7 +682,7 @@
      "dataset": "SR Legacy",
      "category": "Restaurant Foods",
      "calories": 229,
-     "completeness": 11
+     "completeness": 24
     }
    ],
    "reason": "newer dataset"
@@ -695,7 +695,7 @@
     "dataset": "Foundation",
     "category": "Beef",
     "calories": 176,
-    "completeness": 9
+    "completeness": 19
    },
    "dropped": [
     {
@@ -704,7 +704,7 @@
      "dataset": "SR Legacy",
      "category": "Beef",
      "calories": 169,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -717,7 +717,7 @@
     "dataset": "Foundation",
     "category": "Beef",
     "calories": 155,
-    "completeness": 9
+    "completeness": 23
    },
    "dropped": [
     {
@@ -726,7 +726,7 @@
      "dataset": "SR Legacy",
      "category": "Beef",
      "calories": 149,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -739,7 +739,7 @@
     "dataset": "Foundation",
     "category": "Beef",
     "calories": 122,
-    "completeness": 9
+    "completeness": 19
    },
    "dropped": [
     {
@@ -748,7 +748,7 @@
      "dataset": "SR Legacy",
      "category": "Beef",
      "calories": 116,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -761,7 +761,7 @@
     "dataset": "Foundation",
     "category": "Beef",
     "calories": 123,
-    "completeness": 9
+    "completeness": 23
    },
    "dropped": [
     {
@@ -770,7 +770,7 @@
      "dataset": "SR Legacy",
      "category": "Beef",
      "calories": 116,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -783,7 +783,7 @@
     "dataset": "Foundation",
     "category": "Beef",
     "calories": 145,
-    "completeness": 9
+    "completeness": 19
    },
    "dropped": [
     {
@@ -792,7 +792,7 @@
      "dataset": "SR Legacy",
      "category": "Beef",
      "calories": 145,
-     "completeness": 11
+     "completeness": 27
     }
    ],
    "reason": "newer dataset"
@@ -805,7 +805,7 @@
     "dataset": "Foundation",
     "category": "Beef",
     "calories": 219,
-    "completeness": 9
+    "completeness": 19
    },
    "dropped": [
     {
@@ -814,7 +814,7 @@
      "dataset": "SR Legacy",
      "category": "Beef",
      "calories": 217,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -827,7 +827,7 @@
     "dataset": "Foundation",
     "category": "Dairy",
     "calories": 326,
-    "completeness": 10
+    "completeness": 26
    },
    "dropped": [
     {
@@ -836,7 +836,7 @@
      "dataset": "SR Legacy",
      "category": "Dairy",
      "calories": 325,
-     "completeness": 10
+     "completeness": 26
     }
    ],
    "reason": "newer dataset"
@@ -849,7 +849,7 @@
     "dataset": "Foundation",
     "category": "Dairy",
     "calories": 157,
-    "completeness": 9
+    "completeness": 25
    },
    "dropped": [
     {
@@ -858,7 +858,7 @@
      "dataset": "SR Legacy",
      "category": "Dairy",
      "calories": 150,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -871,7 +871,7 @@
     "dataset": "Foundation",
     "category": "Dairy",
     "calories": 393,
-    "completeness": 10
+    "completeness": 27
    },
    "dropped": [
     {
@@ -880,7 +880,7 @@
      "dataset": "SR Legacy",
      "category": "Dairy",
      "calories": 393,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -893,7 +893,7 @@
     "dataset": "Foundation",
     "category": "Fruits",
     "calories": 249,
-    "completeness": 11
+    "completeness": 27
    },
    "dropped": [
     {
@@ -902,7 +902,7 @@
      "dataset": "SR Legacy",
      "category": "Fruits",
      "calories": 249,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -915,7 +915,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 17,
-    "completeness": 10
+    "completeness": 26
    },
    "dropped": [
     {
@@ -924,7 +924,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 17,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -937,7 +937,7 @@
     "dataset": "Foundation",
     "category": "Fruits",
     "calories": 34,
-    "completeness": 11
+    "completeness": 26
    },
    "dropped": [
     {
@@ -946,7 +946,7 @@
      "dataset": "SR Legacy",
      "category": "Fruits",
      "calories": 34,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -959,7 +959,7 @@
     "dataset": "Foundation",
     "category": "Dairy",
     "calories": 43,
-    "completeness": 10
+    "completeness": 26
    },
    "dropped": [
     {
@@ -968,7 +968,7 @@
      "dataset": "SR Legacy",
      "category": "Dairy",
      "calories": 42,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -981,7 +981,7 @@
     "dataset": "Foundation",
     "category": "Restaurant Foods",
     "calories": 260,
-    "completeness": 11
+    "completeness": 27
    },
    "dropped": [
     {
@@ -990,7 +990,7 @@
      "dataset": "SR Legacy",
      "category": "Restaurant Foods",
      "calories": 270,
-     "completeness": 11
+     "completeness": 27
     }
    ],
    "reason": "newer dataset"
@@ -1003,7 +1003,7 @@
     "dataset": "Foundation",
     "category": "Dairy",
     "calories": 34,
-    "completeness": 10
+    "completeness": 26
    },
    "dropped": [
     {
@@ -1012,7 +1012,7 @@
      "dataset": "SR Legacy",
      "category": "Dairy",
      "calories": 34,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1025,7 +1025,7 @@
     "dataset": "Foundation",
     "category": "Sauces & Condiments",
     "calories": 29,
-    "completeness": 11
+    "completeness": 23
    },
    "dropped": [
     {
@@ -1034,7 +1034,7 @@
      "dataset": "SR Legacy",
      "category": "Sauces & Condiments",
      "calories": 29,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1047,7 +1047,7 @@
     "dataset": "Foundation",
     "category": "Dairy",
     "calories": 50,
-    "completeness": 10
+    "completeness": 26
    },
    "dropped": [
     {
@@ -1056,7 +1056,7 @@
      "dataset": "SR Legacy",
      "category": "Dairy",
      "calories": 50,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1069,7 +1069,7 @@
     "dataset": "Foundation",
     "category": "Beef",
     "calories": 328,
-    "completeness": 10
+    "completeness": 25
    },
    "dropped": [
     {
@@ -1078,7 +1078,7 @@
      "dataset": "SR Legacy",
      "category": "Beef",
      "calories": 327,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1091,7 +1091,7 @@
     "dataset": "Foundation",
     "category": "Pork",
     "calories": 322,
-    "completeness": 10
+    "completeness": 26
    },
    "dropped": [
     {
@@ -1100,7 +1100,7 @@
      "dataset": "SR Legacy",
      "category": "Pork",
      "calories": 324,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1113,7 +1113,7 @@
     "dataset": "Foundation",
     "category": "Dairy",
     "calories": 60,
-    "completeness": 10
+    "completeness": 26
    },
    "dropped": [
     {
@@ -1122,7 +1122,7 @@
      "dataset": "SR Legacy",
      "category": "Dairy",
      "calories": 61,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1135,7 +1135,7 @@
     "dataset": "Foundation",
     "category": "Turkey",
     "calories": 169,
-    "completeness": 9
+    "completeness": 23
    },
    "dropped": [
     {
@@ -1144,7 +1144,7 @@
      "dataset": "SR Legacy",
      "category": "Turkey",
      "calories": 174,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1157,7 +1157,7 @@
     "dataset": "Foundation",
     "category": "Desserts",
     "calories": 385,
-    "completeness": 10
+    "completeness": 15
    },
    "dropped": [
     {
@@ -1166,7 +1166,7 @@
      "dataset": "SR Legacy",
      "category": "Desserts",
      "calories": 387,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1179,7 +1179,7 @@
     "dataset": "Foundation",
     "category": "Turkey",
     "calories": 220,
-    "completeness": 9
+    "completeness": 23
    },
    "dropped": [
     {
@@ -1188,7 +1188,7 @@
      "dataset": "SR Legacy",
      "category": "Turkey",
      "calories": 213,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1201,7 +1201,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 31,
-    "completeness": 11
+    "completeness": 27
    },
    "dropped": [
     {
@@ -1210,7 +1210,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 34,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1223,7 +1223,7 @@
     "dataset": "Foundation",
     "category": "Oils & Fats",
     "calories": 0,
-    "completeness": 0
+    "completeness": 1
    },
    "dropped": [
     {
@@ -1232,7 +1232,7 @@
      "dataset": "SR Legacy",
      "category": "Oils & Fats",
      "calories": 884,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1245,7 +1245,7 @@
     "dataset": "Foundation",
     "category": "Rice",
     "calories": 359,
-    "completeness": 10
+    "completeness": 21
    },
    "dropped": [
     {
@@ -1254,7 +1254,7 @@
      "dataset": "SR Legacy",
      "category": "Rice",
      "calories": 366,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1267,7 +1267,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 143,
-    "completeness": 6
+    "completeness": 8
    },
    "dropped": [
     {
@@ -1276,7 +1276,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 149,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1289,7 +1289,7 @@
     "dataset": "Foundation",
     "category": "Beans & Legumes",
     "calories": 366,
-    "completeness": 10
+    "completeness": 20
    },
    "dropped": [
     {
@@ -1298,7 +1298,7 @@
      "dataset": "SR Legacy",
      "category": "Beans & Legumes",
      "calories": 327,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1311,7 +1311,7 @@
     "dataset": "Foundation",
     "category": "Rice",
     "calories": 365,
-    "completeness": 9
+    "completeness": 19
    },
    "dropped": [
     {
@@ -1320,7 +1320,7 @@
      "dataset": "SR Legacy",
      "category": "Rice",
      "calories": 363,
-     "completeness": 11
+     "completeness": 26
     }
    ],
    "reason": "newer dataset"
@@ -1333,7 +1333,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 38,
-    "completeness": 9
+    "completeness": 20
    },
    "dropped": [
     {
@@ -1342,7 +1342,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 35,
-     "completeness": 11
+     "completeness": 28
     }
    ],
    "reason": "newer dataset"
@@ -1355,7 +1355,7 @@
     "dataset": "Foundation",
     "category": "Dairy",
     "calories": 77,
-    "completeness": 9
+    "completeness": 20
    },
    "dropped": [
     {
@@ -1364,7 +1364,7 @@
      "dataset": "SR Legacy",
      "category": "Dairy",
      "calories": 61,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1377,7 +1377,7 @@
     "dataset": "Foundation",
     "category": "Dairy",
     "calories": 95,
-    "completeness": 9
+    "completeness": 20
    },
    "dropped": [
     {
@@ -1386,7 +1386,7 @@
      "dataset": "SR Legacy",
      "category": "Dairy",
      "calories": 97,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1399,7 +1399,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 353,
-    "completeness": 9
+    "completeness": 20
    },
    "dropped": [
     {
@@ -1408,7 +1408,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 357,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1421,7 +1421,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 15,
-    "completeness": 8
+    "completeness": 18
    },
    "dropped": [
     {
@@ -1430,7 +1430,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 13,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1443,7 +1443,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 19,
-    "completeness": 8
+    "completeness": 18
    },
    "dropped": [
     {
@@ -1452,7 +1452,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 15,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1465,7 +1465,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 34,
-    "completeness": 10
+    "completeness": 19
    },
    "dropped": [
     {
@@ -1474,7 +1474,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 31,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1487,7 +1487,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 15,
-    "completeness": 8
+    "completeness": 15
    },
    "dropped": [
     {
@@ -1496,7 +1496,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 14,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1509,7 +1509,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 14,
-    "completeness": 8
+    "completeness": 14
    },
    "dropped": [
     {
@@ -1518,7 +1518,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 15,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1531,7 +1531,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 30,
-    "completeness": 8
+    "completeness": 16
    },
    "dropped": [
     {
@@ -1540,7 +1540,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 31,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1553,7 +1553,7 @@
     "dataset": "Foundation",
     "category": "Fruits",
     "calories": 33,
-    "completeness": 9
+    "completeness": 15
    },
    "dropped": [
     {
@@ -1562,7 +1562,7 @@
      "dataset": "SR Legacy",
      "category": "Fruits",
      "calories": 32,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1575,7 +1575,7 @@
     "dataset": "Foundation",
     "category": "Fruits",
     "calories": 51,
-    "completeness": 9
+    "completeness": 15
    },
    "dropped": [
     {
@@ -1584,7 +1584,7 @@
      "dataset": "SR Legacy",
      "category": "Fruits",
      "calories": 52,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1597,7 +1597,7 @@
     "dataset": "Foundation",
     "category": "Fruits",
     "calories": 57,
-    "completeness": 9
+    "completeness": 15
    },
    "dropped": [
     {
@@ -1606,7 +1606,7 @@
      "dataset": "SR Legacy",
      "category": "Fruits",
      "calories": 57,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1619,7 +1619,7 @@
     "dataset": "Foundation",
     "category": "Beef",
     "calories": 190,
-    "completeness": 8
+    "completeness": 13
    },
    "dropped": [
     {
@@ -1628,7 +1628,7 @@
      "dataset": "SR Legacy",
      "category": "Beef",
      "calories": 176,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1641,7 +1641,7 @@
     "dataset": "Foundation",
     "category": "Beef",
     "calories": 248,
-    "completeness": 8
+    "completeness": 13
    },
    "dropped": [
     {
@@ -1650,7 +1650,7 @@
      "dataset": "SR Legacy",
      "category": "Beef",
      "calories": 254,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1663,7 +1663,7 @@
     "dataset": "Foundation",
     "category": "Turkey",
     "calories": 158,
-    "completeness": 8
+    "completeness": 13
    },
    "dropped": [
     {
@@ -1672,7 +1672,7 @@
      "dataset": "SR Legacy",
      "category": "Turkey",
      "calories": 150,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1685,7 +1685,7 @@
     "dataset": "Foundation",
     "category": "Nuts & Seeds",
     "calories": 533,
-    "completeness": 9
+    "completeness": 15
    },
    "dropped": [
     {
@@ -1694,7 +1694,7 @@
      "dataset": "SR Legacy",
      "category": "Nuts & Seeds",
      "calories": 553,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1707,7 +1707,7 @@
     "dataset": "Foundation",
     "category": "Nuts & Seeds",
     "calories": 669,
-    "completeness": 9
+    "completeness": 15
    },
    "dropped": [
     {
@@ -1716,7 +1716,7 @@
      "dataset": "SR Legacy",
      "category": "Nuts & Seeds",
      "calories": 718,
-     "completeness": 11
+     "completeness": 28
     }
    ],
    "reason": "newer dataset"
@@ -1729,7 +1729,7 @@
     "dataset": "Foundation",
     "category": "Nuts & Seeds",
     "calories": 561,
-    "completeness": 9
+    "completeness": 15
    },
    "dropped": [
     {
@@ -1738,7 +1738,7 @@
      "dataset": "SR Legacy",
      "category": "Nuts & Seeds",
      "calories": 560,
-     "completeness": 11
+     "completeness": 28
     }
    ],
    "reason": "newer dataset"
@@ -1751,7 +1751,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 42,
-    "completeness": 9
+    "completeness": 16
    },
    "dropped": [
     {
@@ -1760,7 +1760,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 45,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1773,7 +1773,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 42,
-    "completeness": 9
+    "completeness": 16
    },
    "dropped": [
     {
@@ -1782,7 +1782,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 40,
-     "completeness": 10
+     "completeness": 26
     }
    ],
    "reason": "newer dataset"
@@ -1795,7 +1795,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 23,
-    "completeness": 9
+    "completeness": 16
    },
    "dropped": [
     {
@@ -1804,7 +1804,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 25,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1817,7 +1817,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 39,
-    "completeness": 9
+    "completeness": 16
    },
    "dropped": [
     {
@@ -1826,7 +1826,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 32,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1839,7 +1839,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 49,
-    "completeness": 9
+    "completeness": 16
    },
    "dropped": [
     {
@@ -1848,7 +1848,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 43,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1861,7 +1861,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 41,
-    "completeness": 10
+    "completeness": 17
    },
    "dropped": [
     {
@@ -1870,7 +1870,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 43,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1883,7 +1883,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 22,
-    "completeness": 10
+    "completeness": 17
    },
    "dropped": [
     {
@@ -1892,7 +1892,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 25,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1905,7 +1905,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 32,
-    "completeness": 10
+    "completeness": 16
    },
    "dropped": [
     {
@@ -1914,7 +1914,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 32,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1927,7 +1927,7 @@
     "dataset": "Foundation",
     "category": "Fruits",
     "calories": 33,
-    "completeness": 9
+    "completeness": 15
    },
    "dropped": [
     {
@@ -1936,7 +1936,7 @@
      "dataset": "SR Legacy",
      "category": "Fruits",
      "calories": 36,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1949,7 +1949,7 @@
     "dataset": "Foundation",
     "category": "Game & Other Meats",
     "calories": 242,
-    "completeness": 7
+    "completeness": 12
    },
    "dropped": [
     {
@@ -1958,7 +1958,7 @@
      "dataset": "SR Legacy",
      "category": "Game & Other Meats",
      "calories": 282,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1971,7 +1971,7 @@
     "dataset": "Foundation",
     "category": "Fruits",
     "calories": 5,
-    "completeness": 8
+    "completeness": 14
    },
    "dropped": [
     {
@@ -1980,7 +1980,7 @@
      "dataset": "SR Legacy",
      "category": "Fruits",
      "calories": 43,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -1993,7 +1993,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 26,
-    "completeness": 10
+    "completeness": 19
    },
    "dropped": [
     {
@@ -2002,7 +2002,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 22,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -2015,7 +2015,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 27,
-    "completeness": 10
+    "completeness": 17
    },
    "dropped": [
     {
@@ -2024,7 +2024,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 31,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -2037,7 +2037,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 87,
-    "completeness": 10
+    "completeness": 17
    },
    "dropped": [
     {
@@ -2046,7 +2046,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 75,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -2059,7 +2059,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 26,
-    "completeness": 10
+    "completeness": 17
    },
    "dropped": [
     {
@@ -2068,7 +2068,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 23,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -2081,7 +2081,7 @@
     "dataset": "Foundation",
     "category": "Vegetables",
     "calories": 34,
-    "completeness": 10
+    "completeness": 18
    },
    "dropped": [
     {
@@ -2090,7 +2090,7 @@
      "dataset": "SR Legacy",
      "category": "Vegetables",
      "calories": 28,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "newer dataset"
@@ -2103,7 +2103,7 @@
     "dataset": "SR Legacy",
     "category": "Nuts & Seeds",
     "calories": 607,
-    "completeness": 11
+    "completeness": 29
    },
    "dropped": [
     {
@@ -2112,7 +2112,7 @@
      "dataset": "SR Legacy",
      "category": "Nuts & Seeds",
      "calories": 615,
-     "completeness": 11
+     "completeness": 29
     }
    ],
    "reason": "higher fdcId"
@@ -2125,7 +2125,7 @@
     "dataset": "SR Legacy",
     "category": "Bread & Bakery",
     "calories": 350,
-    "completeness": 11
+    "completeness": 27
    },
    "dropped": [
     {
@@ -2134,7 +2134,7 @@
      "dataset": "SR Legacy",
      "category": "Bread & Bakery",
      "calories": 344,
-     "completeness": 9
+     "completeness": 24
     }
    ],
    "reason": "more complete nutrition"

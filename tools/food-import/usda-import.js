@@ -191,10 +191,11 @@ function convert(record, dataset, stats) {
     fat: nutrition.fat,
     fibre: nutrition.fibre,
     sugar: nutrition.sugar,
-    sodium: nutrition.sodium,
-    potassium: nutrition.potassium,
-    calcium: nutrition.calcium,
-    iron: nutrition.iron,
+    /* The 22 micronutrients, spread from the extraction result so this list never has to be
+       kept in sync by hand. Absent values stay null and are dropped at write time. */
+    ...Object.keys(nutrientLib.NUTRIENT_DECIMALS).reduce(function (acc, k) {
+      acc[k] = nutrition[k]; return acc;
+    }, {}),
 
     /* ---- supporting data the app needs, not USDA metadata ---- */
     per: 100,                    // every value above is per 100 g
@@ -215,14 +216,22 @@ function convert(record, dataset, stats) {
 
 /** Removes pipeline-internal fields so the shipped JSON carries no USDA metadata. */
 function strip(f) {
-  return {
+  var out = {
     id: f.id, name: f.name, category: f.category, brand: f.brand,
     servingSize: f.servingSize, servingUnit: f.servingUnit, per: f.per,
     calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat,
-    fibre: f.fibre, sugar: f.sugar, sodium: f.sodium, potassium: f.potassium,
-    calcium: f.calcium, iron: f.iron,
-    portions: f.portions, searchKey: f.searchKey, source: f.source
+    fibre: f.fibre, sugar: f.sugar
   };
+  /* Micronutrients are written only where a value exists. Emitting `"zinc": null` on the
+     ~5% of foods that lack it would add roughly 900 KB of the word "null" to the shipped
+     file; an absent key already means "not measured" everywhere that reads this. */
+  Object.keys(nutrientLib.NUTRIENT_DECIMALS).forEach(function (k) {
+    if (f[k] !== null && f[k] !== undefined) out[k] = f[k];
+  });
+  out.portions = f.portions;
+  out.searchKey = f.searchKey;
+  out.source = f.source;
+  return out;
 }
 
 /* ---------------------------------------------------------

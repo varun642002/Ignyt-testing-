@@ -30,17 +30,61 @@
 
 import * as normalize from "./normalize.js";
 
-/* Accepted nutrient numbers, best first. */
+/* Accepted nutrient numbers, best first.
+
+   MEASURED COVERAGE across the 8,156 source records, which is why this set and not a
+   longer one — every entry below is present on the majority of foods:
+     minerals      84-99%   (iron 98.9, calcium 98.8, sodium 98.6 ... manganese 83.9)
+     B vitamins    79-93%   (niacin 92.9, thiamin 92.8 ... pantothenic 78.8)
+     C / A         91% / 85%
+     E / D / K     69% / 64% / 63%
+   Anything absent for a food stays null and renders as an em dash, never as a zero.
+
+   Vitamin A uses RAE (µg) rather than IU: IU is a legacy unit whose conversion differs by
+   the form of the vitamin, so a percentage against a µg reference value would be wrong.
+   Folate prefers DFE for the same reason — it is the basis the reference value is set on. */
 var NUTRIENT_NUMBERS = {
   protein:   ["203"],
   fat:       ["204"],
   carbs:     ["205", "205.2"],   // by difference, then by summation
   fibre:     ["291", "293"],     // total dietary, then AOAC 2011.25
   sugar:     ["269.3", "269"],   // "Sugars, Total" (modern), then "Total Sugars" (legacy)
-  sodium:    ["307"],
-  potassium: ["306"],
-  calcium:   ["301"],
-  iron:      ["303"]
+
+  /* minerals */
+  sodium:     ["307"],
+  potassium:  ["306"],
+  calcium:    ["301"],
+  iron:       ["303"],
+  magnesium:  ["304"],
+  phosphorus: ["305"],
+  zinc:       ["309"],
+  copper:     ["312"],
+  manganese:  ["315"],
+  selenium:   ["317"],
+
+  /* vitamins */
+  vitaminA:   ["320"],           // RAE µg — see note above, NOT 318 (IU)
+  vitaminC:   ["401"],
+  vitaminD:   ["328"],           // D2 + D3, µg
+  vitaminE:   ["323"],           // alpha-tocopherol, mg
+  vitaminK:   ["430"],           // phylloquinone, µg
+  thiamin:    ["404"],
+  riboflavin: ["405"],
+  niacin:     ["406"],
+  pantothenic:["410"],
+  vitaminB6:  ["415"],
+  folate:     ["435", "417"],    // DFE first, then total folate
+  vitaminB12: ["418"]
+};
+
+/* Decimal places per nutrient. Trace minerals are reported in hundredths because rounding
+   copper or manganese to one place turns most real values into 0.0 or 0.1. */
+var NUTRIENT_DECIMALS = {
+  sodium: 1, potassium: 1, calcium: 1, iron: 2, magnesium: 1, phosphorus: 1,
+  zinc: 2, copper: 3, manganese: 3, selenium: 2,
+  vitaminA: 1, vitaminC: 1, vitaminD: 2, vitaminE: 2, vitaminK: 2,
+  thiamin: 3, riboflavin: 3, niacin: 2, pantothenic: 3, vitaminB6: 3,
+  folate: 1, vitaminB12: 2
 };
 
 var ENERGY_KCAL = "208";
@@ -160,28 +204,34 @@ function extract(food) {
 
   var energy = resolveEnergy(food, map, macros);
 
-  return {
+  var out = {
     calories:  energy.kcal,
     energySource: energy.source,
     protein:   macros.protein,
     carbs:     macros.carbs,
     fat:       macros.fat,
     fibre:     normalize.nutrientValue(firstOf(map, NUTRIENT_NUMBERS.fibre), 2),
-    sugar:     normalize.nutrientValue(firstOf(map, NUTRIENT_NUMBERS.sugar), 2),
-    sodium:    normalize.nutrientValue(firstOf(map, NUTRIENT_NUMBERS.sodium), 1),
-    potassium: normalize.nutrientValue(firstOf(map, NUTRIENT_NUMBERS.potassium), 1),
-    calcium:   normalize.nutrientValue(firstOf(map, NUTRIENT_NUMBERS.calcium), 1),
-    iron:      normalize.nutrientValue(firstOf(map, NUTRIENT_NUMBERS.iron), 2)
+    sugar:     normalize.nutrientValue(firstOf(map, NUTRIENT_NUMBERS.sugar), 2)
   };
+
+  // Every micronutrient reads through the same table, so adding one later means adding a
+  // line to NUTRIENT_NUMBERS and nothing else.
+  Object.keys(NUTRIENT_DECIMALS).forEach(function (key) {
+    out[key] = normalize.nutrientValue(firstOf(map, NUTRIENT_NUMBERS[key]), NUTRIENT_DECIMALS[key]);
+  });
+
+  return out;
 }
 
 /** How many of the retained nutrients carry real data — the tie-breaker when merging. */
 function completeness(n) {
-  var fields = ["protein", "carbs", "fat", "fibre", "sugar", "sodium", "potassium", "calcium", "iron"];
+  // Counts every retained nutrient, so the duplicate tie-break rewards the record that
+  // actually measured more — the point of the check.
+  var fields = ["protein", "carbs", "fat", "fibre", "sugar"].concat(Object.keys(NUTRIENT_DECIMALS));
   var score = fields.reduce(function (acc, f) { return acc + (n[f] !== null ? 1 : 0); }, 0);
   if (n.energySource === "measured") score += 2;          // direct kcal is worth more
   else if (n.energySource !== "none") score += 1;
   return score;
 }
 
-export { extract, completeness, NUTRIENT_NUMBERS };
+export { extract, completeness, NUTRIENT_NUMBERS, NUTRIENT_DECIMALS };
