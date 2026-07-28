@@ -15,6 +15,8 @@
                               name). No local migration needed or performed.)
      foodLog/{id}          <- hx_food_log      (stable id)
      waterLog/{id}         <- hx_water_log     (stable id)
+     favoriteFoods/{id}    <- hx_favorite_foods (stable id, backfilled by the
+                              hx_favfoods_id_migrated_v1 migration)
      goals/{id}             <- hx_goals         (stable id; goal engine's own storage,
                               read/written directly via window.IgnytStorageUtils — the
                               goals.js module itself is untouched)
@@ -27,7 +29,7 @@
    (username/phone/dob/medicalConditions/allergies/bloodGroup, heightUnit/dateFormat/
    timeFormat) alongside a per-key union merge for the completed map.
 
-   DELIBERATELY NOT SYNCED: favorite foods/exercises (food domain — later phase), active
+   DELIBERATELY NOT SYNCED: favorite exercises, active
    session / rest duration / UI state / reminder-scheduling bookkeeping (device-local),
    ALL Health Connect data/state/cache, auth tokens (never stored anywhere by IGNYT).
 
@@ -221,6 +223,17 @@ const IgnytCloudSync = (() => {
       validate: (r) => !!r && (typeof r.id === "number" || typeof r.id === "string")
         && typeof r.date === "string" && typeof r.ml === "number",
       sort: (a, b) => Number(b.id) - Number(a.id)
+    },
+    // Favourite foods gained stable ids via the hx_favfoods_id_migrated_v1 migration, which
+    // is what makes them syncable at all. Records predating that migration (or hand-edited
+    // ones) that still lack an id simply fail validate() and stay local — they are never
+    // dropped from storage, matching how every other category treats invalid records.
+    favoriteFoods: {
+      read: () => state.favoriteFoods, write: (arr) => { state.favoriteFoods = arr; },
+      idOf: (r) => String(r.id),
+      validate: (r) => !!r && (typeof r.id === "number" || typeof r.id === "string")
+        && typeof r.name === "string" && r.name.trim().length > 0,
+      sort: null // the Nutrition tab renders these in insertion order
     },
     // goals.js owns hx_goals via window.IgnytStorageUtils and doesn't expose it on
     // `state`; read/write it directly at the same storage layer goals.js itself uses,

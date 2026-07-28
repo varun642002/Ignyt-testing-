@@ -4997,6 +4997,22 @@ function runMigrations(){
     }catch(e){ /* cleanup must never break boot */ }
     LS.set("hx_workout_dedupe_v1", true);
   }
+  // One-time id backfill for favourite foods. They were originally stored as bare
+  // {name, calories, protein, carbs, fat, fibre} with no identifier, which is exactly why
+  // they were never cloud-synced: the record-sync engine keys every record on its own id.
+  // Assigning stable ids here is what lets favouriteFoods become a synced category without
+  // changing anything the UI reads. Flag-guarded, idempotent, and additive only — no
+  // existing field is touched or removed, so an older build still reads these records fine.
+  if(!LS.get("hx_favfoods_id_migrated_v1", false)){
+    try{
+      const list = Array.isArray(state.favoriteFoods) ? state.favoriteFoods : [];
+      let added = 0;
+      list.forEach(f=>{ if(f && f.id == null){ f.id = nextId(); added++; } });
+      if(added > 0) LS.set("hx_favorite_foods", list);
+    }catch(e){ /* a migration must never break boot */ }
+    LS.set("hx_favfoods_id_migrated_v1", true);
+  }
+
   const stored = LS.get("hx_schema_version", null);
   if(stored===null){
     // Pre-versioning install (or brand new) — just stamp current version, no data shape to migrate
@@ -13714,7 +13730,9 @@ function attachHandlers(){
     }
     if(!r.validRows || !r.validRows.length) return;
     if(r.kind==="foods"){
-      state.favoriteFoods = state.favoriteFoods.concat(r.validRows);
+      // Imported rows come from a CSV and carry no id — assign one each so they sync like
+      // any other favourite.
+      state.favoriteFoods = state.favoriteFoods.concat(r.validRows.map(row=> Object.assign({ id: nextId() }, row)));
       const foodCount = r.validCount;
       state.csvImportPreview = null;
       persist();
@@ -15685,6 +15703,7 @@ function attachHandlers(){
     const cal = Number(calStr);
     if(!name || calStr === "" || isNaN(cal) || cal < 0) return;
     const fav = {
+      id: nextId(), // stable id -- required for the record-based cloud sync
       name, calories: cal,
       protein: Number(document.getElementById("food-protein").value)||0,
       carbs: Number(document.getElementById("food-carbs").value)||0,

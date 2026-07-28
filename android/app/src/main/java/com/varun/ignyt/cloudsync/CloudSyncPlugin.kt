@@ -141,7 +141,7 @@ class CloudSyncPlugin : com.getcapacitor.Plugin() {
      *  if a compromised/buggy JS layer asks for it. */
     private val allowedCollections = setOf(
         "workouts", "routines", "prs", "bodylog", "races", "customExercises",
-        "foodLog", "waterLog", "goals", "achievements"
+        "foodLog", "waterLog", "goals", "achievements", "favoriteFoods"
     )
 
     /** Incremental pull: every record in users/{uid}/{collection} whose updatedAt is greater
