@@ -7182,6 +7182,105 @@ function renderNutritionRow(row, isServing){
   </tr>`;
 }
 
+/* ---- Smart serving selector (Phase 7) -----------------------------------------------
+   The one control that decides whether logging feels fast. Typing "how many grams of
+   broccoli is a portion" is a question nobody should have to answer, so the app answers it.
+
+   Presets are built in priority order:
+     1. The food's OWN USDA-measured portions. This is the whole point — a cup of raw
+        broccoli is 76 g and a cup of raw kale is 20.6 g, and no generic table can say that.
+     2. A category shape for foods USDA has no portions for, so bread still offers slices
+        and milk still offers glasses.
+     3. Gram anchors, always last, so an exact figure is never more than one tap away.
+
+   Each preset carries its own calorie figure. That is what removes the arithmetic: you pick
+   the portion you ate, not a number you have to convert. */
+
+/* Fallback serving shapes by category, used only when USDA has no measured portion for a
+   food. Deliberately short — a wrong guess dressed as a measurement is worse than grams. */
+const CATEGORY_SERVING_SHAPES = {
+  "Eggs":            [["egg",1],["egg",2],["egg",3]],
+  "Bread & Bakery":  [["slice",1],["slice",2],["piece",1]],
+  "Dairy":           [["cup",1],["glass",1],["tbsp",1]],
+  "Beverages":       [["glass",1],["cup",1],["bottle",1]],
+  "Rice":            [["cup",0.5],["cup",1],["cup",2]],
+  "Pasta":           [["cup",1],["bowl",1]],
+  "Protein Supplements": [["scoop",0.5],["scoop",1],["scoop",2]],
+  "Oils & Fats":     [["tsp",1],["tbsp",1]],
+  "Sauces & Condiments": [["tsp",1],["tbsp",1],["cup",0.25]],
+  "Nuts & Seeds":    [["tbsp",1],["cup",0.25],["serving",1]],
+  "Indian Foods":    [["roti",1],["roti",2],["cup",1],["bowl",1]],
+  "Soups":           [["cup",1],["bowl",1]],
+  "Fruits":          [["piece",1],["cup",1]],
+  "Vegetables":      [["cup",1],["piece",1]]
+};
+
+/* Gram anchors offered for every food, so an exact amount is always one tap away. Kept to
+   four so the row never wraps on a narrow phone. */
+const GRAM_ANCHORS = [50, 100, 150, 200];
+
+/**
+ * @returns {Array<{amount:number, unit:string, grams:number, kcal:number, label:string, source:string}>}
+ */
+function servingPresetsFor(food){
+  if(!food || food.per == null) return [];
+  const conv = window.IgnytServingConverter;
+  const N = window.IgnytNutrition;
+  if(!conv || !N) return [];
+
+  const out = [];
+  const seen = Object.create(null);
+  const push = (amount, unit, source)=>{
+    const grams = unit === "g" ? amount : conv.toGrams(food, amount, unit);
+    if(!(grams > 0) || grams > 2000) return;
+    const key = Math.round(grams * 10) / 10;
+    if(seen[key]) return;                       // two presets of the same weight are one preset
+    seen[key] = 1;
+    out.push({
+      amount, unit, grams: key, source,
+      kcal: Math.round((Number(food.calories)||0) * (key / (food.per || 100))),
+      // Anything below 2 takes the singular: "½ cup", not "½ cups". labelFor() pluralises on
+      // amount !== 1, which is right for whole numbers and wrong for fractions.
+      label: unit === "g" ? `${amount} g`
+        : `${N.formatAmount(amount)} ${conv.labelFor(unit, amount >= 2 ? amount : 1)}`
+    });
+  };
+
+  // 1. What USDA actually measured for this food.
+  (food.portions || []).forEach(p=>{ if(p && p.unit && p.grams > 0) push(1, p.unit, "measured"); });
+
+  // 2. Category shape, only for units this food can express.
+  if(out.length < 3){
+    (CATEGORY_SERVING_SHAPES[food.category] || []).forEach(([unit, amount])=>{
+      if(conv.gramsPerUnit(food, unit) != null) push(amount, unit, "category");
+    });
+  }
+
+  // 3. Gram anchors, always available.
+  GRAM_ANCHORS.forEach(g=>push(g, "g", "grams"));
+
+  // Smallest first reads as a scale rather than an arbitrary list.
+  return out.sort((a,b)=>a.grams - b.grams).slice(0, 8);
+}
+
+function renderServingPresets(food, activeGrams){
+  const presets = servingPresetsFor(food);
+  if(!presets.length) return "";
+  const measured = presets.filter(p=>p.source === "measured").length;
+  return `
+    <div class="nut-label" style="margin-bottom:var(--space-2xs);">
+      Serving${measured?` · ${measured} USDA-measured`:""}
+    </div>
+    <div class="srv-grid" style="margin-bottom:var(--space-xs);">
+      ${presets.map(p=>`<button class="srv${Math.abs(p.grams - activeGrams) < 0.5 ? ' is-on' : ''}"
+        data-srv-amount="${p.amount}" data-srv-unit="${escHtml(p.unit)}">
+        <span class="srv__name">${escHtml(p.label)}</span>
+        <span class="srv__grams">${p.grams} g</span>
+        <span class="srv__kcal">${p.kcal} kcal</span>
+      </button>`).join("")}
+    </div>`;
+}
+
 function renderFoodDetail(food, meal){
   if(!food) return "";
   const N = window.IgnytNutrition;
@@ -7203,7 +7302,6 @@ function renderFoodDetail(food, meal){
                         : N.compute({ ...food, per: 1 }, 1);   // favourites: values as stored
 
   const units = (scalable && conv) ? conv.unitsFor(food) : ["g"];
-  const measured = (food.portions||[]).filter(x=>x && x.grams>0);
   const isFav = (state.favoriteFoods||[]).some(x=>x && String(x.name).toLowerCase()===String(food.name).toLowerCase());
 
   return `
@@ -7233,17 +7331,15 @@ function renderFoodDetail(food, meal){
           ? `<div class="mono" style="font-size:11px;color:var(--muted);margin-bottom:6px;">= ${grams} g${p.unit!=="g"&&conv?` · 1 ${escHtml(conv.labelFor(p.unit,1))} = ${conv.gramsPerUnit(food,p.unit)} g`:""}</div>`
           : `<div style="font-size:11px;color:var(--accent);margin-bottom:6px;">${escHtml(check.error)}</div>`}
 
+        <!-- Phase 7: real measured servings, each with its own calorie figure, so choosing a
+             portion never requires converting anything. -->
+        ${renderServingPresets(food, grams)}
+
         <div style="display:flex;gap:4px;overflow-x:auto;margin-bottom:8px;padding-bottom:2px;">
           ${(p.unit==="g" ? N.GRAM_PRESETS.map(v=>({v,label:v+"g"}))
                           : N.AMOUNT_FRACTIONS.map(f=>({v:f.value,label:f.label})))
             .map(x=>`<button class="cat-chip${Math.abs(Number(shownAmount)-x.v)<0.001?' active':''}" data-food-amount="${x.v}" style="margin:0;flex-shrink:0;">${escHtml(x.label)}</button>`).join("")}
         </div>
-
-        ${measured.length ? `
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">USDA measured servings</div>
-          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
-            ${measured.map(m=>`<button class="cat-chip" data-food-portion="${escHtml(m.unit)}" style="margin:0;">1 ${escHtml(m.label)} · ${m.grams}g</button>`).join("")}
-          </div>` : ""}
       ` : `<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Saved favourite — logged as one portion.</div>`}
 
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:2px;">Nutrition facts</div>
@@ -7664,6 +7760,54 @@ function donutSvg(segments, size, stroke, centerTop, centerSub){
     ${arcs}
     ${centerTop!=null?`<text x="${size/2}" y="${size/2-1}" text-anchor="middle" font-size="${Math.round(size*0.19)}" font-weight="900" fill="var(--text)" font-family="'SF Mono',monospace">${escHtml(String(centerTop))}</text>`:""}
     ${centerSub?`<text x="${size/2}" y="${size/2+Math.round(size*0.15)}" text-anchor="middle" font-size="${Math.round(size*0.11)}" fill="var(--muted)">${escHtml(centerSub)}</text>`:""}
+  </svg>`;
+}
+
+/**
+ * The dashboard calorie ring.
+ *
+ * The arc length is progress against the day's budget, and it is SPLIT BY MACRO — so one
+ * ring answers both "how much of my day have I eaten" and "what was it made of". A ring
+ * normalised to 100% would show composition but lose the progress, and a plain progress ring
+ * would show progress but lose the composition; this shows both without a second chart.
+ *
+ * Segments are sized by ENERGY (protein x4, carbs x4, fat x9), not gram weight, so the ring
+ * agrees with the calorie number printed inside it.
+ *
+ * Over budget, the ring fills completely and turns accent rather than wrapping past itself,
+ * because a second lap reads as a smaller number than the first.
+ */
+function calorieRingSvg(consumed, budget, kcalP, kcalC, kcalF){
+  const size = 108, stroke = 12, r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const over = budget > 0 && consumed > budget;
+  const frac = budget > 0 ? Math.min(1, consumed / budget) : 0;
+  const arc = circ * frac;
+
+  // Split the filled arc in proportion to each macro's contribution to the energy eaten.
+  const macroTotal = kcalP + kcalC + kcalF;
+  const parts = macroTotal > 0
+    ? [[kcalP,"protein"],[kcalC,"carbs"],[kcalF,"fat"]].map(([v,k])=>({ len: (v/macroTotal)*arc, key:k }))
+    : [{ len: arc, key:"energy" }];
+
+  let offset = 0;
+  const segs = parts.map(p=>{
+    const el = `<circle class="fill" cx="${size/2}" cy="${size/2}" r="${r}" fill="none"
+      stroke="${over?'var(--accent)':`var(--n-${p.key})`}" stroke-width="${stroke}"
+      stroke-dasharray="${p.len} ${circ - p.len}" stroke-dashoffset="${-offset}"
+      transform="rotate(-90 ${size/2} ${size/2})"></circle>`;
+    offset += p.len;
+    return el;
+  }).join("");
+
+  return `<svg class="nut-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"
+    role="img" aria-label="${consumed} of ${budget} kcal eaten">
+    <circle class="track" cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke-width="${stroke}"></circle>
+    ${segs}
+    <text x="${size/2}" y="${size/2 - 1}" text-anchor="middle" font-size="21" font-weight="900"
+      fill="var(--text)" font-family="'SF Mono',ui-monospace,monospace">${consumed.toLocaleString()}</text>
+    <text x="${size/2}" y="${size/2 + 15}" text-anchor="middle" font-size="9"
+      fill="var(--muted)">kcal eaten</text>
   </svg>`;
 }
 
@@ -12447,40 +12591,42 @@ function renderNutritionTab(){
       <button class="cat-chip" data-nutrition-date="1" style="margin:0;width:34px;justify-content:center;${isToday?'opacity:.3;pointer-events:none;':''}" aria-label="Next day">›</button>
     </div>
 
-    <!-- Calories hero -->
-    <div class="info-box" style="padding:14px;margin-bottom:8px;">
-      <div style="display:flex;gap:12px;align-items:center;">
+    <!-- Calories hero (Phase 3)
+         Ring on the left, the two numbers people act on to its right. "Remaining" carries
+         the second-largest type on the screen because it is the figure that decides what
+         happens next; the daily goal sits under it as context rather than competing. -->
+    <div class="nut-card">
+      <div style="display:flex;gap:var(--space-md);align-items:center;">
+        ${calorieRingSvg(dayKcal, calorieBudget, kcalFromProtein, kcalFromCarbs, kcalFromFat)}
         <div style="flex:1;min-width:0;">
-          <div class="stat-label">Calories</div>
-          <div class="mono" style="font-size:28px;font-weight:900;color:var(--mint);line-height:1.1;margin-top:2px;">
-            ${dayKcal.toLocaleString()}<span style="font-size:12px;font-weight:700;color:var(--muted);"> / ${calorieBudget.toLocaleString()} kcal</span>
+          <div class="nut-label">${dayRemaining>=0?'Remaining':'Over budget'}</div>
+          <div class="nut-value nut-value--lg" style="color:${dayRemaining>=0?'var(--mint)':'var(--accent)'};">
+            ${Math.abs(dayRemaining).toLocaleString()}<span class="nut-unit"> kcal</span>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-            <div style="flex:1;height:6px;border-radius:3px;background:var(--surface-alt);overflow:hidden;">
-              <div style="height:100%;width:${Math.min(100,Math.max(0,kcalPct))}%;background:${dayKcal>calorieBudget?'var(--accent)':'var(--mint)'};border-radius:3px;"></div>
-            </div>
-            <span class="mono" style="font-size:11px;color:var(--muted);">${kcalPct}%</span>
+          <div class="nut-label" style="margin-top:var(--space-sm);">Daily goal</div>
+          <div class="nut-value nut-value--md">${calorieBudget.toLocaleString()}<span class="nut-unit"> kcal</span></div>
+          <div class="nut-bar nut-bar--${dayKcal>calorieBudget?'over':'energy'}" style="margin-top:var(--space-xs);">
+            <i style="width:${Math.min(100,Math.max(0,kcalPct))}%;"></i>
           </div>
-          <div class="stat-label" style="margin-top:8px;">${dayRemaining>=0?'Remaining':'Over budget'}</div>
-          <div class="mono" style="font-size:15px;font-weight:900;color:${dayRemaining>=0?'var(--text)':'var(--accent)'};">${Math.abs(dayRemaining).toLocaleString()} kcal</div>
         </div>
-        ${donutSvg([
-          {value:kcalFromProtein, color:NUTRIENT_COLORS.protein},
-          {value:kcalFromCarbs,   color:NUTRIENT_COLORS.carbs},
-          {value:kcalFromFat,     color:NUTRIENT_COLORS.fat}
-        ], 104, 13, dayKcal.toLocaleString(), "kcal")}
       </div>
-      <div style="display:flex;flex-direction:column;gap:5px;margin-top:10px;">
-        ${[["Protein",kcalFromProtein,T.protein,"protein"],["Carbs",kcalFromCarbs,T.carbs,"carbs"],["Fat",kcalFromFat,T.fat,"fat"]]
-          .map(([label,kc,grams,key])=>`<div class="row-between">
-            <span style="font-size:12px;display:flex;align-items:center;gap:7px;">
-              <span style="width:8px;height:8px;border-radius:50%;background:${NUTRIENT_COLORS[key]};display:inline-block;flex-shrink:0;"></span>
-              ${label} <span style="color:var(--muted);">(${sharePct(kc)}%)</span>
-            </span>
-            <span class="mono" style="font-size:12px;font-weight:700;">${Math.round(grams)} g</span>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-sm);margin-top:var(--space-md);">
+        ${[["Protein","protein",T.protein,targets.protein,kcalFromProtein],
+           ["Carbs","carbs",T.carbs,targets.carbs,kcalFromCarbs],
+           ["Fat","fat",T.fat,targets.fat,kcalFromFat]]
+          .map(([label,key,grams,target,kc])=>`<div>
+            <div class="nut-stat__name" style="color:var(--n-${key});">${label}</div>
+            <div class="nut-value nut-value--sm" style="margin-top:2px;">
+              ${Math.round(grams)}<span class="nut-unit">/${Math.round(target)}g</span>
+            </div>
+            <div class="nut-bar nut-bar--${key}" style="margin-top:5px;">
+              <i style="width:${target>0?Math.min(100,Math.round((grams/target)*100)):0}%;"></i>
+            </div>
+            <div class="nut-stat__pct" style="color:var(--muted);">${sharePct(kc)}% of energy</div>
           </div>`).join("")}
       </div>
-      <div style="font-size:9px;color:var(--muted);margin-top:8px;">Ring shows each macro's share of energy, not grams.</div>
+      <div class="nut-note" style="margin-top:var(--space-xs);">Ring segments are each macro's share of energy, not grams.</div>
     </div>
 
     <!-- Macro + water strip -->
@@ -17459,6 +17605,15 @@ function bindFoodResultHandlers(){
         state.foodSearchUnit = el.dataset.foodPortion;
         state.foodSearchAmount = 1;
         render();
+      });
+    });
+    // Serving presets (Phase 7). Sets amount and unit together — picking "1 cup" must not
+    // leave a gram amount behind, which is what made the old two-control version confusing.
+    document.querySelectorAll("[data-srv-amount]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        state.foodSearchAmount = Number(el.dataset.srvAmount);
+        state.foodSearchUnit = el.dataset.srvUnit;
+        updateFoodSearchResults();
       });
     });
     const foodShareBtn = document.querySelector("[data-food-share]");
