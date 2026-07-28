@@ -569,6 +569,22 @@ const IgnytCloudSync = (() => {
 
       if (appliedAny && typeof persist === "function") persist();
 
+      // A restore onto a fresh device applies real data AFTER resolveOnboardingStatus()
+      // already ran (synchronously, at boot, against then-empty local storage) and locked in
+      // onboardingComplete=false for good -- that check never re-runs. Recognize a genuine
+      // restore here so a returning user isn't stuck being routed through onboarding despite
+      // now having real profile/history data.
+      if (appliedAny && typeof state !== "undefined" && state.onboardingComplete !== true) {
+        const hasRealData = (state.profile && state.profile.name) ||
+          (state.workoutLog && state.workoutLog.length > 0) ||
+          (state.bodylog && state.bodylog.length > 0) ||
+          (state.routines && state.routines.length > 0);
+        if (hasRealData) {
+          state.onboardingComplete = true;
+          if (typeof LS !== "undefined") LS.set("hx_onboarding_complete", true);
+        }
+      }
+
       syncState.lastSyncAt = now;
       saveSyncState(syncState);
       setStatus(queued ? "queued" : "synced");
