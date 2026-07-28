@@ -220,7 +220,7 @@ const EXERCISE_DETAILS = {
     ],
     animationWebmUrl: null,
     animationMp4Url: null,
-    thumbnailUrl: "assets/images/exercises/bench-press-barbell.jpg",
+    thumbnailUrl: null,
     animationAvailable: false
   },
   "Conventional Deadlift": {
@@ -316,7 +316,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Lie on the bench with eyes roughly under the bar, feet flat on the floor.", "Grip the bar slightly wider than shoulder-width and unrack it over your chest.", "Lower the bar under control to the mid-chest, keeping elbows at roughly a 45\u00b0 angle to your torso.", "Press the bar back up to full lockout in a slight arc back toward the rack position."],
     formTips: ["Keep your shoulder blades pulled back and down against the bench throughout.", "Keep a slight, natural arch in your lower back.", "Drive your feet into the floor for stability, not to bounce the bar."],
     commonMistakes: ["Flaring the elbows out to 90\u00b0, which stresses the shoulders.", "Bouncing the bar off the chest.", "Losing shoulder blade retraction partway through the set."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/bench-press-barbell.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Incline Bench Press": {
     primaryMuscle: "Chest",
@@ -327,7 +327,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Set the bench to a 30\u201345\u00b0 incline and lie back with eyes under the bar.", "Grip slightly wider than shoulder-width and unrack the bar over your upper chest.", "Lower to the upper chest with control, elbows at roughly 45\u00b0.", "Press back up to lockout, keeping the bar path slightly back toward your face."],
     formTips: ["A steeper incline shifts more work to the front delts \u2014 30\u201345\u00b0 keeps it chest-focused.", "Keep shoulder blades retracted throughout, same as flat bench.", "Don't let the bar drift too far forward over your face."],
     commonMistakes: ["Setting the incline too steep, turning it into a shoulder press.", "Bouncing the bar off the chest.", "Flaring the elbows excessively."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/incline-bench-press-barbell.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Overhead Press": {
     primaryMuscle: "Shoulders",
@@ -459,7 +459,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Lie back on a bench holding a dumbbell in each hand at chest level, palms forward.", "Press both dumbbells up until your arms are extended, without locking the elbows harshly.", "Lower under control until the dumbbells are level with your chest, elbows at roughly 45\u00b0.", "Press back up, keeping both sides moving evenly."],
     formTips: ["The extra range of motion versus a barbell is a benefit \u2014 use it, but stay controlled.", "Keep your shoulder blades retracted throughout.", "Bring the dumbbells together slightly at the top rather than clanking them."],
     commonMistakes: ["Letting the dumbbells drift out wide, stressing the shoulders.", "Uneven pressing between arms.", "Losing control on the descent."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/bench-press-dumbbell.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "DB Row": {
     primaryMuscle: "Lats",
@@ -549,6 +549,226 @@ const EXERCISE_DETAILS = {
     commonMistakes: ["Using momentum/swinging to raise the weight.", "Shrugging the traps to assist the lift.", "Raising the arms above shoulder height."],
     animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
+  "Dumbbell Lateral Raise": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Traps"],
+    equipment: "Dumbbell",
+    difficulty: "Beginner",
+    movementPattern: "Shoulder Abduction",
+    instructions: ["Stand holding a light dumbbell in each hand at your sides.", "With a slight bend in the elbows, raise both arms out to the sides.", "Lift until your arms are roughly parallel to the floor, leading with the elbows.", "Lower under control back to the start."],
+    formTips: ["Use a lighter weight than you think — this movement is easy to cheat with momentum.", "Lead with your elbows, not your hands.", "Stop at shoulder height; going higher shifts the work to your traps."],
+    commonMistakes: ["Using momentum/swinging to raise the weight.", "Shrugging the traps to assist the lift.", "Raising the arms above shoulder height."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "One-Arm Dumbbell Lateral Raise": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Traps", "Core"],
+    equipment: "Dumbbell",
+    difficulty: "Beginner",
+    movementPattern: "Shoulder Abduction",
+    instructions: ["Stand holding a light dumbbell in one hand at your side, other hand free or braced on a support.", "With a slight bend in the elbow, raise the arm out to the side.", "Lift until your arm is roughly parallel to the floor, leading with the elbow.", "Lower under control, then complete all reps before switching sides."],
+    formTips: ["Working one side at a time makes it easier to spot and fix a strength imbalance.", "Brace your core so you don't lean away from the working side.", "Lead with your elbow, not your hand."],
+    commonMistakes: ["Leaning the torso away to help lift the weight.", "Shrugging the trap to assist.", "Doing more reps or using more weight on the stronger side."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Cuff Cable Lateral Raise": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Traps"],
+    equipment: "Machine",
+    difficulty: "Beginner",
+    movementPattern: "Shoulder Abduction",
+    instructions: ["Attach an ankle-style cuff to a low cable pulley and secure it around your wrist.", "Stand side-on to the machine with the cuffed arm furthest away.", "With a slight bend in the elbow, raise the arm out to the side to shoulder height.", "Lower under control, then complete all reps before switching sides."],
+    formTips: ["The cuff removes grip from the equation, so the delt does all the work.", "Cables keep tension constant through the whole range, unlike dumbbells.", "Stop at shoulder height rather than going higher."],
+    commonMistakes: ["Leaning away from the machine to help lift.", "Using too much weight and swinging.", "Shrugging the trap at the top of the rep."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Dumbbell Rear Delt Fly": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Upper Back", "Traps"],
+    equipment: "Dumbbell",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Pull",
+    instructions: ["Hinge forward at the hips holding a light dumbbell in each hand, arms hanging down.", "With a slight bend in the elbows, raise both arms out to the sides.", "Squeeze your shoulder blades together at the top.", "Lower under control back to the start."],
+    formTips: ["Keep your torso angle fixed — don't stand up as you lift.", "Use light weight; the rear delts are small and easily overpowered by the traps.", "Lead with your elbows out to the sides, not back toward your hips."],
+    commonMistakes: ["Using momentum to swing the weights up.", "Turning it into a row by pulling the elbows back instead of out.", "Standing up out of the hinge as the set fatigues."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Dumbbell Reverse Pec Deck Fly": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Upper Back", "Traps"],
+    equipment: "Dumbbell",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Pull",
+    instructions: ["Sit facing the backrest of an incline bench, chest supported, a light dumbbell in each hand hanging down.", "With a slight bend in the elbows, raise both arms out to the sides.", "Squeeze your shoulder blades together at the top.", "Lower under control back to the start."],
+    formTips: ["Chest support removes momentum entirely — that's the point of this variation.", "Use light weight and focus on the squeeze rather than the load.", "Lead with your elbows out to the sides."],
+    commonMistakes: ["Lifting the chest off the pad to cheat the weight up.", "Using too much weight, recruiting the traps instead of the rear delts.", "Rushing reps without the end-range squeeze."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Face Pull": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Traps", "Upper Back"],
+    equipment: "Machine",
+    difficulty: "Beginner",
+    movementPattern: "Horizontal Pull",
+    instructions: ["Set a rope attachment at roughly face height on the cable machine.", "Grip the rope with both hands, palms facing each other.", "Pull the rope toward your face, flaring your elbows out and back.", "Squeeze your shoulder blades together at the end, then return under control."],
+    formTips: ["Aim the pull toward your face/forehead, not your chest.", "Externally rotate your hands as you pull for full rear-delt engagement.", "Keep the weight light — this is a technique-focused movement."],
+    commonMistakes: ["Using too much weight and turning it into a row.", "Pulling toward the chest instead of the face.", "Rushing through reps without the external rotation finish."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Landmine Press": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Triceps", "Upper Chest", "Core"],
+    equipment: "Barbell",
+    difficulty: "Beginner",
+    movementPattern: "Vertical Push",
+    instructions: ["Wedge one end of a barbell into a landmine attachment (or a corner), load the free end.", "Hold the free end at shoulder height with one or both hands, standing or half-kneeling.", "Press the bar up and forward along its natural arc until your arm is extended.", "Lower under control back to shoulder height."],
+    formTips: ["The angled arc is far more shoulder-friendly than a strict vertical press.", "Brace your core to avoid leaning back as you press.", "A half-kneeling stance removes leg drive and forces stricter form."],
+    commonMistakes: ["Leaning back excessively to press the weight.", "Letting the core go slack, arching the lower back.", "Fighting the bar's natural arc instead of following it."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Kettlebell Arnold Press": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Triceps", "Upper Chest"],
+    equipment: "Kettlebell",
+    difficulty: "Intermediate",
+    movementPattern: "Vertical Push",
+    instructions: ["Hold a kettlebell in each hand at shoulder height, palms facing you.", "Press upward while rotating your palms to face forward as the bells rise.", "Finish locked out overhead with palms forward.", "Reverse the rotation as you lower back to the start."],
+    formTips: ["The rotation is the whole point — it works the front and side delts through a longer range.", "Keep the rotation smooth and continuous rather than pressing then twisting.", "Kettlebells' offset load makes this harder than the dumbbell version; start lighter."],
+    commonMistakes: ["Pressing first and rotating separately instead of blending the two.", "Letting the bells drift forward away from the body.", "Arching the lower back to help press."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Cable Arnold Press": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Triceps", "Upper Chest"],
+    equipment: "Machine",
+    difficulty: "Intermediate",
+    movementPattern: "Vertical Push",
+    instructions: ["Set two low cable pulleys and grip a handle in each hand at shoulder height, palms facing you.", "Press upward while rotating your palms to face forward as the handles rise.", "Finish locked out overhead with palms forward.", "Reverse the rotation as you lower back to the start."],
+    formTips: ["Cables keep tension constant through the whole rotation, unlike free weights.", "Keep the rotation smooth and blended with the press.", "Brace your core to avoid leaning back."],
+    commonMistakes: ["Pressing and rotating as two separate movements.", "Leaning back to help press the weight.", "Letting the cables pull your arms back out of the pressing line."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Dumbbell Push Press": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Triceps", "Quadriceps", "Core"],
+    equipment: "Dumbbell",
+    difficulty: "Intermediate",
+    movementPattern: "Vertical Push",
+    instructions: ["Hold a dumbbell in each hand at shoulder height, feet hip-width apart.", "Dip straight down a few inches by bending the knees, keeping the torso upright.", "Drive explosively through the legs and immediately press the dumbbells overhead.", "Lock out overhead, then lower back to the shoulders under control."],
+    formTips: ["Keep the dip short and vertical — this is a leg drive, not a squat.", "Time the press to start right as the legs finish driving.", "Keep your torso upright through the dip; don't lean forward."],
+    commonMistakes: ["Dipping too deep, turning it into a squat-and-press.", "Leaning forward during the dip.", "Pressing before the leg drive finishes, losing the momentum transfer."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Barbell Push Press": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Triceps", "Quadriceps", "Core"],
+    equipment: "Barbell",
+    difficulty: "Intermediate",
+    movementPattern: "Vertical Push",
+    instructions: ["Unrack the bar to rest on your front delts, feet hip-width apart.", "Dip straight down a few inches by bending the knees, keeping the torso upright.", "Drive explosively through the legs and immediately press the bar overhead.", "Lock out with the bar stacked over your shoulders, then lower back to the rack position."],
+    formTips: ["Keep the dip short and vertical — this is a leg drive, not a squat.", "Time the press to start right as the legs finish driving.", "Move your head back slightly to let the bar pass, then through once it clears."],
+    commonMistakes: ["Dipping too deep, turning it into a squat-and-press.", "Leaning forward during the dip.", "Pressing around the face instead of moving the head out of the bar's path."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Kettlebell Push Press": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Triceps", "Quadriceps", "Core"],
+    equipment: "Kettlebell",
+    difficulty: "Intermediate",
+    movementPattern: "Vertical Push",
+    instructions: ["Clean a kettlebell to the rack position at your shoulder, feet hip-width apart.", "Dip straight down a few inches by bending the knees, keeping the torso upright.", "Drive explosively through the legs and press the bell overhead.", "Lock out overhead, then lower back to the rack position under control."],
+    formTips: ["Keep the bell tight in the rack position before the dip — a loose rack wastes the leg drive.", "Keep the dip short and vertical.", "The bell's offset load will want to pull your wrist back; keep a straight wrist throughout."],
+    commonMistakes: ["A sloppy rack position that dissipates the leg drive.", "Dipping too deep.", "Letting the wrist bend back under the bell's offset weight."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Cable Push Press": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Triceps", "Quadriceps", "Core"],
+    equipment: "Machine",
+    difficulty: "Intermediate",
+    movementPattern: "Vertical Push",
+    instructions: ["Set two low cable pulleys and grip a handle in each hand at shoulder height, feet hip-width apart.", "Dip straight down a few inches by bending the knees.", "Drive through the legs and press the handles overhead.", "Lower under control back to shoulder height."],
+    formTips: ["Cables keep tension on the delts even at lockout, unlike a barbell.", "Keep the dip short and vertical.", "Brace your core — the cables pull backward and will arch your back if you let them."],
+    commonMistakes: ["Letting the cables pull you into an arched-back position.", "Dipping too deep.", "Pressing before the leg drive finishes."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Resistance Band Push Press": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Triceps", "Quadriceps", "Core"],
+    equipment: "Band",
+    difficulty: "Beginner",
+    movementPattern: "Vertical Push",
+    instructions: ["Stand on the middle of a resistance band, holding one end in each hand at shoulder height.", "Dip straight down a few inches by bending the knees.", "Drive through the legs and press the band overhead.", "Lower under control, resisting the band's pull back down."],
+    formTips: ["Band resistance increases as you press — expect the top of the rep to be hardest.", "Keep the dip short and vertical.", "Control the descent; don't let the band snap your arms down."],
+    commonMistakes: ["Letting the band pull your arms down uncontrolled.", "Standing on the band off-center, making one side harder.", "Dipping too deep."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Handstand Hold": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Triceps", "Core", "Forearms"],
+    equipment: "Bodyweight",
+    difficulty: "Advanced",
+    movementPattern: "Isometric Hold",
+    instructions: ["Face a wall (or open floor if you're practiced), place hands shoulder-width on the floor.", "Kick up into a handstand, keeping your arms locked straight.", "Hold the inverted position with your body in a straight line, core and glutes squeezed.", "Come down under control before your form breaks."],
+    formTips: ["Start with wall support before attempting free handstands.", "Stack your body — hands, shoulders, hips, feet in one vertical line.", "Push the floor away actively rather than sagging into your shoulders."],
+    commonMistakes: ["Arching the lower back into a banana shape.", "Bending the elbows and sinking into the shoulders.", "Holding past the point where form has already broken down."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Dumbbell Handstand Push-Up": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Triceps", "Core"],
+    equipment: "Dumbbell",
+    difficulty: "Advanced",
+    movementPattern: "Vertical Push",
+    instructions: ["Set two dumbbells on the floor shoulder-width apart as handles, then kick up into a wall-supported handstand gripping them.", "Lower under control until your head reaches roughly dumbbell height.", "Press back up to full arm extension.", "Come down under control when the set is finished."],
+    formTips: ["The dumbbell handles add range of motion versus floor handstand push-ups — build up to it.", "Keep your body stacked and core braced throughout.", "Make sure the dumbbells are hex-shaped or otherwise stable so they cannot roll."],
+    commonMistakes: ["Using round dumbbells that can roll mid-set.", "Attempting this before floor handstand push-ups are solid.", "Arching the lower back to shorten the press."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Kettlebell Handstand Push-Up": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Triceps", "Core"],
+    equipment: "Kettlebell",
+    difficulty: "Advanced",
+    movementPattern: "Vertical Push",
+    instructions: ["Set two kettlebells on the floor shoulder-width apart, handles aligned, then kick up into a wall-supported handstand gripping them.", "Lower under control until your head passes below the handle line.", "Press back up to full arm extension.", "Come down under control when the set is finished."],
+    formTips: ["Check the bells are stable and won't tip before putting your weight on them.", "The added range makes this notably harder than a floor handstand push-up.", "Keep your body stacked and core braced throughout."],
+    commonMistakes: ["Using bells that tip or shift mid-set.", "Attempting this before floor handstand push-ups are solid.", "Letting the lower back arch to shorten the range."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Resistance Band Handstand Push-Up": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Triceps", "Core"],
+    equipment: "Band",
+    difficulty: "Intermediate",
+    movementPattern: "Vertical Push",
+    instructions: ["Anchor a resistance band overhead and loop it around your hips or waist to offload some bodyweight.", "Kick up into a wall-supported handstand.", "Lower under control until your head approaches the floor, then press back up.", "Come down under control when the set is finished."],
+    formTips: ["This is an assistance variation — the band offloads weight so you can build handstand press strength.", "Use a lighter band as you get stronger to reduce the assistance.", "Keep your body stacked and core braced throughout."],
+    commonMistakes: ["Using a band so strong it does most of the work.", "Letting the band's pull throw off your body line.", "Arching the lower back to shorten the press."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Battle Rope Slams": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Core", "Lats", "Forearms"],
+    equipment: "Conditioning",
+    difficulty: "Intermediate",
+    movementPattern: "Conditioning",
+    instructions: ["Hold one rope end in each hand, feet shoulder-width apart, knees slightly bent.", "Raise both arms overhead simultaneously.", "Slam both rope ends down to the floor with maximal force, hinging at the hips.", "Immediately raise back overhead and repeat for the prescribed time or reps."],
+    formTips: ["Drive the slam with your whole body — hips, core, and shoulders together, not just the arms.", "Both arms move together here, unlike alternating waves.", "Keep a slight knee bend and stay athletic throughout."],
+    commonMistakes: ["Slamming with the arms alone, ignoring the hip drive.", "Standing too upright without hinging into the slam.", "Fading to half-hearted slams as fatigue sets in."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
+  "Log Press": {
+    primaryMuscle: "Shoulders",
+    secondaryMuscles: ["Triceps", "Core", "Quadriceps"],
+    equipment: "Conditioning",
+    difficulty: "Advanced",
+    movementPattern: "Vertical Push",
+    instructions: ["Clean the log to your chest, resting it across your upper chest/front delts with a neutral grip.", "Brace your core hard and take a breath.", "Dip slightly and drive the log overhead, leaning back briefly to clear your face.", "Lock out overhead, then lower back to the chest under control."],
+    formTips: ["The log's neutral grip and thickness make it more shoulder-friendly than a straight bar for many people.", "Brace as hard as you would for a max squat before pressing.", "Get your head through once the log clears your face to finish stacked."],
+    commonMistakes: ["Losing the core brace and over-arching the lower back.", "Failing to move the head out of the log's path.", "Pressing without a leg dip when the load requires one."],
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
+  },
   "DB RDL": {
     primaryMuscle: "Hamstrings",
     secondaryMuscles: ["Glutes", "Lower Back"],
@@ -569,7 +789,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Set a bench to a 30\u201345\u00b0 incline and lie back holding a dumbbell in each hand at shoulder level.", "Press both dumbbells up until arms are extended.", "Lower under control to the upper chest, elbows at roughly 45\u00b0.", "Press back up, keeping both sides moving evenly."],
     formTips: ["A moderate incline keeps this chest-focused \u2014 too steep shifts it to the shoulders.", "Keep shoulder blades retracted throughout.", "Control the descent rather than dropping the weight."],
     commonMistakes: ["Incline set too steep.", "Letting the dumbbells drift too wide.", "Uneven pressing between arms."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/incline-bench-press-dumbbell.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Leg Press": {
     primaryMuscle: "Quadriceps",
@@ -646,7 +866,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Adjust the seat so the handles line up with mid-chest height.", "Grip the handles and press forward until your arms are extended.", "Control the return, allowing your elbows to travel back without banging the stack.", "Repeat for reps, keeping shoulder blades pinned to the pad."],
     formTips: ["Keep your shoulder blades pressed into the pad throughout.", "Adjust seat height before you start so the handles match your chest level.", "Control both the press and the return."],
     commonMistakes: ["Letting the shoulder blades lift off the pad.", "Locking the elbows out harshly at the top.", "Using a seat height that turns this into a shoulder press."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/chest-press-machine.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Shoulder Press Machine": {
     primaryMuscle: "Shoulders",
@@ -668,7 +888,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Sit with your back flat against the pad, forearms or hands on the pads/handles.", "Bring your arms together in front of your chest in a hugging motion.", "Squeeze your chest at full contraction.", "Return under control, allowing a stretch across the chest."],
     formTips: ["Keep the movement slow and controlled \u2014 this exercise is easy to cheat with momentum.", "Squeeze and briefly pause at the point of full contraction.", "Don't let the pads slam together."],
     commonMistakes: ["Using momentum instead of a squeeze.", "Arching the back off the pad.", "Going too heavy and using partial range."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/butterfly-pec-deck.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Assisted Pull-up": {
     primaryMuscle: "Lats",
@@ -734,7 +954,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Start in a plank position, hands slightly wider than shoulder-width.", "Keep your body in a straight line from head to heels.", "Lower your chest toward the floor, elbows at roughly 45\u00b0.", "Press back up to full arm extension."],
     formTips: ["Keep your core braced so your hips don't sag or pike.", "Lower until your chest nearly touches the floor for full range.", "Keep your elbows at roughly 45\u00b0, not flared to 90\u00b0."],
     commonMistakes: ["Letting the hips sag toward the floor.", "Only performing a partial range of motion.", "Flaring the elbows straight out to the sides."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/push-up.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Wide-Grip Barbell Bench Press": {
     primaryMuscle: "Chest",
@@ -745,7 +965,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Grip the bar significantly wider than shoulder-width and unrack it over your chest.", "Lower under control to the chest — expect a shorter range of motion than a standard-grip bench.", "Press back up to lockout, keeping the bar path vertical."],
     formTips: ["The wider grip shifts more emphasis onto the chest and less onto the triceps.", "Keep shoulder blades retracted throughout, same as standard bench.", "Don't go wider than feels stable on your shoulders."],
     commonMistakes: ["Gripping wide enough to strain the shoulder joint.", "Losing the shortened range of motion by bouncing off the chest.", "Uneven bar path."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/bench-press-wide-grip-barbell.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Cable Bench Press": {
     primaryMuscle: "Chest",
@@ -756,7 +976,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Lie on a bench positioned between two low cable pulleys, handle in each hand at chest level.", "Press both handles up and together until your arms are extended.", "Lower under control back to chest level, feeling a stretch across the chest."],
     formTips: ["The cables keep constant tension through the whole range, unlike free weights.", "Keep shoulder blades retracted throughout.", "Press in a straight, even line with both arms."],
     commonMistakes: ["Letting one arm lead the press.", "Losing tension by not lowering fully.", "Flaring the elbows too wide."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/bench-press-cable.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Smith Machine Bench Press": {
     primaryMuscle: "Chest",
@@ -767,7 +987,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Lie on the bench under the fixed bar path, eyes roughly under the bar.", "Unrack and lower the bar under control to your mid-chest.", "Press back up to lockout, rotating the bar to re-rack when finished."],
     formTips: ["The fixed bar path removes the stabilization demand — good for isolating the chest at higher fatigue.", "Keep shoulder blades retracted throughout.", "Position the bench so the bar path lines up with your natural pressing groove."],
     commonMistakes: ["Bench positioned so the fixed path doesn't match a natural pressing line, stressing the shoulders.", "Bouncing the bar off the chest.", "Forgetting to rotate and re-rack safely."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/bench-press-smith-machine.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Feet-Up Barbell Bench Press": {
     primaryMuscle: "Chest",
@@ -778,7 +998,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Lie on the bench with feet raised off the floor, either crossed or resting on the bench.", "Unrack the bar and lower it under control to your mid-chest.", "Press back up to lockout, keeping your lower back from arching off the bench."],
     formTips: ["Removing leg drive forces the chest and core to do more of the stabilizing work.", "Brace your core hard since you can't drive through your feet.", "Keep the bar path controlled — no leg drive means less forgiveness for a sloppy path."],
     commonMistakes: ["Letting the lower back arch up off the bench to compensate.", "Losing core brace partway through the set.", "Using too much weight for a set-up that removes leg drive."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/feet-up-bench-press-barbell.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Decline Barbell Bench Press": {
     primaryMuscle: "Chest",
@@ -789,7 +1009,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Secure your legs at the top of a decline bench and lie back, head lower than your hips.", "Unrack the bar and lower it to your lower chest.", "Press back up to lockout, keeping the bar path controlled on a decline."],
     formTips: ["This angle emphasizes the lower chest fibers.", "Keep shoulder blades retracted throughout.", "Have a spotter or use a rack designed for decline work — re-racking is trickier on a decline."],
     commonMistakes: ["Lowering to the wrong spot on the torso (should be lower chest, not mid-chest).", "Losing control of the bar path on the way up.", "Skipping the leg lock-in, risking sliding on the bench."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/decline-bench-press-barbell.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Decline DB Bench Press": {
     primaryMuscle: "Chest",
@@ -800,7 +1020,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Secure your legs at the top of a decline bench, a dumbbell in each hand at chest level.", "Press both dumbbells up until arms are extended.", "Lower under control to your lower chest, elbows at roughly 45°."],
     formTips: ["Get the dumbbells into position carefully on a decline — use your knees to help hoist them up at the start.", "Keep shoulder blades retracted throughout.", "Control the descent rather than dropping the weight."],
     commonMistakes: ["Letting the dumbbells drift wide.", "Uneven pressing between arms.", "Rushing the setup and losing control of the dumbbells."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/decline-bench-press-dumbbell.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Decline Bench Press Machine": {
     primaryMuscle: "Chest",
@@ -811,7 +1031,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Sit or lie into the decline press machine so the handles line up with your lower chest.", "Press forward until your arms are extended.", "Control the return, feeling a stretch across the lower chest."],
     formTips: ["Adjust the seat so the handles match your lower-chest line before loading weight.", "Keep shoulder blades pinned to the pad throughout.", "Control both the press and the return."],
     commonMistakes: ["Wrong seat height, changing the target from lower chest to mid-chest.", "Locking the elbows out harshly at the top.", "Letting the shoulder blades lift off the pad."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/decline-bench-press-machine.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Decline Smith Machine Bench Press": {
     primaryMuscle: "Chest",
@@ -833,7 +1053,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Secure your legs at the top of a decline bench, dumbbells held above your chest, palms facing in.", "With a slight bend in the elbows, lower the dumbbells out to the sides in an arc.", "Bring the dumbbells back together above your chest, squeezing at the top."],
     formTips: ["Keep the same slight elbow bend throughout — don't turn it into a press.", "Lower only as far as a comfortable stretch allows.", "Squeeze the chest at the top rather than just meeting the dumbbells."],
     commonMistakes: ["Bending the elbows more as the set fatigues, turning it into a press.", "Lowering too far and straining the shoulder joint.", "Using momentum to swing the weights back up."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/decline-chest-fly-dumbbell.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Incline Smith Machine Bench Press": {
     primaryMuscle: "Chest",
@@ -844,7 +1064,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Set an incline bench (30–45°) under the Smith machine bar.", "Unrack and lower the bar under control to your upper chest.", "Press back up to lockout, then rotate to re-rack."],
     formTips: ["A moderate incline keeps this chest-focused rather than shoulder-focused.", "Keep shoulder blades retracted throughout.", "Line the bench up so the fixed path matches your upper-chest line."],
     commonMistakes: ["Incline set too steep, shifting emphasis to the front delts.", "Bouncing the bar off the chest.", "Bench misaligned with the fixed bar path."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/incline-bench-press-smith-machine.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Incline DB Chest Fly": {
     primaryMuscle: "Chest",
@@ -855,7 +1075,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Set a bench to a 30–45° incline, dumbbells held above your chest, palms facing in.", "With a slight bend in the elbows, lower the dumbbells out to the sides in an arc.", "Bring the dumbbells back together above your chest, squeezing at the top."],
     formTips: ["This angle emphasizes the upper chest fibers.", "Keep the same slight elbow bend throughout — don't turn it into a press.", "Lower only as far as a comfortable stretch allows."],
     commonMistakes: ["Bending the elbows more as the set fatigues, turning it into a press.", "Lowering too far and straining the shoulder joint.", "Using momentum to swing the weights back up."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/incline-chest-fly-dumbbell.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Incline Chest Press Machine": {
     primaryMuscle: "Chest",
@@ -866,7 +1086,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Adjust the seat so the handles line up with your upper-chest height.", "Press forward until your arms are extended.", "Control the return, keeping shoulder blades pinned to the pad."],
     formTips: ["Set seat height before loading weight so the handles match your upper chest.", "Keep shoulder blades pressed into the pad throughout.", "Control both the press and the return."],
     commonMistakes: ["Wrong seat height, turning it into a shoulder press.", "Letting the shoulder blades lift off the pad.", "Locking the elbows out harshly at the top."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/incline-chest-press-machine.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Barbell Floor Press": {
     primaryMuscle: "Chest",
@@ -877,7 +1097,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Lie on the floor with knees bent, bar held above your chest at arm's length.", "Lower the bar under control until your upper arms touch the floor.", "Pause briefly, then press back up to lockout."],
     formTips: ["The floor cuts range of motion short, which unloads the shoulder joint and emphasizes lockout strength.", "Pause at the bottom rather than bouncing your arms off the floor.", "Keep your feet flat and core braced throughout."],
     commonMistakes: ["Bouncing the elbows off the floor instead of pausing.", "Arching excessively to fake more range of motion.", "Flaring the elbows out to 90°."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/floor-press-barbell.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "DB Floor Press": {
     primaryMuscle: "Chest",
@@ -888,7 +1108,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Lie on the floor with knees bent, a dumbbell in each hand at chest level.", "Press both dumbbells up until arms are extended.", "Lower under control until your upper arms touch the floor, then press back up."],
     formTips: ["Pause briefly at the bottom rather than bouncing off the floor.", "Keep both dumbbells moving evenly.", "This is a good shoulder-friendly alternative to a full-range bench press."],
     commonMistakes: ["Bouncing the elbows off the floor.", "Letting the dumbbells drift wide.", "Uneven pressing between arms."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/floor-press-dumbbell.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "DB Hex Press": {
     primaryMuscle: "Chest",
@@ -899,7 +1119,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Lie on a bench holding two hex dumbbells pressed together, palms facing each other.", "Press the dumbbells straight up while squeezing them together throughout.", "Lower under control back to chest level, maintaining the squeeze."],
     formTips: ["The constant inward squeeze is what makes this a chest-focused variation — don't let it relax.", "Keep the dumbbells pressed together for the entire set.", "Use a lighter weight than a standard press — the squeeze adds difficulty."],
     commonMistakes: ["Letting the dumbbells separate mid-set, losing the squeeze.", "Going too heavy and sacrificing the inward pressure.", "Rushing the tempo."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/hex-press-dumbbell.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "DB Squeeze Press": {
     primaryMuscle: "Chest",
@@ -910,7 +1130,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Lie on a bench with two dumbbells held together at chest level, pressing your palms into the weights.", "Press upward while squeezing the dumbbells together throughout the entire rep.", "Lower under control, maintaining the inward squeeze."],
     formTips: ["The squeeze is the whole point of this exercise — keep constant inward pressure.", "Use lighter weight than you'd use for a standard press.", "Slow the tempo down to maximize the contraction."],
     commonMistakes: ["Losing the squeeze partway through the set.", "Using too much weight, making it hard to maintain pressure.", "Rushing through reps."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/dumbbell-squeeze-press.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Plate Press": {
     primaryMuscle: "Chest",
@@ -921,7 +1141,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Stand or lie holding a weight plate between both palms at chest height, pressing the plate faces together.", "Press the plate straight out in front of you while maintaining the squeeze.", "Bring it back to your chest under control, keeping constant pressure."],
     formTips: ["Constant inward squeeze is what makes this work — never let the plate faces separate.", "Keep your elbows roughly level with your shoulders.", "A lighter plate held with maximal squeeze beats a heavy plate held loosely."],
     commonMistakes: ["Letting the squeeze relax between reps.", "Using a plate too heavy to press with both palms pushing inward.", "Rushing the tempo."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/plate-press.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Svend Press": {
     primaryMuscle: "Chest",
@@ -932,7 +1152,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Stand holding a weight plate between both palms at chest height, arms extended slightly, plate faces squeezed together.", "Press the plate straight out away from your chest while maintaining the squeeze.", "Bring it back to your chest under control, never letting the pressure release."],
     formTips: ["This is done standing, unlike the flat Plate Press — keep your core braced.", "The squeeze between your palms is the entire point of the exercise.", "Use a light plate; this is about contraction quality, not load."],
     commonMistakes: ["Letting the plate faces separate mid-rep.", "Leaning back to help press the weight instead of using the chest.", "Using too heavy a plate to maintain the squeeze."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/plate-squeeze-svend-press.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Around The World": {
     primaryMuscle: "Chest",
@@ -943,7 +1163,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Lie on a bench holding a dumbbell in each hand at your sides, arms extended, palms facing up.", "In one continuous arc, sweep the dumbbells up and around until they meet above your chest.", "Reverse the same arcing path back down to the start."],
     formTips: ["Keep a slight bend in the elbows throughout the whole circular path.", "Use lighter dumbbells than you would for a press or fly — this is a longer lever, higher-demand movement.", "Move slowly and under control; this is not a movement to rush."],
     commonMistakes: ["Using too much weight and losing control of the arc.", "Locking the elbows straight, stressing the joint.", "Rushing the tempo instead of a smooth, continuous sweep."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/around-the-world.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Cable Fly Crossovers": {
     primaryMuscle: "Chest",
@@ -954,7 +1174,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Stand centered between two high cable pulleys, a handle in each hand, slight forward lean.", "With a slight bend in the elbows, bring your hands together in front of your chest in an arcing motion.", "Return under control, feeling a stretch across the chest."],
     formTips: ["Keep the same slight elbow bend throughout — don't turn it into a press.", "Cross your hands slightly at the bottom for a fuller squeeze, if comfortable.", "Take a small step forward to keep tension on the chest at the start."],
     commonMistakes: ["Using the arms/shoulders to muscle the weight instead of the chest.", "Straightening the elbows too much, turning it into a different movement.", "Standing too far back, losing tension at the start."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/cable-fly-crossovers.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Low Cable Fly Crossovers": {
     primaryMuscle: "Chest",
@@ -965,7 +1185,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Stand centered between two low cable pulleys, a handle in each hand, slight forward lean.", "With a slight bend in the elbows, sweep your hands up and together in front of your upper chest.", "Return under control, feeling a stretch across the lower/mid chest."],
     formTips: ["The low-to-high path emphasizes the upper chest fibers.", "Keep the same slight elbow bend throughout the movement.", "Squeeze and briefly pause at the top of each rep."],
     commonMistakes: ["Turning it into a press by bending the elbows more as the set fatigues.", "Using too much weight and losing the arc path.", "Standing too close, losing range of motion."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/low-cable-fly-crossovers.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Single-Arm Cable Crossover": {
     primaryMuscle: "Chest",
@@ -976,7 +1196,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Stand side-on to a high cable pulley, handle in the far hand, slight forward lean.", "With a slight bend in the elbow, sweep your arm down and across your body.", "Return under control, feeling a stretch across the chest, then repeat before switching sides."],
     formTips: ["Brace your core — working one side at a time challenges anti-rotation stability.", "Keep the same slight elbow bend throughout.", "Match reps and effort on both sides."],
     commonMistakes: ["Rotating the torso to help move the weight instead of isolating the chest.", "Using too much weight for one-arm control.", "Rushing through reps without a controlled return."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/single-arm-cable-crossover.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "DB Chest Fly": {
     primaryMuscle: "Chest",
@@ -987,7 +1207,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Lie on a flat bench holding a dumbbell in each hand above your chest, palms facing in.", "With a slight bend in the elbows, lower the dumbbells out to the sides in an arc.", "Bring the dumbbells back together above your chest, squeezing at the top."],
     formTips: ["Keep the same slight elbow bend throughout — don't turn it into a press.", "Lower only as far as a comfortable stretch allows.", "Squeeze the chest at the top of each rep."],
     commonMistakes: ["Bending the elbows more as the set fatigues, turning it into a press.", "Lowering too far and straining the shoulder joint.", "Using momentum to swing the weights back up."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/chest-fly-dumbbell.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Band Chest Fly": {
     primaryMuscle: "Chest",
@@ -998,7 +1218,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Anchor a resistance band behind you at chest height and hold one end in each hand, arms extended out to the sides.", "With a slight bend in the elbows, bring your hands together in front of your chest.", "Return under control, resisting the band's pull back."],
     formTips: ["Keep the same slight elbow bend throughout the movement.", "Control the return — the band wants to snap your arms back, don't let it.", "Step forward from the anchor to increase resistance as you get stronger."],
     commonMistakes: ["Letting the band yank your arms back uncontrolled.", "Turning it into a press by bending the elbows more.", "Standing too close to the anchor, losing resistance."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/chest-fly-band.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Suspension Chest Fly": {
     primaryMuscle: "Chest",
@@ -1009,7 +1229,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Hold the suspension trainer handles and lean forward with arms extended out to the sides, body in a straight line.", "With a slight bend in the elbows, bring your hands together in front of your chest as your body rises.", "Return under control back to the extended position."],
     formTips: ["Adjust your foot position — further back/more horizontal increases difficulty.", "Keep your core and glutes braced for a straight body line throughout.", "Keep the same slight elbow bend throughout the movement."],
     commonMistakes: ["Letting the hips sag out of a straight line.", "Standing too upright, removing most of the resistance.", "Rushing the return instead of controlling it."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/chest-fly-suspension.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Chest Fly Machine": {
     primaryMuscle: "Chest",
@@ -1020,7 +1240,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Sit with your back flat against the pad, gripping the handles with arms out to the sides.", "Bring your arms together in front of your chest in an arcing motion.", "Return under control, feeling a stretch across the chest."],
     formTips: ["Set the seat so the handles line up with chest height before loading weight.", "Keep the movement slow and controlled — this machine is easy to cheat with momentum.", "Squeeze and briefly pause at full contraction."],
     commonMistakes: ["Using momentum instead of a controlled squeeze.", "Wrong seat height, changing the angle of resistance.", "Letting the weight stack slam on the way down."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/chest-fly-machine.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Seated Cable Chest Fly": {
     primaryMuscle: "Chest",
@@ -1031,7 +1251,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Sit on a bench centered between two cable pulleys set at chest height, a handle in each hand.", "With a slight bend in the elbows, bring your hands together in front of your chest.", "Return under control, feeling a stretch across the chest."],
     formTips: ["Sitting removes leg drive/momentum, keeping the tension purely on the chest.", "Keep the same slight elbow bend throughout.", "Squeeze and briefly pause at the point of full contraction."],
     commonMistakes: ["Leaning back to add momentum.", "Turning it into a press by bending the elbows more.", "Standing up mid-set to cheat the weight."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/seated-chest-fly-cable.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Band Chest Press": {
     primaryMuscle: "Chest",
@@ -1042,7 +1262,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Anchor a resistance band behind you at chest height and hold one end in each hand at your chest.", "Press both hands forward until your arms are extended.", "Return under control, resisting the band's pull back to your chest."],
     formTips: ["Control the return just as much as the press — the band wants to snap back.", "Keep your core braced, especially standing.", "Step forward from the anchor to increase resistance as you progress."],
     commonMistakes: ["Letting the band yank your arms back uncontrolled.", "Leaning your whole body into the press instead of using your chest and arms.", "Standing too close to the anchor, losing resistance."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/chest-press-band.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Iso-Lateral Chest Press Machine": {
     primaryMuscle: "Chest",
@@ -1053,7 +1273,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Adjust the seat so the handles line up with mid-chest height, one handle in each hand.", "Press both handles forward independently until your arms are extended.", "Control the return on both sides evenly, keeping shoulder blades pinned to the pad."],
     formTips: ["The independent arms let you correct side-to-side strength imbalances — don't let a stronger side dominate.", "Keep shoulder blades pressed into the pad throughout.", "Control both the press and the return."],
     commonMistakes: ["Letting one arm do more of the work.", "Locking the elbows out harshly at the top.", "Letting the shoulder blades lift off the pad."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/iso-lateral-chest-press-machine.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Chest Dip": {
     primaryMuscle: "Chest",
@@ -1064,7 +1284,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Grip parallel dip bars and support your bodyweight with arms extended, leaning your torso forward.", "Lower under control until your shoulders drop below your elbows.", "Press back up to lockout, keeping the forward lean to target the chest."],
     formTips: ["Leaning forward (versus staying upright) is what shifts emphasis onto the chest over triceps.", "Keep your descent controlled rather than dropping quickly.", "Go as deep as your shoulder mobility comfortably allows."],
     commonMistakes: ["Staying too upright, which shifts the work to the triceps instead of the chest.", "Dropping too fast and losing control at the bottom.", "Only performing partial-depth reps."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/chest-dip.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Weighted Chest Dip": {
     primaryMuscle: "Chest",
@@ -1075,7 +1295,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Attach weight via a dip belt or hold a dumbbell between your feet, then grip the parallel bars and support yourself with arms extended, leaning forward.", "Lower under control until your shoulders drop below your elbows.", "Press back up to lockout, maintaining the forward lean."],
     formTips: ["Only add weight once bodyweight dips are controlled and pain-free for multiple reps.", "Keep the same forward lean as an unweighted chest dip.", "Control the descent — added weight makes an uncontrolled drop riskier on the shoulders."],
     commonMistakes: ["Adding weight before bodyweight dips are solid.", "Staying too upright, shifting emphasis to the triceps.", "Dropping too fast under the extra load."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/weighted-chest-dip.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Ring Dip": {
     primaryMuscle: "Chest",
@@ -1086,7 +1306,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Support yourself on gymnastic rings with arms extended, leaning your torso forward.", "Lower under control until your shoulders drop below your elbows, controlling the rings' instability.", "Press back up to lockout, keeping the rings steady."],
     formTips: ["The instability of the rings demands far more shoulder stability than fixed dip bars — build up on bars first.", "Keep the forward lean to emphasize the chest.", "Turn the rings out slightly at the top (a false grip or ring turnout) if you have the mobility."],
     commonMistakes: ["Attempting ring dips before fixed-bar dips are solid.", "Letting the rings swing/wobble excessively.", "Staying too upright, shifting emphasis to the triceps."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/ring-dips.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Incline Push-up": {
     primaryMuscle: "Chest",
@@ -1097,7 +1317,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Place your hands on a raised, stable surface (bench, box, or step), body in a straight line.", "Lower your chest toward the surface, elbows at roughly 45°.", "Press back up to full arm extension."],
     formTips: ["The higher the surface, the easier the push-up — a good regression while building strength.", "Keep your core braced so your hips don't sag or pike.", "Lower for full range rather than stopping halfway."],
     commonMistakes: ["Letting the hips sag toward the floor.", "Using a surface so high the exercise becomes too easy to be useful.", "Only performing a partial range of motion."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/incline-push-up.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Decline Push-up": {
     primaryMuscle: "Chest",
@@ -1108,7 +1328,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Place your feet on a raised, stable surface (bench or box), hands on the floor, body in a straight line.", "Lower your chest toward the floor, elbows at roughly 45°.", "Press back up to full arm extension."],
     formTips: ["Elevating the feet increases the load on the upper chest and shoulders versus a standard push-up.", "Keep your core braced so your hips don't sag.", "The higher your feet, the harder the exercise — progress gradually."],
     commonMistakes: ["Using a surface too high for your current strength, breaking form.", "Letting the hips sag or pike.", "Only performing a partial range of motion."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/decline-push-up.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Kneeling Push-up": {
     primaryMuscle: "Chest",
@@ -1119,7 +1339,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Start on your hands and knees, hands slightly wider than shoulder-width, body in a straight line from head to knees.", "Lower your chest toward the floor, elbows at roughly 45°.", "Press back up to full arm extension."],
     formTips: ["A great regression for building push-up strength before moving to full push-ups.", "Keep your core braced so your hips don't sag.", "Lower until your chest nearly touches the floor for full range."],
     commonMistakes: ["Letting the hips sag or pike out of a straight line.", "Only performing a partial range of motion.", "Flaring the elbows straight out to the sides."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/kneeling-push-up.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Close-Grip Push-Up": {
     primaryMuscle: "Chest",
@@ -1130,7 +1350,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Start in a plank position with hands close together, roughly under your chest.", "Keep your body in a straight line and lower your chest toward your hands, elbows tracking close to your torso.", "Press back up to full arm extension."],
     formTips: ["The narrow hand position shifts more emphasis onto the triceps while still working the chest.", "Keep your elbows tucked close rather than flaring.", "Keep your core braced so your hips don't sag."],
     commonMistakes: ["Flaring the elbows out, which defeats the purpose of the narrow grip.", "Letting the hips sag toward the floor.", "Hands too close together, straining the wrists."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/close-grip-push-up.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Weighted Push-up": {
     primaryMuscle: "Chest",
@@ -1141,7 +1361,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Have a partner place a weight plate on your upper back, or wear a weighted vest, then get into a plank position.", "Keep your body in a straight line and lower your chest toward the floor.", "Press back up to full arm extension, keeping the weight stable."],
     formTips: ["Only add weight once bodyweight push-ups are easy for high reps.", "Keep your core extra braced — added weight makes hip sag more likely.", "Have someone place/remove the weight safely rather than balancing it yourself."],
     commonMistakes: ["Adding weight before bodyweight push-ups are solid.", "Letting the hips sag under the extra load.", "Using unstable/unsecured weight that can slide off."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/weighted-push-up.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Clap Push-up": {
     primaryMuscle: "Chest",
@@ -1152,7 +1372,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Start in a plank position, hands slightly wider than shoulder-width.", "Lower your chest toward the floor, then explosively press up hard enough for your hands to leave the ground.", "Clap once in the air, then land with soft elbows and immediately absorb into the next rep."],
     formTips: ["Master strict push-ups for high reps before attempting this — it's a genuine plyometric movement.", "Land with bent elbows to absorb the impact rather than landing stiff-armed.", "Keep your core braced throughout the explosive phase."],
     commonMistakes: ["Attempting this before having real push-up strength, risking a hard fall.", "Landing with locked elbows, jarring the joints.", "Letting the hips sag during the explosive phase."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/clap-push-up.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "One-Arm Push-up": {
     primaryMuscle: "Chest",
@@ -1163,7 +1383,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Start in a plank position with one hand on the floor roughly under your chest, feet set wide for stability.", "Lower your chest toward the floor under control on the single arm, resisting rotation.", "Press back up to full arm extension, then repeat before switching sides."],
     formTips: ["Set your feet wider than normal to build a stable base against the rotational demand.", "Brace your core hard to resist twisting toward the working arm.", "Build up with a hand-elevated or assisted version before attempting the full floor version."],
     commonMistakes: ["Twisting the torso to help push instead of resisting rotation.", "Attempting this before having solid two-arm push-up strength.", "Letting the hips sag or rotate out of line."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/one-arm-push-up.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Ring Push-up": {
     primaryMuscle: "Chest",
@@ -1174,7 +1394,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Set gymnastic rings low to the ground and grip them in a plank position, body in a straight line.", "Lower your chest toward the rings, controlling their instability, elbows at roughly 45°.", "Press back up to full arm extension, keeping the rings steady."],
     formTips: ["The instability demands far more shoulder and core stabilization than a floor push-up.", "Keep your core braced hard throughout to control the rings.", "Build up on a stable surface first before progressing to rings."],
     commonMistakes: ["Letting the rings wobble excessively from poor stabilization.", "Attempting this before standard push-ups are solid.", "Letting the hips sag out of a straight line."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/ring-push-up.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Plank Push-up": {
     primaryMuscle: "Chest",
@@ -1185,7 +1405,7 @@ const EXERCISE_DETAILS = {
     instructions: ["Start in a forearm plank, body in a straight line.", "Press up one arm at a time into a full push-up (hand) plank.", "Lower back down one arm at a time to forearms, alternating the leading arm each rep."],
     formTips: ["Keep your hips as level and still as possible — minimizing rock is the real challenge here.", "Brace your core hard throughout the transitions.", "Move at a controlled pace rather than rushing the up-down transitions."],
     commonMistakes: ["Letting the hips rock side to side during transitions.", "Letting the hips sag or pike.", "Rushing the transitions and losing control."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: "assets/images/exercises/plank-push-up.jpg", animationAvailable: false
+    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
   },
   "Pull-up": {
     primaryMuscle: "Lats",
