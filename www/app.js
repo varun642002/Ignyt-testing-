@@ -4545,6 +4545,8 @@ const state = {
   historySearch: "", historyRange: "all", historyMuscle: "", historySort: "newest",
   historyPRsOnly: false, historyPage: 1, historyArchived: false, historyBinOpen: false,
   historySelectMode: false, historySelected: [], // transient — bulk multi-select
+  // Food search (transient — a fresh visit starts with an empty search)
+  foodSearchQuery: "", foodSearchSelected: null, foodSearchGrams: null,
   raceActive: LS.get("hx_race_active", null),
   raceLog: LS.get("hx_race_log", []),
   viewingRaceMode: !!LS.get("hx_race_active", null),
@@ -6953,6 +6955,65 @@ function calcBodyType(bust, waist, highHip, hip){
     else shape = "Rectangle / Banana";
   }
   return { shape, whr };
+}
+
+/* ---------- Food search panel (Food module Phase 3) ----------
+   Search over the bundled catalogue + the user's own favourites. Selecting a result opens a
+   small portion row (grams) and logs through the SAME insert path the quick-add chips use,
+   so a logged entry's stored shape is completely unchanged.
+
+   Degrades silently if either food module failed to load -- the manual macro form below it
+   has always been the fallback and still works on its own. */
+function renderFoodSearchPanel(meal){
+  if(!window.IgnytFoodSearch || !window.IgnytFoodDB) return "";
+  const q = state.foodSearchQuery || "";
+  const sel = state.foodSearchSelected;
+  const results = q.trim() ? IgnytFoodSearch.search(q, { limit: 8 }) : [];
+
+  // Portion row for the selected food. Catalogue foods are per-100g so they scale by grams;
+  // a saved favourite is already one logged portion, so it is logged as-is.
+  let portion = "";
+  if(sel){
+    const food = sel.id.indexOf("fav:")===0 ? IgnytFoodSearch.search(sel.name,{limit:1})[0] : IgnytFoodDB.byId(sel.id);
+    if(food){
+      const scalable = food.per != null;
+      const grams = Number(state.foodSearchGrams) > 0 ? Number(state.foodSearchGrams) : (food.per || 100);
+      const scaled = scalable ? IgnytFoodDB.scaleFood(food, grams)
+        : { name:food.name, calories:food.calories, protein:food.protein, carbs:food.carbs, fat:food.fat, fibre:food.fibre };
+      portion = `
+        <div class="info-box" style="padding:10px 12px;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:800;margin-bottom:6px;">${escHtml(food.name)}</div>
+          ${scalable?`<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+            <input type="number" id="food-search-grams" value="${grams}" min="1" style="width:80px;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:8px;font-size:13px;color:var(--text);text-align:center;">
+            <span style="font-size:12px;color:var(--muted);">grams</span>
+            <span style="display:flex;gap:4px;margin-left:auto;">
+              ${[50,100,150,200].map(g=>`<button class="cat-chip" data-food-grams="${g}" style="margin:0;">${g}g</button>`).join("")}
+            </span>
+          </div>`:`<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Saved favourite — logged as one portion.</div>`}
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">
+            <b style="color:var(--accent);">${scaled.calories} kcal</b> · P ${scaled.protein}g · C ${scaled.carbs}g · F ${scaled.fat}g · Fb ${scaled.fibre}g
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-accent" style="flex:1;padding:8px;font-size:13px;" data-food-search-add="${escHtml(meal)}">Add to ${escHtml(meal)}</button>
+            <button class="btn btn-ghost" style="padding:8px 12px;font-size:13px;" data-food-search-cancel="1">Cancel</button>
+          </div>
+        </div>`;
+    }
+  }
+
+  return `
+    <div style="margin-bottom:10px;">
+      <input type="text" id="food-search-input" placeholder="Search ${IgnytFoodDB.count()} foods…" value="${escHtml(q)}"
+        style="width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:13px;color:var(--text);margin-bottom:6px;">
+      ${portion}
+      ${q.trim() && !sel ? (results.length ? `
+        <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">
+          ${results.map(f=>`<button class="cat-chip" data-food-pick="${escHtml(f.id)}" style="text-align:left;justify-content:flex-start;">
+            <span style="flex:1;">${escHtml(f.name)}</span>
+            <span style="color:var(--muted);font-size:11px;">${f.calories} kcal${f.per?` /${f.per}g`:''}</span>
+          </button>`).join("")}
+        </div>` : `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">No foods match "${escHtml(q)}" — enter it manually below.</div>`) : ""}
+    </div>`;
 }
 
 function foodsForDate(dateStr){ return state.foodLog.filter(f=>f.date===dateStr); }
@@ -11680,6 +11741,7 @@ function renderNutritionTab(){
           <button class="del" data-del-food="${f.id}" aria-label="Delete food entry">${svg('x',12)}</button>
         </div>`).join("")}
         ${isOpen?`<div style="margin-top:10px;">
+          ${renderFoodSearchPanel(meal)}
           ${recentFoodEntries(6).length ? `
             <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Recent</div>
             <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
@@ -15681,6 +15743,67 @@ function attachHandlers(){
       render();
     });
   });
+  /* ---- Food search (Phase 3) ---- */
+  const foodSearchInput = document.getElementById("food-search-input");
+  if(foodSearchInput) foodSearchInput.addEventListener("input", (e)=>{
+    state.foodSearchQuery = e.target.value;
+    state.foodSearchSelected = null; // a new query invalidates the current selection
+    debounce("food-search", ()=>{
+      render();
+      // render() replaces the input node, so restore focus and caret like the other searches.
+      setTimeout(()=>{ const s=document.getElementById("food-search-input"); if(s){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
+    }, 150);
+  });
+  document.querySelectorAll("[data-food-pick]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.foodPick;
+      const food = id.indexOf("fav:")===0
+        ? IgnytFoodSearch.search(state.foodSearchQuery,{limit:25}).find(f=>f.id===id)
+        : IgnytFoodDB.byId(id);
+      if(!food) return;
+      state.foodSearchSelected = { id: food.id, name: food.name };
+      state.foodSearchGrams = food.per || null; // default to the catalogue's own basis (100g)
+      render();
+    });
+  });
+  const gramsInput = document.getElementById("food-search-grams");
+  if(gramsInput) gramsInput.addEventListener("input", ()=>{
+    state.foodSearchGrams = gramsInput.value;
+    debounce("food-grams", ()=>{
+      render();
+      setTimeout(()=>{ const g=document.getElementById("food-search-grams"); if(g){ g.focus(); g.setSelectionRange(g.value.length,g.value.length); } },0);
+    }, 200);
+  });
+  document.querySelectorAll("[data-food-grams]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.foodSearchGrams = Number(el.dataset.foodGrams); render(); });
+  });
+  const foodCancelBtn = document.querySelector("[data-food-search-cancel]");
+  if(foodCancelBtn) foodCancelBtn.addEventListener("click", ()=>{
+    state.foodSearchSelected = null; state.foodSearchGrams = null; render();
+  });
+  const foodAddBtn = document.querySelector("[data-food-search-add]");
+  if(foodAddBtn) foodAddBtn.addEventListener("click", ()=>{
+    const sel = state.foodSearchSelected;
+    if(!sel) return;
+    const food = sel.id.indexOf("fav:")===0
+      ? IgnytFoodSearch.search(sel.name,{limit:25}).find(f=>f.id===sel.id)
+      : IgnytFoodDB.byId(sel.id);
+    if(!food) return;
+    const scalable = food.per != null;
+    const grams = Number(state.foodSearchGrams) > 0 ? Number(state.foodSearchGrams) : (food.per || 100);
+    const v = scalable ? IgnytFoodDB.scaleFood(food, grams) : food;
+    // Identical record shape to the quick-add chips — nothing downstream can tell the
+    // difference between a searched food and a manually entered one.
+    state.foodLog.unshift({
+      id: nextId(), date: todayStr(), meal: foodAddBtn.dataset.foodSearchAdd,
+      name: v.name,
+      calories: Number(v.calories)||0, protein: Number(v.protein)||0,
+      carbs: Number(v.carbs)||0, fat: Number(v.fat)||0, fibre: Number(v.fibre)||0
+    });
+    state.foodSearchSelected = null; state.foodSearchQuery = ""; state.foodSearchGrams = null;
+    render();
+  });
+
   document.querySelectorAll("[data-quick-add-food]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const meal = el.dataset.quickAddFood;
