@@ -4598,8 +4598,8 @@ const state = {
   nutritionDate: null, microExpanded: false, insightsExpanded: false,
   // Quick Add panel (transient). quickAddMeal is which meal one-tap items land in.
   quickAddOpen: false, quickAddMeal: null,
-  // Whether the coach card's reasoning is expanded (transient).
-  coachExpanded: false,
+  // Whether the coach / recovery card detail is expanded (transient).
+  coachExpanded: false, recoveryExpanded: false,
   /* The two full-screen food routes. null means the dashboard.
      { screen:"search"|"detail", meal, foodId, notes } — all transient, so a fresh visit to
      the tab always lands on the dashboard rather than resuming a half-finished entry. */
@@ -14227,6 +14227,48 @@ function coachRecommendation(){
   }
 }
 
+/* Readiness (§29). Pulls whatever Health Connect has cached and whatever the onboarding
+   collected, and asks the recovery engine for a decision. Everything is optional — the
+   engine reports its own confidence rather than degrading silently. */
+function readinessReport(){
+  if(!window.IgnytCoachRecovery || !IgnytCoachRecovery.readiness) return null;
+  try{
+    const hc = IgnytCoachRecovery.healthInputs();
+    const o = state.onboarding || {};
+
+    /* Sleep history: Health Connect first, then the single onboarding figure. One number is
+       still worth having — it just cannot produce a trend, and analyseSleep() says so. */
+    const sleepHistory = hc.sleepHours ? [{ hours: hc.sleepHours }]
+                       : (Number(o.sleepHours) > 0 ? [{ hours: Number(o.sleepHours) }] : null);
+
+    /* Is the user's top-set performance falling? Ask the coach engine about the lift they
+       have logged most, rather than guessing at a named exercise that may not exist. */
+    let strengthDeclining = false;
+    try{
+      const counts = {};
+      (state.workoutLog||[]).forEach(s=>(s.exercises||[]).forEach(e=>{ counts[e.name]=(counts[e.name]||0)+1; }));
+      const top = Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
+      if(top && window.IgnytCoachEngine){
+        const t = IgnytCoachEngine.strengthTrend(state.workoutLog, top);
+        strengthDeclining = !!(t && t.changePct < -5);
+      }
+    }catch(e){ /* a trend read must never block the readiness card */ }
+
+    return IgnytCoachRecovery.readiness({
+      workoutLog: state.workoutLog,
+      muscleOf: getMuscle,
+      sleepHistory: sleepHistory,
+      restingHeartRate: hc.restingHeartRate || Number(o.restingHeartRate) || null,
+      // Baseline from the profile's own figure, so "elevated" means elevated FOR THIS USER.
+      baselineRestingHeartRate: Number(o.restingHeartRate) || null,
+      strengthDeclining: strengthDeclining
+    });
+  }catch(e){
+    console.warn("Ignyt: readiness unavailable —", e);
+    return null;
+  }
+}
+
 /** Turns a coach session into a live workout the existing logger understands. */
 function startCoachWorkout(rec){
   if(!rec || rec.today.type !== "training" || !rec.today.exercises.length) return false;
@@ -14277,7 +14319,8 @@ function renderWorkoutTab(){
       volumeTrend: comparisonLabel(weekStats.weeklyVolume, prevWeekVolume),
       todayMuscles: plannedDay ? Array.from(new Set(plannedDay.exercises.map(ex=>getMuscle(ex.name)))).filter(m=>m && m!=="Other").slice(0,3) : [],
       getMuscle, ROUTINE_CATEGORIES, routineEstimatedMinutes, escHtml,
-      coach: coachRecommendation()
+      coach: coachRecommendation(),
+      readiness: readinessReport()
     });
   }
   const s = state.session;
@@ -17247,6 +17290,11 @@ function attachHandlers(){
   const coachToggleBtn = document.querySelector('[data-action="coach-toggle"]');
   if(coachToggleBtn) coachToggleBtn.addEventListener("click", ()=>{
     state.coachExpanded = !state.coachExpanded;
+    render();
+  });
+  const recoveryToggleBtn = document.querySelector('[data-action="recovery-toggle"]');
+  if(recoveryToggleBtn) recoveryToggleBtn.addEventListener("click", ()=>{
+    state.recoveryExpanded = !state.recoveryExpanded;
     render();
   });
   const coachRegenBtn = document.querySelector('[data-action="coach-regenerate"]');

@@ -202,10 +202,16 @@
 
     /* Consistency matters independently of duration: seven 6-hour nights is easier to adapt
        to than alternating 4s and 9s. Measured as spread, inverted. */
-    var mean = avg;
-    var variance = hours.reduce(function (a, h) { return a + Math.pow(h - mean, 2); }, 0) / hours.length;
-    var sd = Math.sqrt(variance);
-    var consistency = Math.max(0, Math.min(100, Math.round(100 - sd * 25)));
+    /* Needs at least three nights to mean anything. One night has zero variance and would
+       score a perfect 100 — mathematically true and completely misleading, since a single
+       data point says nothing about how consistent someone is. */
+    var consistency = null;
+    if (hours.length >= 3) {
+      var mean = avg;
+      var variance = hours.reduce(function (a, h) { return a + Math.pow(h - mean, 2); }, 0) / hours.length;
+      var sd = Math.sqrt(variance);
+      consistency = Math.max(0, Math.min(100, Math.round(100 - sd * 25)));
+    }
 
     var trend = null;
     if (hours.length >= 4) {
@@ -217,13 +223,13 @@
     }
 
     var score = Math.max(0, Math.min(100, Math.round(
-      (Math.min(1, avg / SLEEP_TARGET) * 70) + (consistency * 0.3)
+      (Math.min(1, avg / SLEEP_TARGET) * 70) + ((consistency == null ? 70 : consistency) * 0.3)
     )));
 
     var recs = [];
     if (avg < 6) recs.push("Averaging " + avg.toFixed(1) + " h. Training volume should come down until this improves.");
     else if (avg < 7) recs.push("Averaging " + avg.toFixed(1) + " h — an earlier bedtime would do more for progress than an extra set.");
-    if (consistency < 60 && hours.length >= 3) recs.push("Bedtime is inconsistent. A fixed wake time is the easiest lever.");
+    if (consistency != null && consistency < 60) recs.push("Bedtime is inconsistent. A fixed wake time is the easiest lever.");
     if (deficit >= 6) recs.push("About " + Math.round(deficit) + " h of accumulated deficit over " + hours.length + " nights.");
     if (trend === "declining") recs.push("Sleep has been trending down this week.");
 

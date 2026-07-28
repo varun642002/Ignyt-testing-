@@ -441,3 +441,26 @@
 .coach-insight--info { background:rgba(37,99,235,.09); }
 .coach-insight--warn { background:rgba(217,119,6,.11); }
 .coach-insight--bad  { background:rgba(239,68,68,.10); }
+
+
+/* --- muscle recovery map (§29) ---
+   A bar plus a word, never a bar alone: "Fatigued" has to survive a colour-blind reading and
+   a glance too quick to compare bar lengths. --- */
+.rec-map { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+.rec-map__row { display:grid; grid-template-columns:72px 1fr auto; align-items:center; gap:10px; }
+.rec-map__name {
+  font-size:12px; font-weight:600; color:var(--rh-text);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.rec-map__bar { height:6px; border-radius:3px; background:var(--rh-border); overflow:hidden; }
+.rec-map__bar i { display:block; height:100%; border-radius:3px; transition:width .4s cubic-bezier(.22,.61,.36,1); }
+.rec-map__bar i[data-status="Ready"]      { background:var(--rh-green); }
+.rec-map__bar i[data-status="Recovered"]  { background:var(--rh-green); opacity:.75; }
+.rec-map__bar i[data-status="Recovering"] { background:#D97706; }
+.rec-map__bar i[data-status="Fatigued"]   { background:var(--rh-red); }
+.rec-map__eta {
+  font-family:'SF Mono',ui-monospace,monospace; font-size:10px; color:var(--rh-muted);
+  white-space:nowrap; font-variant-numeric:tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) { .rec-map__bar i { transition:none !important; } }
