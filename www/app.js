@@ -7131,7 +7131,8 @@ function foodCategoryIcon(name){
 }
 
 /** One search/browse result. Shows enough to choose without opening anything. */
-function renderFoodResultCard(f){
+/** @param {string} [labelOverride] the canonical group name, when this card leads a group */
+function renderFoodResultCard(f, labelOverride){
   const isFav = (state.favoriteFoods||[]).some(x=>x && String(x.name).toLowerCase()===String(f.name).toLowerCase());
   // Favourites are stored as one absolute portion (per === null), so their macros are shown
   // as-is; catalogue foods are per 100 g and say so.
@@ -7141,7 +7142,7 @@ function renderFoodResultCard(f){
   return `<div class="food-row" data-food-pick="${escHtml(f.id)}">
     ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(f) : `<span class="food-thumb">${foodCategoryIcon(f.category)}</span>`}
     <div class="food-row__body">
-      <div class="food-row__name">${escHtml(window.IgnytFoodCuration ? IgnytFoodCuration.displayName(f) : f.name)}</div>
+      <div class="food-row__name">${escHtml(labelOverride || (window.IgnytFoodCuration ? IgnytFoodCuration.displayName(f) : f.name))}</div>
       <div class="food-row__meta">${escHtml(f.category||"")}${serving?` · ${serving}`:""} · P${f.protein??0} C${f.carbs??0} F${f.fat??0}</div>
     </div>
     <span class="food-row__kcal">${f.calories??0}<span class="nut-unit"> kcal${basis}</span></span>
@@ -7197,8 +7198,12 @@ function renderFoodList(foods, page){
         if(!g.variants.length) return renderFoodResultCard(g.lead);
         const open = !!(state.expandedVariants||{})[g.key];
         const n = g.variants.length;
+        // The primary card carries the CANONICAL name — "Apple", not whichever USDA record
+        // happened to rank first. Its foodId is still the lead's, so tapping it logs a real
+        // record rather than an abstraction.
+        const label = window.IgnytFoodCuration ? IgnytFoodCuration.groupLabel(g.lead) : null;
         return `<div class="variant-group${open?' is-open':''}">
-          ${renderFoodResultCard(g.lead)}
+          ${renderFoodResultCard(g.lead, label)}
           <button class="variant-toggle" data-variant-toggle="${escHtml(g.key)}"
             aria-expanded="${open?'true':'false'}">
             <span>${open?'Hide':'View'} ${n} variant${n===1?'':'s'}</span>
@@ -12613,7 +12618,50 @@ function startFoodVoiceSearch(){
   }
 }
 
+/* ---- Scroll preservation across the food routes ------------------------------------
+   render() rebuilds <main> wholesale, so the browser has nothing to restore and the page
+   lands at the top. Anyone logging three foods into Dinner would scroll back down three
+   times.
+
+   The offset is captured on the way OUT (opening a route) and restored on the way BACK, and
+   the same pair wraps the in-place operations — delete, duplicate, save — which re-render
+   without changing screen at all.
+
+   Restored in requestAnimationFrame rather than immediately: the new DOM exists after
+   render() returns but has not been laid out, so <main> has no scrollHeight yet and any
+   assignment would clamp to 0. One frame later the height is real. No smooth behaviour —
+   this is a restoration, and animating it would draw attention to a movement the user
+   should never notice. */
+let _nutritionScroll = 0;
+
+function captureNutritionScroll(){
+  const main = document.querySelector("main");
+  if(main) _nutritionScroll = main.scrollTop;
+}
+
+function restoreNutritionScroll(){
+  if(!_nutritionScroll) return;
+  const target = _nutritionScroll;
+  requestAnimationFrame(()=>{
+    const main = document.querySelector("main");
+    if(!main) return;
+    // Clamp: the list may be shorter now (a deletion), and asking for an offset past the
+    // end would silently land at the bottom instead of where the content actually is.
+    main.scrollTop = Math.min(target, Math.max(0, main.scrollHeight - main.clientHeight));
+  });
+}
+
+/** render() that keeps the reader where they were. For anything that changes the food log
+ *  without changing screen. */
+function renderKeepingScroll(){
+  captureNutritionScroll();
+  render();
+  restoreNutritionScroll();
+}
+
 function openFoodSearch(meal){
+  // Captured here so returning from anywhere in the flow lands back on this exact offset.
+  captureNutritionScroll();
   state.foodFlow = { screen:"search", meal: meal || mealForNow(), foodId:null, notes:"" };
   state.foodSearchQuery = "";
   state.foodSearchSelected = null;

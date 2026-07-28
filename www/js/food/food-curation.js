@@ -298,8 +298,161 @@
      differ nutritionally stay separate — Chicken Breast (Raw) and (Roasted) are two groups,
      not one.
   --------------------------------------------------------- */
+  /* ---------------------------------------------------------
+     Canonical names
+
+     Grouping by display name only merges records that differ by preparation, which left
+     "apple" showing Red Delicious, Granny Smith, Gala and Fuji as four separate results.
+     They are the same food to anyone logging breakfast.
+
+     A canonical rule says "everything matching this pattern is the same food, called this".
+     Order matters: DERIVED products are listed before the base ingredient, so Apple Juice
+     and Apple Pie claim their records before the plain /apple/ rule can.
+
+     Each rule may carry a `notIf` guard for the cases a keyword alone gets wrong.
+  --------------------------------------------------------- */
+  var CANONICAL_RULES = [
+    /* --- derived products first --- */
+    [/\bapple\s*(juice|cider)\b|\bjuice.*apple\b/i, "Apple Juice"],
+    [/\bapple\s*sauce\b|\bapplesauce\b/i, "Apple Sauce"],
+    [/\bapple\b.*\bpie\b|\bpie\b.*\bapple\b/i, "Apple Pie"],
+    [/\bapples?\b.*\bdried\b|\bdried\b.*\bapples?\b/i, "Dried Apple"],
+    [/\bbanana\b.*\b(chips|dried)\b/i, "Dried Banana"],
+    [/\borange\s*juice\b/i, "Orange Juice"],
+
+    /* --- eggs, by preparation, because the nutrition genuinely differs --- */
+    [/\begg\b.*\b(hard-boiled|boiled)\b/i, "Boiled Egg"],
+    [/\begg\b.*\bfried\b/i, "Fried Egg"],
+    [/\begg\b.*\bscrambled\b/i, "Scrambled Egg"],
+    [/\begg\b.*\bpoached\b/i, "Poached Egg"],
+    [/\begg\b.*\bwhite\b/i, "Egg White"],
+    [/\begg\b.*\byolk\b/i, "Egg Yolk"],
+    [/^eggs?,\s*(whole|grade)\b/i, "Egg"],
+
+    /* --- chicken, by cut then preparation --- */
+    [/\bchicken\b.*\bbreast\b.*\b(roasted|cooked|grilled)\b/i, "Chicken Breast (Cooked)"],
+    [/\bchicken\b.*\bbreast\b/i, "Chicken Breast"],
+    [/\bchicken\b.*\bthigh\b/i, "Chicken Thigh"],
+    [/\bchicken\b.*\b(wing|wings)\b/i, "Chicken Wings"],
+    [/\bchicken\b.*\bdrumstick\b/i, "Chicken Drumstick"],
+    [/\bchicken\b.*\b(curry|masala|tikka)\b/i, "Chicken Curry"],
+    [/\bchicken\b.*\bbiryani\b/i, "Chicken Biryani"],
+
+    /* --- rice --- */
+    [/\brice\b.*\bbrown\b|\bbrown\b.*\brice\b/i, "Brown Rice"],
+    [/\bbasmati\b/i, "Basmati Rice"],
+    [/\bjasmine\b.*\brice\b/i, "Jasmine Rice"],
+    [/\brice\b.*\bwhite\b.*\bcooked\b|\bwhite\b.*\brice\b.*\bcooked\b/i, "White Rice (Cooked)"],
+    [/\brice\b.*\bwhite\b/i, "White Rice"],
+
+    /* --- milk. Plant milks first, or /milk/ would swallow them. --- */
+    [/\balmond\b.*\bmilk\b/i, "Almond Milk"],
+    [/\bsoy\b.*\bmilk\b/i, "Soy Milk"],
+    [/\boat\b.*\bmilk\b/i, "Oat Milk"],
+    [/\bcoconut\b.*\bmilk\b/i, "Coconut Milk"],
+    [/\bbuffalo\b.*\bmilk\b/i, "Buffalo Milk"],
+    [/\bmilk\b.*\b(skim|nonfat|fat free)\b/i, "Skim Milk"],
+    [/\bmilk\b.*\b(lowfat|low fat|1%|2%)\b/i, "Low Fat Milk"],
+    [/\bmilk\b.*\bwhole\b|\bwhole\b.*\bmilk\b/i, "Whole Milk"],
+
+    /* --- protein supplements --- */
+    [/\bwhey\b.*\bisolate\b|\bisolate\b.*\bwhey\b/i, "Whey Isolate"],
+    [/\bwhey\b.*\bconcentrate\b/i, "Whey Concentrate"],
+    [/\bwhey\b.*\bhydroly/i, "Hydrolysed Whey"],
+    [/\bwhey\b.*\bprotein\b|\bprotein\b.*\bwhey\b/i, "Whey Protein"],
+    [/\bcasein\b/i, "Casein Protein"],
+
+    /* --- base ingredients, last --- */
+    [/^apples?\b/i, "Apple"],
+    [/^bananas?\b/i, "Banana"],
+    [/^oranges?\b/i, "Orange"],
+    [/^grapes?\b/i, "Grapes"],
+    [/^strawberr/i, "Strawberries"],
+    [/^potatoes?\b/i, "Potato"],
+    [/^tomatoes?\b/i, "Tomato"],
+    [/^onions?\b/i, "Onion"],
+    [/^carrots?\b/i, "Carrot"],
+    [/^broccoli\b/i, "Broccoli"],
+    [/^spinach\b/i, "Spinach"]
+  ];
+
+  /** @returns {string|null} the canonical name for a food, or null if no rule claims it. */
+  function canonicalFor(food) {
+    var n = String((food && food.name) || "");
+    if (!n) return null;
+    for (var i = 0; i < CANONICAL_RULES.length; i++) {
+      var r = CANONICAL_RULES[i];
+      if (r[0].test(n) && !(r[2] && r[2].test(n))) return r[1];
+    }
+    return null;
+  }
+
+  /* An earlier version appended a calorie band to the key as a safety guard. It backfired:
+     milk spans 34-61 kcal across fat levels, so one canonical name fragmented into four
+     groups all labelled "Whole Milk" — visibly worse than no grouping at all.
+
+     The guard was solving a problem the RULES already solve. Apple Pie, Apple Juice and
+     Dried Apple each have their own rule and are matched before the plain /apple/ rule can
+     claim them, so nothing wildly different reaches the same canonical name in the first
+     place. Separation belongs in the rules, where it is explicit and reviewable, not in an
+     arithmetic band that splits legitimate groups as a side effect. */
+
+  /**
+   * The grouping key.
+   *
+   * A canonical name wins where a rule claims the food; otherwise it falls back to the
+   * previous behaviour (display name minus preparation), so foods no rule covers group
+   * exactly as they did before.
+   *
+   * One canonical name plus one PREPARATION STATE is one group.
+   *
+   * The state is what stops raw and cooked merging. Measured without it: fresh apple (52)
+   * absorbed dehydrated apple (346), raw brown rice (368) absorbed cooked (112), and apple
+   * juice (46) absorbed frozen concentrate (166). All three are exactly what the brief says
+   * must stay separate, because the nutrition per 100 g genuinely differs.
+   *
+   * A semantic separator rather than an arithmetic one. An earlier version used calorie
+   * bands and fragmented milk into four groups all labelled "Whole Milk" — the band split
+   * things that were the same food, while letting through things that were not. State is
+   * the property that actually matters.
+   */
+  var PREP_STATES = [
+    [/\b(dehydrated|freeze[- ]dried|dried)\b/i, "dried"],
+    [/\b(concentrate|undiluted)\b/i, "concentrate"],
+    [/\b(cooked|boiled|roasted|grilled|fried|baked|steamed|stewed|braised)\b/i, "cooked"],
+    [/\b(canned|tinned)\b/i, "canned"],
+    [/\b(frozen)\b/i, "frozen"],
+    [/\b(powder|powdered)\b/i, "powder"],
+    [/\b(raw|fresh|uncooked)\b/i, "raw"]
+  ];
+
+  function preparationState(food) {
+    var n = String((food && food.name) || "");
+    for (var i = 0; i < PREP_STATES.length; i++) {
+      if (PREP_STATES[i][0].test(n)) return PREP_STATES[i][1];
+    }
+    return "";
+  }
+
   function groupKey(food) {
-    return displayName(food).replace(/\s*\([^)]*\)\s*$/, "").trim().toLowerCase();
+    var canon = canonicalFor(food);
+    if (!canon) return displayName(food).replace(/\s*\([^)]*\)\s*$/, "").trim().toLowerCase();
+    var state = preparationState(food);
+    /* Canonical names that already NAME their state ("White Rice (Cooked)", "Boiled Egg")
+       must not have it appended twice, or the same food splits into two groups. */
+    if (state && canon.toLowerCase().indexOf(state) !== -1) state = "";
+    return canon.toLowerCase() + (state ? "|" + state : "");
+  }
+
+  /** The label for a group. The preparation state is shown when it distinguishes this group
+   *  from another with the same canonical name — "Brown Rice" and "Brown Rice (Cooked)" are
+   *  two rows, and the user needs to be able to tell which is which. */
+  function groupLabel(food) {
+    var canon = canonicalFor(food);
+    if (!canon) return displayName(food).replace(/\s*\([^)]*\)\s*$/, "").trim();
+    var state = preparationState(food);
+    if (!state || canon.toLowerCase().indexOf(state) !== -1) return canon;
+    return canon + " (" + state.charAt(0).toUpperCase() + state.slice(1) + ")";
   }
 
   /**
@@ -325,6 +478,9 @@
     isIncomplete: isIncomplete,
     groupVariants: groupVariants,
     groupKey: groupKey,
+    groupLabel: groupLabel,
+    canonicalFor: canonicalFor,
+    CANONICAL_RULES: CANONICAL_RULES,
     COMMON_FOODS: COMMON_FOODS,
     TIERS: TIERS
   });
