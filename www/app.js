@@ -7123,21 +7123,16 @@ function renderFoodResultCard(f){
   const basis = f.per ? `/${f.per}g` : "";
   const serving = (f.servingSize && f.servingUnit && f.servingUnit !== "g")
     ? `${f.servingSize}g per ${escHtml(f.servingUnit)}` : "";
-  return `<div class="history-row" data-food-pick="${escHtml(f.id)}" style="cursor:pointer;align-items:flex-start;padding:9px 10px;">
-    <div style="min-width:0;flex:1;margin-right:8px;">
-      <div style="font-size:13px;font-weight:700;line-height:1.3;">${escHtml(f.name)}</div>
-      <div class="mono" style="font-size:10px;color:var(--muted);margin-top:3px;">
-        ${escHtml(f.category||"")}${serving?` · ${serving}`:""}
-      </div>
-      <div class="mono" style="font-size:10px;color:var(--muted);margin-top:2px;">
-        P${f.protein??0} · C${f.carbs??0} · F${f.fat??0}
-      </div>
+  return `<div class="food-row" data-food-pick="${escHtml(f.id)}">
+    <span class="food-thumb">${foodCategoryIcon(f.category)}</span>
+    <div class="food-row__body">
+      <div class="food-row__name">${escHtml(f.name)}</div>
+      <div class="food-row__meta">${escHtml(f.category||"")}${serving?` · ${serving}`:""} · P${f.protein??0} C${f.carbs??0} F${f.fat??0}</div>
     </div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
-      <span class="mono" style="font-size:12px;color:var(--accent);font-weight:700;">${f.calories??0} kcal${basis}</span>
-      <button class="cat-chip${isFav?' active':''}" data-food-fav="${escHtml(f.id)}" title="${isFav?'Remove from favourites':'Save to favourites'}"
-        style="margin:0;padding:2px 8px;font-size:11px;">${isFav?'★':'☆'}</button>
-    </div>
+    <span class="food-row__kcal">${f.calories??0}<span class="nut-unit"> kcal${basis}</span></span>
+    <button class="cat-chip${isFav?' active':''}" data-food-fav="${escHtml(f.id)}"
+      aria-label="${isFav?'Remove from favourites':'Save to favourites'}"
+      style="margin:0;padding:4px 9px;font-size:12px;flex-shrink:0;">${isFav?'★':'☆'}</button>
   </div>`;
 }
 
@@ -7304,38 +7299,59 @@ function renderFoodSearchPanel(meal){
   // exactly the behaviour that shipped before the catalogue existed.
   if(cat && cat.status() === "idle") cat.onReady(()=>render());
 
-  // Searching inside a category filters to it; otherwise it is a catalogue-wide search.
-  // Browsing with no query lists the category alphabetically, which is what makes a category
-  // scannable — relevance ordering has nothing to rank against when there is no query.
-  const results = q.trim()
-    ? IgnytFoodSearch.search(q, { limit: 200, category: browsing || undefined })
-    : (browsing && cat
-        ? cat.byCategory(browsing).slice().sort((a,b)=>a.name.localeCompare(b.name))
-        : []);
-
-  // Detail panel for the selected food. Catalogue foods are per-100g so they scale by grams;
-  // a saved favourite is already one logged portion, so it is logged as-is.
-  const portion = sel ? renderFoodDetail(lookupFood(sel.id, sel.name), meal) : "";
-
   const total = cat ? cat.count() : IgnytFoodDB.count();
-  const loading = cat && cat.status() === "loading";
-  const recentSearches = IgnytFoodSearch.recentSearches ? IgnytFoodSearch.recentSearches() : [];
-
-  // Nothing typed, nothing selected, not browsing — the idle state, which is where recent
-  // searches and the category grid earn their place.
-  const idle = !q.trim() && !sel && !browsing;
+  const browseCount = (browsing && cat) ? cat.byCategory(browsing).length : 0;
 
   return `
     <div style="margin-bottom:10px;">
       ${browsing ? `<div class="row-between" style="margin-bottom:6px;">
         <button class="cat-chip" data-food-browse-back="1" style="margin:0;">← All categories</button>
-        <span class="mono" style="font-size:11px;color:var(--muted);">${foodCategoryIcon(browsing)} ${escHtml(browsing)} · ${results.length}</span>
+        <span class="mono" style="font-size:11px;color:var(--muted);">${foodCategoryIcon(browsing)} ${escHtml(browsing)} · ${browseCount}</span>
       </div>` : ""}
 
       <input type="text" id="food-search-input"
         placeholder="${browsing?`Search in ${escHtml(browsing)}…`:`Search ${total.toLocaleString()} foods…`}" value="${escHtml(q)}"
         style="width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:13px;color:var(--text);margin-bottom:6px;">
 
+      <!-- Everything that depends on the query lives inside this container so it can be
+           swapped on its own. The <input> above is deliberately OUTSIDE it: see
+           updateFoodSearchResults(). -->
+      <div id="food-search-results">${foodSearchResultsHtml(meal)}</div>
+    </div>`;
+}
+
+/**
+ * The query-dependent half of the food panel: loading note, selected-food detail, recent
+ * searches, category grid and results.
+ *
+ * Split out from renderFoodSearchPanel so typing can refresh THIS ONLY. The previous version
+ * called the app-wide render() on every keystroke, which destroyed and recreated the focused
+ * <input>. On Android that takes the soft keyboard down and brings it back up, and the
+ * viewport resizing twice per keystroke is the "jumping" — plus the caret had to be restored
+ * by hand, and the whole page (8,000-food catalogue and all) was rebuilt to update a list.
+ *
+ * This mirrors exercisePickerResultsHtml()/updateExercisePickerResults(), which solved the
+ * same problem for the exercise picker.
+ */
+function foodSearchResultsHtml(meal){
+  if(!window.IgnytFoodSearch || !window.IgnytFoodDB) return "";
+  const q = state.foodSearchQuery || "";
+  const sel = state.foodSearchSelected;
+  const cat = window.IgnytFoodCatalogue;
+  const browsing = state.foodBrowseCategory;
+  const loading = cat && cat.status() === "loading";
+  const recentSearches = IgnytFoodSearch.recentSearches ? IgnytFoodSearch.recentSearches() : [];
+  const idle = !q.trim() && !sel && !browsing;
+
+  const results = q.trim()
+    ? IgnytFoodSearch.search(q, { limit: 200, category: browsing || undefined })
+    : (browsing && cat
+        ? cat.byCategory(browsing).slice().sort((a,b)=>a.name.localeCompare(b.name))
+        : []);
+
+  const portion = sel ? renderFoodDetail(lookupFood(sel.id, sel.name), meal) : "";
+
+  return `
       ${loading ? `<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Loading the full food database…</div>` : ""}
 
       ${portion}
@@ -7353,8 +7369,17 @@ function renderFoodSearchPanel(meal){
 
       ${!sel && (q.trim() || browsing) ? (results.length
         ? renderFoodList(results, browsing ? state.foodBrowsePage : state.foodResultPage)
-        : `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">No foods match "${escHtml(q)}"${browsing?` in ${escHtml(browsing)}`:""} — enter it manually below.</div>`) : ""}
-    </div>`;
+        : `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">No foods match "${escHtml(q)}"${browsing?` in ${escHtml(browsing)}`:""} — enter it manually below.</div>`) : ""}`;
+}
+
+/* Swaps only the results container. The input element is untouched, so focus, the soft
+   keyboard, the caret and the scroll position all survive with no re-focus tricks. */
+function updateFoodSearchResults(){
+  const el = document.getElementById("food-search-results");
+  if(!el) return;
+  el.innerHTML = foodSearchResultsHtml(state.mealOpen || mealForNow());
+  // The swap discarded the old nodes and their listeners, so the fresh ones need binding.
+  bindFoodResultHandlers();
 }
 
 function foodsForDate(dateStr){ return state.foodLog.filter(f=>f.date===dateStr); }
@@ -7596,10 +7621,14 @@ function shiftNutritionDate(days){
 
 /* Colour per nutrient, shared by the ring, the macro cards and the micro strip so the same
    nutrient is always the same colour wherever it appears. */
+/* Points at the --n-* tokens in css/pages/nutrition.css rather than carrying literal hex.
+   A nutrient's colour is now one fact defined in CSS, so it themes with everything else
+   instead of needing a parallel light-mode table here. */
 const NUTRIENT_COLORS = {
-  protein:"var(--mint)", carbs:"var(--steel)", fat:"#FFB020", fibre:"#A98BFF",
-  water:"#4FC3F7", sugar:"#FF8FA3", sodium:"#FFB020", potassium:"#7BD389",
-  calcium:"#9AD5FF", iron:"#FF7A5C", calories:"var(--accent)"
+  protein:"var(--n-protein)", carbs:"var(--n-carbs)", fat:"var(--n-fat)", fibre:"var(--n-fibre)",
+  water:"var(--n-water)", sugar:"var(--n-sugar)", sodium:"var(--n-sodium)",
+  potassium:"var(--n-potassium)", calcium:"var(--n-calcium)", iron:"var(--n-iron)",
+  calories:"var(--n-energy)"
 };
 
 /** Totals for one day, with per-nutrient coverage so partial data can be labelled. */
@@ -7639,17 +7668,16 @@ function donutSvg(segments, size, stroke, centerTop, centerSub){
 }
 
 /** A compact labelled progress bar used by the macro strip. */
-function macroMiniCard(label, value, target, color, unit, decimals){
+function macroMiniCard(label, value, target, colorKey, unit, decimals){
   const pct = target > 0 ? Math.round((value/target)*100) : 0;
   const shown = decimals ? (Math.round(value*10)/10) : Math.round(value);
   const shownTarget = decimals ? (Math.round(target*10)/10) : Math.round(target);
-  return `<div class="stat-card" style="padding:10px;min-width:104px;flex:1;">
-    <div style="font-size:11px;font-weight:700;color:${color};">${escHtml(label)}</div>
-    <div class="mono" style="font-size:15px;font-weight:900;margin-top:2px;">${shown}<span style="font-size:10px;font-weight:600;color:var(--muted);"> / ${shownTarget}${escHtml(unit)}</span></div>
-    <div style="height:4px;border-radius:2px;background:var(--surface);margin-top:6px;overflow:hidden;">
-      <div style="height:100%;width:${Math.min(100,Math.max(0,pct))}%;background:${color};border-radius:2px;"></div>
-    </div>
-    <div class="mono" style="font-size:10px;color:${color};margin-top:4px;">${pct}%</div>
+  const c = `var(--n-${colorKey})`;
+  return `<div class="nut-stat">
+    <div class="nut-stat__name" style="color:${c};">${escHtml(label)}</div>
+    <div class="nut-value nut-value--md nut-stat__value">${shown}<span class="nut-unit"> / ${shownTarget}${escHtml(unit)}</span></div>
+    <div class="nut-bar nut-bar--${colorKey}" style="margin-top:6px;"><i style="width:${Math.min(100,Math.max(0,pct))}%;"></i></div>
+    <div class="nut-stat__pct" style="color:${c};">${pct}%</div>
   </div>`;
 }
 
@@ -12456,12 +12484,12 @@ function renderNutritionTab(){
     </div>
 
     <!-- Macro + water strip -->
-    <div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:8px;padding-bottom:2px;">
-      ${macroMiniCard("Protein", T.protein, targets.protein, NUTRIENT_COLORS.protein, "g")}
-      ${macroMiniCard("Carbs", T.carbs, targets.carbs, NUTRIENT_COLORS.carbs, "g")}
-      ${macroMiniCard("Fat", T.fat, targets.fat, NUTRIENT_COLORS.fat, "g")}
-      ${macroMiniCard("Fibre", T.fibre, targets.fibre, NUTRIENT_COLORS.fibre, "g")}
-      ${macroMiniCard("Water", waterMl/1000, waterTarget/1000, NUTRIENT_COLORS.water, "L", true)}
+    <div class="nut-strip">
+      ${macroMiniCard("Protein", T.protein, targets.protein, "protein", "g")}
+      ${macroMiniCard("Carbs", T.carbs, targets.carbs, "carbs", "g")}
+      ${macroMiniCard("Fat", T.fat, targets.fat, "fat", "g")}
+      ${macroMiniCard("Fibre", T.fibre, targets.fibre, "fibre", "g")}
+      ${macroMiniCard("Water", waterMl/1000, waterTarget/1000, "water", "L", true)}
     </div>
 
     <!-- Micronutrients -->
@@ -12630,23 +12658,17 @@ function renderNutritionTab(){
       const mc = Math.round(mealFoods.reduce((a,f)=>a+Number(f.carbs||0),0));
       const mf = Math.round(mealFoods.reduce((a,f)=>a+Number(f.fat||0),0));
       return `<div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
-        <div class="row-between" data-meal-toggle="${meal}" style="cursor:pointer;align-items:center;">
-          <span style="display:flex;align-items:center;gap:9px;min-width:0;">
-            <span style="width:32px;height:32px;border-radius:50%;background:var(--surface-alt);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">${MEAL_ICONS[meal]||"🍽️"}</span>
-            <span style="min-width:0;">
-              <span style="font-weight:800;font-size:14px;display:block;">${escHtml(meal)}</span>
-              <span style="font-size:10px;color:var(--muted);">${mealFoods.length} food${mealFoods.length===1?"":"s"}</span>
-            </span>
+        <div class="meal-head" data-meal-toggle="${meal}">
+          <span class="meal-icon">${MEAL_ICONS[meal]||"🍽️"}</span>
+          <span style="min-width:0;flex:1;">
+            <span class="meal-name">${escHtml(meal)}</span>
+            <span class="meal-count">${mealFoods.length} food${mealFoods.length===1?"":"s"}</span>
           </span>
-          <span style="text-align:right;flex-shrink:0;">
-            <span class="mono" style="font-size:13px;font-weight:800;color:${mealKcal>budget?'var(--accent)':'var(--text)'};display:block;">${mealKcal} kcal</span>
-            <span class="mono" style="font-size:9px;color:var(--muted);">
-              <span style="color:${NUTRIENT_COLORS.protein};">P ${mp}g</span>
-              <span style="color:${NUTRIENT_COLORS.carbs};">C ${mc}g</span>
-              <span style="color:${NUTRIENT_COLORS.fat};">F ${mf}g</span>
-            </span>
+          <span class="meal-kcal">
+            <span class="nut-value nut-value--sm" style="display:block;color:${mealKcal>budget?'var(--accent)':'var(--text)'};">${mealKcal} kcal</span>
+            <span class="meal-macros"><span class="p">P${mp}</span><span class="c">C${mc}</span><span class="f">F${mf}</span></span>
           </span>
-          <span style="color:var(--accent);font-weight:900;margin-left:8px;flex-shrink:0;">${isOpen?'−':'+'}</span>
+          <span class="meal-toggle">${isOpen?'−':'+'}</span>
         </div>
         ${mealFoods.map(f=>{
           const open = String(state.foodEntryOpen) === String(f.id);
@@ -16752,221 +16774,23 @@ function attachHandlers(){
     state.foodSearchSelected = null; // a new query invalidates the current selection
     state.foodResultPage = 1;        // and its paging
     state.foodBrowsePage = 1;
-    debounce("food-search", ()=>{
-      render();
-      // render() replaces the input node, so restore focus and caret like the other searches.
-      setTimeout(()=>{ const s=document.getElementById("food-search-input"); if(s){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
-    }, 150);
+    // Refresh ONLY the results container. The input element is never recreated, so the soft
+    // keyboard stays up, the caret stays put and the page does not move — the previous
+    // render()-per-keystroke was what made the view jump on every character.
+    debounce("food-search", updateFoodSearchResults, 150);
   });
-  document.querySelectorAll("[data-food-pick]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      const id = el.dataset.foodPick;
-      const food = lookupFood(id, state.foodSearchQuery);
-      if(!food) return;
-      // Picking a result is the signal that the query was useful, so it is worth remembering.
-      if(state.foodSearchQuery && IgnytFoodSearch.rememberSearch) IgnytFoodSearch.rememberSearch(state.foodSearchQuery);
-      state.foodSearchSelected = { id: food.id, name: food.name };
-      // Reset the portion for the new food; a unit carried over from a previous food may not
-      // even apply to this one. defaultFoodPortion() prefers what the user chose last time.
-      const d = defaultFoodPortion(food);
-      state.foodSearchAmount = d.amount;
-      state.foodSearchUnit = d.unit;
-      render();
-    });
-  });
-  const amountInput = document.getElementById("food-search-amount");
-  if(amountInput) amountInput.addEventListener("input", ()=>{
-    state.foodSearchAmount = amountInput.value;
-    debounce("food-amount", ()=>{
-      render();
-      setTimeout(()=>{ const g=document.getElementById("food-search-amount"); if(g){ g.focus(); g.setSelectionRange(g.value.length,g.value.length); } },0);
-    }, 200);
-  });
-  const unitSelect = document.getElementById("food-search-unit");
-  if(unitSelect) unitSelect.addEventListener("change", ()=>{
-    const prev = state.foodSearchUnit;
-    state.foodSearchUnit = unitSelect.value;
-    // Switching between grams and a countable unit makes the old number meaningless
-    // (150 grams -> 150 chapatis), so reset to a sensible default for the new unit.
-    if((prev === "g") !== (unitSelect.value === "g")) state.foodSearchAmount = null;
-    render();
-  });
-  document.querySelectorAll("[data-food-amount]").forEach(el=>{
-    el.addEventListener("click", ()=>{ state.foodSearchAmount = Number(el.dataset.foodAmount); render(); });
-  });
-  /* ---- Category browser + recent searches (Phase 3) ---- */
-  document.querySelectorAll("[data-food-browse]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      state.foodBrowseCategory = el.dataset.foodBrowse;
-      state.foodBrowsePage = 1;
-      state.foodSearchQuery = "";
-      state.foodSearchSelected = null;
-      render();
-    });
-  });
+
+  // Everything inside #food-search-results is bound through this, so it can be re-bound after
+  // updateFoodSearchResults() replaces that container. The nodes are new every time, so
+  // re-running cannot double-bind. The search <input> above is deliberately NOT in there — it
+  // survives the swap, and rebinding it would make every keystroke fire twice.
+  bindFoodResultHandlers();
+
+  // Lives in the panel header, outside the swapped container, so it is bound once per full
+  // render rather than once per keystroke.
   const browseBack = document.querySelector("[data-food-browse-back]");
   if(browseBack) browseBack.addEventListener("click", ()=>{
     state.foodBrowseCategory = null; state.foodBrowsePage = 1; state.foodSearchQuery = ""; render();
-  });
-  const foodMore = document.querySelector("[data-food-more]");
-  if(foodMore) foodMore.addEventListener("click", ()=>{
-    if(state.foodBrowseCategory) state.foodBrowsePage++; else state.foodResultPage++;
-    render();
-  });
-  document.querySelectorAll("[data-recent-search]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      state.foodSearchQuery = el.dataset.recentSearch;
-      state.foodResultPage = 1;
-      render();
-    });
-  });
-  const clearRecent = document.querySelector("[data-clear-recent-searches]");
-  if(clearRecent) clearRecent.addEventListener("click", ()=>{
-    if(IgnytFoodSearch.clearRecentSearches) IgnytFoodSearch.clearRecentSearches();
-    render();
-  });
-  document.querySelectorAll("[data-food-fav]").forEach(el=>{
-    el.addEventListener("click", (ev)=>{
-      ev.stopPropagation();   // the whole card is a pick target; the star is not
-      const food = lookupFood(el.dataset.foodFav, state.foodSearchQuery);
-      if(!food) return;
-      const key = String(food.name).toLowerCase();
-      const existing = (state.favoriteFoods||[]).findIndex(x=>x && String(x.name).toLowerCase()===key);
-      if(existing >= 0){
-        state.favoriteFoods.splice(existing, 1);
-      }else{
-        // Favourites store one absolute portion, so a per-100g catalogue food is saved at
-        // its default serving rather than at an unstated basis.
-        const grams = food.per ? (food.servingSize || food.per) : null;
-        const v = (grams != null && window.IgnytFoodCatalogue)
-          ? IgnytFoodCatalogue.scale(food, grams) : food;
-        state.favoriteFoods.push({
-          id: nextId(), name: food.name,
-          calories: Number(v.calories)||0, protein: Number(v.protein)||0,
-          carbs: Number(v.carbs)||0, fat: Number(v.fat)||0, fibre: Number(v.fibre)||0
-        });
-      }
-      LS.set("hx_favorite_foods", state.favoriteFoods);
-      render();
-    });
-  });
-
-  const foodCancelBtn = document.querySelector("[data-food-search-cancel]");
-  if(foodCancelBtn) foodCancelBtn.addEventListener("click", ()=>{
-    state.foodSearchSelected = null; state.foodSearchAmount = null; state.foodSearchUnit = "g"; render();
-  });
-  /* Commits the selected food to a meal. Shared by the main Add button and the quick-add
-     meal chips so both paths validate and record identically. Returns false if the entry was
-     rejected, so the caller knows not to close the panel. */
-  function commitSelectedFood(meal){
-    const sel = state.foodSearchSelected;
-    if(!sel) return false;
-    const food = lookupFood(sel.id, sel.name);
-    if(!food) return false;
-
-    const N = window.IgnytNutrition;
-    const scalable = food.per != null;
-    let v;
-
-    if(scalable && N){
-      const p = resolveFoodPortion(food);
-      const check = N.validateQuantity(food, currentFoodAmount(food), p.unit);
-      // Refuse rather than log something the user did not ask for. The panel already shows
-      // the reason and disables the button; this is the guard for every other route in.
-      if(!check.ok){ showToast(check.error, "error", render); return false; }
-      v = N.logValues(food, check.grams);
-      N.rememberServing(food.id, check.amount, check.unit);
-    }else{
-      // A favourite is already one absolute portion, and the seed path is unchanged.
-      v = scalable ? IgnytFoodDB.scaleFood(food, resolveFoodPortion(food).grams) : food;
-    }
-
-    // Identical record shape to the quick-add chips — nothing downstream can tell the
-    // difference between a searched food and a manually entered one.
-    const record = {
-      id: nextId(), date: state.nutritionDate || todayStr(), meal: meal,
-      name: v.name,
-      calories: Number(v.calories)||0, protein: Number(v.protein)||0,
-      carbs: Number(v.carbs)||0, fat: Number(v.fat)||0, fibre: Number(v.fibre)||0
-    };
-    // Micronutrients are written only where the food actually has them. An absent key means
-    // "unknown for this food", which the dashboard reports as incomplete coverage rather
-    // than counting as zero.
-    if(N) N.MICRO_LOG_FIELDS.forEach(k=>{ if(v[k] != null) record[k] = Number(v[k]); });
-
-    // Provenance. Recording which catalogue food and which serving produced these numbers is
-    // what makes an entry EDITABLE later: without it, changing "150 g" to "200 g" would mean
-    // guessing what the original 150 g referred to. Purely additive — an entry without these
-    // still renders and totals exactly as before, it just cannot be re-scaled.
-    if(scalable){
-      const p2 = resolveFoodPortion(food);
-      record.foodId = food.id;
-      record.category = food.category || null;
-      record.quantity = Number(currentFoodAmount(food));
-      record.servingUnit = p2.unit;
-      record.grams = Number(v.grams) || null;
-    }
-    record.at = Date.now();
-
-    state.foodLog.unshift(record);
-    state.foodSearchSelected = null; state.foodSearchQuery = "";
-    state.foodSearchAmount = null; state.foodSearchUnit = "g";
-    return true;
-  }
-
-  const foodAddBtn = document.querySelector("[data-food-search-add]");
-  if(foodAddBtn) foodAddBtn.addEventListener("click", ()=>{
-    commitSelectedFood(foodAddBtn.dataset.foodSearchAdd);
-    render();
-  });
-  document.querySelectorAll("[data-food-quick-meal]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      if(commitSelectedFood(el.dataset.foodQuickMeal)) showToast("Added to " + el.dataset.foodQuickMeal, "success", render);
-      render();
-    });
-  });
-
-  /* Serving controls. Stepping is unit-aware: grams move in 5s, countables in halves. */
-  document.querySelectorAll("[data-food-step]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      const sel = state.foodSearchSelected;
-      if(!sel) return;
-      const food = lookupFood(sel.id, sel.name);
-      if(!food) return;
-      const p = resolveFoodPortion(food);
-      const step = p.unit === "g" ? 5 : 0.5;
-      const next = Math.round((Number(p.amount) + step * Number(el.dataset.foodStep)) * 100) / 100;
-      if(next <= 0) return;                       // never step into an invalid amount
-      state.foodSearchAmount = next;
-      render();
-    });
-  });
-  document.querySelectorAll("[data-food-portion]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      state.foodSearchUnit = el.dataset.foodPortion;
-      state.foodSearchAmount = 1;
-      render();
-    });
-  });
-  const foodShareBtn = document.querySelector("[data-food-share]");
-  if(foodShareBtn) foodShareBtn.addEventListener("click", async ()=>{
-    const sel = state.foodSearchSelected;
-    const food = sel && lookupFood(sel.id, sel.name);
-    if(!food || !window.IgnytNutrition) return;
-    const p = resolveFoodPortion(food);
-    const text = IgnytNutrition.summaryText(food, currentFoodAmount(food), p.unit);
-    try{
-      // Same escalation the workout share uses: native plugin, then Web Share, then clipboard.
-      const share = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytShare;
-      if(share){ await share.shareText({ fileName:"ignyt-food.txt", content:text, mimeType:"text/plain" }); return; }
-      if(navigator.share){ await navigator.share({ title:"IGNYT", text }); return; }
-      await navigator.clipboard.writeText(text);
-      showToast("Copied to clipboard.", "success", render);
-    }catch(e){
-      if(String(e).toLowerCase().includes("cancel") || String(e).toLowerCase().includes("abort")) return;
-      try{ await navigator.clipboard.writeText(text); showToast("Copied to clipboard.", "success", render); }
-      catch(e2){ showToast("Sharing isn't available on this device.", "error", render); }
-    }
   });
 
   document.querySelectorAll("[data-quick-add-food]").forEach(el=>{
@@ -17440,3 +17264,221 @@ document.addEventListener("focusin", (e)=>{
   document.addEventListener("focusin", onViewportChange);
   document.addEventListener("focusout", ()=> setTimeout(()=>{ if(!activeSetControl()) setPin(null); }, 0));
 })();
+
+/* Handlers for everything inside #food-search-results.
+   Kept separate from the main wiring pass because updateFoodSearchResults() replaces that
+   container's HTML on every keystroke, which discards these nodes and their listeners.
+   Re-running this against the fresh nodes re-binds them; it can never double-bind, because
+   the elements it binds to did not exist a moment ago. */
+function bindFoodResultHandlers(){
+    document.querySelectorAll("[data-food-pick]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const id = el.dataset.foodPick;
+        const food = lookupFood(id, state.foodSearchQuery);
+        if(!food) return;
+        // Picking a result is the signal that the query was useful, so it is worth remembering.
+        if(state.foodSearchQuery && IgnytFoodSearch.rememberSearch) IgnytFoodSearch.rememberSearch(state.foodSearchQuery);
+        state.foodSearchSelected = { id: food.id, name: food.name };
+        // Reset the portion for the new food; a unit carried over from a previous food may not
+        // even apply to this one. defaultFoodPortion() prefers what the user chose last time.
+        const d = defaultFoodPortion(food);
+        state.foodSearchAmount = d.amount;
+        state.foodSearchUnit = d.unit;
+        render();
+      });
+    });
+    const amountInput = document.getElementById("food-search-amount");
+    if(amountInput) amountInput.addEventListener("input", ()=>{
+      state.foodSearchAmount = amountInput.value;
+      debounce("food-amount", ()=>{
+        render();
+        setTimeout(()=>{ const g=document.getElementById("food-search-amount"); if(g){ g.focus(); g.setSelectionRange(g.value.length,g.value.length); } },0);
+      }, 200);
+    });
+    const unitSelect = document.getElementById("food-search-unit");
+    if(unitSelect) unitSelect.addEventListener("change", ()=>{
+      const prev = state.foodSearchUnit;
+      state.foodSearchUnit = unitSelect.value;
+      // Switching between grams and a countable unit makes the old number meaningless
+      // (150 grams -> 150 chapatis), so reset to a sensible default for the new unit.
+      if((prev === "g") !== (unitSelect.value === "g")) state.foodSearchAmount = null;
+      render();
+    });
+    document.querySelectorAll("[data-food-amount]").forEach(el=>{
+      el.addEventListener("click", ()=>{ state.foodSearchAmount = Number(el.dataset.foodAmount); render(); });
+    });
+    /* ---- Category browser + recent searches (Phase 3) ---- */
+    document.querySelectorAll("[data-food-browse]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        state.foodBrowseCategory = el.dataset.foodBrowse;
+        state.foodBrowsePage = 1;
+        state.foodSearchQuery = "";
+        state.foodSearchSelected = null;
+        render();
+      });
+    });
+    /* NOTE: [data-food-browse-back] is deliberately NOT bound here. It sits in the panel
+       header, OUTSIDE #food-search-results, so the container swap never destroys it — and
+       binding it on every swap stacked a listener per keystroke. It is bound once per full
+       render in the main wiring pass instead. */
+    const foodMore = document.querySelector("[data-food-more]");
+    if(foodMore) foodMore.addEventListener("click", ()=>{
+      if(state.foodBrowseCategory) state.foodBrowsePage++; else state.foodResultPage++;
+      render();
+    });
+    document.querySelectorAll("[data-recent-search]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        state.foodSearchQuery = el.dataset.recentSearch;
+        state.foodResultPage = 1;
+        render();
+      });
+    });
+    const clearRecent = document.querySelector("[data-clear-recent-searches]");
+    if(clearRecent) clearRecent.addEventListener("click", ()=>{
+      if(IgnytFoodSearch.clearRecentSearches) IgnytFoodSearch.clearRecentSearches();
+      render();
+    });
+    document.querySelectorAll("[data-food-fav]").forEach(el=>{
+      el.addEventListener("click", (ev)=>{
+        ev.stopPropagation();   // the whole card is a pick target; the star is not
+        const food = lookupFood(el.dataset.foodFav, state.foodSearchQuery);
+        if(!food) return;
+        const key = String(food.name).toLowerCase();
+        const existing = (state.favoriteFoods||[]).findIndex(x=>x && String(x.name).toLowerCase()===key);
+        if(existing >= 0){
+          state.favoriteFoods.splice(existing, 1);
+        }else{
+          // Favourites store one absolute portion, so a per-100g catalogue food is saved at
+          // its default serving rather than at an unstated basis.
+          const grams = food.per ? (food.servingSize || food.per) : null;
+          const v = (grams != null && window.IgnytFoodCatalogue)
+            ? IgnytFoodCatalogue.scale(food, grams) : food;
+          state.favoriteFoods.push({
+            id: nextId(), name: food.name,
+            calories: Number(v.calories)||0, protein: Number(v.protein)||0,
+            carbs: Number(v.carbs)||0, fat: Number(v.fat)||0, fibre: Number(v.fibre)||0
+          });
+        }
+        LS.set("hx_favorite_foods", state.favoriteFoods);
+        render();
+      });
+    });
+
+    const foodCancelBtn = document.querySelector("[data-food-search-cancel]");
+    if(foodCancelBtn) foodCancelBtn.addEventListener("click", ()=>{
+      state.foodSearchSelected = null; state.foodSearchAmount = null; state.foodSearchUnit = "g"; render();
+    });
+    /* Commits the selected food to a meal. Shared by the main Add button and the quick-add
+       meal chips so both paths validate and record identically. Returns false if the entry was
+       rejected, so the caller knows not to close the panel. */
+    function commitSelectedFood(meal){
+      const sel = state.foodSearchSelected;
+      if(!sel) return false;
+      const food = lookupFood(sel.id, sel.name);
+      if(!food) return false;
+
+      const N = window.IgnytNutrition;
+      const scalable = food.per != null;
+      let v;
+
+      if(scalable && N){
+        const p = resolveFoodPortion(food);
+        const check = N.validateQuantity(food, currentFoodAmount(food), p.unit);
+        // Refuse rather than log something the user did not ask for. The panel already shows
+        // the reason and disables the button; this is the guard for every other route in.
+        if(!check.ok){ showToast(check.error, "error", render); return false; }
+        v = N.logValues(food, check.grams);
+        N.rememberServing(food.id, check.amount, check.unit);
+      }else{
+        // A favourite is already one absolute portion, and the seed path is unchanged.
+        v = scalable ? IgnytFoodDB.scaleFood(food, resolveFoodPortion(food).grams) : food;
+      }
+
+      // Identical record shape to the quick-add chips — nothing downstream can tell the
+      // difference between a searched food and a manually entered one.
+      const record = {
+        id: nextId(), date: state.nutritionDate || todayStr(), meal: meal,
+        name: v.name,
+        calories: Number(v.calories)||0, protein: Number(v.protein)||0,
+        carbs: Number(v.carbs)||0, fat: Number(v.fat)||0, fibre: Number(v.fibre)||0
+      };
+      // Micronutrients are written only where the food actually has them. An absent key means
+      // "unknown for this food", which the dashboard reports as incomplete coverage rather
+      // than counting as zero.
+      if(N) N.MICRO_LOG_FIELDS.forEach(k=>{ if(v[k] != null) record[k] = Number(v[k]); });
+
+      // Provenance. Recording which catalogue food and which serving produced these numbers is
+      // what makes an entry EDITABLE later: without it, changing "150 g" to "200 g" would mean
+      // guessing what the original 150 g referred to. Purely additive — an entry without these
+      // still renders and totals exactly as before, it just cannot be re-scaled.
+      if(scalable){
+        const p2 = resolveFoodPortion(food);
+        record.foodId = food.id;
+        record.category = food.category || null;
+        record.quantity = Number(currentFoodAmount(food));
+        record.servingUnit = p2.unit;
+        record.grams = Number(v.grams) || null;
+      }
+      record.at = Date.now();
+
+      state.foodLog.unshift(record);
+      state.foodSearchSelected = null; state.foodSearchQuery = "";
+      state.foodSearchAmount = null; state.foodSearchUnit = "g";
+      return true;
+    }
+
+    const foodAddBtn = document.querySelector("[data-food-search-add]");
+    if(foodAddBtn) foodAddBtn.addEventListener("click", ()=>{
+      commitSelectedFood(foodAddBtn.dataset.foodSearchAdd);
+      render();
+    });
+    document.querySelectorAll("[data-food-quick-meal]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        if(commitSelectedFood(el.dataset.foodQuickMeal)) showToast("Added to " + el.dataset.foodQuickMeal, "success", render);
+        render();
+      });
+    });
+
+    /* Serving controls. Stepping is unit-aware: grams move in 5s, countables in halves. */
+    document.querySelectorAll("[data-food-step]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const sel = state.foodSearchSelected;
+        if(!sel) return;
+        const food = lookupFood(sel.id, sel.name);
+        if(!food) return;
+        const p = resolveFoodPortion(food);
+        const step = p.unit === "g" ? 5 : 0.5;
+        const next = Math.round((Number(p.amount) + step * Number(el.dataset.foodStep)) * 100) / 100;
+        if(next <= 0) return;                       // never step into an invalid amount
+        state.foodSearchAmount = next;
+        render();
+      });
+    });
+    document.querySelectorAll("[data-food-portion]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        state.foodSearchUnit = el.dataset.foodPortion;
+        state.foodSearchAmount = 1;
+        render();
+      });
+    });
+    const foodShareBtn = document.querySelector("[data-food-share]");
+    if(foodShareBtn) foodShareBtn.addEventListener("click", async ()=>{
+      const sel = state.foodSearchSelected;
+      const food = sel && lookupFood(sel.id, sel.name);
+      if(!food || !window.IgnytNutrition) return;
+      const p = resolveFoodPortion(food);
+      const text = IgnytNutrition.summaryText(food, currentFoodAmount(food), p.unit);
+      try{
+        // Same escalation the workout share uses: native plugin, then Web Share, then clipboard.
+        const share = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytShare;
+        if(share){ await share.shareText({ fileName:"ignyt-food.txt", content:text, mimeType:"text/plain" }); return; }
+        if(navigator.share){ await navigator.share({ title:"IGNYT", text }); return; }
+        await navigator.clipboard.writeText(text);
+        showToast("Copied to clipboard.", "success", render);
+      }catch(e){
+        if(String(e).toLowerCase().includes("cancel") || String(e).toLowerCase().includes("abort")) return;
+        try{ await navigator.clipboard.writeText(text); showToast("Copied to clipboard.", "success", render); }
+        catch(e2){ showToast("Sharing isn't available on this device.", "error", render); }
+      }
+    });
+}
