@@ -193,23 +193,23 @@
 
   // -------------------------------------------------------------- sheets
 
-  function planSheet(plan, isActive) {
+  /* Four options, per the brief. "Set as active" and "Meals per day" used to live here too;
+     both are still reachable and are better placed than they were - active is the badge in the
+     selector bar (visible exactly when the plan is not active), and meals-per-day is the
+     "Change" link on the meal bar plus Profile > Diet Settings. A menu that lists everything is
+     a menu nobody reads. */
+  function planSheet(plan) {
     return '' +
-      '<div class="dp-sheet">' +
+      '<div class="dp-sheet" role="dialog" aria-modal="true" aria-label="Plan options">' +
         '<div class="dp-sheet__backdrop" data-dp-plan-menu="1"></div>' +
         '<div class="dp-sheet__panel">' +
           '<div class="dp-sheet__title">' + esc(plan.name) + '</div>' +
-          (isActive ? '' : '<button class="dp-sheet__item" data-dp-plan-action="active">' +
-            '<span aria-hidden="true">★</span> Set as active plan</button>') +
-          '<button class="dp-sheet__item" data-dp-plan-action="meals">' +
-            '<span aria-hidden="true">🍽️</span> Meals per day' +
-            '<span class="dp-sheet__value">' + plan.meals.length + '</span></button>' +
           '<button class="dp-sheet__item" data-dp-plan-action="rename">' +
-            '<span aria-hidden="true">✎</span> Rename plan</button>' +
+            '<span aria-hidden="true">✎</span> Rename Plan</button>' +
           '<button class="dp-sheet__item" data-dp-plan-action="duplicate">' +
-            '<span aria-hidden="true">⧉</span> Duplicate</button>' +
+            '<span aria-hidden="true">⧉</span> Duplicate Plan</button>' +
           '<button class="dp-sheet__item dp-sheet__item--danger" data-dp-plan-action="delete">' +
-            '<span aria-hidden="true">🗑</span> Delete plan</button>' +
+            '<span aria-hidden="true">🗑</span> Delete Plan</button>' +
           '<button class="dp-sheet__cancel" data-dp-plan-menu="1">Cancel</button>' +
         '</div>' +
       '</div>';
@@ -375,7 +375,7 @@
       '</div>';
 
     var sheet = "";
-    if (ui.planMenu) sheet = planSheet(plan, isActive);
+    if (ui.planMenu) sheet = planSheet(plan);
     else if (ui.sheet === "meals") sheet = mealCountSheet(plan);
     else if (ui.sheet === "meal" && ui.sheetMeal) {
       var sm = D.mealById(plan, ui.sheetMeal);

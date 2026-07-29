@@ -238,16 +238,41 @@
 }
 .dp-empty__cta { margin-top: 18px; min-width: 200px; }
 
-/* ---- plan action sheet ---- */
-.dp-sheet { position: fixed; inset: 0; z-index: 80; display: flex; align-items: flex-end; }
-.dp-sheet__backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.45); }
+/* ---- plan action sheet ----
+   A real modal: above every other layer in the app except the boot splash, a full-screen
+   backdrop that swallows taps, and an OPAQUE panel.
+
+   The panel's background carries a literal fallback rather than relying on var() alone. When
+   --rh-card was out of scope the declaration was invalid and the panel painted nothing, so the
+   meal list showed straight through it — the bug this fixes. The token is now in scope, and
+   the fallback means the same class of mistake can never make the panel see-through again. */
+.dp-sheet {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: flex-end;
+  touch-action: none;   /* the backdrop must not scroll the page underneath */
+}
+.dp-sheet__backdrop {
+  position: absolute; inset: 0; background: rgba(0,0,0,.5);
+  animation: dp-fade .18s ease both;
+}
 .dp-sheet__panel {
-  position: relative; width: 100%;
-  background: var(--rh-card); color: var(--rh-text);
+  position: relative; width: 100%; max-height: 86vh; overflow-y: auto;
+  background: #FFFFFF; background: var(--rh-card, #FFFFFF);
+  color: var(--rh-text, #111827);
   border-radius: 18px 18px 0 0;
   padding: 8px 12px calc(12px + env(safe-area-inset-bottom, 0px));
-  box-shadow: 0 -8px 30px rgba(0,0,0,.25);
+  box-shadow: 0 -8px 30px rgba(0,0,0,.28);
+  animation: dp-rise .24s cubic-bezier(.32,.72,0,1) both;
 }
+[data-theme="dark"] .dp-sheet__panel { background: #1A1A1E; background: var(--rh-card, #1A1A1E); }
+
+@keyframes dp-rise { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes dp-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Background scroll lock. Applied to <body> while any sheet is open, so the page behind cannot
+   move under the modal — the usual iOS/Android annoyance where the sheet stays put and the
+   content scrolls behind it. */
+body.dp-modal-open { overflow: hidden; }
 .dp-sheet__title {
   font-size: 12px; font-weight: 800; color: var(--rh-muted);
   text-transform: uppercase; letter-spacing: .08em;
@@ -279,6 +304,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .dp-progress__fill, .dp-check { transition: none; }
+  .dp-sheet__panel, .dp-sheet__backdrop { animation: none; }
 }
 
 /* ---- meal-count bar ---- */

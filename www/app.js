@@ -19896,6 +19896,13 @@ function attachHandlers(){
 
   /* ---- Diet Plan Builder ---------------------------------------------------------- */
   const D = window.IgnytDietPlans;
+
+  /* Background scroll lock while a sheet is open. Set from the rendered DOM rather than from
+     state, so it can never disagree with what is actually on screen — every path that closes a
+     sheet re-renders, and this reads the result. */
+  try {
+    document.body.classList.toggle("dp-modal-open", !!document.querySelector(".dp-sheet"));
+  } catch(e) { /* never let a class toggle break the handler pass */ }
   const dpUI = patch => { state.dietUI = Object.assign({}, state.dietUI, patch); };
   const dpCloseSheets = () => dpUI({ planMenu:false, sheet:null, sheetMeal:null });
 
