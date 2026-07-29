@@ -4654,7 +4654,10 @@ const state = {
   // Food search (transient — a fresh visit starts with an empty search)
   foodSearchQuery: "", foodSearchSelected: null, foodSearchAmount: null, foodSearchUnit: "g",
   // Category browser (transient). foodBrowseCategory === null means search mode.
-  foodBrowseCategory: null, foodBrowsePage: 1, foodResultPage: 1,
+  foodBrowseCategory: null,
+  // Categories are behind a button now rather than the default view.
+  foodBrowseOpen: false,
+  foodBrowsePage: 1, foodResultPage: 1,
   // Which day the nutrition dashboard is showing. Transient: a fresh visit opens on today.
   nutritionDate: null, microExpanded: false, insightsExpanded: false,
   // Quick Add panel (transient). quickAddMeal is which meal one-tap items land in.
@@ -7203,7 +7206,9 @@ function renderFoodResultCard(f, labelOverride){
   return `<div class="food-row" data-food-pick="${escHtml(f.id)}">
     ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(f) : `<span class="food-thumb">${foodCategoryIcon(f.category)}</span>`}
     <div class="food-row__body">
-      <div class="food-row__name">${escHtml(labelOverride || (window.IgnytFoodCuration ? IgnytFoodCuration.displayName(f) : f.name))}</div>
+      <!-- The matched span is marked so the eye lands on WHY this row is here, which matters
+           most on a fuzzy or synonym hit where the connection is not otherwise obvious. -->
+      <div class="food-row__name">${highlightMatch(labelOverride || (window.IgnytFoodCuration ? IgnytFoodCuration.displayName(f) : f.name), state.foodSearchQuery)}</div>
       <div class="food-row__meta">${escHtml(f.category||"")}${serving?` · ${serving}`:""} · P${f.protein??0} C${f.carbs??0} F${f.fat??0}</div>
     </div>
     <span class="food-row__kcal">${f.calories??0}<span class="nut-unit"> kcal${basis}</span></span>
@@ -7568,6 +7573,97 @@ function renderFoodSearchPanel(meal){
  * This mirrors exercisePickerResultsHtml()/updateExercisePickerResults(), which solved the
  * same problem for the exercise picker.
  */
+/* =========================================================
+   SEARCH-FIRST FOOD LOG
+
+   The screen used to open on a grid of 41 category tiles, which meant logging a food you eat
+   every day started with a taxonomy question. It now opens on the two lists that answer that
+   question directly — what you save, and what you just ate — with categories moved behind a
+   button for the genuine browse case.
+
+   Everything here reads the EXISTING search index and food log. Fuzzy matching, synonyms
+   (curd -> yogurt) and the token index were already built; what was missing was showing them
+   to the user before they type.
+========================================================= */
+
+/** Favourites, most-used first. Frequency comes from the real log rather than a stored
+ *  counter, so it cannot drift out of step with what was actually eaten. */
+function favouriteFoodsRanked(limit){
+  const favs = Array.isArray(state.favoriteFoods) ? state.favoriteFoods : [];
+  if(!favs.length) return [];
+  const uses = Object.create(null);
+  for(const e of state.foodLog){
+    const k = String(e.name||"").trim().toLowerCase();
+    uses[k] = (uses[k]||0) + 1;
+  }
+  return favs.slice()
+    .map(f=>({ food:f, n: uses[String(f.name||"").trim().toLowerCase()] || 0 }))
+    .sort((a,b)=> b.n - a.n || String(a.food.name).localeCompare(String(b.food.name)))
+    .slice(0, limit || 8);
+}
+
+/** Distinct recently-logged foods, newest first, carrying the serving and meal they were
+ *  last logged with — that is what makes them one-tap rather than one-tap-then-adjust. */
+function recentLoggedFoods(limit){
+  const seen = new Set();
+  const out = [];
+  for(const e of state.foodLog){
+    const k = String(e.name||"").trim().toLowerCase();
+    if(!k || seen.has(k)) continue;
+    seen.add(k);
+    out.push(e);
+    if(out.length >= (limit||8)) break;
+  }
+  return out;
+}
+
+/* Wraps the matched span in <mark>. Escapes FIRST and matches on the escaped string, so a
+   food name containing a bracket cannot inject markup through the highlighter. */
+function highlightMatch(text, query){
+  const safe = escHtml(String(text||""));
+  const q = String(query||"").trim();
+  if(q.length < 2) return safe;
+  const needle = escHtml(q).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  try{
+    return safe.replace(new RegExp("(" + needle + ")", "ig"), "<mark class=\"fs-mark\">$1</mark>");
+  }catch(e){ return safe; }
+}
+
+/* Autocomplete. Names only, deduplicated, and only when the query is short enough that the
+   user is plausibly still typing — offering completions once someone has typed the whole
+   thing is noise sitting on top of the answer. */
+function searchSuggestions(q, limit){
+  const s = window.IgnytFoodSearch;
+  if(!s || !s.search) return [];
+  const query = String(q||"").trim();
+  if(query.length < 2 || query.length > 14) return [];
+  const seen = new Set([query.toLowerCase()]);
+  const out = [];
+  for(const f of s.search(query, { limit: 24 })){
+    const label = window.IgnytFoodCuration ? IgnytFoodCuration.displayName(f) : f.name;
+    const k = label.toLowerCase();
+    if(seen.has(k)) continue;
+    seen.add(k);
+    out.push(label);
+    if(out.length >= (limit||6)) break;
+  }
+  return out;
+}
+
+/** A compact one-tap row used by both the Favorites and Recent lists. */
+function quickFoodRow(food, sub, action){
+  const img = window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(food, 34) : "";
+  const name = window.IgnytFoodCuration ? IgnytFoodCuration.displayName(food) : food.name;
+  return `<button class="fs-quick" ${action}>
+    ${img}
+    <span class="fs-quick__body">
+      <span class="fs-quick__name">${escHtml(name)}</span>
+      ${sub ? `<span class="fs-quick__sub">${escHtml(sub)}</span>` : ""}
+    </span>
+    <span class="fs-quick__kcal">${Math.round(food.calories||0)}<span class="nut-unit"> kcal</span></span>
+  </button>`;
+}
+
 function foodSearchResultsHtml(meal){
   if(!window.IgnytFoodSearch || !window.IgnytFoodDB) return "";
   const q = state.foodSearchQuery || "";
@@ -7610,7 +7706,58 @@ function foodSearchResultsHtml(meal){
           ${recentSearches.slice(0,12).map(s=>`<button class="cat-chip" data-recent-search="${escHtml(s)}" style="margin:0;">${escHtml(s)}</button>`).join("")}
         </div>` : ""}
 
-      ${idle ? renderFoodCategoryGrid() : ""}
+      ${idle ? (()=>{
+        const favs = favouriteFoodsRanked(6);
+        const recents = recentLoggedFoods(8);
+        return `
+          ${favs.length ? `
+            <div class="fs-head"><span>⭐ Favourites</span></div>
+            <div class="fs-list">
+              ${favs.map(({food,n})=>quickFoodRow(
+                food,
+                n ? `Logged ${n} time${n===1?'':'s'}` : "Saved",
+                `data-quick-fav="${escHtml(food.name)}"`
+              )).join("")}
+            </div>` : ""}
+
+          ${recents.length ? `
+            <div class="fs-head"><span>🕒 Recent</span></div>
+            <div class="fs-list">
+              ${recents.map(e=>quickFoodRow(
+                e,
+                [e.grams ? `${Math.round(e.grams)} ${e.servingUnit||'g'}` : null, e.meal].filter(Boolean).join(" · "),
+                `data-quick-recent="${escHtml(String(e.id))}"`
+              )).join("")}
+            </div>` : ""}
+
+          ${!favs.length && !recents.length ? `
+            <div class="fs-empty">
+              <div style="font-size:30px;line-height:1;margin-bottom:8px;">🔍</div>
+              <div style="font-weight:700;font-size:14px;">Search ${(cat?cat.count():0).toLocaleString()} foods</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+                Anything you log or save shows up here for one-tap logging next time.
+              </div>
+            </div>` : ""}
+
+          <!-- Categories are still reachable, just no longer the front door. Browsing a
+               taxonomy is a real need occasionally; it is not how anyone logs the lunch they
+               eat every week. -->
+          <button class="fs-browse" data-toggle-browse="1">
+            <span>${state.foodBrowseOpen ? "Hide categories" : "Browse categories"}</span>
+            <span style="transform:rotate(${state.foodBrowseOpen?180:0}deg);transition:transform .2s;">⌄</span>
+          </button>
+          ${state.foodBrowseOpen ? renderFoodCategoryGrid() : ""}`;
+      })() : ""}
+
+      ${q.trim() && !browsing ? (()=>{
+        const sugg = searchSuggestions(q, 6);
+        return sugg.length ? `
+          <div class="fs-sugg">
+            ${sugg.map(s=>`<button class="fs-sugg__item" data-suggest="${escHtml(s)}">
+              <span aria-hidden="true" style="color:var(--muted);">⌕</span>${highlightMatch(s, q)}
+            </button>`).join("")}
+          </div>` : "";
+      })() : ""}
 
       ${(q.trim() || browsing) ? (results.length
         ? renderFoodList(results, browsing ? state.foodBrowsePage : state.foodResultPage)
@@ -19206,6 +19353,52 @@ function commitSelectedFood(meal){
 }
 
 function bindFoodResultHandlers(){
+    /* One-tap logging from Favourites and Recent. These go straight to Food Details with the
+       food resolved, so the "one or two taps" target holds: tap the row, tap Add. */
+    document.querySelectorAll("[data-quick-fav]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const name = el.dataset.quickFav;
+        const hit = IgnytFoodSearch.search(name, { limit: 1 })[0];
+        if(hit){ openFoodDetail(hit.id); render(); }
+        else showToast("That favourite is no longer in the database.", "error", render);
+      });
+    });
+    document.querySelectorAll("[data-quick-recent]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const entry = state.foodLog.find(e=>String(e.id) === el.dataset.quickRecent);
+        if(!entry) return;
+        /* Prefer the food it was logged FROM, so the serving controls work. An entry with no
+           resolvable food still opens by name, which is what a hand-typed row can offer. */
+        const hit = (entry.foodId != null && lookupFood(entry.foodId, entry.name))
+          || IgnytFoodSearch.search(entry.name, { limit: 1 })[0];
+        if(!hit){ showToast("That food is no longer in the database.", "error", render); return; }
+        openFoodDetail(hit.id);
+        // Re-offer the serving they used last time rather than the generic default.
+        if(entry.grams){ state.foodSearchAmount = entry.grams; state.foodSearchUnit = entry.servingUnit || "g"; }
+        render();
+      });
+    });
+
+    /* Autocomplete. Fills the input and re-runs the search without a full render, so the
+       keyboard stays up and the caret survives. */
+    document.querySelectorAll("[data-suggest]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const v = el.dataset.suggest;
+        state.foodSearchQuery = v;
+        const input = document.getElementById("food-search-input");
+        if(input) input.value = v;
+        state.foodResultPage = 1;
+        if(IgnytFoodSearch.rememberSearch) IgnytFoodSearch.rememberSearch(v);
+        updateFoodSearchResults();
+      });
+    });
+
+    const browseToggle = document.querySelector("[data-toggle-browse]");
+    if(browseToggle) browseToggle.addEventListener("click", ()=>{
+      state.foodBrowseOpen = !state.foodBrowseOpen;
+      updateFoodSearchResults();
+    });
+
     /* Variant expansion. Swaps only the results container, so the search input keeps focus
        and the keyboard stays up — the same reason typing does not call render(). */
     document.querySelectorAll("[data-variant-toggle]").forEach(el=>{
