@@ -3975,11 +3975,17 @@ const CALCULATORS = [
   {key:"ideal", label:"Ideal Weight"},
   {key:"bodyfat", label:"Body Fat %"},
   {key:"bodytype", label:"Body Type (Shape)"},
-  {key:"hr", label:"Heart Rate Zones"}
+  {key:"hr", label:"Heart Rate Zones"},
+  {key:"ffmi", label:"FFMI"},
+  {key:"water", label:"Water Intake"},
+  {key:"orm", label:"One Rep Max"},
+  {key:"pace", label:"Running Pace"},
+  {key:"goal", label:"Goal Timeline"}
 ];
 
 const CALC_ICON = { bmi:'target', bmr:'flame', calorie:'flame', protein:'dumbbell', carbs:'nutrition',
-  fat:'droplet', lbm:'body', ideal:'scale', bodyfat:'droplet', bodytype:'body', hr:'heart' };
+  fat:'droplet', lbm:'body', ideal:'scale', bodyfat:'droplet', bodytype:'body', hr:'heart',
+  ffmi:'body', water:'droplet', orm:'dumbbell', pace:'progress', goal:'target' };
 
 const GOAL_OPTIONS = [
   {label:"Maintain weight", delta:0},
@@ -4527,6 +4533,8 @@ const state = {
   profile: Object.assign({
     weight:0, height:180, age:25, gender:"male",
     activityMultiplier:1.465, goalDelta:-400,
+    bf:null, minutes:null, liftWeight:null, reps:null,
+    distance:null, hours:null, mins:null, secs:null, targetWeight:null, rate:0.5,
     name:"", hyroxExperience:"first-timer", trainingDays:5,
     equipment:["Barbell","Dumbbell","Machines","Sled","Rower","Ski Erg","Kettlebell"],
     username:"", phone:"", dob:null, medicalConditions:[], allergies:[], bloodGroup:""
@@ -11352,6 +11360,152 @@ function renderCalculators(){
     }
   }
 
+
+  if(active==="ffmi"){
+    fields = `<div class="grid2">
+      ${calcInputRow("calc-height","Height",c.height,"cm")}
+      ${calcInputRow("calc-weight","Weight",c.weight,"kg")}
+      ${calcInputRow("calc-bf","Body Fat",c.bf,"%")}
+    </div>`;
+    if(c.result && c.result.type==="ffmi"){
+      const r = c.result;
+      /* 25 is the widely cited natural ceiling for men and ~22 for women; above it is not a
+         verdict, which is why the label hedges rather than accusing anyone of anything. */
+      const ceiling = c.gender==="female" ? 22 : 25;
+      const band = r.normalised >= ceiling ? "Exceptional — above the usual natural range"
+                 : r.normalised >= (ceiling-3) ? "Very muscular"
+                 : r.normalised >= (ceiling-6) ? "Athletic" : "Average";
+      result = `<div class="info-box" style="text-align:center;padding:16px;margin-top:10px;">
+        <div class="stat-label">Fat-Free Mass Index</div>
+        <div class="mono" style="font-weight:900;font-size:28px;color:var(--primary);">${r.normalised.toFixed(1)}</div>
+        <div style="font-size:13px;font-weight:700;margin-top:2px;">${band}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;">
+          Fat-free mass ${r.ffm.toFixed(1)} kg · raw FFMI ${r.ffmi.toFixed(1)}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">
+          FFMI = fat-free mass ÷ height², height-normalised to 1.8 m. It needs a body-fat
+          figure to mean anything, and a guessed body fat gives a guessed FFMI.
+        </div>
+      </div>`;
+    }
+  }
+
+  if(active==="water"){
+    fields = `<div class="grid2">
+      ${calcInputRow("calc-weight","Weight",c.weight,"kg")}
+      ${calcInputRow("calc-minutes","Exercise today",c.minutes,"min")}
+    </div>`;
+    if(c.result && c.result.type==="water"){
+      const r = c.result;
+      result = `<div class="info-box" style="text-align:center;padding:16px;margin-top:10px;">
+        <div class="stat-label">Daily Water Target</div>
+        <div class="mono" style="font-weight:900;font-size:28px;color:var(--steel);">${(r.total/1000).toFixed(1)}<span style="font-size:15px;"> L</span></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;">
+          Baseline ${(r.base/1000).toFixed(1)} L${r.exercise ? ` + ${r.exercise} ml for exercise` : ""}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">
+          35 ml per kg, plus 500 ml per hour of training. Food contributes water too, so treat
+          this as a target for what you drink, not total intake.
+        </div>
+      </div>`;
+    }
+  }
+
+  if(active==="orm"){
+    fields = `<div class="grid2">
+      ${calcInputRow("calc-liftweight","Weight lifted",c.liftWeight,"kg")}
+      ${calcInputRow("calc-reps","Reps completed",c.reps,"")}
+    </div>`;
+    if(c.result && c.result.type==="orm"){
+      const r = c.result;
+      const pcts = [[100,"1"],[95,"2"],[90,"4"],[85,"6"],[80,"8"],[75,"10"],[70,"12"]];
+      result = `<div class="info-box" style="padding:16px;margin-top:10px;">
+        <div style="text-align:center;">
+          <div class="stat-label">Estimated One Rep Max</div>
+          <div class="mono" style="font-weight:900;font-size:28px;color:var(--primary);">${Math.round(r.orm)}<span style="font-size:15px;"> kg</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+            Epley ${Math.round(r.epley)} · Brzycki ${Math.round(r.brzycki)} — the average of both
+          </div>
+        </div>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:5px;">
+          ${pcts.map(([pc,reps])=>`<div class="row-between" style="font-size:12px;">
+            <span style="color:var(--muted);">${pc}% · ~${reps} rep${reps==="1"?"":"s"}</span>
+            <span class="mono" style="font-weight:800;">${Math.round(r.orm*pc/100)} kg</span>
+          </div>`).join("")}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;">
+          Estimates diverge above about 10 reps — a set of 15 says more about endurance than
+          about a single maximal lift.
+        </div>
+      </div>`;
+    }
+  }
+
+  if(active==="pace"){
+    fields = `<div class="grid2">
+      ${calcInputRow("calc-distance","Distance",c.distance,"km")}
+      ${calcInputRow("calc-hours","Hours",c.hours,"h")}
+      ${calcInputRow("calc-mins","Minutes",c.mins,"min")}
+      ${calcInputRow("calc-secs","Seconds",c.secs,"s")}
+    </div>`;
+    if(c.result && c.result.type==="pace"){
+      const r = c.result;
+      const fmt = sec => `${Math.floor(sec/60)}:${String(Math.round(sec%60)).padStart(2,"0")}`;
+      const races = [["5K",5],["10K",10],["Half",21.0975],["Marathon",42.195]];
+      result = `<div class="info-box" style="padding:16px;margin-top:10px;">
+        <div style="text-align:center;">
+          <div class="stat-label">Pace</div>
+          <div class="mono" style="font-weight:900;font-size:28px;color:var(--primary);">${fmt(r.perKm)}<span style="font-size:15px;"> /km</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+            ${fmt(r.perMile)} /mile · ${r.kph.toFixed(1)} km/h
+          </div>
+        </div>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:5px;">
+          <div class="stat-label" style="margin-bottom:2px;">At this pace</div>
+          ${races.map(([name,km])=>{
+            const t = r.perKm*km;
+            const h = Math.floor(t/3600), m = Math.floor((t%3600)/60), sec = Math.round(t%60);
+            return `<div class="row-between" style="font-size:12px;">
+              <span style="color:var(--muted);">${name}</span>
+              <span class="mono" style="font-weight:800;">${h?h+":":""}${String(m).padStart(h?2:1,"0")}:${String(sec).padStart(2,"0")}</span>
+            </div>`;
+          }).join("")}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;">
+          A flat projection. Real race times drift slower over distance as fatigue accumulates.
+        </div>
+      </div>`;
+    }
+  }
+
+  if(active==="goal"){
+    fields = `<div class="grid2">
+      ${calcInputRow("calc-weight","Current weight",c.weight,"kg")}
+      ${calcInputRow("calc-target","Target weight",c.targetWeight,"kg")}
+      ${calcInputRow("calc-rate","Rate",c.rate,"kg/week")}
+    </div>`;
+    if(c.result && c.result.type==="goal"){
+      const r = c.result;
+      const safe = r.ratePerWeek <= 0.75;
+      result = `<div class="info-box" style="padding:16px;margin-top:10px;text-align:center;">
+        <div class="stat-label">${r.direction === "lose" ? "Time to lose" : r.direction === "gain" ? "Time to gain" : "Already there"}</div>
+        ${r.weeks > 0 ? `
+          <div class="mono" style="font-weight:900;font-size:28px;color:var(--primary);">${r.weeks}<span style="font-size:15px;"> week${r.weeks===1?"":"s"}</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+            ${Math.abs(r.delta).toFixed(1)} kg at ${r.ratePerWeek} kg/week · target date ${r.date}
+          </div>
+          <div style="font-size:12px;color:${safe?'var(--mint)':'var(--accent)'};font-weight:700;margin-top:8px;">
+            ${safe ? "A sustainable rate." : "Aggressive — hard to sustain and more likely to cost muscle."}
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px;">
+            Roughly ${Math.round(r.dailyKcal)} kcal/day ${r.direction==="lose"?"below":"above"} maintenance.
+            7,700 kcal ≈ 1 kg of body fat.
+          </div>` : `
+          <div style="font-size:13px;color:var(--mint);font-weight:700;margin-top:6px;">You are at your target weight.</div>`}
+      </div>`;
+    }
+  }
+
   if(active==="bmr"){
     fields = `<div class="grid2">
       ${calcInputRow("calc-age","Age",c.age,"")}
@@ -14812,6 +14966,53 @@ function macroBar(label, val, target, color, unit){
    renderErrorScreen() directly from here.
 ========================================================= */
 
+/* =========================================================
+   FOCUS PRESERVATION ACROSS render()
+
+   THE KEYBOARD-JUMP BUG, AND WHY IT WAS EVERYWHERE
+
+   render() replaces the contents of #app, which destroys whatever input the user is typing
+   into. Five search boxes worked around that individually with the same shape:
+
+       render();
+       setTimeout(() => { input.focus(); input.setSelectionRange(len, len); }, 0);
+
+   On Android that is the jump. Losing focus closes the soft keyboard, the layout viewport
+   grows, the timeout re-focuses a frame later, the keyboard reopens and the viewport shrinks
+   again — the page visibly bounces on EVERY keystroke. It also snapped the caret to the end
+   of the line, so editing anywhere but the end was impossible.
+
+   Preserving focus HERE fixes all of them at once, and any input added later gets it for
+   free. Three things matter:
+
+     synchronously   restored in the same task as the innerHTML swap, before the browser has
+                     laid out or told the IME anything. No frame passes with nothing focused,
+                     so the keyboard never closes and there is nothing to bounce.
+     caret intact    selectionStart/End are carried over rather than jumping to the end.
+     scroll intact   preventScroll, because re-focusing an offscreen field would otherwise
+                     yank the page to it.
+========================================================= */
+function withFocusPreserved(fn){
+  const active = document.activeElement;
+  const id = active && active.id;
+  const isText = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
+  let start = null, end = null;
+  if(isText){
+    // selectionStart throws on input types that do not support it (number, date, email).
+    try{ start = active.selectionStart; end = active.selectionEnd; }catch(e){}
+  }
+
+  fn();
+
+  if(!id || !isText) return;
+  const next = document.getElementById(id);
+  if(!next || next === document.activeElement) return;
+  try{
+    next.focus({ preventScroll: true });
+    if(start != null) next.setSelectionRange(start, end);
+  }catch(e){ /* a field that cannot take a caret is not worth failing a render over */ }
+}
+
 function render(){
   try{
     applyTheme();
@@ -14823,10 +15024,10 @@ function render(){
         renderSignInScreen();
         return;
       }
-      renderOnboardingWizard();
+      withFocusPreserved(renderOnboardingWizard);
       return;
     }
-    renderApp();
+    withFocusPreserved(renderApp);
     if(state.session) ensureElapsedTimerRunning();
     else stopElapsedTimer();
     if(state.raceActive) ensureRaceTimerRunning();
@@ -17754,7 +17955,6 @@ function attachHandlers(){
     state.libSearch = e.target.value;
     debounce("lib-search", ()=>{
       render();
-      setTimeout(()=>{ const s=document.getElementById("lib-search"); if(s){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
     }, 150);
   });
   document.querySelectorAll("[data-cat]").forEach(el=>{
@@ -17768,8 +17968,6 @@ function attachHandlers(){
     state.historyPage = 1; // a new query always starts from the first page
     debounce("history-search", ()=>{
       render();
-      // Same focus-restore as the library search: render() replaces the input node.
-      setTimeout(()=>{ const s=document.getElementById("history-search"); if(s){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
     }, 150);
   });
   document.querySelectorAll("[data-history-range]").forEach(el=>{
@@ -18532,6 +18730,16 @@ function attachHandlers(){
     c.waist = readNum("calc-waist", c.waist);
     c.hip = readNum("calc-hip", c.hip);
     c.restingHR = readNum("calc-resting", 0);
+    c.bf = readNum("calc-bf", c.bf);
+    c.minutes = readNum("calc-minutes", c.minutes);
+    c.liftWeight = readNum("calc-liftweight", c.liftWeight);
+    c.reps = readNum("calc-reps", c.reps);
+    c.distance = readNum("calc-distance", c.distance);
+    c.hours = readNum("calc-hours", c.hours);
+    c.mins = readNum("calc-mins", c.mins);
+    c.secs = readNum("calc-secs", c.secs);
+    c.targetWeight = readNum("calc-target", c.targetWeight);
+    c.rate = readNum("calc-rate", c.rate);
     c.bust = readNum("calc-bust", c.bust);
     c.bwaist = readNum("calc-bwaist", c.bwaist);
     c.highHip = readNum("calc-highhip", c.highHip);
@@ -18544,6 +18752,38 @@ function attachHandlers(){
     if(c.activeCalc==="bmi"){
       const h = Number(c.height)/100;
       c.result = { type:"bmi", bmi: (h>0 ? Number(c.weight)/(h*h) : 0) };
+    } else if(c.activeCalc==="ffmi"){
+      const h = Number(c.height)/100, w = Number(c.weight), bf = Number(c.bf);
+      const ffm = w * (1 - bf/100);
+      const ffmi = h > 0 ? ffm/(h*h) : 0;
+      // Height-normalised to 1.8 m, which is what makes FFMI comparable between people.
+      c.result = { type:"ffmi", ffm, ffmi, normalised: ffmi + 6.1*(1.8 - h) };
+    } else if(c.activeCalc==="water"){
+      const base = Number(c.weight) * 35;
+      const exercise = Math.round((Number(c.minutes)||0) / 60 * 500);
+      c.result = { type:"water", base, exercise, total: base + exercise };
+    } else if(c.activeCalc==="orm"){
+      const w = Number(c.liftWeight), reps = Math.max(1, Number(c.reps)||1);
+      // Two formulas averaged: Epley reads high at low reps, Brzycki low at high reps, and
+      // neither is authoritative. Showing both and their mean is more honest than picking one.
+      const epley = w * (1 + reps/30);
+      const brzycki = reps < 37 ? w * 36/(37-reps) : w;
+      c.result = { type:"orm", epley, brzycki, orm: (epley+brzycki)/2 };
+    } else if(c.activeCalc==="pace"){
+      const km = Number(c.distance)||0;
+      const secs = (Number(c.hours)||0)*3600 + (Number(c.mins)||0)*60 + (Number(c.secs)||0);
+      const perKm = km > 0 ? secs/km : 0;
+      c.result = { type:"pace", perKm, perMile: perKm*1.60934, kph: perKm>0 ? 3600/perKm : 0 };
+    } else if(c.activeCalc==="goal"){
+      const cur = Number(c.weight)||0, tgt = Number(c.targetWeight)||0;
+      const rate = Math.max(0.05, Number(c.rate)||0.5);
+      const delta = tgt - cur;
+      const weeks = Math.ceil(Math.abs(delta)/rate);
+      const d = new Date(); d.setDate(d.getDate() + weeks*7);
+      c.result = { type:"goal", delta, ratePerWeek: rate, weeks,
+                   direction: delta < 0 ? "lose" : delta > 0 ? "gain" : "same",
+                   date: d.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}),
+                   dailyKcal: rate*7700/7 };
     } else if(c.activeCalc==="bmr"){
       const bmr = calcBMR(c.age, c.gender, c.height, c.weight);
       c.result = { type:"bmr", bmr };
@@ -18664,7 +18904,6 @@ function attachHandlers(){
     state.prShowCount = 10;
     debounce("pr-search", ()=>{
       render();
-      setTimeout(()=>{ const s=document.getElementById("pr-search"); if(s){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
     }, 250);
   });
   const exProgSearchInput = document.getElementById("ex-progress-search");
@@ -18672,7 +18911,6 @@ function attachHandlers(){
     state.exProgressSearch = e.target.value;
     debounce("ex-progress-search", ()=>{
       render();
-      setTimeout(()=>{ const s=document.getElementById("ex-progress-search"); if(s){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
     }, 250);
   });
   document.querySelectorAll("[data-analytics-range]").forEach(el=>{
@@ -19589,7 +19827,6 @@ function bindFoodResultHandlers(){
       state.foodSearchAmount = amountInput.value;
       debounce("food-amount", ()=>{
         render();
-        setTimeout(()=>{ const g=document.getElementById("food-search-amount"); if(g){ g.focus(); g.setSelectionRange(g.value.length,g.value.length); } },0);
       }, 200);
     });
     const unitSelect = document.getElementById("food-search-unit");
