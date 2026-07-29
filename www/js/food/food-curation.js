@@ -277,7 +277,10 @@
     else if (c.favouriteNames && c.favouriteNames[name]) tier = "favourite";
     else if (c.frequentNames && c.frequentNames[name]) tier = "frequent";
     else if (c.recentNames && c.recentNames[name]) tier = "recent";
-    else if (food && food.source === "ifct") tier = "ifct";
+    /* The IGNYT master catalogue. Curated, human-named and per-100 g already, so it ranks with
+       IFCT rather than falling through to the generic USDA tier — which is where it landed
+       until this line existed, because tierOf() had never heard of this source. */
+    else if (food && (food.source === "ifct" || food.source === "ignyt")) tier = "ifct";
     else if (food && food.verified) tier = "verified";
     else if (food && food.source === "seed") tier = "seed";
     else if (food && food.brand) tier = "branded";

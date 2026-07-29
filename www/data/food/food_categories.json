@@ -1,1 +1,166 @@
-[]
+[
+  {
+    "name": "Branded Whey Protein & Sports Protein Products",
+    "count": 150
+  },
+  {
+    "name": "Fast food",
+    "count": 137
+  },
+  {
+    "name": "Curries & Gravies",
+    "count": 132
+  },
+  {
+    "name": "Branded Chocolates & Candy",
+    "count": 100
+  },
+  {
+    "name": "Branded Ice Cream",
+    "count": 100
+  },
+  {
+    "name": "Breakfast Brands",
+    "count": 100
+  },
+  {
+    "name": "Fish (by Species)",
+    "count": 100
+  },
+  {
+    "name": "Processed Meat",
+    "count": 100
+  },
+  {
+    "name": "Sauces, Spreads & Condiments",
+    "count": 100
+  },
+  {
+    "name": "Spices & Seasonings",
+    "count": 100
+  },
+  {
+    "name": "Vegetables",
+    "count": 100
+  },
+  {
+    "name": "Branded Biscuits & Cookies",
+    "count": 99
+  },
+  {
+    "name": "Salt, Sugar & Sweeteners",
+    "count": 99
+  },
+  {
+    "name": "Snacks & Street Foods",
+    "count": 93
+  },
+  {
+    "name": "Branded Biscuits",
+    "count": 85
+  },
+  {
+    "name": "Baking Ingredients & Flours",
+    "count": 80
+  },
+  {
+    "name": "Coffee, Tea & Hot Beverages",
+    "count": 80
+  },
+  {
+    "name": "Rice & Bread items",
+    "count": 80
+  },
+  {
+    "name": "Branded Breakfast Cereals",
+    "count": 78
+  },
+  {
+    "name": "Fruits",
+    "count": 78
+  },
+  {
+    "name": "Dal & Legumes",
+    "count": 76
+  },
+  {
+    "name": "Desserts",
+    "count": 76
+  },
+  {
+    "name": "Pasta, Noodles & International Staples",
+    "count": 76
+  },
+  {
+    "name": "Frozen & Ready-to-Eat Foods",
+    "count": 75
+  },
+  {
+    "name": "South Indian dishes",
+    "count": 75
+  },
+  {
+    "name": "Dry Fruits",
+    "count": 74
+  },
+  {
+    "name": "Spreads & Condiments",
+    "count": 72
+  },
+  {
+    "name": "Branded Coffee, Tea & Hot Drinks",
+    "count": 70
+  },
+  {
+    "name": "Branded Noodles & Instant Pasta",
+    "count": 70
+  },
+  {
+    "name": "Cakes & Cake Varieties",
+    "count": 68
+  },
+  {
+    "name": "Oats, Cereals & Healthy Breakfast Foods",
+    "count": 66
+  },
+  {
+    "name": "Protein-Related Products",
+    "count": 61
+  },
+  {
+    "name": "Nuts & Seeds",
+    "count": 60
+  },
+  {
+    "name": "Gym Supplements",
+    "count": 59
+  },
+  {
+    "name": "Branded soft drink",
+    "count": 50
+  },
+  {
+    "name": "Dairy Products",
+    "count": 50
+  },
+  {
+    "name": "Beverages",
+    "count": 36
+  },
+  {
+    "name": "Seafood",
+    "count": 31
+  },
+  {
+    "name": "Oil Types",
+    "count": 29
+  },
+  {
+    "name": "Mutton/Lamb",
+    "count": 22
+  },
+  {
+    "name": "Chicken",
+    "count": 20
+  }
+]
