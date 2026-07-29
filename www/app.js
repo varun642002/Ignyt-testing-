@@ -4601,6 +4601,10 @@ const state = {
   authFormMode: null, // transient — null|"signin"|"signup"|"forgot" when the email auth form is open in Settings
   authSeen: LS.get("hx_auth_seen", false), // the Sign In screen has been passed, by signing in or skipping
   authPhone: "",      // transient — the number being typed on the Sign In screen
+  /* AI scan overlay. Transient by design: a half-reviewed scan should not survive an app
+     restart, because the photo it came from does not either — restoring the numbers without
+     the picture would leave someone confirming macros they can no longer check. */
+  aiScan: null,       // { phase:"loading"|"error"|"review", message, retryable, foods[], meal }
   nativeNotifPermissionGranted: null, // transient — null=unknown yet, refreshed from IgnytNotify at boot
   plateCalcOpen: null, // element id string when plate calc popover open
   restDuration: LS.get("hx_rest_duration",90),
@@ -8815,6 +8819,7 @@ function renderApp(){
     ${renderTimerOverlay()}
     ${renderHoldTimerOverlay()}
     ${renderToast()}
+    ${renderAiScanOverlay()}
     ${renderConfirmDialog()}
     ${renderLegalViewer()}
     <nav class="bottom-nav ${isLightTab?'bottom-nav--home-light':''}">
@@ -13194,6 +13199,9 @@ function renderKeepingScroll(){
 function openFoodSearch(meal){
   // Captured here so returning from anywhere in the flow lands back on this exact offset.
   captureNutritionScroll();
+  // Ask the backend what this account may actually do, once per open. Async on purpose: the
+  // screen must not wait on a network call to render its search box.
+  refreshAiScanStatus();
   state.foodFlow = { screen:"search", meal: meal || mealForNow(), foodId:null, notes:"" };
   state.foodSearchQuery = "";
   state.foodSearchSelected = null;
@@ -13270,6 +13278,328 @@ function foodPageHeader(title, subtitle, trailing){
   </div>`;
 }
 
+/* =========================================================
+   AI FOOD SCAN — the Food Log surface
+
+   Four ways in, per the brief: AI Scan, Camera, Gallery, Manual Entry — plus the barcode
+   button that already lived in the header. AI Scan and Camera differ only in whether the
+   picker opens the camera directly, so they share one path.
+
+   WHAT IS SHOWN DEPENDS ON WHAT IS TRUE. The row asks the backend once for scan-status and
+   then renders the honest thing: the allowance when scanning is available, "Premium" when the
+   account is not entitled, and nothing at all when the server has no key configured. An
+   always-visible button that fails on tap is worse than no button.
+========================================================= */
+
+/* Cached so the row can render synchronously. Refreshed on open and after each scan. */
+let _aiScanStatus = null;
+
+function aiScanAvailable(){
+  return !!(window.IgnytAiScan && _aiScanStatus && _aiScanStatus.ai_configured);
+}
+
+function renderAiScanRow(){
+  if(!window.IgnytAiScan) return "";
+  const st = _aiScanStatus;
+
+  // Never configured on the server: no scan entry points at all, just manual paths.
+  const aiOff = st && !st.ai_configured;
+  const locked = st && st.ai_configured && !st.is_premium;
+  const remaining = st ? st.remaining : null;
+
+  const btn = (kind, icon, label, extra) =>
+    `<button class="ai-act" data-ai-act="${kind}" ${extra||''}>
+       <span class="ai-act__icon" aria-hidden="true">${icon}</span>
+       <span class="ai-act__label">${label}</span>
+     </button>`;
+
+  return `<div class="ai-scan-row">
+    <div class="ai-scan-row__grid">
+      ${aiOff ? "" : btn("scan", "📷", locked ? "AI Scan 🔒" : "AI Scan Food")}
+      ${aiOff ? "" : btn("gallery", "🖼", "Gallery")}
+      ${btn("barcode", "▤", "Barcode")}
+      ${btn("manual", "⌨", "Manual")}
+    </div>
+    ${st && st.ai_configured && st.is_premium ? `
+      <div class="ai-scan-row__quota">
+        <span>AI Scans Today</span>
+        <strong>${remaining} / ${st.daily_limit} Remaining</strong>
+      </div>` : ""}
+    ${locked ? `<div class="ai-scan-row__quota"><span>AI food scanning is a Premium feature</span></div>` : ""}
+  </div>`;
+}
+
+/* The overlay: one element covering loading, error and review. Kept as a single render so
+   there is no chance of two of these being on screen at once. */
+function renderAiScanOverlay(){
+  const s = state.aiScan;
+  if(!s || !s.phase) return "";
+
+  if(s.phase === "loading"){
+    return `<div class="ai-sheet" role="dialog" aria-live="polite" aria-label="Analysing your meal">
+      <div class="ai-sheet__box ai-sheet__box--center">
+        <div class="ai-spinner" aria-hidden="true"></div>
+        <div class="ai-sheet__msg">${escHtml(s.message || "Analyzing your meal…")}</div>
+        <div class="ai-sheet__hint">This usually takes a few seconds.</div>
+      </div>
+    </div>`;
+  }
+
+  if(s.phase === "error"){
+    return `<div class="ai-sheet" role="dialog" aria-label="Scan failed">
+      <div class="ai-sheet__box ai-sheet__box--center">
+        <div style="font-size:40px;line-height:1;">😕</div>
+        <div class="ai-sheet__msg">${escHtml(s.message)}</div>
+        <div class="ai-sheet__actions">
+          ${s.retryable ? `<button class="btn btn-accent btn-block" data-ai-act="retry">Try again</button>` : ""}
+          <button class="btn btn-ghost btn-block" data-ai-act="manual">Enter manually</button>
+          <button class="btn btn-ghost btn-block" data-ai-act="close">Close</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // review
+  const foods = s.foods || [];
+  return `<div class="ai-sheet" role="dialog" aria-label="Review scanned foods">
+    <div class="ai-sheet__box">
+      <div class="ai-sheet__head">
+        <strong>${foods.length} item${foods.length===1?'':'s'} found</strong>
+        <button class="ai-sheet__x" data-ai-act="close" aria-label="Close">✕</button>
+      </div>
+      <div class="ai-sheet__meal">
+        ${IgnytAiScan.MEAL_TYPES.map(m=>
+          `<button class="ai-chip ${s.meal===m?'is-on':''}" data-ai-meal="${escHtml(m)}">${escHtml(m)}</button>`
+        ).join("")}
+      </div>
+      <div class="ai-sheet__scroll">
+        ${foods.map((f,i)=>renderAiFoodCard(f,i)).join("")}
+      </div>
+      <button class="btn btn-accent btn-block" data-ai-act="save-all">
+        Add ${foods.filter(f=>!f.skipped).length} to ${escHtml(s.meal)}
+      </button>
+    </div>
+  </div>`;
+}
+
+function renderAiFoodCard(f, i){
+  const grams = Math.round(f.grams);
+  const n = IgnytAiScan.scaleTo(f.nutrition, grams);
+  const src = f.nutrition_source;
+  const badge = src === "local" ? ["Database", "ok"]
+              : src === "community" ? ["Community", "ok"]
+              : src === "ai_estimate" ? ["AI Estimated", "est"]
+              : ["No nutrition data", "none"];
+  const pct = (v) => Math.round((v||0)*100);
+
+  return `<div class="ai-food ${f.skipped?'is-skipped':''}">
+    <div class="ai-food__top">
+      <div style="flex:1;min-width:0;">
+        <div class="ai-food__name">${escHtml(f.name)}</div>
+        <div class="ai-food__meta">
+          <span class="ai-badge ai-badge--${badge[1]}">${badge[0]}</span>
+          <span>${pct(f.confidence)}% match</span>
+          ${f.nutrition_confidence!=null && src==="ai_estimate" ? `<span>· ${pct(f.nutrition_confidence)}% nutrition</span>` : ""}
+        </div>
+      </div>
+      <button class="ai-food__skip" data-ai-skip="${i}" aria-label="${f.skipped?'Include':'Remove'}">${f.skipped?'＋':'✕'}</button>
+    </div>
+
+    ${n ? `<div class="ai-food__macros">
+      <span><strong>${Math.round(n.calories)}</strong> kcal</span>
+      <span><strong>${n.protein==null?'—':n.protein}</strong> P</span>
+      <span><strong>${n.carbs==null?'—':n.carbs}</strong> C</span>
+      <span><strong>${n.fat==null?'—':n.fat}</strong> F</span>
+    </div>` : `<div class="ai-food__macros"><span style="color:var(--muted);">Add the numbers by hand after saving.</span></div>`}
+
+    <div class="ai-food__portions">
+      ${IgnytAiScan.PORTIONS.map(p=>{
+        const g = Math.round(f.estimated_grams * p.mult);
+        return `<button class="ai-chip ${grams===g?'is-on':''}" data-ai-portion="${i}|${g}">${p.label}</button>`;
+      }).join("")}
+      <span class="ai-food__grams">${grams} g</span>
+    </div>
+    <input type="range" class="ai-range" min="10" max="${Math.max(600, Math.round(f.estimated_grams*3))}"
+      step="5" value="${grams}" data-ai-grams="${i}" aria-label="Portion in grams for ${escHtml(f.name)}">
+  </div>`;
+}
+
+/* ---- AI scan: actions ------------------------------------------------------------- */
+
+/** Fetch scan-status once per open. Failure is silent and non-blocking: the row simply does
+ *  not offer AI, and the rest of the food screen is unaffected. */
+async function refreshAiScanStatus(){
+  if(!window.IgnytAiScan) return;
+  try{
+    _aiScanStatus = await IgnytAiScan.status(true);
+  }catch(e){
+    // Offline, signed out, or no backend. All mean the same thing here: no AI row.
+    _aiScanStatus = { ai_configured:false, is_premium:false, daily_limit:0, used_today:0, remaining:0 };
+  }
+  if(state.foodFlow && state.foodFlow.screen === "search") render();
+}
+
+async function startAiScan(source){
+  const meal = (state.foodFlow && state.foodFlow.meal) || mealForNow();
+
+  let file;
+  try{
+    file = await IgnytAiScan.pickImage(source);
+  }catch(e){ return; }
+  if(!file) return;                       // the user backed out of the picker
+
+  state.aiScan = { phase:"loading", message:IgnytAiScan.LOADING_STEPS[0], meal, source };
+  render();
+
+  try{
+    const res = await IgnytAiScan.scan(file, (msg)=>{
+      // Update the line in place. A full render here would restart the spinner animation on
+      // every tick, which reads as a stutter rather than progress.
+      if(state.aiScan && state.aiScan.phase === "loading"){
+        state.aiScan.message = msg;
+        const el = document.querySelector(".ai-sheet__msg");
+        if(el) el.textContent = msg;
+      }
+    });
+
+    _aiScanStatus = null;
+    refreshAiScanStatus();
+
+    state.aiScan = {
+      phase: "review",
+      meal: res.meal_type && IgnytAiScan.MEAL_TYPES.includes(res.meal_type) ? res.meal_type : meal,
+      foods: (res.foods||[]).map(f=>({
+        name: f.name,
+        estimated_grams: f.estimated_grams || 100,
+        grams: f.estimated_grams || 100,
+        confidence: f.confidence,
+        nutrition_confidence: f.nutrition_confidence,
+        nutrition_source: f.nutrition_source,
+        nutrition: f.nutrition || null,
+        foodId: f.foodId || null,
+        skipped: false
+      }))
+    };
+  }catch(err){
+    state.aiScan = {
+      phase: "error",
+      message: IgnytAiScan.messageFor(err),
+      retryable: IgnytAiScan.isRetryable(err),
+      meal, source
+    };
+  }
+  render();
+}
+
+/** Commit the reviewed foods to the log. */
+async function saveAiScanFoods(){
+  const s = state.aiScan;
+  if(!s || s.phase !== "review") return;
+  const keep = s.foods.filter(f=>!f.skipped);
+  if(!keep.length){ state.aiScan = null; render(); return; }
+
+  let added = 0;
+  for(const f of keep){
+    const n = IgnytAiScan.scaleTo(f.nutrition, f.grams) || {};
+    state.foodLog.unshift({
+      id: nextId(),
+      date: nutritionDateStr(),
+      name: f.name,
+      meal: s.meal,
+      grams: Math.round(f.grams),
+      quantity: Math.round(f.grams),
+      servingUnit: "g",
+      calories: Math.round(n.calories||0),
+      protein: Number(n.protein||0),
+      carbs: Number(n.carbs||0),
+      fat: Number(n.fat||0),
+      fibre: Number(n.fibre||0),
+      // Provenance, so the entry can be told apart from a hand-typed one later.
+      foodId: f.foodId || null,
+      aiScanned: true,
+      at: Date.now()
+    });
+    added++;
+
+    /* An AI estimate the user just accepted becomes a community food, so the next scan of it
+       is a database hit rather than another model call. Fire-and-forget: this is an
+       improvement to the shared catalogue, and failing it must not fail the user's log entry. */
+    if(f.nutrition_source === "ai_estimate" && f.nutrition && f.nutrition.calories != null){
+      IgnytAiScan.confirmFood({
+        name: f.name,
+        calories: f.nutrition.calories, protein: f.nutrition.protein,
+        carbs: f.nutrition.carbs, fat: f.nutrition.fat,
+        fibre: f.nutrition.fibre, sugar: f.nutrition.sugar,
+        serving_grams: Math.round(f.grams)
+      }).catch(()=>{});
+    }
+  }
+
+  state.aiScan = null;
+  state.mealOpen = s.meal;
+  closeFoodFlow();
+  persist();
+  showToast(added + (added===1?" food":" foods") + " added to " + s.meal + ".", "success", render);
+  render();
+}
+
+function bindAiScanHandlers(){
+  document.querySelectorAll("[data-ai-act]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const kind = el.dataset.aiAct;
+      if(kind === "scan")     return startAiScan("camera");
+      if(kind === "gallery")  return startAiScan("gallery");
+      if(kind === "retry")    return startAiScan((state.aiScan && state.aiScan.source) || "camera");
+      if(kind === "barcode")  { state.aiScan = null; render(); const b = document.querySelector("[data-food-scan]"); if(b) b.click(); return; }
+      if(kind === "manual")   { state.aiScan = null; state.manualEntryOpen = true; render(); return; }
+      if(kind === "close")    { state.aiScan = null; render(); return; }
+      if(kind === "save-all") return saveAiScanFoods();
+    });
+  });
+
+  document.querySelectorAll("[data-ai-meal]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.aiScan.meal = el.dataset.aiMeal; render(); });
+  });
+
+  document.querySelectorAll("[data-ai-skip]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const f = state.aiScan.foods[Number(el.dataset.aiSkip)];
+      f.skipped = !f.skipped;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-ai-portion]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const [i, g] = el.dataset.aiPortion.split("|");
+      state.aiScan.foods[Number(i)].grams = Number(g);
+      render();
+    });
+  });
+
+  /* Same rule as the onboarding sliders: `input` updates the numbers in place, only `change`
+     re-renders. Re-rendering mid-drag replaces the slider and the gesture is lost. */
+  document.querySelectorAll("[data-ai-grams]").forEach(el=>{
+    const i = Number(el.dataset.aiGrams);
+    el.addEventListener("input", ()=>{
+      const f = state.aiScan.foods[i];
+      f.grams = Number(el.value);
+      const card = el.closest(".ai-food");
+      const n = IgnytAiScan.scaleTo(f.nutrition, f.grams);
+      const g = card && card.querySelector(".ai-food__grams");
+      if(g) g.textContent = Math.round(f.grams) + " g";
+      const cells = card && card.querySelectorAll(".ai-food__macros strong");
+      if(cells && cells.length === 4 && n){
+        cells[0].textContent = Math.round(n.calories);
+        cells[1].textContent = n.protein==null?"—":n.protein;
+        cells[2].textContent = n.carbs==null?"—":n.carbs;
+        cells[3].textContent = n.fat==null?"—":n.fat;
+      }
+    });
+    el.addEventListener("change", ()=>{ state.aiScan.foods[i].grams = Number(el.value); render(); });
+  });
+}
+
 function renderFoodSearchPage(){
   const flow = state.foodFlow;
   const meal = flow.meal;
@@ -13292,6 +13622,8 @@ function renderFoodSearchPage(){
       ${state.foodSearchQuery?`<button class="food-search-bar__clear" data-food-clear="1" aria-label="Clear search">✕</button>`:""}
       <button class="food-search-bar__voice" data-food-voice="1" aria-label="Voice search">🎙</button>
     </div>
+
+    ${renderAiScanRow()}
 
     <div id="food-search-results">${foodSearchResultsHtml(meal)}</div>
 
@@ -18099,6 +18431,7 @@ function attachHandlers(){
   // re-running cannot double-bind. The search <input> above is deliberately NOT in there — it
   // survives the swap, and rebinding it would make every keystroke fire twice.
   bindFoodResultHandlers();
+  bindAiScanHandlers();
 
   /* ---- Food logging flow routes ---- */
   document.querySelectorAll("[data-meal-add]").forEach(el=>{

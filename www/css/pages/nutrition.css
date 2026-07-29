@@ -897,3 +897,130 @@ main{ -webkit-overflow-scrolling: touch; }
 @media (prefers-reduced-motion: reduce){
   .variant-body, .variant-toggle__chev{ transition: none !important; }
 }
+
+/* =========================================================
+   AI FOOD SCAN
+
+   The action row sits between the search bar and the results. It is a row of equal tiles
+   rather than one big button because the four ways in are peers — scanning is not more
+   important than typing, it is just faster when it works.
+========================================================= */
+.ai-scan-row{ margin: var(--space-sm) 0; }
+.ai-scan-row__grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+
+.ai-act{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  min-height:70px; padding:10px 4px;
+  border:1px solid var(--border); border-radius:var(--radius-btn);
+  background:var(--surface); color:var(--text); font:inherit; cursor:pointer;
+  box-shadow:var(--shadow-sm);
+  transition:transform .14s cubic-bezier(.34,1.4,.64,1), border-color .16s ease;
+}
+.ai-act:active{ transform:scale(.96); border-color:var(--primary); }
+.ai-act__icon{ font-size:20px; line-height:1; }
+.ai-act__label{ font-size:11px; font-weight:700; text-align:center; line-height:1.2; }
+
+.ai-scan-row__quota{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  margin-top:8px; padding:8px 12px;
+  border-radius:var(--radius-btn); background:var(--surface-alt);
+  font-size:11.5px; color:var(--muted);
+}
+.ai-scan-row__quota strong{ color:var(--primary); font-variant-numeric:tabular-nums; }
+
+/* ---- the overlay ---- */
+.ai-sheet{
+  position:fixed; inset:0; z-index:80;
+  display:flex; align-items:flex-end; justify-content:center;
+  background:rgba(0,0,0,.55); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+  animation:aiFade .18s ease;
+}
+@keyframes aiFade{ from{ opacity:0 } to{ opacity:1 } }
+
+.ai-sheet__box{
+  width:100%; max-width:480px; max-height:88dvh;
+  display:flex; flex-direction:column;
+  background:var(--surface); color:var(--text);
+  border-radius:var(--radius-card) var(--radius-card) 0 0;
+  padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));
+  box-shadow:0 -8px 40px rgba(0,0,0,.35);
+  animation:aiRise .26s cubic-bezier(.22,.9,.28,1);
+}
+.ai-sheet__box--center{ align-items:center; text-align:center; padding-top:32px; padding-bottom:32px; }
+@keyframes aiRise{ from{ transform:translateY(22px); opacity:0 } to{ transform:none; opacity:1 } }
+
+.ai-sheet__msg{ font-size:15px; font-weight:700; margin-top:16px; }
+.ai-sheet__hint{ font-size:12px; color:var(--muted); margin-top:6px; }
+.ai-sheet__actions{ width:100%; margin-top:20px; display:flex; flex-direction:column; gap:8px; }
+
+.ai-spinner{
+  width:44px; height:44px; border-radius:50%;
+  border:3px solid var(--surface-alt); border-top-color:var(--primary);
+  animation:aiSpin .8s linear infinite;
+}
+@keyframes aiSpin{ to{ transform:rotate(360deg) } }
+
+.ai-sheet__head{
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:15px; padding-bottom:10px;
+}
+.ai-sheet__x{
+  width:32px; height:32px; border:0; border-radius:50%;
+  background:var(--surface-alt); color:var(--muted); font-size:14px; cursor:pointer;
+}
+.ai-sheet__meal{ display:flex; gap:6px; overflow-x:auto; padding-bottom:10px; scrollbar-width:none; }
+.ai-sheet__meal::-webkit-scrollbar{ display:none; }
+.ai-sheet__scroll{ overflow-y:auto; flex:1; margin-bottom:12px; }
+
+.ai-chip{
+  flex-shrink:0; padding:7px 12px; border-radius:999px;
+  border:1px solid var(--border); background:var(--surface-alt);
+  color:var(--muted); font:inherit; font-size:11.5px; font-weight:700; cursor:pointer;
+}
+.ai-chip.is-on{ background:var(--primary); border-color:var(--primary); color:var(--on-primary); }
+
+.ai-food{
+  border:1px solid var(--border); border-radius:var(--radius-btn);
+  padding:12px; margin-bottom:8px; background:var(--surface);
+}
+/* Skipped rather than removed: the food stays visible so it can be put back, which a
+   deleted row could not be. */
+.ai-food.is-skipped{ opacity:.45; }
+.ai-food__top{ display:flex; align-items:flex-start; gap:10px; }
+.ai-food__name{ font-size:14px; font-weight:700; }
+.ai-food__meta{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:11px; color:var(--muted); margin-top:4px; }
+.ai-food__skip{
+  width:30px; height:30px; flex:0 0 30px; border:0; border-radius:50%;
+  background:var(--surface-alt); color:var(--muted); font-size:13px; cursor:pointer;
+}
+
+/* The source badge is the honest bit: a stored record and a model's guess must not look the
+   same, because only one of them is worth trusting without checking. */
+.ai-badge{ padding:2px 7px; border-radius:999px; font-size:10px; font-weight:800; letter-spacing:.02em; }
+.ai-badge--ok{ background:rgba(62,207,142,.15); color:var(--mint); }
+.ai-badge--est{ background:var(--primary-soft); color:var(--primary); }
+.ai-badge--none{ background:var(--surface-alt); color:var(--muted); }
+
+.ai-food__macros{
+  display:flex; gap:14px; margin-top:10px;
+  font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums;
+}
+.ai-food__macros strong{ color:var(--text); font-size:14px; }
+
+.ai-food__portions{ display:flex; align-items:center; gap:6px; margin-top:12px; }
+.ai-food__grams{ margin-left:auto; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
+
+.ai-range{ -webkit-appearance:none; appearance:none; width:100%; height:26px; background:transparent; margin-top:4px; }
+.ai-range::-webkit-slider-runnable-track{ height:4px; border-radius:999px; background:var(--surface-alt); }
+.ai-range::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none; width:20px; height:20px; border-radius:50%;
+  margin-top:-8px; background:var(--primary); border:2px solid var(--surface);
+}
+.ai-range::-moz-range-track{ height:4px; border-radius:999px; background:var(--surface-alt); }
+.ai-range::-moz-range-thumb{ width:16px; height:16px; border-radius:50%; background:var(--primary); border:2px solid var(--surface); }
+
+@media (prefers-reduced-motion: reduce){
+  .ai-sheet, .ai-sheet__box{ animation:none; }
+  .ai-spinner{ animation-duration:2s; }
+  .ai-act{ transition:none; }
+}
