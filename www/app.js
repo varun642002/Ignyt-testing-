@@ -4110,8 +4110,13 @@ const TRAINING_STYLE_OPTIONS = ["Push Pull Legs","Upper Lower","Full Body","Bro 
 const PREFERRED_CARDIO_OPTIONS = ["Walking","Jogging","Running","Cycling","Swimming","Rowing","Elliptical",
   "Stair Climber","HIIT","No Cardio"];
 
-const ONBOARDING_STEP_TITLES = ["Fair Use Policy","Birthday","Gender","Height","Weight",
-  "Fitness Goal","Activity Level","Diet Preference","Workout Preference","Health Connect",
+/* Health Connect sits at step 2, immediately after the policy and ahead of the personal
+   questions. It was step 10, which meant a user answered ten screens before being offered the
+   one thing that can fill several of them in automatically — and by then most people have
+   already committed to typing. Asking first also means steps/weight/sleep start flowing from
+   the user's first session rather than whenever they later find the toggle. */
+const ONBOARDING_STEP_TITLES = ["Fair Use Policy","Health Connect","Birthday","Gender","Height",
+  "Weight","Fitness Goal","Activity Level","Diet Preference","Workout Preference",
   "AI Personalization"];
 
 /* The brief's six goals, mapped onto the calorie deltas this app already applies. The keys
@@ -4611,6 +4616,8 @@ const state = {
   authFormMode: null, // transient — null|"signin"|"signup"|"forgot" when the email auth form is open in Settings
   authSeen: LS.get("hx_auth_seen", false), // the Sign In screen has been passed, by signing in or skipping
   authPhone: "",      // transient — the number being typed on the Sign In screen
+  authOtpSent: false, // transient — Sign In screen is on the code-entry step
+  authOtpCode: "",    // transient — the 6-digit code being typed (never persisted)
   nativeNotifPermissionGranted: null, // transient — null=unknown yet, refreshed from IgnytNotify at boot
   plateCalcOpen: null, // element id string when plate calc popover open
   restDuration: LS.get("hx_rest_duration",90),
@@ -9097,7 +9104,6 @@ function renderApp(){
       ${navBtn("nutrition","Food Log")}
       ${navBtn("progress","Progress")}
       ${navBtn("profile","Profile")}
-      ${navBtn("tools","Tools")}
     </nav>
   `;
   const main = document.getElementById("main");
@@ -9180,6 +9186,7 @@ function renderToolsTab(){
   return `
     <div class="pg-light">
       <div class="pg-header">
+        <button class="pg-back" data-nav="profile" aria-label="Back to Profile">‹</button>
         <div class="pg-header__title">Tools</div>
         <div class="pg-header__sub">Everything you need to train smarter</div>
       </div>
@@ -9300,6 +9307,11 @@ function renderProfileTab(){
         <button class="tl-card" data-action="open-personal-info"><span class="tl-card__icon">${svg('body',20)}</span><div class="tl-card__body"><div class="tl-card__label">Personal Information</div><div class="tl-card__desc">Update your profile details</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-nav="goals"><span class="tl-card__icon">${svg('target',20)}</span><div class="tl-card__body"><div class="tl-card__label">Fitness Goals</div><div class="tl-card__desc">View and edit your goals</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-open-progress-view="achievements"><span class="tl-card__icon">${svg('trophy',20)}</span><div class="tl-card__body"><div class="tl-card__label">Achievements</div><div class="tl-card__desc">Badges, milestones &amp; records</div></div><span class="tl-card__chev">›</span></button>
+      </div>
+
+      <div class="rh-section-head"><span>Tools</span></div>
+      <div class="tl-grid" style="grid-template-columns:1fr;">
+        <button class="tl-card" data-nav="tools"><span class="tl-card__icon" style="color:var(--rh-blue);background:rgba(37,99,235,.1);">${svg('more',20)}</span><div class="tl-card__body"><div class="tl-card__label">All Tools</div><div class="tl-card__desc">Calculators, Insights, Health Connect &amp; more</div></div><span class="tl-card__chev">›</span></button>
       </div>
 
       <div class="rh-section-head"><span>Data &amp; Settings</span></div>
@@ -10977,9 +10989,18 @@ function obComputePlan(){
 }
 
 const ONBOARDING_STEP_RENDERERS = [
-  obFairUse, obBirthday, obGender, obHeight, obWeight, obGoal,
-  obActivity, obDiet, obWorkoutPref, obHealthConnect, obPersonalization
+  obFairUse, obHealthConnect, obBirthday, obGender, obHeight, obWeight, obGoal,
+  obActivity, obDiet, obWorkoutPref, obPersonalization
 ];
+
+/* Step gates and the Health Connect auto-advance used to compare against literal step numbers
+   (=== 1, === 9, === 10). Moving Health Connect from step 10 to step 2 silently pointed all of
+   them at the wrong screens — the workout gate would have fired on Diet, and the auto-advance
+   on nothing at all. Deriving the index from the array above makes the ORDER the single source
+   of truth, so a future reorder cannot desynchronise them again. */
+function obStepIndexOf(renderer){
+  return ONBOARDING_STEP_RENDERERS.indexOf(renderer) + 1;
+}
 
 /* =========================================================
    SIGN IN
@@ -11012,6 +11033,13 @@ function renderSignInScreen(){
   const root = document.getElementById("app");
   const phone = state.authPhone || "";
   const ready = phone.replace(/\D/g, "").length >= 10;
+  const auth = window.IgnytAuth;
+  // Busy and error come from IgnytAuth, not local state, so there is exactly one source of
+  // truth for "a call is in flight" and it cannot get out of step with the native layer.
+  const busy = !!(auth && auth.isBusy());
+  const errMsg = auth && auth.getError();
+  const otpStep = !!state.authOtpSent;
+  const authErr = errMsg ? `<div class="auth-err" role="alert">${escHtml(errMsg)}</div>` : "";
 
   root.innerHTML = `
     <div class="auth">
@@ -11033,16 +11061,32 @@ function renderSignInScreen(){
         </div>
         <p class="auth-brand__sub">Your AI-powered fitness companion for a stronger, healthier life.</p>
 
-        <div class="auth-field">
-          <button class="auth-field__cc" type="button" data-auth="country" aria-label="Select country code">
-            <span class="auth-field__flag">🇮🇳</span><span>+91</span><span class="auth-field__chev">▼</span>
-          </button>
-          <input class="auth-field__input" type="tel" inputmode="numeric" autocomplete="tel"
-                 maxlength="10" placeholder="Enter mobile number" data-auth="phone"
-                 value="${escHtml(phone)}" aria-label="Mobile number">
-        </div>
-
-        <button class="auth-cta" data-auth="otp" ${ready ? "" : "disabled"}>Send OTP</button>
+        ${otpStep ? `
+          <div class="auth-otp__sent">
+            Code sent to <b>+91 ${escHtml(phone)}</b>
+            <button class="auth-otp__change" data-auth="otp-change" type="button">Change</button>
+          </div>
+          <input class="auth-otp__input" type="tel" inputmode="numeric" autocomplete="one-time-code"
+                 maxlength="6" placeholder="······" data-auth="code"
+                 value="${escHtml(state.authOtpCode || "")}" aria-label="6-digit code">
+          ${authErr}
+          <button class="auth-cta" data-auth="verify" ${busy || (state.authOtpCode || "").length < 6 ? "disabled" : ""}>
+            ${busy ? "Verifying…" : "Verify &amp; Continue"}</button>
+          <button class="auth-otp__resend" data-auth="resend" type="button" ${busy ? "disabled" : ""}>
+            Didn't get it? Resend code</button>
+        ` : `
+          <div class="auth-field">
+            <button class="auth-field__cc" type="button" data-auth="country" aria-label="Select country code">
+              <span class="auth-field__flag">🇮🇳</span><span>+91</span><span class="auth-field__chev">▼</span>
+            </button>
+            <input class="auth-field__input" type="tel" inputmode="numeric" autocomplete="tel"
+                   maxlength="10" placeholder="Enter mobile number" data-auth="phone"
+                   value="${escHtml(phone)}" aria-label="Mobile number">
+          </div>
+          ${authErr}
+          <button class="auth-cta" data-auth="otp" ${ready && !busy ? "" : "disabled"}>
+            ${busy ? "Sending…" : "Send OTP"}</button>
+        `}
 
         <div class="auth-div">OR Continue with</div>
 
@@ -11056,9 +11100,9 @@ function renderSignInScreen(){
           <a href="legal/privacy-policy.html" data-auth="privacy">Privacy Policy</a>
           and <a href="legal/privacy-policy.html" data-auth="terms">Terms of Service</a>.
           <br>
-          <!-- Not in the reference, and not optional. Phone OTP has no provider wired up yet, so
-               without this a new user whose only working option is Google would be stuck
-               outside the app if they do not use it. A way through matters more than matching the mockup exactly. -->
+          <!-- Not in the reference, and not optional. Every provider here can fail for reasons
+               the user cannot fix from this screen (no SMS coverage, no Play Services, SMS
+               quota exhausted). A way through matters more than matching the mockup exactly. -->
           <button class="auth-legal__skip" data-auth="skip">Continue without signing in</button>
         </p>
       </div>
@@ -11082,9 +11126,26 @@ function bindSignInScreen(){
     });
   }
 
+  /* Same no-re-render rule as the phone field: update state on keystroke and toggle the
+     button's disabled flag by hand. Re-rendering here would blow away the focused field and
+     drop the keyboard mid-code, which is precisely the bug this pattern exists to avoid. */
+  const codeInput = document.querySelector('[data-auth="code"]');
+  if(codeInput){
+    const verifyBtn = document.querySelector('[data-auth="verify"]');
+    codeInput.addEventListener("input", ()=>{
+      const digits = codeInput.value.replace(/\D/g, "").slice(0, 6);
+      if(codeInput.value !== digits) codeInput.value = digits;
+      state.authOtpCode = digits;
+      if(verifyBtn) verifyBtn.disabled = digits.length < 6;
+      // Android's SMS autofill drops all six in at once; verify without a second tap.
+      if(digits.length === 6) signInAction("verify");
+    });
+    codeInput.focus();
+  }
+
   document.querySelectorAll("[data-auth]").forEach(el=>{
     const kind = el.dataset.auth;
-    if(kind === "phone") return;
+    if(kind === "phone" || kind === "code") return;
     el.addEventListener("click", (e)=>{
       if(kind === "privacy" || kind === "terms") return;   // real links, let them navigate
       e.preventDefault();
@@ -11099,8 +11160,17 @@ function bindSignInScreen(){
 function signInAction(kind){
   const auth = window.IgnytAuth;
   if(kind === "google"){
-    if(auth && auth.signIn) { auth.signIn(); return; }
-    showToast("Google sign-in isn't available in this build.", "error", render);
+    if(!auth || !auth.signIn){
+      showToast("Google sign-in isn't available in this build.", "error", render);
+      return;
+    }
+    // Was fire-and-forget: the promise was dropped, so a successful Google sign-in updated the
+    // account but never advanced past this screen. Await it and route through completeSignIn
+    // like every other provider.
+    auth.signIn().then(res=>{
+      if(res && res.success && res.data && res.data.user) completeSignIn(res.data.user);
+      else if(res && res.error) showToast(res.error, "error", render);
+    });
     return;
   }
   if(kind === "email"){
@@ -11110,8 +11180,15 @@ function signInAction(kind){
     render();
     return;
   }
-  if(kind === "otp"){
-    showToast("Phone OTP needs a provider — not wired up yet.", "info", render);
+  if(kind === "otp" || kind === "resend"){ requestOtp(kind === "resend"); return; }
+  if(kind === "verify"){ submitOtp(); return; }
+  if(kind === "otp-change"){
+    // Back to the number field. The pending verification id is abandoned on purpose — a code
+    // sent to the old number must not validate against a new one.
+    state.authOtpSent = false;
+    state.authOtpCode = "";
+    if(auth && auth.clearError) auth.clearError();
+    render();
     return;
   }
   if(kind === "country"){
@@ -11119,6 +11196,83 @@ function signInAction(kind){
     return;
   }
   if(kind === "skip") skipSignIn();
+}
+
+/* Phone sign-in, step 1. Every exit path either advances the step or surfaces an error —
+   there is no branch that leaves the button spinning, which is what "stuck on Signing in…"
+   means in practice. IgnytAuth clears its own busy flag in a finally block and re-renders. */
+async function requestOtp(isResend){
+  const auth = window.IgnytAuth;
+  const digits = (state.authPhone || "").replace(/\D/g, "");
+  if(digits.length < 10){ showToast("Enter a 10-digit mobile number.", "error", render); return; }
+  if(!auth || !auth.sendOtp){
+    showToast("Phone sign-in isn't available in this build.", "error", render);
+    return;
+  }
+  console.log("[auth] OTP requested for +91" + digits + (isResend ? " (resend)" : ""));
+  const res = await auth.sendOtp("+91" + digits, { resend: !!isResend });
+  if(res && res.success){
+    console.log("[auth] OTP sent; verificationId received");
+    state.authOtpSent = true;
+    state.authOtpCode = "";
+    render();
+    // Auto-retrieval already read the SMS — finish without making the user type it.
+    if(res.data && res.data.autoVerified){
+      console.log("[auth] SMS auto-retrieved, verifying immediately");
+      state.authOtpCode = res.data.smsCode || "";
+      submitOtp();
+    }
+  } else {
+    // The error is already in IgnytAuth and rendered inline by renderSignInScreen; the toast
+    // is for the case where the user's eyes are on the button rather than the field.
+    console.warn("[auth] OTP request failed:", res && res.error);
+    showToast((res && res.error) || "Could not send the code.", "error", render);
+  }
+}
+
+/** Phone sign-in, step 2: verify, persist, then navigate. */
+async function submitOtp(){
+  const auth = window.IgnytAuth;
+  if(!auth || !auth.verifyOtp) return;
+  const code = (state.authOtpCode || "").replace(/\D/g, "");
+  console.log("[auth] verifying OTP");
+  const res = await auth.verifyOtp(code);
+  if(res && res.success && res.data && res.data.user){
+    console.log("[auth] Firebase sign-in successful, uid=" + res.data.user.uid);
+    completeSignIn(res.data.user);
+  } else {
+    console.warn("[auth] OTP verification failed:", res && res.error);
+    state.authOtpCode = "";
+    // An expired verification id cannot be retried — send the user back to request a new code
+    // instead of letting them retype into something that can never validate.
+    if(!auth.hasPendingOtp || !auth.hasPendingOtp()) state.authOtpSent = false;
+    render();
+    showToast((res && res.error) || "Could not verify the code.", "error", render);
+  }
+}
+
+/* The single place that decides what happens after ANY successful sign-in. Google, email and
+   phone all land here, so navigation can never work on one path and silently not on another.
+   IgnytAuth has already persisted the session (saveAccount + ignyt:auth-changed). */
+function completeSignIn(user){
+  state.authSeen = true;
+  LS.set("hx_auth_seen", true);
+  state.authOtpSent = false;
+  state.authOtpCode = "";
+  state.authPhone = "";
+  /* Seed the profile name from the account, but never overwrite one the user already set.
+     Wrapped because nothing optional here may block navigation: an exception thrown between
+     "signed in" and render() strands the user on the sign-in screen with a valid session,
+     which is the exact failure this whole change exists to remove. */
+  try {
+    if(user && user.displayName && !state.profile.name){
+      state.profile.name = user.displayName;
+      persist();
+    }
+  } catch(e){ console.warn("[auth] could not seed profile name:", e); }
+  console.log("[auth] session saved, navigating");
+  render();   // render() now falls through to onboarding or the app, per state.onboardingComplete
+  console.log("[auth] navigation complete");
 }
 
 /** Continue into onboarding without signing in. Recorded so the screen does not reappear. */
@@ -11260,7 +11414,10 @@ function wireOnboardingWizard(){
        whose job is done. A denial stays put and shows the "anytime from Profile" line. */
     if(o.healthConnectState === "ok"){
       setTimeout(()=>{
-        if(state.onboardingStep === 10){ state.onboardingStep = 11; renderOnboardingWizard(); }
+        if(state.onboardingStep === obStepIndexOf(obHealthConnect)){
+          state.onboardingStep = Math.min(ONBOARDING_TOTAL_STEPS, state.onboardingStep + 1);
+          renderOnboardingWizard();
+        }
       }, 900);
     }
   });
@@ -11277,14 +11434,14 @@ function wireOnboardingWizard(){
   if(nextBtn) nextBtn.addEventListener("click", ()=>{
     // The only hard gate in the flow. Everything else is skippable by design; agreeing to the
     // policy is not something the app can assume on the user's behalf.
-    if(state.onboardingStep === 1 && !state.onboarding.fairUseAccepted){
+    if(state.onboardingStep === obStepIndexOf(obFairUse) && !state.onboarding.fairUseAccepted){
       showToast("Please accept the Fair Use Policy to continue.", "error", render);
       return;
     }
     /* Workout preferences gate. These drive the home dashboard, recommendations and the
        coach, so an empty array is not a neutral default — it is a plan with nothing to plan
        around. The other steps stay skippable; this one asks for a single tap. */
-    if(state.onboardingStep === 9 && !(state.onboarding.workoutPreferences||[]).length){
+    if(state.onboardingStep === obStepIndexOf(obWorkoutPref) && !(state.onboarding.workoutPreferences||[]).length){
       showToast("Pick at least one workout type to continue.", "error", render);
       return;
     }

@@ -1,5 +1,40 @@
 # CLAUDE_PROGRESS.md
 
+## Phone auth + navigation + Tools move + Health Connect first — BUILD SUCCESSFUL, pushed
+
+Branch `feature/v1.1`. The brief was "debug phone auth", but phone auth had never been
+implemented — `AuthPlugin.kt` had no `PhoneAuthProvider` and `signInAction("otp")` only fired
+a toast reading "not wired up yet". Built it, and fixed three real navigation bugs found on
+the way.
+
+Root causes of "stuck on Signing in…", all three independent:
+1. `notifyUI()` in `www/auth.js` re-rendered ONLY when `state.tab === "settings"`. Sign-in also
+   lives on Tools and the first-run screen, where the busy flag changed and nothing repainted.
+2. `signInAction("google")` called `auth.signIn()` without awaiting — the promise was dropped,
+   so a successful Google sign-in never advanced past the screen.
+3. The busy guards (`if (_busy) return;`) returned `undefined`, and callers read `res.success`
+   off it.
+
+Built: `sendOtp`/`verifyOtp` on the native plugin (AtomicBoolean `settled` guard — Firebase's
+`onVerificationCompleted` can fire before `onCodeSent`, and resolving a PluginCall twice is
+itself a hang), JS wrappers with `finally`-clearing busy state, a two-step OTP screen, and one
+`completeSignIn()` that every provider routes through so navigation cannot work on one path and
+not another.
+
+Also this session, per user request mid-turn:
+- Tools removed from the bottom nav (6 tabs → 5), now reached from Profile → All Tools; added
+  `.pg-back` so the demoted tab is not a dead end.
+- Health Connect moved from onboarding step 10 to step 2. The step gates keyed off literal
+  numbers (`=== 1`, `=== 9`, `=== 10`) and the reorder silently pointed them at the wrong
+  screens — replaced with `obStepIndexOf(renderer)` so the order array is the only source of
+  truth.
+
+Verified in the browser pane with a stubbed Capacitor bridge: wrong code stays on the field and
+shows the error, correct code navigates, busy always clears, zero console errors.
+
+NOT verified on a real device — SMS delivery, Play Integrity and the reCAPTCHA fallback cannot
+run outside a real Android device with Play Services. That is the one open risk.
+
 ## Batch 1 catalogue enrichment — 100 South Indian breakfast foods — BLOCKED ON SOURCES
 
 Branch `feature/v1.1`. Brief's binding rules: never invent or estimate values; use only USDA /

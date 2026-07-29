@@ -257,6 +257,77 @@
 .auth-cta:active{ transform: translateY(1px) scale(.988); box-shadow: 0 1px 4px rgba(0,0,0,.34), 0 6px 18px -10px rgba(59,130,246,.42); }
 .auth-cta[disabled]{ opacity: .45; box-shadow: none; cursor: default; }
 
+/* ---- OTP step ----
+   The code field is one input, not six boxes. Six boxes look neater in a mockup and are worse
+   in the hand: they fight SMS autofill, paste, and backspace, and every keystroke moves focus
+   between elements. One wide, letter-spaced field gets autofill and paste for free. */
+.auth-otp__sent{
+  margin-top: 4px;
+  font-size: 13.5px;
+  color: var(--auth-muted, #9CA3AF);
+  text-align: center;
+}
+.auth-otp__sent b{ color: var(--auth-text); font-weight: 700; }
+.auth-otp__change{
+  margin-left: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--auth-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.auth-otp__input{
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 14px;
+  padding: 17px 16px;
+  border: 1px solid var(--auth-line, #2A2A2E);
+  border-radius: var(--auth-radius-sm);
+  background: var(--auth-field-bg, #131316);
+  color: var(--auth-text);
+  font: inherit;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: .5em;   /* trailing space is intentional: keeps the group optically centred */
+  text-indent: .5em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+.auth-otp__input:focus{ border-color: var(--auth-primary); }
+.auth-otp__input::placeholder{ color: #4B5563; letter-spacing: .35em; }
+.auth-otp__resend{
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 6px;
+  border: 0;
+  background: none;
+  color: var(--auth-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.auth-otp__resend[disabled]{ opacity: .45; cursor: default; }
+
+/* Inline, in the flow, above the button — an error the user must read before they tap again.
+   A toast alone would let them retry into the same failure without ever seeing why. */
+.auth-err{
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, .12);
+  border: 1px solid rgba(239, 68, 68, .3);
+  color: #FCA5A5;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
 /* ---- divider ---- */
 .auth-div{
   display: flex;

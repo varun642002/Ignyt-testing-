@@ -23,6 +23,18 @@
 .pg-header__title { font-size:28px; font-weight:800; letter-spacing:-.02em; }
 .pg-header__sub { font-size:13px; color:var(--rh-muted); margin-top:2px; }
 
+/* Back affordance for .pg-light screens that are pushed rather than tabbed. Tools needs this
+   now that it is reached from Profile instead of the bottom nav — without a way back, a tab
+   demoted to a subpage is a dead end. 44px hit target, per touch guidance. */
+.pg-back {
+  display:flex; align-items:center; justify-content:center;
+  width:36px; height:36px; margin:0 0 6px -8px; padding:0;
+  border:0; border-radius:50%; background:transparent;
+  color:var(--rh-text); font-size:30px; line-height:1;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.pg-back:active { background:var(--rh-border); }
+
 /* Shared .cat-chip reskin for every .pg-light screen (Log Weight ranges, Body Progress
    week-nav, Exercise Library category filter, etc.) -- same idea as .wk-light .cat-chip
    in workout.css, just scoped to the broader .pg-light wrapper instead of one page. */

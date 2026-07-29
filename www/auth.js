@@ -83,15 +83,21 @@ const IgnytAuth = (() => {
     } catch (e) { /* never let an event listener error break auth */ }
   }
 
-  /** Re-render the Settings tab if it's on screen (same pattern as
-   *  HealthConnectIntegration.notifyDashboard). No-ops on any other tab. */
+  /** Re-render whatever is on screen after busy/error/account state changes.
+   *
+   *  This used to re-render ONLY when state.tab === "settings", which was true when the
+   *  account card lived exclusively in Settings. It no longer does: there is a sign-in entry
+   *  on Tools and the whole first-run Sign In screen, and on those a button that flipped to a
+   *  busy label had no way to flip back — the state changed and nothing repainted, so it read
+   *  as a permanent "Signing in…". Re-render unconditionally; render() is already the app's
+   *  normal repaint path and is called far more often than this. */
   function notifyUI() {
     if (typeof state === "undefined" || typeof render !== "function") return;
-    if (state.tab === "settings") render();
+    render();
   }
 
   async function signIn() {
-    if (_busy) return;
+    if (_busy) return { success: false, error: "Already in progress." };
     _busy = true; _errorMsg = null; notifyUI();
     const result = await callNative("signIn");
     _busy = false;
@@ -106,7 +112,7 @@ const IgnytAuth = (() => {
   }
 
   async function signUpWithEmail(email, password) {
-    if (_busy) return;
+    if (_busy) return { success: false, error: "Already in progress." };
     _busy = true; _errorMsg = null; notifyUI();
     const result = await callNative("signUpWithEmail", { email: email, password: password });
     _busy = false;
@@ -121,7 +127,7 @@ const IgnytAuth = (() => {
   }
 
   async function signInWithEmail(email, password) {
-    if (_busy) return;
+    if (_busy) return { success: false, error: "Already in progress." };
     _busy = true; _errorMsg = null; notifyUI();
     const result = await callNative("signInWithEmail", { email: email, password: password });
     _busy = false;
@@ -192,6 +198,63 @@ const IgnytAuth = (() => {
    *  or null if unavailable (not native, not signed in, not configured, or plugin too old).
    *  The token is NEVER cached in JS — it is fetched on demand and handed straight to the
    *  single request that needs it. `forceRefresh` re-mints after a 401. */
+  /* ---------------------------------------------------------------
+     PHONE / SMS
+
+     _verificationId is held here rather than in app state because it is a credential handle,
+     not UI state: it must not survive a reload or be readable from the rest of the app. It is
+     cleared on success and on an expired-code failure so a stale handle can never be reused.
+  --------------------------------------------------------------- */
+  let _verificationId = null;
+
+  /** @param phoneNumber full E.164, e.g. "+919876543210" */
+  async function sendOtp(phoneNumber, opts) {
+    if (_busy) return { success: false, error: "Already in progress." };
+    _busy = true; _errorMsg = null; notifyUI();
+    let result;
+    try {
+      result = await callNative("sendOtp", {
+        phoneNumber: phoneNumber,
+        resend: !!(opts && opts.resend)
+      });
+    } finally {
+      // finally, not after the await: if the bridge throws, the button must still come back.
+      _busy = false;
+    }
+    if (result && result.success && result.data) {
+      _verificationId = result.data.verificationId || null;
+      _errorMsg = null;
+    } else {
+      _errorMsg = (result && result.error) || "Could not send the code.";
+    }
+    notifyUI();
+    return result;
+  }
+
+  async function verifyOtp(code) {
+    if (_busy) return { success: false, error: "Already in progress." };
+    _busy = true; _errorMsg = null; notifyUI();
+    let result;
+    try {
+      result = await callNative("verifyOtp", { code: code, verificationId: _verificationId });
+    } finally {
+      _busy = false;
+    }
+    if (result && result.success && result.data && result.data.user) {
+      _verificationId = null;
+      saveAccount(result.data.user);
+      _errorMsg = null;
+    } else {
+      _errorMsg = (result && result.error) || "Could not verify the code.";
+      // Only a genuinely expired session invalidates the handle. This used to regex the error
+      // text for "expired", which also matched the ordinary wrong-code message and threw the
+      // user back to the number field over a single mistyped digit — costing them another SMS.
+      if (result && result.expired) _verificationId = null;
+    }
+    notifyUI();
+    return result;
+  }
+
   async function getIdToken(forceRefresh) {
     const result = await callNative("getIdToken", { forceRefresh: !!forceRefresh });
     if (result && result.success && result.data && result.data.token) return result.data.token;
@@ -215,6 +278,9 @@ const IgnytAuth = (() => {
     getError: () => _errorMsg,
     clearError: () => { _errorMsg = null; },
     signIn,
+    sendOtp,
+    verifyOtp,
+    hasPendingOtp: () => !!_verificationId,
     signUpWithEmail,
     signInWithEmail,
     sendPasswordReset,
