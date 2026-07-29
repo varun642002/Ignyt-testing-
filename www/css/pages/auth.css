@@ -438,3 +438,28 @@
   .auth-brand{ padding-top: 18px; }
   .auth-field{ margin-top: 18px; }
 }
+
+/* ---- signing diagnostic (Settings ▸ account card) ----
+   Lives in auth.css because it belongs to the account surface, but it is deliberately styled
+   as a utility panel rather than in the dark sign-in world: it renders inside the normal app
+   chrome, so it uses the app tokens, not the --auth-* ones. */
+.auth-diag{ margin-top: 12px; border-top: 1px solid var(--rh-border); padding-top: 10px; }
+.auth-diag > summary{
+  font-size: 12px; font-weight: 700; color: var(--rh-muted);
+  cursor: pointer; list-style: none; padding: 2px 0;
+}
+.auth-diag > summary::-webkit-details-marker{ display: none; }
+.auth-diag > summary::before{ content: "▸ "; }
+.auth-diag[open] > summary::before{ content: "▾ "; }
+.auth-diag__body{ margin-top: 8px; }
+.auth-diag__row{
+  display: flex; gap: 8px; align-items: baseline;
+  margin-top: 6px; font-size: 11px;
+}
+.auth-diag__row > span{ flex: none; width: 62px; color: var(--rh-muted); font-weight: 700; }
+/* Fingerprints are long colon-separated hex; wrap on the colons rather than overflowing. */
+.auth-diag__row > code{
+  flex: 1; min-width: 0; font-size: 10.5px; line-height: 1.5;
+  word-break: break-all; color: var(--rh-text);
+}
+.auth-diag__note{ margin-top: 10px; font-size: 11px; line-height: 1.5; color: var(--rh-muted); }

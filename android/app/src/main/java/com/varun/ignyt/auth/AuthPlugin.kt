@@ -1,5 +1,7 @@
 package com.varun.ignyt.auth
 
+import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
@@ -110,6 +112,68 @@ class AuthPlugin : com.getcapacitor.Plugin() {
         "ERROR_TOO_MANY_REQUESTS" -> "Too many attempts. Please wait a moment and try again."
         "ERROR_NETWORK_REQUEST_FAILED" -> "Network error. Check your connection and try again."
         else -> e.message ?: "Something went wrong. Please try again."
+    }
+
+    /* =====================================================================
+       SIGNING FINGERPRINTS
+
+       Firebase phone auth verifies the app through Play Integrity, which is keyed to the
+       signing certificate. If the certificate's fingerprints are not registered on the Firebase
+       project, verification fails — and it fails with a generic message that says nothing about
+       fingerprints, which is why this is such a common time sink.
+
+       SHA-1 alone is not enough. google-services.json only ever carries SHA-1 (the
+       certificate_hash field), so that file cannot tell anyone whether SHA-256 is registered;
+       only the Firebase Console shows it. Play Integrity requires SHA-256. Rather than leave
+       the user guessing, the app computes its OWN certificate fingerprints at runtime and can
+       report them for comparison against the Console.
+
+       These are public values — a certificate fingerprint is derived from the public
+       certificate shipped inside every copy of the APK. Nothing secret is exposed.
+    ===================================================================== */
+
+    private fun fingerprints(): Pair<String, String>? = try {
+        val pm = context.packageManager
+        val certBytes: ByteArray? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val info = pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+            info.signingInfo?.apkContentsSigners?.firstOrNull()?.toByteArray()
+        } else {
+            @Suppress("DEPRECATION")
+            val info = pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES)
+            @Suppress("DEPRECATION")
+            info.signatures?.firstOrNull()?.toByteArray()
+        }
+        if (certBytes == null) null else {
+            fun digest(algorithm: String) = java.security.MessageDigest.getInstance(algorithm)
+                .digest(certBytes)
+                .joinToString(":") { "%02X".format(it) }
+            Pair(digest("SHA-1"), digest("SHA-256"))
+        }
+    } catch (e: Exception) {
+        Log.w("IgnytAuth", "Could not read signing certificate: ${e.message}")
+        null
+    }
+
+    /**
+     * Reports the running app's certificate fingerprints so they can be checked against the
+     * Firebase Console. Returns both, plus a flag for whether Firebase is initialised at all.
+     * Safe to call any time; performs no network I/O and changes no state.
+     */
+    @PluginMethod
+    fun checkSigning(call: PluginCall) {
+        try {
+            val fp = fingerprints()
+            val auth = firebaseAuthOrNull()
+            resolveSuccess(call, JSObject().apply {
+                put("packageName", context.packageName)
+                put("firebaseInitialised", auth != null)
+                put("sha1", fp?.first ?: "")
+                put("sha256", fp?.second ?: "")
+                put("readable", fp != null)
+            })
+        } catch (e: Exception) {
+            resolveError(call, "Could not read signing information: ${e.message}")
+        }
     }
 
     /** Reports whether sign-in can work at all on this build/device, without side effects. */
@@ -457,8 +521,21 @@ class AuthPlugin : com.getcapacitor.Plugin() {
                 "That phone number isn't valid. Include the country code."
             m.contains("reCAPTCHA", true) || m.contains("captcha", true) ->
                 "Verification could not complete. Check Play Services and your connection."
-            m.contains("app-not-authorized", true) || m.contains("APP_NOT_VERIFIED", true) ->
-                "This app build isn't authorized for phone sign-in. Add its SHA-1 and SHA-256 fingerprints in the Firebase Console."
+            m.contains("app-not-authorized", true) || m.contains("APP_NOT_VERIFIED", true) ||
+            m.contains("MISSING_CLIENT_IDENTIFIER", true) -> {
+                /* The single most common cause, and the one Firebase's own message never names.
+                   Print the fingerprint the project is actually missing rather than telling the
+                   user to go and find it — SHA-256 in particular is not in google-services.json,
+                   so there is nowhere on disk they could have looked it up. */
+                val sha256 = fingerprints()?.second
+                Log.w("IgnytAuth", "Phone auth rejected this build. SHA-256=$sha256")
+                if (sha256 != null)
+                    "This build isn't authorized for phone sign-in. Add this SHA-256 fingerprint " +
+                    "to the Firebase Console (Project settings ▸ Your apps ▸ ${context.packageName}):\n$sha256"
+                else
+                    "This build isn't authorized for phone sign-in. Add its SHA-1 and SHA-256 " +
+                    "fingerprints in the Firebase Console."
+            }
             m.contains("network", true) ->
                 "Network error. Check your connection and try again."
             else -> m

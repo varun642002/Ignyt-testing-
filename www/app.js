@@ -8385,6 +8385,51 @@ function settingToggle(key, label, desc, icon){
  *  snapshot against the real persisted Firebase session once per launch. */
 /* No "Premium"/subscription badge here -- this app has no payment or subscription system,
    so nothing implying a paid tier is shown (same principle already applied to Profile). */
+
+/* Signing fingerprints, on screen.
+
+   Phone sign-in fails with a message that never mentions certificates when the project is
+   missing this build's SHA-256 — and SHA-256 is not written into google-services.json, so
+   there is no file anyone can check it against. The only other way to read it is keytool on
+   the machine holding the keystore, which is no help to someone testing on a device.
+
+   These are public values: a fingerprint of the certificate shipped inside every copy of the
+   APK. Showing them leaks nothing. Collapsed by default so it stays a diagnostic rather than
+   clutter. */
+function legacyCopy(text, onDone){
+  try{
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly","");
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0;";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    if(onDone) onDone();
+  }catch(e){ console.warn("copy failed:", e); }
+}
+
+function renderSigningDiagnostic(){
+  const auth = window.IgnytAuth;
+  if(!auth || !auth.isNativeAndroid || !auth.isNativeAndroid()) return "";
+  const info = auth.getSigningInfo && auth.getSigningInfo();
+  if(!info || !info.sha256) return "";
+  const esc = v => String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return `<details class="auth-diag">
+    <summary>Build fingerprints</summary>
+    <div class="auth-diag__body">
+      <div class="auth-diag__row"><span>Package</span><code>${esc(info.packageName)}</code></div>
+      <div class="auth-diag__row"><span>SHA-1</span><code>${esc(info.sha1)}</code></div>
+      <div class="auth-diag__row"><span>SHA-256</span><code>${esc(info.sha256)}</code></div>
+      <p class="auth-diag__note">Both must be registered under Project settings &#9656; Your apps
+      in the Firebase Console. Phone sign-in uses Play Integrity, which needs the SHA-256 —
+      it is not stored in google-services.json, so it cannot be checked from the app files.</p>
+      <button class="btn btn-ghost btn-block" data-action="copy-fingerprints" style="margin-top:8px;">Copy SHA-256</button>
+    </div>
+  </details>`;
+}
+
 function renderAccountSection(){
   const esc = v => String(v == null ? "" : v)
     .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
@@ -8433,6 +8478,7 @@ function renderAccountSection(){
       <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:${(!mode && errorHtml)?'10px':'0'};padding:12px;" data-action="account-signin" ${busy?'disabled':''}>${busy?'Signing in…':'Continue with Google'}</button>
       ${!mode ? `<button class="btn btn-ghost btn-block" style="margin-top:8px;" data-action="auth-form-mode" data-auth-mode="signin">Use Email Instead</button>` : ''}
       ${emailForm}
+      ${renderSigningDiagnostic()}
     </div>`;
   }
 
@@ -17123,6 +17169,18 @@ function attachHandlers(){
     });
   });
   // IGNYT Account: IgnytAuth handles busy/error state and re-renders Settings itself.
+  const copyFp = document.querySelector('[data-action="copy-fingerprints"]');
+  if(copyFp) copyFp.addEventListener("click", ()=>{
+    const info = window.IgnytAuth && window.IgnytAuth.getSigningInfo && window.IgnytAuth.getSigningInfo();
+    if(!info || !info.sha256) return;
+    // navigator.clipboard is unavailable in some WebView configurations; the textarea fallback
+    // is what makes this work on a device rather than only in the browser pane.
+    const done = ()=> showToast("SHA-256 copied.", "success", render);
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(info.sha256).then(done).catch(()=>legacyCopy(info.sha256, done));
+    } else legacyCopy(info.sha256, done);
+  });
+
   const accountSigninBtn = document.querySelector('[data-action="account-signin"]');
   if(accountSigninBtn) accountSigninBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signIn(); });
   const accountSignoutBtn = document.querySelector('[data-action="account-signout"]');

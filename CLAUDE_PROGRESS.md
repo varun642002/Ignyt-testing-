@@ -1,5 +1,31 @@
 # CLAUDE_PROGRESS.md
 
+## SHA-256 fingerprint check — added, BUILD SUCCESSFUL
+
+Verified on this machine (debug keystore, `~/.android/debug.keystore`):
+
+    SHA-1    44:7C:FA:B0:43:F2:7D:6A:1F:93:DE:CF:47:90:A1:EB:2B:FB:14:78
+    SHA-256  B7:55:60:B3:6A:5B:D5:73:39:61:43:F2:7D:95:D1:D2:31:A9:A4:DF:12:25:AD:BB:26:07:5C:F7:56:3F:1A:F0
+
+Chain confirmed with apksigner against the built APK: its V2 signer cert SHA-1 is
+`447cfab043f27d6a1f93decf4790a1eb2bfb1478`, which is byte-for-byte the `certificate_hash` in
+`android/app/google-services.json`. So the debug build's SHA-1 IS registered on the
+`ignyt-fitness2` project.
+
+SHA-256 registration CANNOT be determined from any local file — Firebase writes only SHA-1
+into google-services.json. Only the Console shows it. Hence the check is a runtime one:
+
+- `AuthPlugin.checkSigning()` reads the running app's own certificate (signingInfo on API 28+,
+  the deprecated `signatures` below it, since minSdk is 26) and returns both fingerprints.
+- The app-not-authorized / MISSING_CLIENT_IDENTIFIER branch of `phoneErrorMessage()` now prints
+  the actual SHA-256 to register, instead of telling the user to go find a value that is not on
+  disk anywhere.
+- Logged once per launch, and shown on-device under Settings > account card > "Build
+  fingerprints", with a copy button (clipboard API + textarea fallback, since
+  navigator.clipboard is unavailable in some WebView configs).
+
+Fingerprints are public — derived from the certificate inside every copy of the APK.
+
 ## Phone auth + navigation + Tools move + Health Connect first — BUILD SUCCESSFUL, pushed
 
 Branch `feature/v1.1`. The brief was "debug phone auth", but phone auth had never been

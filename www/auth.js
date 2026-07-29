@@ -255,6 +255,20 @@ const IgnytAuth = (() => {
     return result;
   }
 
+  /* Cached at boot so the UI can read it synchronously during render. The value is fixed for
+     the lifetime of the install — it is the certificate the APK was signed with — so there is
+     nothing to invalidate. */
+  let _signing = null;
+
+  /** The running build's signing fingerprints, for checking against the Firebase Console.
+   *  Public values (derived from the certificate inside every copy of the APK), so they are
+   *  safe to log and to show on screen. */
+  async function checkSigning() {
+    const result = await callNative("checkSigning");
+    _signing = (result && result.success && result.data) ? result.data : null;
+    return _signing;
+  }
+
   async function getIdToken(forceRefresh) {
     const result = await callNative("getIdToken", { forceRefresh: !!forceRefresh });
     if (result && result.success && result.data && result.data.token) return result.data.token;
@@ -264,6 +278,19 @@ const IgnytAuth = (() => {
   function boot() {
     // One reconciliation pass per launch; no polling, no retry loop.
     refreshFromNative();
+    // Fingerprints to logcat once per launch, so `adb logcat -s chromium` answers "is the
+    // right certificate registered?" without needing to reproduce a failed sign-in first.
+    if (isNative()) {
+      checkSigning().then(info => {
+        if (!info) return;
+        console.log("[auth] package " + info.packageName +
+                    " | SHA-1 " + (info.sha1 || "unreadable") +
+                    " | SHA-256 " + (info.sha256 || "unreadable"));
+        if (!info.firebaseInitialised) {
+          console.warn("[auth] Firebase is NOT initialised — google-services.json missing at build time.");
+        }
+      });
+    }
   }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
@@ -278,6 +305,8 @@ const IgnytAuth = (() => {
     getError: () => _errorMsg,
     clearError: () => { _errorMsg = null; },
     signIn,
+    checkSigning,
+    getSigningInfo: () => _signing,   // sync, cached — null until boot's checkSigning resolves
     sendOtp,
     verifyOtp,
     hasPendingOtp: () => !!_verificationId,
