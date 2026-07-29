@@ -177,3 +177,33 @@
 @media (prefers-reduced-motion: reduce){
   .ob-opt{ transition:none; }
 }
+
+/* Select All / Clear All on the workout-preference step. */
+.ob-bulk{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.ob-bulk__btn{
+  padding:6px 12px; border-radius:999px;
+  border:1px solid var(--primary); background:var(--primary-soft);
+  color:var(--primary); font:inherit; font-size:11.5px; font-weight:700; cursor:pointer;
+}
+.ob-bulk__count{ font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; }
+
+/* Health Connect success. The tick scales in once — a state change worth confirming, not an
+   effect worth repeating. */
+.ob-hc-ok{
+  display:flex; align-items:center; gap:10px;
+  padding:12px 14px; margin-bottom:12px;
+  border-radius:var(--radius-btn);
+  background:rgba(62,207,142,.12); border:1px solid rgba(62,207,142,.32);
+  color:var(--text); font-size:13px; line-height:1.45;
+}
+.ob-hc-ok__tick{
+  flex:0 0 24px; width:24px; height:24px; border-radius:50%;
+  display:grid; place-items:center;
+  background:var(--mint); color:#fff; font-size:13px; font-weight:900;
+  animation:obTick .4s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes obTick{ from{ transform:scale(0); opacity:0 } to{ transform:scale(1); opacity:1 } }
+@media (prefers-reduced-motion: reduce){ .ob-hc-ok__tick{ animation:none; } }
+.ob-bulk__btn--quiet{
+  border-color:var(--border); background:var(--surface-alt); color:var(--muted);
+}

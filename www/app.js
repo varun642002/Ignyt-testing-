@@ -4547,6 +4547,8 @@ const state = {
     // age is derived from it, so it cannot go stale the way a typed number does.
     fairUseAccepted: false, birthday: null, dietPreference: null, workoutPreferences: [],
     healthConnectRequested: false,
+    healthConnectState: null,   // null | "ok" | "denied" | "skipped"
+    healthConnectBusy: false,   // transient
     painAreas: [], previousInjuries: "", medicalConditions: "", movementRestrictions: "",
     exercisesToAvoid: "", dietaryRestrictions: "",
     trainingStyle: null, preferredCardio: [],
@@ -10593,8 +10595,21 @@ function obDiet(){
 
 /* STEP 9 — Workout Preference */
 function obWorkoutPref(){
+  const chosen = state.onboarding.workoutPreferences || [];
+  /* Both actions are offered whenever they would do something, rather than one toggling
+     button. Keyed only on "is everything selected", a user with three picks got a button
+     labelled "Select All" and no way to clear without ten taps. */
+  const some = chosen.length > 0;
+  const all = chosen.length === OB_WORKOUT_OPTIONS.length;
   return `
     ${obHero("\u{1F3CB}\u{FE0F}", "What <span class='ob-accent'>workouts</span> do you prefer?", "Select all that you enjoy. You can change these any time.")}
+    <div class="ob-bulk">
+      <span style="display:flex;gap:6px;">
+        ${all ? "" : `<button class="ob-bulk__btn" data-ob-bulk="all">Select All</button>`}
+        ${some ? `<button class="ob-bulk__btn ob-bulk__btn--quiet" data-ob-bulk="clear">Clear All</button>` : ""}
+      </span>
+      <span class="ob-bulk__count">${chosen.length} selected</span>
+    </div>
     ${obOptionList("onboarding.workoutPreferences", OB_WORKOUT_OPTIONS, true)}`;
 }
 
@@ -10607,9 +10622,26 @@ function obHealthConnect(){
     <div class="ob-policy">
       ${OB_HEALTH_METRICS.map(m=>`<div class="ob-policy__row"><span aria-hidden="true" style="color:var(--mint);">✓</span><span>${obEsc(m)}</span></div>`).join("")}
     </div>
+    ${state.onboarding.healthConnectState === "ok" ? `
+      <div class="ob-hc-ok" role="status">
+        <span class="ob-hc-ok__tick" aria-hidden="true">✓</span>
+        <span>Connected. Your health data will sync automatically.</span>
+      </div>` : ""}
+    ${state.onboarding.healthConnectState === "denied" ? `
+      <div class="ob-note">You can connect Health Connect anytime from Profile.</div>` : ""}
+
     ${native
-      ? `<button class="btn btn-accent btn-block" data-ob-health>Connect Health Connect</button>`
-      : `<div class="ob-note">Health Connect is an Android feature. On this device the app will use manual entry, and you can connect later from Profile.</div>`}`;
+      ? `<button class="btn btn-accent btn-block" data-ob-health ${state.onboarding.healthConnectBusy?'disabled':''}>
+           ${state.onboarding.healthConnectBusy ? 'Connecting…'
+             : state.onboarding.healthConnectState === "ok" ? 'Connected' : 'Connect Health Connect'}
+         </button>`
+      : `<div class="ob-note">Health Connect is an Android feature. On this device the app will use manual entry, and you can connect later from Profile.</div>`}
+
+    <!-- Secondary, and never absent. Health Connect must not be able to block onboarding:
+         a denied permission, an unsupported device or a missing app all still need a way
+         forward, and burying that in the primary button's failure path is how people get
+         stuck on step 10 of 11. -->
+    <button class="btn btn-ghost btn-block" data-ob-health-skip style="margin-top:8px;">Skip for now</button>`;
 }
 
 /* STEP 11 — AI Personalization.
@@ -10701,10 +10733,10 @@ const ONBOARDING_STEP_RENDERERS = [
    their published geometry rather than approximated with a letter in a coloured circle.
 ========================================================= */
 const AUTH_ICONS = {
-  email: `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3.2" stroke="#FF4D5A" stroke-width="1.7"/><path d="M3.4 6.8 12 12.9l8.6-6.1" stroke="#FF4D5A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  email: `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3.2" stroke="#3B82F6" stroke-width="1.7"/><path d="M3.4 6.8 12 12.9l8.6-6.1" stroke="#3B82F6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   google: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.26-2.09 3.56-5.17 3.56-8.87z"/><path fill="#34A853" d="M12 24c3.24 0 5.96-1.08 7.94-2.91l-3.87-3a7.2 7.2 0 0 1-10.75-3.78H1.32v3.09A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.32 14.31a7.19 7.19 0 0 1 0-4.6V6.62H1.32a12 12 0 0 0 0 10.78l4-3.09z"/><path fill="#EA4335" d="M12 4.77c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.18 15.24 0 12 0A12 12 0 0 0 1.32 6.62l4 3.09A7.15 7.15 0 0 1 12 4.77z"/></svg>`,
   facebook: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#1877F2" d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.96h-1.51c-1.49 0-1.96.93-1.96 1.89v2.26h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z"/></svg>`,
-  bolt: `<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M13.6 1.5 4.2 13.2c-.4.5-.05 1.25.6 1.25h4.9l-1.5 7.9c-.13.7.76 1.1 1.19.54l9.4-11.7c.4-.5.05-1.25-.6-1.25h-4.9l1.5-7.9c.13-.7-.76-1.1-1.19-.54z" fill="#FF4D5A"/></svg>`
+  bolt: `<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M13.6 1.5 4.2 13.2c-.4.5-.05 1.25.6 1.25h4.9l-1.5 7.9c-.13.7.76 1.1 1.19.54l9.4-11.7c.4-.5.05-1.25-.6-1.25h-4.9l1.5-7.9c.13-.7-.76-1.1-1.19-.54z" fill="#3B82F6"/></svg>`
 };
 
 /* Grain for the hero, as a data URI so it survives the CSP and works offline. */
@@ -10896,6 +10928,15 @@ function wireOnboardingWizard(){
     });
   });
 
+  /* Select All / Clear All on the workout step. */
+  document.querySelectorAll("[data-ob-bulk]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.onboarding.workoutPreferences =
+        el.dataset.obBulk === "all" ? OB_WORKOUT_OPTIONS.map(o=>o.key) : [];
+      renderOnboardingWizard();
+    });
+  });
+
   /* A checkbox that is a boolean rather than a value in a set — the Fair Use agreement. */
   document.querySelectorAll("[data-ob-toggle-bool]").forEach(el=>{
     el.addEventListener("click", (e)=>{
@@ -10923,12 +10964,41 @@ function wireOnboardingWizard(){
 
   const hcBtn = document.querySelector("[data-ob-health]");
   if(hcBtn) hcBtn.addEventListener("click", async ()=>{
-    state.onboarding.healthConnectRequested = true;
+    const o = state.onboarding;
+    o.healthConnectRequested = true;
+    o.healthConnectBusy = true;
+    renderOnboardingWizard();
     try{
-      if(window.IgnytHealth && IgnytHealth.requestPermissions) await IgnytHealth.requestPermissions();
+      const res = window.IgnytHealth && IgnytHealth.requestPermissions
+        ? await IgnytHealth.requestPermissions()
+        : null;
+      /* Treat anything that is not an explicit failure as success. The plugin's shape varies
+         by version — some return a boolean, some an object, some nothing at all — and
+         demanding one exact shape would report a working connection as a denial. */
+      const denied = res && res.success === false;
+      o.healthConnectState = denied ? "denied" : "ok";
+      if(!denied){
+        // Sync straight away so the next screen has real numbers rather than a promise of them.
+        try{ if(IgnytHealth.syncNow) await IgnytHealth.syncNow(); }catch(e){}
+      }
     }catch(err){
-      showToast("Health Connect didn't grant access. You can connect later from Profile.", "error", render);
+      o.healthConnectState = "denied";
     }
+    o.healthConnectBusy = false;
+    renderOnboardingWizard();
+    /* Advance on success, so a granted permission does not leave the user staring at a screen
+       whose job is done. A denial stays put and shows the "anytime from Profile" line. */
+    if(o.healthConnectState === "ok"){
+      setTimeout(()=>{
+        if(state.onboardingStep === 10){ state.onboardingStep = 11; renderOnboardingWizard(); }
+      }, 900);
+    }
+  });
+
+  const hcSkip = document.querySelector("[data-ob-health-skip]");
+  if(hcSkip) hcSkip.addEventListener("click", ()=>{
+    state.onboarding.healthConnectState = "skipped";
+    state.onboardingStep = Math.min(ONBOARDING_TOTAL_STEPS, state.onboardingStep + 1);
     renderOnboardingWizard();
   });
   const backBtn = document.querySelector('[data-ob-nav="back"]');
@@ -10939,6 +11009,13 @@ function wireOnboardingWizard(){
     // policy is not something the app can assume on the user's behalf.
     if(state.onboardingStep === 1 && !state.onboarding.fairUseAccepted){
       showToast("Please accept the Fair Use Policy to continue.", "error", render);
+      return;
+    }
+    /* Workout preferences gate. These drive the home dashboard, recommendations and the
+       coach, so an empty array is not a neutral default — it is a plan with nothing to plan
+       around. The other steps stay skippable; this one asks for a single tap. */
+    if(state.onboardingStep === 9 && !(state.onboarding.workoutPreferences||[]).length){
+      showToast("Pick at least one workout type to continue.", "error", render);
       return;
     }
     if(state.onboardingStep < ONBOARDING_TOTAL_STEPS){

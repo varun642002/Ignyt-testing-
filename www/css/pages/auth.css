@@ -2,8 +2,8 @@
    IGNYT AUTH — the Sign In screen
 
    A DELIBERATELY SEPARATE VISUAL WORLD. The app proper is a light theme built on a blue
-   --primary, tuned over several passes and not to be disturbed. This screen is dark luxury on
-   red. Auth screens carrying their own identity is normal — it is the brand moment before the
+   --primary, tuned over several passes and not to be disturbed. This screen is dark rather
+   than light. Auth screens carrying their own ground is normal — it is the brand moment before the
    product starts — but it means every value here is LOCAL. Nothing below reads an app token
    and nothing below leaks out: the palette is scoped to .auth, so switching the app between
    light and dark cannot alter this screen and this screen cannot alter the app.
@@ -15,8 +15,11 @@
 .auth{
   --auth-bg:        #0D0D0D;
   --auth-card:      #1A1A1A;
-  --auth-primary:   #FF4D5A;
-  --auth-primary-2: #FF2E52;   /* gradient partner, kept close so the button reads as one hue */
+  /* Blue, matching the rest of the app. This screen keeps its own scoped palette — the app
+     behind it is a light theme and this is deliberately dark — but the ACCENT is now the same
+     IGNYT blue as every other surface, so the brand does not change colour at the door. */
+  --auth-primary:   #3B82F6;
+  --auth-primary-2: #2563EB;   /* gradient partner, kept close so the button reads as one hue */
   --auth-text:      #FFFFFF;
   --auth-muted:     #9CA3AF;
   --auth-border:    #2B2B2B;
@@ -162,9 +165,9 @@
   display: grid;
   place-items: center;
   border-radius: 15px;
-  border: 1px solid rgba(255,77,90,.28);
-  background: linear-gradient(150deg, rgba(255,77,90,.20), rgba(255,77,90,.05));
-  box-shadow: 0 8px 26px -10px rgba(255,77,90,.65);
+  border: 1px solid rgba(59,130,246,.28);
+  background: linear-gradient(150deg, rgba(59,130,246,.20), rgba(59,130,246,.05));
+  box-shadow: 0 8px 26px -10px rgba(59,130,246,.55);
 }
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)){
   .auth-brand__mark{ backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
@@ -196,8 +199,8 @@
   transition: border-color .18s ease, box-shadow .18s ease;
 }
 .auth-field:focus-within{
-  border-color: rgba(255,77,90,.55);
-  box-shadow: 0 0 0 3px rgba(255,77,90,.13);
+  border-color: rgba(59,130,246,.55);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.13);
 }
 .auth-field__cc{
   display: flex;
@@ -248,10 +251,10 @@
   cursor: pointer;
   /* Two shadows: a tight one for the edge, a wide tinted one for the glow. A single large
      black shadow on a saturated button reads as dirt around it. */
-  box-shadow: 0 2px 6px rgba(0,0,0,.34), 0 12px 30px -10px rgba(255,77,90,.62);
+  box-shadow: 0 2px 6px rgba(0,0,0,.34), 0 12px 30px -10px rgba(59,130,246,.52);
   transition: transform .14s cubic-bezier(.34,1.4,.64,1), box-shadow .18s ease, opacity .18s ease;
 }
-.auth-cta:active{ transform: translateY(1px) scale(.988); box-shadow: 0 1px 4px rgba(0,0,0,.34), 0 6px 18px -10px rgba(255,77,90,.5); }
+.auth-cta:active{ transform: translateY(1px) scale(.988); box-shadow: 0 1px 4px rgba(0,0,0,.34), 0 6px 18px -10px rgba(59,130,246,.42); }
 .auth-cta[disabled]{ opacity: .45; box-shadow: none; cursor: default; }
 
 /* ---- divider ---- */

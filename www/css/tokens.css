@@ -14,9 +14,9 @@
   --color-primary-strong: #ff6a2b;
   --color-accent-blue: #32b8f4;
   --color-accent-cyan: #55d8ff;
-  --color-interactive: #FF4D5A;
-  --color-interactive-strong: #F03547;
-  --color-interactive-soft: rgba(255,77,90,.16);
+  --color-interactive: #3e82f7;
+  --color-interactive-strong: #5a94f9;
+  --color-interactive-soft: rgba(62,130,247,.14);
   --color-text-primary: #f7f4ef;
   --color-text-secondary: #aaa9b0;
   --color-success: #45d294;
@@ -105,12 +105,12 @@
   --opacity-disabled: .5; --opacity-muted: .65; --opacity-overlay: .92;
   /* Chart series palette -- reuses the app's real accent colors (not new hex values) so a
      multi-series chart stays on-brand instead of each chart picking its own colors. */
-  /* chart-1 was --color-interactive. Now that interactive is #FF4D5A, leaving it there would
-     paint the first series of every chart in the same red as every button, and "the tappable
-     colour" and "the first data series" would stop being distinguishable. Data keeps its own
-     hues; the accent is not a chart colour. */
-  --chart-1: var(--color-accent-blue); --chart-2: var(--color-primary);
-  --chart-3: var(--color-success); --chart-4: var(--color-accent-cyan); --chart-5: var(--color-warning);
+  /* chart-1 tracks --color-interactive again. It was moved off while the accent was red, so
+     the first data series would not be the same colour as every button. With blue restored
+     that concern is gone: blue is this app's data-and-action colour and the chart palette was
+     built around it. */
+  --chart-1: var(--color-interactive); --chart-2: var(--color-primary);
+  --chart-3: var(--color-success); --chart-4: var(--color-accent-blue); --chart-5: var(--color-warning);
 }
 /* Light theme: primary reference target -- cool blue-gray background, white elevated
    cards, dark navy text, bright blue interactive accent. */
@@ -174,6 +174,6 @@
 [data-theme="light"] .home-light, [data-theme="light"] .wk-light, [data-theme="light"] .pg-light {
   /* Same ground and text scale as the other two light palettes. Blue is left exactly as it
      was — it is the interactive colour on these screens and the brief asked not to touch it. */
-  --rh-bg:#F8FAFC; --rh-card:#FFFFFF; --rh-blue:#FF4D5A; --rh-text:#111827; --rh-muted:#6B7280;
+  --rh-bg:#F8FAFC; --rh-card:#FFFFFF; --rh-blue:#2563EB; --rh-text:#111827; --rh-muted:#6B7280;
   --rh-border:#E7EBF0; --rh-purple:#7C3AED; --rh-green:#16A34A; --rh-red:#EF4444;
 }
