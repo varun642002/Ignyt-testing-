@@ -1,6 +1,39 @@
 # CLAUDE_PROGRESS.md
 
-## Current task (this session) — 8-item backlog, ALL COMPLETE, one branch per item, all pushed
+## Batch 1 catalogue enrichment — 100 South Indian breakfast foods — BLOCKED ON SOURCES
+
+Branch `feature/v1.1`. Brief's binding rules: never invent or estimate values; use only USDA /
+IFCT / NIN / Open Food Facts (packaged only) / government databases; skip any food whose values
+cannot be verified; do not duplicate a food that already exists.
+
+Result: **1 of 100 addable.** Not a tooling problem — a source-coverage problem.
+
+- 37 of the 100 already exist in `www/data/food/clean_foods.json` → skipped as duplicates.
+- IFCT 2017 (`C:/Users/varun/Downloads/IFCT2017.pdf`) contains NONE of these dishes. Confirmed
+  two ways: full-text scan of all 585 pages (the only "dosa" hits are "Dosa kaya", the Telugu
+  word for cucumber), and IFCT's own front matter on p.26 — "All data except for poultry and
+  egg pertains to raw food", 528 raw commodities. NIN publishes IFCT, so NIN adds nothing.
+- USDA SR Legacy + Foundation (both on disk) carry only `Bread, chapati or roti` (2 rows).
+  No idli, dosa, upma, pongal, vada, appam, puttu, paniyaram, idiyappam, poori, sevai.
+- Open Food Facts is excluded by the brief itself — packaged foods only; these are homemade.
+- The 37 existing rows cannot be enriched either: they hold macros only (0 of 23 micronutrients),
+  and no permitted source has the micros.
+
+Added: **Plain Chapati** (`ignyt:3208`), 25 verified nutrients from USDA fdcId 171844, 68 g
+piece weight from the source, `verified: true` — the catalogue's first verified row. The 8
+nutrients USDA does not report are left null, not estimated.
+
+Note for whoever picks this up: the 37 existing South Indian rows are already labelled
+`"sourceNote": "Representative recipe estimate (per 100 g, cooked)"` with `verified: false`.
+The catalogue therefore already has a convention for unverifiable dishes. Extending it —
+recipe-computed from IFCT raw ingredients, flagged `verified: false` — is the only route to the
+remaining 62, and it needs the user's explicit go-ahead because the brief forbids estimation.
+
+Next action: user decides between (a) ship the 1 verified food only, (b) supply a trusted
+source file covering cooked Indian dishes, or (c) authorise recipe-computed rows marked
+unverified. No APK built — a one-row data change does not warrant one.
+
+## Earlier task (this session) — 8-item backlog, ALL COMPLETE, one branch per item, all pushed
 Request: Cardio/Timed-Hold/Carry exercise logging, Notifications, Dark Mode, Splash Screen,
 Export Data, Built-in Exercise Timer, Smart Exercise Logging, Testing. Google Drive
 Backup/Sync (expanded scope) queued separately, blocked on user OAuth setup — not started.
