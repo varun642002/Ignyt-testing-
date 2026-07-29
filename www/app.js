@@ -11358,7 +11358,7 @@ async function requestOtp(isResend){
     showToast("Phone sign-in isn't available in this build.", "error", render);
     return;
   }
-  console.log("[auth] OTP requested for +91" + digits + (isResend ? " (resend)" : ""));
+  console.log("[auth] OTP requested" + (isResend ? " (resend)" : ""));   // number deliberately not logged
   const res = await auth.sendOtp("+91" + digits, { resend: !!isResend });
   if(res && res.success){
     console.log("[auth] OTP sent; verificationId received");
@@ -11387,7 +11387,7 @@ async function submitOtp(){
   console.log("[auth] verifying OTP");
   const res = await auth.verifyOtp(code);
   if(res && res.success && res.data && res.data.user){
-    console.log("[auth] Firebase sign-in successful, uid=" + res.data.user.uid);
+    console.log("[auth] Firebase sign-in successful");   // uid deliberately not logged
     completeSignIn(res.data.user);
   } else {
     console.warn("[auth] OTP verification failed:", res && res.error);
@@ -12765,23 +12765,23 @@ function renderProgressHabits(){
           <span class="tl-card__icon" style="flex:none;background:${meta.bg};color:${meta.color};">${svg(meta.icon,20)}</span>
           <div class="row-between" style="align-items:flex-start;flex:1;min-width:0;">
             ${isEditing ? `
-              <input type="text" id="habit-rename-${h.id}" class="pi-input" value="${h.name}" style="flex:1;min-width:0;font-weight:700;margin-right:8px;">
+              <input type="text" id="habit-rename-${h.id}" class="pi-input" value="${escHtml(h.name)}" style="flex:1;min-width:0;font-weight:700;margin-right:8px;">
             ` : `
               <div style="min-width:0;flex:1;cursor:pointer;" data-rename-habit="${h.id}">
-                <div style="font-weight:800;font-size:16px;">${h.name}</div>
+                <div style="font-weight:800;font-size:16px;">${escHtml(h.name)}</div>
                 <div style="font-size:12px;color:var(--rh-muted);margin-top:3px;">🔥 ${streak} day streak</div>
                 <div style="font-size:11px;color:var(--rh-muted);margin-top:2px;"><b style="color:var(--rh-text);">Best:</b> ${best} · ${week}/7 this week · ${month} this month</div>
               </div>
             `}
             <div style="display:flex;gap:8px;flex-shrink:0;align-items:center;">
               ${isEditing ? `<button class="rh-btn rh-btn--ghost" data-action="save-habit-name" data-habit-id="${h.id}" style="flex:none;padding:8px 12px;font-size:12px;">Save</button>`
-                : `<button class="set-check ${done?'done':''}" data-toggle-habit="${h.id}" aria-label="Mark ${h.name} complete for today">${done?svg('check',16):''}</button>
+                : `<button class="set-check ${done?'done':''}" data-toggle-habit="${h.id}" aria-label="Mark ${escHtml(h.name)} complete for today">${done?svg('check',16):''}</button>
                    <button style="background:none;border:none;padding:4px;cursor:pointer;color:var(--rh-muted);flex:none;" data-del-habit="${h.id}" aria-label="Delete habit">${svg('x',15)}</button>`}
             </div>
           </div>
           <div class="hbm-tools">
-            <button data-move-habit="${h.id}" data-move-habit-dir="up" ${idx===0?'disabled':''} aria-label="Move ${h.name} up">↑</button>
-            <button data-move-habit="${h.id}" data-move-habit-dir="down" ${idx===state.habits.length-1?'disabled':''} aria-label="Move ${h.name} down">↓</button>
+            <button data-move-habit="${h.id}" data-move-habit-dir="up" ${idx===0?'disabled':''} aria-label="Move ${escHtml(h.name)} up">↑</button>
+            <button data-move-habit="${h.id}" data-move-habit-dir="down" ${idx===state.habits.length-1?'disabled':''} aria-label="Move ${escHtml(h.name)} down">↓</button>
             <button class="hbm-toggle${h.enabled===false?'':' is-on'}" data-habit-enabled="${h.id}"
               aria-pressed="${h.enabled===false?'false':'true'}">${h.enabled===false?'Hidden from Home':'Showing on Home'}</button>
           </div>
