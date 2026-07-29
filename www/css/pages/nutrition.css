@@ -1201,7 +1201,11 @@ body.kb-open
 .ni-chart{ margin:4px 0 10px; }
 .ni-chart svg{ width:100%; height:96px; display:block; }
 .ni-chart__x{ display:flex; justify-content:space-between; font-size:10.5px; color:var(--muted); margin-top:4px; }
-.ni-week{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+/* Four figures now (Total joined Average/Highest/Lowest when the Food Log's weekly block was
+   folded in here). auto-fit rather than a fixed 4 so they wrap to 2x2 on a narrow handset
+   instead of squeezing "3,240 kcal" into 80px. */
+.ni-week{ display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:10px; }
+.ni-week__note{ margin-top:10px; font-size:11.5px; line-height:1.45; color:var(--muted); }
 .ni-week > div{ display:flex; flex-direction:column; gap:2px; }
 .ni-week span{ font-size:11px; color:var(--muted); }
 .ni-week strong{ font-size:13.5px; font-weight:800; font-variant-numeric:tabular-nums; }

@@ -4011,7 +4011,7 @@ const ACTIVITY_KCAL_PER_MIN = 8; // rough estimate for mixed strength/conditioni
    The list is stored so custom meal names can be added later without touching code. It is
    read through mealTypes(), never captured in a const, so a change takes effect on the next
    render. */
-const DEFAULT_MEALS = ["Breakfast","Morning Snack","Lunch","Afternoon Snack","Dinner","Post Workout"];
+const DEFAULT_MEALS = ["Breakfast","Morning Snack","Lunch","Afternoon Snack","Dinner"];
 const MEAL_TYPES_KEY = "hx_meal_types";
 
 function mealTypes(){
@@ -4039,9 +4039,13 @@ function mealTypesInUse(entries){
    total when it runs over. Sums to 1.00 across the defaults. A custom or legacy meal name
    absent from this table falls back to an even split rather than a budget of zero, which
    would otherwise paint every entry in it as over-budget. */
-const MEAL_SHARE = {"Breakfast":0.25,"Morning Snack":0.10,"Lunch":0.27,"Afternoon Snack":0.10,"Dinner":0.25,"Post Workout":0.03,
-  /* legacy name, kept so a log that predates the migration still gets a sane budget */
-  "Evening Snack":0.10};
+/* Shares total 1.00. Post Workout's 0.03 went to Lunch and Dinner when that meal was removed
+   from the default list -- leaving it out entirely would have made the budgets sum to 97%. */
+const MEAL_SHARE = {"Breakfast":0.25,"Morning Snack":0.10,"Lunch":0.28,"Afternoon Snack":0.10,"Dinner":0.27,
+  /* Legacy names, kept so a log that predates a change still gets a sane budget. Entries
+     already saved under these still render -- mealTypesInUse() appends any meal it finds in
+     the day's entries to the known list, so removing a default never hides logged food. */
+  "Post Workout":0.03, "Evening Snack":0.10};
 
 function mealShare(meal){
   if(MEAL_SHARE[meal] != null) return MEAL_SHARE[meal];
@@ -14611,6 +14615,20 @@ function renderNutritionInsightsPage(){
   const wkAvg = weekVals.length ? Math.round(weekVals.reduce((a,b)=>a+b,0)/weekVals.length) : 0;
   const wkHigh = weekVals.length ? Math.max(...weekVals) : 0;
   const wkLow = weekVals.length ? Math.min(...weekVals) : 0;
+  const wkTotal = weekVals.reduce((a,b)=>a+b, 0);
+  /* Compared against the daily target, because "1,340 kcal/day" says nothing on its own. This
+     is what the Food Log's dashed target line used to convey; it moves here with the rest of
+     the weekly block. Suppressed on an empty week, where "100% below target" is noise. */
+  const wkTargetNote = (() => {
+    // dayTargets, not `targets` -- the latter is scaled to the selected meal tab, and a
+    // weekly average must be judged against the whole-day figure.
+    const t = dayTargets.kcal;
+    if(!t || !wkTotal) return "";
+    const diff = wkAvg - t;
+    const pct = Math.abs(Math.round(diff / t * 100));
+    if(pct < 3) return `<div class="ni-week__note">Averaging within 3% of your ${t.toLocaleString()} kcal daily target.</div>`;
+    return `<div class="ni-week__note">Averaging ${pct}% ${diff > 0 ? "above" : "below"} your ${t.toLocaleString()} kcal daily target.</div>`;
+  })();
 
   const contributors = topContributors(entries, 5);
 
@@ -14749,10 +14767,12 @@ function renderNutritionInsightsPage(){
         <div class="ni-card__title">Weekly Trends <span class="ni-card__sub">Last 7 days</span></div>
         ${sparklineSvg(weekVals, week.map(d=>d.label))}
         <div class="ni-week">
+          <div><span>Total</span><strong>${wkTotal.toLocaleString()} kcal</strong></div>
           <div><span>Average</span><strong>${wkAvg.toLocaleString()} kcal</strong></div>
           <div><span>Highest</span><strong class="ni-good">${wkHigh.toLocaleString()} kcal</strong></div>
           <div><span>Lowest</span><strong class="ni-low">${wkLow.toLocaleString()} kcal</strong></div>
         </div>
+        ${wkTargetNote}
       </div>
 
       <!-- SUMMARY -->
@@ -14837,10 +14857,6 @@ function renderNutritionTab(){
   const activityKcal = Math.round(todayActivityKcal());
   const macros = todayMacros();
   const macroPctTotal = (n.proteinPct||0)+(n.carbPct||0)+(n.fatPct||0);
-  const week = last7DaysCalories();
-  const weekTotal = week.reduce((a,d)=>a+d.kcal,0);
-  const weekAvg = Math.round(weekTotal/7);
-  const maxKcal = Math.max(targets.kcal, ...week.map(d=>d.kcal), 1);
 
   /* ---- Dashboard data, all derived from the selected day ---- */
   const ds = nutritionDateStr();
@@ -15011,15 +15027,6 @@ function renderNutritionTab(){
           </div>`).join("")}
       </div>
       <div class="nut-note" style="margin-top:var(--space-xs);">Ring segments are each macro's share of energy, not grams.</div>
-    </div>
-
-    <!-- Macro + water strip -->
-    <div class="nut-strip">
-      ${macroMiniCard("Protein", T.protein, targets.protein, "protein", "g")}
-      ${macroMiniCard("Carbs", T.carbs, targets.carbs, "carbs", "g")}
-      ${macroMiniCard("Fat", T.fat, targets.fat, "fat", "g")}
-      ${macroMiniCard("Fibre", T.fibre, targets.fibre, "fibre", "g")}
-      ${macroMiniCard("Water", waterMl/1000, waterTarget/1000, "water", "L", true)}
     </div>
 
     <!-- Micronutrients -->
@@ -15230,23 +15237,6 @@ function renderNutritionTab(){
         }).join("")}
       </div>`;
     }).join("")}
-
-    <div class="eyebrow-label">Last 7 Days</div>
-    <div class="info-box" style="padding:14px;margin-bottom:16px;">
-      <div class="grid2" style="margin-bottom:12px;">
-        <div><div class="stat-label">Weekly Total</div><div class="mono" style="font-weight:900;font-size:18px;">${weekTotal.toLocaleString()} <span style="font-size:11px;color:var(--muted);">Cal</span></div></div>
-        <div><div class="stat-label">Average / Day</div><div class="mono" style="font-weight:900;font-size:18px;">${weekAvg.toLocaleString()} <span style="font-size:11px;color:var(--muted);">Cal</span></div></div>
-      </div>
-      <div style="position:relative;height:110px;display:flex;align-items:flex-end;gap:6px;">
-        <div style="position:absolute;left:0;right:0;top:${100-Math.min(100,targets.kcal/maxKcal*100)}%;border-top:1.5px dashed var(--accent);opacity:.6;"></div>
-        ${week.map(d=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end;">
-          ${d.kcal>0?`<span class="mono" style="font-size:11px;color:var(--muted);">${d.kcal}</span>`:""}
-          <div style="width:70%;border-radius:var(--radius-2xs) 4px 0 0;background:${d.kcal>targets.kcal?'var(--accent)':'#FFB020'};height:${Math.max(2,Math.round(d.kcal/maxKcal*80))}px;"></div>
-          <span style="font-size:11px;color:var(--muted);font-weight:700;">${d.label}</span>
-        </div>`).join("")}
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;">Dashed line = your ${targets.kcal} kcal daily target.</div>
-    </div>
 
     <div class="eyebrow-label">Calorie & Macro Budget</div>
     <div class="info-box" style="padding:12px 14px;margin-bottom:8px;font-size:12px;color:var(--muted);">
