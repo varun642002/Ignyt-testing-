@@ -53,3 +53,127 @@
 .pi-tag button { background:none; border:none; color:var(--rh-blue); font-size:14px; line-height:1; cursor:pointer; padding:0 2px; }
 
 @media (max-width:374px) { .pi-grid2 { grid-template-columns:1fr; } }
+
+/* =========================================================
+   ONBOARDING — the eleven-step flow
+
+   Lives in profile.css because the wizard is reached from Settings as well as at first run,
+   and this file already loads on both paths. Everything is scoped under .ob-* so it cannot
+   collide with the settings styles above it.
+========================================================= */
+.ob-hero{ text-align:center; margin-bottom:22px; }
+.ob-hero__icon{ font-size:52px; line-height:1; margin-bottom:12px; }
+.ob-hero__title{
+  font-size:23px; font-weight:800; letter-spacing:-.02em; margin:0 0 6px;
+  color:var(--text); text-wrap:balance;
+}
+.ob-accent{ color:var(--primary); }
+.ob-hero__sub{
+  font-size:13px; line-height:1.5; color:var(--muted); margin:0 auto; max-width:32ch;
+}
+
+/* The option row. One component behind goal, activity, diet, workout and gender so those five
+   steps cannot drift into five slightly different looking lists. */
+.ob-opts{ display:flex; flex-direction:column; gap:8px; }
+.ob-opt{
+  display:flex; align-items:center; gap:12px; width:100%;
+  padding:14px 14px; border-radius:var(--radius-btn);
+  border:1.5px solid var(--border); background:var(--surface);
+  color:var(--text); font:inherit; text-align:left; cursor:pointer;
+  transition:border-color .16s ease, background .16s ease, transform .12s cubic-bezier(.34,1.4,.64,1);
+}
+.ob-opt:active{ transform:scale(.985); }
+.ob-opt.is-on{
+  border-color:var(--primary);
+  background:var(--primary-soft);
+}
+.ob-opt__icon{ font-size:22px; line-height:1; flex:0 0 auto; }
+.ob-opt__body{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.ob-opt__label{ font-size:14.5px; font-weight:700; }
+.ob-opt__desc{ font-size:11.5px; color:var(--muted); }
+.ob-opt__tick{ color:var(--primary); font-weight:900; font-size:15px; flex:0 0 auto; }
+
+/* Policy / metric lists */
+.ob-policy{ display:flex; flex-direction:column; gap:12px; margin-bottom:18px; }
+.ob-policy__row{
+  display:flex; align-items:flex-start; gap:10px;
+  font-size:13px; line-height:1.45; color:var(--text-body, var(--text));
+}
+.ob-policy__row > span:first-child{ flex:0 0 auto; font-size:15px; }
+
+.ob-check{
+  display:flex; align-items:flex-start; gap:10px; width:100%;
+  padding:12px; border-radius:var(--radius-btn);
+  border:1.5px solid var(--border); background:var(--surface);
+  color:var(--text); font:inherit; font-size:12.5px; line-height:1.45;
+  text-align:left; cursor:pointer;
+}
+.ob-check.is-on{ border-color:var(--primary); background:var(--primary-soft); }
+.ob-check__box{
+  flex:0 0 20px; width:20px; height:20px; border-radius:6px;
+  border:1.5px solid var(--border); display:grid; place-items:center;
+  color:#fff; font-size:12px; font-weight:900; margin-top:1px;
+}
+.ob-check.is-on .ob-check__box{ background:var(--primary); border-color:var(--primary); }
+.ob-check a{ color:var(--primary); text-decoration:none; font-weight:700; }
+
+/* Big single-value steps: height and weight */
+.ob-bigvalue{
+  text-align:center; font-size:52px; font-weight:800; letter-spacing:-.03em;
+  color:var(--text); line-height:1; font-variant-numeric:tabular-nums;
+}
+.ob-bigvalue__unit{ font-size:19px; font-weight:700; color:var(--muted); margin-left:6px; letter-spacing:0; }
+.ob-derived{ text-align:center; font-size:13px; color:var(--muted); margin-top:8px; }
+
+.ob-range{
+  -webkit-appearance:none; appearance:none; width:100%; height:34px;
+  background:transparent; margin-top:20px; cursor:pointer;
+}
+.ob-range::-webkit-slider-runnable-track{
+  height:6px; border-radius:999px; background:var(--surface-alt);
+}
+.ob-range::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none;
+  width:28px; height:28px; border-radius:50%; margin-top:-11px;
+  background:var(--primary); border:3px solid var(--surface);
+  box-shadow:0 2px 10px rgba(0,0,0,.28);
+}
+.ob-range::-moz-range-track{ height:6px; border-radius:999px; background:var(--surface-alt); }
+.ob-range::-moz-range-thumb{
+  width:22px; height:22px; border-radius:50%; background:var(--primary);
+  border:3px solid var(--surface); box-shadow:0 2px 10px rgba(0,0,0,.28);
+}
+.ob-range__ticks{
+  display:flex; justify-content:space-between;
+  font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; margin-top:2px;
+}
+
+.ob-date{
+  width:100%; padding:15px; border-radius:var(--radius-btn);
+  border:1.5px solid var(--border); background:var(--surface);
+  color:var(--text); font:inherit; font-size:16px; text-align:center;
+}
+.ob-date:focus{ outline:none; border-color:var(--primary); }
+
+/* Step 11 */
+.ob-plan{
+  border:1px solid var(--border); border-radius:var(--radius-card);
+  background:var(--surface); overflow:hidden; margin-bottom:14px;
+}
+.ob-plan__row{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:12px 15px; font-size:13.5px; color:var(--muted);
+  border-bottom:1px solid var(--divider, var(--border));
+}
+.ob-plan__row:last-child{ border-bottom:0; }
+.ob-plan__row strong{ color:var(--text); font-weight:700; font-variant-numeric:tabular-nums; }
+
+.ob-note{
+  font-size:12px; line-height:1.5; color:var(--muted);
+  background:var(--surface-alt); border-radius:var(--radius-btn);
+  padding:12px 14px; margin-top:14px;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .ob-opt{ transition:none; }
+}

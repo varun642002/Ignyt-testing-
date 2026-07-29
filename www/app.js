@@ -4104,8 +4104,57 @@ const TRAINING_STYLE_OPTIONS = ["Push Pull Legs","Upper Lower","Full Body","Bro 
 const PREFERRED_CARDIO_OPTIONS = ["Walking","Jogging","Running","Cycling","Swimming","Rowing","Elliptical",
   "Stair Climber","HIIT","No Cardio"];
 
-const ONBOARDING_STEP_TITLES = ["Primary Goal","Target Goal","Target Date","Availability","Equipment",
-  "Fitness Assessment","Health Screening","Preferences","Fitness Level Test","Your Plan"];
+const ONBOARDING_STEP_TITLES = ["Fair Use Policy","Birthday","Gender","Height","Weight",
+  "Fitness Goal","Activity Level","Diet Preference","Workout Preference","Health Connect",
+  "AI Personalization"];
+
+/* The brief's six goals, mapped onto the calorie deltas this app already applies. The keys
+   ARE the GOAL_TO_CALORIE_DELTA keys, so the mapping lives in one place instead of becoming a
+   second lookup that drifts. */
+const OB_GOAL_OPTIONS = [
+  {key:"Fat Loss",             label:"Lose Fat",             icon:"🔥"},
+  {key:"Build Muscle",         label:"Gain Muscle",          icon:"💪"},
+  {key:"Maintain Weight",      label:"Maintain Weight",      icon:"⚖️"},
+  {key:"Improve Fitness",      label:"Improve Fitness",      icon:"❤️"},
+  {key:"Body Recomposition",   label:"Body Recomposition",   icon:"🔄"},
+  {key:"Athletic Performance", label:"Athletic Performance", icon:"⭐"}
+];
+
+const OB_DIET_OPTIONS = [
+  {key:"non-veg",    label:"Non Vegetarian", icon:"🍗"},
+  {key:"vegetarian", label:"Vegetarian",     icon:"🥦"},
+  {key:"vegan",      label:"Vegan",          icon:"🌱"},
+  {key:"eggetarian", label:"Eggetarian",     icon:"🥚"},
+  {key:"jain",       label:"Jain",           icon:"🙏"},
+  {key:"none",       label:"No Preference",  icon:"🍽️"}
+];
+
+const OB_WORKOUT_OPTIONS = [
+  {key:"gym",        label:"Gym",          icon:"🏋️"},
+  {key:"home",       label:"Home Workout", icon:"🏠"},
+  {key:"running",    label:"Running",      icon:"🏃"},
+  {key:"cycling",    label:"Cycling",      icon:"🚴"},
+  {key:"swimming",   label:"Swimming",     icon:"🏊"},
+  {key:"strength",   label:"Strength",     icon:"💪"},
+  {key:"functional", label:"Functional",   icon:"🤸"},
+  {key:"crossfit",   label:"CrossFit",     icon:"🥊"},
+  {key:"hyrox",      label:"HYROX",        icon:"🏆"},
+  {key:"yoga",       label:"Yoga",         icon:"🧘"}
+];
+
+/* Activity levels carry the multiplier TDEE already uses, so the step writes a real number
+   into the plan rather than a label something else then has to translate. */
+const OB_ACTIVITY_OPTIONS = [
+  {key:"Sedentary",         label:"Sedentary",         desc:"Little or no exercise", mult:1.2,   icon:"🛋️"},
+  {key:"Lightly Active",    label:"Lightly Active",    desc:"1–3 days per week",     mult:1.375, icon:"🚶"},
+  {key:"Moderately Active", label:"Moderately Active", desc:"3–5 days per week",     mult:1.465, icon:"🏃"},
+  {key:"Very Active",       label:"Very Active",       desc:"6–7 days per week",     mult:1.725, icon:"🏋️"},
+  {key:"Extremely Active",  label:"Athlete",           desc:"Very intense daily",    mult:1.9,   icon:"🥇"}
+];
+
+const OB_HEALTH_METRICS = [
+  "Steps & Distance", "Calories Burned", "Heart Rate", "Weight", "Sleep", "Workouts"
+];
 
 const MOBILITY_RATING_OPTIONS = ["Poor","Fair","Good","Excellent"];
 const FITNESS_LEVELS = ["Beginner","Novice","Intermediate","Advanced","Elite"];
@@ -4494,6 +4543,10 @@ const state = {
     targetWeight: null, bodyFatPct: null, experienceLevel: null, activityLevel: null,
     strengthLevel: null, cardioLevel: null, mobilityLevel: null, flexibilityLevel: null,
     dailySteps: null, restingHeartRate: null, sleepHours: null, stressLevel: null, occupation: "",
+    // Added for the eleven-step flow. Birthday supersedes profile.age as the stored value —
+    // age is derived from it, so it cannot go stale the way a typed number does.
+    fairUseAccepted: false, birthday: null, dietPreference: null, workoutPreferences: [],
+    healthConnectRequested: false,
     painAreas: [], previousInjuries: "", medicalConditions: "", movementRestrictions: "",
     exercisesToAvoid: "", dietaryRestrictions: "",
     trainingStyle: null, preferredCardio: [],
@@ -10081,7 +10134,7 @@ function obTextarea(fieldPath, placeholder){
   return `<textarea class="note-input" data-ob-field="${obEsc(fieldPath)}" placeholder="${obEsc(placeholder||'')}" style="margin-bottom:14px;min-height:52px;">${obEsc(v||'')}</textarea>`;
 }
 
-const ONBOARDING_TOTAL_STEPS = 10;
+const ONBOARDING_TOTAL_STEPS = 11;
 
 function onboardingProgressHeader(step){
   return `
@@ -10390,7 +10443,239 @@ function obStepSummary(){
   `;
 }
 
-const ONBOARDING_STEP_RENDERERS = [obStep1,obStep2,obStep3,obStep4,obStep5,obStep6,obStep7,obStep8,obStep9Tests,obStepSummary];
+/* =========================================================
+   ONBOARDING — the eleven steps
+
+   The previous ten training-focused steps are NOT deleted. obStep1..obStep9Tests and
+   obStepSummary are still defined above and still write the same fields; they are simply no
+   longer in the primary flow. Everything they collected that the coach engines need is either
+   asked for below or left at its default, and classifyFitnessLevel() already returns null when
+   no test was taken, which the finish handler has always guarded for.
+========================================================= */
+
+/* A large tappable option row: icon, label, optional description, tick when chosen. One
+   component for goal, activity, diet and workout so the four steps cannot drift apart. */
+/* Single-select here uses data-ob-pick, NOT the older data-ob-select.
+   data-ob-select toggles: re-tapping the current value clears it. That is right for an
+   optional chip, and wrong for a required answer — gender defaults to male, so the first tap
+   on "Male" was silently DESELECTING it and leaving the field null. A required choice should
+   never be clearable by mistapping the thing you already meant. */
+function obOptionRow(fieldPath, opt, selected, multi){
+  const attr = multi ? "data-ob-toggle" : "data-ob-pick";
+  return `<button class="ob-opt ${selected?'is-on':''}" ${attr}="${obEsc(fieldPath)}|${obEsc(opt.key)}">
+    <span class="ob-opt__icon" aria-hidden="true">${opt.icon||''}</span>
+    <span class="ob-opt__body">
+      <span class="ob-opt__label">${obEsc(opt.label)}</span>
+      ${opt.desc?`<span class="ob-opt__desc">${obEsc(opt.desc)}</span>`:''}
+    </span>
+    <span class="ob-opt__tick" aria-hidden="true">${selected?'✓':''}</span>
+  </button>`;
+}
+
+function obOptionList(fieldPath, options, multi){
+  const cur = obGet(fieldPath);
+  return `<div class="ob-opts">${options.map(o=>
+    obOptionRow(fieldPath, o, multi ? (cur||[]).includes(o.key) : cur===o.key, multi)
+  ).join("")}</div>`;
+}
+
+function obHero(icon, title, sub){
+  return `<div class="ob-hero">
+    <div class="ob-hero__icon" aria-hidden="true">${icon}</div>
+    <h2 class="ob-hero__title">${title}</h2>
+    ${sub?`<p class="ob-hero__sub">${obEsc(sub)}</p>`:''}
+  </div>`;
+}
+
+/* STEP 1 — Fair Use Policy */
+function obFairUse(){
+  const ok = !!state.onboarding.fairUseAccepted;
+  const points = [
+    ["\u{1F464}", "Your account is for personal use only. Do not share it."],
+    ["\u{1F512}", "Keep your health data private and secure."],
+    ["\u{1F916}", "Use AI features responsibly. They inform, they do not diagnose."],
+    ["\u{1F91D}", "Be respectful and follow community guidelines."]
+  ];
+  return `
+    ${obHero("\u{1F4CB}", "Fair Use Policy", "IGNYT is designed to provide fair and secure access to fitness, wellness and health features for all members.")}
+    <div class="ob-policy">
+      ${points.map(([i,t])=>`<div class="ob-policy__row"><span aria-hidden="true">${i}</span><span>${obEsc(t)}</span></div>`).join("")}
+    </div>
+    <button class="ob-check ${ok?'is-on':''}" data-ob-toggle-bool="onboarding.fairUseAccepted">
+      <span class="ob-check__box" aria-hidden="true">${ok?'✓':''}</span>
+      <span>I have read and agree to the <a href="legal/privacy-policy.html" data-ob-legal>Terms of Service</a> and <a href="legal/privacy-policy.html" data-ob-legal>Privacy Policy</a>.</span>
+    </button>`;
+}
+
+/* STEP 2 — Birthday. Stored as a date; profile.age is derived, because age drifts and a
+   birthday does not — the old flow asked for age directly and it silently went stale. */
+function obBirthday(){
+  const b = state.onboarding.birthday || "";
+  const age = obAgeFromBirthday(b);
+  return `
+    ${obHero("\u{1F382}", "When's your <span class='ob-accent'>birthday</span>?", "We use your age to personalise your workout plans and nutrition targets.")}
+    <input type="date" class="ob-date" data-ob-field="onboarding.birthday" value="${obEsc(b)}" max="${new Date().toISOString().slice(0,10)}">
+    ${age!=null ? `<div class="ob-derived">You are <strong>${age}</strong> years old</div>` : ''}`;
+}
+
+function obAgeFromBirthday(iso){
+  if(!iso) return null;
+  const d = new Date(iso);
+  if(isNaN(d)) return null;
+  const now = new Date();
+  let a = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if(m < 0 || (m === 0 && now.getDate() < d.getDate())) a--;
+  return (a >= 0 && a < 120) ? a : null;
+}
+
+/* STEP 3 — Gender */
+function obGender(){
+  return `
+    ${obHero("\u{26A5}", "What's your <span class='ob-accent'>gender</span>?", "We use this to estimate your metabolic rate. Mifflin-St Jeor needs it.")}
+    ${obOptionList("profile.gender", [
+      {key:"male",   label:"Male",  icon:"\u{2642}\u{FE0F}"},
+      {key:"female", label:"Female",icon:"\u{2640}\u{FE0F}"},
+      {key:"other",  label:"Other", icon:"\u{26A7}\u{FE0F}"}
+    ])}
+    ${state.profile.gender==="other" ? `<div class="ob-note">Metabolic formulas only publish male and female coefficients. We will use the female equation, which is the more conservative of the two.</div>` : ''}`;
+}
+
+/* STEP 4 — Height */
+function obHeight(){
+  const cm = Number(state.profile.height) || 0;
+  const ft = cm ? Math.floor(cm/30.48) : 0;
+  const inch = cm ? Math.round((cm/2.54) - ft*12) : 0;
+  return `
+    ${obHero("\u{1F4CF}", "Your height", "")}
+    <div class="ob-bigvalue">${cm||'—'}<span class="ob-bigvalue__unit">cm</span></div>
+    ${cm?`<div class="ob-derived">${ft} ft ${inch} in</div>`:''}
+    <input type="range" class="ob-range" min="120" max="220" step="1" value="${cm||170}" data-ob-range="profile.height" aria-label="Height in centimetres">
+    <div class="ob-range__ticks"><span>120</span><span>170</span><span>220</span></div>`;
+}
+
+/* STEP 5 — Weight */
+function obWeight(){
+  const kg = Number(state.profile.weight) || 0;
+  return `
+    ${obHero("\u{2696}\u{FE0F}", "Your weight", "")}
+    <div class="ob-bigvalue">${kg?kg.toFixed(1):'—'}<span class="ob-bigvalue__unit">kg</span></div>
+    ${kg?`<div class="ob-derived">${(kg*2.20462).toFixed(1)} lb</div>`:''}
+    <input type="range" class="ob-range" min="30" max="200" step="0.5" value="${kg||70}" data-ob-range="profile.weight" aria-label="Weight in kilograms">
+    <div class="ob-range__ticks"><span>30</span><span>115</span><span>200</span></div>`;
+}
+
+/* STEP 6 — Fitness Goal */
+function obGoal(){
+  return `
+    ${obHero("\u{1F3AF}", "What's your <span class='ob-accent'>goal</span>?", "This is what the whole plan gets built around.")}
+    ${obOptionList("onboarding.primaryGoal", OB_GOAL_OPTIONS)}`;
+}
+
+/* STEP 7 — Activity Level */
+function obActivity(){
+  return `
+    ${obHero("\u{1F3C3}", "How <span class='ob-accent'>active</span> are you?", "This sets your daily calorie needs. Be honest rather than aspirational — the number only works if it matches your real week.")}
+    ${obOptionList("onboarding.activityLevel", OB_ACTIVITY_OPTIONS)}`;
+}
+
+/* STEP 8 — Diet Preference */
+function obDiet(){
+  return `
+    ${obHero("\u{1F957}", "What's your <span class='ob-accent'>diet</span> preference?", "We use this to suggest meals you will actually eat.")}
+    ${obOptionList("onboarding.dietPreference", OB_DIET_OPTIONS)}`;
+}
+
+/* STEP 9 — Workout Preference */
+function obWorkoutPref(){
+  return `
+    ${obHero("\u{1F3CB}\u{FE0F}", "What <span class='ob-accent'>workouts</span> do you prefer?", "Select all that you enjoy. You can change these any time.")}
+    ${obOptionList("onboarding.workoutPreferences", OB_WORKOUT_OPTIONS, true)}`;
+}
+
+/* STEP 10 — Health Connect. Android only; on anything else the step says so rather than
+   offering a button that cannot work. */
+function obHealthConnect(){
+  const native = window.IgnytHealth && IgnytHealth.isAvailable && IgnytHealth.isAvailable();
+  return `
+    ${obHero("\u{1F499}", "Connect <span class='ob-accent'>Health Connect</span>", "Sync your health data for better insights and accurate tracking.")}
+    <div class="ob-policy">
+      ${OB_HEALTH_METRICS.map(m=>`<div class="ob-policy__row"><span aria-hidden="true" style="color:var(--mint);">✓</span><span>${obEsc(m)}</span></div>`).join("")}
+    </div>
+    ${native
+      ? `<button class="btn btn-accent btn-block" data-ob-health>Connect Health Connect</button>`
+      : `<div class="ob-note">Health Connect is an Android feature. On this device the app will use manual entry, and you can connect later from Profile.</div>`}`;
+}
+
+/* STEP 11 — AI Personalization.
+
+   Every number here is COMPUTED from the ten answers above using the formulas already in this
+   file — calcBMR is Mifflin-St Jeor, TDEE is BMR x the activity multiplier the user just
+   chose, the goal delta is GOAL_TO_CALORIE_DELTA, the split is recommendedSplit(). Nothing is
+   invented and nothing is a placeholder; if an input is missing the row says so instead of
+   showing a number derived from a guess. */
+function obPersonalization(){
+  const plan = obComputePlan();
+  if(!plan.ok){
+    return `
+      ${obHero("\u{1F916}", "AI Personalization", "")}
+      <div class="ob-note">${obEsc(plan.missing)} Go back and fill that in and your full plan appears here.</div>`;
+  }
+  const row = (k,v) => `<div class="ob-plan__row"><span>${obEsc(k)}</span><strong>${v}</strong></div>`;
+  return `
+    ${obHero("\u{1F916}", "AI Personalization", "Here is the plan built from your answers.")}
+    <div class="ob-plan">
+      ${row("BMI", plan.bmi.toFixed(1) + " · " + bmiCategory(plan.bmi))}
+      ${row("BMR", Math.round(plan.bmr) + " kcal")}
+      ${row("TDEE", Math.round(plan.tdee) + " kcal")}
+      ${row("Daily Target", Math.round(plan.calories) + " kcal")}
+      ${row("Protein", plan.protein + " g")}
+      ${row("Carbs", plan.carbs + " g")}
+      ${row("Fat", plan.fat + " g")}
+      ${row("Water", plan.water + " ml")}
+      ${row("Workout Split", plan.split)}
+    </div>
+    <div class="ob-note">Calculated with Mifflin-St Jeor and your activity multiplier — the same formulas the Tools calculators use. You can adjust any of it later.</div>`;
+}
+
+/* Shared by the step and by the finish handler, so what the user is shown and what gets
+   saved cannot disagree. */
+function obComputePlan(){
+  const p = state.profile, o = state.onboarding;
+  const age = obAgeFromBirthday(o.birthday) ?? p.age;
+  const h = Number(p.height), w = Number(p.weight);
+  if(!age)      return { ok:false, missing:"Your birthday is missing." };
+  if(!h || !w)  return { ok:false, missing:"Your height or weight is missing." };
+
+  const act = OB_ACTIVITY_OPTIONS.find(a=>a.key===o.activityLevel);
+  const mult = act ? act.mult : (p.activityMultiplier || 1.465);
+  const bmr = calcBMR(age, p.gender || "female", h, w);
+  const tdee = bmr * mult;
+  const delta = GOAL_TO_CALORIE_DELTA[o.primaryGoal] || 0;
+  const calories = Math.max(1200, tdee + delta);
+
+  /* Protein by goal and bodyweight, then fat at 25% of energy, carbs as the remainder. This
+     is the standard ordering — protein and fat have floors, carbs are what is left. */
+  const gPerKg = o.primaryGoal === "Build Muscle" || o.primaryGoal === "Body Recomposition" ? 2.0
+               : o.primaryGoal === "Fat Loss" ? 1.8 : 1.6;
+  const protein = Math.round(w * gPerKg);
+  const fat = Math.round((calories * 0.25) / 9);
+  const carbs = Math.max(0, Math.round((calories - protein*4 - fat*9) / 4));
+
+  return {
+    ok:true, age, bmr, tdee, calories,
+    bmi: w / Math.pow(h/100, 2),
+    protein, carbs, fat,
+    water: Math.round(w * 35),                 // 35 ml/kg, the usual clinical baseline
+    split: recommendedSplit(p.trainingDays || 4, null),
+    mult
+  };
+}
+
+const ONBOARDING_STEP_RENDERERS = [
+  obFairUse, obBirthday, obGender, obHeight, obWeight, obGoal,
+  obActivity, obDiet, obWorkoutPref, obHealthConnect, obPersonalization
+];
 
 /* =========================================================
    SIGN IN
@@ -10591,17 +10876,84 @@ function wireOnboardingWizard(){
       const fieldPath = el.dataset.obField;
       const isNumber = el.type==="number" || fieldPath==="profile.trainingDays" || fieldPath==="onboarding.minutesPerSession";
       obSet(fieldPath, isNumber ? (el.value===""?null:Number(el.value)) : el.value);
-      if(fieldPath==="onboarding.targetGoalText" || fieldPath==="onboarding.targetDateCustom") renderOnboardingWizard();
+      if(fieldPath==="onboarding.targetGoalText" || fieldPath==="onboarding.targetDateCustom"
+         || fieldPath==="onboarding.birthday") renderOnboardingWizard();
     });
+  });
+
+  /* Single-select that always SETS. See the note on obOptionRow for why this is not
+     data-ob-select. */
+  document.querySelectorAll("[data-ob-pick]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const [fieldPath, raw] = el.dataset.obPick.split("|");
+      obSet(fieldPath, /^-?\d+(\.\d+)?$/.test(raw) ? Number(raw) : raw);
+      renderOnboardingWizard();
+    });
+  });
+
+  /* A checkbox that is a boolean rather than a value in a set — the Fair Use agreement. */
+  document.querySelectorAll("[data-ob-toggle-bool]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      if(e.target.closest("a")) return;               // the policy links are real links
+      const path = el.dataset.obToggleBool;
+      obSet(path, !obGet(path));
+      renderOnboardingWizard();
+    });
+  });
+
+  /* Height and weight sliders. `input` updates the readout live WITHOUT a re-render — a
+     re-render mid-drag replaces the slider element and the drag is lost, which is the same
+     class of bug the food search had with the keyboard. The re-render happens once on
+     `change`, when the thumb is released. */
+  document.querySelectorAll("[data-ob-range]").forEach(el=>{
+    const path = el.dataset.obRange;
+    const readout = document.querySelector(".ob-bigvalue");
+    el.addEventListener("input", ()=>{
+      const v = Number(el.value);
+      obSet(path, v);
+      if(readout) readout.firstChild.textContent = path==="profile.weight" ? v.toFixed(1) : String(v);
+    });
+    el.addEventListener("change", ()=>{ obSet(path, Number(el.value)); renderOnboardingWizard(); });
+  });
+
+  const hcBtn = document.querySelector("[data-ob-health]");
+  if(hcBtn) hcBtn.addEventListener("click", async ()=>{
+    state.onboarding.healthConnectRequested = true;
+    try{
+      if(window.IgnytHealth && IgnytHealth.requestPermissions) await IgnytHealth.requestPermissions();
+    }catch(err){
+      showToast("Health Connect didn't grant access. You can connect later from Profile.", "error", render);
+    }
+    renderOnboardingWizard();
   });
   const backBtn = document.querySelector('[data-ob-nav="back"]');
   if(backBtn) backBtn.addEventListener("click", ()=>{ state.onboardingStep = Math.max(1, state.onboardingStep-1); renderOnboardingWizard(); });
   const nextBtn = document.querySelector('[data-ob-nav="next"]');
   if(nextBtn) nextBtn.addEventListener("click", ()=>{
+    // The only hard gate in the flow. Everything else is skippable by design; agreeing to the
+    // policy is not something the app can assume on the user's behalf.
+    if(state.onboardingStep === 1 && !state.onboarding.fairUseAccepted){
+      showToast("Please accept the Fair Use Policy to continue.", "error", render);
+      return;
+    }
     if(state.onboardingStep < ONBOARDING_TOTAL_STEPS){
       state.onboardingStep++;
       renderOnboardingWizard();
       return;
+    }
+
+    /* Finishing. The plan shown on step 11 is written to the profile here, so what the user
+       was shown and what the app then uses are the same numbers rather than two independent
+       calculations that can disagree. */
+    const plan = obComputePlan();
+    if(plan.ok){
+      state.profile.age = plan.age;                       // derived from birthday
+      state.profile.activityMultiplier = plan.mult;
+      state.nutrition = Object.assign({}, state.nutrition, {
+        proteinPct: Math.round(plan.protein*4 / plan.calories * 100),
+        carbPct:    Math.round(plan.carbs*4   / plan.calories * 100),
+        fatPct:     Math.round(plan.fat*9     / plan.calories * 100)
+      });
     }
     // Finishing: apply the recommended calorie delta, and the measured fitness level (if
     // any tests were completed) to the app's real 3-tier training-volume scale.
