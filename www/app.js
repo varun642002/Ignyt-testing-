@@ -4657,6 +4657,8 @@ const state = {
   foodBrowseCategory: null,
   // Categories are behind a button now rather than the default view.
   foodBrowseOpen: false,
+  savedMeals: LS.get("hx_saved_meals", []),   // "My Meals" — named combos logged in one tap
+  savedMealsAll: false,       // transient — "View all" expands the My Meals list
   nutritionScreen: null,      // null | "insights"
   insightsMeal: "All Meals",  // which meal tab the Insights page is filtered to
   foodBrowsePage: 1, foodResultPage: 1,
@@ -7576,6 +7578,101 @@ function renderFoodSearchPanel(meal){
  * same problem for the exercise picker.
  */
 /* =========================================================
+   SAVED MEALS ("My Meals") + repeat-logging helpers
+
+   A saved meal is a NAMED SET OF FOODS logged as one action — "Breakfast and dinner" being
+   whey, strawberry cream and the rest, added in a single tap. It is stored as a snapshot of
+   its items rather than as a list of foodIds, for the same reason a log entry is: the
+   catalogue can change underneath it, and a combo that silently re-prices itself when a food
+   is re-imported would be worse than one that keeps the numbers you saved.
+========================================================= */
+
+/** Distinct foods ranked by how often they have actually been logged, each carrying the
+ *  serving it was last logged with. Favourites are pinned above the rest — an explicit save
+ *  is a stronger signal than a frequency count. */
+function frequentlyTrackedFoods(limit){
+  const counts = Object.create(null);
+  const last = Object.create(null);
+  for(const e of state.foodLog){
+    const k = String(e.name||"").trim().toLowerCase();
+    if(!k) continue;
+    counts[k] = (counts[k]||0) + 1;
+    if(!last[k]) last[k] = e;            // foodLog is newest-first, so the first win is the latest
+  }
+  const favNames = new Set((state.favoriteFoods||[]).map(f=>String(f.name||"").toLowerCase()));
+  return Object.keys(counts)
+    .map(k=>({ entry:last[k], count:counts[k], fav:favNames.has(k) }))
+    .sort((a,b)=> (b.fav?1:0)-(a.fav?1:0) || b.count-a.count
+                  || String(a.entry.name).localeCompare(String(b.entry.name)))
+    .slice(0, limit || 8);
+}
+
+/** Yesterday's entries, for the one-tap repeat. */
+function yesterdayEntries(){
+  const d = new Date(nutritionDateStr() + "T12:00:00");
+  d.setDate(d.getDate() - 1);
+  const ds = d.toISOString().slice(0,10);
+  return state.foodLog.filter(f=>f.date === ds);
+}
+
+/** Copy a set of entries onto the current day, keeping their meal assignment. */
+function copyEntriesToToday(entries, mealOverride){
+  const ds = nutritionDateStr();
+  let n = 0;
+  for(const e of entries){
+    state.foodLog.unshift(Object.assign({}, e, {
+      id: nextId(),
+      date: ds,
+      meal: mealOverride || e.meal,
+      at: Date.now(),
+      copiedFrom: e.id
+    }));
+    n++;
+  }
+  persist();
+  return n;
+}
+
+/** Save the foods currently in one meal as a reusable combo. */
+function saveMealCombo(name, entries){
+  if(!entries || !entries.length) return null;
+  const combo = {
+    id: nextId(),
+    name: String(name||"My meal").trim().slice(0,60),
+    createdAt: Date.now(),
+    // A snapshot, not references — see the note at the top of this block.
+    items: entries.map(e=>({
+      name: e.name, grams: e.grams, servingUnit: e.servingUnit, foodId: e.foodId ?? null,
+      calories: Number(e.calories||0), protein: Number(e.protein||0),
+      carbs: Number(e.carbs||0), fat: Number(e.fat||0), fibre: Number(e.fibre||0)
+    }))
+  };
+  state.savedMeals = [combo].concat(state.savedMeals || []);
+  LS.set("hx_saved_meals", state.savedMeals);
+  return combo;
+}
+
+function savedMealCalories(combo){
+  return Math.round((combo.items||[]).reduce((a,i)=>a+Number(i.calories||0), 0));
+}
+
+/** Log every food in a combo into one meal. */
+function logSavedMeal(combo, meal){
+  const ds = nutritionDateStr();
+  for(const i of (combo.items||[])){
+    state.foodLog.unshift({
+      id: nextId(), date: ds, name: i.name, meal: meal || mealForNow(),
+      grams: i.grams, quantity: i.grams, servingUnit: i.servingUnit || "g",
+      calories: Math.round(i.calories||0), protein: Number(i.protein||0),
+      carbs: Number(i.carbs||0), fat: Number(i.fat||0), fibre: Number(i.fibre||0),
+      foodId: i.foodId ?? null, at: Date.now(), fromMeal: combo.id
+    });
+  }
+  persist();
+  return (combo.items||[]).length;
+}
+
+/* =========================================================
    SEARCH-FIRST FOOD LOG
 
    The screen used to open on a grid of 41 category tiles, which meant logging a food you eat
@@ -7709,41 +7806,64 @@ function foodSearchResultsHtml(meal){
         </div>` : ""}
 
       ${idle ? (()=>{
-        const favs = favouriteFoodsRanked(6);
-        const recents = recentLoggedFoods(8);
+        const freq = frequentlyTrackedFoods(8);
+        const combos = (state.savedMeals || []).slice(0, state.savedMealsAll ? 99 : 2);
+        const yday = yesterdayEntries();
         return `
-          ${favs.length ? `
-            <div class="fs-head"><span>⭐ Favourites</span></div>
-            <div class="fs-list">
-              ${favs.map(({food,n})=>quickFoodRow(
-                food,
-                n ? `Logged ${n} time${n===1?'':'s'}` : "Saved",
-                `data-quick-fav="${escHtml(food.name)}"`
-              )).join("")}
-            </div>` : ""}
+          <!-- Promoted AI scan. The camera is the fastest way in when it works, so it gets a
+               banner rather than one tile among four. -->
+          <button class="sp-banner" data-ai-act="scan">
+            <span class="sp-banner__body">
+              <span class="sp-banner__title">Track with Images</span>
+              <span class="sp-banner__sub">You click. We scan and track!</span>
+            </span>
+            <span class="sp-banner__cam" aria-hidden="true">📷</span>
+          </button>
 
-          ${recents.length ? `
-            <div class="fs-head"><span>🕒 Recent</span></div>
-            <div class="fs-list">
-              ${recents.map(e=>quickFoodRow(
-                e,
-                [e.grams ? `${Math.round(e.grams)} ${e.servingUnit||'g'}` : null, e.meal].filter(Boolean).join(" · "),
-                `data-quick-recent="${escHtml(String(e.id))}"`
-              )).join("")}
-            </div>` : ""}
+          ${yday.length ? `
+            <button class="sp-row sp-row--action" data-copy-yesterday="1">
+              <span class="sp-row__title">Track Yesterday's Meal</span>
+              <span class="sp-row__meta">${yday.length} item${yday.length===1?'':'s'}</span>
+              <span class="sp-plus" aria-hidden="true">+</span>
+            </button>` : ""}
 
-          ${!favs.length && !recents.length ? `
+          ${combos.length ? `
+            <div class="sp-head">
+              <span>My Meals</span>
+              ${(state.savedMeals||[]).length > 2
+                ? `<button class="sp-viewall" data-saved-all="1">${state.savedMealsAll?'Show less':'View all'}</button>` : ""}
+            </div>
+            ${combos.map(c=>`
+              <div class="sp-row" data-saved-meal="${escHtml(String(c.id))}">
+                <span class="sp-row__body">
+                  <span class="sp-row__title">${escHtml(c.name)}</span>
+                  <span class="sp-row__sub">${escHtml((c.items||[]).map(i=>i.name).join(", ")).slice(0,60)}${(c.items||[]).map(i=>i.name).join(", ").length>60?'…':''}</span>
+                </span>
+                <span class="sp-row__cal">${savedMealCalories(c)} Cal</span>
+                <span class="sp-plus" aria-hidden="true">+</span>
+              </div>`).join("")}` : ""}
+
+          ${freq.length ? `
+            <div class="sp-head"><span>Frequently Tracked Foods</span></div>
+            ${freq.map(f=>`
+              <div class="sp-row" data-quick-recent="${escHtml(String(f.entry.id))}">
+                <span class="sp-row__body">
+                  <span class="sp-row__title">${escHtml(f.entry.name)}${f.fav?' <span class="sp-star">★</span>':''}</span>
+                  <span class="sp-row__sub">${f.entry.grams?`${Math.round(f.entry.grams)} ${escHtml(f.entry.servingUnit||'g')}`:'&mdash;'}${f.count>1?` · ${f.count}×`:''}</span>
+                </span>
+                <span class="sp-row__cal">${Math.round(f.entry.calories||0)} Cal</span>
+                <span class="sp-plus" aria-hidden="true">+</span>
+              </div>`).join("")}` : ""}
+
+          ${!freq.length && !combos.length && !yday.length ? `
             <div class="fs-empty">
               <div style="font-size:30px;line-height:1;margin-bottom:8px;">🔍</div>
               <div style="font-weight:700;font-size:14px;">Search ${(cat?cat.count():0).toLocaleString()} foods</div>
               <div style="font-size:12px;color:var(--muted);margin-top:4px;">
-                Anything you log or save shows up here for one-tap logging next time.
+                Anything you log shows up here for one-tap repeat logging.
               </div>
             </div>` : ""}
 
-          <!-- Categories are still reachable, just no longer the front door. Browsing a
-               taxonomy is a real need occasionally; it is not how anyone logs the lunch they
-               eat every week. -->
           <button class="fs-browse" data-toggle-browse="1">
             <span>${state.foodBrowseOpen ? "Hide categories" : "Browse categories"}</span>
             <span style="transform:rotate(${state.foodBrowseOpen?180:0}deg);transition:transform .2s;">⌄</span>
@@ -19933,6 +20053,39 @@ function bindFoodResultHandlers(){
         if(IgnytFoodSearch.rememberSearch) IgnytFoodSearch.rememberSearch(v);
         updateFoodSearchResults();
       });
+    });
+
+    /* Copy yesterday forward. Confirmed rather than instant: it can add a dozen entries and
+       an accidental tap would be tedious to unpick one row at a time. */
+    const copyY = document.querySelector("[data-copy-yesterday]");
+    if(copyY) copyY.addEventListener("click", async ()=>{
+      const entries = yesterdayEntries();
+      if(!entries.length) return;
+      const ok = await confirmDialog(
+        `Log yesterday's ${entries.length} item${entries.length===1?'':'s'} again?`, render);
+      if(!ok) return;
+      const n = copyEntriesToToday(entries);
+      closeFoodFlow();
+      showToast(n + " item" + (n===1?"":"s") + " added.", "success", render);
+      render();
+    });
+
+    document.querySelectorAll("[data-saved-meal]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const combo = (state.savedMeals||[]).find(c=>String(c.id) === el.dataset.savedMeal);
+        if(!combo) return;
+        const meal = (state.foodFlow && state.foodFlow.meal) || mealForNow();
+        const n = logSavedMeal(combo, meal);
+        closeFoodFlow();
+        showToast(`${combo.name} — ${n} item${n===1?'':'s'} added to ${meal}.`, "success", render);
+        render();
+      });
+    });
+
+    const savedAll = document.querySelector("[data-saved-all]");
+    if(savedAll) savedAll.addEventListener("click", ()=>{
+      state.savedMealsAll = !state.savedMealsAll;
+      updateFoodSearchResults();
     });
 
     const browseToggle = document.querySelector("[data-toggle-browse]");

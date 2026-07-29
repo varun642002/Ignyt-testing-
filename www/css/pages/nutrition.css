@@ -1385,3 +1385,63 @@ body.kb-open .nd-snap{ display:none; }
 @media (prefers-reduced-motion: reduce){
   .ni-bar > i, .ni-bottle > i{ transition:none; }
 }
+
+/* =========================================================
+   SEARCH PAGE — reference layout
+========================================================= */
+.sp-banner{
+  display:flex; align-items:center; gap:12px; width:100%;
+  padding:14px; margin-bottom:14px;
+  border:0; border-radius:var(--radius-card);
+  background:var(--primary-soft); color:var(--text);
+  font:inherit; text-align:left; cursor:pointer;
+  transition:transform .14s cubic-bezier(.34,1.4,.64,1);
+}
+.sp-banner:active{ transform:scale(.985); }
+.sp-banner__body{ flex:1; min-width:0; }
+.sp-banner__title{ display:block; font-size:15px; font-weight:800; color:var(--primary); }
+.sp-banner__sub{ display:block; font-size:12.5px; color:var(--primary); opacity:.8; margin-top:2px; }
+.sp-banner__cam{
+  width:44px; height:44px; flex:0 0 44px; border-radius:12px;
+  display:grid; place-items:center; font-size:19px;
+  background:var(--primary); color:var(--on-primary);
+}
+
+.sp-head{
+  display:flex; align-items:center; justify-content:space-between;
+  margin:18px 0 8px; font-size:13px; font-weight:700; color:var(--muted);
+}
+.sp-viewall{
+  border:0; background:none; color:var(--primary);
+  font:inherit; font-size:12.5px; font-weight:700; cursor:pointer;
+}
+
+.sp-row{
+  display:flex; align-items:center; gap:12px; width:100%;
+  padding:12px 2px; border:0; border-bottom:1px solid var(--divider, var(--border));
+  background:none; color:var(--text); font:inherit; text-align:left; cursor:pointer;
+}
+.sp-row:active{ background:var(--surface-alt); }
+.sp-row--action{ border-bottom:0; padding:14px 2px; }
+.sp-row__body{ flex:1; min-width:0; }
+.sp-row__title{
+  display:block; font-size:15px; font-weight:700; line-height:1.3;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.sp-row__sub{
+  display:block; font-size:12.5px; color:var(--muted); margin-top:2px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.sp-row__meta{ font-size:12.5px; color:var(--muted); }
+.sp-row__cal{
+  flex-shrink:0; font-size:13.5px; color:var(--muted); font-variant-numeric:tabular-nums;
+}
+.sp-star{ color:var(--primary); font-size:12px; }
+.sp-plus{
+  width:30px; height:30px; flex:0 0 30px; border-radius:9px;
+  display:grid; place-items:center;
+  border:1.5px solid var(--primary); color:var(--primary);
+  font-size:17px; font-weight:700; line-height:1;
+}
+
+@media (prefers-reduced-motion: reduce){ .sp-banner{ transition:none; } }
