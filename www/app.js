@@ -13781,6 +13781,10 @@ function renderFoodDetailPage(){
             Vitamin A is µg RAE and folate is µg DFE, which is the basis the daily values are set on.
             Trans fat shows no percentage because health authorities set no reference intake for it —
             the guidance is to keep it as low as possible.
+            ${food.fatSource === "usda" ? `<br><br><strong>Fat breakdown from a matched USDA record.</strong>
+              This food's own source did not report saturated, unsaturated or cholesterol figures, so
+              they were taken from the closest USDA FoodData Central match on energy, fat and protein.
+              Treat them as representative of the food type rather than measured from this exact product.` : ""}
           </div>`;
       })() : ""}
     </div>

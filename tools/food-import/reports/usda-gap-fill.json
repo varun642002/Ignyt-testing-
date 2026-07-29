@@ -1,0 +1,484 @@
+{
+  "usdaFoodsIndexed": 7844,
+  "ignytFoods": 3207,
+  "matched": 259,
+  "rejectedNoCandidate": 2578,
+  "rejectedMacroMismatch": 112,
+  "rejectedAmbiguous": 0,
+  "rejectedQualifier": 257,
+  "filled": {
+    "saturatedFat": 258,
+    "monounsaturatedFat": 258,
+    "polyunsaturatedFat": 255,
+    "cholesterol": 223,
+    "pantothenic": 174,
+    "omega3": 185,
+    "transFat": 88,
+    "omega6": 83
+  },
+  "samples": [
+    {
+      "ignyt": "Aashirvaad Rice Flour",
+      "usda": "Rice flour, brown",
+      "wrote": {
+        "saturatedFat": 0.557,
+        "monounsaturatedFat": 1.01,
+        "polyunsaturatedFat": 0.996,
+        "cholesterol": 0.0,
+        "pantothenic": 1.59
+      }
+    },
+    {
+      "ignyt": "Annapurna Rice Flour",
+      "usda": "Rice flour, brown",
+      "wrote": {
+        "saturatedFat": 0.557,
+        "monounsaturatedFat": 1.01,
+        "polyunsaturatedFat": 0.996,
+        "cholesterol": 0.0,
+        "pantothenic": 1.59
+      }
+    },
+    {
+      "ignyt": "Annapurna Sooji",
+      "usda": "Semolina, unenriched",
+      "wrote": {
+        "saturatedFat": 0.15,
+        "monounsaturatedFat": 0.124,
+        "polyunsaturatedFat": 0.43,
+        "cholesterol": 0.0,
+        "pantothenic": 0.58,
+        "omega3": 0.0
+      }
+    },
+    {
+      "ignyt": "Betty Crocker Chocolate Cake Mix",
+      "usda": "Cake, white, dry mix, special dietary (includes lemon-flavored)",
+      "wrote": {
+        "saturatedFat": 1.25,
+        "monounsaturatedFat": 3.48,
+        "polyunsaturatedFat": 3.18,
+        "cholesterol": 0.0,
+        "pantothenic": 0.196,
+        "omega3": 0.0
+      }
+    },
+    {
+      "ignyt": "Betty Crocker Pancake Mix",
+      "usda": "Pancakes, whole wheat, dry mix, incomplete",
+      "wrote": {
+        "saturatedFat": 0.0,
+        "monounsaturatedFat": 0.057,
+        "polyunsaturatedFat": 0.259,
+        "transFat": 0.0,
+        "cholesterol": 0.0,
+        "omega3": 0.0
+      }
+    },
+    {
+      "ignyt": "Betty Crocker Vanilla Cake Mix",
+      "usda": "Cake, white, dry mix, special dietary (includes lemon-flavored)",
+      "wrote": {
+        "saturatedFat": 1.25,
+        "monounsaturatedFat": 3.48,
+        "polyunsaturatedFat": 3.18,
+        "cholesterol": 0.0,
+        "pantothenic": 0.196,
+        "omega3": 0.0
+      }
+    },
+    {
+      "ignyt": "Fortune Rice Flour",
+      "usda": "Rice flour, brown",
+      "wrote": {
+        "saturatedFat": 0.557,
+        "monounsaturatedFat": 1.01,
+        "polyunsaturatedFat": 0.996,
+        "cholesterol": 0.0,
+        "pantothenic": 1.59
+      }
+    },
+    {
+      "ignyt": "Fortune Sooji",
+      "usda": "Semolina, unenriched",
+      "wrote": {
+        "saturatedFat": 0.15,
+        "monounsaturatedFat": 0.124,
+        "polyunsaturatedFat": 0.43,
+        "cholesterol": 0.0,
+        "pantothenic": 0.58,
+        "omega3": 0.0
+      }
+    },
+    {
+      "ignyt": "Fortune Whole Wheat Flour",
+      "usda": "Wheat flour, whole-grain (Includes foods for USDA's Food Distribution Program)",
+      "wrote": {
+        "saturatedFat": 0.43,
+        "monounsaturatedFat": 0.283,
+        "polyunsaturatedFat": 1.17,
+        "cholesterol": 0.0,
+        "pantothenic": 0.603,
+        "omega3": 0.0,
+        "omega6": 0.0
+      }
+    },
+    {
+      "ignyt": "Nature Fresh Rice Flour",
+      "usda": "Rice flour, brown",
+      "wrote": {
+        "saturatedFat": 0.557,
+        "monounsaturatedFat": 1.01,
+        "polyunsaturatedFat": 0.996,
+        "cholesterol": 0.0,
+        "pantothenic": 1.59
+      }
+    },
+    {
+      "ignyt": "Nature Fresh Sooji",
+      "usda": "Semolina, unenriched",
+      "wrote": {
+        "saturatedFat": 0.15,
+        "monounsaturatedFat": 0.124,
+        "polyunsaturatedFat": 0.43,
+        "cholesterol": 0.0,
+        "pantothenic": 0.58,
+        "omega3": 0.0
+      }
+    },
+    {
+      "ignyt": "Nature Fresh Whole Wheat Flour",
+      "usda": "Wheat flour, whole-grain (Includes foods for USDA's Food Distribution Program)",
+      "wrote": {
+        "saturatedFat": 0.43,
+        "monounsaturatedFat": 0.283,
+        "polyunsaturatedFat": 1.17,
+        "cholesterol": 0.0,
+        "pantothenic": 0.603,
+        "omega3": 0.0,
+        "omega6": 0.0
+      }
+    },
+    {
+      "ignyt": "Pillsbury Whole Wheat Flour",
+      "usda": "Wheat flour, whole-grain (Includes foods for USDA's Food Distribution Program)",
+      "wrote": {
+        "saturatedFat": 0.43,
+        "monounsaturatedFat": 0.283,
+        "polyunsaturatedFat": 1.17,
+        "cholesterol": 0.0,
+        "pantothenic": 0.603,
+        "omega3": 0.0,
+        "omega6": 0.0
+      }
+    },
+    {
+      "ignyt": "Pomegranate Juice",
+      "usda": "Pomegranate juice, bottled",
+      "wrote": {
+        "saturatedFat": 0.077,
+        "monounsaturatedFat": 0.059,
+        "polyunsaturatedFat": 0.05,
+        "transFat": 0.0,
+        "cholesterol": 0.0,
+        "pantothenic": 0.285,
+        "omega3": 0.0
+      }
+    },
+    {
+      "ignyt": "Tea",
+      "usda": "Tea, tundra, herb and laborador combination (Alaska Native)",
+      "wrote": {
+        "saturatedFat": 0.0,
+        "monounsaturatedFat": 0.0,
+        "polyunsaturatedFat": 0.0,
+        "cholesterol": 0.0,
+        "pantothenic": 0.01
+      }
+    },
+    {
+      "ignyt": "Yogurt Drink",
+      "usda": "Yogurt, vanilla, low fat.",
+      "wrote": {
+        "saturatedFat": 0.806,
+        "monounsaturatedFat": 0.343,
+        "polyunsaturatedFat": 0.036,
+        "cholesterol": 5.0,
+        "pantothenic": 0.552,
+        "omega3": 0.0
+      }
+    },
+    {
+      "ignyt": "Bisk Farm Butter Cookies",
+      "usda": "Cookies, chocolate cream covered biscuit sticks",
+      "wrote": {
+        "saturatedFat": 12.6,
+        "monounsaturatedFat": 2.06,
+        "polyunsaturatedFat": 6.72,
+        "cholesterol": 0.0,
+        "omega3": 0.0
+      }
+    },
+    {
+      "ignyt": "Bonn Butter Cookies",
+      "usda": "Cookies, brownies, commercially prepared",
+      "wrote": {
+        "saturatedFat": 4.24,
+        "monounsaturatedFat": 8.96,
+        "polyunsaturatedFat": 2.26,
+        "cholesterol": 17.0,
+        "pantothenic": 0.547,
+        "omega3": 0.001
+      }
+    },
+    {
+      "ignyt": "Britannia Treat Chocolate",
+      "usda": "Chocolate, dark, 45- 59% cacao solids",
+      "wrote": {
+        "saturatedFat": 18.5,
+        "monounsaturatedFat": 9.54,
+        "polyunsaturatedFat": 1.09,
+        "transFat": 0.112,
+        "cholesterol": 8.0,
+        "pantothenic": 0.297,
+        "omega3": 0.086,
+        "omega6": 0.948
+      }
+    },
+    {
+      "ignyt": "Cremica Butter Cookies",
+      "usda": "Cookies, chocolate chip, commercially prepared, regular, higher fat, enriched",
+      "wrote": {
+        "saturatedFat": 8.09,
+        "monounsaturatedFat": 6.27,
+        "polyunsaturatedFat": 8.42,
+        "transFat": 0.684,
+        "cholesterol": 0.0,
+        "omega3": 0.842,
+        "omega6": 7.471
+      }
+    }
+  ],
+  "rejections": [
+    {
+      "ignyt": "Annapurna Corn Flour",
+      "ignytKcal": 381,
+      "ignytFat": 0.1,
+      "usda": "Corn flour, whole-grain, blue (harina de maiz morado)",
+      "usdaKcal": 364,
+      "usdaFat": 5.09
+    },
+    {
+      "ignyt": "Betty Crocker Muffin Mix",
+      "ignytKcal": 420,
+      "ignytFat": 11,
+      "usda": "Muffin, blueberry, commercially prepared, low-fat",
+      "usdaKcal": 255,
+      "usdaFat": 4.22
+    },
+    {
+      "ignyt": "Dr. Oetker Chocolate Chips",
+      "ignytKcal": 480,
+      "ignytFat": 30,
+      "usda": "Chocolate, dark, 45- 59% cacao solids",
+      "usdaKcal": 546,
+      "usdaFat": 31.3
+    },
+    {
+      "ignyt": "Dr. Oetker Chocolate Essence",
+      "ignytKcal": 10,
+      "ignytFat": 0,
+      "usda": "Chocolate, dark, 45- 59% cacao solids",
+      "usdaKcal": 546,
+      "usdaFat": 31.3
+    },
+    {
+      "ignyt": "Fortune Corn Flour",
+      "ignytKcal": 381,
+      "ignytFat": 0.1,
+      "usda": "Corn flour, whole-grain, blue (harina de maiz morado)",
+      "usdaKcal": 364,
+      "usdaFat": 5.09
+    },
+    {
+      "ignyt": "Nature Fresh Corn Flour",
+      "ignytKcal": 381,
+      "ignytFat": 0.1,
+      "usda": "Corn flour, whole-grain, blue (harina de maiz morado)",
+      "usdaKcal": 364,
+      "usdaFat": 5.09
+    },
+    {
+      "ignyt": "Weikfield Chocolate Chips",
+      "ignytKcal": 480,
+      "ignytFat": 30,
+      "usda": "Chocolate, dark, 45- 59% cacao solids",
+      "usdaKcal": 546,
+      "usdaFat": 31.3
+    },
+    {
+      "ignyt": "Weikfield Corn Flour",
+      "ignytKcal": 381,
+      "ignytFat": 0.1,
+      "usda": "Corn flour, whole-grain, blue (harina de maiz morado)",
+      "usdaKcal": 364,
+      "usdaFat": 5.09
+    },
+    {
+      "ignyt": "Chocolate Milkshake",
+      "ignytKcal": 120,
+      "ignytFat": 3.8,
+      "usda": "Chocolate, dark, 45- 59% cacao solids",
+      "usdaKcal": 546,
+      "usdaFat": 31.3
+    },
+    {
+      "ignyt": "Iced Tea",
+      "ignytKcal": 30,
+      "ignytFat": 0,
+      "usda": "Tea, tundra, herb and laborador combination (Alaska Native)",
+      "usdaKcal": 1.0,
+      "usdaFat": 0.0
+    },
+    {
+      "ignyt": "Hide & Seek Chocolate Chip",
+      "ignytKcal": 470,
+      "ignytFat": 18,
+      "usda": "Chocolate, dark, 45- 59% cacao solids",
+      "usdaKcal": 546,
+      "usdaFat": 31.3
+    },
+    {
+      "ignyt": "McVitie\u2019s Rich Tea",
+      "ignytKcal": 415,
+      "ignytFat": 10,
+      "usda": "Tea, tundra, herb and laborador combination (Alaska Native)",
+      "usdaKcal": 1.0,
+      "usdaFat": 0.0
+    },
+    {
+      "ignyt": "Oreo Chocolate Creme",
+      "ignytKcal": 489,
+      "ignytFat": 20.3,
+      "usda": "Chocolate, dark, 45- 59% cacao solids",
+      "usdaKcal": 546,
+      "usdaFat": 31.3
+    },
+    {
+      "ignyt": "Sunfeast Bounce Chocolate",
+      "ignytKcal": 467,
+      "ignytFat": 15.9,
+      "usda": "Chocolate, dark, 45- 59% cacao solids",
+      "usdaKcal": 546,
+      "usdaFat": 31.3
+    },
+    {
+      "ignyt": "Unibic Honey Oatmeal Cookies",
+      "ignytKcal": 460,
+      "ignytFat": 18,
+      "usda": "Oats (Includes foods for USDA's Food Distribution Program)",
+      "usdaKcal": 389,
+      "usdaFat": 6.9
+    },
+    {
+      "ignyt": "Unibic Oatmeal Cookies",
+      "ignytKcal": 469,
+      "ignytFat": 24.5,
+      "usda": "Oats (Includes foods for USDA's Food Distribution Program)",
+      "usdaKcal": 389,
+      "usdaFat": 6.9
+    },
+    {
+      "ignyt": "McVitie's Rich Tea",
+      "ignytKcal": 452,
+      "ignytFat": 15.8,
+      "usda": "Tea, tundra, herb and laborador combination (Alaska Native)",
+      "usdaKcal": 1.0,
+      "usdaFat": 0.0
+    },
+    {
+      "ignyt": "Unibic Oatmeal Cookies",
+      "ignytKcal": 460,
+      "ignytFat": 18,
+      "usda": "Oats (Includes foods for USDA's Food Distribution Program)",
+      "usdaKcal": 389,
+      "usdaFat": 6.9
+    },
+    {
+      "ignyt": "Chocolate Cheerios",
+      "ignytKcal": 385,
+      "ignytFat": 4,
+      "usda": "Chocolate, dark, 45- 59% cacao solids",
+      "usdaKcal": 546,
+      "usdaFat": 31.3
+    },
+    {
+      "ignyt": "Honey Nut Cheerios",
+      "ignytKcal": 385,
+      "ignytFat": 4,
+      "usda": "Honey",
+      "usdaKcal": 304,
+      "usdaFat": 0.0
+    },
+    {
+      "ignyt": "Kellogg's Honey Loops",
+      "ignytKcal": 385,
+      "ignytFat": 4,
+      "usda": "Honey",
+      "usdaKcal": 304,
+      "usdaFat": 0.0
+    },
+    {
+      "ignyt": "Post Honey Bunches of Oats",
+      "ignytKcal": 380,
+      "ignytFat": 7,
+      "usda": "Honey",
+      "usdaKcal": 304,
+      "usdaFat": 0.0
+    },
+    {
+      "ignyt": "Quaker Honey Oats",
+      "ignytKcal": 380,
+      "ignytFat": 7,
+      "usda": "Honey",
+      "usdaKcal": 304,
+      "usdaFat": 0.0
+    },
+    {
+      "ignyt": "Melody Chocolate",
+      "ignytKcal": 451,
+      "ignytFat": 17.4,
+      "usda": "Chocolate, dark, 45- 59% cacao solids",
+      "usdaKcal": 546,
+      "usdaFat": 31.3
+    },
+    {
+      "ignyt": "Reese's Peanut Butter Cups",
+      "ignytKcal": 500,
+      "ignytFat": 26,
+      "usda": "Peanut butter, creamy",
+      "usdaKcal": 632,
+      "usdaFat": 49.4
+    }
+  ],
+  "coverageBefore": {
+    "saturatedFat": 2,
+    "monounsaturatedFat": 2,
+    "polyunsaturatedFat": 2,
+    "transFat": 142,
+    "cholesterol": 142,
+    "pantothenic": 16,
+    "omega3": 1,
+    "omega6": 1
+  },
+  "coverageAfter": {
+    "saturatedFat": 260,
+    "monounsaturatedFat": 260,
+    "polyunsaturatedFat": 257,
+    "transFat": 230,
+    "cholesterol": 365,
+    "pantothenic": 190,
+    "omega3": 186,
+    "omega6": 84
+  }
+}
