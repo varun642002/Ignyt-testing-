@@ -4657,6 +4657,8 @@ const state = {
   foodBrowseCategory: null,
   // Categories are behind a button now rather than the default view.
   foodBrowseOpen: false,
+  nutritionScreen: null,      // null | "insights"
+  insightsMeal: "All Meals",  // which meal tab the Insights page is filtered to
   foodBrowsePage: 1, foodResultPage: 1,
   // Which day the nutrition dashboard is showing. Transient: a fresh visit opens on today.
   nutritionDate: null, microExpanded: false, insightsExpanded: false,
@@ -14185,9 +14187,439 @@ function renderLoggedEntryDetailPage(entry, flow){
   </div>`;
 }
 
+/* =========================================================
+   NUTRITION SCORE
+
+   A single 0-100 figure has to be defensible or it is decoration. This one is the weighted
+   average of five things the app already measures, each capped so a big overshoot on one
+   cannot buy a poor score elsewhere:
+
+     protein 30   the macro people under-eat, and the one that matters most for the goals
+                  this app serves
+     energy  25   scored on CLOSENESS to the budget, not on how much was eaten — 2,600 against
+                  a 2,000 target is as far off as 1,400, and a score that rewarded eating more
+                  would be actively harmful
+     fibre   20   consistently the most under-consumed nutrient in real logs
+     carbs+fat 15 combined, because they trade against each other; hitting either is fine
+     water   10
+
+   Anything with no target returns null and drops out of the weighting rather than counting as
+   zero, so someone who has not set a water goal is not permanently capped at 90.
+========================================================= */
+function nutritionScore(T, targets, waterMl, waterTarget){
+  const part = (value, target) => {
+    if(!target || target <= 0) return null;
+    const ratio = (Number(value)||0) / target;
+    /* Overshoot is penalised symmetrically past 110%. Being 40% over a fat target is not
+       extra credit — it is the same distance from the plan as being 40% under. */
+    return Math.max(0, Math.min(100, Math.round(100 * (ratio > 1.1 ? Math.max(0, 2.1 - ratio) : ratio))));
+  };
+  const parts = [
+    { w: 30, s: part(T.protein, targets.protein) },
+    { w: 25, s: part(T.calories, targets.kcal) },
+    { w: 20, s: part(T.fibre, targets.fibre) },
+    { w: 15, s: part((T.carbs||0)+(T.fat||0), (targets.carbs||0)+(targets.fat||0)) },
+    { w: 10, s: part(waterMl, waterTarget) }
+  ].filter(p => p.s !== null);
+
+  if(!parts.length) return { score: 0, band: "No data", tone: "muted" };
+  const weight = parts.reduce((a,p)=>a+p.w, 0);
+  const score = Math.round(parts.reduce((a,p)=>a + p.s*p.w, 0) / weight);
+  const band = score >= 90 ? "Excellent" : score >= 70 ? "Good" : score >= 50 ? "Fair" : "Needs work";
+  const tone = score >= 90 ? "great" : score >= 70 ? "ok" : score >= 50 ? "warn" : "bad";
+  return { score, band, tone };
+}
+
+/** Coach lines. Every one comes from a real gap and names the number. */
+function insightCoachLines(T, targets, waterMl, waterTarget, remaining){
+  const out = [];
+  const gap = (v, t) => t > 0 ? Math.max(0, t - (Number(v)||0)) : 0;
+
+  if(targets.protein && T.protein >= targets.protein*0.9)
+    out.push(["ok", "Excellent protein intake today."]);
+  else if(targets.protein)
+    out.push(["up", `Add ${Math.round(gap(T.protein, targets.protein))} g more protein.`]);
+
+  if(targets.fibre && T.fibre < targets.fibre*0.75)
+    out.push(["up", `Fibre is ${Math.round(gap(T.fibre, targets.fibre))} g short — vegetables or fruit will close it.`]);
+
+  if(waterTarget > 0 && waterMl < waterTarget)
+    out.push(["water", `Drink another ${Math.round(waterTarget - waterMl)} ml of water.`]);
+
+  if(remaining > 0) out.push(["info", `You can eat up to ${Math.round(remaining)} kcal more today.`]);
+  else if(remaining < 0) out.push(["warn", `You are ${Math.abs(Math.round(remaining))} kcal over budget.`]);
+
+  if(!out.length) out.push(["ok", "Everything is on target today."]);
+  return out;
+}
+
+/** The day's biggest foods, each captioned by whatever it contributes most of. */
+function topContributors(entries, limit){
+  const KEYS = [
+    { key:"protein", label:"Protein", unit:"g" },
+    { key:"carbs",   label:"Carbs",   unit:"g" },
+    { key:"fat",     label:"Fat",     unit:"g" },
+    { key:"fibre",   label:"Fibre",   unit:"g" }
+  ];
+  return entries.slice()
+    .sort((a,b)=>Number(b.calories||0)-Number(a.calories||0))
+    .slice(0, limit||5)
+    .map(e=>{
+      /* Captioned by the nutrient it supplies most of. "48 g Protein" tells the reader
+         something; repeating the calories already shown on the row does not. */
+      let best = KEYS[0], bestVal = -1;
+      for(const n of KEYS){
+        const v = Number(e[n.key]||0);
+        if(v > bestVal){ bestVal = v; best = n; }
+      }
+      return { entry: e, label: best.label, value: Math.round(bestVal), unit: best.unit };
+    });
+}
+
+/* =========================================================
+   MEAL CALORIE BUDGETS
+
+   The reference splits a 2,000 kcal day as 500 / 250 / 500 / 250 / 500 — main meals take a
+   quarter each, snacks an eighth. That is a real convention, not a number picked to match a
+   screenshot, and it sums to the day's budget whatever the budget is.
+
+   Anything the user has renamed or added beyond the five gets an even share of what is left,
+   so a custom meal is never budgeted at zero.
+========================================================= */
+function mealCalorieTarget(meal, dayBudget){
+  const types = mealTypes();
+  const isSnack = /snack/i.test(meal);
+  const mains = types.filter(t=>!/snack/i.test(t)).length || 1;
+  const snacks = types.filter(t=>/snack/i.test(t)).length;
+  /* Mains take 25% each and snacks 12.5% each only while that adds up to at most the whole
+     day. With unusual meal counts the shares are normalised instead, so the parts always sum
+     to the budget rather than over-promising. */
+  const raw = isSnack ? 0.125 : 0.25;
+  const total = mains*0.25 + snacks*0.125;
+  const share = total > 0 ? raw/total : 0;
+  return Math.round(dayBudget * share);
+}
+
+/* The icon each meal carries in the list. Time-of-day rather than food, matching the
+   reference: a sun for the daytime meals, a moon for the evening ones. */
+function mealIcon(meal){
+  const m = String(meal||"").toLowerCase();
+  if(m.includes("breakfast")) return "☀️";
+  if(m.includes("morning")) return "☕";
+  if(m.includes("lunch")) return "🌤️";
+  if(m.includes("evening") || m.includes("afternoon")) return "🌙";
+  if(m.includes("dinner")) return "🌙";
+  return "🍽️";
+}
+
+function mealEmptyCopy(meal){
+  const m = String(meal||"").toLowerCase();
+  if(m.includes("morning")) return "Keep your energy steady!";
+  if(m.includes("evening") || m.includes("afternoon")) return "A smart snack keeps you active!";
+  if(m.includes("breakfast")) return "Start the day with something solid.";
+  if(m.includes("lunch")) return "Fuel the rest of your day.";
+  if(m.includes("dinner")) return "Round the day off.";
+  return "Add something to this meal.";
+}
+
+/* =========================================================
+   NUTRITION INSIGHTS
+
+   Everything on this page is computed from the day's real log. Nothing is illustrative: where
+   a figure has no data behind it the card says so rather than showing a plausible number.
+
+   The meal tabs filter the WHOLE page, not just one card — asking "how was lunch" and getting
+   a day-level score under a tab labelled Lunch would be worse than not offering the tab.
+========================================================= */
+function renderNutritionInsightsPage(){
+  const ds = nutritionDateStr();
+  const isToday = ds === todayStr();
+  const tab = state.insightsMeal || "All Meals";
+  const allEntries = foodsForDate(ds);
+  const entries = tab === "All Meals" ? allEntries : allEntries.filter(f=>(f.meal||"Lunch") === tab);
+
+  const N = window.IgnytNutrition;
+  const agg = N ? N.totalEntries(entries) : { totals:{}, coverage:{}, count:entries.length };
+  const T = agg.totals;
+  const dayTargets = macroTargets();
+
+  /* A meal tab scales the targets to that meal's share of the day, so "82% of carbs" under
+     Lunch means 82% of lunch's carbs — not 82% of the whole day eaten at one sitting. */
+  const budget = dayTargets.kcal;
+  const scale = tab === "All Meals" ? 1
+    : (budget > 0 ? mealCalorieTarget(tab, budget) / budget : 1);
+  const targets = {
+    kcal: Math.round(dayTargets.kcal * scale),
+    protein: Math.round(dayTargets.protein * scale),
+    carbs: Math.round(dayTargets.carbs * scale),
+    fat: Math.round(dayTargets.fat * scale),
+    fibre: Math.round(dayTargets.fibre * scale)
+  };
+
+  const waterMl = waterForDate(ds);
+  const waterTarget = state.settings.waterTargetMl || 2500;
+  const eaten = Math.round(T.calories || 0);
+  const remaining = targets.kcal - eaten;
+  const pctGoal = targets.kcal > 0 ? Math.round((eaten / targets.kcal) * 100) : 0;
+  const sc = nutritionScore(T, targets, tab === "All Meals" ? waterMl : null,
+                                        tab === "All Meals" ? waterTarget : null);
+
+  const bar = (v, t, tone) => {
+    const p = t > 0 ? Math.min(100, Math.round((v/t)*100)) : 0;
+    return `<div class="ni-bar ni-bar--${tone}"><i style="width:${p}%"></i></div>`;
+  };
+  const pctTone = p => p >= 90 ? "great" : p >= 70 ? "ok" : "warn";
+  const pctOf = (v, t) => t > 0 ? Math.round((v/t)*100) : 0;
+
+  const MACROS = [
+    ["💪", "Protein", T.protein, targets.protein, "g"],
+    ["🌾", "Carbs",   T.carbs,   targets.carbs,   "g"],
+    ["🧈", "Fat",     T.fat,     targets.fat,     "g"],
+    ["🌿", "Fibre",   T.fibre,   targets.fibre,   "g"]
+  ];
+  const MICROS = [
+    ["🛡️", "Calcium",   "calcium",   1300, "mg"],
+    ["🩸", "Iron",      "iron",        18, "mg"],
+    ["🔮", "Magnesium", "magnesium",  420, "mg"],
+    ["🍌", "Potassium", "potassium", 4700, "mg"],
+    ["🍊", "Vitamin C", "vitaminC",    90, "mg"],
+    ["☀️", "Vitamin D", "vitaminD",    20, "µg"]
+  ];
+  const microRows = MICROS.filter(([,,key]) => T[key] != null);
+
+  // Calories by meal, for the donut. Only meals with food appear — an empty slice is a lie.
+  const mealColours = ["#F5BB45", "#3B82F6", "#A855F7", "#45D294", "#FF8A5C", "#55D8FF"];
+  const byMeal = mealTypes()
+    .map((m,i)=>({ meal:m, kcal: Math.round(allEntries.filter(f=>(f.meal||"Lunch")===m)
+                                    .reduce((a,f)=>a+Number(f.calories||0),0)),
+                   color: mealColours[i % mealColours.length] }))
+    .filter(m=>m.kcal > 0);
+  const mealTotal = byMeal.reduce((a,m)=>a+m.kcal, 0);
+
+  const week = last7DaysCalories();
+  const weekVals = week.map(d=>d.kcal);
+  const wkAvg = weekVals.length ? Math.round(weekVals.reduce((a,b)=>a+b,0)/weekVals.length) : 0;
+  const wkHigh = weekVals.length ? Math.max(...weekVals) : 0;
+  const wkLow = weekVals.length ? Math.min(...weekVals) : 0;
+
+  const contributors = topContributors(entries, 5);
+  const coach = insightCoachLines(T, targets, waterMl, waterTarget, remaining);
+  const COACH_ICON = { ok:["✓","great"], up:["↑","warn"], water:["💧","ok"], info:["i","ok"], warn:["!","bad"] };
+
+  const streak = (typeof loggingStreak === "function") ? loggingStreak() : null;
+  const mealsLogged = mealTypes().filter(m=>allEntries.some(f=>(f.meal||"Lunch")===m)).length;
+
+  return `
+    <div class="ni">
+      <div class="ni-top">
+        <button class="food-page__back" data-insights-back="1" aria-label="Back">←</button>
+        <h2 class="ni-title">${tab === "All Meals" ? "Today's Insights" : escHtml(tab)}</h2>
+        <span class="ni-today">📅 ${escHtml(isToday ? "Today" : nutritionDateLabel(ds))}</span>
+      </div>
+
+      <div class="ni-tabs">
+        ${["All Meals"].concat(mealTypes()).map(m=>
+          `<button class="ni-tab ${tab===m?'is-on':''}" data-insights-meal="${escHtml(m)}">${escHtml(m)}</button>`
+        ).join("")}
+      </div>
+
+      ${!entries.length ? `
+        <div class="ni-card ni-empty">
+          <div style="font-size:34px;line-height:1;margin-bottom:8px;">🍽️</div>
+          <div style="font-weight:800;font-size:15px;">Nothing logged${tab==="All Meals"?"":" for "+escHtml(tab)}</div>
+          <div style="font-size:12.5px;color:var(--muted);margin-top:4px;">
+            Log a food and this page fills in with your real numbers.
+          </div>
+        </div>` : `
+
+      <!-- NUTRITION SCORE -->
+      <div class="ni-card">
+        <div class="ni-card__title">Nutrition Score</div>
+        <div class="ni-score">
+          <div class="ni-score__ring">
+            ${scoreRingSvg(sc.score, sc.tone)}
+          </div>
+          <div class="ni-score__msg">
+            ${sc.score>=90 ? "Great job! Your nutrition is on point. Keep going strong!"
+              : sc.score>=70 ? "Solid day. A couple of gaps left to close."
+              : sc.score>=50 ? "Some way off target — the coach notes below say where."
+              : "Well short today. Start with protein and fibre."}
+          </div>
+        </div>
+        <div class="ni-score__stats">
+          <div><span class="ni-stat__icon">🔥</span><strong>${eaten.toLocaleString()}</strong><span>Consumed</span></div>
+          <div><span class="ni-stat__icon">🎯</span><strong>${targets.kcal.toLocaleString()}</strong><span>Goal</span></div>
+          <div><span class="ni-stat__icon">⚡</span><strong>${Math.abs(remaining).toLocaleString()}</strong><span>${remaining>=0?'Remaining':'Over'}</span></div>
+        </div>
+        ${bar(eaten, targets.kcal, pctTone(pctGoal))}
+        <div class="ni-score__pct">${pctGoal}% of daily goal</div>
+      </div>
+
+      <!-- MACROS -->
+      <div class="ni-card">
+        <div class="ni-card__title">Macronutrient Breakdown</div>
+        ${MACROS.map(([icon,label,v,t,unit])=>{
+          const p = pctOf(v||0, t);
+          return `<div class="ni-row">
+            <span class="ni-row__icon" aria-hidden="true">${icon}</span>
+            <span class="ni-row__label">${label}</span>
+            <span class="ni-row__val"><strong>${Math.round(v||0)}</strong> / ${t} ${unit}</span>
+            <span class="ni-row__pct ni-row__pct--${pctTone(p)}">${p}%</span>
+            ${bar(v||0, t, pctTone(p))}
+          </div>`;
+        }).join("")}
+      </div>
+
+      <!-- MICROS -->
+      <div class="ni-card">
+        <div class="ni-card__title">Micronutrient Analysis</div>
+        ${microRows.length ? microRows.map(([icon,label,key,t,unit])=>{
+          const v = T[key] || 0, p = pctOf(v, t);
+          return `<div class="ni-row">
+            <span class="ni-row__icon" aria-hidden="true">${icon}</span>
+            <span class="ni-row__label">${label}</span>
+            <span class="ni-row__val"><strong>${Math.round(v)}</strong> / ${t} ${unit}</span>
+            <span class="ni-row__pct ni-row__pct--${pctTone(p)}">${p}%</span>
+            ${bar(v, t, pctTone(p))}
+          </div>`;
+        }).join("") : `<div class="ni-none">None of today's foods carry micronutrient data.</div>`}
+      </div>
+
+      <!-- HYDRATION. Day-level, so it is hidden under a meal tab where it would be meaningless. -->
+      ${tab === "All Meals" ? `
+      <div class="ni-card">
+        <div class="ni-card__title">Hydration</div>
+        <div class="ni-hydro">
+          <div>
+            <div class="ni-hydro__val"><strong>${(waterMl/1000).toFixed(1)}</strong> / ${(waterTarget/1000).toFixed(1)} L</div>
+            <div class="ni-hydro__pct">${pctOf(waterMl, waterTarget)}% of daily goal</div>
+          </div>
+          <div class="ni-bottle" aria-hidden="true">
+            <i style="height:${Math.min(100, pctOf(waterMl, waterTarget))}%"></i>
+          </div>
+        </div>
+        <div class="ni-hydro__btns">
+          ${[250,500,750].map(ml=>`<button class="ni-wbtn" data-add-water="${ml}">+${ml}ml</button>`).join("")}
+          <button class="ni-wbtn" data-add-water="-250">Undo</button>
+        </div>
+      </div>` : ""}
+
+      <!-- CALORIES BY MEAL -->
+      ${tab === "All Meals" && byMeal.length ? `
+      <div class="ni-card">
+        <div class="ni-card__title">Calories by Meal</div>
+        <div class="ni-bymeal">
+          ${donutSvg(byMeal.map(m=>({value:m.kcal, color:m.color})), 132, 20,
+                     mealTotal.toLocaleString(), "kcal")}
+          <div class="ni-legend">
+            ${byMeal.map(m=>`<div class="ni-legend__row">
+              <span class="ni-legend__dot" style="background:${m.color}"></span>
+              <span class="ni-legend__name">${escHtml(m.meal)}</span>
+              <span class="ni-legend__val">${m.kcal} kcal (${Math.round(m.kcal/mealTotal*100)}%)</span>
+            </div>`).join("")}
+          </div>
+        </div>
+      </div>` : ""}
+
+      <!-- COACH -->
+      <div class="ni-card">
+        <div class="ni-card__title">AI Nutrition Coach</div>
+        ${coach.map(([kind,text])=>{
+          const [glyph,tone] = COACH_ICON[kind] || ["i","ok"];
+          return `<div class="ni-coach">
+            <span class="ni-coach__dot ni-coach__dot--${tone}">${glyph}</span>
+            <span>${escHtml(text)}</span>
+          </div>`;
+        }).join("")}
+      </div>
+
+      <!-- CONTRIBUTORS -->
+      ${contributors.length ? `
+      <div class="ni-card">
+        <div class="ni-card__title">Top Food Contributors</div>
+        <div class="ni-contrib">
+          ${contributors.map(c=>`<div class="ni-contrib__item">
+            ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(c.entry, 54) : ""}
+            <div class="ni-contrib__name">${escHtml(c.entry.name)}</div>
+            <div class="ni-contrib__val">${c.value}${c.unit}</div>
+            <div class="ni-contrib__lab">${c.label}</div>
+          </div>`).join("")}
+        </div>
+      </div>` : ""}
+
+      <!-- WEEKLY -->
+      <div class="ni-card">
+        <div class="ni-card__title">Weekly Trends <span class="ni-card__sub">Last 7 days</span></div>
+        ${sparklineSvg(weekVals, week.map(d=>d.label))}
+        <div class="ni-week">
+          <div><span>Average</span><strong>${wkAvg.toLocaleString()} kcal</strong></div>
+          <div><span>Highest</span><strong class="ni-good">${wkHigh.toLocaleString()} kcal</strong></div>
+          <div><span>Lowest</span><strong class="ni-low">${wkLow.toLocaleString()} kcal</strong></div>
+        </div>
+      </div>
+
+      <!-- SUMMARY -->
+      <div class="ni-card">
+        <div class="ni-card__title">Insights Summary</div>
+        <div class="ni-sum"><span>📈 Goal Progress</span><strong>${pctGoal}%</strong></div>
+        <div class="ni-sum"><span>🎯 Nutrition Score</span><strong>${sc.score}/100</strong></div>
+        <div class="ni-sum"><span>🗓️ Meals Logged</span><strong>${mealsLogged}/${mealTypes().length}</strong></div>
+        <div class="ni-sum"><span>💧 Hydration</span><strong>${pctOf(waterMl, waterTarget)}%</strong></div>
+        ${streak != null ? `<div class="ni-sum"><span>🔥 Streak</span><strong>${streak} day${streak===1?'':'s'}</strong></div>` : ""}
+      </div>
+
+      <div class="ni-banner">
+        <span aria-hidden="true">🛡️</span>
+        <span>${sc.score>=70 ? "Keep going! You're consistent and making great progress towards your goals."
+                             : "Small changes add up — the coach notes above are the quickest wins."}</span>
+      </div>`}
+    </div>`;
+}
+
+/** The score ring. Its own renderer rather than calorieRingSvg: that one plots macro segments
+ *  around an energy budget, which is a different thing from a single 0-100 figure. */
+function scoreRingSvg(score, tone){
+  const size = 128, stroke = 12, r = (size-stroke)/2, c = 2*Math.PI*r;
+  const pct = Math.max(0, Math.min(100, score));
+  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" role="img"
+      aria-label="Nutrition score ${score} out of 100">
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--surface-alt)" stroke-width="${stroke}"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none"
+      stroke="var(--ni-${tone})" stroke-width="${stroke}" stroke-linecap="round"
+      stroke-dasharray="${c}" stroke-dashoffset="${c*(1-pct/100)}"
+      transform="rotate(-90 ${size/2} ${size/2})"/>
+    <text x="50%" y="46%" text-anchor="middle" fill="var(--text)"
+      style="font-size:30px;font-weight:900;">${score}</text>
+    <text x="50%" y="62%" text-anchor="middle" fill="var(--muted)" style="font-size:11px;">/ 100</text>
+  </svg>`;
+}
+
+/** A 7-point line chart. Plain SVG — no library, no dependency, and it scales to the card. */
+function sparklineSvg(values, labels){
+  if(!values || !values.length) return `<div class="ni-none">No history yet.</div>`;
+  const w = 300, h = 96, pad = 6;
+  const max = Math.max(...values, 1);
+  const step = values.length > 1 ? (w - pad*2) / (values.length - 1) : 0;
+  const pt = (v, i) => [pad + i*step, h - pad - (v/max) * (h - pad*2)];
+  const pts = values.map(pt);
+  const line = pts.map((p,i)=>`${i?'L':'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  const area = `${line} L${pts[pts.length-1][0].toFixed(1)},${h-pad} L${pts[0][0].toFixed(1)},${h-pad} Z`;
+  return `<div class="ni-chart">
+    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Calories over the last 7 days">
+      <path d="${area}" fill="var(--primary-soft)"/>
+      <path d="${line}" fill="none" stroke="var(--primary)" stroke-width="2"
+        stroke-linejoin="round" stroke-linecap="round"/>
+      ${pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="var(--primary)"/>`).join("")}
+    </svg>
+    <div class="ni-chart__x">${(labels||[]).map(l=>`<span>${escHtml(String(l).slice(0,3))}</span>`).join("")}</div>
+  </div>`;
+}
+
+
 function renderNutritionTab(){
   if(state.foodFlow && state.foodFlow.screen === "search") return renderFoodSearchPage();
   if(state.foodFlow && state.foodFlow.screen === "detail") return renderFoodDetailPage();
+  if(state.nutritionScreen === "insights") return renderNutritionInsightsPage();
 
   const n = state.nutrition;
   const targets = macroTargets();
@@ -14252,15 +14684,104 @@ function renderNutritionTab(){
     return { have, total, partial: total>0 && have<total };
   };
 
+  const pct = Math.min(100, Math.max(0, kcalPct));
+
   return `
-    <div class="row-between" style="margin:4px 0 10px;">
-      <button class="cat-chip" data-nutrition-date="-1" style="margin:0;width:34px;justify-content:center;" aria-label="Previous day">‹</button>
-      <div style="text-align:center;flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(nutritionDateLabel(ds))}</div>
-        ${!isToday?`<button class="cat-chip" data-nutrition-date="today" style="margin:3px 0 0;padding:1px 8px;font-size:11px;">Jump to today</button>`:""}
+    <!-- Date pill. Replaces the ‹ date › row: one control that reads as the current day and
+         steps either way, instead of three things competing for the same line. -->
+    <div class="nd-datebar">
+      <button class="nd-date" data-nutrition-date="-1" aria-label="Previous day">‹</button>
+      <div class="nd-date__pill">
+        <span aria-hidden="true">📅</span>
+        <span class="nd-date__label">${escHtml(nutritionDateLabel(ds))}</span>
       </div>
-      <button class="cat-chip" data-nutrition-date="1" style="margin:0;width:34px;justify-content:center;${isToday?'opacity:.3;pointer-events:none;':''}" aria-label="Next day">›</button>
+      <button class="nd-date" data-nutrition-date="1" ${isToday?'disabled':''} aria-label="Next day">›</button>
     </div>
+    ${!isToday?`<button class="cat-chip" data-nutrition-date="today" style="margin:0 auto 10px;display:block;padding:2px 10px;font-size:11px;">Jump to today</button>`:""}
+
+    <!-- CALORIE HERO
+         Ring on the left with the figure it represents inside it, the budget and its progress
+         in the middle, and Remaining on the right where the eye lands last — it is the number
+         that decides what happens next, so it gets its own column rather than a line of body
+         text. Tapping it opens Insights. -->
+    <div class="nd-hero" data-nav-insights="1" role="button" tabindex="0">
+      <div class="nd-hero__ring">
+        ${calorieRingSvg(dayKcal, calorieBudget, kcalFromProtein, kcalFromCarbs, kcalFromFat)}
+      </div>
+      <div class="nd-hero__mid">
+        <div class="nd-hero__eat">Eat up to <strong>${calorieBudget.toLocaleString()}</strong> Cal</div>
+        <div class="nd-hero__bar"><i style="width:${pct}%;"></i></div>
+        <div class="nd-hero__pct">${pct}% of daily goal</div>
+      </div>
+      <div class="nd-hero__rem">
+        <div class="nd-hero__remlabel">${dayRemaining>=0?'Remaining':'Over'}</div>
+        <div class="nd-hero__remval">${Math.abs(dayRemaining).toLocaleString()}</div>
+        <div class="nd-hero__remunit">kcal</div>
+      </div>
+      <span class="nd-hero__chev" aria-hidden="true">›</span>
+    </div>
+
+    <!-- Three shortcuts. Each goes somewhere that already exists rather than being a tile
+         that will be wired up later. -->
+    <div class="nd-shortcuts">
+      <button class="nd-short" data-nav="plan">
+        <span class="nd-short__icon nd-short__icon--blue">📋</span>
+        <span class="nd-short__body"><span class="nd-short__title">Diet Plan</span><span class="nd-short__sub">View your plan</span></span>
+        <span class="nd-short__chev">›</span>
+      </button>
+      <button class="nd-short" data-nav-insights="1">
+        <span class="nd-short__icon nd-short__icon--purple">📊</span>
+        <span class="nd-short__body"><span class="nd-short__title">Insights</span><span class="nd-short__sub">See your progress</span></span>
+        <span class="nd-short__chev">›</span>
+      </button>
+      <button class="nd-short" data-nav="recipes">
+        <span class="nd-short__icon nd-short__icon--orange">🍲</span>
+        <span class="nd-short__body"><span class="nd-short__title">Recipes</span><span class="nd-short__sub">Healthy recipes</span></span>
+        <span class="nd-short__chev">›</span>
+      </button>
+    </div>
+
+    <!-- MEALS -->
+    ${mealTypes().map(meal=>{
+      const foods = dayEntries.filter(f=>(f.meal||"Lunch")===meal);
+      const kcal = Math.round(foods.reduce((a,f)=>a+Number(f.calories||0),0));
+      const target = mealCalorieTarget(meal, calorieBudget);
+      return `<div class="nd-meal">
+        <div class="nd-meal__head">
+          <span class="nd-meal__icon" aria-hidden="true">${mealIcon(meal)}</span>
+          <span class="nd-meal__name">${escHtml(meal)}</span>
+          <span class="nd-meal__kcal"><strong>${kcal}</strong> of ${target} Cal</span>
+          <button class="nd-meal__add" data-meal-add="${escHtml(meal)}" aria-label="Add food to ${escHtml(meal)}">+</button>
+        </div>
+        ${foods.length ? foods.map(f=>`
+          <div class="nd-food" data-entry-open="${escHtml(String(f.id))}">
+            ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(f, 44) : ""}
+            <div class="nd-food__body">
+              <div class="nd-food__name">${escHtml(f.name)}</div>
+              <div class="nd-food__serving">${f.grams?`${Math.round(f.grams)} ${escHtml(f.servingUnit||'g')}`:'&mdash;'}</div>
+              <div class="nd-food__macros">
+                <span><b class="m-p">P</b> ${Math.round(f.protein||0)}g</span>
+                <span><b class="m-c">C</b> ${Math.round(f.carbs||0)}g</span>
+                <span><b class="m-f">F</b> ${Math.round(f.fat||0)}g</span>
+              </div>
+            </div>
+            <span class="nd-food__kcal">${Math.round(f.calories||0)}<span class="nut-unit"> kcal</span></span>
+          </div>`).join("")
+        : `<button class="nd-meal__empty" data-meal-add="${escHtml(meal)}">
+             <span class="nd-meal__emptyplus">+</span>
+             <span>
+               <span class="nd-meal__emptytitle">Add ${/^[aeiou]/i.test(meal)?'an':'a'} ${escHtml(meal.toLowerCase())}</span>
+               <span class="nd-meal__emptysub">${escHtml(mealEmptyCopy(meal))}</span>
+             </span>
+           </button>`}
+      </div>`;
+    }).join("")}
+
+    <!-- Snap. A floating action rather than a row in the list: photographing a meal is the
+         fastest path in and should not require scrolling to find. -->
+    <button class="nd-snap" data-ai-act="scan" aria-label="Scan a meal with the camera">
+      <span aria-hidden="true">📷</span><span class="nd-snap__label">Snap</span>
+    </button>
 
     <!-- Calories hero (Phase 3)
          Ring on the left, the two numbers people act on to its right. "Remaining" carries
@@ -18727,6 +19248,27 @@ function attachHandlers(){
   // survives the swap, and rebinding it would make every keystroke fire twice.
   bindFoodResultHandlers();
   bindAiScanHandlers();
+
+  /* ---- Nutrition dashboard <-> Insights ---- */
+  document.querySelectorAll("[data-nav-insights]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      captureNutritionScroll();          // so Back lands where they left, not at the top
+      state.nutritionScreen = "insights";
+      render();
+    });
+  });
+  const insightsBack = document.querySelector("[data-insights-back]");
+  if(insightsBack) insightsBack.addEventListener("click", ()=>{
+    state.nutritionScreen = null;
+    restoreNutritionScroll();
+    render();
+  });
+  document.querySelectorAll("[data-insights-meal]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.insightsMeal = el.dataset.insightsMeal;
+      render();
+    });
+  });
 
   /* ---- Food logging flow routes ---- */
   document.querySelectorAll("[data-meal-add]").forEach(el=>{
