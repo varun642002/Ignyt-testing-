@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "867400579785-hdfv6qti05f8vb2p142k6ueb2u38qim4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.varun.ignyt",
+            "certificate_hash": "52c9f90c3f3c6f82c823f1937da618b50e71396a"
+          }
+        },
+        {
           "client_id": "867400579785-kd7vp4d096g7rncvb3enqr0putvnjquj.apps.googleusercontent.com",
           "client_type": 3
         }
