@@ -7217,27 +7217,31 @@ function foodCategoryIcon(name){
   return FOOD_CATEGORY_ICONS[name] || "🍴";
 }
 
-/** One search/browse result. Shows enough to choose without opening anything. */
+/** One search/browse result.
+ *
+ *  A PICKER ROW, NOT A NUTRITION CARD. This used to carry the category, serving basis, the
+ *  three macros and the calorie figure. All of that is real, and all of it is noise while
+ *  someone is typing: at that moment the only question is "which of these is the food I mean",
+ *  and four numbers per row make the names harder to scan rather than easier. Everything
+ *  removed here is on the Food Details page, one tap away, where the user has actually chosen
+ *  something and the numbers answer a question they are asking.
+ *
+ *  What survives is what identifies a food: picture, name, whether it is verified, and whether
+ *  it is one the user has starred. */
 /** @param {string} [labelOverride] the canonical group name, when this card leads a group */
 function renderFoodResultCard(f, labelOverride){
   const isFav = (state.favoriteFoods||[]).some(x=>x && String(x.name).toLowerCase()===String(f.name).toLowerCase());
-  // Favourites are stored as one absolute portion (per === null), so their macros are shown
-  // as-is; catalogue foods are per 100 g and say so.
-  const basis = f.per ? `/${f.per}g` : "";
-  const serving = (f.servingSize && f.servingUnit && f.servingUnit !== "g")
-    ? `${f.servingSize}g per ${escHtml(f.servingUnit)}` : "";
   return `<div class="food-row" data-food-pick="${escHtml(f.id)}">
     ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(f) : `<span class="food-thumb">${foodCategoryIcon(f.category)}</span>`}
     <div class="food-row__body">
       <!-- The matched span is marked so the eye lands on WHY this row is here, which matters
            most on a fuzzy or synonym hit where the connection is not otherwise obvious. -->
-      <div class="food-row__name">${highlightMatch(labelOverride || (window.IgnytFoodCuration ? IgnytFoodCuration.displayName(f) : f.name), state.foodSearchQuery)}</div>
-      <div class="food-row__meta">${escHtml(f.category||"")}${serving?` · ${serving}`:""} · P${f.protein??0} C${f.carbs??0} F${f.fat??0}</div>
+      <div class="food-row__name">
+        <span class="food-row__text">${highlightMatch(labelOverride || (window.IgnytFoodCuration ? IgnytFoodCuration.displayName(f) : f.name), state.foodSearchQuery)}</span>${
+        f.verified ? `<span class="food-row__verified" title="Measured values from a published source" aria-label="Verified">✓</span>` : ""}</div>
     </div>
-    <span class="food-row__kcal">${f.calories??0}<span class="nut-unit"> kcal${basis}</span></span>
-    <button class="cat-chip${isFav?' active':''}" data-food-fav="${escHtml(f.id)}"
-      aria-label="${isFav?'Remove from favourites':'Save to favourites'}"
-      style="margin:0;padding:4px 9px;font-size:12px;flex-shrink:0;">${isFav?'★':'☆'}</button>
+    <button class="food-row__fav${isFav?' is-on':''}" data-food-fav="${escHtml(f.id)}"
+      aria-label="${isFav?'Remove from favourites':'Save to favourites'}">${isFav?'★':'☆'}</button>
   </div>`;
 }
 
