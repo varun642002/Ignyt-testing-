@@ -219,7 +219,9 @@
       ['nutrition','nutrition','#DC2626', avgKcal!=null ? `${avgKcal.toLocaleString()} kcal avg` : 'No data yet'],
       ['body','body','#0891B2', 'Track your body'],
       ['calendar','calendar','#4F46E5', 'View your activity'],
-      ['plan','plan','#CA8A04', 'Follow your plan']
+      ['plan','plan','#CA8A04', 'Follow your plan'],
+      ['reports','file','#0D9488', 'Weekly · monthly · yearly'],
+      ['photos','body','#DB2777', `${(state.bodyPhotos||[]).length} photo${(state.bodyPhotos||[]).length!==1?'s':''}`]
     ];
 
     return `

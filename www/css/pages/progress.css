@@ -116,3 +116,43 @@
 .pg-quick-card__chev { color:var(--rh-muted); font-size:16px; flex:none; }
 
 @media (max-width:374px) { .pg-card-row { grid-template-columns:1fr; } }
+
+/* =========================================================
+   REPORTS — weekly / monthly / yearly
+========================================================= */
+.rp-tabs{ display:flex; gap:6px; margin-bottom:12px; }
+.rp-tab{
+  flex:1; padding:9px 8px; border-radius:var(--radius-btn);
+  border:1px solid var(--rh-border); background:var(--rh-card);
+  color:var(--rh-muted); font:inherit; font-size:12.5px; font-weight:700; cursor:pointer;
+}
+.rp-tab.is-on{ background:var(--rh-blue); border-color:var(--rh-blue); color:#fff; }
+
+.rp-head{
+  display:flex; align-items:baseline; justify-content:space-between; gap:8px;
+  font-size:14px; font-weight:800; margin-bottom:10px;
+}
+.rp-head span{ font-size:11.5px; font-weight:600; color:var(--rh-muted); }
+
+.rp-row{
+  display:flex; align-items:center; gap:10px;
+  padding:9px 0; border-bottom:1px solid var(--rh-border);
+}
+.rp-row:last-child{ border-bottom:0; }
+.rp-row__label{ flex:1; font-size:13px; color:var(--rh-muted); }
+.rp-row__value{
+  font-size:15px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--rh-text);
+}
+
+/* Direction is carried by an arrow as well as colour — a red/green pair alone is unreadable
+   for the ~8% of men with a red-green deficiency. */
+.rp-delta{
+  flex-shrink:0; min-width:66px; text-align:right;
+  font-size:11.5px; font-weight:800; font-variant-numeric:tabular-nums;
+}
+.rp-delta--up{ color:var(--rh-green,#16A34A); }
+.rp-delta--down{ color:#D97706; }
+.rp-delta--flat{ color:var(--rh-muted); font-weight:600; }
+
+.rp-none{ font-size:12.5px; color:var(--rh-muted); padding:4px 0; }
+.rp-note{ font-size:11px; color:var(--rh-muted); line-height:1.5; margin-top:10px; }

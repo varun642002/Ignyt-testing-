@@ -4654,6 +4654,7 @@ const state = {
   // Workout History view filters (transient — a fresh visit starts unfiltered)
   historySearch: "", historyRange: "all", historyMuscle: "", historySort: "newest",
   historyPRsOnly: false, historyPage: 1, historyArchived: false, historyBinOpen: false,
+  reportPeriod: "week",   // Reports view: week | month | year
   historySelectMode: false, historySelected: [], // transient — bulk multi-select
   // Food search (transient — a fresh visit starts with an empty search)
   foodSearchQuery: "", foodSearchSelected: null, foodSearchAmount: null, foodSearchUnit: "g",
@@ -12046,6 +12047,126 @@ function renderExerciseDetailHistory(history, exerciseName){
    is generated at all; there are no chart instances to destroy.
 ========================================================= */
 
+
+/* =========================================================
+   REPORTS — weekly / monthly / yearly
+
+   Every figure is aggregated from the logs the app already keeps, and each is shown against
+   the PREVIOUS period of the same length. A total on its own does not tell you whether things
+   are going well; "18,400 kg, up 12% on the week before" does.
+
+   A period with no data says so. It does not render zeros, because a zero here reads as "you
+   did nothing" when the truth is usually "the app was not being used yet".
+========================================================= */
+function progressReportFor(days, endMs){
+  const end = endMs != null ? endMs : Date.now();
+  const start = end - days*86400000;
+  const inRange = (t) => t > start && t <= end;
+
+  const workouts = state.workoutLog.filter(w=>inRange(new Date(w.date).getTime()));
+  const volume = workouts.reduce((a,w)=>a+Number(w.volume||0), 0);
+  const minutes = workouts.reduce((a,w)=>a+Number(w.durationMin||0), 0);
+  const sets = workouts.reduce((a,w)=>a+(w.exercises||[]).reduce(
+    (b,ex)=>b+(ex.sets||[]).filter(st=>st.done).length, 0), 0);
+
+  const foods = state.foodLog.filter(f=>inRange(new Date(f.date + "T12:00:00").getTime()));
+  const dayKeys = [...new Set(foods.map(f=>f.date))];
+  const kcal = foods.reduce((a,f)=>a+Number(f.calories||0), 0);
+  const protein = foods.reduce((a,f)=>a+Number(f.protein||0), 0);
+
+  const body = state.bodylog.filter(b=>inRange(new Date(b.date).getTime()))
+                            .sort((a,b)=>new Date(a.date)-new Date(b.date));
+
+  return {
+    workouts: workouts.length, volume, minutes, sets,
+    daysLogged: dayKeys.length,
+    // Averaged over DAYS LOGGED, not over the period. Dividing a week's calories by 7 when
+    // only three days were logged reports a deficit nobody actually ate.
+    avgKcal: dayKeys.length ? Math.round(kcal/dayKeys.length) : null,
+    avgProtein: dayKeys.length ? Math.round(protein/dayKeys.length) : null,
+    weightStart: body.length ? body[0].weight : null,
+    weightEnd: body.length ? body[body.length-1].weight : null,
+    hasData: workouts.length > 0 || dayKeys.length > 0 || body.length > 0
+  };
+}
+
+function renderProgressReports(){
+  const PERIODS = { week:{days:7, label:"This week", prev:"the week before"},
+                    month:{days:30, label:"This month", prev:"the month before"},
+                    year:{days:365, label:"This year", prev:"last year"} };
+  const key = state.reportPeriod || "week";
+  const P = PERIODS[key];
+  const now = progressReportFor(P.days);
+  const before = progressReportFor(P.days, Date.now() - P.days*86400000);
+
+  /* Change is only shown when the previous period HAS the same measure. "+100%" against a
+     period with nothing in it is arithmetic, not information. */
+  const delta = (a, b) => {
+    if(a == null || b == null || b === 0) return "";
+    const pc = Math.round(((a-b)/b)*100);
+    if(pc === 0) return `<span class="rp-delta rp-delta--flat">no change</span>`;
+    const up = pc > 0;
+    return `<span class="rp-delta rp-delta--${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(pc)}%</span>`;
+  };
+  const row = (label, value, unit, d) => `
+    <div class="rp-row">
+      <span class="rp-row__label">${escHtml(label)}</span>
+      <span class="rp-row__value">${value}<span class="nut-unit">${unit?" "+unit:""}</span></span>
+      ${d || ""}
+    </div>`;
+
+  const weightChange = (now.weightStart != null && now.weightEnd != null)
+    ? (now.weightEnd - now.weightStart) : null;
+
+  return `
+    <div class="rp-tabs">
+      ${Object.entries(PERIODS).map(([k,v])=>
+        `<button class="rp-tab ${k===key?'is-on':''}" data-report-period="${k}">${
+          k==="week"?"Weekly":k==="month"?"Monthly":"Yearly"}</button>`).join("")}
+    </div>
+
+    ${!now.hasData ? `
+      <div class="pg-card" style="text-align:center;padding:28px 16px;">
+        <div style="font-size:32px;line-height:1;margin-bottom:8px;">🧾</div>
+        <div style="font-weight:800;font-size:15px;">Nothing logged for ${escHtml(P.label.toLowerCase())}</div>
+        <div style="font-size:12.5px;color:var(--rh-muted);margin-top:4px;">
+          Log a workout, a meal or a weight and this report fills in.
+        </div>
+      </div>` : `
+
+      <div class="pg-card">
+        <div class="rp-head">Training <span>vs ${escHtml(P.prev)}</span></div>
+        ${row("Workouts", now.workouts, "", delta(now.workouts, before.workouts))}
+        ${row("Total volume", Math.round(now.volume).toLocaleString(), "kg", delta(now.volume, before.volume))}
+        ${row("Working sets", now.sets, "", delta(now.sets, before.sets))}
+        ${row("Time trained", Math.round(now.minutes), "min", delta(now.minutes, before.minutes))}
+        ${now.workouts ? row("Average session", Math.round(now.minutes/now.workouts), "min", "") : ""}
+      </div>
+
+      <div class="pg-card">
+        <div class="rp-head">Nutrition <span>vs ${escHtml(P.prev)}</span></div>
+        ${row("Days logged", now.daysLogged + " of " + P.days, "", "")}
+        ${now.avgKcal != null
+          ? row("Average calories", now.avgKcal.toLocaleString(), "kcal", delta(now.avgKcal, before.avgKcal))
+          : `<div class="rp-none">No meals logged in this period.</div>`}
+        ${now.avgProtein != null
+          ? row("Average protein", now.avgProtein, "g", delta(now.avgProtein, before.avgProtein)) : ""}
+        ${now.avgKcal != null ? `<div class="rp-note">
+          Averaged over the ${now.daysLogged} day${now.daysLogged===1?"":"s"} you actually logged,
+          not over all ${P.days} — dividing by days you did not track would report a deficit you
+          never ate.</div>` : ""}
+      </div>
+
+      <div class="pg-card">
+        <div class="rp-head">Body</div>
+        ${weightChange != null
+          ? row("Weight change", (weightChange>0?"+":"") + weightChange.toFixed(1), "kg", "") +
+            row("Latest weight", now.weightEnd.toFixed(1), "kg", "")
+          : `<div class="rp-none">No weigh-ins in this period.</div>`}
+      </div>`}
+  `;
+}
+
 const PROGRESS_VIEWS = {
   achievements: { icon:"🎖️", title:"Achievements & Records", sub:"Milestones, streaks and unlocked achievements." },
   // `history` has always rendered the PR list, despite its old "Workout History" title --
@@ -12058,7 +12179,12 @@ const PROGRESS_VIEWS = {
   nutrition:    { icon:"🍎", title:"Nutrition Progress", sub:"Average calories and protein per logged day." },
   body:         { icon:"⚖️", title:"Body Progress",      sub:"Body weight and measurement trends." },
   calendar:     { icon:"📅", title:"Training Calendar",  sub:"See your workout activity by date." },
-  plan:         { icon:"✅", title:"Plan Progress",      sub:"Phase and weekly training-plan completion." }
+  plan:         { icon:"✅", title:"Plan Progress",      sub:"Phase and weekly training-plan completion." },
+  reports:      { icon:"🧾", title:"Reports",            sub:"Weekly, monthly and yearly summaries with period-on-period change." },
+  /* Photos already had a complete screen (renderBodyScanArchive) reachable from Body — it was
+     simply not reachable from Progress, which is where the brief expects it. Routed rather
+     than rebuilt: a second photo UI would mean two places to fix every future bug. */
+  photos:       { icon:"📷", title:"Progress Photos",    sub:"Your body-progress photo archive." }
 };
 
 function fmtMinutes(min){
@@ -12088,7 +12214,8 @@ function renderProgressTab(){
       analytics: renderProgressAnalytics, exercise: renderProgressExercise,
       nutrition: renderProgressNutrition,
       body: renderProgressBody,
-      calendar: renderProgressCalendar, plan: renderProgressPlan
+      calendar: renderProgressCalendar, plan: renderProgressPlan,
+      reports: renderProgressReports, photos: renderBodyScanArchive
     };
     let body;
     try{ body = detailFns[view](); }
@@ -18875,6 +19002,9 @@ function attachHandlers(){
 
   // Progress home <-> detail navigation. Bound per-render like every other handler here
   // (the DOM is rebuilt each render, so listeners never accumulate).
+  document.querySelectorAll("[data-report-period]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.reportPeriod = el.dataset.reportPeriod; render(); });
+  });
   document.querySelectorAll("[data-progress-view]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const main = document.getElementById("main");
