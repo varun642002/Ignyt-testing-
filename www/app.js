@@ -9379,6 +9379,11 @@ function renderProfileTab(){
         <button class="tl-card" data-open-progress-view="achievements"><span class="tl-card__icon">${svg('trophy',20)}</span><div class="tl-card__body"><div class="tl-card__label">Achievements</div><div class="tl-card__desc">Badges, milestones &amp; records</div></div><span class="tl-card__chev">›</span></button>
       </div>
 
+      <div class="rh-section-head"><span>Diet</span></div>
+      <div class="tl-grid" style="grid-template-columns:1fr;">
+        <button class="tl-card" data-open-diet-settings="1"><span class="tl-card__icon" style="color:var(--rh-green);background:rgba(22,163,74,.1);">${svg('nutrition',20)}</span><div class="tl-card__body"><div class="tl-card__label">Diet Settings</div><div class="tl-card__desc">Meals per day, plan &amp; meal times</div></div><span class="tl-card__chev">›</span></button>
+      </div>
+
       <div class="rh-section-head"><span>Tools</span></div>
       <div class="tl-grid" style="grid-template-columns:1fr;">
         <button class="tl-card" data-nav="tools"><span class="tl-card__icon" style="color:var(--rh-blue);background:rgba(37,99,235,.1);">${svg('more',20)}</span><div class="tl-card__body"><div class="tl-card__label">All Tools</div><div class="tl-card__desc">Calculators, Insights, Health Connect &amp; more</div></div><span class="tl-card__chev">›</span></button>
@@ -14183,6 +14188,34 @@ function openLoggedFoodDetail(entryId){
   state.foodSearchUnit = entry.servingUnit || "g";
 }
 
+
+/* Opens Food Details for an item already in a DIET PLAN, in edit mode. Deliberately reuses
+   the whole search/detail/serving screen rather than growing a plan-specific serving editor:
+   scaling a food is the same problem in both places, and two implementations of it would
+   disagree the first time either changed. */
+function openPlanItemDetail(planId, mealId, itemId){
+  const D = window.IgnytDietPlans;
+  if(!D) return;
+  const item = D.findItem(planId, mealId, itemId);
+  if(!item) return;
+  const food = item.foodId != null ? lookupFood(item.foodId, item.name) : null;
+
+  state.foodFlow = {
+    screen: "detail",
+    mode: "edit",
+    meal: item.name,
+    foodId: item.foodId != null ? item.foodId : null,
+    entryId: null,
+    notes: item.note || "",
+    target: { kind: "plan-edit", planId: planId, mealId: mealId, itemId: itemId }
+  };
+  state.foodSearchSelected = food ? { id: food.id, name: food.name } : null;
+  // Start from what is actually in the plan, not from a default serving.
+  state.foodSearchAmount = item.quantity != null ? item.quantity : (item.grams || null);
+  state.foodSearchUnit = item.servingUnit || "g";
+  state.nutritionScreen = null;
+}
+
 /* Every exit from the food routes runs through here — cancel, save, add, duplicate, delete,
    and the two guards that bail out when an entry has vanished underneath the screen. So the
    scroll restore lives here rather than at eight call sites, where the eighth would be the
@@ -14292,8 +14325,19 @@ function renderFoodSearchPage(){
 function renderFoodDetailPage(){
   const flow = state.foodFlow;
   const editing = flow.mode === "edit";
-  const entry = editing ? foodEntryById(flow.entryId) : null;
-  if(editing && !entry){ closeFoodFlow(); return renderNutritionTab(); }
+  /* An edit target is normally a food-log entry. It can also be a DIET PLAN item, which has
+     the same snapshot shape but lives in a different store — so the lookup branches while
+     everything downstream (serving controls, scaling, macro rows) stays identical. */
+  const planEdit = editing && flow.target && flow.target.kind === "plan-edit";
+  const entry = editing
+    ? (planEdit
+        ? (window.IgnytDietPlans && IgnytDietPlans.findItem(flow.target.planId, flow.target.mealId, flow.target.itemId))
+        : foodEntryById(flow.entryId))
+    : null;
+  if(editing && !entry){
+    if(planEdit){ closeFoodFlow(); state.nutritionScreen = "dietplan"; return renderDietPlanScreen(); }
+    closeFoodFlow(); return renderNutritionTab();
+  }
 
   const food = flow.foodId != null
     ? lookupFood(flow.foodId, state.foodSearchSelected && state.foodSearchSelected.name)
@@ -14828,6 +14872,14 @@ async function syncFastNotifications(fast){
 }
 
 function renderDietPlanScreen(){
+  /* The catalogue loads lazily on the first food UI. The Diet Plan is one — it re-scales plan
+     items against catalogue foods when a serving is edited — but it can be opened from Profile
+     or the Food Log shortcut without search ever running. Without this, editing a serving hit
+     the "no catalogue record" fallback instead of the serving controls. Same kick-off the
+     search page uses. */
+  const cat = window.IgnytFoodCatalogue;
+  if(cat && cat.status() === "idle") cat.onReady(()=>render());
+
   if(!window.IgnytPages || typeof window.IgnytPages.renderDietPlan !== "function"){
     return `<div class="food-page">${foodPageHeader("Diet Plan")}
       <div class="nut-note" style="padding:16px;">The diet plan module failed to load.</div></div>`;
@@ -14843,6 +14895,10 @@ function renderDietPlanScreen(){
 
 function openDietPlan(){
   captureNutritionScroll();
+  /* The plan renders inside renderNutritionTab(), so the tab has to move too. Without this the
+     call worked from the Food Log (already on that tab) and silently did nothing from Profile,
+     which is exactly where the brief puts Diet Settings. */
+  state.tab = "nutrition";
   state.nutritionScreen = "dietplan";
   state.dietUI = { expanded: null, menuFor: null, menuMeal: null, details: false, planMenu: false };
 }
@@ -19911,8 +19967,20 @@ function attachHandlers(){
     });
   });
 
+  /* Tapping the row edits the serving; the trailing menu removes it. Same split the food log
+     uses, so the gesture means the same thing in both places. */
+  document.querySelectorAll("[data-dp-item-edit]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const plan = currentDietPlan();
+      if(!plan) return;
+      openPlanItemDetail(plan.id, el.dataset.dpItemMeal, el.dataset.dpItemEdit);
+      render();
+    });
+  });
+
   document.querySelectorAll("[data-dp-item-menu]").forEach(el=>{
-    el.addEventListener("click", async ()=>{
+    el.addEventListener("click", async (ev)=>{
+      ev.stopPropagation();   // the menu sits inside the row; removing must not also open it
       const plan = currentDietPlan();
       if(!plan || !D) return;
       const itemId = el.dataset.dpItemMenu, mealId = el.dataset.dpMenuMeal;
@@ -20069,6 +20137,16 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{ openDietPlan(); render(); });
   });
 
+  document.querySelectorAll("[data-open-diet-settings]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      openDietPlan();
+      // Land directly on "How many meals do you eat in a day?" when a plan exists; with none,
+      // the plan screen's own empty state is the right first step.
+      if(currentDietPlan()) state.dietUI = Object.assign({}, state.dietUI, { sheet:"meals" });
+      render();
+    });
+  });
+
   const insightsBack = document.querySelector("[data-insights-back]");
   if(insightsBack) insightsBack.addEventListener("click", ()=>{
     state.nutritionScreen = null;
@@ -20103,6 +20181,49 @@ function attachHandlers(){
   const flowSave = document.querySelector("[data-food-flow-save]");
   if(flowSave) flowSave.addEventListener("click", ()=>{
     const flow = state.foodFlow;
+
+    /* Saving an edited DIET PLAN item: re-scale from the catalogue food at the new serving and
+       write the whole snapshot back, so the plan stores the same shape it would have got from
+       adding the food fresh. */
+    if(flow && flow.target && flow.target.kind === "plan-edit"){
+      const D = window.IgnytDietPlans;
+      const t = flow.target;
+      const item = D && D.findItem(t.planId, t.mealId, t.itemId);
+      if(!item){ closeFoodFlow(); state.nutritionScreen = "dietplan"; render(); return; }
+      const food = flow.foodId != null ? lookupFood(flow.foodId, item.name) : null;
+      if(!food){ showToast("This food is no longer in the catalogue, so it can't be re-scaled.", "error", render); return; }
+
+      const N = window.IgnytNutrition;
+      const pf = resolveFoodPortion(food);
+      const check = N.validateQuantity(food, currentFoodAmount(food), pf.unit);
+      if(!check.ok){ showToast(check.error, "error", render); return; }
+      const v = N.logValues(food, check.grams);
+      N.rememberServing(food.id, check.amount, check.unit);
+
+      const next = {
+        name: v.name,
+        calories: Number(v.calories)||0, protein: Number(v.protein)||0,
+        carbs: Number(v.carbs)||0, fat: Number(v.fat)||0, fibre: Number(v.fibre)||0,
+        foodId: food.id, category: food.category || null,
+        quantity: Number(currentFoodAmount(food)), servingUnit: pf.unit,
+        grams: Number(v.grams) || null
+      };
+      N.MICRO_LOG_FIELDS.forEach(k=>{ if(v[k] != null) next[k] = Number(v[k]); });
+      const note = (flow.notes||"").trim();
+      if(note) next.note = note;
+
+      if(!D.replaceItem(t.planId, t.mealId, t.itemId, next)){
+        showToast("Could not save the change.", "error", render);
+        return;
+      }
+      closeFoodFlow();
+      state.nutritionScreen = "dietplan";
+      state.dietUI = Object.assign({}, state.dietUI, { expanded: t.mealId });
+      showToast("Serving updated.", "success", render);
+      render();
+      return;
+    }
+
     const entry = flow && foodEntryById(flow.entryId);
     if(!entry) return;
 

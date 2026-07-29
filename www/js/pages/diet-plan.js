@@ -119,12 +119,15 @@
 
   function itemRow(item, meal) {
     var img = window.IgnytFoodImages ? window.IgnytFoodImages.thumbHtml(item, 40) : "";
+    /* The row is a button: tapping it opens the serving editor. The trailing ⋮ removes the
+       item and stops propagation, so the two actions cannot fire together. */
     return '' +
-      '<div class="dp-item">' +
+      '<div class="dp-item" role="button" tabindex="0" data-dp-item-edit="' + esc(item.id) +
+        '" data-dp-item-meal="' + esc(meal.id) + '">' +
         '<div class="dp-item__img">' + img + '</div>' +
         '<div class="dp-item__body">' +
           '<div class="dp-item__name">' + esc(item.name) + '</div>' +
-          '<div class="dp-item__serving">' + esc(servingLabel(item)) + '</div>' +
+          '<div class="dp-item__serving">' + esc(servingLabel(item)) + ' · tap to edit</div>' +
         '</div>' +
         '<div class="dp-item__nums">' +
           '<span class="dp-item__cal">' + num(item.calories) + ' Cal</span>' +
