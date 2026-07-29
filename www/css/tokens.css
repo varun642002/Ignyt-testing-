@@ -39,6 +39,12 @@
      than new ones, so every surface already reading --radius-card picks the new shape up with
      no component edits — which is the whole reason the token layer exists. --radius-lg is
      raised in step with --radius-card so large surfaces stay rounder than cards, not flatter. */
+  /* --radius-tile is for SMALL surfaces — the 96-104px gauges, quick-action tiles and stat
+     chips. Radius has to scale with the element: 22px on a 96px tile reads as a pill, not a
+     card, so one radius for everything is not consistency, it is a flattened hierarchy.
+     Audit before this existed: 12 distinct hard-coded radius values across the page
+     stylesheets and not one of them referencing a token. */
+  --radius-tile: 16px;
   --radius-card: 22px; --radius-btn: 18px; --radius-lg: 26px; --radius-pill: 999px;
   /* Elevation scale -- --shadow-card kept as-is (widely referenced already) and now aliases
      the mid level so existing callers are unaffected. */

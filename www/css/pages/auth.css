@@ -164,7 +164,7 @@
   flex: 0 0 46px;
   display: grid;
   place-items: center;
-  border-radius: 15px;
+  border-radius:15px;
   border: 1px solid rgba(59,130,246,.28);
   background: linear-gradient(150deg, rgba(59,130,246,.20), rgba(59,130,246,.05));
   box-shadow: 0 8px 26px -10px rgba(59,130,246,.55);

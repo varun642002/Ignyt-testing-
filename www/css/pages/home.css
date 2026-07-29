@@ -25,7 +25,7 @@ nav.bottom-nav--home-light .nav-btn { color:#94A3B8; }
 nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 
 /* ---------- Hero card ---------- */
-.rh-hero { background:var(--rh-card); border-radius:20px; padding:20px; margin-top:4px; box-shadow:0 2px 10px rgba(15,23,42,.06); overflow:hidden; }
+.rh-hero { background:var(--rh-card); border-radius:var(--radius-card); padding:20px; margin-top:4px; box-shadow:0 2px 10px rgba(15,23,42,.06); overflow:hidden; }
 .rh-hero__row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; min-width:0; }
 .rh-hero__text { min-width:0; flex:1; }
 .rh-hero__greeting { font-size:15px; color:var(--rh-muted); font-weight:500; }
@@ -40,7 +40,7 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 .rh-hero__recovery-value { font-size:14px; font-weight:800; margin-top:6px; }
 .rh-hero__recovery-label { font-size:11px; color:var(--rh-blue); font-weight:700; margin-top:1px; white-space:nowrap; }
 .rh-hero__actions { display:flex; gap:10px; margin-top:16px; }
-.rh-btn { border:none; border-radius:12px; font-weight:700; font-size:14px; padding:13px 16px; cursor:pointer; flex:1; text-align:center; }
+.rh-btn { border:none; border-radius:var(--radius-md); font-weight:700; font-size:14px; padding:13px 16px; cursor:pointer; flex:1; text-align:center; }
 .rh-btn--primary { background:var(--rh-blue); color:#fff; }
 .rh-btn--ghost { background:var(--rh-card); color:var(--rh-text); border:1px solid var(--rh-border); }
 .rh-hero__image-wrap { flex:none; width:130px; align-self:flex-end; margin:-20px -20px -20px 0; position:relative; }
@@ -54,14 +54,14 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 
 /* ---------- Quick actions ---------- */
 .rh-quick-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:16px; }
-.rh-quick-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px 6px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; color:var(--rh-blue); box-shadow:0 1px 4px rgba(15,23,42,.05); }
+.rh-quick-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-tile); padding:14px 6px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; color:var(--rh-blue); box-shadow:0 1px 4px rgba(15,23,42,.05); }
 .rh-quick-card span { font-size:11px; font-weight:700; color:var(--rh-text); text-align:center; line-height:1.2; }
 
 /* ---------- Today's Overview (horizontal scroll) ---------- */
 .rh-overview-scroll { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; }
 .rh-overview-scroll::-webkit-scrollbar { display:none; }
-.ov-tile { scroll-snap-align:start; flex:none; width:104px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px 12px; }
-.ov-tile__icon { display:inline-flex; width:36px; height:36px; border-radius:10px; align-items:center; justify-content:center; background:rgba(37,99,235,.1); color:var(--rh-blue); }
+.ov-tile { scroll-snap-align:start; flex:none; width:104px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-tile); padding:14px 12px; }
+.ov-tile__icon { display:inline-flex; width:36px; height:36px; border-radius:var(--radius-sm); align-items:center; justify-content:center; background:rgba(37,99,235,.1); color:var(--rh-blue); }
 .ov-tile__value { font-size:19px; font-weight:800; margin-top:10px; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ov-tile__unit { font-size:11px; font-weight:600; color:var(--rh-muted); margin-left:2px; }
 .ov-tile__label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:2px; }
@@ -71,10 +71,10 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 .ov-tile__trend.is-down { color:var(--rh-red); }
 
 /* ---------- Shared card + progress bar ---------- */
-.rh-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:16px; }
-.rh-progress-track { height:8px; border-radius:4px; background:#EEF1F6; overflow:hidden; margin-top:12px; }
+.rh-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-card); padding:16px; }
+.rh-progress-track { height:8px; border-radius:var(--radius-2xs); background:#EEF1F6; overflow:hidden; margin-top:12px; }
 .rh-progress-track--sm { height:5px; margin-top:8px; }
-.rh-progress-fill { height:100%; border-radius:4px; background:var(--rh-blue); }
+.rh-progress-fill { height:100%; border-radius:var(--radius-2xs); background:var(--rh-blue); }
 
 /* ---------- Weekly goal ---------- */
 .rh-weekly-goal__row { display:flex; align-items:flex-start; justify-content:space-between; }
@@ -82,12 +82,12 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 .rh-weekly-goal__count { font-size:30px; font-weight:800; margin-top:4px; }
 .rh-weekly-goal__count span { font-size:16px; color:var(--rh-muted); font-weight:700; }
 .rh-weekly-goal__sub { font-size:12px; color:var(--rh-muted); margin-top:2px; }
-.rh-weekly-goal__badge { width:44px; height:44px; border-radius:12px; background:rgba(37,99,235,.1); color:var(--rh-blue); display:flex; align-items:center; justify-content:center; flex:none; }
+.rh-weekly-goal__badge { width:44px; height:44px; border-radius:var(--radius-md); background:rgba(37,99,235,.1); color:var(--rh-blue); display:flex; align-items:center; justify-content:center; flex:none; }
 .rh-weekly-goal__pct { font-size:13px; font-weight:800; color:var(--rh-blue); margin-top:6px; }
 
 /* ---------- Habits ---------- */
 .rh-habit-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
-.rh-habit-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:12px 10px; text-align:left; cursor:pointer; }
+.rh-habit-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-tile); padding:12px 10px; text-align:left; cursor:pointer; }
 .rh-habit-card__icon { display:flex; width:30px; height:30px; border-radius:50%; align-items:center; justify-content:center; background:#EEF1F6; color:var(--rh-muted); }
 .rh-habit-card__icon.is-done { background:rgba(22,163,74,.12); color:var(--rh-green); }
 .rh-habit-card__name { font-size:13px; font-weight:700; margin-top:8px; overflow-wrap:anywhere; }
@@ -100,7 +100,7 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 /* ---------- Recovery & Health gauges ---------- */
 .rh-recovery-scroll { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
 .rh-recovery-scroll::-webkit-scrollbar { display:none; }
-.rh-gauge-card { scroll-snap-align:start; flex:none; width:96px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px 10px; display:flex; flex-direction:column; align-items:center; text-align:center; }
+.rh-gauge-card { scroll-snap-align:start; flex:none; width:96px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-tile); padding:14px 10px; display:flex; flex-direction:column; align-items:center; text-align:center; }
 .rh-gauge-card__value { font-size:14px; font-weight:800; margin-top:8px; }
 .rh-gauge-card__label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:1px; }
 .rh-gauge-card__sub { font-size:11px; font-weight:700; margin-top:2px; }

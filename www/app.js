@@ -11135,7 +11135,16 @@ function renderOnboardingWizard(){
   const step = state.onboardingStep;
   const isLast = step===ONBOARDING_TOTAL_STEPS;
   root.innerHTML = `
-    <div style="padding:24px 20px 100px;max-width:480px;margin:0 auto;">
+    <!-- 16px matches the app's <main> gutter. It was 20px, so every card shifted 4px inward
+         the moment onboarding finished and Home appeared — a small jump, but it is the first
+         transition a new user sees and it reads as the layout settling rather than arriving.
+
+         width:100% is load-bearing, not belt-and-braces. #app is a COLUMN FLEX container, and
+         "margin:0 auto" on a flex child overrides align-items:stretch — so this wrapper was
+         collapsing to its content width and centring: 286px of content inside a 412px screen,
+         with 63px of dead space either side on every one of the eleven steps. It read as a
+         narrow column rather than a page. -->
+    <div style="padding:24px 16px 100px;max-width:480px;width:100%;margin:0 auto;">
       ${step===1 && !state.editingOnboarding ? `
         <div style="text-align:center;margin-bottom:20px;">
           <div style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:800;margin-bottom:4px;">Welcome to</div>
