@@ -92,6 +92,14 @@ dependencies {
     // configured" cleanly); drop the file from Firebase Console into android/app/ to enable it.
     implementation platform("com.google.firebase:firebase-bom:33.7.0")
     implementation "com.google.firebase:firebase-auth"
+    /* Play Integrity is how Firebase Auth verifies this app is genuine before sending an SMS.
+       firebase-auth pulls it transitively, but declaring it pins a current version and makes
+       the dependency visible — when this verification fails, Firebase silently falls back to a
+       reCAPTCHA WEB flow that opens <project>.firebaseapp.com in a browser. That fallback is
+       the "why is phone login opening Chrome" symptom, and it is not something app code can
+       turn off: the only real fix is making the primary path succeed (Play Integrity API
+       enabled on the Cloud project + the signing SHA-256 registered in Firebase). */
+    implementation "com.google.android.play:integrity:1.4.0"
     // ADDED for Phase 2B cloud sync (profile/settings backup). Same BOM pins the version;
     // Firestore's built-in disk persistence provides the offline-first queueing.
     implementation "com.google.firebase:firebase-firestore"

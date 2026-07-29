@@ -430,6 +430,24 @@ class AuthPlugin : com.getcapacitor.Plugin() {
                 resendToken?.let { builder.setForceResendingToken(it) }
             }
             PhoneAuthProvider.verifyPhoneNumber(builder.build())
+
+            /* Watchdog. Every normal outcome arrives as one of the four callbacks above, but
+               there is one path where NONE of them fire: app verification fails, Firebase
+               opens its reCAPTCHA page in a browser, and the user backs out of it. The
+               PluginCall would then never resolve and the JS button would spin forever — the
+               exact "stuck on Signing in" failure this plugin was written to eliminate.
+
+               setTimeout() is 60s, so 90s is comfortably past every legitimate outcome. */
+            pluginScope.launch {
+                kotlinx.coroutines.delay(90_000L)
+                if (settled.compareAndSet(false, true)) {
+                    Log.w("IgnytAuth", "phone: no callback within 90s - app verification likely fell back to the web flow")
+                    resolveError(call,
+                        "Verification didn't complete. If a browser page opened, this build " +
+                        "isn't passing Play Integrity — check that its SHA-256 is registered in " +
+                        "Firebase and that the Play Integrity API is enabled for the project.")
+                }
+            }
         } catch (e: Exception) {
             Log.e("IgnytAuth", "phone: verifyPhoneNumber threw", e)
             if (settled.compareAndSet(false, true)) {
@@ -520,7 +538,11 @@ class AuthPlugin : com.getcapacitor.Plugin() {
             m.contains("invalid", true) && m.contains("phone", true) ->
                 "That phone number isn't valid. Include the country code."
             m.contains("reCAPTCHA", true) || m.contains("captcha", true) ->
-                "Verification could not complete. Check Play Services and your connection."
+                /* Reaching reCAPTCHA at all means Play Integrity verification failed — the
+                   fallback is the symptom, not the cause, so the message names the cause. */
+                "This build could not be verified with Play Integrity, so Firebase fell back to " +
+                "a web check. Register its SHA-256 in the Firebase Console and enable the Play " +
+                "Integrity API for the project."
             m.contains("app-not-authorized", true) || m.contains("APP_NOT_VERIFIED", true) ||
             m.contains("MISSING_CLIENT_IDENTIFIER", true) -> {
                 /* The single most common cause, and the one Firebase's own message never names.
