@@ -4691,6 +4691,10 @@ const state = {
      { screen:"search"|"detail", meal, foodId, notes } — all transient, so a fresh visit to
      the tab always lands on the dashboard rather than resuming a half-finished entry. */
   foodFlow: null,
+  /* Diet Plan Builder — all transient view state. The plans themselves live in
+     IgnytDietPlans/localStorage; nothing here is persisted. */
+  dietUI: { expanded: null, menuFor: null, menuMeal: null, details: false, planMenu: false },
+  dietViewPlanId: null,   // which plan is being LOOKED at, which is not always the active one
   // Id of the entry just logged, so the dashboard can highlight it once and forget it.
   justAddedFoodId: null,
   raceActive: LS.get("hx_race_active", null),
@@ -8810,6 +8814,14 @@ function confirmDialog(message, renderFn, opts){
 }
 
 function resolveConfirmDialog(result, renderFn){
+  // A dialog with an input resolves to the typed string (or false when cancelled), so callers
+  // get the value without reaching into the DOM after the element has been torn down.
+  if(result && state.confirmDialog && state.confirmDialog.input){
+    const el = document.getElementById("dialog-input");
+    const typed = el ? el.value.trim() : "";
+    if(!typed){ return; }   // empty name: keep the dialog open rather than saving "Untitled"
+    result = typed;
+  }
   state.confirmDialog = null;
   const r = _resolver;
   _resolver = null;
@@ -8851,6 +8863,9 @@ function renderConfirmDialog(){
     <div class="dialog-box">
       ${d.title?`<div class="dialog-title">${d.title}</div>`:''}
       <div class="dialog-message">${d.message}</div>
+      ${d.input ? `<input type="text" id="dialog-input" class="dialog-input"
+          value="${escHtml(d.inputValue||"")}" placeholder="${escHtml(d.inputPlaceholder||"")}"
+          maxlength="60" autocomplete="off">` : ''}
       <div class="dialog-actions">
         <button class="btn btn-ghost" data-dialog-action="cancel">${d.cancelLabel||'Cancel'}</button>
         <button class="btn ${d.danger?'btn-danger':'btn-accent'}" data-dialog-action="confirm">${d.confirmLabel||'Confirm'}</button>
@@ -14022,10 +14037,15 @@ function renderKeepingScroll(){
   restoreNutritionScroll();
 }
 
-function openFoodSearch(meal){
+function openFoodSearch(meal, target){
   // Captured here so returning from anywhere in the flow lands back on this exact offset.
   captureNutritionScroll();
-  state.foodFlow = { screen:"search", meal: meal || mealForNow(), foodId:null, notes:"" };
+  /* `target` routes where the chosen food ends up. Undefined means the food log, which is
+     what every pre-existing caller passes, so the default path is untouched. The Diet Plan
+     Builder passes {kind:"plan", planId, meal} and reuses this entire search/detail flow
+     rather than growing a second food picker that would drift from this one. */
+  state.foodFlow = { screen:"search", meal: meal || mealForNow(), foodId:null, notes:"",
+                     target: target || null };
   state.foodSearchQuery = "";
   state.foodSearchSelected = null;
   state.foodBrowseCategory = null;
@@ -14545,6 +14565,101 @@ function mealEmptyCopy(meal){
    The meal tabs filter the WHOLE page, not just one card — asking "how was lunch" and getting
    a day-level score under a tab labelled Lunch would be worse than not offering the tab.
 ========================================================= */
+
+/* =========================================================
+   DIET PLAN BUILDER — app-side wiring
+
+   The screen itself is www/js/pages/diet-plan.js. This is the adapter: it hands the module
+   the user's real macro targets and today's date key, and owns every action the module's
+   markup declares. Same split as home.js / progress.js.
+========================================================= */
+
+/* Builds the same nutrition snapshot commitSelectedFood() writes to the food log, and stores
+   it on a diet plan instead. Kept separate rather than parameterising commitSelectedFood
+   because that function's job is to LOG something — adding to a plan must never put a row in
+   the user's food diary, and a shared function with a "don't actually log it" flag is exactly
+   how that bug gets introduced later. */
+function commitSelectedFoodToPlan(planId, mealId, note){
+  const D = window.IgnytDietPlans;
+  const sel = state.foodSearchSelected;
+  if(!D || !sel || !planId) return false;
+  const food = lookupFood(sel.id, sel.name);
+  if(!food) return false;
+
+  const N = window.IgnytNutrition;
+  const scalable = food.per != null;
+  let v;
+  if(scalable && N){
+    const p = resolveFoodPortion(food);
+    const check = N.validateQuantity(food, currentFoodAmount(food), p.unit);
+    if(!check.ok){ showToast(check.error, "error", render); return false; }
+    v = N.logValues(food, check.grams);
+    N.rememberServing(food.id, check.amount, check.unit);
+  }else{
+    v = scalable ? IgnytFoodDB.scaleFood(food, resolveFoodPortion(food).grams) : food;
+  }
+
+  const item = {
+    name: v.name,
+    calories: Number(v.calories)||0, protein: Number(v.protein)||0,
+    carbs: Number(v.carbs)||0, fat: Number(v.fat)||0, fibre: Number(v.fibre)||0
+  };
+  // Same rule as the log: a micronutrient is written only where the food reports one, so an
+  // absent key means "unknown" rather than counting as zero in the plan's totals.
+  if(N) N.MICRO_LOG_FIELDS.forEach(k=>{ if(v[k] != null) item[k] = Number(v[k]); });
+  if(scalable){
+    const p2 = resolveFoodPortion(food);
+    item.foodId = food.id;
+    item.category = food.category || null;
+    item.quantity = Number(currentFoodAmount(food));
+    item.servingUnit = p2.unit;
+    item.grams = Number(v.grams) || null;
+  }
+  if(note) item.note = note;
+
+  if(!D.addItem(planId, mealId, item)){
+    showToast("Could not save to the plan.", "error", render);
+    return false;
+  }
+  state.foodSearchSelected = null; state.foodSearchQuery = "";
+  state.foodSearchAmount = null; state.foodSearchUnit = "g";
+  return true;
+}
+
+function renderDietPlanScreen(){
+  if(!window.IgnytPages || typeof window.IgnytPages.renderDietPlan !== "function"){
+    return `<div class="food-page">${foodPageHeader("Diet Plan")}
+      <div class="nut-note" style="padding:16px;">The diet plan module failed to load.</div></div>`;
+  }
+  const plan = currentDietPlan();
+  return window.IgnytPages.renderDietPlan({
+    targets: macroTargets(),
+    dateStr: todayStr(),
+    planId: plan ? plan.id : null,
+    ui: state.dietUI || {}
+  });
+}
+
+function openDietPlan(){
+  captureNutritionScroll();
+  state.nutritionScreen = "dietplan";
+  state.dietUI = { expanded: null, menuFor: null, menuMeal: null, details: false, planMenu: false };
+}
+
+function closeDietPlan(){
+  state.nutritionScreen = null;
+  state.dietUI = { expanded: null, menuFor: null, menuMeal: null, details: false, planMenu: false };
+  restoreNutritionScroll();
+}
+
+/** The plan currently on screen. Not always the active one — the selector lets you look at
+ *  a plan without adopting it, which is what makes "Set active" a meaningful separate action. */
+function currentDietPlan(){
+  const D = window.IgnytDietPlans;
+  if(!D) return null;
+  return (state.dietViewPlanId && D.get(state.dietViewPlanId)) || D.active() || D.all()[0] || null;
+}
+
 function renderNutritionInsightsPage(){
   const ds = nutritionDateStr();
   const isToday = ds === todayStr();
@@ -14837,6 +14952,7 @@ function renderNutritionTab(){
   if(state.foodFlow && state.foodFlow.screen === "search") return renderFoodSearchPage();
   if(state.foodFlow && state.foodFlow.screen === "detail") return renderFoodDetailPage();
   if(state.nutritionScreen === "insights") return renderNutritionInsightsPage();
+  if(state.nutritionScreen === "dietplan") return renderDietPlanScreen();
 
   const n = state.nutrition;
   const targets = macroTargets();
@@ -14937,9 +15053,9 @@ function renderNutritionTab(){
     <!-- Three shortcuts. Each goes somewhere that already exists rather than being a tile
          that will be wired up later. -->
     <div class="nd-shortcuts">
-      <button class="nd-short" data-nav="plan">
+      <button class="nd-short" data-open-diet-plan="1">
         <span class="nd-short__icon nd-short__icon--blue">📋</span>
-        <span class="nd-short__body"><span class="nd-short__title">Diet Plan</span><span class="nd-short__sub">View your plan</span></span>
+        <span class="nd-short__body"><span class="nd-short__title">Diet Plan</span><span class="nd-short__sub">Build your meal plan</span></span>
         <span class="nd-short__chev">›</span>
       </button>
       <button class="nd-short" data-nav-insights="1">
@@ -19412,6 +19528,238 @@ function attachHandlers(){
       render();
     });
   });
+
+  /* ---- Diet Plan Builder ---------------------------------------------------------- */
+  const D = window.IgnytDietPlans;
+  const dpUI = patch => { state.dietUI = Object.assign({}, state.dietUI, patch); };
+  const dpCloseSheets = () => dpUI({ planMenu:false, sheet:null, sheetMeal:null });
+
+  const dpBack = document.querySelector("[data-dp-back]");
+  if(dpBack) dpBack.addEventListener("click", ()=>{ closeDietPlan(); render(); });
+
+  document.querySelectorAll("[data-dp-create]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      if(!D) return;
+      const name = await confirmDialog(
+        "Give the plan a name you'll recognise — Weight Loss, Muscle Gain, Keto, whatever fits.",
+        render,
+        { title:"Create diet plan", confirmLabel:"Create", input:true,
+          inputPlaceholder:"e.g. Muscle Gain", inputValue:"" });
+      if(!name) return;
+      const plan = D.create(name);
+      if(!plan){ showToast("Could not create the plan.", "error", render); return; }
+      state.dietViewPlanId = plan.id;
+      dpUI({ expanded:null });
+      showToast("Plan created.", "success", render);
+      render();
+    });
+  });
+
+  const dpSelect = document.getElementById("dp-plan-select");
+  if(dpSelect) dpSelect.addEventListener("change", ()=>{
+    // Viewing a plan is not adopting it -- "Set active" stays a deliberate, separate action.
+    state.dietViewPlanId = dpSelect.value;
+    dpUI({ expanded:null });
+    render();
+  });
+
+  document.querySelectorAll("[data-dp-set-active]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(!D) return;
+      D.setActive(el.dataset.dpSetActive);
+      showToast("Set as your active plan.", "success", render);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-dp-meal-toggle]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.dpMealToggle;
+      dpUI({ expanded: (state.dietUI||{}).expanded === id ? "__none__" : id });
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-dp-add-food]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const plan = currentDietPlan();
+      if(!plan || !D){ showToast("Create a plan first.", "info", render); return; }
+      const meal = D.mealById(plan, el.dataset.dpAddFood) || plan.meals[0];
+      if(!meal){ showToast("Add a meal to this plan first.", "info", render); return; }
+      // Reuses the whole existing search -> detail -> serving flow; only the destination differs.
+      openFoodSearch(meal.name, { kind:"plan", planId: plan.id, mealId: meal.id, mealName: meal.name });
+      state.nutritionScreen = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-dp-meal-done]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const plan = currentDietPlan();
+      if(!plan || !D) return;
+      D.toggleMealDone(plan.id, todayStr(), el.dataset.dpMealDone);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-dp-item-menu]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const plan = currentDietPlan();
+      if(!plan || !D) return;
+      const itemId = el.dataset.dpItemMenu, mealId = el.dataset.dpMenuMeal;
+      const item = D.findItem(plan.id, mealId, itemId);
+      if(!item) return;
+      const meal = D.mealById(plan, mealId);
+      const ok = await confirmDialog(
+        "Remove " + escHtml(item.name) + " from " + escHtml(meal ? meal.name : "this meal") + "?",
+        render, { title:"Remove food", confirmLabel:"Remove", danger:true });
+      if(!ok){ render(); return; }
+      D.removeItem(plan.id, mealId, itemId);
+      dpUI({ expanded: mealId });
+      showToast("Removed.", "success", render);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-dp-plan-menu]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      dpUI({ planMenu: !(state.dietUI||{}).planMenu, sheet:null });
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-dp-close-sheet]").forEach(el=>{
+    el.addEventListener("click", ()=>{ dpCloseSheets(); render(); });
+  });
+
+  document.querySelectorAll("[data-dp-plan-action]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const plan = currentDietPlan();
+      if(!plan || !D) return;
+      const act = el.dataset.dpPlanAction;
+      dpUI({ planMenu:false });
+
+      if(act === "meals"){ dpUI({ sheet:"meals" }); render(); return; }
+
+      if(act === "rename"){
+        const name = await confirmDialog("Rename this plan.", render,
+          { title:"Rename plan", confirmLabel:"Save", input:true, inputValue: plan.name });
+        if(!name){ render(); return; }
+        D.rename(plan.id, name);
+        showToast("Renamed.", "success", render);
+      } else if(act === "duplicate"){
+        const copy = D.duplicate(plan.id);
+        if(copy){ state.dietViewPlanId = copy.id; dpUI({ expanded:null });
+                  showToast("Plan duplicated.", "success", render); }
+      } else if(act === "active"){
+        D.setActive(plan.id);
+        showToast("Set as your active plan.", "success", render);
+      } else if(act === "delete"){
+        const ok = await confirmDialog(
+          "Delete \"" + escHtml(plan.name) + "\"? This cannot be undone.", render,
+          { title:"Delete plan", confirmLabel:"Delete", danger:true });
+        if(!ok){ render(); return; }
+        D.remove(plan.id);
+        state.dietViewPlanId = null;
+        showToast("Plan deleted.", "success", render);
+      }
+      render();
+    });
+  });
+
+  /* Meals per day. Shrinking relocates food rather than deleting it, and says how much moved --
+     a silent move is as alarming as a silent delete when the user next opens the plan. */
+  document.querySelectorAll("[data-dp-set-meals]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const plan = currentDietPlan();
+      if(!plan || !D) return;
+      const n = parseInt(el.dataset.dpSetMeals, 10);
+      const res = D.setMealCount(plan.id, n);
+      dpCloseSheets();
+      dpUI({ expanded:null });
+      const label = n + (n === 1 ? " meal" : " meals") + " a day.";
+      if(res.moved > 0){
+        showToast("Now " + label + " " + res.moved + " item" + (res.moved===1?"":"s") +
+                  " moved into your last meal.", "info", render);
+      }else if(res.ok){
+        showToast("Now " + label, "success", render);
+      }
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-dp-meal-config]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      dpUI({ sheet:"meal", sheetMeal: el.dataset.dpMealConfig, planMenu:false });
+      render();
+    });
+  });
+
+  const dpSaveMeal = document.querySelector("[data-dp-save-meal]");
+  if(dpSaveMeal) dpSaveMeal.addEventListener("click", ()=>{
+    const plan = currentDietPlan();
+    const mealId = (state.dietUI||{}).sheetMeal;
+    if(!plan || !D || !mealId) return;
+    const nameEl = document.getElementById("dp-meal-name");
+    const timeEl = document.getElementById("dp-meal-time");
+    if(nameEl && nameEl.value.trim()) D.renameMeal(plan.id, mealId, nameEl.value);
+    if(timeEl) D.setMealTime(plan.id, mealId, timeEl.value);
+    dpCloseSheets();
+    showToast("Meal updated.", "success", render);
+    render();
+  });
+
+  document.querySelectorAll("[data-dp-move-meal]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const plan = currentDietPlan();
+      const mealId = (state.dietUI||{}).sheetMeal;
+      if(!plan || !D || !mealId) return;
+      D.moveMeal(plan.id, mealId, el.dataset.dpMoveMeal === "up" ? -1 : 1);
+      render();
+    });
+  });
+
+  const dpDeleteMeal = document.querySelector("[data-dp-delete-meal]");
+  if(dpDeleteMeal) dpDeleteMeal.addEventListener("click", async ()=>{
+    const plan = currentDietPlan();
+    const mealId = (state.dietUI||{}).sheetMeal;
+    if(!plan || !D || !mealId) return;
+    const meal = D.mealById(plan, mealId);
+    const has = meal ? meal.items.length : 0;
+    const msg = has
+      ? "Delete " + escHtml(meal.name) + "? Its " + has + " item" + (has===1?"":"s") +
+        " will move to the meal before it."
+      : "Delete " + escHtml(meal ? meal.name : "this meal") + "?";
+    const ok = await confirmDialog(msg, render,
+      { title:"Delete meal", confirmLabel:"Delete", danger:true });
+    if(!ok){ render(); return; }
+    D.deleteMeal(plan.id, mealId);
+    dpCloseSheets();
+    dpUI({ expanded:null });
+    showToast("Meal deleted.", "success", render);
+    render();
+  });
+
+  const dpAddMeal = document.querySelector("[data-dp-add-meal]");
+  if(dpAddMeal) dpAddMeal.addEventListener("click", ()=>{
+    const plan = currentDietPlan();
+    if(!plan || !D) return;
+    const added = D.addMeal(plan.id);
+    if(!added){ showToast("A plan can have at most " + D.MAX_MEALS + " meals.", "info", render); return; }
+    dpUI({ expanded: added.id });
+    render();
+  });
+
+  const dpDetails = document.querySelector("[data-dp-details]");
+  if(dpDetails) dpDetails.addEventListener("click", ()=>{
+    dpUI({ details: !(state.dietUI||{}).details });
+    render();
+  });
+
+  document.querySelectorAll("[data-open-diet-plan]").forEach(el=>{
+    el.addEventListener("click", ()=>{ openDietPlan(); render(); });
+  });
+
   const insightsBack = document.querySelector("[data-insights-back]");
   if(insightsBack) insightsBack.addEventListener("click", ()=>{
     state.nutritionScreen = null;
@@ -19503,6 +19851,19 @@ function attachHandlers(){
     if(!flow) return;
     const meal = flow.meal;
     const note = (flow.notes||"").trim();
+
+    // Diet plan target: build the same snapshot the log would store, but hand it to the plan
+    // and return to the plan screen instead of the dashboard.
+    if(flow.target && flow.target.kind === "plan"){
+      if(!commitSelectedFoodToPlan(flow.target.planId, flow.target.mealId, note)) return;
+      closeFoodFlow();
+      state.nutritionScreen = "dietplan";
+      state.dietUI = Object.assign({}, state.dietUI, { expanded: flow.target.mealId });
+      showToast("Added to " + (flow.target.mealName || "your plan") + ".", "success", render);
+      render();
+      return;
+    }
+
     if(!commitSelectedFood(meal)) return;      // shows its own error and keeps the screen
     // commitSelectedFood unshifts the new record, so it is at index 0.
     const added = state.foodLog[0];

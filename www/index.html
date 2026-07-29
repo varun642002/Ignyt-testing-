@@ -468,6 +468,11 @@ textarea.note-input{background:var(--surface); border-radius:10px; padding:10px 
   margin:0 auto; background:var(--surface); border-radius:14px; padding:20px; z-index:211;
   box-shadow:0 12px 32px rgba(0,0,0,.5);}
 .dialog-message{font-size:14px; font-weight:600; line-height:1.5; margin-bottom:18px;}
+/* Optional text input for dialogs that ask for a name (Create/Rename diet plan). */
+.dialog-input{width:100%; box-sizing:border-box; margin:-8px 0 18px; padding:11px 12px;
+  border:1px solid var(--rh-border,#ddd); border-radius:10px; background:var(--rh-bg,#fff);
+  color:var(--rh-text,#111); font:inherit; font-size:15px; outline:none;}
+.dialog-input:focus{border-color:var(--rh-blue,#2563EB);}
 .dialog-actions{display:flex; gap:8px;}
 .dialog-actions .btn{flex:1;}
 /* =========================================================
@@ -538,6 +543,7 @@ main{overflow-x:hidden;}
 <link rel="stylesheet" href="css/pages/nutrition.css" />
 <link rel="stylesheet" href="css/pages/progress.css" />
 <link rel="stylesheet" href="css/pages/tools.css" />
+<link rel="stylesheet" href="css/pages/diet-plan.css" />
 <link rel="stylesheet" href="css/pages/profile.css" />
 <link rel="stylesheet" href="css/pages/auth.css" />
 <link rel="stylesheet" href="css/pages/ai-coach.css" />
@@ -576,6 +582,8 @@ try{
 <script src="js/pages/home.js"></script>
 <script src="js/pages/workout.js"></script>
 <script src="js/pages/progress.js"></script>
+<script src="js/diet/diet-plans.js"></script>
+<script src="js/pages/diet-plan.js"></script>
 <script src="js/config.js"></script>
 <script src="js/storage-utils.js"></script>
 <script src="js/body-photos-db.js"></script>

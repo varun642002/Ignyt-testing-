@@ -1,0 +1,360 @@
+/* =========================================================
+   CUSTOM DIET PLAN BUILDER
+
+   Layout follows the supplied reference; the palette does not. Every colour is an existing
+   app token, so this screen follows the user's light/dark setting like every other page
+   instead of being the one screen locked to a single ground. In dark mode it reads as the
+   reference image; in light mode it reads as the rest of IGNYT.
+
+   Scoped under .dp throughout — nothing here can leak into the Food Log it launches from.
+========================================================= */
+.dp {
+  --dp-gap: 12px;
+  padding: 0 0 96px;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--rh-text);
+}
+
+/* ---- header ---- */
+.dp-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 4px 10px;
+}
+.dp-head__title {
+  flex: 1; min-width: 0;
+  font-size: 20px; font-weight: 800; letter-spacing: -.02em;
+}
+.dp-head__menu {
+  width: 36px; height: 36px; flex: none;
+  border: 0; border-radius: 50%; background: transparent;
+  color: var(--rh-muted); font-size: 20px; line-height: 1; cursor: pointer;
+}
+.dp-head__menu:active { background: var(--rh-border); }
+
+/* ---- plan selector bar ---- */
+.dp-bar { display: flex; align-items: center; gap: 8px; margin-bottom: var(--dp-gap); }
+.dp-bar__select { flex: 1; min-width: 0; position: relative; }
+.dp-bar__select select {
+  width: 100%; appearance: none; -webkit-appearance: none;
+  padding: 10px 30px 10px 12px;
+  border: 1px solid var(--rh-border); border-radius: 12px;
+  background: var(--rh-card); color: var(--rh-text);
+  font: inherit; font-size: 14px; font-weight: 700;
+  text-overflow: ellipsis; cursor: pointer;
+}
+/* The chevron is drawn rather than a background image so it inherits the text colour and
+   therefore survives a theme switch. */
+.dp-bar__select::after {
+  content: "⌄"; position: absolute; right: 12px; top: 46%;
+  transform: translateY(-50%); pointer-events: none;
+  color: var(--rh-muted); font-size: 14px;
+}
+.dp-badge {
+  flex: none; padding: 7px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 800; white-space: nowrap; border: 0; cursor: default;
+}
+.dp-badge--on { background: rgba(16,185,129,.14); color: var(--rh-green); }
+.dp-badge--off {
+  background: transparent; color: var(--rh-muted);
+  border: 1px solid var(--rh-border); cursor: pointer;
+}
+.dp-newplan {
+  flex: none; padding: 7px 12px; border-radius: 999px;
+  border: 1px solid var(--rh-blue); background: transparent;
+  color: var(--rh-blue); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer;
+}
+.dp-newplan:active { background: rgba(37,99,235,.1); }
+
+/* ---- summary card ---- */
+.dp-sum {
+  background: var(--rh-card); border: 1px solid var(--rh-border);
+  border-radius: 16px; padding: 14px; margin-bottom: var(--dp-gap);
+}
+.dp-sum__top { display: flex; align-items: center; gap: 14px; }
+.dp-sum__ring { width: 104px; height: 104px; flex: none; }
+.dp-sum__ring .pg-ring__inner {
+  width: 86px; height: 86px; flex-direction: column; gap: 0;
+}
+.dp-sum__kcal { font-size: 22px; font-weight: 900; letter-spacing: -.02em; line-height: 1.1; }
+.dp-sum__goal { font-size: 11px; color: var(--rh-muted); font-weight: 700; }
+.dp-sum__unit { font-size: 10px; color: var(--rh-muted); margin-top: 1px; }
+
+/* Four macro columns. auto-fit so they stay legible rather than crushing to 40px each on a
+   narrow handset — two rows of two is better than four unreadable columns. */
+.dp-sum__macros {
+  flex: 1; min-width: 0;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 8px;
+}
+.dp-macro { min-width: 0; }
+.dp-macro__value { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.dp-macro__label { font-size: 11px; color: var(--rh-muted); margin-top: 1px; }
+.dp-macro__target { font-size: 10.5px; color: var(--rh-muted); opacity: .8; }
+
+.dp-sum__track {
+  height: 5px; border-radius: 3px; background: var(--rh-border);
+  overflow: hidden; margin-top: 12px;
+}
+.dp-sum__fill { height: 100%; background: var(--rh-blue); border-radius: 3px; }
+.dp-sum__foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-top: 10px; font-size: 12.5px; color: var(--rh-muted);
+}
+.dp-sum__note { min-width: 0; }
+.dp-under { color: var(--rh-green); }
+.dp-over  { color: #DC2626; }
+.dp-sum__details {
+  flex: none; border: 0; background: none; padding: 0;
+  color: var(--rh-blue); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
+
+/* ---- details panel ---- */
+.dp-details {
+  background: var(--rh-card); border: 1px solid var(--rh-border);
+  border-radius: 16px; padding: 12px 14px; margin-bottom: var(--dp-gap);
+}
+.dp-details__row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 7px 0; font-size: 13px; border-bottom: 1px solid var(--rh-border);
+}
+.dp-details__row:last-of-type { border-bottom: 0; }
+.dp-details__row > span { color: var(--rh-muted); }
+.dp-details__row > b { font-weight: 800; font-variant-numeric: tabular-nums; }
+.dp-details__note { margin: 8px 0 0; font-size: 11px; line-height: 1.45; color: var(--rh-muted); }
+
+/* ---- today's progress ---- */
+.dp-progress {
+  background: var(--rh-card); border: 1px solid var(--rh-border);
+  border-radius: 16px; padding: 12px 14px; margin-bottom: var(--dp-gap);
+}
+.dp-progress__head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 13px; font-weight: 700;
+}
+.dp-progress__count { font-size: 12px; color: var(--rh-muted); font-weight: 700; }
+.dp-progress__track {
+  height: 6px; border-radius: 3px; background: var(--rh-border);
+  overflow: hidden; margin-top: 8px;
+}
+.dp-progress__fill { height: 100%; background: var(--rh-green); border-radius: 3px; transition: width .25s ease; }
+
+/* ---- meal cards ---- */
+.dp-meals { display: flex; flex-direction: column; gap: 10px; }
+.dp-meal {
+  background: var(--rh-card); border: 1px solid var(--rh-border);
+  border-radius: 16px; overflow: hidden;
+}
+.dp-meal.is-done { border-color: rgba(16,185,129,.4); }
+/* A row holding two siblings: the expand control and the completion tick. They are separate
+   buttons because a button inside a button is invalid and the tick must be reachable without
+   expanding the meal. */
+.dp-meal__head { display: flex; align-items: center; padding: 12px 14px; gap: 8px; }
+.dp-meal__toggle {
+  display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;
+  padding: 0; border: 0; background: transparent;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+/* 30px is below the 44px guidance, so the tap area is extended past the painted circle
+   rather than drawing a control that large in the middle of a dense row. */
+.dp-check {
+  position: relative; flex: none;
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 2px solid var(--rh-border); background: transparent;
+  color: transparent; font-size: 15px; font-weight: 900; line-height: 1;
+  cursor: pointer; display: grid; place-items: center;
+  transition: background-color .16s ease, border-color .16s ease, transform .16s ease;
+}
+.dp-check::after { content: ""; position: absolute; inset: -8px; }
+.dp-check.is-on {
+  background: var(--rh-green); border-color: var(--rh-green); color: #fff;
+}
+.dp-check:active { transform: scale(.9); }
+.dp-meal__icon {
+  width: 34px; height: 34px; flex: none;
+  display: grid; place-items: center; border-radius: 50%;
+  background: var(--rh-bg, rgba(127,127,127,.1)); font-size: 16px;
+}
+.dp-meal__title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.dp-meal__name { font-size: 14.5px; font-weight: 800; }
+.dp-meal__opt { font-size: 11px; font-weight: 600; color: var(--rh-muted); margin-left: 5px; }
+.dp-meal__sub { font-size: 12px; color: var(--rh-muted); }
+/* Hidden on the narrowest screens: the name and calories matter more than a macro triple,
+   and three extra numbers is what pushes this row to two lines on a small phone. */
+.dp-meal__macros { flex: none; display: none; gap: 8px; font-size: 11.5px; font-weight: 700; }
+@media (min-width: 360px) { .dp-meal__macros { display: flex; } }
+.dp-m--p { color: var(--rh-green); }
+.dp-m--c { color: var(--rh-blue); }
+.dp-m--f { color: #D97706; }
+.dp-meal__chev { flex: none; color: var(--rh-muted); font-size: 13px; width: 14px; text-align: center; }
+
+.dp-meal__body { padding: 0 14px 12px; }
+.dp-meal__empty { font-size: 12.5px; color: var(--rh-muted); padding: 4px 0 10px; }
+
+/* ---- item rows ---- */
+.dp-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0; border-top: 1px solid var(--rh-border);
+}
+.dp-item__img { width: 40px; height: 40px; flex: none; border-radius: 9px; overflow: hidden; }
+.dp-item__img img { width: 100%; height: 100%; object-fit: cover; }
+.dp-item__body { flex: 1; min-width: 0; }
+.dp-item__name {
+  font-size: 13.5px; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dp-item__serving { font-size: 11.5px; color: var(--rh-muted); margin-top: 1px; }
+.dp-item__nums {
+  flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+  font-variant-numeric: tabular-nums;
+}
+.dp-item__cal { font-size: 13px; font-weight: 800; color: var(--rh-blue); }
+.dp-item__macro { font-size: 10.5px; color: var(--rh-muted); }
+/* The three macros stack under the calories on narrow screens and sit inline on wider ones. */
+@media (min-width: 420px) {
+  .dp-item__nums { flex-direction: row; align-items: baseline; gap: 10px; }
+}
+.dp-item__more {
+  width: 30px; height: 30px; flex: none; border: 0; background: transparent;
+  color: var(--rh-muted); font-size: 17px; line-height: 1; cursor: pointer; border-radius: 50%;
+}
+.dp-item__more:active { background: var(--rh-border); }
+
+/* ---- meal actions ---- */
+.dp-meal__actions {
+  display: flex; align-items: center; gap: 8px;
+  padding-top: 10px; border-top: 1px solid var(--rh-border); margin-top: 2px;
+}
+.dp-add {
+  border: 0; background: none; padding: 4px 0;
+  color: var(--rh-blue); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+
+/* ---- empty state ---- */
+.dp-empty { text-align: center; padding: 40px 20px; }
+.dp-empty__icon { font-size: 42px; line-height: 1; }
+.dp-empty__title { font-size: 17px; font-weight: 800; margin-top: 12px; }
+.dp-empty__sub {
+  font-size: 13px; line-height: 1.55; color: var(--rh-muted);
+  margin: 6px auto 0; max-width: 34ch;
+}
+.dp-empty__cta { margin-top: 18px; min-width: 200px; }
+
+/* ---- plan action sheet ---- */
+.dp-sheet { position: fixed; inset: 0; z-index: 80; display: flex; align-items: flex-end; }
+.dp-sheet__backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.45); }
+.dp-sheet__panel {
+  position: relative; width: 100%;
+  background: var(--rh-card); color: var(--rh-text);
+  border-radius: 18px 18px 0 0;
+  padding: 8px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -8px 30px rgba(0,0,0,.25);
+}
+.dp-sheet__title {
+  font-size: 12px; font-weight: 800; color: var(--rh-muted);
+  text-transform: uppercase; letter-spacing: .08em;
+  padding: 10px 8px 8px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dp-sheet__item {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 14px 8px; border: 0; background: none;
+  color: inherit; font: inherit; font-size: 14.5px; font-weight: 600;
+  text-align: left; cursor: pointer; border-radius: 10px;
+}
+.dp-sheet__item:active { background: var(--rh-border); }
+.dp-sheet__item--danger { color: #DC2626; }
+.dp-sheet__cancel {
+  width: 100%; margin-top: 6px; padding: 13px;
+  border: 0; border-radius: 12px; background: var(--rh-border);
+  color: var(--rh-text); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+
+/* ---- sticky action ---- */
+.dp-spacer { height: 8px; }
+.dp-sticky {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, var(--rh-bg, #fff) 62%, transparent);
+}
+.dp-sticky__btn { width: 100%; min-height: 52px; font-size: 15px; font-weight: 800; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dp-progress__fill, .dp-check { transition: none; }
+}
+
+/* ---- meal-count bar ---- */
+.dp-mealbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-bottom: 10px; padding: 0 2px;
+  font-size: 12px; font-weight: 700; color: var(--rh-muted);
+}
+.dp-mealbar button {
+  border: 0; background: none; padding: 2px 0;
+  color: var(--rh-blue); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+
+.dp-meal__time {
+  margin-left: 7px; font-size: 11px; font-weight: 600; color: var(--rh-muted);
+  font-variant-numeric: tabular-nums;
+}
+.dp-mealcfg {
+  margin-left: auto; border: 0; background: none; padding: 4px 0;
+  color: var(--rh-muted); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+
+.dp-addmeal {
+  width: 100%; margin-top: 10px; padding: 12px;
+  border: 1px dashed var(--rh-border); border-radius: 14px; background: transparent;
+  color: var(--rh-blue); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
+}
+.dp-addmeal:active { background: rgba(37,99,235,.06); }
+
+/* ---- meals-per-day options ---- */
+.dp-sheet__heading {
+  font-size: 15.5px; font-weight: 800; padding: 12px 8px 10px; line-height: 1.35;
+}
+.dp-sheet__value { margin-left: auto; color: var(--rh-muted); font-weight: 800; }
+.dp-sheet__note { margin: 8px; font-size: 11.5px; line-height: 1.5; color: var(--rh-muted); }
+.dp-opts { display: flex; flex-direction: column; gap: 6px; }
+.dp-opt {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 11px 10px; border: 1px solid var(--rh-border); border-radius: 12px;
+  background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.dp-opt.is-on { border-color: var(--rh-blue); background: rgba(37,99,235,.07); }
+.dp-opt__n {
+  width: 30px; height: 30px; flex: none; display: grid; place-items: center;
+  border-radius: 50%; background: var(--rh-border);
+  font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.dp-opt.is-on .dp-opt__n { background: var(--rh-blue); color: #fff; }
+.dp-opt__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dp-opt__label { font-size: 13.5px; font-weight: 700; }
+.dp-opt__tag {
+  margin-left: 7px; padding: 1px 6px; border-radius: 999px;
+  background: var(--rh-border); color: var(--rh-muted);
+  font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em;
+}
+/* The preset names can be long ("Breakfast · Morning Snack · Lunch · Evening Snack · Dinner"),
+   so they wrap rather than forcing the sheet to scroll sideways. */
+.dp-opt__names { font-size: 11px; color: var(--rh-muted); line-height: 1.4; }
+.dp-opt__tick { flex: none; color: var(--rh-blue); font-weight: 900; }
+
+/* ---- meal edit fields ---- */
+.dp-field { display: flex; align-items: center; gap: 12px; padding: 8px; }
+.dp-field > span { flex: none; width: 56px; font-size: 13px; font-weight: 700; color: var(--rh-muted); }
+.dp-field input {
+  flex: 1; min-width: 0; box-sizing: border-box; padding: 10px 12px;
+  border: 1px solid var(--rh-border); border-radius: 10px;
+  background: var(--rh-bg, transparent); color: var(--rh-text);
+  font: inherit; font-size: 14.5px; outline: none;
+}
+.dp-field input:focus { border-color: var(--rh-blue); }
+.dp-sheet__row { display: flex; gap: 8px; padding: 6px 8px; }
+.dp-sheet__mini {
+  flex: 1; padding: 10px; border: 1px solid var(--rh-border); border-radius: 10px;
+  background: transparent; color: var(--rh-text);
+  font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
+.dp-sheet__mini[disabled] { opacity: .4; cursor: default; }
+.dp-sheet__save { flex: 1; min-height: 44px; }
+.dp-sheet__row .dp-sheet__cancel { flex: 1; margin-top: 0; }
