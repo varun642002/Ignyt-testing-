@@ -62,6 +62,28 @@
     { key: "fibre",     label: "Fibre",         unit: "g",    decimals: 1, dv: 28,   group: "macro" },
     { key: "sugar",     label: "Sugar",         unit: "g",    decimals: 1, dv: null, group: "macro" },
 
+    /* FAT BREAKDOWN. Its own section rather than more rows under Macronutrients, because
+       these are components OF the fat figure above, not peers of it — a label indents them
+       under Total Fat for the same reason. Reading "Fat 14 g" and "Saturated Fat 9 g" as two
+       sibling rows invites adding them together.
+
+       Trans fat has no Daily Value on purpose: the FDA sets no reference because the advice
+       is "as low as possible", and a percentage against an invented target would imply an
+       allowance that health authorities deliberately decline to give.
+
+       Omega-3 and omega-6 use Adequate Intake figures (ALA 1.6 g, LA 17 g, adult male), which
+       are not DVs. They are shown as percentages anyway because a reader wants proportion, but
+       they are the only two rows here not on the FDA table. */
+    { key: "saturatedFat",        label: "Saturated Fat",   unit: "g",  decimals: 1, dv: 20,   group: "fat" },
+    { key: "monounsaturatedFat",  label: "Monounsaturated", unit: "g",  decimals: 1, dv: null, group: "fat" },
+    { key: "polyunsaturatedFat",  label: "Polyunsaturated", unit: "g",  decimals: 1, dv: null, group: "fat" },
+    { key: "transFat",            label: "Trans Fat",       unit: "g",  decimals: 1, dv: null, group: "fat" },
+    { key: "omega3",              label: "Omega-3",         unit: "g",  decimals: 2, dv: 1.6,  group: "fat" },
+    { key: "omega6",              label: "Omega-6",         unit: "g",  decimals: 1, dv: 17,   group: "fat" },
+    /* Cholesterol is not a fat, but it travels with them on every label and in most people's
+       heads, and it is the row they look for right after saturated fat. */
+    { key: "cholesterol",         label: "Cholesterol",     unit: "mg", decimals: 0, dv: 300,  group: "fat" },
+
     { key: "sodium",     label: "Sodium",     unit: "mg", decimals: 0, dv: 2300, group: "mineral" },
     { key: "potassium",  label: "Potassium",  unit: "mg", decimals: 0, dv: 4700, group: "mineral" },
     { key: "calcium",    label: "Calcium",    unit: "mg", decimals: 0, dv: 1300, group: "mineral" },
@@ -84,7 +106,10 @@
     { key: "pantothenic", label: "Pantothenic (B5)", unit: "mg", decimals: 2, dv: 5,    group: "vitamin" },
     { key: "vitaminB6",   label: "Vitamin B6",       unit: "mg", decimals: 2, dv: 1.7,  group: "vitamin" },
     { key: "folate",      label: "Folate",           unit: "µg", decimals: 0, dv: 400,  group: "vitamin" },
-    { key: "vitaminB12",  label: "Vitamin B12",      unit: "µg", decimals: 1, dv: 2.4,  group: "vitamin" }
+    { key: "vitaminB12",  label: "Vitamin B12",      unit: "µg", decimals: 1, dv: 2.4,  group: "vitamin" },
+    /* B7. The catalogue carries it; the table did not, so it was being stored and silently
+       dropped on the way to the screen. */
+    { key: "biotin",      label: "Biotin (B7)",      unit: "µg", decimals: 1, dv: 30,   group: "vitamin" }
   ];
 
   var BY_KEY = {};

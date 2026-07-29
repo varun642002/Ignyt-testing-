@@ -13750,6 +13750,12 @@ function renderFoodDetailPage(){
             !["protein","carbs","fat"].includes(r.key));
           if(!rows.length) return "";
           const measured = rows.filter(r=>r.present).length;
+          /* A section where NOTHING was measured is a block of em dashes. It tells the reader
+             only that we have no data, which the absence of the section says just as well and
+             more quietly. This matters most for Fat Breakdown: the current catalogue carries
+             saturated fat for 2 foods of 3,207, so rendering it unconditionally would put a
+             seven-row wall of dashes under almost every food in the app. */
+          if(!measured) return "";
           return `
             <div class="nut-label" style="margin:var(--space-sm) 0 var(--space-2xs);">
               ${title} <span style="color:var(--muted);font-weight:600;">· ${measured}/${rows.length} measured</span>
@@ -13767,11 +13773,14 @@ function renderFoodDetailPage(){
         return `
           <div class="divide" style="margin:var(--space-sm) 0 0;"></div>
           ${section("Macronutrients","macro")}
+          ${section("Fat Breakdown","fat")}
           ${section("Minerals","mineral")}
           ${section("Vitamins","vitamin")}
           <div class="nut-note" style="margin-top:var(--space-sm);">
             An em dash means the value was never measured for this food, not that it is zero.
             Vitamin A is µg RAE and folate is µg DFE, which is the basis the daily values are set on.
+            Trans fat shows no percentage because health authorities set no reference intake for it —
+            the guidance is to keep it as low as possible.
           </div>`;
       })() : ""}
     </div>

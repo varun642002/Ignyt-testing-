@@ -89,7 +89,11 @@ const MAP = {
   thiamin: "Vitamin_B1_mg",
   riboflavin: "Vitamin_B2_mg",
   niacin: "Vitamin_B3_mg",
-  pantothenicAcid: "Vitamin_B5_mg",
+  /* `pantothenic`, NOT `pantothenicAcid`. The nutrition engine's table has used the short key
+     since it was written, and a record keyed differently is stored, scaled and then silently
+     dropped at the display layer — a whole vitamin permanently blank with nothing to indicate
+     why. Matching the engine here is the smaller change and keeps one name for one thing. */
+  pantothenic: "Vitamin_B5_mg",
   vitaminB6: "Vitamin_B6_mg",
   biotin: "Vitamin_B7_mcg",
   folate: "Vitamin_B9_mcg",
