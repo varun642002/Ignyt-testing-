@@ -4695,6 +4695,8 @@ const state = {
      IgnytDietPlans/localStorage; nothing here is persisted. */
   dietUI: { expanded: null, menuFor: null, menuMeal: null, details: false, planMenu: false },
   dietViewPlanId: null,   // which plan is being LOOKED at, which is not always the active one
+  /* Fasting Tracker — transient view state only. Fasts live in IgnytFasting/localStorage. */
+  fastUI: { pickScheduleId: null, customHours: 16, chartRange: 7, historyAll: false },
   // Id of the entry just logged, so the dashboard can highlight it once and forget it.
   justAddedFoodId: null,
   raceActive: LS.get("hx_race_active", null),
@@ -9185,6 +9187,7 @@ function renderApp(){
   if(state.tab==="healthhub") main.innerHTML = window.IgnytHealthDashboard ? window.IgnytHealthDashboard.render() : "";
   if(state.tab==="insights") main.innerHTML = renderInsightsTab();
   if(state.tab==="tools") main.innerHTML = renderToolsTab();
+  if(state.tab==="fasting") main.innerHTML = renderFastingScreen();
   if(state.tab==="profile") main.innerHTML = renderProfileTab();
   if(state.tab==="bloodwork") main.innerHTML = window.IgnytBloodwork ? window.IgnytBloodwork.render() : "";
   if(state.tab==="goals") main.innerHTML = window.IgnytGoals ? window.IgnytGoals.render() : "";
@@ -9237,6 +9240,9 @@ function renderToolsTab(){
     ]],
     ["Nutrition", [
       {id:"nutrition", label:"Food Log", desc:"Meals, macros & calorie budget", icon:"nutrition"},
+      /* Fasting sits under Nutrition because that is where a user looks for it, but it is its
+         own page and its own store — it never reads or writes the food log. */
+      {id:"fasting", label:"Fasting", desc:"Track intermittent fasts & streaks", icon:"timer"},
       {id:"calculators", label:"Calculator", desc:"BMI, BMR, TDEE & macros", icon:"calc"}
     ]],
     ["Insights", [
@@ -11016,13 +11022,22 @@ function obWorkoutPref(){
 /* STEP 10 — Health Connect. Android only; on anything else the step says so rather than
    offering a button that cannot work. */
 function obHealthConnect(){
-  const native = window.IgnytHealth && IgnytHealth.isAvailable && IgnytHealth.isAvailable();
+  /* window.IgnytHealth does not exist and never did — the Health Connect bridge is
+     window.HealthConnect (health-connect.js) with the connect/sync flow on
+     window.HealthConnectIntegration. Gating on the wrong global meant `native` was false on
+     every device, so the Connect button never rendered at all and this step offered no way to
+     connect on the screen whose entire job is connecting. */
+  const native = !!(window.HealthConnect && HealthConnect.isNativeAndroid && HealthConnect.isNativeAndroid());
+  const alreadyConnected = (() => {
+    try { return !!(window.HealthConnectIntegration && HealthConnectIntegration.loadState().connected); }
+    catch (e) { return false; }
+  })();
   return `
     ${obHero("\u{1F499}", "Connect <span class='ob-accent'>Health Connect</span>", "Sync your health data for better insights and accurate tracking.")}
     <div class="ob-policy">
       ${OB_HEALTH_METRICS.map(m=>`<div class="ob-policy__row"><span aria-hidden="true" style="color:var(--mint);">✓</span><span>${obEsc(m)}</span></div>`).join("")}
     </div>
-    ${state.onboarding.healthConnectState === "ok" ? `
+    ${(state.onboarding.healthConnectState === "ok" || alreadyConnected) ? `
       <div class="ob-hc-ok" role="status">
         <span class="ob-hc-ok__tick" aria-hidden="true">✓</span>
         <span>Connected. Your health data will sync automatically.</span>
@@ -11033,9 +11048,12 @@ function obHealthConnect(){
     ${native
       ? `<button class="btn btn-accent btn-block" data-ob-health ${state.onboarding.healthConnectBusy?'disabled':''}>
            ${state.onboarding.healthConnectBusy ? 'Connecting…'
-             : state.onboarding.healthConnectState === "ok" ? 'Connected' : 'Connect Health Connect'}
+             : (state.onboarding.healthConnectState === "ok" || alreadyConnected)
+               ? 'Sync now' : 'Sync with Health Connect'}
          </button>`
-      : `<div class="ob-note">Health Connect is an Android feature. On this device the app will use manual entry, and you can connect later from Profile.</div>`}
+      : `<div class="ob-note">Health Connect is an Android feature, so it isn't available in this
+           preview. On a device you'll be able to sync steps, weight, sleep and workouts here —
+           for now the app uses manual entry, and you can connect later from Tools.</div>`}
 
     <!-- Secondary, and never absent. Health Connect must not be able to block onboarding:
          a denied permission, an unsupported device or a missing app all still need a way
@@ -11514,19 +11532,29 @@ function wireOnboardingWizard(){
     o.healthConnectBusy = true;
     renderOnboardingWizard();
     try{
-      const res = window.IgnytHealth && IgnytHealth.requestPermissions
-        ? await IgnytHealth.requestPermissions()
-        : null;
-      /* Treat anything that is not an explicit failure as success. The plugin's shape varies
-         by version — some return a boolean, some an object, some nothing at all — and
-         demanding one exact shape would report a working connection as a denial. */
-      const denied = res && res.success === false;
-      o.healthConnectState = denied ? "denied" : "ok";
-      if(!denied){
-        // Sync straight away so the next screen has real numbers rather than a promise of them.
-        try{ if(IgnytHealth.syncNow) await IgnytHealth.syncNow(); }catch(e){}
+      const HC = window.HealthConnectIntegration;
+      if(!HC || !HC.connect){
+        o.healthConnectState = "denied";
+      }else{
+        /* The app's real connect flow: checks Health Connect is installed and current, sends
+           the user to install it if not, requests the permissions, and syncs on success. It
+           is the ONLY place permissions are requested, so onboarding reuses it rather than
+           calling the plugin directly — a second permission path would drift from it.
+
+           Success is read back from the stored connection state rather than from a return
+           value: handleConnect() resolves either way and records the outcome itself, so the
+           state is the honest answer to "did this work". The previous version treated
+           "anything not an explicit failure" as success, which reported a connection that had
+           never been requested. */
+        await HC.connect();
+        const connected = (()=>{ try { return !!HC.loadState().connected; } catch(e){ return false; } })();
+        o.healthConnectState = connected ? "ok" : "denied";
+        if(!connected && HC.getError && HC.getError()){
+          showToast(HC.getError(), "error", ()=>{});
+        }
       }
     }catch(err){
+      console.warn("[onboarding] Health Connect failed:", err);
       o.healthConnectState = "denied";
     }
     o.healthConnectBusy = false;
@@ -14688,6 +14716,115 @@ function commitSelectedFoodToPlan(planId, mealId, note){
   return true;
 }
 
+
+/* =========================================================
+   FASTING TRACKER — app-side wiring
+
+   The screen is www/js/pages/fasting.js. This owns routing, the 1-second tick, and the
+   device notifications, none of which belong in a render function.
+========================================================= */
+
+/** Duration for confirm-dialog copy. The page module has its own formatter for display; this
+ *  is the one-liner app.js needs and is not worth exporting across the module boundary. */
+function dur_ft(ms){
+  const neg = ms < 0; ms = Math.abs(ms);
+  const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
+  return (neg?"-":"") + (h > 0 ? `${h}h ${m}m` : `${m}m`);
+}
+
+function renderFastingScreen(){
+  if(!window.IgnytPages || typeof window.IgnytPages.renderFasting !== "function"){
+    return `<div class="ft"><div class="ft-empty-note">The fasting module failed to load.</div></div>`;
+  }
+  return window.IgnytPages.renderFasting({ ui: state.fastUI || {} });
+}
+
+/* The countdown updates by writing into existing nodes once a second. A full render() per tick
+   would rebuild the history list and fight the scroll position sixty times a minute, and any
+   open input would lose focus. The interval stops itself the moment the nodes are gone, so
+   navigating away cannot leave it running. */
+let fastTimerHandle = null;
+function ensureFastTimerRunning(){
+  if(fastTimerHandle) return;
+  fastTimerHandle = setInterval(()=>{
+    const F = window.IgnytFasting;
+    const fast = F && F.active();
+    const elapsedEl = document.getElementById("ft-elapsed");
+    const homeEl = document.getElementById("ft-home-elapsed");
+    if(!fast || (!elapsedEl && !homeEl)){ stopFastTimer(); return; }
+
+    const p = F.progress(fast);
+    const fmt = (ms)=>{
+      const neg = ms < 0; ms = Math.abs(ms);
+      const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000), sec = Math.floor((ms%60000)/1000);
+      const out = h > 0 ? `${h}h ${String(m).padStart(2,"0")}m`
+                : m > 0 ? `${m}m ${String(sec).padStart(2,"0")}s` : `${sec}s`;
+      return (neg?"-":"") + out;
+    };
+    const over = p.remainingMs < 0;
+    const remainText = over ? fmt(-p.remainingMs) + " past goal" : fmt(p.remainingMs) + " to go";
+
+    if(elapsedEl) elapsedEl.textContent = fmt(p.elapsedMs);
+    const remEl = document.getElementById("ft-remaining");
+    if(remEl) remEl.textContent = remainText;
+    const pctEl = document.getElementById("ft-pct");
+    if(pctEl) pctEl.textContent = p.pct + "%";
+    const ring = document.getElementById("ft-ring");
+    if(ring) ring.style.setProperty("--pct", p.pct);
+    const stageEl = document.getElementById("ft-stage");
+    if(stageEl){
+      const nameEl = stageEl.querySelector(".ft-stage__name");
+      if(nameEl && nameEl.textContent !== p.stage.label){
+        // The stage changed under the user. Re-render once so the note changes with it —
+        // this is rare (six times in 48 hours), so it does not reintroduce the per-tick cost.
+        render();
+        return;
+      }
+    }
+    if(homeEl) homeEl.textContent = fmt(p.elapsedMs) + " elapsed";
+    const homeRem = document.getElementById("ft-home-remaining");
+    if(homeRem) homeRem.textContent = remainText;
+  }, 1000);
+}
+function stopFastTimer(){
+  if(fastTimerHandle){ clearInterval(fastTimerHandle); fastTimerHandle = null; }
+}
+
+function openFasting(){
+  state.tab = "fasting";
+  state.fastUI = Object.assign({ pickScheduleId:null, customHours:16, chartRange:7, historyAll:false },
+                               state.fastUI || {});
+}
+
+/* Device reminders for the running fast. One-shot alarms at absolute times, cancelled whenever
+   the fast ends — a "time to break your fast" notification arriving after the user already ate
+   is worse than no notification. Silently does nothing off-native, where there is no such thing
+   as a background alarm. */
+async function syncFastNotifications(fast){
+  const plugin = nativeNotify();
+  if(!plugin) return;
+  const ids = ["fast-half", "fast-end"];
+  try{
+    for(const id of ids) await plugin.cancel({ id });
+    if(!fast) return;
+    const F = window.IgnytFasting;
+    const prefs = F.prefs();
+    const p = F.progress(fast);
+    if(prefs.notifyHalf){
+      await plugin.scheduleAt({
+        id: "fast-half", at: fast.startAt + p.targetMs / 2,
+        title: "IGNYT", body: `Halfway through your ${fast.label} fast.`
+      });
+    }
+    if(prefs.notifyEnd){
+      await plugin.scheduleAt({
+        id: "fast-end", at: p.endsAt,
+        title: "IGNYT", body: `Your ${fast.label} fast is complete — time to break it.`
+      });
+    }
+  }catch(e){ console.warn("[fast] could not schedule reminders:", e); }
+}
+
 function renderDietPlanScreen(){
   if(!window.IgnytPages || typeof window.IgnytPages.renderDietPlan !== "function"){
     return `<div class="food-page">${foodPageHeader("Diet Plan")}
@@ -15530,6 +15667,9 @@ function render(){
       return;
     }
     withFocusPreserved(renderApp);
+    // A running fast ticks wherever it is visible — the Fasting page or the Home card.
+    if(window.IgnytFasting && IgnytFasting.active()) ensureFastTimerRunning();
+    else stopFastTimer();
     if(state.session) ensureElapsedTimerRunning();
     else stopElapsedTimer();
     if(state.raceActive) ensureRaceTimerRunning();
@@ -19629,6 +19769,123 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{
       captureNutritionScroll();          // so Back lands where they left, not at the top
       state.nutritionScreen = "insights";
+      render();
+    });
+  });
+
+  /* ---- Fasting Tracker ------------------------------------------------------------- */
+  const FT = window.IgnytFasting;
+  const ftUI = patch => { state.fastUI = Object.assign({}, state.fastUI, patch); };
+
+  document.querySelectorAll("[data-open-fasting]").forEach(el=>{
+    el.addEventListener("click", ()=>{ openFasting(); render(); });
+  });
+
+  const ftBack = document.querySelector("[data-ft-back]");
+  if(ftBack) ftBack.addEventListener("click", ()=>{ state.tab = "home"; render(); });
+
+  document.querySelectorAll("[data-ft-pick]").forEach(el=>{
+    el.addEventListener("click", ()=>{ ftUI({ pickScheduleId: el.dataset.ftPick }); render(); });
+  });
+
+  const ftStart = document.querySelector("[data-ft-start]");
+  if(ftStart) ftStart.addEventListener("click", async ()=>{
+    if(!FT) return;
+    const id = (state.fastUI||{}).pickScheduleId;
+    const hoursEl = document.getElementById("ft-custom-hours");
+    const startEl = document.getElementById("ft-start-at");
+    // datetime-local yields local wall time with no zone; Date parses it as local, which is
+    // what the user meant when they typed it.
+    const startAt = startEl && startEl.value ? new Date(startEl.value).getTime() : Date.now();
+    const res = FT.start({
+      scheduleId: id,
+      hours: id === "custom" ? Number(hoursEl && hoursEl.value) : undefined,
+      startAt: startAt
+    });
+    if(!res.ok){ showToast(res.error, "error", render); return; }
+    ftUI({ pickScheduleId: null });
+    await syncFastNotifications(res.fast);
+    if(FT.prefs().notifyStart) showToast("Fast started. Good luck.", "success", render);
+    render();
+  });
+
+  const ftEnd = document.querySelector("[data-ft-end]");
+  if(ftEnd) ftEnd.addEventListener("click", async ()=>{
+    if(!FT) return;
+    const fast = FT.active();
+    if(!fast) return;
+    const p = FT.progress(fast);
+    if(!p.complete){
+      const ok = await confirmDialog(
+        `You're ${dur_ft(p.elapsedMs)} into a ${escHtml(fast.label)} fast, with ` +
+        `${dur_ft(p.remainingMs)} to go. End it now?`,
+        render, { title:"End fast early", confirmLabel:"End fast", danger:true });
+      if(!ok){ render(); return; }
+    }
+    const res = FT.end();
+    await syncFastNotifications(null);
+    if(res.ok){
+      // Ending a fast records the fast. It deliberately does NOT log food — the app has no
+      // idea what the user ate, and inventing an entry would corrupt their diary.
+      showToast(res.record.completed
+        ? `Fast complete — ${Math.round(res.record.durationMs/3600000)}h. Nice work.`
+        : "Fast ended and saved to your history.", "success", render);
+    }
+    render();
+  });
+
+  const ftEditStart = document.querySelector("[data-ft-edit-start]");
+  if(ftEditStart) ftEditStart.addEventListener("click", async ()=>{
+    if(!FT) return;
+    const fast = FT.active();
+    if(!fast) return;
+    const val = await confirmDialog(
+      "When did this fast actually start? Use 24-hour time, e.g. 20:30.", render,
+      { title:"Edit start time", confirmLabel:"Save", input:true,
+        inputValue: new Date(fast.startAt).toTimeString().slice(0,5), inputPlaceholder:"HH:MM" });
+    if(!val){ render(); return; }
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(val).trim());
+    if(!m){ showToast("Use HH:MM, e.g. 20:30.", "error", render); return; }
+    const d = new Date();
+    d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+    // A time later than now must mean yesterday evening, not the future.
+    if(d.getTime() > Date.now()) d.setDate(d.getDate() - 1);
+    const res = FT.adjustStart(d.getTime());
+    if(!res.ok){ showToast(res.error, "error", render); return; }
+    await syncFastNotifications(res.fast);
+    showToast("Start time updated.", "success", render);
+    render();
+  });
+
+  document.querySelectorAll("[data-ft-range]").forEach(el=>{
+    el.addEventListener("click", ()=>{ ftUI({ chartRange: Number(el.dataset.ftRange) }); render(); });
+  });
+
+  const ftHistAll = document.querySelector("[data-ft-history-all]");
+  if(ftHistAll) ftHistAll.addEventListener("click", ()=>{
+    ftUI({ historyAll: !(state.fastUI||{}).historyAll }); render();
+  });
+
+  document.querySelectorAll("[data-ft-del]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      if(!FT) return;
+      const ok = await confirmDialog("Delete this fast from your history?", render,
+        { title:"Delete fast", confirmLabel:"Delete", danger:true });
+      if(!ok){ render(); return; }
+      FT.removeFromHistory(el.dataset.ftDel);
+      showToast("Deleted.", "success", render);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-ft-pref]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      if(!FT) return;
+      const key = el.dataset.ftPref;
+      const now = !FT.prefs()[key];
+      FT.setPref(key, now);
+      // Turning a reminder on mid-fast should arm it immediately, not at the next fast.
+      if(FT.active()) await syncFastNotifications(FT.active());
       render();
     });
   });

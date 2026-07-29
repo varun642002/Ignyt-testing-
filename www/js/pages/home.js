@@ -192,6 +192,9 @@
         ${summaryTile('moon', 'rgba(124,58,237,.08)', 'var(--rh-purple)', sleepHours == null ? '—' : sleepHours.toFixed(1), '', 'Sleep', sleepHours == null ? 'Not synced' : '/ 8.0 h')}
       </div>
 
+      ${(window.IgnytPages && window.IgnytPages.renderFastingHomeCard)
+          ? window.IgnytPages.renderFastingHomeCard() : ''}
+
       ${renderHomeHabits ? renderHomeHabits() : ''}
 
       ${(() => {

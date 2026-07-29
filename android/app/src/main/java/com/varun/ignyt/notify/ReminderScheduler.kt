@@ -35,6 +35,21 @@ object ReminderScheduler {
         am.setInexactRepeating(AlarmManager.RTC_WAKEUP, trigger, intervalMs, pi)
     }
 
+    /** One-shot alarm at an absolute time, for things that happen once and then are over —
+     *  a fast's halfway point and its end. Uses set() rather than setExact() for the same
+     *  reason arm() uses inexact repeating: exact alarms need SCHEDULE_EXACT_ALARM on
+     *  Android 12+, which is a heavy permission ask for a nudge that is fine landing within
+     *  a battery-friendly window. A fast that ends "about now" is what the user wants; a
+     *  system permission dialog to get it to the second is not. */
+    fun armOnce(context: Context, id: String, atMillis: Long, title: String, body: String) {
+        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val pi = pendingIntent(context, id, title, body)
+        // A time already past would fire immediately, which for a fasting reminder means a
+        // notification about something that has already happened.
+        if (atMillis <= System.currentTimeMillis()) return
+        am.set(AlarmManager.RTC_WAKEUP, atMillis, pi)
+    }
+
     fun cancel(context: Context, id: String) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         am.cancel(pendingIntent(context, id, "", ""))

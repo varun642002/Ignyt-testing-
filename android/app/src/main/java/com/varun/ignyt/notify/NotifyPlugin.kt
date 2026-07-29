@@ -86,6 +86,30 @@ class NotifyPlugin : com.getcapacitor.Plugin() {
         call.resolve(JSObject().apply { put("scheduled", true) })
     }
 
+    /**
+     * One-shot notification at an absolute epoch time. Used by the Fasting Tracker for the
+     * halfway nudge and the break-fast alert, both of which happen once per fast and are
+     * cancelled when the fast is stopped early.
+     *
+     * Deliberately NOT persisted the way scheduleDaily is: a daily reminder must survive a
+     * reboot, but a one-shot tied to a specific fast should not be resurrected by BootReceiver
+     * hours later when that fast may already be over. The JS layer re-arms from the active
+     * fast on launch, which is the only place that knows whether the fast still exists.
+     */
+    @PluginMethod
+    fun scheduleAt(call: PluginCall) {
+        val id = call.getString("id")
+        if (id.isNullOrEmpty()) { call.reject("id is required"); return }
+        // getLong is unavailable on PluginCall; epoch millis exceeds Int, so it crosses the
+        // bridge as a double and is narrowed here.
+        val at = call.getDouble("at")
+        if (at == null || at <= 0) { call.reject("at (epoch millis) is required"); return }
+        val title = call.getString("title") ?: "IGNYT"
+        val body = call.getString("body") ?: ""
+        ReminderScheduler.armOnce(context, id, at.toLong(), title, body)
+        call.resolve(JSObject().apply { put("scheduled", true) })
+    }
+
     @PluginMethod
     fun cancel(call: PluginCall) {
         val id = call.getString("id")
