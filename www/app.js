@@ -7182,7 +7182,11 @@ function defaultFoodPortion(food){
    container that survives re-render, and this app re-renders wholesale from state on every
    interaction — a windowed list would fight that on every keystroke. Paging costs one tap
    and reuses the same incremental pattern already used by workout history. */
-const FOOD_PAGE_SIZE = 12;
+/* 8, not 12. The brief asks for the top 5-10 with a "View More" rather than a wall of every
+   food containing the word — and a shorter first page is only tolerable because the ranking
+   underneath it now puts the right things first. The pager was already here; this is the
+   number it counts to. */
+const FOOD_PAGE_SIZE = 8;
 
 /* A glyph per category. Purely decorative — the name is always shown next to it. */
 const FOOD_CATEGORY_ICONS = {

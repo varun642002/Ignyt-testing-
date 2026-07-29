@@ -386,13 +386,140 @@
 
       // Whole-name bonuses, which is what separates "Egg" from "Egg Noodles, Cooked".
       if (e.key === q) total += 1000;
-      else if (e.key.indexOf(q) === 0) total += 300;
+      else if (e.key.indexOf(q + " ") === 0) total += 300;   // "oats, rolled" — a real boundary
       total += e.boost;
+
+      /* Primary-food ranking. Without these a dish containing the word scores the same as a
+         cut of it, which is what put chicken biryani among the chicken cuts. */
+      total += wholeWordSignal(e.key, q);
+      var dish = dishPenaltyFor(e.key, q);
+      total -= dish;
+      total -= brandPenaltyFor(e, q);
+      total -= extraWordCost(e.key, tokens.length);
+      /* The canonical boost says "this is a named variant of what you typed". A dish is not,
+         however neatly the curation layer names it: "Apple Pie" is a canonical name beginning
+         with "apple", and awarding it the variant bonus cancelled its own dish penalty and put
+         pie above Red Apple. A food cannot be both. */
+      if (!dish) total += canonicalBoost(e, q);
 
       if (scoreByIdx[idx] === undefined || total > scoreByIdx[idx]) scoreByIdx[idx] = total;
     }
 
-    /** Gathers candidates from the rarest token, then verifies each against the whole set. */
+  
+  /* The same normalisation the index uses, exposed for the ranking helpers above. */
+  function normKey(v) {
+    return String(v || "").toLowerCase()
+      .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s]+/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  /* =========================================================
+     PRIMARY-FOOD RANKING
+
+     Searching "chicken" was returning chicken biryani, chicken pizza and chicken fried rice
+     alongside the cuts, because every one of them genuinely contains the word. Token matching
+     cannot tell them apart — it only knows the word is present. What separates them is what
+     the food IS: a cut or variant of the thing you typed, or a dish that happens to contain
+     it.
+
+     Three signals, in order of how much they matter:
+
+       DISH MARKERS   a name carrying "biryani", "pizza", "cookie" or similar is a prepared
+                      dish. It is penalised HARD when the query did not ask for it, and not at
+                      all when it did — typing "chicken biryani" should still find chicken
+                      biryani first.
+
+       EXTRA WORDS    "Oats" is a better answer to "oats" than "Oats, Instant, Fortified,
+                      Plain, Dry" and both are better than "Oatmeal Raisin Cookie". Each word
+                      beyond the query costs a little, so shorter and more direct wins without
+                      needing a list of every possible qualifier.
+
+       CANONICAL      the curation layer already decided that "Chicken, broilers, breast, meat
+                      only" is called Chicken Breast. A food whose canonical name begins with
+                      the query is a variant of it by definition, which is exactly the
+                      "common food variants" tier the brief asks for.
+
+     The penalties are large relative to the token scores on purpose. A soft nudge would leave
+     dishes interleaved with cuts, which is the complaint.
+  ========================================================= */
+  var DISH_MARKERS = [
+    "biryani", "curry", "pizza", "burger", "sandwich", "wrap", "roll", "soup", "stew",
+    "cookie", "cookies", "biscuit", "biscuits", "cake", "muffin", "pie", "pastry", "donut",
+    "doughnut", "brownie", "smoothie", "shake", "milkshake", "latte", "juice", "salad",
+    "pasta", "noodle", "noodles", "dosa", "idli", "pakora", "samosa", "cutlet", "kebab",
+    "tikka", "masala", "gravy", "sauce", "dip", "spread", "chips", "crisps", "bar",
+    "cereal", "granola", "pudding", "custard", "ice cream", "yogurt", "parfait", "fried rice",
+    "casserole", "lasagna", "taco", "burrito", "sushi", "omelet", "omelette", "pancake",
+    "waffle", "toast", "bhaji", "poha", "upma", "khichdi", "pulao", "paratha", "naan",
+    "chilla", "porridge", "korma", "bhurji", "manchurian", "momos", "tikki", "vada",
+    "chocolate", "mayonnaise", "halwa", "kheer", "lassi", "raita", "chutney", "pickle",
+    /* Derived PRODUCTS, not dishes, but the same principle: rice flour and rice bran oil are
+       made FROM rice, they are not rice. Someone typing the ingredient wants the ingredient. */
+    "flour", "oil", "bran", "extract", "essence", "syrup", "powder"
+  ];
+
+  function dishPenaltyFor(nameKey, queryKey) {
+    var hit = 0;
+    for (var i = 0; i < DISH_MARKERS.length; i++) {
+      var m = DISH_MARKERS[i];
+      // Only a marker the USER DID NOT TYPE counts against the food.
+      if (nameKey.indexOf(m) !== -1 && queryKey.indexOf(m) === -1) { hit++; }
+    }
+    return hit ? 900 + (hit - 1) * 200 : 0;
+  }
+
+  /** Extra words beyond the query, as a cost. Capped so a very long lab name does not
+   *  overwhelm every other signal. */
+  function extraWordCost(nameKey, queryTokenCount) {
+    var words = nameKey.split(" ").filter(Boolean).length;
+    var extra = Math.max(0, words - queryTokenCount);
+    return Math.min(extra, 8) * 45;
+  }
+
+  /* WORD BOUNDARIES.
+
+     "Applegate Ham" is not an apple food, "Eggplant" is not an egg, and "Eggless Mayonnaise"
+     is the opposite of one — yet all three start with the query and were scoring the prefix
+     bonus. A token index cannot see this because it matches on prefixes by design, which is
+     what makes typing "chick" find chicken.
+
+     So the query has to appear as a WHOLE WORD to count as being about that food. Where it
+     only appears inside a longer word, the entry is pushed down hard rather than excluded:
+     someone typing "app" should still reach Applegate, they just should not reach it before
+     Apple. */
+  function wholeWordSignal(nameKey, queryKey) {
+    if (!queryKey) return 0;
+    var padded = " " + nameKey + " ";
+    if (padded.indexOf(" " + queryKey + " ") !== -1) return 250;   // standalone word
+    // Query is a prefix of a longer word only ("applegate", "eggplant", "eggless").
+    if (nameKey.indexOf(queryKey) !== -1) return -800;
+    return 0;
+  }
+
+  /* The brief's ranking order puts common variants (2nd) above branded foods (5th). Without
+     this, "chicken" led with Hormel and Applegate chicken breast ahead of Chicken Thigh —
+     every one of them a real match, but a shopper looking for a cut does not want a
+     manufacturer first. A brand the user actually typed is not penalised. */
+  function brandPenaltyFor(entry, queryKey) {
+    var brand = entry && entry.food && entry.food.brand;
+    if (!brand) return 0;
+    return queryKey.indexOf(normKey(brand)) !== -1 ? 0 : 420;
+  }
+
+  /** Does the curation layer consider this a named variant of what was typed? */
+  function canonicalBoost(entry, queryKey) {
+    var C = window.IgnytFoodCuration;
+    if (!C || !C.canonicalFor || !entry || !entry.food) return 0;
+    var canon = C.canonicalFor(entry.food);
+    if (!canon) return 0;
+    var ck = normKey(canon);
+    if (ck === queryKey) return 700;              // canonical name IS the query
+    if (ck.indexOf(queryKey + " ") === 0) return 500;   // "chicken breast" for "chicken"
+    if ((" " + ck).indexOf(" " + queryKey) !== -1) return 200;
+    return 0;
+  }
+
+  /** Gathers candidates from the rarest token, then verifies each against the whole set. */
     function runPass(tokens, bonus) {
       var lists = tokens.map(candidatesFor);
       var smallest = 0;
