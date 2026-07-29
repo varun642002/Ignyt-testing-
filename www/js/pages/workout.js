@@ -128,74 +128,11 @@
         </div>`;
     })();
 
-    /* Recovery dashboard (§29). Sits under Today because it answers the follow-up question:
-       the coach card says what to do, this says whether the body is ready for it. */
-    const recoveryCard = (() => {
-      const rd = ctx.readiness;
-      if (!rd) return '';
-      const open = state.recoveryExpanded;
-      const bandFor = s => s >= 85 ? 'high' : s >= 70 ? 'normal' : s >= 50 ? 'reduced' : 'low';
-
-      return `
-        <div class="rh-section-head"><span>Recovery</span></div>
-        <div class="pg-card coach-card">
-          <div class="coach-card__head">
-            <div style="min-width:0;flex:1;">
-              <div class="coach-card__title">${escHtml(rd.status)}</div>
-              <div class="coach-card__sub">${escHtml(rd.session.label)}</div>
-            </div>
-            <span class="coach-badge coach-badge--${bandFor(rd.score)}">
-              ${rd.score}<span class="coach-badge__unit">/100</span>
-            </span>
-          </div>
-
-          ${rd.why.length ? `<div class="coach-why">${escHtml(rd.why.slice(0, 2).join(' · '))}</div>` : ''}
-          ${rd.session.why ? `<div class="coach-note">${escHtml(rd.session.why)}</div>` : ''}
-
-          ${rd.muscles.length ? `
-            <div class="rec-map">
-              ${rd.muscles.slice(0, open ? 12 : 4).map(m => `
-                <div class="rec-map__row">
-                  <span class="rec-map__name">${escHtml(m.muscle)}</span>
-                  <span class="rec-map__bar"><i style="width:${Math.min(100, m.readiness)}%;" data-status="${m.status}"></i></span>
-                  <span class="rec-map__eta">${escHtml(m.status)} · ${escHtml(m.eta)}</span>
-                </div>`).join('')}
-            </div>` : ''}
-
-          <button class="coach-toggle" data-action="recovery-toggle">
-            ${open ? 'Hide detail' : 'Detail'} <span aria-hidden="true">${open ? '⌃' : '⌄'}</span>
-          </button>
-
-          ${open ? `
-            <div class="coach-detail">
-              ${rd.sleep.available ? `
-                <p><b>Sleep</b> — ${rd.sleep.avgHours} h average over ${rd.sleep.nights} night${rd.sleep.nights === 1 ? '' : 's'},
-                consistency ${rd.sleep.consistency}%${rd.sleep.trend ? ', trend ' + escHtml(rd.sleep.trend) : ''}.</p>
-                ${rd.sleep.recommendations.map(r => `<p class="coach-detail__muted">${escHtml(r)}</p>`).join('')}
-              ` : `<p class="coach-detail__muted">No sleep data — connect Health Connect or add it in your profile to sharpen this.</p>`}
-
-              ${rd.overtraining.signals.length ? `
-                <p><b>Overtraining signals (${escHtml(rd.overtraining.level)})</b></p>
-                ${rd.overtraining.signals.map(s => `<p class="coach-detail__muted">• ${escHtml(s.why)}</p>`).join('')}
-              ` : `<p class="coach-detail__muted">No overtraining signals.</p>`}
-
-              <p><b>Suggested today</b></p>
-              ${rd.actions.map(a => `<p class="coach-detail__muted">• <b style="color:var(--rh-text);">${escHtml(a.label)}</b> — ${escHtml(a.detail)}</p>`).join('')}
-
-              <p class="coach-detail__muted" style="margin-top:10px;">
-                Confidence ${rd.confidence}%${rd.missingInputs.length ? ' · missing: ' + escHtml(rd.missingInputs.join(', ')) : ''}.
-                Based on ${escHtml(rd.basis)}.
-              </p>
-            </div>` : ''}
-        </div>`;
-    })();
-
     return `
       <div class="wk-light">
         ${renderPRCelebration && state.lastSessionPRs && state.lastSessionPRs.length ? renderPRCelebration() : ''}
 
         ${coachCard}
-        ${recoveryCard}
 
         <div class="rh-section-head"><span>This Week</span><a href="#" class="rh-view-all" data-nav="plan">Week ${week.week} of 8 ›</a></div>
         <div class="wk-stat-grid">
