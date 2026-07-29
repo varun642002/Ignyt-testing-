@@ -1024,3 +1024,23 @@ main{ -webkit-overflow-scrolling: touch; }
   .ai-spinner{ animation-duration:2s; }
   .ai-act{ transition:none; }
 }
+
+/* Inline nutrition editing in the scan review sheet. Only offered where the numbers are an
+   AI estimate or absent — a database record is not the user's to overwrite here. */
+.ai-food__edit{
+  margin-left:auto; padding:4px 10px; border-radius:999px;
+  border:1px solid var(--border); background:var(--surface-alt);
+  color:var(--primary); font:inherit; font-size:11px; font-weight:700; cursor:pointer;
+}
+.ai-edit{ margin-top:10px; padding:10px; border-radius:var(--radius-btn); background:var(--surface-alt); }
+.ai-edit__hint{ font-size:11px; color:var(--muted); margin-bottom:8px; }
+.ai-edit__grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.ai-edit__field{ display:flex; flex-direction:column; gap:3px; }
+.ai-edit__field span{ font-size:10.5px; font-weight:700; color:var(--muted); text-transform:uppercase; }
+.ai-edit__field input{
+  width:100%; padding:8px; border-radius:10px;
+  border:1px solid var(--border); background:var(--surface);
+  color:var(--text); font:inherit; font-size:13px; text-align:center;
+  font-variant-numeric:tabular-nums;
+}
+.ai-edit__field input:focus{ outline:none; border-color:var(--primary); }

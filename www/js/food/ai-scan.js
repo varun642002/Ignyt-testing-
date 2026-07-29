@@ -45,16 +45,28 @@
      Transport
   --------------------------------------------------------- */
 
-  function authHeaders() {
+  /* IgnytAuth.getIdToken() is ASYNC — it round-trips to the native Firebase plugin. The first
+     version of this function called it synchronously and tested `typeof token === "string"`,
+     which is false for a Promise, so the Authorization header was never once set and every
+     request fell through to the dev header. That is the whole of requirement 10 failing
+     silently, and it looked like working code.
+
+     Firebase always wins when a token exists. X-Ignyt-Uid is only a fallback for local
+     AUTH_MODE=insecure-uid, and the backend refuses that header outright when
+     ENVIRONMENT=production, so it cannot become a production hole from either side. */
+  async function authHeaders(forceRefresh) {
     var h = {};
     try {
       var a = window.IgnytAuth;
-      var token = a && a.getIdToken ? a.getIdToken() : null;
-      if (token && typeof token === "string") h.Authorization = "Bearer " + token;
-      // Dev fallback: the backend accepts X-Ignyt-Uid when AUTH_MODE=insecure-uid, which is
-      // refused outright in production, so this cannot become a production hole.
-      else if (window.IGNYT_DEV_UID) h["X-Ignyt-Uid"] = window.IGNYT_DEV_UID;
-    } catch (e) { /* unauthenticated is a normal state, not an error */ }
+      if (a && a.getIdToken) {
+        var token = await a.getIdToken(!!forceRefresh);
+        if (token && typeof token === "string") {
+          h.Authorization = "Bearer " + token;
+          return h;
+        }
+      }
+    } catch (e) { /* not signed in / not native / plugin absent — all normal */ }
+    if (window.IGNYT_DEV_UID) h["X-Ignyt-Uid"] = window.IGNYT_DEV_UID;
     return h;
   }
 
@@ -67,18 +79,45 @@
     return err;
   }
 
+  /* BASE is read per call rather than captured at load, so IgnytConfig.setApiBase() takes
+     effect immediately instead of after a restart. */
+  function base() {
+    return String(window.IGNYT_API_BASE || "").replace(/\/+$/, "");
+  }
+
+  async function send(path, opts, forceRefresh) {
+    return fetch(base() + PREFIX + path, {
+      method: opts.method || "GET",
+      headers: Object.assign(await authHeaders(forceRefresh), opts.headers || {}),
+      body: opts.body
+    });
+  }
+
   async function request(path, opts) {
     opts = opts || {};
     var res;
     try {
-      res = await fetch(BASE + PREFIX + path, {
-        method: opts.method || "GET",
-        headers: Object.assign(authHeaders(), opts.headers || {}),
-        body: opts.body
-      });
+      res = await send(path, opts, false);
+
+      /* A 401 on a token that was valid a moment ago means it expired mid-session. Firebase
+         ID tokens last an hour, and a scan can easily be the first request after that hour,
+         so one silent re-mint and retry is the difference between "works" and "randomly makes
+         you sign in again". Only retried once, and only when a real token is in play —
+         retrying the dev header would just fail twice. */
+      if (res.status === 401 && window.IgnytAuth && window.IgnytAuth.getIdToken) {
+        if (opts.body instanceof FormData) {
+          // A consumed FormData body cannot be replayed; the caller rebuilds it.
+          var e401 = new Error("Your session expired. Try the scan again.");
+          e401.code = "token_expired";
+          throw e401;
+        }
+        res = await send(path, opts, true);
+      }
     } catch (e) {
-      // fetch only rejects on a transport failure, which on a phone means no usable network.
-      var offline = new Error("You're offline. Connect and try again, or enter this meal manually.");
+      if (e && e.code) throw e;
+      // fetch only rejects on a transport failure, which on a phone means no usable network —
+      // or a backend that is not running, which during development is the likelier of the two.
+      var offline = new Error("Can't reach the IGNYT server. Check your connection, or enter this meal manually.");
       offline.code = "offline";
       throw offline;
     }

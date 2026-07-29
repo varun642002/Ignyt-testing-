@@ -13386,7 +13386,8 @@ function renderAiFoodCard(f, i){
   const grams = Math.round(f.grams);
   const n = IgnytAiScan.scaleTo(f.nutrition, grams);
   const src = f.nutrition_source;
-  const badge = src === "local" ? ["Database", "ok"]
+  const badge = f.edited ? ["Edited by you", "ok"]
+              : src === "local" ? ["Database", "ok"]
               : src === "community" ? ["Community", "ok"]
               : src === "ai_estimate" ? ["AI Estimated", "est"]
               : ["No nutrition data", "none"];
@@ -13410,7 +13411,29 @@ function renderAiFoodCard(f, i){
       <span><strong>${n.protein==null?'—':n.protein}</strong> P</span>
       <span><strong>${n.carbs==null?'—':n.carbs}</strong> C</span>
       <span><strong>${n.fat==null?'—':n.fat}</strong> F</span>
-    </div>` : `<div class="ai-food__macros"><span style="color:var(--muted);">Add the numbers by hand after saving.</span></div>`}
+      ${src==="ai_estimate" ? `<button class="ai-food__edit" data-ai-edit="${i}">${f.editing?'Done':'Edit'}</button>` : ""}
+    </div>` : `<div class="ai-food__macros">
+      <span style="color:var(--muted);">No nutrition found.</span>
+      <button class="ai-food__edit" data-ai-edit="${i}">${f.editing?'Done':'Add values'}</button>
+    </div>`}
+
+    ${f.editing ? `
+      <!-- Editing per 100 g, not per portion. The portion slider is right below and multiplies
+           whatever is entered here; letting someone type a portion figure while a slider also
+           scales it would give two controls fighting over the same number. -->
+      <div class="ai-edit">
+        <div class="ai-edit__hint">Values per 100 ${f.unit||'g'} — the portion below scales them.</div>
+        <div class="ai-edit__grid">
+          ${[["calories","kcal"],["protein","Protein"],["carbs","Carbs"],["fat","Fat"],["fibre","Fibre"],["sugar","Sugar"]]
+            .map(([k,label])=>`<label class="ai-edit__field">
+              <span>${label}</span>
+              <input type="number" inputmode="decimal" min="0" step="0.1"
+                data-ai-nut="${i}|${k}"
+                value="${(f.nutrition && f.nutrition[k]!=null) ? f.nutrition[k] : ''}"
+                placeholder="—">
+            </label>`).join("")}
+        </div>
+      </div>` : ""}
 
     <div class="ai-food__portions">
       ${IgnytAiScan.PORTIONS.map(p=>{
@@ -13559,6 +13582,41 @@ function bindAiScanHandlers(){
 
   document.querySelectorAll("[data-ai-meal]").forEach(el=>{
     el.addEventListener("click", ()=>{ state.aiScan.meal = el.dataset.aiMeal; render(); });
+  });
+
+  document.querySelectorAll("[data-ai-edit]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const f = state.aiScan.foods[Number(el.dataset.aiEdit)];
+      f.editing = !f.editing;
+      // Opening the editor on a food with no numbers at all needs somewhere to put them.
+      if(f.editing && !f.nutrition) f.nutrition = { calories:null, protein:null, carbs:null, fat:null };
+      render();
+    });
+  });
+
+  /* Typed nutrition. `input` writes to state and refreshes the macro row WITHOUT a re-render —
+     re-rendering on every keystroke destroys the focused field, which is the same bug the food
+     search had with the keyboard and the sliders had with the drag. */
+  document.querySelectorAll("[data-ai-nut]").forEach(el=>{
+    el.addEventListener("input", ()=>{
+      const [i, key] = el.dataset.aiNut.split("|");
+      const f = state.aiScan.foods[Number(i)];
+      if(!f.nutrition) f.nutrition = {};
+      const raw = el.value.trim();
+      f.nutrition[key] = raw === "" ? null : Math.max(0, Number(raw) || 0);
+      // A hand-edited estimate is the user's number now, not the model's, so the confidence
+      // reading stops applying and the badge should stop claiming it.
+      f.edited = true;
+      const card = el.closest(".ai-food");
+      const n = IgnytAiScan.scaleTo(f.nutrition, f.grams);
+      const cells = card && card.querySelectorAll(".ai-food__macros strong");
+      if(cells && cells.length >= 4 && n){
+        cells[0].textContent = Math.round(n.calories||0);
+        cells[1].textContent = n.protein==null?"—":n.protein;
+        cells[2].textContent = n.carbs==null?"—":n.carbs;
+        cells[3].textContent = n.fat==null?"—":n.fat;
+      }
+    });
   });
 
   document.querySelectorAll("[data-ai-skip]").forEach(el=>{
