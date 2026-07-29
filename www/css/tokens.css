@@ -14,9 +14,9 @@
   --color-primary-strong: #ff6a2b;
   --color-accent-blue: #32b8f4;
   --color-accent-cyan: #55d8ff;
-  --color-interactive: #3e82f7;
-  --color-interactive-strong: #5a94f9;
-  --color-interactive-soft: rgba(62,130,247,.14);
+  --color-interactive: #FF4D5A;
+  --color-interactive-strong: #F03547;
+  --color-interactive-soft: rgba(255,77,90,.16);
   --color-text-primary: #f7f4ef;
   --color-text-secondary: #aaa9b0;
   --color-success: #45d294;
@@ -35,7 +35,11 @@
      progress step, a 26px-tall toggle switch) rather than scale outliers -- those migrate
      to --radius-pill, not a new fixed token. */
   --radius-2xs: 4px; --radius-xs: 6px; --radius-xs-plus: 8px; --radius-sm: 10px; --radius-md: 14px;
-  --radius-card: 18px; --radius-lg: 20px; --radius-pill: 999px;
+  /* The brief sets cards to 22px and buttons to 18px. Both land on existing tokens rather
+     than new ones, so every surface already reading --radius-card picks the new shape up with
+     no component edits — which is the whole reason the token layer exists. --radius-lg is
+     raised in step with --radius-card so large surfaces stay rounder than cards, not flatter. */
+  --radius-card: 22px; --radius-btn: 18px; --radius-lg: 26px; --radius-pill: 999px;
   /* Elevation scale -- --shadow-card kept as-is (widely referenced already) and now aliases
      the mid level so existing callers are unaffected. */
   --shadow-sm: 0 1px 4px rgba(0,0,0,.12);
@@ -101,8 +105,12 @@
   --opacity-disabled: .5; --opacity-muted: .65; --opacity-overlay: .92;
   /* Chart series palette -- reuses the app's real accent colors (not new hex values) so a
      multi-series chart stays on-brand instead of each chart picking its own colors. */
-  --chart-1: var(--color-interactive); --chart-2: var(--color-primary);
-  --chart-3: var(--color-success); --chart-4: var(--color-accent-blue); --chart-5: var(--color-warning);
+  /* chart-1 was --color-interactive. Now that interactive is #FF4D5A, leaving it there would
+     paint the first series of every chart in the same red as every button, and "the tappable
+     colour" and "the first data series" would stop being distinguishable. Data keeps its own
+     hues; the accent is not a chart colour. */
+  --chart-1: var(--color-accent-blue); --chart-2: var(--color-primary);
+  --chart-3: var(--color-success); --chart-4: var(--color-accent-cyan); --chart-5: var(--color-warning);
 }
 /* Light theme: primary reference target -- cool blue-gray background, white elevated
    cards, dark navy text, bright blue interactive accent. */
@@ -166,6 +174,6 @@
 [data-theme="light"] .home-light, [data-theme="light"] .wk-light, [data-theme="light"] .pg-light {
   /* Same ground and text scale as the other two light palettes. Blue is left exactly as it
      was — it is the interactive colour on these screens and the brief asked not to touch it. */
-  --rh-bg:#F3F5F7; --rh-card:#FFFFFF; --rh-blue:#2563EB; --rh-text:#1F2937; --rh-muted:#6B7280;
+  --rh-bg:#F8FAFC; --rh-card:#FFFFFF; --rh-blue:#FF4D5A; --rh-text:#111827; --rh-muted:#6B7280;
   --rh-border:#E7EBF0; --rh-purple:#7C3AED; --rh-green:#16A34A; --rh-red:#EF4444;
 }

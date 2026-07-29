@@ -8621,7 +8621,6 @@ function renderLegacyHomeTab(){
     <div class="grid2" style="margin-bottom:8px;">
       <button class="btn btn-steel" data-nav="workout" style="display:flex;align-items:center;justify-content:center;gap:8px;">${svg('workout',16)} Start Workout</button>
       <button class="btn btn-steel" data-nav="body" style="display:flex;align-items:center;justify-content:center;gap:8px;">${svg('body',16)} Log Weight</button>
-      <button class="btn btn-steel" data-nav="uploads" style="display:flex;align-items:center;justify-content:center;gap:8px;">${svg('health',16)} Medical Reports</button>
       <button class="btn btn-steel" data-nav="progress" style="display:flex;align-items:center;justify-content:center;gap:8px;">${svg('progress',16)} View Progress</button>
     </div>
 
@@ -8768,9 +8767,10 @@ function renderApp(){
     <nav class="bottom-nav ${isLightTab?'bottom-nav--home-light':''}">
       ${navBtn("home","Home")}
       ${navBtn("workout","Workout")}
+      ${navBtn("nutrition","Food Log")}
       ${navBtn("progress","Progress")}
-      ${navBtn("tools","Tools")}
       ${navBtn("profile","Profile")}
+      ${navBtn("tools","Tools")}
     </nav>
   `;
   const main = document.getElementById("main");
@@ -8830,8 +8830,12 @@ function renderToolsTab(){
       // Health Hub ({id:"healthhub"}) intentionally disconnected for this release (not
       // deleted -- renderApp()'s state.tab==="healthhub" route and www/js/health/* are still
       // in the repo for future work, just unreachable from the UI now).
-      {id:"health", label:"Health Connect", desc:"Sync with apps, track all metrics", icon:"health"},
-      {id:"uploads", label:"Medical Reports", desc:"Blood work & DEXA", icon:"flask"}
+      /* Medical Reports removed from the UI per the brief. The route and
+         www/js/health-uploads.js stay in the repo, unreachable — the same treatment Health Hub
+         got above. Deleting the module would also remove the read path to files a user has
+         already uploaded, and "take it out of the app" need not mean "make their data
+         unrecoverable". */
+      {id:"health", label:"Health Connect", desc:"Sync with apps, track all metrics", icon:"health"}
     ]],
     ["Nutrition", [
       {id:"nutrition", label:"Food Log", desc:"Meals, macros & calorie budget", icon:"nutrition"},

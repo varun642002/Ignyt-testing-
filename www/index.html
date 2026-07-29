@@ -30,8 +30,8 @@
        (the thing you tap).
        That is why this is not a palette swap. IGNYT's orange keeps every job it had; blue
        takes over the interactive elements it was doubling up on. */
-    --primary:#3B82F6; --primary-strong:#2563EB; --on-primary:#FFFFFF;
-    --primary-soft:rgba(59,130,246,.14);
+    --primary:#FF4D5A; --primary-strong:#F03547; --on-primary:#FFFFFF;
+    --primary-soft:rgba(255,77,90,.16);
   }
 
 /* Light theme.
@@ -45,15 +45,15 @@
      and everything competed. --text is now the heading weight; --text-body carries running
      text; --muted is secondary. */
 [data-theme="light"]{
-    --bg:#F3F5F7; --surface:#FFFFFF; --surface-alt:#EDF1F6;
+    --bg:#F8FAFC; --surface:#FFFFFF; --surface-alt:#EFF3F8;
     --accent:#E24E15; --steel:#1F6E9C; --mint:#188F5D;
-    --text:#1F2937; --text-body:#4B5563; --muted:#6B7280; --placeholder:#9CA3AF;
+    --text:#111827; --text-body:#4B5563; --muted:#6B7280; --placeholder:#9CA3AF;
     --border:#E7EBF0; --divider:#E8ECF2;
 
     /* The reference blue, tuned for a light ground. Same split as the dark theme: this is
        action, --accent stays data. */
-    --primary:#2563EB; --primary-strong:#1D4ED8; --on-primary:#FFFFFF;
-    --primary-soft:rgba(37,99,235,.10);
+    --primary:#FF4D5A; --primary-strong:#E63B4B; --on-primary:#FFFFFF;
+    --primary-soft:rgba(255,77,90,.10);
 
     /* Soft and wide rather than dark and tight: 6-8% opacity, 24-32px blur, 6-10px drop.
        A heavy shadow on a light ground reads as dirt under the card instead of lift. */
@@ -312,8 +312,12 @@ nav.bottom-nav{position:fixed; bottom:0; left:50%; transform:translateX(-50%); w
    layout viewport doesn't shrink the way the native WebView does under adjustResize. */
 body.kb-open nav.bottom-nav{transform:translate(-50%, 100%);}
 
-.nav-btn{flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 2px;
+/* min-width:0 matters now that the bar carries six items rather than five: without it a
+   flex item refuses to shrink below its content, so "Food Log" would push the row wider than
+   the screen instead of the labels ellipsing. */
+.nav-btn{flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 1px;
     border-radius:10px; background:none; border:none; color:var(--muted); cursor:pointer;}
+.nav-btn span{max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 
 .nav-btn.active{color:var(--accent);}
 
