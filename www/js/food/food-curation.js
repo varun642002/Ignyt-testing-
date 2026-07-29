@@ -354,94 +354,589 @@
     return head;
   }
 
-  /* Heads that count as milk. Plant milks reach it through the "Beverages, Almond Milk"
-     absorption above. */
-  var HEAD_MILK = /\bmilk\b|\bbuttermilk\b|\bcream\b/i;
-  var HEAD_EGG = /\begg/i;
+  /* Head guards, shared by whole families. A rule using one of these says "this keyword only
+     means what I think it means when the food is actually one of these". Without them
+     /\bchicken\b/ claims chicken soup, chicken gravy and chicken-flavour ramen. */
+  /* No \bcream\b here. It let "Puddings, Coconut Cream, Dry Mix" through the milk head guard,
+     where the /\bdry\b/ rule filed thirteen puddings as Milk Powder. Cream has its own rule
+     with its own guard. */
+  var HEAD_MILK    = /\bmilk\b|\bbuttermilk\b/i;
+  var HEAD_EGG     = /\begg/i;
+  var HEAD_CHICKEN = /\bchicken\b/i;
+  var HEAD_TURKEY  = /\bturkey\b/i;
+  /* Veal is not beef for naming purposes: with it in this guard, "Veal, Shoulder, Arm" came
+     out as "Beef Shoulder". It has its own rule, placed before the beef cuts. */
+  var HEAD_BEEF    = /\bbeef\b/i;
+  var HEAD_PORK    = /\bpork\b|\bham\b|\bbacon\b|\bsausages?\b/i;
+  var HEAD_LAMB    = /\blamb\b|\bmutton\b|\bgoat\b/i;
+  var HEAD_SEA     = /\bfish\b|\bcrustaceans?\b|\bmollusks?\b|\bseafood\b|\bshrimp\b|\bprawns?\b/i;
+  var HEAD_CHEESE  = /\bcheese\b/i;
+  var HEAD_YOGURT  = /\byogurt\b|\bcurd\b|\bdahi\b/i;
+  var HEAD_OIL     = /\boils?\b|\bfats?\b|\bbutter\b|\bmargarine|\bghee\b|\bshortening\b/i;
+  /* USDA files nuts under "Nuts, Almonds", but the seed catalogue has bare "Almonds" — a head
+     guard of /\bnuts?\b/ alone rejected the very records the rule exists for. The nut's own
+     name is therefore an acceptable head, and NOT_CONFECTION does the work the narrow guard
+     was doing: keeping "Candies, Almond Joy Candy Bar" from being filed as almonds. */
+  var HEAD_NUT     = /\bnuts?\b|\bseeds?\b|\bpeanuts?\b|\balmonds?\b|\bcashews?\b|\bwalnuts?\b|\bpistachios?\b|\bhazelnuts?\b|\bpecans?\b|\bmacadamia\b|\bcoconut\b|\bchia\b|\bflax\b/i;
+  var NOT_CONFECTION = /\bcandies\b|\bcandy\b|\bchocolate\b|\bcookies?\b|\bcereals?\b|\bbars?\b|\bice\s*cream\b|\bsnickers\b|\bhershey/i;
+  var HEAD_BREAD   = /\bbread\b|\brolls?\b|\bbagels?\b|\bmuffins?\b|\btortillas?\b|\bbiscuits?\b|\bpancakes?\b/i;
+  var HEAD_RICE    = /\brice\b/i;
+  var HEAD_FLOUR   = /\bflour\b|\bsemolina\b|\bmeal\b|\bstarch\b/i;
+  var HEAD_LEGUME  = /\bbeans?\b|\bpeas\b|\blentils?\b|\bchickpeas?\b|\bgram\b|\bdal\b|\bdhal\b|\bsoy|\btofu\b|\bcowpeas\b/i;
+  var HEAD_VEG     = /\bvegetables?\b|\bpotatoes?\b|\bpeppers?\b|\bsquash\b|\bcabbage\b|\bmushrooms?\b|\bonions?\b|\btomatoes?\b|\bgreens\b|\bcarrots?\b|\bbeets\b/i;
+  var HEAD_FRUIT   = /\bfruit|\bjuice\b|\bapples?\b|\bbananas?\b|\boranges?\b|\bgrapes?\b|\bberries\b|\bmelons?\b/i;
 
+  /* THE ORDER OF THIS TABLE IS THE DESIGN.
+
+     A food is claimed by the first rule that matches, so everything DERIVED from an
+     ingredient must be listed before the ingredient itself. Peanut Butter before Peanuts
+     before Butter; Almond Milk before Almonds and before Milk; Coconut Oil before Coconut
+     and before Oil. Get the order wrong and /\bbutter\b/ turns peanut butter into butter —
+     588 kcal filed under a 717 kcal name.
+
+     Sections run derived -> composite dishes -> cuts and varieties -> base ingredients. */
   var CANONICAL_RULES = [
-    /* --- derived products first --- */
-    [/\bapple\s*(juice|cider)\b|\bjuice.*apple\b/i, "Apple Juice"],
-    [/\bapple\s*sauce\b|\bapplesauce\b/i, "Apple Sauce"],
-    [/\bapple\b.*\bpie\b|\bpie\b.*\bapple\b/i, "Apple Pie"],
-    [/\bapples?\b.*\bdried\b|\bdried\b.*\bapples?\b/i, "Dried Apple"],
-    [/\bbanana\b.*\b(chips|dried)\b/i, "Dried Banana"],
-    [/\borange\s*juice\b/i, "Orange Juice"],
 
-    /* --- eggs, by preparation, because the nutrition genuinely differs.
-           `eggs?` rather than `egg`: USDA writes both "Egg, whole, …" and "Eggs, Grade A, …",
-           and \begg\b silently missed every plural. --- */
+    /* =====================================================================
+       DERIVED PRODUCTS — juices, butters, oils, flours, plant milks.
+       These take a base ingredient's word and mean something else entirely.
+       ===================================================================== */
+    [/\bapple\s*(juice|cider)\b|\bjuice\b.*\bapple\b/i, "Apple Juice"],
+    [/\bapple\s*sauce\b|\bapplesauce\b/i, "Apple Sauce"],
+    [/\borange\s*juice\b|\bjuice\b.*\borange\b/i, "Orange Juice"],
+    [/\bgrape\s*juice\b/i, "Grape Juice"],
+    [/\bcranberry\s*juice\b/i, "Cranberry Juice"],
+    [/\bpineapple\s*juice\b/i, "Pineapple Juice"],
+    [/\btomato\s*juice\b/i, "Tomato Juice"],
+    [/\blemon\s*juice\b/i, "Lemon Juice"],
+    [/\bcoconut\s*water\b/i, "Coconut Water"],
+    [/\bbanana\s*chips\b/i, "Banana Chips"],
+
+    [/\bpeanut\s*butter\b/i, "Peanut Butter", NOT_CONFECTION],
+    [/\balmond\s*butter\b/i, "Almond Butter"],
+    [/\bcashew\s*butter\b/i, "Cashew Butter"],
+    [/\bcocoa\s*butter\b/i, "Cocoa Butter"],
+
+    [/\bolive\b.*\boil\b|\boil\b.*\bolive\b/i, "Olive Oil", null, HEAD_OIL],
+    [/\bcoconut\b.*\boil\b|\boil\b.*\bcoconut\b/i, "Coconut Oil", null, HEAD_OIL],
+    [/\bsunflower\b.*\boil\b|\boil\b.*\bsunflower\b/i, "Sunflower Oil", null, HEAD_OIL],
+    [/\bmustard\b.*\boil\b|\boil\b.*\bmustard\b/i, "Mustard Oil", null, HEAD_OIL],
+    [/\bsesame\b.*\boil\b|\boil\b.*\bsesame\b/i, "Sesame Oil", null, HEAD_OIL],
+    [/\b(peanut|groundnut)\b.*\boil\b|\boil\b.*\b(peanut|groundnut)\b/i, "Peanut Oil", null, HEAD_OIL],
+    [/\b(canola|rapeseed)\b.*\boil\b|\boil\b.*\bcanola\b/i, "Canola Oil", null, HEAD_OIL],
+    [/\bsoybean\b.*\boil\b|\boil\b.*\bsoybean\b/i, "Soybean Oil", null, HEAD_OIL],
+    [/\bavocado\b.*\boil\b|\boil\b.*\bavocado\b/i, "Avocado Oil", null, HEAD_OIL],
+    [/\brice\s*bran\b.*\boil\b|\boil\b.*\brice\s*bran\b/i, "Rice Bran Oil", null, HEAD_OIL],
+    [/\bcorn\b.*\boil\b|\boil\b.*\bcorn\b/i, "Corn Oil", null, HEAD_OIL],
+    [/\bpalm\b.*\boil\b|\boil\b.*\bpalm\b/i, "Palm Oil", null, HEAD_OIL],
+    [/\bmargarine/i, "Margarine"],
+    [/\bvegetable\s*oil\b/i, "Vegetable Oil", null, HEAD_OIL],
+
+    [/\bghee\b|\bbutter\s*oil\b|\bbutter\b.*\bclarified\b|\bclarified\b.*\bbutter\b/i, "Ghee"],
+    [/^butter\b|\bbutter\b.*\b(salted|unsalted|stick|whipped)\b/i, "Butter", null, HEAD_OIL],
+
+    [/\bwheat\b.*\bflour\b|\bflour\b.*\bwheat\b/i, "Wheat Flour", null, HEAD_FLOUR],
+    [/\bflour\b.*\b(all[- ]purpose|maida|white)\b|\ball[- ]purpose\s*flour\b/i, "All Purpose Flour", null, HEAD_FLOUR],
+    [/\b(gram|besan|chickpea)\b.*\bflour\b/i, "Gram Flour", null, HEAD_FLOUR],
+    [/\bcorn\b.*\b(flour|meal|starch)\b/i, "Corn Flour", null, HEAD_FLOUR],
+    [/\brice\b.*\bflour\b/i, "Rice Flour", null, HEAD_FLOUR],
+    [/\b(semolina|sooji|rava)\b/i, "Semolina"],
+
+    /* =====================================================================
+       PROTEIN SUPPLEMENTS
+       ===================================================================== */
+    [/\bwhey\b.*\bisolate\b|\bisolate\b.*\bwhey\b/i, "Whey Isolate"],
+    [/\bwhey\b.*\bconcentrate\b/i, "Whey Concentrate"],
+    [/\bwhey\b.*\bhydroly/i, "Hydrolysed Whey"],
+    [/\bwhey\b.*\bprotein\b|\bprotein\b.*\bwhey\b/i, "Whey Protein"],
+    [/\bcasein\b/i, "Casein Protein"],
+    [/\bsoy\b.*\bprotein\b(\s*(isolate|concentrate))?/i, "Soy Protein"],
+    [/\bmass\s*gainer\b|\bweight\s*gainer\b/i, "Mass Gainer"],
+    [/\bcreatine\b/i, "Creatine"],
+    [/\bprotein\b.*\b(bar)\b|\bbar\b.*\bprotein\b/i, "Protein Bar"],
+
+    /* =====================================================================
+       DAIRY. Plant milks first, or /milk/ swallows them. Every milk rule is
+       head-scoped — "Cheese, Ricotta, Whole Milk" is a cheese.
+       ===================================================================== */
+    [/\balmond\b.*\bmilk\b/i, "Almond Milk", null, /\bmilk\b|\balmond\b/i],
+    /* "Soymilk" is one word in USDA, so \bsoy\b never matched it and 95 soymilk records were
+       being claimed by the Chocolate rule instead. */
+    [/\bsoy\s*milk\b|\bsoymilk\b/i, "Soy Milk", null, /\bmilk\b|\bsoy/i],
+    [/\boat\b.*\bmilk\b/i, "Oat Milk", null, /\bmilk\b|\boat\b/i],
+    [/\bcoconut\b.*\bmilk\b/i, "Coconut Milk", null, /\bmilk\b|\bcoconut\b/i],
+    [/\brice\b.*\bmilk\b/i, "Rice Milk", null, /\bmilk\b|\brice\b/i],
+    [/\bbuffalo\b.*\bmilk\b/i, "Buffalo Milk", null, HEAD_MILK],
+    [/\bgoat\b.*\bmilk\b/i, "Goat Milk", null, HEAD_MILK],
+    [/\bcondensed\b/i, "Condensed Milk", null, HEAD_MILK],
+    [/\bevaporated\b/i, "Evaporated Milk", null, HEAD_MILK],
+    [/\bbuttermilk\b/i, "Buttermilk", null, HEAD_MILK],
+    /* Before the fat-level rules. "Milk, Dry, Whole" is 496 kcal and was being claimed by
+       Whole Milk, where it led the group and pushed actual 60 kcal fluid milk out into a
+       split-off row called "3.25% Milkfat Whole Milk (With Added Vitamin D)". It is milk
+       powder, which is what people call it and what it should be called. */
+    [/\b(dry|dried|powder)\b/i, "Milk Powder", null, HEAD_MILK],
+    [/\bmilk\b.*\b(skim|nonfat|fat free)\b|\b(skim|nonfat)\b.*\bmilk\b/i, "Skim Milk", null, HEAD_MILK],
+    [/\bmilk\b.*\b(lowfat|low fat|1%|2%|reduced fat)\b|\b(lowfat|low fat)\b.*\bmilk\b/i, "Low Fat Milk", null, HEAD_MILK],
+    [/\bmilk\b.*\bwhole\b|\bwhole\b.*\bmilk\b/i, "Whole Milk", null, HEAD_MILK],
+
+    [/\bgreek\b.*\byogurt\b|\byogurt\b.*\bgreek\b/i, "Greek Yogurt", null, HEAD_YOGURT],
+    [/\bfrozen\b.*\byogurt\b|\byogurt\b.*\bfrozen\b/i, "Frozen Yogurt", null, HEAD_YOGURT],
+    [/\b(curd|dahi)\b/i, "Curd", null, HEAD_YOGURT],
+    [/\byogurt\b/i, "Yogurt", null, HEAD_YOGURT],
+
+    [/\bpaneer\b/i, "Paneer"],
+    [/\bcottage\s*cheese\b/i, "Cottage Cheese"],
+    [/\bcream\s*cheese\b/i, "Cream Cheese"],
+    [/\bcheddar\b/i, "Cheddar Cheese", null, HEAD_CHEESE],
+    [/\bmozzarella\b/i, "Mozzarella Cheese", null, HEAD_CHEESE],
+    [/\bparmesan\b/i, "Parmesan Cheese", null, HEAD_CHEESE],
+    [/\bfeta\b/i, "Feta Cheese", null, HEAD_CHEESE],
+    [/\bricotta\b/i, "Ricotta Cheese", null, HEAD_CHEESE],
+    [/\bswiss\b/i, "Swiss Cheese", null, HEAD_CHEESE],
+    [/\bgouda\b/i, "Gouda Cheese", null, HEAD_CHEESE],
+    [/\bprovolone\b/i, "Provolone Cheese", null, HEAD_CHEESE],
+    [/\bmonterey\b/i, "Monterey Jack", null, HEAD_CHEESE],
+    [/\bcolby\b/i, "Colby Cheese", null, HEAD_CHEESE],
+    [/\bmuenster\b/i, "Muenster Cheese", null, HEAD_CHEESE],
+    [/\bbrie\b/i, "Brie", null, HEAD_CHEESE],
+    [/\bcamembert\b/i, "Camembert", null, HEAD_CHEESE],
+    [/\bblue\b|\bgorgonzola\b|\broquefort\b/i, "Blue Cheese", null, HEAD_CHEESE],
+    [/\bromano\b/i, "Romano Cheese", null, HEAD_CHEESE],
+    [/\bgruyere\b/i, "Gruyere", null, HEAD_CHEESE],
+    [/\bgoat\b|\bchevre\b/i, "Goat Cheese", null, HEAD_CHEESE],
+    [/\b(queso|cotija|fresco|oaxaca|asadero)\b/i, "Queso", null, HEAD_CHEESE],
+    [/\bprocessed\b|\bamerican\b/i, "Processed Cheese", null, HEAD_CHEESE],
+    [/\bice\s*cream\b/i, "Ice Cream"],
+    [/^cream\b|\bheavy\s*cream\b|\bwhipping\s*cream\b|\bsour\s*cream\b/i, "Cream", null, HEAD_MILK],
+
+    /* =====================================================================
+       EGGS — by preparation, because the nutrition genuinely differs.
+       `eggs?` rather than `egg`: USDA writes both "Egg, whole, …" and
+       "Eggs, Grade A, …", and \begg\b silently missed every plural.
+       ===================================================================== */
     [/\beggs?\b.*\b(hard-boiled|boiled)\b/i, "Boiled Egg", null, HEAD_EGG],
     [/\beggs?\b.*\bfried\b/i, "Fried Egg", null, HEAD_EGG],
     [/\beggs?\b.*\b(scrambled|omelet|omelette)\b/i, "Scrambled Egg", null, HEAD_EGG],
     [/\beggs?\b.*\bpoached\b/i, "Poached Egg", null, HEAD_EGG],
     [/\beggs?\b.*\bwhite\b/i, "Egg White", null, HEAD_EGG],
     [/\beggs?\b.*\byolk\b/i, "Egg Yolk", null, HEAD_EGG],
+    [/\bduck\b/i, "Duck Egg", null, HEAD_EGG],
+    [/\bquail\b/i, "Quail Egg", null, HEAD_EGG],
+    [/\bgoose\b/i, "Goose Egg", null, HEAD_EGG],
+    [/\bturkey\b/i, "Turkey Egg", null, HEAD_EGG],
     [/^eggs?,\s*(whole|grade|fresh|raw)\b/i, "Egg"],
     [/^whole eggs?$/i, "Egg"],
 
-    /* --- chicken, by cut. NOT by preparation: the state is derived separately, and a
-           canonical name that also spelled it out produced the same food under two keys. --- */
-    [/\bchicken\b.*\bbreast\b/i, "Chicken Breast"],
-    [/\bchicken\b.*\bthigh\b/i, "Chicken Thigh"],
-    [/\bchicken\b.*\b(wing|wings)\b/i, "Chicken Wings"],
-    [/\bchicken\b.*\bdrumstick\b/i, "Chicken Drumstick"],
-    [/\bchicken\b.*\b(curry|masala|tikka)\b/i, "Chicken Curry"],
-    [/\bchicken\b.*\bbiryani\b/i, "Chicken Biryani"],
+    /* =====================================================================
+       INDIAN DISHES. Before the meat and grain rules, because a chicken
+       biryani is a biryani, not a chicken cut.
+       ===================================================================== */
+    [/\bbiryani\b.*\bchicken\b|\bchicken\b.*\bbiryani\b/i, "Chicken Biryani"],
+    [/\bbiryani\b/i, "Biryani"],
+    [/\bchicken\b.*\b(curry|masala|tikka|tandoori)\b|\b(curry|tikka)\b.*\bchicken\b/i, "Chicken Curry"],
+    [/\bpaneer\b.*\b(butter|masala|tikka)\b/i, "Paneer Masala"],
+    [/\bpalak\s*paneer\b/i, "Palak Paneer"],
+    [/\bdal\b.*\b(tadka|fry|makhani)\b/i, "Dal Tadka"],
+    [/\bchole\b|\bchana\s*masala\b/i, "Chole"],
+    [/\brajma\b/i, "Rajma"],
+    [/\bsambar\b/i, "Sambar"],
+    [/\brasam\b/i, "Rasam"],
+    [/\bmasala\s*dosa\b/i, "Masala Dosa"],
+    [/\bdosa\b/i, "Dosa"],
+    [/\bidli\b/i, "Idli"],
+    [/\bvada\b|\bwada\b/i, "Vada"],
+    [/\buttapam\b|\buthappam\b/i, "Uttapam"],
+    [/\bupma\b/i, "Upma"],
+    [/\bpoha\b|\bflattened\s*rice\b/i, "Poha"],
+    [/\bkhichdi\b|\bkhichri\b/i, "Khichdi"],
+    [/\bpulao\b|\bpilaf\b/i, "Pulao"],
+    [/\bsamosa\b/i, "Samosa"],
+    [/\bpakora\b|\bbhajji\b/i, "Pakora"],
+    [/\bchapati\b|\broti\b|\bphulka\b/i, "Chapati"],
+    [/\bparatha\b|\bparantha\b/i, "Paratha"],
+    [/\bnaan\b/i, "Naan"],
+    [/\bpuri\b|\bpoori\b/i, "Puri"],
+    [/\bgulab\s*jamun\b/i, "Gulab Jamun"],
+    [/\brasgulla\b|\brasagolla\b/i, "Rasgulla"],
+    [/\bjalebi\b/i, "Jalebi"],
+    [/\bhalwa\b/i, "Halwa"],
+    [/\bkheer\b|\bpayasam\b/i, "Kheer"],
+    [/\blassi\b/i, "Lassi"],
 
-    /* --- rice --- */
-    [/\brice\b.*\bbrown\b|\bbrown\b.*\brice\b/i, "Brown Rice"],
+    /* =====================================================================
+       CHICKEN & TURKEY — by cut. NOT by preparation: the state is derived
+       separately, and a canonical name that also spelled it out produced the
+       same food under two keys.
+       ===================================================================== */
+    [/\bnuggets?\b/i, "Chicken Nuggets", null, HEAD_CHICKEN],
+    [/\btenders?\b/i, "Chicken Tenders", null, HEAD_CHICKEN],
+    [/\bliver\b/i, "Chicken Liver", null, HEAD_CHICKEN],
+    /* Skin on or off is a 30-40 kcal difference on the same cut, which is more than the merge
+       guard tolerates — so these were already ending up as separate rows, just badly named
+       ones ("Breast Broilers Or Fryers Chicken (Cooked, Roasted)"). Naming the distinction
+       makes the same split readable, and it is a distinction someone tracking fat wants. */
+    /* PLURALS. USDA writes "Thighs" and "Drumsticks" as often as the singular, and \bthigh\b
+       does not match "thighs" — thirteen records were falling through to raw USDA naming
+       because of a missing `s?`. Every cut pattern below is plural-tolerant for that reason. */
+    [/\bbreasts?\b.*\bmeat and skin\b/i, "Chicken Breast with Skin", null, HEAD_CHICKEN],
+    [/\bthighs?\b.*\bmeat and skin\b/i, "Chicken Thigh with Skin", null, HEAD_CHICKEN],
+    /* Sliced deli meat is a different product from the cut it is named after — 80 kcal
+       against 165 — and people shop for it as its own thing. */
+    [/\bbreasts?\b.*\b(deli|luncheon|prepackaged|sliced)\b|\b(deli|luncheon)\b.*\bbreasts?\b/i, "Deli Chicken Breast", null, HEAD_CHICKEN],
+    [/\bbreasts?\b/i, "Chicken Breast", null, HEAD_CHICKEN],
+    [/\bthighs?\b/i, "Chicken Thigh", null, HEAD_CHICKEN],
+    [/\bwings?\b/i, "Chicken Wings", null, HEAD_CHICKEN],
+    [/\bdrumsticks?\b/i, "Chicken Drumstick", null, HEAD_CHICKEN],
+    [/\blegs?\b/i, "Chicken Leg", null, HEAD_CHICKEN],
+    [/\bgiblets?\b/i, "Chicken Giblets", null, HEAD_CHICKEN],
+    [/\bgizzards?\b/i, "Chicken Gizzard", null, HEAD_CHICKEN],
+    [/\bhearts?\b/i, "Chicken Heart", null, HEAD_CHICKEN],
+    [/\bnecks?\b/i, "Chicken Neck", null, HEAD_CHICKEN],
+    [/\bbacks?\b/i, "Chicken Back", null, HEAD_CHICKEN],
+    [/\bskin\b/i, "Chicken Skin", null, HEAD_CHICKEN],
+    [/\bdark\s*meat\b/i, "Chicken (Dark Meat)", null, HEAD_CHICKEN],
+    [/\blight\s*meat\b/i, "Chicken (Light Meat)", null, HEAD_CHICKEN],
+    [/\bpatt(y|ies)\b/i, "Chicken Patty", null, HEAD_CHICKEN],
+    [/\bcanned\b/i, "Canned Chicken", null, HEAD_CHICKEN],
+    [/\bground\b|\bmince/i, "Ground Chicken", null, HEAD_CHICKEN],
+    /* Only a literal "whole". Matching "broilers or fryers" here would have named every
+       uncut record — backs, necks, giblets — "Whole Chicken", which is a different food with
+       different numbers. Those keep their own display name instead. */
+    [/\bwhole\b/i, "Whole Chicken", null, HEAD_CHICKEN],
+    [/\bbreast\b.*\bmeat and skin\b/i, "Turkey Breast with Skin", null, HEAD_TURKEY],
+    [/\bbreast\b/i, "Turkey Breast", null, HEAD_TURKEY],
+    [/\bground\b|\bmince/i, "Ground Turkey", null, HEAD_TURKEY],
+
+    /* =====================================================================
+       RED MEAT. 967 beef records are one naming pattern with the cut buried
+       four segments in — head-scoping is what makes matching on the cut safe.
+       ===================================================================== */
+    [/^veal\b/i, "Veal"],
+    [/\bground\b|\bmince|\bhamburger\b/i, "Ground Beef", null, HEAD_BEEF],
+    [/\btenderloin\b|\bfilet\b/i, "Beef Tenderloin", null, HEAD_BEEF],
+    [/\b(rib\s*eye|ribeye)\b/i, "Beef Ribeye", null, HEAD_BEEF],
+    [/\bsirloin\b/i, "Beef Sirloin", null, HEAD_BEEF],
+    [/\bbrisket\b/i, "Beef Brisket", null, HEAD_BEEF],
+    [/\bchuck\b/i, "Beef Chuck", null, HEAD_BEEF],
+    [/\bround\b/i, "Beef Round", null, HEAD_BEEF],
+    [/\bshort\s*loin\b|\btop\s*loin\b|\bstrip\s*steaks?\b/i, "Beef Strip Steak", null, HEAD_BEEF],
+    [/\bflank\b/i, "Beef Flank", null, HEAD_BEEF],
+    [/\bskirt\b/i, "Beef Skirt Steak", null, HEAD_BEEF],
+    [/\bshanks?\b/i, "Beef Shank", null, HEAD_BEEF],
+    [/\b(t[- ]bone|porterhouse)\b/i, "T-Bone Steak", null, HEAD_BEEF],
+    [/\brumps?\b/i, "Beef Rump", null, HEAD_BEEF],
+    [/\b(shoulders?|blades?)\b/i, "Beef Shoulder", null, HEAD_BEEF],
+    [/\bribs?\b/i, "Beef Ribs", null, HEAD_BEEF],
+    [/\bliver\b/i, "Beef Liver", null, HEAD_BEEF],
+    [/\bkidneys?\b/i, "Beef Kidney", null, HEAD_BEEF],
+    [/\bhearts?\b/i, "Beef Heart", null, HEAD_BEEF],
+    [/\btongue\b/i, "Beef Tongue", null, HEAD_BEEF],
+    [/\btripe\b/i, "Tripe", null, HEAD_BEEF],
+    [/\boxtail\b/i, "Oxtail", null, HEAD_BEEF],
+    [/\bsteaks?\b/i, "Beef Steak", null, HEAD_BEEF],
+    /* "Composite of Trimmed Retail Cuts" is USDA's average across every cut. It is not a cut,
+       so it gets the plain family name rather than being filed under one arbitrarily. */
+    [/\bcomposite\b|\bvariety meats\b|\bretail cuts\b/i, "Beef", null, HEAD_BEEF],
+
+    [/\bbacon\b/i, "Bacon", null, /\bbacon\b|\bpork\b/i],
+    [/\bham\b/i, "Ham", null, HEAD_PORK],
+    [/\bsausage\b/i, "Sausage", null, /\bsausages?\b|\bpork\b|\bbeef\b/i],
+    [/\bsalami\b/i, "Salami"],
+    [/\bbelly\b/i, "Pork Belly", null, HEAD_PORK],
+    [/\bchops?\b/i, "Pork Chop", null, HEAD_PORK],
+    [/\bribs?\b/i, "Pork Ribs", null, HEAD_PORK],
+    [/\bground\b|\bmince/i, "Ground Pork", null, HEAD_PORK],
+    [/\b(boston|butt|picnic)\b/i, "Pork Shoulder", null, HEAD_PORK],
+    [/\b(shoulders?|blades?)\b/i, "Pork Shoulder", null, HEAD_PORK],
+    [/\bliver\b/i, "Pork Liver", null, HEAD_PORK],
+    [/\bsteaks?\b/i, "Pork Steak", null, HEAD_PORK],
+    [/\btenderloins?\b|\bloins?\b/i, "Pork Loin", null, HEAD_PORK],
+    [/\bcomposite\b|\bvariety meats\b|\bretail cuts\b/i, "Pork", null, HEAD_PORK],
+
+    [/\bground\b|\bmince/i, "Ground Lamb", null, HEAD_LAMB],
+    [/\blegs?\b/i, "Leg of Lamb", null, HEAD_LAMB],
+    [/\brack\b|\bfrenched\b/i, "Rack of Lamb", null, HEAD_LAMB],
+    [/\btenderloins?\b/i, "Lamb Tenderloin", null, HEAD_LAMB],
+    [/\b(chops?|loins?|ribs?)\b/i, "Lamb Chop", null, HEAD_LAMB],
+    [/\bshoulders?\b/i, "Lamb Shoulder", null, HEAD_LAMB],
+    [/\b(shanks?|foreshanks?)\b/i, "Lamb Shank", null, HEAD_LAMB],
+    [/\bliver\b/i, "Lamb Liver", null, HEAD_LAMB],
+    [/\bcomposite\b|\bvariety meats\b|\bretail cuts\b/i, "Lamb", null, HEAD_LAMB],
+    [/^goat\b|\bmutton\b/i, "Mutton"],
+
+    /* =====================================================================
+       SEAFOOD — species is the useful name; USDA buries it behind
+       "Fish," / "Crustaceans," / "Mollusks,".
+       ===================================================================== */
+    [/\bsalmon\b/i, "Salmon", null, HEAD_SEA],
+    [/\btuna\b.*\bsalad\b/i, "Tuna Salad"],
+    [/\btuna\b/i, "Tuna", null, HEAD_SEA],
+    [/\bcod\b/i, "Cod", null, HEAD_SEA],
+    [/\btilapia\b/i, "Tilapia", null, HEAD_SEA],
+    [/\bmackerel\b/i, "Mackerel", null, HEAD_SEA],
+    [/\bsardine\b/i, "Sardine", null, HEAD_SEA],
+    [/\banchovy\b/i, "Anchovy", null, HEAD_SEA],
+    [/\btrout\b/i, "Trout", null, HEAD_SEA],
+    [/\bhalibut\b/i, "Halibut", null, HEAD_SEA],
+    [/\bhaddock\b/i, "Haddock", null, HEAD_SEA],
+    [/\bbass\b/i, "Sea Bass", null, HEAD_SEA],
+    [/\bcatfish\b/i, "Catfish", null, HEAD_SEA],
+    [/\bpollock\b/i, "Pollock", null, HEAD_SEA],
+    [/\bherring\b/i, "Herring", null, HEAD_SEA],
+    [/\b(shrimp|prawns?)\b/i, "Prawns", null, /\bcrustaceans?\b|\bshrimp\b|\bprawns?\b/i],
+    [/\bcrab\b/i, "Crab", null, HEAD_SEA],
+    [/\blobster\b/i, "Lobster", null, HEAD_SEA],
+    [/\b(squid|calamari)\b/i, "Squid", null, HEAD_SEA],
+    [/\boyster\b/i, "Oysters", null, HEAD_SEA],
+    [/\bclam\b/i, "Clams", null, HEAD_SEA],
+    [/\bmussel\b/i, "Mussels", null, HEAD_SEA],
+    [/\bscallop\b/i, "Scallops", null, HEAD_SEA],
+    [/\bwhitefish\b/i, "Whitefish", null, HEAD_SEA],
+    [/\b(ocean\s*perch|perch)\b/i, "Perch", null, HEAD_SEA],
+    [/\bpike\b/i, "Pike", null, HEAD_SEA],
+    [/\bsablefish\b/i, "Sablefish", null, HEAD_SEA],
+    [/\bsturgeon\b/i, "Sturgeon", null, HEAD_SEA],
+    [/\bsnapper\b/i, "Snapper", null, HEAD_SEA],
+    [/\b(flounder|sole)\b/i, "Flounder", null, HEAD_SEA],
+    [/\bswordfish\b/i, "Swordfish", null, HEAD_SEA],
+    [/\bcarp\b/i, "Carp", null, HEAD_SEA],
+    [/\beel\b/i, "Eel", null, HEAD_SEA],
+    [/\bmullet\b/i, "Mullet", null, HEAD_SEA],
+    [/\bsmelt\b/i, "Smelt", null, HEAD_SEA],
+    [/\b(roe|caviar)\b/i, "Fish Roe", null, HEAD_SEA],
+    [/\bbutterfish\b/i, "Butterfish", null, HEAD_SEA],
+    [/\bcroaker\b/i, "Croaker", null, HEAD_SEA],
+    [/\blingcod\b/i, "Lingcod", null, HEAD_SEA],
+    [/\bbluefish\b/i, "Bluefish", null, HEAD_SEA],
+    [/\boctopus\b/i, "Octopus", null, HEAD_SEA],
+
+    /* =====================================================================
+       NUTS & SEEDS
+       ===================================================================== */
+    [/\balmonds?\b/i, "Almonds", NOT_CONFECTION, HEAD_NUT],
+    [/\bcashews?\b/i, "Cashews", NOT_CONFECTION, HEAD_NUT],
+    [/\bwalnuts?\b/i, "Walnuts", NOT_CONFECTION, HEAD_NUT],
+    [/\bpistachios?\b/i, "Pistachios", NOT_CONFECTION, HEAD_NUT],
+    [/\bpeanuts?\b/i, "Peanuts", NOT_CONFECTION, HEAD_NUT],
+    [/\bhazelnuts?\b|\bfilberts?\b/i, "Hazelnuts", NOT_CONFECTION, HEAD_NUT],
+    [/\bpecans?\b/i, "Pecans", NOT_CONFECTION, HEAD_NUT],
+    [/\bmacadamia\b/i, "Macadamia Nuts", NOT_CONFECTION, HEAD_NUT],
+    [/\bbrazilnuts?\b|\bbrazil\s*nuts?\b/i, "Brazil Nuts", NOT_CONFECTION, HEAD_NUT],
+    [/\bpine\s*nuts?\b/i, "Pine Nuts", NOT_CONFECTION, HEAD_NUT],
+    [/\bchia\b/i, "Chia Seeds"],
+    [/\b(flax|linseed)\b/i, "Flax Seeds"],
+    [/\bsunflower\s*seed/i, "Sunflower Seeds"],
+    [/\bpumpkin\s*seed|\bpepitas\b/i, "Pumpkin Seeds"],
+    [/\bsesame\s*seed|\btahini\b/i, "Sesame Seeds"],
+    [/\bcoconut\b/i, "Coconut", /\b(oil|milk|water)\b/i],
+
+    /* =====================================================================
+       GRAINS, RICE, BREAD & PASTA
+       ===================================================================== */
+    [/\bbrown\b/i, "Brown Rice", null, HEAD_RICE],
     [/\bbasmati\b/i, "Basmati Rice"],
-    [/\bjasmine\b.*\brice\b/i, "Jasmine Rice"],
-    [/\brice\b.*\bwhite\b/i, "White Rice"],
+    [/\bjasmine\b/i, "Jasmine Rice", null, HEAD_RICE],
+    [/\bwild\b/i, "Wild Rice", null, HEAD_RICE],
+    [/\bblack\b/i, "Black Rice", null, HEAD_RICE],
+    [/\bred\b/i, "Red Rice", null, HEAD_RICE],
+    [/\bwhite\b|\bglutinous\b|\blong[- ]grain\b|\bmedium[- ]grain\b|\bshort[- ]grain\b/i, "White Rice", null, HEAD_RICE],
 
-    /* --- milk. Plant milks first, or /milk/ would swallow them.
-           Every rule is head-scoped: "Cheese, Ricotta, Whole Milk" is a cheese. --- */
-    [/\balmond\b.*\bmilk\b/i, "Almond Milk", null, /\bmilk\b|\balmond\b/i],
-    [/\bsoy\b.*\bmilk\b/i, "Soy Milk", null, /\bmilk\b|\bsoy\b/i],
-    [/\boat\b.*\bmilk\b/i, "Oat Milk", null, /\bmilk\b|\boat\b/i],
-    [/\bcoconut\b.*\bmilk\b/i, "Coconut Milk", null, /\bmilk\b|\bcoconut\b/i],
-    [/\bbuffalo\b.*\bmilk\b/i, "Buffalo Milk", null, HEAD_MILK],
-    [/\bmilk\b.*\b(skim|nonfat|fat free)\b|\b(skim|nonfat)\b.*\bmilk\b/i, "Skim Milk", null, HEAD_MILK],
-    [/\bmilk\b.*\b(lowfat|low fat|1%|2%)\b|\b(lowfat|low fat)\b.*\bmilk\b/i, "Low Fat Milk", null, HEAD_MILK],
-    [/\bmilk\b.*\bwhole\b|\bwhole\b.*\bmilk\b/i, "Whole Milk", null, HEAD_MILK],
+    [/\b(rolled|old[- ]fashioned)\b.*\boats?\b|\boats?\b.*\brolled\b/i, "Rolled Oats"],
+    [/\bsteel[- ]cut\b/i, "Steel Cut Oats"],
+    [/\binstant\b.*\boat|\boat.*\binstant\b/i, "Instant Oats"],
+    [/\bquick\b.*\boats?\b|\boats?\b.*\bquick\b/i, "Quick Oats"],
+    [/^oats?\b|\boatmeal\b/i, "Oats", null, /\boats?\b|\boatmeal\b/i],
+    [/\bquinoa\b/i, "Quinoa"],
+    [/\bbarley\b/i, "Barley"],
+    [/\bbuckwheat\b/i, "Buckwheat"],
+    [/\b(millet|ragi|bajra|jowar|sorghum)\b/i, "Millet"],
+    [/\bcouscous\b/i, "Couscous"],
+    [/\bcornflakes?\b|\bcorn\s*flakes?\b/i, "Corn Flakes"],
+    [/\bgranola\b|\bmuesli\b/i, "Granola"],
 
-    /* --- protein supplements --- */
-    [/\bwhey\b.*\bisolate\b|\bisolate\b.*\bwhey\b/i, "Whey Isolate"],
-    [/\bwhey\b.*\bconcentrate\b/i, "Whey Concentrate"],
-    [/\bwhey\b.*\bhydroly/i, "Hydrolysed Whey"],
-    [/\bwhey\b.*\bprotein\b|\bprotein\b.*\bwhey\b/i, "Whey Protein"],
-    [/\bcasein\b/i, "Casein Protein"],
+    [/\bwhole[- ]wheat\b|\bwholemeal\b/i, "Whole Wheat Bread", null, HEAD_BREAD],
+    [/\bmultigrain\b|\bmulti[- ]grain\b/i, "Multigrain Bread", null, HEAD_BREAD],
+    [/\brye\b/i, "Rye Bread", null, HEAD_BREAD],
+    [/\bwhite\b/i, "White Bread", null, HEAD_BREAD],
+    [/\bbagel\b/i, "Bagel"],
+    [/\bcroissant\b/i, "Croissant"],
+    [/\btortilla\b/i, "Tortilla"],
+    [/\bpita\b/i, "Pita Bread"],
+    [/\bmuffin\b/i, "Muffin"],
+    [/\bpancake\b/i, "Pancakes"],
+    [/\bwaffle\b/i, "Waffles"],
 
-    /* --- base ingredients, last --- */
+    [/\bspaghetti\b/i, "Spaghetti"],
+    [/\bmacaroni\b/i, "Macaroni"],
+    [/\bnoodles?\b/i, "Noodles"],
+    [/^pasta\b/i, "Pasta"],
+
+    /* =====================================================================
+       DAL, PULSES & LEGUMES
+       ===================================================================== */
+    /* `peas?` not `pea`: subjectOf strips the parenthetical from "Pigeon Peas (red Gram),
+       Mature Seeds, Raw", and \bpigeon\s*pea\b does not match the plural that is left. */
+    [/\b(toor|tur|arhar|pigeon\s*peas?|red\s*gram)\b/i, "Toor Dal"],
+    [/\b(moong|mung|green\s*gram)\b/i, "Moong Dal"],
+    [/\b(chana\s*dal|bengal\s*gram)\b/i, "Chana Dal"],
+    [/\b(masoor|red\s*lentil)\b/i, "Masoor Dal"],
+    [/\b(urad|black\s*gram)\b/i, "Urad Dal"],
+    [/\b(kidney\s*beans?|rajma)\b/i, "Kidney Beans"],
+    [/\b(chickpeas?|garbanzo)\b/i, "Chickpeas"],
+    [/\bblack\s*beans?\b/i, "Black Beans", null, HEAD_LEGUME],
+    [/\bpinto\b/i, "Pinto Beans", null, HEAD_LEGUME],
+    [/\bnavy\b/i, "Navy Beans", null, HEAD_LEGUME],
+    [/\blima\b/i, "Lima Beans", null, HEAD_LEGUME],
+    [/\badzuki\b/i, "Adzuki Beans", null, HEAD_LEGUME],
+    [/\b(cowpeas?|black[- ]eyed)\b/i, "Black-Eyed Peas"],
+    [/\bbaked\b/i, "Baked Beans", null, HEAD_LEGUME],
+    [/\b(snap|green|string)\b/i, "Green Beans", null, /\bbeans?\b/i],
+    [/\btofu\b/i, "Tofu"],
+    [/\btempeh\b/i, "Tempeh"],
+    [/\bsoybeans?\b/i, "Soybeans"],
+    [/\blentils?\b/i, "Lentils", null, HEAD_LEGUME],
+    [/^dal\b|^dhal\b/i, "Dal"],
+
+    /* =====================================================================
+       FRUITS. Derived apple and banana products were claimed above; these are
+       the fruit itself.
+       ===================================================================== */
+    [/\bgranny\s*smith\b/i, "Green Apple"],
+    [/\bred\s*delicious\b/i, "Red Apple"],
     [/^apples?\b/i, "Apple"],
-    [/^bananas?\b/i, "Banana"],
+    [/^bananas?\b/i, "Banana", /\bpepper\b|\bmelon\b/i],
     [/^oranges?\b/i, "Orange"],
     [/^grapes?\b/i, "Grapes"],
+    [/^raisins\b/i, "Raisins"],
+    [/^mangos?\b|^mangoes\b/i, "Mango"],
+    [/^watermelon\b/i, "Watermelon"],
+    [/^papayas?\b/i, "Papaya"],
+    [/^pomegranates?\b/i, "Pomegranate"],
+    [/^pineapples?\b/i, "Pineapple"],
     [/^strawberr/i, "Strawberries"],
+    [/^blueberr/i, "Blueberries"],
+    [/^raspberr/i, "Raspberries"],
+    [/^blackberr/i, "Blackberries"],
+    [/^cranberr/i, "Cranberries"],
+    [/^pears?\b/i, "Pear"],
+    [/^peach(es)?\b/i, "Peach"],
+    [/^plums?\b/i, "Plum"],
+    [/^cherries\b|^cherry\b/i, "Cherries"],
+    [/^apricots?\b/i, "Apricot"],
+    [/^dates\b/i, "Dates"],
+    [/^figs\b/i, "Figs"],
+    [/^kiwi/i, "Kiwi"],
+    [/^lemons?\b/i, "Lemon"],
+    [/^limes?\b/i, "Lime"],
+    [/^avocados?\b/i, "Avocado"],
+    [/^guavas?\b/i, "Guava"],
+    [/^melons?\b/i, "Melon"],
+    [/^olives\b/i, "Olives"],
+
+    /* =====================================================================
+       VEGETABLES
+       ===================================================================== */
+    [/\bsweet\s*potato/i, "Sweet Potato"],
     [/^potatoes?\b/i, "Potato"],
     [/^tomatoes?\b/i, "Tomato"],
     [/^onions?\b/i, "Onion"],
+    [/^garlic\b/i, "Garlic"],
+    [/^ginger\b/i, "Ginger"],
     [/^carrots?\b/i, "Carrot"],
     [/^broccoli\b/i, "Broccoli"],
-    [/^spinach\b/i, "Spinach"]
+    [/^cauliflower\b/i, "Cauliflower"],
+    [/^spinach\b/i, "Spinach"],
+    [/^lettuce\b/i, "Lettuce"],
+    [/^kale\b/i, "Kale"],
+    [/^cucumbers?\b/i, "Cucumber"],
+    [/^celery\b/i, "Celery"],
+    [/^asparagus\b/i, "Asparagus"],
+    [/^corn\b|^sweet\s*corn\b/i, "Corn"],
+    [/^beets\b|^beetroot\b/i, "Beetroot"],
+    [/^radishes?\b/i, "Radish"],
+    [/^turnips?\b/i, "Turnip"],
+    [/^pumpkin\b/i, "Pumpkin"],
+    [/^zucchini\b/i, "Zucchini"],
+    [/\bbell\b/i, "Bell Pepper", null, /\bpeppers?\b/i],
+    [/\b(chili|chile|hot)\b/i, "Green Chilli", null, /\bpeppers?\b/i],
+    [/\b(eggplant|aubergine|brinjal)\b/i, "Eggplant"],
+    [/\b(okra|bhindi|ladyfinger)\b/i, "Okra"],
+    [/\bbottle\s*gourd\b|\blauki\b/i, "Bottle Gourd"],
+    [/\bbitter\s*gourd\b|\bkarela\b/i, "Bitter Gourd"],
+    [/^mushrooms?\b/i, "Mushrooms"],
+    [/^cabbage\b/i, "Cabbage"],
+    [/^peas\b|\bgreen\s*peas\b/i, "Green Peas"],
+    [/^squash\b/i, "Squash"],
+
+    /* =====================================================================
+       SNACKS, SWEETS & DRINKS
+       ===================================================================== */
+    [/\bpotato\s*chips\b/i, "Potato Chips"],
+    [/\btortilla\s*chips\b/i, "Tortilla Chips"],
+    [/\bpopcorn\b/i, "Popcorn"],
+    [/\bpretzels?\b/i, "Pretzels"],
+    [/\bcrackers?\b/i, "Crackers"],
+    [/\btrail\s*mix\b/i, "Trail Mix"],
+    [/\bdark\s*chocolate\b/i, "Dark Chocolate"],
+    [/\bmilk\s*chocolate\b/i, "Milk Chocolate"],
+    [/\bchocolate\b/i, "Chocolate", /\b(milk|drink|syrup|pudding|cake|beverage|soymilk)\b/i, /\bchocolate\b|\bcandies\b|\bcocoa\b/i],
+    [/\bbrownies?\b/i, "Brownie"],
+    [/\bdoughnuts?\b|\bdonuts?\b/i, "Doughnut"],
+    [/\bcookies?\b/i, "Cookies"],
+    [/^cakes?\b|\bcake\b/i, "Cake", /\bfish\b|\bcrab\b|\brice\b|\boat\b/i],
+    [/\bapple\b.*\bpie\b|\bpie\b.*\bapple\b/i, "Apple Pie"],
+    [/^pie\b/i, "Pie"],
+    [/\bhoney\b/i, "Honey", null, /\bhoney\b/i],
+    [/^sugars?\b/i, "Sugar"],
+    [/^salt\b/i, "Salt"],
+
+    [/\bgreen\s*tea\b/i, "Green Tea"],
+    /* Head-guarded rather than pattern-guarded: USDA files drinks as "Beverages, Water, Tap"
+       and "Beverages, Coffee, Brewed", where the generic head absorbs the second segment. An
+       unguarded /\bcoffee\b/ would rename coffee ice cream and coffee cake. */
+    [/\bwater\b/i, "Water", null, /^(beverages,\s*)?water$/i],
+    [/\btea\b/i, "Tea", /\bcake\b|\bbiscuit\b/i, /\btea\b/i],
+    [/\bcoffee\b/i, "Coffee", null, /\bcoffee\b/i],
+    [/\bcola\b/i, "Cola"],
+    [/\bbeer\b/i, "Beer"],
+    [/\bwine\b/i, "Wine"],
+    [/\benergy\s*drink\b/i, "Energy Drink"]
+
+    /* No "Dried Apple" or "Dried Banana" rule. Dried IS a preparation state, and the state
+       engine already renders "Apples, Dried, Sulfured" as Apple (Dried) with its own key and
+       its own row. A canonical name that spells out a state is the defect that made
+       "Chicken Breast (Cooked)" appear twice; there is one mechanism for state and this is
+       not it. Banana Chips is a rule because a fried chip is not a dried banana. */
   ];
+
+  /* Memoised on the raw name. Grouping asks for the canonical name three times per food
+     (key, label, base), and a full-catalogue pass is 7,968 foods against ~200 rules — without
+     this that is upward of four million regex tests for one render. Names are stable and the
+     rules are constant, so the answer never changes for a given string. */
+  var _canonCache = Object.create(null);
 
   /** @returns {string|null} the canonical name for a food, or null if no rule claims it. */
   function canonicalFor(food) {
     var n = String((food && food.name) || "");
     if (!n) return null;
+    if (n in _canonCache) return _canonCache[n];
+
+    var result = null;
     var subject = subjectOf(n);
-    if (!subject) return null;
-    var head = headOf(subject);
-    for (var i = 0; i < CANONICAL_RULES.length; i++) {
-      var r = CANONICAL_RULES[i];
-      if (!r[0].test(subject)) continue;
-      if (r[2] && r[2].test(subject)) continue;      // notIf
-      if (r[3] && !r[3].test(head)) continue;        // headMust
-      return r[1];
+    if (subject) {
+      var head = headOf(subject);
+      for (var i = 0; i < CANONICAL_RULES.length; i++) {
+        var r = CANONICAL_RULES[i];
+        if (!r[0].test(subject)) continue;
+        if (r[2] && r[2].test(subject)) continue;      // notIf
+        if (r[3] && !r[3].test(head)) continue;        // headMust
+        result = r[1];
+        break;
+      }
     }
-    return null;
+    _canonCache[n] = result;
+    return result;
   }
 
   /* An earlier version appended a calorie band to the key as a safety guard. It backfired:
