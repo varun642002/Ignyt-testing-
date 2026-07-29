@@ -4594,6 +4594,12 @@ const state = {
   // bodyPhotos here is just an in-memory metadata cache (no blobs), populated asynchronously
   // after boot (see the IgnytBodyPhotosDB.getAllMeta() call near the bottom of this file).
   bodyPhotos: [],
+  /* Progress Photos view state (transient). Sessions themselves are derived from the photos'
+     dates, so none of this is persisted — it is only what is on screen right now. */
+  bodyPhotoFilter: {},      // { year, month, weightMin, weightMax }
+  bodyOpenSession: null,    // expanded check-in in the timeline
+  bodyCompareA: null,       // earlier session id
+  bodyCompareB: null,       // later session id
   bodyPhotoCategory: "Front Relaxed",
   viewingBodyPhotoId: null,
   bodyView: null, // null = Log Weight page; 'calculators' = dedicated calculator view (transient, not persisted)
@@ -13672,95 +13678,190 @@ function renderBodyPhotoViewer(id, photoList){
    preview on the main Body tab (that stays a lightweight "recent 9 + Open Archive" widget);
    this is where the category filter, month/year grouping, milestones, and before/after
    comparison actually live, so the everyday Body tab isn't cluttered by them. */
+/* =========================================================
+   PROGRESS PHOTOS — a dated journal, not a pile of images
+
+   Photos are grouped into SESSIONS by the date they were taken (see js/body/photo-sessions.js
+   for why that grouping is derived rather than stored). Each session is one check-in: several
+   angles, one weight, one set of measurements, one note. That is how the photos were taken and
+   it is what makes two dates comparable.
+
+   Three views, all over sessions rather than loose photos:
+     Timeline  reverse-chronological check-ins, newest first
+     Compare   two sessions side by side with the change between them
+     Grid      every photo, for when you just want to find one image
+
+   The per-photo viewer, its rotate/delete/milestone actions and the underlying IndexedDB store
+   are untouched — this rearranges how photos are presented, and deliberately changes nothing
+   about how they are kept.
+========================================================= */
 function renderBodyScanArchive(){
-  const view = state.bodyScanView || "grid";
-  const catFilter = state.bodyScanCategoryFilter || "All";
-  const photos = state.bodyPhotos.filter(ph=> catFilter==="All" || ph.category===catFilter);
+  const S = window.IgnytPhotoSessions;
+  const view = state.bodyScanView || "timeline";
+  const all = S ? S.sessions(state.bodyPhotos) : [];
+  const f = state.bodyPhotoFilter || {};
+  const shown = S ? S.filter(all, f) : all;
+  const periods = S ? S.periods(all) : { years: [], months: [] };
 
-  const tabBtn = (id,label) => `<button class="cat-chip ${view===id?'active':''}" data-body-scan-view="${id}" style="flex:1;text-align:center;">${label}</button>`;
-  const catChips = `<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-bottom:10px;">
-    <button class="cat-chip ${catFilter==='All'?'active':''}" data-body-scan-category="All" style="flex:none;">All</button>
-    ${BODY_SCAN_CATEGORIES.map(c=>`<button class="cat-chip ${catFilter===c?'active':''}" data-body-scan-category="${c}" style="flex:none;white-space:nowrap;">${c}</button>`).join("")}
-  </div>`;
+  const dateLong = (d) => {
+    const dt = new Date(d + "T12:00:00");
+    if(isNaN(dt)) return d;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diff = Math.round((today - dt) / 86400000);
+    if(diff === 0) return "Today";
+    if(diff === 1) return "Yesterday";
+    return dt.toLocaleDateString(undefined, { day:"numeric", month:"long", year:"numeric" });
+  };
+  const timeShort = (ms) => ms ? new Date(ms).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}) : "";
+  const kg = (v) => v == null ? null : `${displayW(v)} ${wUnit()}`;
 
-  function gridView(){
-    if(!photos.length) return emptyState('body', 'No photos in this category yet — add one from the Body tab.');
-    return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-      ${photos.map(ph=>{
-        const url = photoThumbUrl(ph.id);
-        return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
-          ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : skeletonImage()}
-          <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:11px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:var(--radius-2xs);padding:2px 4px;text-align:center;">${ph.date}</span>
-          ${ph.milestone?`<span style="position:absolute;top:4px;right:4px;">${svg('star',14)}</span>`:''}
-        </button>`;
+  function thumb(ph, size){
+    const url = photoThumbUrl(ph.id);
+    return `<button class="bp-thumb" data-view-body-photo="${ph.id}" style="${size?`width:${size}px;`:""}"
+      aria-label="${escHtml(ph.category||"Photo")} on ${escHtml(ph.date)}">
+      ${url ? `<img src="${url}" alt="" loading="lazy" style="transform:rotate(${ph.rotation||0}deg);">` : skeletonImage()}
+      <span class="bp-thumb__cat">${escHtml(ph.category||"")}</span>
+    </button>`;
+  }
+
+  /* ---- filters ---- */
+  function filterBar(){
+    if(!all.length) return "";
+    const chip = (label, active, attrs) =>
+      `<button class="cat-chip ${active?'active':''}" ${attrs} style="flex:none;white-space:nowrap;">${escHtml(label)}</button>`;
+    const anyFilter = f.year || f.month || f.weightMin != null || f.weightMax != null;
+    return `<div class="bp-filters">
+      <div class="bp-filters__row">
+        ${chip("All", !f.year && !f.month, 'data-bp-period="all"')}
+        ${periods.years.map(y=>chip(y, f.year===y && !f.month, `data-bp-period="year" data-bp-value="${y}"`)).join("")}
+        ${periods.months.slice(0,6).map(m=>{
+          const lbl = new Date(m+"-01T12:00:00").toLocaleDateString(undefined,{month:"short",year:"2-digit"});
+          return chip(lbl, f.month===m, `data-bp-period="month" data-bp-value="${m}"`);
+        }).join("")}
+      </div>
+      <div class="bp-filters__row">
+        <label class="bp-range"><span>Weight</span>
+          <input type="number" inputmode="decimal" id="bp-wmin" placeholder="min" value="${f.weightMin ?? ""}">
+          <em>to</em>
+          <input type="number" inputmode="decimal" id="bp-wmax" placeholder="max" value="${f.weightMax ?? ""}">
+          <button data-bp-apply-weight="1">Apply</button>
+        </label>
+        ${anyFilter ? `<button class="bp-clear" data-bp-clear="1">Clear filters</button>` : ""}
+      </div>
+    </div>`;
+  }
+
+  /* ---- timeline ---- */
+  function timelineView(){
+    if(!all.length) return emptyState('body', 'No progress photos yet — add one from the Body tab to start your journal.');
+    if(!shown.length) return `<div class="bp-none">No check-ins match these filters.</div>`;
+
+    return `<div class="bp-timeline">
+      ${shown.map(sess=>{
+        const open = state.bodyOpenSession === sess.id;
+        const stats = [
+          kg(sess.weight) ? ["Weight", kg(sess.weight)] : null,
+          sess.bodyfat != null ? ["Body fat", sess.bodyfat + "%"] : null,
+          sess.waist != null ? ["Waist", sess.waist + " cm"] : null,
+          sess.chest != null ? ["Chest", sess.chest + " cm"] : null
+        ].filter(Boolean);
+
+        return `<div class="bp-sess${open?' is-open':''}">
+          <button class="bp-sess__head" data-bp-session="${escHtml(sess.id)}" aria-expanded="${open?'true':'false'}">
+            <span class="bp-sess__dot" aria-hidden="true"></span>
+            <span class="bp-sess__title">
+              <span class="bp-sess__date">${escHtml(dateLong(sess.date))}${sess.milestone?' <span class="bp-star">★</span>':''}</span>
+              <span class="bp-sess__meta">${sess.count} photo${sess.count===1?'':'s'}${
+                kg(sess.weight) ? ` · ${escHtml(kg(sess.weight))}` : ""}${
+                sess.takenAt ? ` · ${escHtml(timeShort(sess.takenAt))}` : ""}</span>
+              <span class="bp-sess__views">${sess.views.map(v=>escHtml(v)).join(" • ")}</span>
+            </span>
+            <span class="bp-sess__chev" aria-hidden="true">${open?'⌃':'⌄'}</span>
+          </button>
+
+          <div class="bp-sess__strip">${sess.photos.map(ph=>thumb(ph)).join("")}</div>
+
+          ${open ? `<div class="bp-sess__detail">
+            ${stats.length ? `<div class="bp-stats">${stats.map(([l,v])=>
+              `<div><span>${escHtml(l)}</span><b>${escHtml(v)}</b></div>`).join("")}</div>`
+              : `<div class="bp-none" style="padding:6px 0;">No measurements recorded for this check-in.</div>`}
+            ${sess.note ? `<div class="bp-note">${escHtml(sess.note)}</div>` : ""}
+            <div class="bp-sess__actions">
+              <button data-bp-edit="${escHtml(sess.id)}">Edit details</button>
+              <button data-bp-compare-with="${escHtml(sess.id)}">Compare</button>
+              <button class="is-danger" data-bp-delete-session="${escHtml(sess.id)}">Delete check-in</button>
+            </div>
+          </div>` : ""}
+        </div>`;
       }).join("")}
     </div>`;
   }
 
-  function timelineView(){
-    if(!photos.length) return emptyState('body', 'No photos in this category yet — add one from the Body tab.');
-    // Group by "Month Year" -- covers both "Monthly Gallery" and (via the section list itself)
-    // a de-facto yearly view, without a full interactive calendar grid.
-    const groups = {};
-    photos.forEach(ph=>{
-      const d = new Date(ph.date+"T12:00:00");
-      const key = isNaN(d.getTime()) ? "Undated" : d.toLocaleDateString('default',{month:'long',year:'numeric'});
-      (groups[key] = groups[key] || []).push(ph);
-    });
-    return Object.keys(groups).map(key=>`
-      <div class="rh-section-head" style="margin-top:14px;"><span>${escHtml(key)}</span></div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
-        ${groups[key].map(ph=>{
-          const url = photoThumbUrl(ph.id);
-          return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:var(--radius-xs-plus);overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
-            ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : ''}
-            ${ph.milestone?`<span style="position:absolute;top:2px;right:2px;">${svg('star',11)}</span>`:''}
-          </button>`;
-        }).join("")}
-      </div>`).join("");
+  /* ---- compare ---- */
+  function compareView(){
+    if(all.length < 2) return `<div class="bp-none">Two check-ins on different dates are needed to compare.</div>`;
+    const aId = state.bodyCompareA || (all[all.length-1] && all[all.length-1].id);
+    const bId = state.bodyCompareB || all[0].id;
+    const A = S.byId(state.bodyPhotos, aId), B = S.byId(state.bodyPhotos, bId);
+    const presets = S.comparePresets(all);
+
+    const picker = (side, selId) => `<select data-bp-compare="${side}" aria-label="${side==='a'?'Earlier':'Later'} check-in">
+      ${all.map(x=>`<option value="${escHtml(x.id)}" ${x.id===selId?'selected':''}>${escHtml(dateLong(x.date))}${
+        kg(x.weight)?` — ${escHtml(kg(x.weight))}`:""}</option>`).join("")}
+    </select>`;
+
+    const d = S.delta(A, B);
+    const chip = (label, val, unit, goodDown) => {
+      if(val == null) return "";
+      const cls = val === 0 ? "" : (goodDown ? (val < 0 ? "is-good" : "is-up") : (val > 0 ? "is-good" : "is-up"));
+      return `<span class="bp-delta ${cls}">${label} ${val>0?"+":""}${val}${unit}</span>`;
+    };
+
+    /* Side by side, not a swipe slider. The brief asks to see both with their weights, and two
+       photos of the same person from the same angle are easier to read side by side than
+       revealed through a wipe — the wipe is a party trick that hides half of each image. */
+    const column = (sess, tag) => {
+      if(!sess) return `<div class="bp-col"><div class="bp-none">No check-in</div></div>`;
+      const lead = sess.photos[0];
+      return `<div class="bp-col">
+        <div class="bp-col__tag">${tag}</div>
+        ${lead ? thumb(lead) : `<div class="bp-none">No photo</div>`}
+        <div class="bp-col__date">${escHtml(dateLong(sess.date))}</div>
+        <div class="bp-col__w">${kg(sess.weight) ? escHtml(kg(sess.weight)) : "—"}</div>
+      </div>`;
+    };
+
+    return `
+      ${presets.length ? `<div class="bp-presets">
+        ${presets.map(p=>`<button class="cat-chip" data-bp-preset="${escHtml(p.other.id)}" data-bp-preset-b="${escHtml(p.latest.id)}">${escHtml(p.label)}</button>`).join("")}
+      </div>` : ""}
+      <div class="bp-pickers">${picker("a", aId)}<span>vs</span>${picker("b", bId)}</div>
+      <div class="bp-compare">${column(A,"Before")}${column(B,"After")}</div>
+      ${d.days != null ? `<div class="bp-deltas">
+        <span class="bp-delta">${Math.abs(d.days)} days apart</span>
+        ${chip("Weight", d.weight, " " + wUnit(), true)}
+        ${chip("Body fat", d.bodyfat, "%", true)}
+        ${chip("Waist", d.waist, " cm", true)}
+        ${chip("Chest", d.chest, " cm", false)}
+      </div>` : ""}`;
   }
 
-  function compareView(){
-    if(photos.length<2) return `<div class="wk-empty">Need at least 2 photos in this category to compare.</div>`;
-    const a = photos.find(p2=>p2.id===state.bodyCompareA) || photos[photos.length-1];
-    const b = photos.find(p2=>p2.id===state.bodyCompareB) || photos[0];
-    const urlA = photoFullUrl(a.id), urlB = photoFullUrl(b.id);
-    const mode = state.bodyCompareMode || "slider";
-    const pct = state.bodyCompareSliderPct!=null ? state.bodyCompareSliderPct : 50;
-    const picker = (label, sel, val) => `<div style="flex:1;"><label class="pi-label">${label}</label>
-      <select class="pi-input" data-body-compare-select="${sel}">
-        ${photos.map(ph=>`<option value="${ph.id}" ${ph.id===val?'selected':''}>${ph.date}</option>`).join("")}
-      </select></div>`;
-    return `
-      <div style="display:flex;gap:8px;margin-bottom:10px;">${picker("Before","A",a.id)}${picker("After","B",b.id)}</div>
-      <div style="display:flex;gap:6px;margin-bottom:10px;">
-        <button class="cat-chip ${mode==='slider'?'active':''}" data-body-compare-mode="slider" style="flex:1;text-align:center;">Photo Slider</button>
-        <button class="cat-chip ${mode==='sideBySide'?'active':''}" data-body-compare-mode="sideBySide" style="flex:1;text-align:center;">Side by Side</button>
-      </div>
-      ${mode==="sideBySide" ? `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div style="aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;background:#000;">${urlA?`<img src="${urlA}" style="width:100%;height:100%;object-fit:cover;transform:rotate(${a.rotation||0}deg);">`:''}</div>
-          <div style="aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;background:#000;">${urlB?`<img src="${urlB}" style="width:100%;height:100%;object-fit:cover;transform:rotate(${b.rotation||0}deg);">`:''}</div>
-        </div>` : `
-        <div id="body-compare-slider" style="position:relative;width:100%;aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;background:#000;user-select:none;">
-          ${urlB?`<img src="${urlB}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:rotate(${b.rotation||0}deg);">`:''}
-          <div style="position:absolute;inset:0;width:${pct}%;overflow:hidden;">
-            ${urlA?`<img src="${urlA}" style="width:${pct>0?(100/(pct/100)):100}%;max-width:none;height:100%;object-fit:cover;transform:rotate(${a.rotation||0}deg);">`:''}
-          </div>
-          <div style="position:absolute;top:0;bottom:0;left:${pct}%;width:2px;background:#fff;"></div>
-          <input type="range" min="0" max="100" value="${pct}" data-body-compare-slider style="position:absolute;left:0;right:0;bottom:8px;width:92%;margin:0 4%;">
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--rh-muted);margin-top:4px;"><span>Before · ${a.date}</span><span>After · ${b.date}</span></div>`}
-    `;
+  /* ---- grid ---- */
+  function gridView(){
+    const flat = shown.reduce((a,x)=>a.concat(x.photos), []);
+    if(!flat.length) return `<div class="bp-none">No photos match these filters.</div>`;
+    return `<div class="bp-grid">${flat.map(ph=>thumb(ph)).join("")}</div>`;
   }
+
+  const tabBtn = (id,label) => `<button class="cat-chip ${view===id?'active':''}" data-body-scan-view="${id}" style="flex:1;text-align:center;">${label}</button>`;
 
   return `<div class="pg-light">
     <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:6px;" data-action="close-body-scan-archive">← Back</button>
-    <div style="font-size:22px;font-weight:800;">Body Scan Archive</div>
-    <div style="font-size:12px;color:var(--rh-muted);margin-bottom:14px;">${state.bodyPhotos.length} photo${state.bodyPhotos.length!==1?'s':''} stored on this device.</div>
-    <div style="display:flex;gap:4px;margin-bottom:12px;">${tabBtn('grid','Grid')}${tabBtn('timeline','Timeline')}${tabBtn('compare','Compare')}</div>
-    ${view!=="compare" ? catChips : ''}
-    <div class="pg-card">${view==="grid"?gridView():view==="timeline"?timelineView():compareView()}</div>
+    <div style="font-size:22px;font-weight:800;">Progress Photos</div>
+    <div style="font-size:12px;color:var(--rh-muted);margin-bottom:14px;">${all.length} check-in${all.length!==1?'s':''} · ${state.bodyPhotos.length} photo${state.bodyPhotos.length!==1?'s':''} on this device.</div>
+    <div style="display:flex;gap:4px;margin-bottom:12px;">${tabBtn('timeline','Timeline')}${tabBtn('compare','Compare')}${tabBtn('grid','Grid')}</div>
+    ${view!=="compare" ? filterBar() : ""}
+    <div class="pg-card">${view==="timeline"?timelineView():view==="compare"?compareView():gridView()}</div>
     ${state.viewingBodyPhotoId!=null ? renderBodyPhotoViewer(state.viewingBodyPhotoId, state.bodyPhotos) : ""}
   </div>`;
 }
@@ -19328,6 +19429,131 @@ function attachHandlers(){
   if(openArchiveBtn) openArchiveBtn.addEventListener("click", ()=>{ state.bodyView = "photos"; render(); });
   const closeArchiveBtn = document.querySelector('[data-action="close-body-scan-archive"]');
   if(closeArchiveBtn) closeArchiveBtn.addEventListener("click", ()=>{ state.bodyView = null; render(); });
+  /* ---- Progress Photos: sessions, filters, compare ------------------------------- */
+  const bpUI = patch => { state.bodyPhotoFilter = Object.assign({}, state.bodyPhotoFilter, patch); };
+
+  document.querySelectorAll("[data-bp-period]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const kind = el.dataset.bpPeriod, val = el.dataset.bpValue;
+      // Year and month are mutually exclusive: picking a month implies its year, and holding
+      // both would let the two disagree.
+      if(kind === "all") bpUI({ year:null, month:null });
+      else if(kind === "year") bpUI({ year: state.bodyPhotoFilter.year === val ? null : val, month:null });
+      else if(kind === "month") bpUI({ month: state.bodyPhotoFilter.month === val ? null : val, year:null });
+      render();
+    });
+  });
+
+  const bpApplyW = document.querySelector("[data-bp-apply-weight]");
+  if(bpApplyW) bpApplyW.addEventListener("click", ()=>{
+    const min = document.getElementById("bp-wmin"), max = document.getElementById("bp-wmax");
+    const num = el => { const v = el && el.value.trim(); return v === "" || v == null ? null : Number(v); };
+    const lo = num(min), hi = num(max);
+    if(lo != null && hi != null && lo > hi){
+      showToast("The minimum weight is above the maximum.", "error", render);
+      return;
+    }
+    bpUI({ weightMin: lo, weightMax: hi });
+    render();
+  });
+
+  const bpClear = document.querySelector("[data-bp-clear]");
+  if(bpClear) bpClear.addEventListener("click", ()=>{ state.bodyPhotoFilter = {}; render(); });
+
+  document.querySelectorAll("[data-bp-session]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.bpSession;
+      state.bodyOpenSession = state.bodyOpenSession === id ? null : id;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-bp-compare]").forEach(el=>{
+    el.addEventListener("change", ()=>{
+      if(el.dataset.bpCompare === "a") state.bodyCompareA = el.value;
+      else state.bodyCompareB = el.value;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-bp-preset]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.bodyCompareA = el.dataset.bpPreset;
+      state.bodyCompareB = el.dataset.bpPresetB;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-bp-compare-with]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      // Compare this check-in against the most recent one, which is the comparison people
+      // actually want from a row in the timeline.
+      const S = window.IgnytPhotoSessions;
+      const list = S ? S.sessions(state.bodyPhotos) : [];
+      const me = el.dataset.bpCompareWith;
+      const latest = list[0] && list[0].id;
+      state.bodyCompareA = me;
+      state.bodyCompareB = (latest && latest !== me) ? latest : me;
+      state.bodyScanView = "compare";
+      render();
+    });
+  });
+
+  /* Editing a check-in writes the measurement to EVERY photo in it. The fields live per photo
+     in the existing schema, but they describe the person on that day, not one camera angle —
+     so the session behaves as one record and a later read cannot pick up a stale value from
+     whichever photo happened to be first. */
+  document.querySelectorAll("[data-bp-edit]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const S = window.IgnytPhotoSessions;
+      const sess = S && S.byId(state.bodyPhotos, el.dataset.bpEdit);
+      if(!sess || !window.IgnytBodyPhotosDB) return;
+      const current = [sess.weight, sess.bodyfat, sess.waist, sess.chest]
+        .map(v=>v == null ? "" : v).join(", ");
+      const val = await confirmDialog(
+        "Weight, body fat %, waist cm, chest cm — comma separated. Leave any blank to clear it.",
+        render,
+        { title:"Edit check-in", confirmLabel:"Save", input:true, inputValue: current,
+          inputPlaceholder:"92, 18, 84, 104" });
+      if(!val){ render(); return; }
+      const parts = String(val).split(",").map(x=>x.trim());
+      const numOrNull = x => x === "" || x == null || isNaN(Number(x)) ? null : Number(x);
+      const patch = { weight:numOrNull(parts[0]), bodyfat:numOrNull(parts[1]),
+                      waist:numOrNull(parts[2]), chest:numOrNull(parts[3]) };
+      try{
+        await Promise.all(sess.photos.map(ph=>IgnytBodyPhotosDB.updatePhoto(ph.id, patch)));
+        state.bodyPhotos = await IgnytBodyPhotosDB.getAllMeta();
+        showToast("Check-in updated.", "success", render);
+      }catch(e){
+        console.warn("[photos] could not update session:", e);
+        showToast("Could not save the changes.", "error", render);
+      }
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-bp-delete-session]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const S = window.IgnytPhotoSessions;
+      const sess = S && S.byId(state.bodyPhotos, el.dataset.bpDeleteSession);
+      if(!sess || !window.IgnytBodyPhotosDB) return;
+      const ok = await confirmDialog(
+        `Delete this check-in and its ${sess.count} photo${sess.count===1?'':'s'}? This cannot be undone.`,
+        render, { title:"Delete check-in", confirmLabel:"Delete", danger:true });
+      if(!ok){ render(); return; }
+      try{
+        await Promise.all(sess.photos.map(ph=>IgnytBodyPhotosDB.deletePhoto(ph.id)));
+        state.bodyPhotos = await IgnytBodyPhotosDB.getAllMeta();
+        state.bodyOpenSession = null;
+        showToast("Check-in deleted.", "success", render);
+      }catch(e){
+        console.warn("[photos] could not delete session:", e);
+        showToast("Could not delete the check-in.", "error", render);
+      }
+      render();
+    });
+  });
+
   document.querySelectorAll("[data-body-scan-view]").forEach(el=>{
     el.addEventListener("click", ()=>{ state.bodyScanView = el.dataset.bodyScanView; render(); });
   });

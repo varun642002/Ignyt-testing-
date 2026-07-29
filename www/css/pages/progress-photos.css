@@ -1,0 +1,147 @@
+/* =========================================================
+   PROGRESS PHOTOS — the session timeline
+
+   Scoped under .pg-light, which already carries the --rh-* palette, so nothing here needs its
+   own tokens. (The Diet Plan and Fasting screens had to be added to that scope explicitly —
+   see tokens.css — because they use their own wrappers.)
+========================================================= */
+
+/* ---- filters ---- */
+.bp-filters { margin-bottom: 12px; }
+.bp-filters__row {
+  display: flex; align-items: center; gap: 6px;
+  overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch;
+}
+.bp-filters__row::-webkit-scrollbar { display: none; }
+.bp-range {
+  display: flex; align-items: center; gap: 6px; flex: none;
+  font-size: 12px; color: var(--rh-muted); font-weight: 700;
+}
+.bp-range input {
+  width: 62px; padding: 6px 8px; box-sizing: border-box;
+  border: 1px solid var(--rh-border); border-radius: 8px;
+  background: var(--rh-card); color: var(--rh-text);
+  font: inherit; font-size: 12px; outline: none;
+}
+.bp-range input:focus { border-color: var(--rh-blue); }
+.bp-range em { font-style: normal; }
+.bp-range button, .bp-clear {
+  padding: 6px 10px; border: 1px solid var(--rh-border); border-radius: 999px;
+  background: transparent; color: var(--rh-blue);
+  font: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer; flex: none;
+}
+.bp-clear { color: var(--rh-muted); margin-left: auto; }
+
+.bp-none { font-size: 12.5px; color: var(--rh-muted); padding: 14px 0; line-height: 1.5; }
+
+/* ---- thumbnails ---- */
+.bp-thumb {
+  position: relative; flex: none;
+  width: 78px; aspect-ratio: 3/4;
+  border: 0; padding: 0; border-radius: 10px; overflow: hidden;
+  background: var(--rh-border); cursor: pointer;
+}
+.bp-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bp-thumb__cat {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 3px 4px; background: linear-gradient(to top, rgba(0,0,0,.72), transparent);
+  color: #fff; font-size: 9px; font-weight: 700; line-height: 1.2;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ---- timeline ----
+   A rail down the left with a node per check-in, so the gaps between dates are visible as
+   distance rather than only readable as text. */
+.bp-timeline { position: relative; }
+.bp-sess { position: relative; padding-left: 20px; padding-bottom: 16px; }
+.bp-sess::before {
+  content: ""; position: absolute; left: 5px; top: 16px; bottom: 0;
+  width: 2px; background: var(--rh-border);
+}
+.bp-sess:last-child::before { display: none; }
+.bp-sess__dot {
+  position: absolute; left: -20px; top: 4px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--rh-blue); box-shadow: 0 0 0 3px var(--rh-card);
+}
+.bp-sess.is-open .bp-sess__dot { background: var(--rh-green); }
+
+.bp-sess__head {
+  display: flex; align-items: flex-start; gap: 8px; width: 100%;
+  padding: 0 0 8px; border: 0; background: none;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.bp-sess__title { flex: 1; min-width: 0; }
+.bp-sess__date { display: block; font-size: 14.5px; font-weight: 800; }
+.bp-star { color: #F5BB45; }
+.bp-sess__meta { display: block; font-size: 12px; color: var(--rh-muted); margin-top: 1px; }
+.bp-sess__views {
+  display: block; font-size: 11px; color: var(--rh-muted); opacity: .8; margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bp-sess__chev { flex: none; color: var(--rh-muted); font-size: 13px; }
+
+.bp-sess__strip {
+  display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.bp-sess__strip::-webkit-scrollbar { display: none; }
+
+.bp-sess__detail { margin-top: 10px; }
+.bp-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px;
+}
+.bp-stats > div {
+  background: var(--rh-card); border: 1px solid var(--rh-border);
+  border-radius: 10px; padding: 8px 10px;
+}
+.bp-stats span { display: block; font-size: 10.5px; color: var(--rh-muted); font-weight: 700; }
+.bp-stats b { display: block; font-size: 14px; font-weight: 800; margin-top: 1px; font-variant-numeric: tabular-nums; }
+.bp-note {
+  margin-top: 8px; font-size: 12.5px; line-height: 1.5; color: var(--rh-muted);
+  padding-left: 9px; border-left: 2px solid var(--rh-border);
+}
+.bp-sess__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.bp-sess__actions button {
+  padding: 7px 11px; border: 1px solid var(--rh-border); border-radius: 999px;
+  background: transparent; color: var(--rh-text);
+  font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.bp-sess__actions button.is-danger { color: var(--rh-red); border-color: rgba(239,68,68,.35); }
+
+/* ---- compare ---- */
+.bp-presets { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; }
+.bp-presets::-webkit-scrollbar { display: none; }
+.bp-pickers { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.bp-pickers > span { flex: none; font-size: 12px; color: var(--rh-muted); font-weight: 700; }
+.bp-pickers select {
+  flex: 1; min-width: 0; padding: 8px 10px;
+  border: 1px solid var(--rh-border); border-radius: 10px;
+  background: var(--rh-card); color: var(--rh-text);
+  font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.bp-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bp-col { min-width: 0; text-align: center; }
+.bp-col .bp-thumb { width: 100%; }
+.bp-col__tag {
+  font-size: 10.5px; font-weight: 800; color: var(--rh-muted);
+  text-transform: uppercase; letter-spacing: .07em; margin-bottom: 5px;
+}
+.bp-col__date { font-size: 12px; font-weight: 700; margin-top: 6px; }
+.bp-col__w { font-size: 13.5px; font-weight: 800; color: var(--rh-blue); font-variant-numeric: tabular-nums; }
+
+.bp-deltas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.bp-delta {
+  padding: 5px 10px; border-radius: 999px;
+  background: var(--rh-border); color: var(--rh-text);
+  font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+/* Direction is coloured only where "better" is unambiguous — down for weight, body fat and
+   waist. Chest gets no colour, because whether a bigger chest is progress depends entirely
+   on the goal and the app should not decide that for anyone. */
+.bp-delta.is-good { background: rgba(16,185,129,.14); color: var(--rh-green); }
+.bp-delta.is-up { background: rgba(239,68,68,.12); color: var(--rh-red); }
+
+/* ---- grid ---- */
+.bp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.bp-grid .bp-thumb { width: 100%; }
