@@ -10998,13 +10998,12 @@ const ONBOARDING_STEP_RENDERERS = [
    and it appears with no code change. Nothing else needs touching.
 
    The icons are inline SVG because a strict CSP and an offline-first service worker both rule
-   out fetching brand marks from a CDN. Google's four-colour G and Facebook's f are drawn to
-   their published geometry rather than approximated with a letter in a coloured circle.
+   out fetching brand marks from a CDN. Google's four-colour G is drawn to its published
+   geometry rather than approximated with a letter in a coloured circle.
 ========================================================= */
 const AUTH_ICONS = {
   email: `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3.2" stroke="#3B82F6" stroke-width="1.7"/><path d="M3.4 6.8 12 12.9l8.6-6.1" stroke="#3B82F6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   google: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.26-2.09 3.56-5.17 3.56-8.87z"/><path fill="#34A853" d="M12 24c3.24 0 5.96-1.08 7.94-2.91l-3.87-3a7.2 7.2 0 0 1-10.75-3.78H1.32v3.09A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.32 14.31a7.19 7.19 0 0 1 0-4.6V6.62H1.32a12 12 0 0 0 0 10.78l4-3.09z"/><path fill="#EA4335" d="M12 4.77c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.18 15.24 0 12 0A12 12 0 0 0 1.32 6.62l4 3.09A7.15 7.15 0 0 1 12 4.77z"/></svg>`,
-  facebook: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#1877F2" d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.96h-1.51c-1.49 0-1.96.93-1.96 1.89v2.26h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z"/></svg>`,
   bolt: `<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M13.6 1.5 4.2 13.2c-.4.5-.05 1.25.6 1.25h4.9l-1.5 7.9c-.13.7.76 1.1 1.19.54l9.4-11.7c.4-.5.05-1.25-.6-1.25h-4.9l1.5-7.9c.13-.7-.76-1.1-1.19-.54z" fill="#3B82F6"/></svg>`
 };
 
@@ -11052,7 +11051,6 @@ function renderSignInScreen(){
         <div class="auth-social">
           <button class="auth-social__btn" data-auth="email">${AUTH_ICONS.email}<span>Email</span></button>
           <button class="auth-social__btn" data-auth="google">${AUTH_ICONS.google}<span>Google</span></button>
-          <button class="auth-social__btn" data-auth="facebook">${AUTH_ICONS.facebook}<span>Facebook</span></button>
         </div>
 
         <p class="auth-legal">
@@ -11060,9 +11058,9 @@ function renderSignInScreen(){
           <a href="legal/privacy-policy.html" data-auth="privacy">Privacy Policy</a>
           and <a href="legal/privacy-policy.html" data-auth="terms">Terms of Service</a>.
           <br>
-          <!-- Not in the reference, and not optional. Phone OTP and Facebook have no provider
-               wired up yet, so without this a new user whose only options fail is simply stuck
-               outside the app. A way through matters more than matching the mockup exactly. -->
+          <!-- Not in the reference, and not optional. Phone OTP has no provider wired up yet, so
+               without this a new user whose only working option is Google would be stuck
+               outside the app if they do not use it. A way through matters more than matching the mockup exactly. -->
           <button class="auth-legal__skip" data-auth="skip">Continue without signing in</button>
         </p>
       </div>
@@ -11098,8 +11096,8 @@ function bindSignInScreen(){
 }
 
 /* Every button routes through here so there is one place that decides what "signed in" means
-   when the backend lands. Today the phone/OTP and Facebook paths are not wired to a provider,
-   and they say so rather than failing silently or pretending to succeed. */
+   when the backend lands. Today the phone/OTP path is not wired to a provider and says
+   so rather than failing silently or pretending to succeed. */
 function signInAction(kind){
   const auth = window.IgnytAuth;
   if(kind === "google"){
@@ -11116,10 +11114,6 @@ function signInAction(kind){
   }
   if(kind === "otp"){
     showToast("Phone OTP needs a provider — not wired up yet.", "info", render);
-    return;
-  }
-  if(kind === "facebook"){
-    showToast("Facebook sign-in needs a provider — not wired up yet.", "info", render);
     return;
   }
   if(kind === "country"){
