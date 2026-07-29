@@ -65,6 +65,12 @@ class Settings(BaseSettings):
     # Pin a specific version here if you would rather have a fixed model and own the upgrades.
     gemini_model: str = Field(default="gemini-flash-latest", alias="GEMINI_MODEL")
     gemini_timeout_seconds: float = Field(default=20.0, alias="GEMINI_TIMEOUT_SECONDS")
+    # How many nutrition estimates may be in flight at once. A plate of seven dishes was
+    # costing 43 s of wall clock because each estimate waited for the one before it; the calls
+    # are independent, so they should not. Bounded rather than unlimited: a big plate would
+    # otherwise open a dozen simultaneous connections and earn a 429, turning a slow scan into
+    # a failed one. Five is comfortably inside free-tier per-minute limits.
+    ai_estimate_concurrency: int = Field(default=5, alias="AI_ESTIMATE_CONCURRENCY")
     # Premium allowance. Free users get none, per the brief; the counter resets on UTC date.
     ai_scan_daily_limit: int = Field(default=15, alias="AI_SCAN_DAILY_LIMIT")
     # Hard ceiling on an uploaded frame. The client compresses first; this is the backstop

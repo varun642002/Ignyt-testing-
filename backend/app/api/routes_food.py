@@ -15,6 +15,8 @@ someone upload a photo we are going to reject.
 """
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -113,7 +115,25 @@ async def scan_food(
 
     already_local = {food_matching.search_key(n) for n in matched_local.split("|") if n.strip()}
 
-    out: list[RecognisedFood] = []
+    # THREE PHASES, AND THE SPLIT IS NOT ARBITRARY.
+    #
+    # This was one sequential loop, and a seven-dish thali took 43 s of wall clock: each
+    # nutrition estimate waited for the one before it even though none of them depend on each
+    # other. The fix is to run the network calls together — but only those.
+    #
+    # Phase 1 (sequential) resolves what the DB can answer. It has to stay sequential because a
+    # SQLAlchemy AsyncSession is NOT safe for concurrent use; firing these off with gather()
+    # corrupts the session rather than speeding anything up, and it would fail intermittently,
+    # which is the worst way to fail.
+    #
+    # Phase 2 (concurrent) is the part that is actually slow and actually independent: one HTTP
+    # call per unmatched food, bounded by a semaphore.
+    #
+    # Phase 3 (sequential) reassembles in the ORIGINAL order. gather() preserves input order,
+    # but the results have to be woven back into the full list, and a plate whose items came
+    # back shuffled would be a strange thing to hand someone.
+
+    slots: list[dict] = []
     for item in identified["foods"]:
         name = str(item.get("name", "")).strip()
         grams = float(item.get("estimated_grams") or 0) or 100.0
@@ -128,44 +148,57 @@ async def scan_food(
 
         # The client already has this one; it will use its own record.
         if food_matching.search_key(name) in already_local:
-            out.append(RecognisedFood(**base, nutrition_source="none"))
+            slots.append({"base": base, "resolved": RecognisedFood(**base, nutrition_source="none")})
             continue
 
         hit = await food_matching.find_community_food(db, name)
         if hit is not None:
-            out.append(
-                RecognisedFood(
-                    **base,
-                    nutrition_source="community",
-                    nutrition_confidence=1.0,   # a stored, human-confirmed record
-                    nutrition=Nutrition(
-                        calories=hit.calories, protein=hit.protein, carbs=hit.carbs,
-                        fat=hit.fat, fibre=hit.fibre, sugar=hit.sugar, sodium=hit.sodium,
-                    ),
-                )
-            )
+            slots.append({"base": base, "resolved": RecognisedFood(
+                **base,
+                nutrition_source="community",
+                nutrition_confidence=1.0,   # a stored, human-confirmed record
+                nutrition=Nutrition(
+                    calories=hit.calories, protein=hit.protein, carbs=hit.carbs,
+                    fat=hit.fat, fibre=hit.fibre, sugar=hit.sugar, sodium=hit.sodium,
+                ),
+            )})
             continue
 
-        # Catalogue miss -> ask for an estimate. A failure here degrades to "identified but
-        # no numbers" rather than failing the whole scan: the other foods on the plate are
-        # still useful, and the user can fill this one in by hand.
-        try:
-            est = await gemini_vision.estimate_nutrition(settings, name, ingredients)
-            out.append(
-                RecognisedFood(
-                    **base,
-                    nutrition_source="ai_estimate",
-                    nutrition_confidence=max(0.0, min(1.0, float(est.get("confidence") or 0))),
-                    nutrition=Nutrition(
-                        calories=float(est.get("calories") or 0),
-                        protein=est.get("protein"), carbs=est.get("carbs"), fat=est.get("fat"),
-                        fibre=est.get("fibre"), sugar=est.get("sugar"),
-                    ),
+        slots.append({"base": base, "resolved": None, "name": name, "ingredients": ingredients})
+
+    pending = [s for s in slots if s["resolved"] is None]
+    if pending:
+        sem = asyncio.Semaphore(max(1, settings.ai_estimate_concurrency))
+
+        async def estimate(slot: dict):
+            async with sem:
+                return await gemini_vision.estimate_nutrition(
+                    settings, slot["name"], slot["ingredients"]
                 )
+
+        # return_exceptions: one food failing must not take the plate with it. The others are
+        # still useful and the user can type the missing one in by hand.
+        results = await asyncio.gather(*(estimate(s) for s in pending), return_exceptions=True)
+
+        for slot, est in zip(pending, results):
+            if isinstance(est, Exception):
+                if not isinstance(est, gemini_vision.AiUnavailable):
+                    raise est          # a real bug here should not be swallowed as "no data"
+                log.warning("nutrition_estimate_failed", extra={"food": slot["name"]})
+                slot["resolved"] = RecognisedFood(**slot["base"], nutrition_source="none")
+                continue
+            slot["resolved"] = RecognisedFood(
+                **slot["base"],
+                nutrition_source="ai_estimate",
+                nutrition_confidence=max(0.0, min(1.0, float(est.get("confidence") or 0))),
+                nutrition=Nutrition(
+                    calories=float(est.get("calories") or 0),
+                    protein=est.get("protein"), carbs=est.get("carbs"), fat=est.get("fat"),
+                    fibre=est.get("fibre"), sugar=est.get("sugar"),
+                ),
             )
-        except gemini_vision.AiUnavailable:
-            log.warning("nutrition_estimate_failed", extra={"food": name})
-            out.append(RecognisedFood(**base, nutrition_source="none"))
+
+    out: list[RecognisedFood] = [s["resolved"] for s in slots]
 
     return ScanResponse(
         foods=out,

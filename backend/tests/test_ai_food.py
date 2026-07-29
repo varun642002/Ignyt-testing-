@@ -226,3 +226,77 @@ async def test_missing_key_reports_not_configured_rather_than_crashing(client, m
     assert scan.status_code == 503
     assert scan.json()["error"]["code"] == "ai_not_configured"
     get_settings.cache_clear()
+
+
+# --- concurrency -----------------------------------------------------------------------
+
+async def test_nutrition_estimates_run_concurrently(client, monkeypatch):
+    """Four foods, each estimate sleeping 200 ms.
+
+    Sequential that is >=800 ms; concurrent it is ~200. Asserting on elapsed time rather than
+    on the code's shape, because "did we actually overlap" is the only thing that matters and
+    a refactor could make it sequential again without touching the call site.
+    """
+    import asyncio
+    import time
+
+    from app.services import gemini_vision
+
+    async def identify(settings, image_bytes, mime_type):
+        return {"foods": [{"name": f"Test Food {i}", "estimated_grams": 100, "confidence": 0.9}
+                          for i in range(4)],
+                "meal_type": "Lunch"}
+
+    async def slow_estimate(settings, name, ingredients=None):
+        await asyncio.sleep(0.2)
+        return {"calories": 100, "protein": 5, "carbs": 10, "fat": 3, "confidence": 0.7}
+
+    monkeypatch.setattr(gemini_vision, "identify_foods", identify)
+    monkeypatch.setattr(gemini_vision, "estimate_nutrition", slow_estimate)
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key-not-real")
+    from app.config import get_settings
+    get_settings.cache_clear()
+
+    await _premium(client, "concurrent-user")
+    t0 = time.perf_counter()
+    r = await client.post("/v1/food/scan", headers={"X-Ignyt-Uid": "concurrent-user"},
+                          files={"image": ("m.jpg", JPEG, "image/jpeg")})
+    elapsed = time.perf_counter() - t0
+
+    assert r.status_code == 200, r.text
+    assert len(r.json()["foods"]) == 4
+    assert elapsed < 0.6, f"estimates look sequential: {elapsed:.2f}s for 4 x 200ms"
+    get_settings.cache_clear()
+
+
+async def test_one_failed_estimate_does_not_sink_the_plate(client, monkeypatch):
+    """The second food's estimate blows up; the other three must still come back with data."""
+    from app.services import gemini_vision
+
+    async def identify(settings, image_bytes, mime_type):
+        return {"foods": [{"name": f"Food {i}", "estimated_grams": 100, "confidence": 0.9}
+                          for i in range(4)],
+                "meal_type": "Lunch"}
+
+    async def flaky(settings, name, ingredients=None):
+        if name == "Food 1":
+            raise gemini_vision.AiUnavailable()
+        return {"calories": 120, "protein": 4, "carbs": 12, "fat": 4, "confidence": 0.8}
+
+    monkeypatch.setattr(gemini_vision, "identify_foods", identify)
+    monkeypatch.setattr(gemini_vision, "estimate_nutrition", flaky)
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key-not-real")
+    from app.config import get_settings
+    get_settings.cache_clear()
+
+    await _premium(client, "flaky-user")
+    r = await client.post("/v1/food/scan", headers={"X-Ignyt-Uid": "flaky-user"},
+                          files={"image": ("m.jpg", JPEG, "image/jpeg")})
+    assert r.status_code == 200
+    foods = r.json()["foods"]
+    # Order must survive the gather, and only the failing one loses its numbers.
+    assert [f["name"] for f in foods] == ["Food 0", "Food 1", "Food 2", "Food 3"]
+    assert foods[1]["nutrition_source"] == "none"
+    assert foods[1]["nutrition"] is None
+    assert all(foods[i]["nutrition"]["calories"] == 120 for i in (0, 2, 3))
+    get_settings.cache_clear()
