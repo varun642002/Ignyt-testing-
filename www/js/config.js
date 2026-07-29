@@ -4,11 +4,15 @@
    Where the app finds its backend, and how it identifies itself during development.
    Loaded before every other script so anything can read it.
 
-   WHY THIS FILE HAS TO EXIST
-   ai-scan.js read `window.IGNYT_API_BASE` and nothing ever set it, so the base was "" and
-   every request went to the WebView's own origin — `https://localhost` inside Capacitor.
-   That origin serves the bundled app, not the API, so /v1/food/scan 404'd and the feature
-   could not work on a device however correct the backend was.
+   WHY THIS FILE EXISTS
+   Any client that talks to the IGNYT backend needs to know where it is, and the WebView's own
+   origin (`https://localhost` inside Capacitor) serves the bundled app, not the API. Without
+   this the base is "" and every request goes to the wrong place.
+
+   Nothing currently calls the backend from the app — the AI food routes were unmounted and
+   their client removed — so this is presently dormant. It is kept because the emulator/device
+   addressing it documents is the part that is easy to get wrong, and rediscovering 10.0.2.2
+   from scratch next time would be wasted effort.
 ========================================================= */
 (function () {
   "use strict";
@@ -39,8 +43,8 @@
   /* DEV IDENTITY, for AUTH_MODE=insecure-uid only.
 
      The backend refuses this header outright when ENVIRONMENT=production, so it cannot become
-     a production hole from this side. It is only ever sent when there is no Firebase token —
-     see authHeaders() in ai-scan.js, where the real token always takes precedence. */
+     a production hole from this side. A real Firebase token should always take precedence
+     over it in any client that uses both. */
   window.IGNYT_DEV_UID = stored("hx_dev_uid") || "varun-dev";
 
   /* Console helpers. Point the app at a different backend from devtools or `adb shell`

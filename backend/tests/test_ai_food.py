@@ -11,7 +11,18 @@ from __future__ import annotations
 
 import pytest
 
-pytestmark = pytest.mark.anyio
+from app.main import app
+
+# The AI food router is UNMOUNTED in app/main.py while AI is out of the product, so every
+# /v1/food/* path 404s and these would all fail for a reason that is not a regression. They are
+# SKIPPED rather than deleted, and the condition is the mount itself — restore the router and
+# this suite comes back automatically, with no one needing to remember it exists.
+_FOOD_MOUNTED = any(getattr(r, "path", "").startswith("/v1/food") for r in app.routes)
+
+pytestmark = [
+    pytest.mark.anyio,
+    pytest.mark.skipif(not _FOOD_MOUNTED, reason="AI food router is unmounted (see app/main.py)"),
+]
 
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 512          # valid JPEG magic
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 512

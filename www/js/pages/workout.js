@@ -62,77 +62,10 @@
     else if (sort === 'exercises') routines.sort((a, b) => b.exercises.length - a.exercises.length);
     // "recent" = existing stored order (newest-created/edited first) -- no change needed.
 
-    /* Today's recommendation, from the coach engine. Rendered before This Week because it is
-       the one thing on this screen that tells the user what to do NEXT rather than what they
-       have already done. Absent when the engine could not run — the tab must work without it. */
-    const coachCard = (() => {
-      const c = ctx.coach;
-      if (!c) return '';
-      const open = state.coachExpanded;
-      const rest = c.today.type === 'rest';
-
-      return `
-        <div class="rh-section-head">
-          <span>Today</span>
-          <a href="#" class="rh-view-all" data-action="coach-regenerate">Regenerate</a>
-        </div>
-        <div class="pg-card coach-card">
-          <div class="coach-card__head">
-            <div style="min-width:0;flex:1;">
-              <div class="coach-card__title">${escHtml(rest ? c.today.label : c.today.label)}</div>
-              <div class="coach-card__sub">
-                ${rest ? 'Recovery' : `${c.today.exercises.length} exercises · ${c.today.totalSets} sets · ~${c.today.estimatedMinutes} min`}
-              </div>
-            </div>
-            <span class="coach-badge coach-badge--${c.recovery.band}">
-              ${c.recovery.score}<span class="coach-badge__unit">/100</span>
-            </span>
-          </div>
-
-          ${rest ? `
-            <ul class="coach-list">${c.today.activities.map(a=>`<li>${escHtml(a)}</li>`).join('')}</ul>
-            <div class="coach-why">${escHtml(c.today.why)}</div>
-          ` : `
-            <div class="coach-ex">
-              ${c.today.exercises.map(e=>`
-                <div class="coach-ex__row">
-                  <span class="coach-ex__name">${escHtml(e.name)}</span>
-                  <span class="coach-ex__dose">${e.sets} × ${e.repRange[0]}-${e.repRange[1]}</span>
-                </div>`).join('')}
-            </div>
-            ${c.today.intensityNote ? `<div class="coach-note">${escHtml(c.today.intensityNote)}</div>` : ''}
-            <button class="wk-primary-btn coach-start" data-action="coach-start">Start this workout</button>
-          `}
-
-          <button class="coach-toggle" data-action="coach-toggle">
-            ${open ? 'Hide reasoning' : 'Why this?'} <span aria-hidden="true">${open ? '⌃' : '⌄'}</span>
-          </button>
-
-          ${open ? `
-            <div class="coach-detail">
-              ${c.explanation.map(p=>`<p>${escHtml(p)}</p>`).join('')}
-              ${c.today.deferred && c.today.deferred.length ? `
-                <p class="coach-detail__muted">Skipped today: ${c.today.deferred.map(d=>
-                  escHtml(d.muscle) + ' (' + d.readiness + '% recovered)').join(', ')}.</p>` : ''}
-              ${c.cardio ? `<p class="coach-detail__muted">Cardio: ${escHtml(c.cardio.style)} ×${c.cardio.sessionsPerWeek} — ${escHtml(c.cardio.detail)}.</p>` : ''}
-              <p class="coach-detail__muted">Confidence ${c.confidence}% (${escHtml(c.confidenceLabel)}) · generated in ${c.elapsedMs} ms.</p>
-            </div>` : ''}
-
-          ${c.insights && c.insights.length ? `
-            <div class="coach-insights">
-              ${c.insights.slice(0, open ? 6 : 2).map(i=>`
-                <div class="coach-insight coach-insight--${i.tone}">
-                  <b>${escHtml(i.title)}</b> ${escHtml(i.body)}
-                </div>`).join('')}
-            </div>` : ''}
-        </div>`;
-    })();
-
     return `
       <div class="wk-light">
         ${renderPRCelebration && state.lastSessionPRs && state.lastSessionPRs.length ? renderPRCelebration() : ''}
 
-        ${coachCard}
 
         <div class="rh-section-head"><span>This Week</span><a href="#" class="rh-view-all" data-nav="plan">Week ${week.week} of 8 ›</a></div>
         <div class="wk-stat-grid">

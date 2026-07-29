@@ -4603,10 +4603,6 @@ const state = {
   authFormMode: null, // transient — null|"signin"|"signup"|"forgot" when the email auth form is open in Settings
   authSeen: LS.get("hx_auth_seen", false), // the Sign In screen has been passed, by signing in or skipping
   authPhone: "",      // transient — the number being typed on the Sign In screen
-  /* AI scan overlay. Transient by design: a half-reviewed scan should not survive an app
-     restart, because the photo it came from does not either — restoring the numbers without
-     the picture would leave someone confirming macros they can no longer check. */
-  aiScan: null,       // { phase:"loading"|"error"|"review", message, retryable, foods[], meal }
   nativeNotifPermissionGranted: null, // transient — null=unknown yet, refreshed from IgnytNotify at boot
   plateCalcOpen: null, // element id string when plate calc popover open
   restDuration: LS.get("hx_rest_duration",90),
@@ -4667,7 +4663,6 @@ const state = {
   // Quick Add panel (transient). quickAddMeal is which meal one-tap items land in.
   quickAddOpen: false, quickAddMeal: null,
   // Whether the coach / recovery card detail is expanded (transient).
-  coachExpanded: false,
   // Manual food entry on the search route (transient).
   manualEntryOpen: false,
   // Which variant groups are expanded, keyed by group key (transient).
@@ -7810,15 +7805,6 @@ function foodSearchResultsHtml(meal){
         const combos = (state.savedMeals || []).slice(0, state.savedMealsAll ? 99 : 2);
         const yday = yesterdayEntries();
         return `
-          <!-- Promoted AI scan. The camera is the fastest way in when it works, so it gets a
-               banner rather than one tile among four. -->
-          <button class="sp-banner" data-ai-act="scan">
-            <span class="sp-banner__body">
-              <span class="sp-banner__title">Track with Images</span>
-              <span class="sp-banner__sub">You click. We scan and track!</span>
-            </span>
-            <span class="sp-banner__cam" aria-hidden="true">📷</span>
-          </button>
 
           ${yday.length ? `
             <button class="sp-row sp-row--action" data-copy-yesterday="1">
@@ -9090,7 +9076,6 @@ function renderApp(){
     ${renderTimerOverlay()}
     ${renderHoldTimerOverlay()}
     ${renderToast()}
-    ${renderAiScanOverlay()}
     ${renderConfirmDialog()}
     ${renderLegalViewer()}
     <nav class="bottom-nav ${isLightTab?'bottom-nav--home-light':''}">
@@ -13548,9 +13533,6 @@ function renderKeepingScroll(){
 function openFoodSearch(meal){
   // Captured here so returning from anywhere in the flow lands back on this exact offset.
   captureNutritionScroll();
-  // Ask the backend what this account may actually do, once per open. Async on purpose: the
-  // screen must not wait on a network call to render its search box.
-  refreshAiScanStatus();
   state.foodFlow = { screen:"search", meal: meal || mealForNow(), foodId:null, notes:"" };
   state.foodSearchQuery = "";
   state.foodSearchSelected = null;
@@ -13640,373 +13622,14 @@ function foodPageHeader(title, subtitle, trailing){
    always-visible button that fails on tap is worse than no button.
 ========================================================= */
 
-/* Cached so the row can render synchronously. Refreshed on open and after each scan. */
-let _aiScanStatus = null;
-
-function aiScanAvailable(){
-  return !!(window.IgnytAiScan && _aiScanStatus && _aiScanStatus.ai_configured);
-}
-
-function renderAiScanRow(){
-  if(!window.IgnytAiScan) return "";
-  const st = _aiScanStatus;
-
-  // Never configured on the server: no scan entry points at all, just manual paths.
-  const aiOff = st && !st.ai_configured;
-  const locked = st && st.ai_configured && !st.is_premium;
-  const remaining = st ? st.remaining : null;
-
-  const btn = (kind, icon, label, extra) =>
-    `<button class="ai-act" data-ai-act="${kind}" ${extra||''}>
-       <span class="ai-act__icon" aria-hidden="true">${icon}</span>
-       <span class="ai-act__label">${label}</span>
-     </button>`;
-
-  return `<div class="ai-scan-row">
-    <div class="ai-scan-row__grid">
-      ${aiOff ? "" : btn("scan", "📷", locked ? "AI Scan 🔒" : "AI Scan Food")}
-      ${aiOff ? "" : btn("gallery", "🖼", "Gallery")}
-      ${btn("barcode", "▤", "Barcode")}
-      ${btn("manual", "⌨", "Manual")}
-    </div>
-    ${st && st.ai_configured && st.is_premium ? `
-      <div class="ai-scan-row__quota">
-        <span>AI Scans Today</span>
-        <strong>${remaining} / ${st.daily_limit} Remaining</strong>
-      </div>` : ""}
-    ${locked ? `<div class="ai-scan-row__quota"><span>AI food scanning is a Premium feature</span></div>` : ""}
-  </div>`;
-}
 
 /* The overlay: one element covering loading, error and review. Kept as a single render so
    there is no chance of two of these being on screen at once. */
-function renderAiScanOverlay(){
-  const s = state.aiScan;
-  if(!s || !s.phase) return "";
-
-  if(s.phase === "loading"){
-    return `<div class="ai-sheet" role="dialog" aria-live="polite" aria-label="Analysing your meal">
-      <div class="ai-sheet__box ai-sheet__box--center">
-        <div class="ai-spinner" aria-hidden="true"></div>
-        <div class="ai-sheet__msg">${escHtml(s.message || "Analyzing your meal…")}</div>
-        <div class="ai-sheet__hint">This usually takes a few seconds.</div>
-      </div>
-    </div>`;
-  }
-
-  if(s.phase === "error"){
-    return `<div class="ai-sheet" role="dialog" aria-label="Scan failed">
-      <div class="ai-sheet__box ai-sheet__box--center">
-        <div style="font-size:40px;line-height:1;">😕</div>
-        <div class="ai-sheet__msg">${escHtml(s.message)}</div>
-        <div class="ai-sheet__actions">
-          ${s.retryable ? `<button class="btn btn-accent btn-block" data-ai-act="retry">Try again</button>` : ""}
-          <button class="btn btn-ghost btn-block" data-ai-act="manual">Enter manually</button>
-          <button class="btn btn-ghost btn-block" data-ai-act="close">Close</button>
-        </div>
-      </div>
-    </div>`;
-  }
-
-  // review
-  const foods = s.foods || [];
-  return `<div class="ai-sheet" role="dialog" aria-label="Review scanned foods">
-    <div class="ai-sheet__box">
-      <div class="ai-sheet__head">
-        <strong>${foods.length} item${foods.length===1?'':'s'} found</strong>
-        <button class="ai-sheet__x" data-ai-act="close" aria-label="Close">✕</button>
-      </div>
-      <div class="ai-sheet__meal">
-        ${IgnytAiScan.MEAL_TYPES.map(m=>
-          `<button class="ai-chip ${s.meal===m?'is-on':''}" data-ai-meal="${escHtml(m)}">${escHtml(m)}</button>`
-        ).join("")}
-      </div>
-      <div class="ai-sheet__scroll">
-        ${foods.map((f,i)=>renderAiFoodCard(f,i)).join("")}
-      </div>
-      <button class="btn btn-accent btn-block" data-ai-act="save-all">
-        Add ${foods.filter(f=>!f.skipped).length} to ${escHtml(s.meal)}
-      </button>
-    </div>
-  </div>`;
-}
-
-function renderAiFoodCard(f, i){
-  const grams = Math.round(f.grams);
-  const n = IgnytAiScan.scaleTo(f.nutrition, grams);
-  const src = f.nutrition_source;
-  const badge = f.edited ? ["Edited by you", "ok"]
-              : src === "local" ? ["Database", "ok"]
-              : src === "community" ? ["Community", "ok"]
-              : src === "ai_estimate" ? ["AI Estimated", "est"]
-              : ["No nutrition data", "none"];
-  const pct = (v) => Math.round((v||0)*100);
-
-  return `<div class="ai-food ${f.skipped?'is-skipped':''}">
-    <div class="ai-food__top">
-      <div style="flex:1;min-width:0;">
-        <div class="ai-food__name">${escHtml(f.name)}</div>
-        <div class="ai-food__meta">
-          <span class="ai-badge ai-badge--${badge[1]}">${badge[0]}</span>
-          <span>${pct(f.confidence)}% match</span>
-          ${f.nutrition_confidence!=null && src==="ai_estimate" ? `<span>· ${pct(f.nutrition_confidence)}% nutrition</span>` : ""}
-        </div>
-      </div>
-      <button class="ai-food__skip" data-ai-skip="${i}" aria-label="${f.skipped?'Include':'Remove'}">${f.skipped?'＋':'✕'}</button>
-    </div>
-
-    ${n ? `<div class="ai-food__macros">
-      <span><strong>${Math.round(n.calories)}</strong> kcal</span>
-      <span><strong>${n.protein==null?'—':n.protein}</strong> P</span>
-      <span><strong>${n.carbs==null?'—':n.carbs}</strong> C</span>
-      <span><strong>${n.fat==null?'—':n.fat}</strong> F</span>
-      ${src==="ai_estimate" ? `<button class="ai-food__edit" data-ai-edit="${i}">${f.editing?'Done':'Edit'}</button>` : ""}
-    </div>` : `<div class="ai-food__macros">
-      <span style="color:var(--muted);">No nutrition found.</span>
-      <button class="ai-food__edit" data-ai-edit="${i}">${f.editing?'Done':'Add values'}</button>
-    </div>`}
-
-    ${f.editing ? `
-      <!-- Editing per 100 g, not per portion. The portion slider is right below and multiplies
-           whatever is entered here; letting someone type a portion figure while a slider also
-           scales it would give two controls fighting over the same number. -->
-      <div class="ai-edit">
-        <div class="ai-edit__hint">Values per 100 ${f.unit||'g'} — the portion below scales them.</div>
-        <div class="ai-edit__grid">
-          ${[["calories","kcal"],["protein","Protein"],["carbs","Carbs"],["fat","Fat"],["fibre","Fibre"],["sugar","Sugar"]]
-            .map(([k,label])=>`<label class="ai-edit__field">
-              <span>${label}</span>
-              <input type="number" inputmode="decimal" min="0" step="0.1"
-                data-ai-nut="${i}|${k}"
-                value="${(f.nutrition && f.nutrition[k]!=null) ? f.nutrition[k] : ''}"
-                placeholder="—">
-            </label>`).join("")}
-        </div>
-      </div>` : ""}
-
-    <div class="ai-food__portions">
-      ${IgnytAiScan.PORTIONS.map(p=>{
-        const g = Math.round(f.estimated_grams * p.mult);
-        return `<button class="ai-chip ${grams===g?'is-on':''}" data-ai-portion="${i}|${g}">${p.label}</button>`;
-      }).join("")}
-      <span class="ai-food__grams">${grams} g</span>
-    </div>
-    <input type="range" class="ai-range" min="10" max="${Math.max(600, Math.round(f.estimated_grams*3))}"
-      step="5" value="${grams}" data-ai-grams="${i}" aria-label="Portion in grams for ${escHtml(f.name)}">
-  </div>`;
-}
-
 /* ---- AI scan: actions ------------------------------------------------------------- */
 
 /** Fetch scan-status once per open. Failure is silent and non-blocking: the row simply does
  *  not offer AI, and the rest of the food screen is unaffected. */
-async function refreshAiScanStatus(){
-  if(!window.IgnytAiScan) return;
-  try{
-    _aiScanStatus = await IgnytAiScan.status(true);
-  }catch(e){
-    // Offline, signed out, or no backend. All mean the same thing here: no AI row.
-    _aiScanStatus = { ai_configured:false, is_premium:false, daily_limit:0, used_today:0, remaining:0 };
-  }
-  if(state.foodFlow && state.foodFlow.screen === "search") render();
-}
-
-async function startAiScan(source){
-  const meal = (state.foodFlow && state.foodFlow.meal) || mealForNow();
-
-  let file;
-  try{
-    file = await IgnytAiScan.pickImage(source);
-  }catch(e){ return; }
-  if(!file) return;                       // the user backed out of the picker
-
-  state.aiScan = { phase:"loading", message:IgnytAiScan.LOADING_STEPS[0], meal, source };
-  render();
-
-  try{
-    const res = await IgnytAiScan.scan(file, (msg)=>{
-      // Update the line in place. A full render here would restart the spinner animation on
-      // every tick, which reads as a stutter rather than progress.
-      if(state.aiScan && state.aiScan.phase === "loading"){
-        state.aiScan.message = msg;
-        const el = document.querySelector(".ai-sheet__msg");
-        if(el) el.textContent = msg;
-      }
-    });
-
-    _aiScanStatus = null;
-    refreshAiScanStatus();
-
-    state.aiScan = {
-      phase: "review",
-      meal: res.meal_type && IgnytAiScan.MEAL_TYPES.includes(res.meal_type) ? res.meal_type : meal,
-      foods: (res.foods||[]).map(f=>({
-        name: f.name,
-        estimated_grams: f.estimated_grams || 100,
-        grams: f.estimated_grams || 100,
-        confidence: f.confidence,
-        nutrition_confidence: f.nutrition_confidence,
-        nutrition_source: f.nutrition_source,
-        nutrition: f.nutrition || null,
-        foodId: f.foodId || null,
-        skipped: false
-      }))
-    };
-  }catch(err){
-    state.aiScan = {
-      phase: "error",
-      message: IgnytAiScan.messageFor(err),
-      retryable: IgnytAiScan.isRetryable(err),
-      meal, source
-    };
-  }
-  render();
-}
-
 /** Commit the reviewed foods to the log. */
-async function saveAiScanFoods(){
-  const s = state.aiScan;
-  if(!s || s.phase !== "review") return;
-  const keep = s.foods.filter(f=>!f.skipped);
-  if(!keep.length){ state.aiScan = null; render(); return; }
-
-  let added = 0;
-  for(const f of keep){
-    const n = IgnytAiScan.scaleTo(f.nutrition, f.grams) || {};
-    state.foodLog.unshift({
-      id: nextId(),
-      date: nutritionDateStr(),
-      name: f.name,
-      meal: s.meal,
-      grams: Math.round(f.grams),
-      quantity: Math.round(f.grams),
-      servingUnit: "g",
-      calories: Math.round(n.calories||0),
-      protein: Number(n.protein||0),
-      carbs: Number(n.carbs||0),
-      fat: Number(n.fat||0),
-      fibre: Number(n.fibre||0),
-      // Provenance, so the entry can be told apart from a hand-typed one later.
-      foodId: f.foodId || null,
-      aiScanned: true,
-      at: Date.now()
-    });
-    added++;
-
-    /* An AI estimate the user just accepted becomes a community food, so the next scan of it
-       is a database hit rather than another model call. Fire-and-forget: this is an
-       improvement to the shared catalogue, and failing it must not fail the user's log entry. */
-    if(f.nutrition_source === "ai_estimate" && f.nutrition && f.nutrition.calories != null){
-      IgnytAiScan.confirmFood({
-        name: f.name,
-        calories: f.nutrition.calories, protein: f.nutrition.protein,
-        carbs: f.nutrition.carbs, fat: f.nutrition.fat,
-        fibre: f.nutrition.fibre, sugar: f.nutrition.sugar,
-        serving_grams: Math.round(f.grams)
-      }).catch(()=>{});
-    }
-  }
-
-  state.aiScan = null;
-  state.mealOpen = s.meal;
-  closeFoodFlow();
-  persist();
-  showToast(added + (added===1?" food":" foods") + " added to " + s.meal + ".", "success", render);
-  render();
-}
-
-function bindAiScanHandlers(){
-  document.querySelectorAll("[data-ai-act]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      const kind = el.dataset.aiAct;
-      if(kind === "scan")     return startAiScan("camera");
-      if(kind === "gallery")  return startAiScan("gallery");
-      if(kind === "retry")    return startAiScan((state.aiScan && state.aiScan.source) || "camera");
-      if(kind === "barcode")  { state.aiScan = null; render(); const b = document.querySelector("[data-food-scan]"); if(b) b.click(); return; }
-      if(kind === "manual")   { state.aiScan = null; state.manualEntryOpen = true; render(); return; }
-      if(kind === "close")    { state.aiScan = null; render(); return; }
-      if(kind === "save-all") return saveAiScanFoods();
-    });
-  });
-
-  document.querySelectorAll("[data-ai-meal]").forEach(el=>{
-    el.addEventListener("click", ()=>{ state.aiScan.meal = el.dataset.aiMeal; render(); });
-  });
-
-  document.querySelectorAll("[data-ai-edit]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      const f = state.aiScan.foods[Number(el.dataset.aiEdit)];
-      f.editing = !f.editing;
-      // Opening the editor on a food with no numbers at all needs somewhere to put them.
-      if(f.editing && !f.nutrition) f.nutrition = { calories:null, protein:null, carbs:null, fat:null };
-      render();
-    });
-  });
-
-  /* Typed nutrition. `input` writes to state and refreshes the macro row WITHOUT a re-render —
-     re-rendering on every keystroke destroys the focused field, which is the same bug the food
-     search had with the keyboard and the sliders had with the drag. */
-  document.querySelectorAll("[data-ai-nut]").forEach(el=>{
-    el.addEventListener("input", ()=>{
-      const [i, key] = el.dataset.aiNut.split("|");
-      const f = state.aiScan.foods[Number(i)];
-      if(!f.nutrition) f.nutrition = {};
-      const raw = el.value.trim();
-      f.nutrition[key] = raw === "" ? null : Math.max(0, Number(raw) || 0);
-      // A hand-edited estimate is the user's number now, not the model's, so the confidence
-      // reading stops applying and the badge should stop claiming it.
-      f.edited = true;
-      const card = el.closest(".ai-food");
-      const n = IgnytAiScan.scaleTo(f.nutrition, f.grams);
-      const cells = card && card.querySelectorAll(".ai-food__macros strong");
-      if(cells && cells.length >= 4 && n){
-        cells[0].textContent = Math.round(n.calories||0);
-        cells[1].textContent = n.protein==null?"—":n.protein;
-        cells[2].textContent = n.carbs==null?"—":n.carbs;
-        cells[3].textContent = n.fat==null?"—":n.fat;
-      }
-    });
-  });
-
-  document.querySelectorAll("[data-ai-skip]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      const f = state.aiScan.foods[Number(el.dataset.aiSkip)];
-      f.skipped = !f.skipped;
-      render();
-    });
-  });
-
-  document.querySelectorAll("[data-ai-portion]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      const [i, g] = el.dataset.aiPortion.split("|");
-      state.aiScan.foods[Number(i)].grams = Number(g);
-      render();
-    });
-  });
-
-  /* Same rule as the onboarding sliders: `input` updates the numbers in place, only `change`
-     re-renders. Re-rendering mid-drag replaces the slider and the gesture is lost. */
-  document.querySelectorAll("[data-ai-grams]").forEach(el=>{
-    const i = Number(el.dataset.aiGrams);
-    el.addEventListener("input", ()=>{
-      const f = state.aiScan.foods[i];
-      f.grams = Number(el.value);
-      const card = el.closest(".ai-food");
-      const n = IgnytAiScan.scaleTo(f.nutrition, f.grams);
-      const g = card && card.querySelector(".ai-food__grams");
-      if(g) g.textContent = Math.round(f.grams) + " g";
-      const cells = card && card.querySelectorAll(".ai-food__macros strong");
-      if(cells && cells.length === 4 && n){
-        cells[0].textContent = Math.round(n.calories);
-        cells[1].textContent = n.protein==null?"—":n.protein;
-        cells[2].textContent = n.carbs==null?"—":n.carbs;
-        cells[3].textContent = n.fat==null?"—":n.fat;
-      }
-    });
-    el.addEventListener("change", ()=>{ state.aiScan.foods[i].grams = Number(el.value); render(); });
-  });
-}
-
 function renderFoodSearchPage(){
   const flow = state.foodFlow;
   const meal = flow.meal;
@@ -14029,8 +13652,6 @@ function renderFoodSearchPage(){
       ${state.foodSearchQuery?`<button class="food-search-bar__clear" data-food-clear="1" aria-label="Clear search">✕</button>`:""}
       <button class="food-search-bar__voice" data-food-voice="1" aria-label="Voice search">🎙</button>
     </div>
-
-    ${renderAiScanRow()}
 
     <div id="food-search-results">${foodSearchResultsHtml(meal)}</div>
 
@@ -14354,28 +13975,6 @@ function nutritionScore(T, targets, waterMl, waterTarget){
 }
 
 /** Coach lines. Every one comes from a real gap and names the number. */
-function insightCoachLines(T, targets, waterMl, waterTarget, remaining){
-  const out = [];
-  const gap = (v, t) => t > 0 ? Math.max(0, t - (Number(v)||0)) : 0;
-
-  if(targets.protein && T.protein >= targets.protein*0.9)
-    out.push(["ok", "Excellent protein intake today."]);
-  else if(targets.protein)
-    out.push(["up", `Add ${Math.round(gap(T.protein, targets.protein))} g more protein.`]);
-
-  if(targets.fibre && T.fibre < targets.fibre*0.75)
-    out.push(["up", `Fibre is ${Math.round(gap(T.fibre, targets.fibre))} g short — vegetables or fruit will close it.`]);
-
-  if(waterTarget > 0 && waterMl < waterTarget)
-    out.push(["water", `Drink another ${Math.round(waterTarget - waterMl)} ml of water.`]);
-
-  if(remaining > 0) out.push(["info", `You can eat up to ${Math.round(remaining)} kcal more today.`]);
-  else if(remaining < 0) out.push(["warn", `You are ${Math.abs(Math.round(remaining))} kcal over budget.`]);
-
-  if(!out.length) out.push(["ok", "Everything is on target today."]);
-  return out;
-}
-
 /** The day's biggest foods, each captioned by whatever it contributes most of. */
 function topContributors(entries, limit){
   const KEYS = [
@@ -14526,8 +14125,6 @@ function renderNutritionInsightsPage(){
   const wkLow = weekVals.length ? Math.min(...weekVals) : 0;
 
   const contributors = topContributors(entries, 5);
-  const coach = insightCoachLines(T, targets, waterMl, waterTarget, remaining);
-  const COACH_ICON = { ok:["✓","great"], up:["↑","warn"], water:["💧","ok"], info:["i","ok"], warn:["!","bad"] };
 
   const streak = (typeof loggingStreak === "function") ? loggingStreak() : null;
   const mealsLogged = mealTypes().filter(m=>allEntries.some(f=>(f.meal||"Lunch")===m)).length;
@@ -14644,17 +14241,6 @@ function renderNutritionInsightsPage(){
         </div>
       </div>` : ""}
 
-      <!-- COACH -->
-      <div class="ni-card">
-        <div class="ni-card__title">AI Nutrition Coach</div>
-        ${coach.map(([kind,text])=>{
-          const [glyph,tone] = COACH_ICON[kind] || ["i","ok"];
-          return `<div class="ni-coach">
-            <span class="ni-coach__dot ni-coach__dot--${tone}">${glyph}</span>
-            <span>${escHtml(text)}</span>
-          </div>`;
-        }).join("")}
-      </div>
 
       <!-- CONTRIBUTORS -->
       ${contributors.length ? `
@@ -14900,11 +14486,6 @@ function renderNutritionTab(){
       </div>`;
     }).join("")}
 
-    <!-- Snap. A floating action rather than a row in the list: photographing a meal is the
-         fastest path in and should not require scrolling to find. -->
-    <button class="nd-snap" data-ai-act="scan" aria-label="Scan a meal with the camera">
-      <span aria-hidden="true">📷</span><span class="nd-snap__label">Snap</span>
-    </button>
 
     <!-- Calories hero (Phase 3)
          Ring on the left, the two numbers people act on to its right. "Remaining" carries
@@ -16131,54 +15712,7 @@ function stableCompare(a, b){
    engine fault must never take the workout tab down with it. */
 let _coachLibCache = null;
 
-function coachRecommendation(){
-  if(!window.IgnytCoachEngine) return null;
-  try{
-    if(!_coachLibCache){
-      const lib = [];
-      Object.keys(LIBRARY).forEach(eq=>{
-        (LIBRARY[eq]||[]).forEach(t=>lib.push({ name:t[0], presc:t[1], unit:t[2], muscle:t[3], equipment:eq }));
-      });
-      const byName = Object.create(null);
-      lib.forEach(e=>{ byName[e.name] = e; });
-      _coachLibCache = { lib, byName };
-    }
-    const { lib, byName } = _coachLibCache;
-    return IgnytCoachEngine.get({
-      state,
-      library: lib,
-      detailsFor: (n)=>{
-        const d = (typeof EXERCISE_DETAILS !== "undefined" && EXERCISE_DETAILS[n]) || {};
-        return d.equipment ? d : Object.assign({}, d, { equipment: (byName[n]||{}).equipment });
-      },
-      muscleOf: getMuscle
-    });
-  }catch(e){
-    console.warn("Ignyt: coach engine unavailable —", e);
-    return null;
-  }
-}
-
-
 /** Turns a coach session into a live workout the existing logger understands. */
-function startCoachWorkout(rec){
-  if(!rec || rec.today.type !== "training" || !rec.today.exercises.length) return false;
-  state.session = {
-    id: nextId(),
-    startedAt: new Date().toISOString(),
-    title: rec.today.label,
-    exercises: rec.today.exercises.map(e=>({
-      name: e.name,
-      notes: "",
-      restDuration: e.restSeconds || state.settings.defaultRest,
-      // Same set shape the manual logger creates, so nothing downstream can tell the
-      // difference between a recommended session and one built by hand.
-      sets: Array.from({length: e.sets}, ()=>newSet(e.name))
-    }))
-  };
-  return true;
-}
-
 function renderWorkoutTab(){
   if(state.session && state.showExercisePicker) return renderExercisePicker();
   if(state.routineBuilder && state.showExercisePicker && isRoutinePickerContext()) return renderExercisePicker();
@@ -16210,7 +15744,6 @@ function renderWorkoutTab(){
       volumeTrend: comparisonLabel(weekStats.weeklyVolume, prevWeekVolume),
       todayMuscles: plannedDay ? Array.from(new Set(plannedDay.exercises.map(ex=>getMuscle(ex.name)))).filter(m=>m && m!=="Other").slice(0,3) : [],
       getMuscle, ROUTINE_CATEGORIES, routineEstimatedMinutes, escHtml,
-      coach: coachRecommendation()
     });
   }
   const s = state.session;
@@ -19176,36 +18709,6 @@ function attachHandlers(){
     });
   });
 
-  /* ---- Coach card (workout tab) ---- */
-  const coachToggleBtn = document.querySelector('[data-action="coach-toggle"]');
-  if(coachToggleBtn) coachToggleBtn.addEventListener("click", ()=>{
-    state.coachExpanded = !state.coachExpanded;
-    render();
-  });
-  const coachRegenBtn = document.querySelector('[data-action="coach-regenerate"]');
-  if(coachRegenBtn) coachRegenBtn.addEventListener("click", (ev)=>{
-    ev.preventDefault();
-    // The plan is deterministic and cached per day, so a regenerate has to clear the cache
-    // or it would hand back the identical object. Exercise selection rotates against recent
-    // sessions, so the result genuinely differs once something has been logged.
-    if(window.IgnytCoachEngine) IgnytCoachEngine.invalidate();
-    showToast("Plan regenerated.", "success", render);
-    render();
-  });
-  const coachStartBtn = document.querySelector('[data-action="coach-start"]');
-  if(coachStartBtn) coachStartBtn.addEventListener("click", ()=>{
-    const rec = coachRecommendation();
-    if(!rec) return;
-    if(state.session){
-      showToast("Finish or discard the current workout first.", "error", render);
-      return;
-    }
-    if(startCoachWorkout(rec)){
-      showToast("Session loaded — " + rec.today.exercises.length + " exercises.", "success", render);
-      render();
-    }
-  });
-
   // Nutrition dashboard — date navigation and card controls
   document.querySelectorAll("[data-nutrition-date]").forEach(el=>{
     el.addEventListener("click", ()=>{
@@ -19323,7 +18826,6 @@ function attachHandlers(){
   // re-running cannot double-bind. The search <input> above is deliberately NOT in there — it
   // survives the swap, and rebinding it would make every keystroke fire twice.
   bindFoodResultHandlers();
-  bindAiScanHandlers();
 
   /* ---- Nutrition dashboard <-> Insights ---- */
   document.querySelectorAll("[data-nav-insights]").forEach(el=>{
