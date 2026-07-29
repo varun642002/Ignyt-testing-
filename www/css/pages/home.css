@@ -112,3 +112,59 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 
 .rh-health-summary { margin-top:20px; }
 .rh-health-summary summary { cursor:pointer; color:var(--rh-muted); font-size:13px; font-weight:700; }
+
+/* =========================================================
+   HOME — greeting, consistency, Today's Plan
+========================================================= */
+.hm-greet{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:4px; }
+.hm-greet__left{ min-width:0; flex:1; }
+.hm-greet__hello{ font-size:20px; font-weight:800; letter-spacing:-.01em; }
+.hm-greet__quote{ font-size:13px; color:var(--rh-muted); margin-top:3px; line-height:1.4; }
+.hm-greet__chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.hm-greet__right{ flex:none; }
+.hm-greet__ringlabel{ font-size:11px; color:var(--rh-muted); font-weight:700; text-align:center; margin-top:4px; }
+
+.hm-chip{
+  display:inline-flex; align-items:center; gap:4px;
+  padding:4px 9px; border-radius:var(--radius-pill);
+  font-size:11px; font-weight:800; white-space:nowrap;
+}
+.hm-chip--streak{ background:rgba(217,119,6,.12); color:#D97706; }
+.hm-chip--gold{ background:rgba(202,138,4,.14); color:#CA8A04; }
+.hm-chip--good{ background:rgba(22,163,74,.12); color:var(--rh-green,#16A34A); }
+.hm-chip--ok{   background:rgba(37,99,235,.12); color:var(--rh-blue); }
+.hm-chip--new{  background:rgba(100,116,139,.14); color:var(--rh-muted); }
+
+/* Goal card additions */
+.hm-goal__bmi{
+  display:flex; align-items:center; gap:8px;
+  margin-top:10px; font-size:12px; color:var(--rh-muted);
+}
+.hm-goal__bmi b{ color:var(--rh-text); font-size:13.5px; font-variant-numeric:tabular-nums; }
+.hm-goal__bmicat{
+  padding:2px 8px; border-radius:var(--radius-pill);
+  background:rgba(37,99,235,.1); color:var(--rh-blue); font-size:11px; font-weight:700;
+}
+.hm-goal__pct{ font-size:11.5px; color:var(--rh-blue); font-weight:700; margin-top:6px; }
+
+/* Today's Plan */
+.hm-plan__count{ font-size:12px; font-weight:700; color:var(--rh-muted); }
+.hm-plan__pct{ font-size:11.5px; color:var(--rh-blue); font-weight:700; margin-top:7px; }
+.hm-plan__list{ display:flex; flex-direction:column; gap:2px; margin-top:10px; }
+.hm-plan__row{
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:9px 4px; border:0; border-radius:var(--radius-sm);
+  background:none; color:var(--rh-text); font:inherit; text-align:left; cursor:pointer;
+}
+.hm-plan__row:active{ background:var(--rh-border); }
+.hm-plan__tick{
+  width:20px; height:20px; flex:0 0 20px; border-radius:50%;
+  border:1.5px solid var(--rh-border); display:grid; place-items:center;
+  font-size:11px; font-weight:900; color:#fff;
+}
+.hm-plan__row.is-done .hm-plan__tick{ background:var(--rh-green,#16A34A); border-color:var(--rh-green,#16A34A); }
+.hm-plan__icon{ font-size:15px; line-height:1; }
+.hm-plan__label{ flex:1; font-size:13.5px; font-weight:600; }
+/* Struck through as well as faded: opacity alone is a weak signal, and on a small screen a
+   completed row and a dim one look the same. */
+.hm-plan__row.is-done .hm-plan__label{ color:var(--rh-muted); text-decoration:line-through; }

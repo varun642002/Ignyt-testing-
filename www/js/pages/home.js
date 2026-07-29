@@ -29,6 +29,10 @@
     let health = null;
     try { health = JSON.parse(localStorage.getItem('hx_hc_dashboard_cache') || 'null'); } catch (_) {}
     const steps = healthValue(health, 'steps.steps', null);
+    // Health Connect reports sleep in minutes; null stays null rather than becoming 0,
+    // because "not synced" and "slept nothing" are different facts.
+    const sleepMinutes = healthValue(health, 'sleep.minutes', null);
+    const sleepHours = sleepMinutes == null ? null : sleepMinutes / 60;
 
     const workoutToday = state.workoutLog.find(s => new Date(s.startedAt || s.date).toDateString() === new Date().toDateString());
     const workoutMinutes = workoutToday ? Math.round(workoutToday.durationMin || 0) : null;
@@ -37,12 +41,81 @@
 
     const weeklyGoalPct = weekStats.workoutsGoal ? Math.min(100, Math.round(weekStats.workoutsCompleted / weekStats.workoutsGoal * 100)) : 0;
 
+    /* One quote per day, chosen by date rather than at random — a line that changes every time
+       the tab is re-rendered is noise, and Home re-renders constantly. */
+    const QUOTES = [
+      "Consistency creates results.",
+      "The work you do today is tomorrow's baseline.",
+      "Small sessions still count. Skipped ones do not.",
+      "Progress is what happens between the days you feel like it.",
+      "Train the habit and the shape follows.",
+      "You do not have to be fresh. You have to turn up.",
+      "The plan only works while you are on it."
+    ];
+    const quoteOfDay = QUOTES[Math.floor(Date.now() / 86400000) % QUOTES.length];
+
+    /* Consistency is measured, not asserted: how many of the last 28 days carry a workout or a
+       food entry. Anything that only counted workouts would call a diligent rest week
+       "inactive", which is both wrong and discouraging. */
+    const consistency = (() => {
+      const DAY = 86400000, now = Date.now();
+      const active = new Set();
+      for (const w of state.workoutLog) {
+        const t = new Date(w.startedAt || w.date).getTime();
+        if (now - t < 28 * DAY) active.add(new Date(t).toDateString());
+      }
+      for (const f of state.foodLog) {
+        const t = new Date(f.date + 'T12:00:00').getTime();
+        if (now - t < 28 * DAY) active.add(new Date(t).toDateString());
+      }
+      const pct = Math.round(active.size / 28 * 100);
+      if (pct >= 80) return { label: 'Exceptional', icon: '🏆', tone: 'gold', pct };
+      if (pct >= 60) return { label: 'Consistent', icon: '⭐', tone: 'good', pct };
+      if (pct >= 35) return { label: 'Building', icon: '📈', tone: 'ok', pct };
+      return { label: 'Getting started', icon: '🌱', tone: 'new', pct };
+    })();
+
+    /* Today's plan. Each row is a real thing with a real done-state, so the completion figure
+       underneath is a count of facts rather than an encouraging guess. */
+    const todaysPlan = (() => {
+      const items = [];
+      if (dayTotal > 0 || plannedDay) {
+        items.push({ icon: '🏋️', label: plannedDay ? (plannedDay.name || 'Workout') : 'Workout',
+                     done: dayTotal > 0 ? dayDone >= dayTotal : !!workoutToday,
+                     nav: 'data-nav="workout"' });
+      }
+      const meals = (state.settings && state.settings.mealTypes) ||
+                    ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
+      for (const m of meals) {
+        items.push({ icon: m.toLowerCase().includes('snack') ? '🍎' : '🍽️', label: m,
+                     done: state.foodLog.some(f => f.date === new Date().toISOString().slice(0, 10) &&
+                                                   (f.meal || 'Lunch') === m),
+                     nav: `data-meal-add="${m}"` });
+      }
+      items.push({ icon: '💧', label: 'Water goal', done: water >= waterTarget,
+                   nav: 'data-nav="nutrition"' });
+      const done = items.filter(i => i.done).length;
+      return { items, done, total: items.length,
+               pct: items.length ? Math.round(done / items.length * 100) : 0 };
+    })();
+
     // Real weight-goal projection from the Smart Goal Engine (same module already used by the
     // Log Weight screen) -- no goal invented here if the user hasn't set one.
     const goals = window.IgnytGoals;
     const activeGoal = goals ? goals.activeGoal() : null;
     const currentWeightKg = state.bodylog[0] ? Number(state.bodylog[0].weight) : (activeGoal ? activeGoal.startWeight : null);
     const goalCompute = activeGoal ? goals.compute(activeGoal) : null;
+
+    /* BMI from the latest weigh-in and the profile height. Shown next to the weight goal
+       because it is the same question asked a different way; omitted when either input is
+       missing rather than computed from a default height. */
+    const bmiNow = (() => {
+      const h = Number(state.profile.height);
+      const w = currentWeightKg;
+      if (!h || !w) return null;
+      return w / Math.pow(h / 100, 2);
+    })();
+    const bmiCategoryLabel = (b) => b < 18.5 ? 'Underweight' : b < 25 ? 'Healthy' : b < 30 ? 'Overweight' : 'Obese';
     const goalPct = (activeGoal && goals && currentWeightKg != null) ? (goals.progressPct(activeGoal, currentWeightKg) || 0) : null;
     let daysLeft = null;
     if (goalCompute && goalCompute.completion) {
@@ -72,18 +145,22 @@
       ${renderAchievementCelebration ? (state.lastUnlockedAchievements && state.lastUnlockedAchievements.length ? renderAchievementCelebration() : '') : ''}
       ${renderPRCelebration ? (state.lastSessionPRs && state.lastSessionPRs.length ? renderPRCelebration() : '') : ''}
 
-      <div class="pg-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:4px;">
-        <div style="min-width:0;">
-          <div style="font-size:20px;font-weight:800;">${greeting()}, ${state.profile.name || 'Athlete'} 👋</div>
-          <div style="font-size:13px;color:var(--rh-muted);margin-top:3px;">You've got this! Consistency creates results.</div>
+      <div class="pg-card hm-greet">
+        <div class="hm-greet__left">
+          <div class="hm-greet__hello">${greeting()}, ${state.profile.name || 'Athlete'} 👋</div>
+          <div class="hm-greet__quote">${quoteOfDay}</div>
+          <div class="hm-greet__chips">
+            <span class="hm-chip hm-chip--streak">🔥 ${streak} day${streak === 1 ? '' : 's'}</span>
+            <span class="hm-chip hm-chip--${consistency.tone}">${consistency.icon} ${consistency.label}</span>
+          </div>
         </div>
-        <div style="flex:none;">
+        <div class="hm-greet__right">
           <div class="pg-ring" style="--pct:${weeklyGoalPct};--ring-color:var(--rh-blue);width:76px;height:76px;">
             <div class="pg-ring__inner" style="width:62px;height:62px;flex-direction:column;">
               <div style="font-size:17px;font-weight:800;">${weeklyGoalPct}%</div>
             </div>
           </div>
-          <div style="font-size:11px;color:var(--rh-muted);font-weight:700;text-align:center;margin-top:4px;">Weekly Goal</div>
+          <div class="hm-greet__ringlabel">Weekly Goal</div>
         </div>
       </div>
 
@@ -101,7 +178,11 @@
               <div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Goal Weight</div><div style="font-size:15px;font-weight:800;">${displayW(activeGoal.targetWeight)} ${wUnit()}</div></div>
             </div>
           </div>
+          ${bmiNow != null ? `<div class="hm-goal__bmi">
+            <span>BMI <b>${bmiNow.toFixed(1)}</b></span><span class="hm-goal__bmicat">${bmiCategoryLabel(bmiNow)}</span>
+          </div>` : ''}
           <div class="rh-progress-track"><div class="rh-progress-fill" style="width:${goalPct || 0}%;"></div></div>
+          <div class="hm-goal__pct">${goalPct || 0}% of the way there</div>
           <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;">
             <span style="color:var(--rh-muted);">${weightDeltaKg != null ? `You need to ${weightDeltaKg < 0 ? 'lose' : 'gain'} <b style="color:var(--rh-text);">${Math.abs(displayW(weightDeltaKg, 1))} ${wUnit()}</b>` : ''}</span>
             <span style="color:var(--rh-muted);">${goalCompute && goalCompute.weeklyRate ? `<b style="color:var(--rh-blue);">${Math.abs(goalCompute.weeklyRate)} ${wUnit()}</b> per week` : ''}</span>
@@ -117,8 +198,11 @@
       </div>` : `
       <div class="rh-section-head" style="margin-top:16px;"><span>Goal Progress</span></div>
       <button class="pg-card" style="width:100%;text-align:left;background:none;border-style:dashed;cursor:pointer;" data-nav="goals">
-        <div style="font-size:13px;font-weight:700;">Set a weight goal</div>
+        <div style="font-size:13px;font-weight:700;">Set your first goal</div>
         <div style="font-size:12px;color:var(--rh-muted);margin-top:2px;">Track your progress toward a target weight and date in Fitness Goals.</div>
+        ${bmiNow != null ? `<div class="hm-goal__bmi" style="margin-top:10px;">
+          <span>Right now · BMI <b>${bmiNow.toFixed(1)}</b></span><span class="hm-goal__bmicat">${bmiCategoryLabel(bmiNow)}</span>
+        </div>` : ''}
       </button>`}
 
       <div class="rh-section-head"><span>Today's Summary</span><a href="#" class="rh-view-all" data-open-progress-view="analytics">View All</a></div>
@@ -127,6 +211,22 @@
         ${summaryTile('dumbbell', 'rgba(124,58,237,.08)', 'var(--rh-purple)', `${workoutDoneCount}`, `/ ${workoutTotalCount}`, 'Workout', workoutDoneCount >= workoutTotalCount && workoutTotalCount > 0 ? 'Completed' : 'In progress')}
         ${summaryTile('footprints', 'rgba(217,119,6,.08)', '#D97706', steps == null ? '—' : Number(steps).toLocaleString(), '', 'Steps', `/ ${DEFAULT_STEPS_GOAL.toLocaleString()}`)}
         ${summaryTile('timer', 'rgba(37,99,235,.08)', 'var(--rh-blue)', workoutMinutes == null ? '—' : workoutMinutes, '', 'Active Minutes', `/ ${DEFAULT_WORKOUT_MINUTES_GOAL} min`)}
+        ${summaryTile('droplet', 'rgba(8,145,178,.08)', '#0891B2', (water / 1000).toFixed(1), '', 'Water', `/ ${(waterTarget / 1000).toFixed(1)} L`)}
+        ${summaryTile('moon', 'rgba(124,58,237,.08)', 'var(--rh-purple)', sleepHours == null ? '—' : sleepHours.toFixed(1), '', 'Sleep', sleepHours == null ? 'Not synced' : '/ 8.0 h')}
+      </div>
+
+      <div class="rh-section-head"><span>Today's Plan</span><span class="hm-plan__count">${todaysPlan.done} of ${todaysPlan.total}</span></div>
+      <div class="pg-card">
+        <div class="rh-progress-track" style="margin-top:0;"><div class="rh-progress-fill" style="width:${todaysPlan.pct}%;"></div></div>
+        <div class="hm-plan__pct">${todaysPlan.pct}% complete</div>
+        <div class="hm-plan__list">
+          ${todaysPlan.items.map(i => `
+            <button class="hm-plan__row ${i.done ? 'is-done' : ''}" ${i.nav}>
+              <span class="hm-plan__tick" aria-hidden="true">${i.done ? '✓' : ''}</span>
+              <span class="hm-plan__icon" aria-hidden="true">${i.icon}</span>
+              <span class="hm-plan__label">${i.label}</span>
+            </button>`).join('')}
+        </div>
       </div>
 
       ${(() => {
@@ -178,10 +278,10 @@
       <div class="rh-section-head"><span>Quick Actions</span></div>
       <div class="rh-quick-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));">
         ${quickAction('workout', 'var(--rh-green)', 'Start Workout', 'data-nav="workout"')}
+        ${quickAction('nutrition', '#DC2626', 'Log Food', 'data-nav="nutrition"')}
         ${quickAction('scale', 'var(--rh-blue)', 'Log Weight', 'data-nav="body"')}
+        ${quickAction('health', '#0891B2', 'Health', 'data-nav="health"')}
         ${quickAction('progress', 'var(--rh-purple)', 'Progress', 'data-nav="progress"')}
-        ${quickAction('heart', '#DC2626', 'Heart Rate', 'data-action="open-calc" data-calc="hr"')}
-        ${quickAction('calc', 'var(--rh-purple)', 'BMI Calculator', 'data-action="open-calc" data-calc="bmi"')}
         ${quickAction('more', 'var(--rh-muted)', 'More', 'data-nav="tools"')}
       </div>
 
