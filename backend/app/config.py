@@ -55,7 +55,15 @@ class Settings(BaseSettings):
     # route, never logged, and never sent to the client — the app talks to this service, this
     # service talks to Gemini. `ai_configured` is what the client is told instead.
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
-    gemini_model: str = Field(default="gemini-2.0-flash", alias="GEMINI_MODEL")
+    # An ALIAS, not a pinned version, and deliberately so. The previous default
+    # `gemini-2.0-flash` was retired by Google and every scan started returning 503 with
+    # nothing in our code having changed; `gemini-2.5-flash` is already refused for newly
+    # issued keys ("no longer available to new users"). A pinned name is a scheduled outage on
+    # somebody else's calendar. The trade-off is real — an alias can change behaviour under
+    # you — which is why the response schema is enforced rather than assumed, so a model swap
+    # surfaces as a typed parse error and not as silently wrong nutrition.
+    # Pin a specific version here if you would rather have a fixed model and own the upgrades.
+    gemini_model: str = Field(default="gemini-flash-latest", alias="GEMINI_MODEL")
     gemini_timeout_seconds: float = Field(default=20.0, alias="GEMINI_TIMEOUT_SECONDS")
     # Premium allowance. Free users get none, per the brief; the counter resets on UTC date.
     ai_scan_daily_limit: int = Field(default=15, alias="AI_SCAN_DAILY_LIMIT")
