@@ -4011,7 +4011,7 @@ const ACTIVITY_KCAL_PER_MIN = 8; // rough estimate for mixed strength/conditioni
    The list is stored so custom meal names can be added later without touching code. It is
    read through mealTypes(), never captured in a const, so a change takes effect on the next
    render. */
-const DEFAULT_MEALS = ["Breakfast","Morning Snack","Lunch","Afternoon Snack","Dinner"];
+const DEFAULT_MEALS = ["Breakfast","Morning Snack","Lunch","Afternoon Snack","Dinner","Bedtime Snack"];
 const MEAL_TYPES_KEY = "hx_meal_types";
 
 function mealTypes(){
@@ -4041,17 +4041,11 @@ function mealTypesInUse(entries){
    would otherwise paint every entry in it as over-budget. */
 /* Shares total 1.00. Post Workout's 0.03 went to Lunch and Dinner when that meal was removed
    from the default list -- leaving it out entirely would have made the budgets sum to 97%. */
-const MEAL_SHARE = {"Breakfast":0.25,"Morning Snack":0.10,"Lunch":0.28,"Afternoon Snack":0.10,"Dinner":0.27,
-  /* Legacy names, kept so a log that predates a change still gets a sane budget. Entries
-     already saved under these still render -- mealTypesInUse() appends any meal it finds in
-     the day's entries to the known list, so removing a default never hides logged food. */
-  "Post Workout":0.03, "Evening Snack":0.10};
-
-function mealShare(meal){
-  if(MEAL_SHARE[meal] != null) return MEAL_SHARE[meal];
-  const n = mealTypes().length || 1;
-  return 1 / n;
-}
+/* MEAL_SHARE and mealShare() lived here. Their only caller was the duplicate meal list that
+   this change removed; the live per-meal budget is mealCalorieTarget(), which derives shares
+   from the CURRENT meal list (25% a main, 12.5% a snack, normalised so the parts always sum to
+   the day's budget). Two competing budget schemes for the same number is how they drift apart,
+   so the unused one goes rather than being kept in step by hand. */
 
 const HYROX_EXPERIENCE_OPTIONS = [
   {key:"first-timer", label:"Never raced Hyrox"},
@@ -8230,7 +8224,8 @@ const MEAL_DONUT_COLORS = ["var(--mint)", "var(--steel)", "#FFB020", "#A98BFF", 
 /* Emoji per meal, matching the meal rows in the design. */
 const MEAL_ICONS = {
   "Breakfast":"🍳", "Morning Snack":"🍌", "Lunch":"🥗", "Evening Snack":"🍎",
-  "Afternoon Snack":"🍌", "Dinner":"🍛", "Post Workout":"🥤", "Snacks":"🍿"
+  "Afternoon Snack":"🍌", "Dinner":"🍛", "Bedtime Snack":"🌙",
+  "Post Workout":"🥤", "Snacks":"🍿"
 };
 
 /** Short observations derived from the day's totals. Only facts, no advice. */
@@ -14631,7 +14626,10 @@ function mealIcon(meal){
   if(m.includes("breakfast")) return "☀️";
   if(m.includes("morning")) return "☕";
   if(m.includes("lunch")) return "🌤️";
-  if(m.includes("evening") || m.includes("afternoon")) return "🌙";
+  // Order matters: "Bedtime Snack" must be caught before the generic fallback, and it gets a
+  // distinct icon from Dinner so two adjacent rows are not both a moon.
+  if(m.includes("bed") || m.includes("night")) return "🌜";
+  if(m.includes("evening") || m.includes("afternoon")) return "🌇";
   if(m.includes("dinner")) return "🌙";
   return "🍽️";
 }
@@ -15270,6 +15268,10 @@ function renderNutritionTab(){
     </div>
 
     <!-- MEALS -->
+    ${lastDeletedFood ? `<div class="row-between" style="align-items:center;margin-bottom:6px;">
+      <div class="eyebrow-label" style="margin:0;">Meals</div>
+      <button class="cat-chip" data-action="undo-food-delete" style="margin:0;padding:2px 10px;font-size:11px;">Undo delete</button>
+    </div>` : ""}
     ${mealTypes().map(meal=>{
       const foods = dayEntries.filter(f=>(f.meal||"Lunch")===meal);
       const kcal = Math.round(foods.reduce((a,f)=>a+Number(f.calories||0),0));
@@ -15494,64 +15496,6 @@ function renderNutritionTab(){
         ${!nothing ? `<div style="font-size:11px;color:var(--muted);margin-top:8px;">Items are added to ${escHtml(state.quickAddMeal || mealTypes()[0])}. Repeated meals keep their original meal.</div>` : ""}
       </div>`;
     })() : ""}
-
-    <div class="row-between" style="align-items:center;">
-      <div class="eyebrow-label">Meals</div>
-      ${lastDeletedFood ? `<button class="cat-chip" data-action="undo-food-delete" style="margin:0;padding:2px 10px;font-size:11px;">Undo delete</button>` : ""}
-    </div>
-    ${mealTypesInUse(dayEntries).map(meal=>{
-      const mealFoods = dayEntries.filter(f=>(f.meal||"Lunch")===meal);
-      const mealKcal = Math.round(mealFoods.reduce((a,f)=>a+Number(f.calories||0),0));
-      const budget = Math.round(targets.kcal * mealShare(meal));
-      // Per-meal macro roll-up, so each row answers "what did this meal give me" without
-      // expanding it.
-      const mp = Math.round(mealFoods.reduce((a,f)=>a+Number(f.protein||0),0));
-      const mc = Math.round(mealFoods.reduce((a,f)=>a+Number(f.carbs||0),0));
-      const mf = Math.round(mealFoods.reduce((a,f)=>a+Number(f.fat||0),0));
-      return `<div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
-        <!-- No chevron and no accordion: meals are always expanded, so their foods are
-             visible without a tap. The header is icon, name, count, calories and +. -->
-        <div class="meal-head">
-          <span class="meal-icon">${MEAL_ICONS[meal]||"🍽️"}</span>
-          <span style="min-width:0;flex:1;">
-            <span class="meal-name">${escHtml(meal)}</span>
-            <span class="meal-count">${mealFoods.length} food${mealFoods.length===1?"":"s"}</span>
-          </span>
-          <!-- Calories only. The meal-level P/C/F roll-up was three more numbers competing
-               with the one that matters, and the per-food rows below already carry macros
-               for anyone who wants them. -->
-          <span class="meal-kcal">
-            <span class="nut-value nut-value--md" style="color:${mealKcal>budget?'var(--accent)':'var(--text)'};">${mealKcal}<span class="nut-unit"> kcal</span></span>
-          </span>
-          <!-- One glyph, rotated. Swapping ⌄ for ⌃ would jump; rotating the same node lets
-               the arrow turn in step with the rows unfolding. -->
-          <!-- Sits inside the header for layout, but stops propagation in its handler so a
-               tap on + opens the search route instead of also toggling the card. -->
-          <button class="meal-add" data-meal-add="${escHtml(meal)}" aria-label="Add food to ${escHtml(meal)}">+</button>
-        </div>
-        <!-- A logged food is a link to its own detail screen, nothing more. Tapping used to
-             expand an inline editor with move/duplicate/delete inside the meal card; all of
-             that now lives on the Food Details route, so this list stays scannable. -->
-        ${mealFoods.map(f=>{
-          // The serving is shown when the entry recorded one, so "Rice 205 kcal" reads as
-          // "1 cup" rather than leaving the user to guess what they logged.
-          const servingText = f.quantity != null && f.servingUnit
-            ? (window.IgnytNutrition ? IgnytNutrition.formatAmount(f.quantity) : f.quantity) + " " +
-              (window.IgnytServingConverter ? IgnytServingConverter.labelFor(f.servingUnit, f.quantity) : f.servingUnit) +
-              (f.servingUnit !== "g" && f.grams ? ` · ${f.grams} g` : "")
-            : (f.grams ? `${f.grams} g` : "");
-          const justAdded = state.justAddedFoodId != null && String(state.justAddedFoodId) === String(f.id);
-          return `<div class="log-row${justAdded?' is-just-added':''}" data-entry-open="${f.id}">
-            <div class="log-row__body">
-              <div class="log-row__name">${escHtml(f.name)}</div>
-              <div class="log-row__meta">${servingText?escHtml(servingText)+" · ":""}P${f.protein||0} C${f.carbs||0} F${f.fat||0}</div>
-            </div>
-            <span class="log-row__kcal">${f.calories}<span class="nut-unit"> kcal</span></span>
-            <span class="log-row__chev" aria-hidden="true">›</span>
-          </div>`;
-        }).join("")}
-      </div>`;
-    }).join("")}
 
     <div class="eyebrow-label">Calorie & Macro Budget</div>
     <div class="info-box" style="padding:12px 14px;margin-bottom:8px;font-size:12px;color:var(--muted);">
