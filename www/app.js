@@ -4621,6 +4621,8 @@ const state = {
   authSeen: LS.get("hx_auth_seen", false), // the Sign In screen has been passed, by signing in or skipping
   authPhone: "",      // transient — the number being typed on the Sign In screen
   authOtpSent: false, // transient — Sign In screen is on the code-entry step
+  authOtpSentAt: 0,   // transient — when the current code was sent, for the resend countdown
+  authOtpResends: 0,  // transient — resends used for this number, capped at OTP_MAX_RESENDS
   authOtpCode: "",    // transient — the 6-digit code being typed (never persisted)
   nativeNotifPermissionGranted: null, // transient — null=unknown yet, refreshed from IgnytNotify at boot
   plateCalcOpen: null, // element id string when plate calc popover open
@@ -11178,6 +11180,13 @@ const AUTH_ICONS = {
 /* Grain for the hero, as a data URI so it survives the CSP and works offline. */
 const AUTH_GRAIN = `<svg class="auth-hero__grain" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><filter id="ag"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3"/></filter><rect width="100%" height="100%" filter="url(#ag)"/></svg>`;
 
+
+/* OTP resend policy. A wait stops people hammering the button before the first SMS has had a
+   chance to land, and the cap stops a typo'd number burning the project's SMS quota — Firebase
+   bills per message and throttles the whole project, not just the one user. */
+const OTP_RESEND_WAIT_MS = 45000;
+const OTP_MAX_RESENDS = 3;
+
 function renderSignInScreen(){
   const root = document.getElementById("app");
   const phone = state.authPhone || "";
@@ -11189,6 +11198,10 @@ function renderSignInScreen(){
   const errMsg = auth && auth.getError();
   const otpStep = !!state.authOtpSent;
   const authErr = errMsg ? `<div class="auth-err" role="alert">${escHtml(errMsg)}</div>` : "";
+  /* Resend gating. Both values are derived from timestamps rather than counted down in state,
+     so backgrounding the app or a re-render cannot drift them from the real clock. */
+  const waitLeft = Math.max(0, Math.ceil((OTP_RESEND_WAIT_MS - (Date.now() - (state.authOtpSentAt || 0))) / 1000));
+  const resendsLeft = Math.max(0, OTP_MAX_RESENDS - (state.authOtpResends || 0));
 
   root.innerHTML = `
     <div class="auth">
@@ -11215,14 +11228,40 @@ function renderSignInScreen(){
             Code sent to <b>+91 ${escHtml(phone)}</b>
             <button class="auth-otp__change" data-auth="otp-change" type="button">Change</button>
           </div>
-          <input class="auth-otp__input" type="tel" inputmode="numeric" autocomplete="one-time-code"
-                 maxlength="6" placeholder="······" data-auth="code"
-                 value="${escHtml(state.authOtpCode || "")}" aria-label="6-digit code">
+
+          <!-- SIX BOXES, ONE INPUT.
+               Six real <input>s is the obvious build and the wrong one: it fights Android's
+               SMS autofill (which targets a single one-time-code field), breaks paste, and
+               turns backspace into focus bookkeeping. So the boxes are presentation only and
+               a single transparent input sits over them, keeping autofill, paste and caret
+               behaviour native while looking like the design. -->
+          <div class="auth-otp__boxes" data-auth="otp-boxes">
+            ${[0,1,2,3,4,5].map(i=>{
+              const ch = (state.authOtpCode || "")[i] || "";
+              const cur = (state.authOtpCode || "").length === i;
+              return `<span class="auth-otp__box${ch ? " is-filled" : ""}${cur ? " is-active" : ""}">${escHtml(ch)}</span>`;
+            }).join("")}
+            <input class="auth-otp__hidden" type="tel" inputmode="numeric" autocomplete="one-time-code"
+                   maxlength="6" data-auth="code" value="${escHtml(state.authOtpCode || "")}"
+                   aria-label="6-digit verification code">
+          </div>
+
           ${authErr}
           <button class="auth-cta" data-auth="verify" ${busy || (state.authOtpCode || "").length < 6 ? "disabled" : ""}>
             ${busy ? "Verifying…" : "Verify &amp; Continue"}</button>
-          <button class="auth-otp__resend" data-auth="resend" type="button" ${busy ? "disabled" : ""}>
-            Didn't get it? Resend code</button>
+
+          <!-- Resend is time-gated and capped. The countdown text is written by a 1s interval
+               rather than re-rendered, so typing a code is never interrupted by the clock. -->
+          <div class="auth-otp__resendrow">
+            ${resendsLeft <= 0
+              ? `<span class="auth-otp__spent">No resends left. Check the number or try again later.</span>`
+              : `<button class="auth-otp__resend" data-auth="resend" type="button" ${busy || waitLeft > 0 ? "disabled" : ""}>
+                   <span id="auth-resend-label">${waitLeft > 0
+                     ? `Resend code in ${waitLeft}s`
+                     : "Didn't get it? Resend code"}</span>
+                 </button>
+                 <span class="auth-otp__left">${resendsLeft} resend${resendsLeft === 1 ? "" : "s"} left</span>`}
+          </div>
         ` : `
           <div class="auth-field">
             <button class="auth-field__cc" type="button" data-auth="country" aria-label="Select country code">
@@ -11281,15 +11320,36 @@ function bindSignInScreen(){
   const codeInput = document.querySelector('[data-auth="code"]');
   if(codeInput){
     const verifyBtn = document.querySelector('[data-auth="verify"]');
+    const boxes = [...document.querySelectorAll('.auth-otp__box')];
+
+    /* Paints the visual boxes from the single real input. Done by hand rather than by
+       re-rendering, for the same reason every other text field here does: a render on each
+       keystroke destroys the focused element and drops the keyboard mid-code. */
+    const paint = (digits)=>{
+      boxes.forEach((b,i)=>{
+        b.textContent = digits[i] || "";
+        b.classList.toggle("is-filled", !!digits[i]);
+        b.classList.toggle("is-active", digits.length === i);
+      });
+    };
+
     codeInput.addEventListener("input", ()=>{
       const digits = codeInput.value.replace(/\D/g, "").slice(0, 6);
       if(codeInput.value !== digits) codeInput.value = digits;
       state.authOtpCode = digits;
+      paint(digits);
       if(verifyBtn) verifyBtn.disabled = digits.length < 6;
       // Android's SMS autofill drops all six in at once; verify without a second tap.
       if(digits.length === 6) signInAction("verify");
     });
+    // The boxes are decoration; a tap anywhere on them must reach the real field.
+    const boxWrap = document.querySelector('[data-auth="otp-boxes"]');
+    if(boxWrap) boxWrap.addEventListener("click", ()=>codeInput.focus());
+    codeInput.addEventListener("focus", ()=>paint(codeInput.value));
+    codeInput.addEventListener("blur", ()=>paint(codeInput.value));
     codeInput.focus();
+    paint(codeInput.value);
+    ensureOtpCountdown();
   }
 
   document.querySelectorAll("[data-auth]").forEach(el=>{
@@ -11336,6 +11396,9 @@ function signInAction(kind){
     // sent to the old number must not validate against a new one.
     state.authOtpSent = false;
     state.authOtpCode = "";
+    state.authOtpSentAt = 0;
+    state.authOtpResends = 0;   // a different number gets a fresh allowance
+    stopOtpCountdown();
     if(auth && auth.clearError) auth.clearError();
     render();
     return;
@@ -11345,6 +11408,31 @@ function signInAction(kind){
     return;
   }
   if(kind === "skip") skipSignIn();
+}
+
+
+/* Resend countdown. Writes into the label once a second instead of re-rendering, so the clock
+   can never interrupt someone typing the code. Stops itself the moment the label is gone or
+   the wait is over, so navigating away cannot leave it running. */
+let otpCountdownHandle = null;
+function ensureOtpCountdown(){
+  if(otpCountdownHandle) return;
+  otpCountdownHandle = setInterval(()=>{
+    const label = document.getElementById("auth-resend-label");
+    if(!label || !state.authOtpSent){ stopOtpCountdown(); return; }
+    const left = Math.max(0, Math.ceil((OTP_RESEND_WAIT_MS - (Date.now() - (state.authOtpSentAt || 0))) / 1000));
+    if(left > 0){
+      label.textContent = `Resend code in ${left}s`;
+    }else{
+      label.textContent = "Didn't get it? Resend code";
+      const btn = label.closest("button");
+      if(btn) btn.disabled = false;
+      stopOtpCountdown();
+    }
+  }, 1000);
+}
+function stopOtpCountdown(){
+  if(otpCountdownHandle){ clearInterval(otpCountdownHandle); otpCountdownHandle = null; }
 }
 
 /* Phone sign-in, step 1. Every exit path either advances the step or surfaces an error —
@@ -11358,12 +11446,25 @@ async function requestOtp(isResend){
     showToast("Phone sign-in isn't available in this build.", "error", render);
     return;
   }
+  // Both guards are enforced here as well as in the markup: a disabled button is a hint, not
+  // a control, and this is the only path that actually sends.
+  if(isResend){
+    if((state.authOtpResends || 0) >= OTP_MAX_RESENDS){
+      showToast("No resends left. Check the number and start again.", "error", render);
+      return;
+    }
+    const wait = Math.ceil((OTP_RESEND_WAIT_MS - (Date.now() - (state.authOtpSentAt || 0))) / 1000);
+    if(wait > 0){ showToast(`Wait ${wait}s before resending.`, "info", render); return; }
+  }
   console.log("[auth] OTP requested" + (isResend ? " (resend)" : ""));   // number deliberately not logged
   const res = await auth.sendOtp("+91" + digits, { resend: !!isResend });
   if(res && res.success){
     console.log("[auth] OTP sent; verificationId received");
     state.authOtpSent = true;
     state.authOtpCode = "";
+    state.authOtpSentAt = Date.now();
+    // Only a resend counts against the cap; the first send is not a resend.
+    if(isResend) state.authOtpResends = (state.authOtpResends || 0) + 1;
     render();
     // Auto-retrieval already read the SMS — finish without making the user type it.
     if(res.data && res.data.autoVerified){
@@ -11409,6 +11510,9 @@ function completeSignIn(user){
   state.authOtpSent = false;
   state.authOtpCode = "";
   state.authPhone = "";
+  state.authOtpSentAt = 0;
+  state.authOtpResends = 0;
+  stopOtpCountdown();
   /* Seed the profile name from the account, but never overwrite one the user already set.
      Wrapped because nothing optional here may block navigation: an exception thrown between
      "signed in" and render() strands the user on the sign-in screen with a valid session,
