@@ -168,3 +168,82 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 /* Struck through as well as faded: opacity alone is a weak signal, and on a small screen a
    completed row and a dim one look the same. */
 .hm-plan__row.is-done .hm-plan__label{ color:var(--rh-muted); text-decoration:line-through; }
+
+/* =========================================================
+   HABIT TRACKER — the Home card
+
+   Sits directly below the summary tiles, where Today's Plan used to be. One tap per habit is
+   the whole interaction, so the row IS the button: no separate checkbox to hit, and a 48px
+   row rather than a 20px tickbox.
+========================================================= */
+.hb { padding: 14px; }
+.hb-top {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  font-size: 13px; color: var(--rh-muted);
+}
+.hb-top__count b { color: var(--rh-text); font-size: 15px; font-weight: 800; }
+.hb-top__pct { font-size: 15px; font-weight: 800; color: var(--rh-blue); font-variant-numeric: tabular-nums; }
+.hb-track {
+  height: 6px; border-radius: 3px; background: var(--rh-border);
+  overflow: hidden; margin-top: 8px;
+}
+.hb-fill {
+  height: 100%; border-radius: 3px; background: var(--rh-blue);
+  transition: width .3s cubic-bezier(.4,0,.2,1);
+}
+
+.hb-list { display: flex; flex-direction: column; margin-top: 6px; }
+.hb-row {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 10px 0; border: 0; background: none;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hb-row + .hb-row { border-top: 1px solid var(--rh-border); }
+
+.hb-box {
+  width: 22px; height: 22px; flex: none;
+  display: grid; place-items: center;
+  border: 2px solid var(--rh-border); border-radius: 7px;
+  color: #fff;
+  transition: background-color .18s ease, border-color .18s ease, transform .18s cubic-bezier(.34,1.5,.64,1);
+}
+.hb-row.is-done .hb-box { background: var(--rh-blue); border-color: var(--rh-blue); }
+.hb-row:active .hb-box { transform: scale(.86); }
+
+.hb-icon {
+  width: 30px; height: 30px; flex: none;
+  display: grid; place-items: center; border-radius: 9px;
+}
+.hb-body { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.hb-name {
+  font-size: 14px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transition: color .18s ease;
+}
+/* Struck through AND dimmed: on a busy card, colour alone is not a reliable signal, and it is
+   the only cue for anyone who cannot distinguish the two greys. */
+.hb-row.is-done .hb-name { color: var(--rh-muted); text-decoration: line-through; }
+.hb-streak { font-size: 11.5px; color: var(--rh-muted); font-weight: 700; white-space: nowrap; }
+
+.hb-more {
+  width: 100%; margin-top: 10px; padding: 9px;
+  border: 1px solid var(--rh-border); border-radius: 10px; background: transparent;
+  color: var(--rh-text); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
+
+/* ---- empty state, with one-tap suggestions ---- */
+.hb-empty { padding: 16px; }
+.hb-empty__title { font-size: 14.5px; font-weight: 800; }
+.hb-empty__sub { font-size: 12.5px; line-height: 1.5; color: var(--rh-muted); margin-top: 4px; }
+.hb-sugg { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.hb-sugg__chip {
+  padding: 7px 11px; border-radius: 999px;
+  border: 1px solid var(--rh-border); background: transparent;
+  color: var(--rh-text); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.hb-sugg__chip:active { background: rgba(37,99,235,.08); border-color: var(--rh-blue); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-fill, .hb-box, .hb-name { transition: none; }
+}

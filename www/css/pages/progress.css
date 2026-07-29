@@ -168,3 +168,19 @@
 
 .rp-none{ font-size:12.5px; color:var(--rh-muted); padding:4px 0; }
 .rp-note{ font-size:11px; color:var(--rh-muted); line-height:1.5; margin-top:10px; }
+
+/* ---- habit manager: reorder + show-on-Home controls ----
+   A third row inside the flex card, forced onto its own line so the arrows and the toggle do
+   not compete with the habit name for width. */
+.hbm-tools {
+  flex-basis: 100%; display: flex; align-items: center; gap: 6px;
+  padding-top: 10px; margin-top: 2px; border-top: 1px solid var(--rh-border);
+}
+.hbm-tools > button {
+  padding: 6px 10px; border: 1px solid var(--rh-border); border-radius: 8px;
+  background: transparent; color: var(--rh-text);
+  font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.hbm-tools > button[disabled] { opacity: .35; cursor: default; }
+.hbm-toggle { margin-left: auto; }
+.hbm-toggle.is-on { border-color: var(--rh-blue); color: var(--rh-blue); }

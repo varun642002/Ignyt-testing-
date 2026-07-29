@@ -24,7 +24,7 @@
     const { state, week, streak, greeting, displayW, wUnit, svg,
       weekStats, targets, eaten, burned, dayDone, dayTotal, plannedDay,
       water, waterTarget, nutritionToday,
-      renderAchievementCelebration, renderPRCelebration } = ctx;
+      renderAchievementCelebration, renderPRCelebration, renderHomeHabits } = ctx;
 
     let health = null;
     try { health = JSON.parse(localStorage.getItem('hx_hc_dashboard_cache') || 'null'); } catch (_) {}
@@ -75,29 +75,6 @@
       return { label: 'Getting started', icon: '🌱', tone: 'new', pct };
     })();
 
-    /* Today's plan. Each row is a real thing with a real done-state, so the completion figure
-       underneath is a count of facts rather than an encouraging guess. */
-    const todaysPlan = (() => {
-      const items = [];
-      if (dayTotal > 0 || plannedDay) {
-        items.push({ icon: '🏋️', label: plannedDay ? (plannedDay.name || 'Workout') : 'Workout',
-                     done: dayTotal > 0 ? dayDone >= dayTotal : !!workoutToday,
-                     nav: 'data-nav="workout"' });
-      }
-      const meals = (state.settings && state.settings.mealTypes) ||
-                    ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
-      for (const m of meals) {
-        items.push({ icon: m.toLowerCase().includes('snack') ? '🍎' : '🍽️', label: m,
-                     done: state.foodLog.some(f => f.date === new Date().toISOString().slice(0, 10) &&
-                                                   (f.meal || 'Lunch') === m),
-                     nav: `data-meal-add="${m}"` });
-      }
-      items.push({ icon: '💧', label: 'Water goal', done: water >= waterTarget,
-                   nav: 'data-nav="nutrition"' });
-      const done = items.filter(i => i.done).length;
-      return { items, done, total: items.length,
-               pct: items.length ? Math.round(done / items.length * 100) : 0 };
-    })();
 
     // Real weight-goal projection from the Smart Goal Engine (same module already used by the
     // Log Weight screen) -- no goal invented here if the user hasn't set one.
@@ -215,19 +192,7 @@
         ${summaryTile('moon', 'rgba(124,58,237,.08)', 'var(--rh-purple)', sleepHours == null ? '—' : sleepHours.toFixed(1), '', 'Sleep', sleepHours == null ? 'Not synced' : '/ 8.0 h')}
       </div>
 
-      <div class="rh-section-head"><span>Today's Plan</span><span class="hm-plan__count">${todaysPlan.done} of ${todaysPlan.total}</span></div>
-      <div class="pg-card">
-        <div class="rh-progress-track" style="margin-top:0;"><div class="rh-progress-fill" style="width:${todaysPlan.pct}%;"></div></div>
-        <div class="hm-plan__pct">${todaysPlan.pct}% complete</div>
-        <div class="hm-plan__list">
-          ${todaysPlan.items.map(i => `
-            <button class="hm-plan__row ${i.done ? 'is-done' : ''}" ${i.nav}>
-              <span class="hm-plan__tick" aria-hidden="true">${i.done ? '✓' : ''}</span>
-              <span class="hm-plan__icon" aria-hidden="true">${i.icon}</span>
-              <span class="hm-plan__label">${i.label}</span>
-            </button>`).join('')}
-        </div>
-      </div>
+      ${renderHomeHabits ? renderHomeHabits() : ''}
 
       ${(() => {
         /* Nutrition card. Only shown once something has been logged today — an empty card of

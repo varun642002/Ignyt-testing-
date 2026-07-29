@@ -9538,34 +9538,90 @@ function hcCard(opts) {
    data-toggle-habit handler, and habitStreak()/habitDateStr() as the full Habit Tracker on
    Progress (single source of truth — no duplicated state). "View all" opens Progress > Habits
    via data-open-progress-view, which already sets tab+progressView. */
+
+
+/** Short confirmation buzz. Guarded because navigator.vibrate is absent on desktop browsers
+ *  and can be disabled by the user or the platform; there is no fallback and none is needed. */
+function hapticTick(){
+  try { if(navigator.vibrate) navigator.vibrate(12); } catch(e){ /* never break a tap over this */ }
+}
+
+/* Adds a habit from the Home suggestion chips. Same store and same id scheme as the Habit
+   Tracker on Progress -- these are ordinary habits from the moment they exist, editable and
+   deletable in the usual place, not a special "suggested" kind. */
+function addHabitNamed(name){
+  const clean = String(name || "").trim();
+  if(!clean) return null;
+  // A habit the user already has must not be silently duplicated by a second tap.
+  const existing = (state.habits || []).find(h => h && String(h.name).toLowerCase() === clean.toLowerCase());
+  if(existing){
+    if(existing.enabled === false){ existing.enabled = true; persist(); return existing; }
+    return null;
+  }
+  const habit = { id: nextId(), name: clean, createdAt: Date.now(), enabled: true };
+  state.habits = (state.habits || []).concat([habit]);
+  persist();
+  return habit;
+}
+
 function renderHomeHabits(){
   const today = habitDateStr();
-  const habits = state.habits || [];
-  const header = `<div class="section-heading"><span class="section-heading__label">Habits Today</span>${habits.length?`<button class="btn btn-ghost" data-open-progress-view="habits" style="padding:5px 8px;font-size:12px;">View all</button>`:''}</div>`;
+  const habits = (state.habits || []).filter(h => h && h.enabled !== false);
+  const allCount = (state.habits || []).length;
+
+  const header = `<div class="rh-section-head"><span>Today's Habits</span>${
+    allCount ? `<a href="#" class="rh-view-all" data-open-progress-view="habits">Manage</a>` : ""}</div>`;
+
+  /* Empty state offers SUGGESTIONS rather than silently creating habits. Seeding someone's
+     tracker with five habits they never asked for is inventing user data — and a habit they
+     did not choose is one they will not keep. One tap each, and nothing exists until tapped. */
   if(!habits.length){
-    return header + `<button class="premium-card home-habits__empty" data-open-progress-view="habits">
-      <div class="home-habits__empty-title">Build a daily habit</div>
-      <div class="home-habits__empty-sub">Track water, steps, sleep and more — tap to add your first habit.</div>
-    </button>`;
+    const suggestions = ["Drink 3L Water", "Morning Workout", "Take Multivitamin",
+                         "Walk 10,000 Steps", "Sleep Before 11 PM"];
+    return header + `<div class="pg-card hb-empty">
+      <div class="hb-empty__title">${allCount ? "All your habits are turned off" : "Start a daily habit"}</div>
+      <div class="hb-empty__sub">${allCount
+        ? "Turn one back on from Manage to see it here."
+        : "Pick one to begin, or add your own. Tick them off each day and the streak builds itself."}</div>
+      ${allCount ? "" : `<div class="hb-sugg">
+        ${suggestions.map(n=>`<button class="hb-sugg__chip" data-add-habit-preset="${escHtml(n)}">+ ${escHtml(n)}</button>`).join("")}
+      </div>`}
+    </div>`;
   }
-  const MAX = 4;
+
+  const done = habits.filter(h => state.habitCompletions[h.id] && state.habitCompletions[h.id][today]).length;
+  const pct = habits.length ? Math.round(done / habits.length * 100) : 0;
+  const MAX = 5;
   const shown = habits.slice(0, MAX);
-  const doneToday = habits.filter(h=> state.habitCompletions[h.id] && state.habitCompletions[h.id][today]).length;
-  return header + `<section class="premium-card home-habits">
-    <div class="home-habits__meta">${doneToday} of ${habits.length} done today</div>
-    ${shown.map(h=>{
-      const done = !!(state.habitCompletions[h.id] && state.habitCompletions[h.id][today]);
-      const streak = habitStreak(h.id);
-      return `<div class="home-habit-row">
-        <button class="set-check ${done?'done':''}" data-toggle-habit="${h.id}" aria-label="Mark ${h.name} complete for today">${done?svg('check',16):''}</button>
-        <div class="home-habit-row__body">
-          <div class="home-habit-row__name ${done?'is-done':''}">${h.name}</div>
-          <div class="home-habit-row__streak">🔥 ${streak} day streak</div>
-        </div>
-      </div>`;
-    }).join("")}
-    ${habits.length>MAX?`<button class="btn btn-secondary btn-block" data-open-progress-view="habits" style="margin-top:10px;">View all ${habits.length} habits</button>`:''}
-  </section>`;
+
+  return header + `<div class="pg-card hb">
+    <div class="hb-top">
+      <div class="hb-top__count"><b>${done}</b> / ${habits.length} completed</div>
+      <div class="hb-top__pct">${pct}%</div>
+    </div>
+    <div class="hb-track"><div class="hb-fill" style="width:${pct}%;"></div></div>
+
+    <div class="hb-list">
+      ${shown.map(h=>{
+        const isDone = !!(state.habitCompletions[h.id] && state.habitCompletions[h.id][today]);
+        const streak = habitStreak(h.id);
+        const meta = habitIconMeta(h.name);
+        return `<button class="hb-row${isDone?" is-done":""}" data-toggle-habit="${h.id}"
+                  aria-pressed="${isDone?"true":"false"}"
+                  aria-label="${isDone?"Mark "+escHtml(h.name)+" as not done":"Mark "+escHtml(h.name)+" as done"}">
+          <span class="hb-box" aria-hidden="true">${isDone?svg('check',14):""}</span>
+          <span class="hb-icon" style="background:${meta.bg};color:${meta.color};" aria-hidden="true">${svg(meta.icon,15)}</span>
+          <span class="hb-body">
+            <span class="hb-name">${escHtml(h.name)}</span>
+            ${streak > 0 ? `<span class="hb-streak">🔥 ${streak} day${streak===1?"":"s"}</span>` : ""}
+          </span>
+        </button>`;
+      }).join("")}
+    </div>
+
+    ${habits.length > MAX
+      ? `<button class="hb-more" data-open-progress-view="habits">View all ${habits.length} habits</button>` : ""}
+  </div>`;
 }
 
 function renderHomeHealthFeed() {
@@ -12659,7 +12715,7 @@ function renderProgressHabits(){
       </div>
     </div>
     ${state.habits.length===0 ? `<div class="empty-note">No habits yet — add one above to start tracking daily streaks.</div>` :
-      state.habits.map(h=>{
+      state.habits.map((h, idx)=>{
         const done = !!(state.habitCompletions[h.id] && state.habitCompletions[h.id][today]);
         const streak = habitStreak(h.id);
         const best = habitBestStreak(h.id);
@@ -12667,7 +12723,7 @@ function renderProgressHabits(){
         const month = habitMonthCompletion(h.id);
         const isEditing = state.editingHabitId === h.id;
         const meta = habitIconMeta(h.name);
-        return `<div class="pg-card" style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;">
+        return `<div class="pg-card" style="display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;margin-bottom:10px;">
           <span class="tl-card__icon" style="flex:none;background:${meta.bg};color:${meta.color};">${svg(meta.icon,20)}</span>
           <div class="row-between" style="align-items:flex-start;flex:1;min-width:0;">
             ${isEditing ? `
@@ -12684,6 +12740,12 @@ function renderProgressHabits(){
                 : `<button class="set-check ${done?'done':''}" data-toggle-habit="${h.id}" aria-label="Mark ${h.name} complete for today">${done?svg('check',16):''}</button>
                    <button style="background:none;border:none;padding:4px;cursor:pointer;color:var(--rh-muted);flex:none;" data-del-habit="${h.id}" aria-label="Delete habit">${svg('x',15)}</button>`}
             </div>
+          </div>
+          <div class="hbm-tools">
+            <button data-move-habit="${h.id}" data-move-habit-dir="up" ${idx===0?'disabled':''} aria-label="Move ${h.name} up">↑</button>
+            <button data-move-habit="${h.id}" data-move-habit-dir="down" ${idx===state.habits.length-1?'disabled':''} aria-label="Move ${h.name} down">↓</button>
+            <button class="hbm-toggle${h.enabled===false?'':' is-on'}" data-habit-enabled="${h.id}"
+              aria-pressed="${h.enabled===false?'false':'true'}">${h.enabled===false?'Hidden from Home':'Showing on Home'}</button>
           </div>
         </div>`;
       }).join("")}
@@ -17800,14 +17862,56 @@ function attachHandlers(){
     state.habitBuilderName = "";
     render();
   });
+  document.querySelectorAll("[data-add-habit-preset]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const added = addHabitNamed(el.dataset.addHabitPreset);
+      if(!added){ showToast("You already have that habit.", "info", render); return; }
+      showToast("Habit added.", "success", render);
+      render();
+    });
+  });
+
+  /* Reorder and enable/disable, per the brief. Both live with the rest of habit management on
+     Progress rather than on Home: Home is for ticking today off, and burying configuration in
+     a dashboard card is how a one-tap surface turns into a settings screen. */
+  document.querySelectorAll("[data-move-habit]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = Number(el.dataset.moveHabit), dir = el.dataset.moveHabitDir === "up" ? -1 : 1;
+      const list = state.habits || [];
+      const i = list.findIndex(h => h && Number(h.id) === id);
+      const j = i + dir;
+      if(i === -1 || j < 0 || j >= list.length) return;
+      const tmp = list[i]; list[i] = list[j]; list[j] = tmp;
+      persist();
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-habit-enabled]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const h = (state.habits || []).find(x => x && Number(x.id) === Number(el.dataset.habitEnabled));
+      if(!h) return;
+      // Disabled habits keep their history and their streak; they simply stop appearing on
+      // Home. Deleting is the destructive option and stays a separate, explicit action.
+      h.enabled = h.enabled === false;
+      persist();
+      showToast(h.enabled === false ? "Hidden from Home." : "Showing on Home.", "info", render);
+      render();
+    });
+  });
+
   document.querySelectorAll("[data-toggle-habit]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const id = Number(el.dataset.toggleHabit);
       const today = habitDateStr();
       if(!state.habitCompletions[id]) state.habitCompletions[id] = {};
-      if(state.habitCompletions[id][today]) delete state.habitCompletions[id][today];
+      const wasDone = !!state.habitCompletions[id][today];
+      if(wasDone) delete state.habitCompletions[id][today];
       else state.habitCompletions[id][today] = Date.now();
-      render();
+      // A short tick on completion only. Buzzing on un-check too would make correcting a
+      // mistap feel like an achievement, and vibrate() is a no-op where it is unsupported.
+      if(!wasDone) hapticTick();
+      render();   // renderApp() ends in persist(), so the completion is saved with the repaint
     });
   });
   document.querySelectorAll("[data-del-habit]").forEach(el=>{
