@@ -49,5 +49,39 @@ public class MainActivity extends BridgeActivity {
         if (getBridge() != null && getBridge().getWebView() != null) {
             getBridge().getWebView().setBackgroundColor(Color.parseColor("#121216"));
         }
+
+        deliverRoute(getIntent());
+    }
+
+    /* A notification tapped while the app is already running delivers here rather than through
+       onCreate, so both paths have to hand the route over or deep links would work only from
+       cold start. */
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        deliverRoute(intent);
+    }
+
+    /**
+     * Passes a notification's deep-link route to the web layer.
+     *
+     * Written to a window property rather than dispatched as an event: the WebView may not have
+     * finished loading when a cold start delivers this, and an event fired at nobody is simply
+     * lost. A property waits to be read. app.js consumes it once at boot and clears it, so a
+     * later reload cannot navigate somewhere the user did not just ask for.
+     *
+     * Kotlin/Java deliberately knows nothing about what a route means — it is an opaque string
+     * chosen by the reminder catalogue in JS.
+     */
+    private void deliverRoute(android.content.Intent intent) {
+        if (intent == null || getBridge() == null || getBridge().getWebView() == null) return;
+        String route = intent.getStringExtra("ignyt_route");
+        if (route == null || route.isEmpty()) return;
+        final String safe = route.replaceAll("[^A-Za-z0-9_-]", "");
+        if (safe.isEmpty()) return;
+        getBridge().getWebView().post(() ->
+            getBridge().getWebView().evaluateJavascript(
+                "window.__ignytRoute = '" + safe + "';", null));
     }
 }

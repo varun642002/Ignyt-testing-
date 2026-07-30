@@ -33,15 +33,38 @@ class NotifyPlugin : com.getcapacitor.Plugin() {
 
     companion object {
         const val CHANNEL_ID = "ignyt_reminders"
+        /* Sound and vibration are fixed on a channel at creation and cannot be overridden per
+           notification from API 26 on, so "silent" and "no vibration" have to be separate
+           channels rather than flags. Three channels, one per combination the settings offer. */
+        const val CHANNEL_NO_VIBRATE = "ignyt_reminders_quiet"
+        const val CHANNEL_SILENT = "ignyt_reminders_silent"
         const val PREFS = "ignyt_reminders_prefs"
     }
 
     override fun load() {
-        val channel = NotificationChannel(
-            CHANNEL_ID, "IGNYT Reminders", NotificationManager.IMPORTANCE_DEFAULT
-        ).apply { description = "Workout, hydration, and weekly report reminders" }
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.createNotificationChannel(channel)
+
+        nm.createNotificationChannel(NotificationChannel(
+            CHANNEL_ID, "Reminders", NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Meal, workout, hydration and progress reminders"
+            enableVibration(true)
+        })
+
+        nm.createNotificationChannel(NotificationChannel(
+            CHANNEL_NO_VIBRATE, "Reminders (no vibration)", NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "The same reminders, with vibration off"
+            enableVibration(false)
+        })
+
+        nm.createNotificationChannel(NotificationChannel(
+            CHANNEL_SILENT, "Reminders (silent)", NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Reminders that appear without sound or vibration"
+            enableVibration(false)
+            setSound(null, null)
+        })
     }
 
     private fun hasPermission(): Boolean {
@@ -110,6 +133,48 @@ class NotifyPlugin : com.getcapacitor.Plugin() {
         call.resolve(JSObject().apply { put("scheduled", true) })
     }
 
+    /**
+     * Schedules a reminder on specific weekdays. "Daily", "weekdays", "weekends" and "custom
+     * days" are all the same call with a different day list -- the JS layer owns that
+     * vocabulary and this only ever sees the resulting days, so a new repeat option needs no
+     * native change.
+     *
+     * days: 0=Sunday..6=Saturday (JavaScript's Date.getDay()). An empty list cancels.
+     */
+    @PluginMethod
+    fun scheduleWeekly(call: PluginCall) {
+        val id = call.getString("id")
+        if (id.isNullOrEmpty()) { call.reject("id is required"); return }
+        val daysArr = call.getArray("days")
+        val days = mutableListOf<Int>()
+        if (daysArr != null) {
+            for (i in 0 until daysArr.length()) {
+                (daysArr.opt(i) as? Number)?.let { days.add(it.toInt()) }
+            }
+        }
+        val hour = call.getInt("hour") ?: 9
+        val minute = call.getInt("minute") ?: 0
+        val title = call.getString("title") ?: "IGNYT"
+        val body = call.getString("body") ?: ""
+        val route = call.getString("route") ?: ""
+        val snooze = call.getInt("snoozeMinutes") ?: 0
+        val vibrate = call.getBoolean("vibrate", true) ?: true
+        val silent = call.getBoolean("silent", false) ?: false
+
+        persistWeekly(id, days, hour, minute, title, body, route, snooze, vibrate, silent)
+        ReminderScheduler.armWeekly(context, id, days, hour, minute, title, body, route, snooze, vibrate, silent)
+        call.resolve(JSObject().apply { put("scheduled", days.isNotEmpty()); put("days", days.size) })
+    }
+
+    /** Every scheduled reminder, so the JS layer can reconcile after a reinstall or a restore
+     *  rather than assuming its own settings and the system agree. */
+    @PluginMethod
+    fun listScheduled(call: PluginCall) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val ids = prefs.all.keys.filter { it.startsWith("reminder_") }.map { it.removePrefix("reminder_") }
+        call.resolve(JSObject().apply { put("ids", com.getcapacitor.JSArray(ids.toTypedArray())) })
+    }
+
     @PluginMethod
     fun cancel(call: PluginCall) {
         val id = call.getString("id")
@@ -128,6 +193,25 @@ class NotifyPlugin : com.getcapacitor.Plugin() {
     }
 
     private fun keyFor(id: String) = "reminder_$id"
+
+    /* Weekly reminders are persisted in the same store as daily ones so BootReceiver can
+       re-arm them: AlarmManager alarms do not survive a reboot, and a reminder that silently
+       stops after a restart is worse than one that was never set. */
+    private fun persistWeekly(
+        id: String, days: List<Int>, hour: Int, minute: Int, title: String, body: String,
+        route: String, snooze: Int, vibrate: Boolean, silent: Boolean
+    ) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (days.isEmpty()) { prefs.edit().remove(keyFor(id)).apply(); return }
+        val json = org.json.JSONObject().apply {
+            put("kind", "weekly")
+            put("days", org.json.JSONArray(days))
+            put("hour", hour); put("minute", minute)
+            put("title", title); put("body", body); put("route", route)
+            put("snoozeMinutes", snooze); put("vibrate", vibrate); put("silent", silent)
+        }
+        prefs.edit().putString(keyFor(id), json.toString()).apply()
+    }
 
     private fun persist(id: String, hour: Int, minute: Int, title: String, body: String, intervalDays: Int) {
         val json = org.json.JSONObject().apply {

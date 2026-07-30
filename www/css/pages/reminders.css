@@ -1,0 +1,99 @@
+/* =========================================================
+   REMINDERS — Settings ▸ All Reminders
+   Scoped under .pg-light, which already carries the --rh-* palette.
+========================================================= */
+.rm-none { font-size: 13px; color: var(--rh-muted); padding: 16px 0; }
+
+.rm-warn {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 14px; margin-bottom: 14px;
+  border: 1px solid rgba(239,68,68,.3); border-radius: 12px;
+  background: rgba(239,68,68,.1);
+  font-size: 12.5px; line-height: 1.45; color: var(--rh-text);
+}
+.rm-warn button {
+  margin-left: auto; padding: 6px 12px; border-radius: 999px;
+  border: 0; background: var(--rh-red, #EF4444); color: #fff;
+  font: inherit; font-size: 12px; font-weight: 800; cursor: pointer;
+}
+
+.rm-group { margin-bottom: 18px; }
+.rm-group__title {
+  font-size: 11px; font-weight: 800; color: var(--rh-muted);
+  text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; padding-left: 2px;
+}
+
+.rm-row {
+  background: var(--rh-card); border: 1px solid var(--rh-border);
+  border-radius: 14px; margin-bottom: 8px; overflow: hidden;
+}
+.rm-row.is-on { border-color: rgba(37,99,235,.35); }
+.rm-row__head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+.rm-row__main {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;
+  border: 0; background: none; padding: 0;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.rm-row__label { font-size: 14.5px; font-weight: 700; }
+.rm-row__meta { font-size: 12px; color: var(--rh-muted); font-variant-numeric: tabular-nums; }
+
+/* Switch. 30px tall with the tap area extended past it, rather than a control that big in a
+   dense list — same approach as the diet plan's completion tick. */
+.rm-switch {
+  position: relative; flex: none; width: 46px; height: 27px;
+  border: 0; border-radius: 999px; background: var(--rh-border);
+  cursor: pointer; transition: background-color .18s ease;
+}
+.rm-switch::after { content: ""; position: absolute; inset: -8px; }
+.rm-switch.is-on { background: var(--rh-blue); }
+.rm-switch__knob {
+  position: absolute; top: 3px; left: 3px; width: 21px; height: 21px;
+  border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  transition: transform .18s cubic-bezier(.34,1.4,.64,1);
+}
+.rm-switch.is-on .rm-switch__knob { transform: translateX(19px); }
+
+.rm-row__body { padding: 0 14px 14px; border-top: 1px solid var(--rh-border); padding-top: 12px; }
+.rm-row__desc { margin: 0 0 12px; font-size: 12.5px; line-height: 1.5; color: var(--rh-muted); }
+
+.rm-field { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.rm-field > span { flex: none; width: 58px; font-size: 12px; font-weight: 700; color: var(--rh-muted); }
+.rm-field input[type="time"] {
+  padding: 8px 10px; border: 1px solid var(--rh-border); border-radius: 10px;
+  background: var(--rh-bg, transparent); color: var(--rh-text);
+  font: inherit; font-size: 14px; font-variant-numeric: tabular-nums; outline: none;
+}
+.rm-field input[type="time"]:focus { border-color: var(--rh-blue); }
+
+.rm-repeat { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
+.rm-chip {
+  padding: 6px 11px; border-radius: 999px;
+  border: 1px solid var(--rh-border); background: transparent; color: var(--rh-muted);
+  font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.rm-chip.is-on { background: var(--rh-blue); border-color: var(--rh-blue); color: #fff; }
+
+/* Seven equal columns — a wrapping row would put Sunday under Monday and read as two weeks. */
+.rm-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin: 4px 0 12px; }
+.rm-day {
+  aspect-ratio: 1; border-radius: 50%;
+  border: 1px solid var(--rh-border); background: transparent; color: var(--rh-muted);
+  font: inherit; font-size: 12px; font-weight: 800; cursor: pointer;
+}
+.rm-day.is-on { background: var(--rh-blue); border-color: var(--rh-blue); color: #fff; }
+
+.rm-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.rm-opt {
+  padding: 6px 11px; border-radius: 999px;
+  border: 1px solid var(--rh-border); background: transparent; color: var(--rh-muted);
+  font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.rm-opt.is-on { border-color: var(--rh-blue); color: var(--rh-blue); }
+.rm-opt.is-static { cursor: default; opacity: .7; }
+
+.rm-note { margin: 10px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--rh-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rm-switch, .rm-switch__knob { transition: none; }
+}

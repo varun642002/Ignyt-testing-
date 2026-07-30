@@ -4680,7 +4680,9 @@ const state = {
   // Workout History view filters (transient — a fresh visit starts unfiltered)
   historySearch: "", historyRange: "all", historyMuscle: "", historySort: "newest",
   historyPRsOnly: false, historyPage: 1, historyArchived: false, historyBinOpen: false,
-  reportPeriod: "week",   // Reports view: week | month | year
+  reportPeriod: "week",
+  reminderScreen: false,   // transient — Settings > All Reminders is open
+  reminderOpen: null,      // transient — which reminder row is expanded   // Reports view: week | month | year
   historySelectMode: false, historySelected: [], // transient — bulk multi-select
   // Food search (transient — a fresh visit starts with an empty search)
   foodSearchQuery: "", foodSearchSelected: null, foodSearchAmount: null, foodSearchUnit: "g",
@@ -8633,7 +8635,98 @@ function renderPrivacySecurityInfo(){
   `;
 }
 
+
+/* =========================================================
+   REMINDERS — the settings screen
+
+   One row per reminder, grouped the way a person thinks about them (Meals, Training, Daily,
+   Fasting, Progress, Custom) rather than by how they are scheduled. Expanding a row reveals
+   its time, its repeat rule and its per-reminder options — collapsed, the list stays scannable
+   at fourteen entries, which a flat list of every control would not be.
+========================================================= */
+const REMINDER_DAY_LABELS = ["S","M","T","W","T","F","S"];
+
+function renderRemindersScreen(){
+  const R = window.IgnytReminders;
+  if(!R) return `<div class="pg-light"><div class="rm-none">Reminders are unavailable in this build.</div></div>`;
+  const open = state.reminderOpen;
+  const granted = state.nativeNotifPermissionGranted;
+
+  const groups = R.groups().map(g=>{
+    const rows = R.CATALOGUE.filter(r=>r.group === g).map(def=>{
+      const s = R.settings(def.id);
+      const isOpen = open === def.id;
+      const time = String(s.hour).padStart(2,"0") + ":" + String(s.minute).padStart(2,"0");
+      const days = R.daysFor(s);
+      const repeatLabel = s.repeat === "daily" ? "Every day"
+                        : s.repeat === "weekdays" ? "Weekdays"
+                        : s.repeat === "weekends" ? "Weekends"
+                        : days.length === 7 ? "Every day"
+                        : days.map(d=>REMINDER_DAY_LABELS[d]).join(" ");
+
+      return `<div class="rm-row${isOpen?' is-open':''}${s.enabled?' is-on':''}">
+        <div class="rm-row__head">
+          <button class="rm-row__main" data-rm-open="${escHtml(def.id)}" aria-expanded="${isOpen?'true':'false'}">
+            <span class="rm-row__label">${escHtml(def.label)}</span>
+            <span class="rm-row__meta">${s.enabled ? escHtml(time + " · " + repeatLabel) : "Off"}</span>
+          </button>
+          <button class="rm-switch${s.enabled?' is-on':''}" data-rm-toggle="${escHtml(def.id)}"
+            role="switch" aria-checked="${s.enabled?'true':'false'}" aria-label="${escHtml(def.label)}">
+            <span class="rm-switch__knob"></span>
+          </button>
+        </div>
+
+        ${isOpen ? `<div class="rm-row__body">
+          <p class="rm-row__desc">${escHtml(s.body)}</p>
+
+          <label class="rm-field"><span>Time</span>
+            <input type="time" value="${escHtml(time)}" data-rm-time="${escHtml(def.id)}"></label>
+
+          <div class="rm-field"><span>Repeat</span>
+            <div class="rm-repeat">
+              ${[["daily","Daily"],["weekdays","Weekdays"],["weekends","Weekends"],["custom","Custom"]]
+                .map(([k,l])=>`<button class="rm-chip${s.repeat===k?' is-on':''}" data-rm-repeat="${escHtml(def.id)}" data-repeat="${k}">${l}</button>`).join("")}
+            </div>
+          </div>
+
+          ${s.repeat === "custom" ? `<div class="rm-days">
+            ${REMINDER_DAY_LABELS.map((lab,i)=>`<button class="rm-day${days.indexOf(i)!==-1?' is-on':''}"
+              data-rm-day="${escHtml(def.id)}" data-day="${i}" aria-pressed="${days.indexOf(i)!==-1?'true':'false'}">${lab}</button>`).join("")}
+          </div>` : ""}
+
+          <div class="rm-opts">
+            <button class="rm-opt${s.vibrate?' is-on':''}" data-rm-flag="${escHtml(def.id)}" data-flag="vibrate">Vibrate</button>
+            <button class="rm-opt${s.silent?' is-on':''}" data-rm-flag="${escHtml(def.id)}" data-flag="silent">Silent</button>
+            ${def.snooze ? `<span class="rm-opt is-static">Snooze ${def.snooze}m</span>` : ""}
+          </div>
+
+          ${def.conditional ? `<p class="rm-note">Only sent if nothing was logged — IGNYT cancels
+            this one for the day as soon as you do.</p>` : ""}
+          ${def.id.indexOf("fast-") === 0 ? `<p class="rm-note">Timed from your active fast, not
+            from the clock above — the time here is only used if no fast is running.</p>` : ""}
+        </div>` : ""}
+      </div>`;
+    }).join("");
+
+    return `<div class="rm-group"><div class="rm-group__title">${escHtml(g)}</div>${rows}</div>`;
+  }).join("");
+
+  return `<div class="pg-light">
+    <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:6px;" data-rm-back="1">← Back</button>
+    <div style="font-size:22px;font-weight:800;">Reminders</div>
+    <div style="font-size:12px;color:var(--rh-muted);margin-bottom:14px;">Every nudge IGNYT can send, and when.</div>
+
+    ${granted === false ? `<div class="rm-warn">
+      Notifications are turned off for IGNYT, so none of these will arrive.
+      <button data-rm-request="1">Turn on</button>
+    </div>` : ""}
+
+    ${groups}
+  </div>`;
+}
+
 function renderSettingsTab(){
+  if(state.reminderScreen) return renderRemindersScreen();
   if(state.viewingPrivacyInfo) return renderPrivacySecurityInfo();
   const s = state.settings;
   return `
@@ -8719,6 +8812,10 @@ function renderSettingsTab(){
       </div>
 
       <div class="rh-section-head"><span>${svg('bell',13)} Notifications</span></div>
+      <div class="pg-card" style="margin-bottom:8px;">
+        <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Meals, workouts, hydration, fasting, supplements and progress — each with its own time and days.</div>
+        <button class="btn btn-steel btn-block" data-action="open-reminders">All Reminders</button>
+      </div>
       <div class="pg-card">
         <div style="font-size:11px;color:var(--rh-muted);margin-bottom:10px;line-height:1.4;">${nativeNotify() ? 'Reminders are scheduled on-device and fire even when IGNYT is closed.' : "Reminders only fire while IGNYT is open — mobile browsers don't allow true background notifications without a push server."}</div>
         ${settingToggle("workoutReminders","Workout Reminders","Nudge you in the evening.","calendar")}
@@ -9131,6 +9228,31 @@ const REMINDER_DEFS = {
   hydrationReminders: { id:"hydration", hour:15, minute:0, title:"IGNYT", body:"Don't forget to log your water today." },
   weeklyReports: { id:"weekly", hour:18, minute:0, title:"IGNYT Weekly Report", body:"Your training week summary is ready.", intervalDays:7 }
 };
+
+
+/* A notification's deep link, handed over by MainActivity as window.__ignytRoute.
+   Read once and cleared: leaving it set would send the user back to the same screen on the
+   next reload, long after the reminder that asked for it. Unknown routes are ignored rather
+   than navigated to, so a stale build can never land on a screen that no longer exists. */
+function consumeNotificationRoute(){
+  const route = window.__ignytRoute;
+  if(!route) return;
+  delete window.__ignytRoute;
+
+  const TABS = ["home","workout","nutrition","progress","profile","tools","fasting","health","body","insights","settings"];
+  if(route === "supplements"){
+    // Not built yet. Land on Tools rather than nowhere, so the notification still goes
+    // somewhere sensible instead of appearing to do nothing.
+    state.tab = "tools";
+  }else if(TABS.indexOf(route) !== -1){
+    state.tab = route;
+  }else{
+    return;
+  }
+  state.nutritionScreen = null;
+  state.foodFlow = null;
+  render();
+}
 
 async function refreshNativeNotifPermission(){
   const plugin = nativeNotify();
@@ -20452,6 +20574,119 @@ function attachHandlers(){
     });
   });
 
+  /* ---- Reminders ------------------------------------------------------------------ */
+  const RM = window.IgnytReminders;
+
+  const rmOpenBtn = document.querySelector('[data-action="open-reminders"]');
+  if(rmOpenBtn) rmOpenBtn.addEventListener("click", async ()=>{
+    state.reminderScreen = true;
+    state.reminderOpen = null;
+    await refreshNativeNotifPermission();   // the answer may have changed in system settings
+    render();
+  });
+
+  const rmBack = document.querySelector("[data-rm-back]");
+  if(rmBack) rmBack.addEventListener("click", ()=>{
+    state.reminderScreen = false; state.reminderOpen = null; render();
+  });
+
+  document.querySelectorAll("[data-rm-open]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.rmOpen;
+      state.reminderOpen = state.reminderOpen === id ? null : id;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-rm-toggle]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      if(!RM) return;
+      const id = el.dataset.rmToggle;
+      const now = !RM.settings(id).enabled;
+      /* Turning one on with the permission refused would schedule an alarm that can never
+         show anything. Ask first; if it is still refused, say so rather than leaving a switch
+         that looks on and does nothing. */
+      if(now && state.nativeNotifPermissionGranted === false){
+        const plugin = nativeNotify();
+        if(plugin && plugin.requestPermission){
+          try{
+            const res = await plugin.requestPermission();
+            state.nativeNotifPermissionGranted = !(res && res.granted === false);
+          }catch(e){ /* leave as-is */ }
+        }
+        if(state.nativeNotifPermissionGranted === false){
+          showToast("Notifications are off for IGNYT in Android settings.", "error", render);
+          render();
+          return;
+        }
+      }
+      RM.update(id, { enabled: now });
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-rm-time]").forEach(el=>{
+    el.addEventListener("change", ()=>{
+      if(!RM) return;
+      const m = /^(\d{1,2}):(\d{2})$/.exec(el.value || "");
+      if(!m) return;
+      RM.update(el.dataset.rmTime, { hour: Number(m[1]), minute: Number(m[2]) });
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-rm-repeat]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(!RM) return;
+      const id = el.dataset.rmRepeat, mode = el.dataset.repeat;
+      // Switching to custom seeds the current effective days, so the switch never lands on an
+      // empty selection that silently means "never".
+      const patch = { repeat: mode };
+      if(mode === "custom") patch.days = RM.daysFor(RM.settings(id)).slice();
+      RM.update(id, patch);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-rm-day]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(!RM) return;
+      const id = el.dataset.rmDay, day = Number(el.dataset.day);
+      const days = RM.daysFor(RM.settings(id)).slice();
+      const i = days.indexOf(day);
+      if(i === -1) days.push(day); else days.splice(i, 1);
+      if(!days.length){ showToast("Pick at least one day, or turn the reminder off.", "info", render); return; }
+      RM.update(id, { repeat: "custom", days: days.sort() });
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-rm-flag]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(!RM) return;
+      const id = el.dataset.rmFlag, flag = el.dataset.flag;
+      const s = RM.settings(id);
+      const patch = {};
+      patch[flag] = !s[flag];
+      // Silent implies no vibration; leaving both on would promise a buzz the channel cannot give.
+      if(flag === "silent" && patch.silent) patch.vibrate = false;
+      RM.update(id, patch);
+      render();
+    });
+  });
+
+  const rmRequest = document.querySelector("[data-rm-request]");
+  if(rmRequest) rmRequest.addEventListener("click", async ()=>{
+    const plugin = nativeNotify();
+    if(!plugin || !plugin.requestPermission) return;
+    try{
+      const res = await plugin.requestPermission();
+      state.nativeNotifPermissionGranted = !(res && res.granted === false);
+      if(state.nativeNotifPermissionGranted && RM) await RM.syncAll();
+    }catch(e){ /* nothing more to do */ }
+    render();
+  });
+
   /* ---- Fasting Tracker ------------------------------------------------------------- */
   const FT = window.IgnytFasting;
   const ftUI = patch => { state.fastUI = Object.assign({}, state.fastUI, patch); };
@@ -21332,7 +21567,29 @@ function handleHardwareBack(){
 // fresh install where toggles were already on, and is a cheap no-op otherwise since
 // AlarmManager's set*Repeating() calls are idempotent for an unchanged schedule).
 if(nativeNotify()){
-  refreshNativeNotifPermission().then(()=> state.nativeNotifPermissionGranted && syncAllNativeReminders()).then(render).catch(()=>{});
+  refreshNativeNotifPermission()
+    .then(()=> state.nativeNotifPermissionGranted && syncAllNativeReminders())
+    .then(()=>{
+      /* Reconcile the reminder registry with the system on every launch. Settings and armed
+         alarms drift apart for reasons the app never sees — a reboot, a reinstall, a restored
+         backup — and a reminder that says "on" while nothing is armed is the worst of both. */
+      if(window.IgnytReminders && state.nativeNotifPermissionGranted){
+        return IgnytReminders.syncAll().then(()=>{
+          // Conditional reminders need today's facts, which only this layer has.
+          const today = todayStr();
+          return IgnytReminders.syncConditional({
+            workoutToday: (state.workoutLog||[]).some(w=> String(w.date||"").slice(0,10) === today),
+            activeRecently: (state.foodLog||[]).concat(state.workoutLog||[]).some(x=>{
+              const t = new Date(x.date || x.startedAt || 0).getTime();
+              return Date.now() - t < 3*86400000;
+            })
+          });
+        });
+      }
+    })
+    .then(render).catch(()=>{});
+
+  consumeNotificationRoute();
 }
 
 // Workout set inputs: tapping one selects its existing value (Bug Fix #7 -- replacing a
