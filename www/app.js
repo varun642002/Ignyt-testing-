@@ -4634,6 +4634,8 @@ const state = {
   authOtpSent: false, // transient — Sign In screen is on the code-entry step
   authOtpSentAt: 0,   // transient — when the current code was sent, for the resend countdown
   authOtpResends: 0,  // transient — resends used for this number, capped at OTP_MAX_RESENDS
+  authEmailMode: null,  // transient — null | "signin" | "signup" | "forgot" on the Sign In screen
+  authEmail: "",        // transient — the address being typed (kept across a re-render)
   authOtpCode: "",    // transient — the 6-digit code being typed (never persisted)
   nativeNotifPermissionGranted: null, // transient — null=unknown yet, refreshed from IgnytNotify at boot
   plateCalcOpen: null, // element id string when plate calc popover open
@@ -11207,6 +11209,7 @@ function renderSignInScreen(){
   const busy = !!(auth && auth.isBusy());
   const errMsg = auth && auth.getError();
   const otpStep = !!state.authOtpSent;
+  const emailStep = !!state.authEmailMode;
   const authErr = errMsg ? `<div class="auth-err" role="alert">${escHtml(errMsg)}</div>` : "";
   /* Resend gating. Both values are derived from timestamps rather than counted down in state,
      so backgrounding the app or a re-render cannot drift them from the real clock. */
@@ -11233,7 +11236,7 @@ function renderSignInScreen(){
         </div>
         <p class="auth-brand__sub">Your AI-powered fitness companion for a stronger, healthier life.</p>
 
-        ${otpStep ? `
+        ${emailStep ? renderAuthEmailStep(state.authEmailMode, authErr, busy) : otpStep ? `
           <div class="auth-otp__sent">
             Code sent to <b>+91 ${escHtml(phone)}</b>
             <button class="auth-otp__change" data-auth="otp-change" type="button">Change</button>
@@ -11286,14 +11289,15 @@ function renderSignInScreen(){
             ${busy ? "Sending…" : "Send OTP"}</button>
         `}
 
-        <div class="auth-div">OR</div>
+        ${emailStep ? "" : `
+          <div class="auth-div">OR</div>
 
-        <!-- Email is the only alternative now that Google Sign-In is gone. It is deliberately
-             secondary: phone is the primary route, so this is one full-width option rather
-             than a row of provider tiles that would imply a choice that no longer exists. -->
-        <div class="auth-social auth-social--single">
-          <button class="auth-social__btn" data-auth="email">${AUTH_ICONS.email}<span>Continue with Email</span></button>
-        </div>
+          <!-- Email is the only alternative now that Google Sign-In is gone. It is deliberately
+               secondary: phone is the primary route, so this is one full-width option rather
+               than a row of provider tiles that would imply a choice that no longer exists. -->
+          <div class="auth-social auth-social--single">
+            <button class="auth-social__btn" data-auth="email">${AUTH_ICONS.email}<span>Continue with Email</span></button>
+          </div>`}
 
         <p class="auth-legal">
           By continuing you agree to our<br>
@@ -11364,9 +11368,29 @@ function bindSignInScreen(){
     ensureOtpCountdown();
   }
 
+  document.querySelectorAll("[data-auth=\"email-mode\"]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      e.preventDefault();
+      state.authEmailMode = el.dataset.mode;
+      const a = window.IgnytAuth;
+      if(a && a.clearError) a.clearError();   // an error from the previous mode is not this one's
+      render();
+    });
+  });
+
+  /* The address survives a mode switch and a failed submit — retyping it because the password
+     was wrong is the kind of small insult that makes a sign-in screen feel hostile. */
+  const emailField = document.getElementById("auth-email");
+  if(emailField){
+    emailField.addEventListener("input", ()=>{ state.authEmail = emailField.value; });
+    if(!state.authOtpSent) emailField.focus();
+  }
+  const pwField = document.getElementById("auth-password");
+  if(pwField) pwField.addEventListener("keydown", (e)=>{ if(e.key === "Enter") submitAuthEmail(); });
+
   document.querySelectorAll("[data-auth]").forEach(el=>{
     const kind = el.dataset.auth;
-    if(kind === "phone" || kind === "code") return;
+    if(kind === "phone" || kind === "code" || kind === "email-mode") return;
     el.addEventListener("click", (e)=>{
       if(kind === "privacy" || kind === "terms") return;   // real links, let them navigate
       e.preventDefault();
@@ -11381,12 +11405,21 @@ function bindSignInScreen(){
 function signInAction(kind){
   const auth = window.IgnytAuth;
   if(kind === "email"){
-    state.authSeen = true;
-    LS.set("hx_auth_seen", true);
-    state.authFormMode = "signin";
+    // Opens the email step ON THIS SCREEN. It used to set authSeen and re-render, which
+    // dismissed the Sign In screen for good and left the user wherever that landed them,
+    // without ever asking for an email address.
+    state.authEmailMode = "signin";
+    if(auth && auth.clearError) auth.clearError();
     render();
     return;
   }
+  if(kind === "email-back"){
+    state.authEmailMode = null;
+    if(auth && auth.clearError) auth.clearError();
+    render();
+    return;
+  }
+  if(kind === "email-submit"){ submitAuthEmail(); return; }
   if(kind === "otp" || kind === "resend"){ requestOtp(kind === "resend"); return; }
   if(kind === "verify"){ submitOtp(); return; }
   if(kind === "otp-change"){
@@ -11431,6 +11464,153 @@ function ensureOtpCountdown(){
 }
 function stopOtpCountdown(){
   if(otpCountdownHandle){ clearInterval(otpCountdownHandle); otpCountdownHandle = null; }
+}
+
+
+/* =========================================================
+   EMAIL AUTHENTICATION — a step INSIDE the Sign In screen
+
+   Tapping "Continue with Email" used to set authSeen = true and re-render, which dismissed the
+   Sign In screen permanently and dropped the user into whatever was behind it. The account was
+   never created; the screen simply left. This is the screen it should always have opened.
+
+   Three modes on one surface (sign in / create account / reset), because they share the same
+   two fields and moving between them is the most common thing a person does here — a separate
+   route per mode would mean three navigations to recover from one typo.
+========================================================= */
+function renderAuthEmailStep(mode, authErr, busy){
+  const email = escHtml(state.authEmail || "");
+  const title = mode === "signup" ? "Create your account"
+              : mode === "forgot" ? "Reset your password" : "Sign in with email";
+  const sub = mode === "signup" ? "You'll get a verification email to confirm it's you."
+            : mode === "forgot" ? "We'll email you a link to set a new password."
+            : "Welcome back.";
+
+  const cta = busy
+    ? (mode === "signup" ? "Creating account…" : mode === "forgot" ? "Sending…" : "Signing in…")
+    : (mode === "signup" ? "Create Account" : mode === "forgot" ? "Send Reset Link" : "Continue");
+
+  return `
+    <div class="auth-email">
+      <button class="auth-email__back" data-auth="email-back" type="button" aria-label="Back">← Back</button>
+      <h3 class="auth-email__title">${escHtml(title)}</h3>
+      <p class="auth-email__sub">${escHtml(sub)}</p>
+
+      <label class="auth-email__field">
+        <span>Email address</span>
+        <input type="email" id="auth-email" inputmode="email" autocomplete="email"
+               autocapitalize="none" spellcheck="false" placeholder="you@example.com"
+               value="${email}">
+      </label>
+
+      ${mode === "forgot" ? "" : `
+        <label class="auth-email__field">
+          <span>Password</span>
+          <input type="password" id="auth-password"
+                 autocomplete="${mode === "signup" ? "new-password" : "current-password"}"
+                 placeholder="${mode === "signup" ? "At least 6 characters" : "Your password"}">
+        </label>`}
+
+      ${mode === "signup" ? `
+        <label class="auth-email__field">
+          <span>Confirm password</span>
+          <input type="password" id="auth-password2" autocomplete="new-password" placeholder="Repeat it">
+        </label>` : ""}
+
+      ${authErr}
+      <div class="auth-err" id="auth-email-error" role="alert" style="display:none;"></div>
+
+      <button class="auth-cta" data-auth="email-submit" ${busy ? "disabled" : ""}>${escHtml(cta)}</button>
+
+      <div class="auth-email__links">
+        ${mode === "signin" ? `
+          <button data-auth="email-mode" data-mode="forgot" type="button">Forgot password?</button>
+          <button data-auth="email-mode" data-mode="signup" type="button">Create account</button>` : ""}
+        ${mode === "signup" ? `
+          <button data-auth="email-mode" data-mode="signin" type="button">Already have an account? Sign in</button>` : ""}
+        ${mode === "forgot" ? `
+          <button data-auth="email-mode" data-mode="signin" type="button">Back to sign in</button>` : ""}
+      </div>
+    </div>`;
+}
+
+/* Validation happens here rather than being left to Firebase, so the common mistakes get an
+   instant answer instead of a network round trip and a code like ERROR_INVALID_EMAIL. */
+function validateEmailForm(mode, email, password, confirm){
+  if(!email) return "Enter your email address.";
+  // Deliberately permissive: the only thing worth rejecting locally is a shape that cannot
+  // possibly be an address. Anything stricter rejects real, valid addresses.
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "That doesn't look like an email address.";
+  if(mode === "forgot") return null;
+  if(!password) return "Enter your password.";
+  if(mode === "signup"){
+    if(password.length < 6) return "Use at least 6 characters for your password.";
+    if(password !== confirm) return "Those passwords don't match.";
+  }
+  return null;
+}
+
+
+/** Writes a validation message into the email step's error slot without re-rendering, so the
+ *  fields the user already filled in survive being told about the one they did not. */
+function showAuthEmailError(msg){
+  const slot = document.getElementById("auth-email-error");
+  if(!slot) { if(msg) showToast(msg, "error", render); return; }
+  slot.textContent = msg || "";
+  slot.style.display = msg ? "" : "none";
+}
+
+async function submitAuthEmail(){
+  const auth = window.IgnytAuth;
+  const mode = state.authEmailMode || "signin";
+  const emailEl = document.getElementById("auth-email");
+  const pwEl = document.getElementById("auth-password");
+  const pw2El = document.getElementById("auth-password2");
+  const email = (emailEl ? emailEl.value : "").trim();
+  const password = pwEl ? pwEl.value : "";
+  const confirm = pw2El ? pw2El.value : "";
+
+  state.authEmail = email;   // survive the re-render a SERVER failure causes
+
+  /* Local validation writes into the error slot WITHOUT re-rendering. A render rebuilds the
+     form, and password inputs carry no value attribute, so both fields would empty — meaning a
+     mismatched confirmation made you retype the whole thing. Keeping the passwords in `state`
+     to survive that is not an option: state is serialised to localStorage by persist(), and a
+     password has no business being written to disk. Not re-rendering solves both. */
+  const localError = validateEmailForm(mode, email, password, confirm);
+  if(localError){ showAuthEmailError(localError); return; }
+  showAuthEmailError("");
+
+  if(!auth){ showToast("Sign-in isn't available in this build.", "error", render); return; }
+
+  if(mode === "forgot"){
+    const res = await auth.sendPasswordReset(email);
+    if(res && res.success){
+      // Deliberately the same message whether or not an account exists: confirming which
+      // addresses are registered would let anyone enumerate the user list.
+      showToast("If that address has an account, a reset link is on its way.", "success", render);
+      state.authEmailMode = "signin";
+      render();
+    }else{
+      showToast((res && res.error) || "Could not send the reset email.", "error", render);
+    }
+    return;
+  }
+
+  const res = mode === "signup"
+    ? await auth.signUpWithEmail(email, password)
+    : await auth.signInWithEmail(email, password);
+
+  if(res && res.success && res.data && res.data.user){
+    if(mode === "signup"){
+      showToast("Account created. Check your inbox to verify your email.", "success", render);
+    }
+    completeSignIn(res.data.user);
+  }else{
+    // IgnytAuth already holds the error and the screen renders it inline; the toast is for
+    // eyes that are on the button rather than the field.
+    showToast((res && res.error) || "That didn't work. Please try again.", "error", render);
+  }
 }
 
 /* Phone sign-in, step 1. Every exit path either advances the step or surfaces an error —
@@ -11510,6 +11690,8 @@ function completeSignIn(user){
   state.authPhone = "";
   state.authOtpSentAt = 0;
   state.authOtpResends = 0;
+  state.authEmailMode = null;
+  state.authEmail = "";
   stopOtpCountdown();
   /* Seed the profile name from the account, but never overwrite one the user already set.
      Wrapped because nothing optional here may block navigation: an exception thrown between

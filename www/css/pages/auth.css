@@ -491,3 +491,41 @@
    collapses from a two-up grid to a single full-width button. Left as a grid with one column
    rather than a special case, so the rule stays true if another provider is ever added back. */
 .auth-social--single { grid-template-columns: 1fr; }
+
+/* ---- email step ----
+   Lives inside .auth, so it inherits the screen's own dark palette rather than the app's. */
+.auth-email__back{
+  border: 0; background: none; padding: 4px 0; margin-top: 18px;
+  color: var(--auth-muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.auth-email__title{ margin: 10px 0 0; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.auth-email__sub{ margin: 5px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--auth-muted); }
+
+.auth-email__field{ display: block; margin-top: 16px; }
+.auth-email__field > span{
+  display: block; margin-bottom: 6px;
+  font-size: 12px; font-weight: 700; color: var(--auth-muted);
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.auth-email__field input{
+  width: 100%; box-sizing: border-box; padding: 15px 16px;
+  border: 1px solid var(--auth-border); border-radius: var(--auth-radius-sm);
+  background: var(--auth-card); color: var(--auth-text);
+  font: inherit; font-size: 15.5px; outline: none;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.auth-email__field input::placeholder{ color: #6B7280; }
+.auth-email__field input:focus{
+  border-color: rgba(59,130,246,.55);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.13);
+}
+
+/* Two links on one row for sign-in, one centred for the other modes — space-between on a
+   single child would shove it to the left, so the row centres and gaps instead. */
+.auth-email__links{
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin-top: 16px;
+}
+.auth-email__links button{
+  border: 0; background: none; padding: 4px 0;
+  color: var(--auth-primary); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
