@@ -4668,7 +4668,7 @@ const state = {
   favoriteExercises: LS.get("hx_favorite_exercises", []), // array of exercise NAMES (mirrors hx_favorite_foods)
   viewingHyroxSchedule: false,
   viewingHyroxInfo: false,
-  viewingLegal: null, // "privacy" | "disclaimer" | null -- see renderLegalViewer()
+  viewingLegal: null, // "privacy" | "terms" | "disclaimer" | null -- see renderLegalViewer()
   viewingPrivacyInfo: false,
   csvImportPreview: null,
   exerciseMenuOpen: null,
@@ -8875,6 +8875,7 @@ function renderSettingsTab(){
       <div class="tl-grid" style="grid-template-columns:1fr;">
         <div class="tl-card" style="cursor:default;"><span class="tl-card__icon">${svg('info',20)}</span><div class="tl-card__body"><div class="tl-card__label">App Version</div><div class="tl-card__desc">IGNYT v1.0</div></div></div>
         <button class="tl-card" data-action="open-legal-privacy"><span class="tl-card__icon">${svg('shield',20)}</span><div class="tl-card__body"><div class="tl-card__label">Privacy Policy</div><div class="tl-card__desc">How your data is stored and shared</div></div><span class="tl-card__chev">›</span></button>
+        <button class="tl-card" data-action="open-legal-terms"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Terms and Conditions</div><div class="tl-card__desc">The terms you agreed to on sign-up</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-action="open-legal-disclaimer"><span class="tl-card__icon">${svg('health',20)}</span><div class="tl-card__body"><div class="tl-card__label">Medical &amp; Fitness Disclaimer</div><div class="tl-card__desc">Read before starting a program</div></div><span class="tl-card__chev">›</span></button>
       </div>
 
@@ -8976,8 +8977,32 @@ function resolveConfirmDialog(result, renderFn){
 // overlay in the app is (a state flag + handleHardwareBack(), see below).
 const LEGAL_PAGES = {
   privacy: { title: "Privacy Policy", url: "legal/privacy-policy.html" },
+  terms: { title: "Terms and Conditions", url: "legal/terms-and-conditions.html" },
   disclaimer: { title: "Medical & Fitness Disclaimer", url: "legal/medical-disclaimer.html" }
 };
+/* The legal links on the onboarding consent row and the sign-in screen used to be plain <a href>
+   navigations: they took the WebView off the SPA with no history entry of its own, so Android
+   hardware back had nowhere to return to and exited the app. That is the exact trap the
+   LEGAL_PAGES overlay was built to avoid -- the fix had only ever been applied to Settings.
+
+   This has to be callable from more than one place. The sign-in screen renders through
+   renderSignInScreen()/bindSignInScreen() and returns before the main app's rebind pass ever
+   runs, so a handler bound only there is bound on every screen except the one whose links were
+   broken. */
+function bindLegalLinks(){
+  document.querySelectorAll("[data-legal-open]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      e.preventDefault();
+      e.stopPropagation();   // the onboarding links sit inside a button that toggles the checkbox
+      state.viewingLegal = el.dataset.legalOpen;
+      render();
+    });
+  });
+  // Closing has to be bound wherever the overlay can appear, for the same reason.
+  document.querySelectorAll('[data-action="close-legal-viewer"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.viewingLegal = null; render(); });
+  });
+}
 function renderLegalViewer(){
   const page = LEGAL_PAGES[state.viewingLegal];
   if(!page) return "";
@@ -11081,7 +11106,7 @@ function obFairUse(){
     </div>
     <button class="ob-check ${ok?'is-on':''}" data-ob-toggle-bool="onboarding.fairUseAccepted">
       <span class="ob-check__box" aria-hidden="true">${ok?'✓':''}</span>
-      <span>I have read and agree to the <a href="legal/privacy-policy.html" data-ob-legal>Terms of Service</a> and <a href="legal/privacy-policy.html" data-ob-legal>Privacy Policy</a>.</span>
+      <span>I have read and agree to the <a href="legal/terms-and-conditions.html" data-legal-open="terms">Terms and Conditions</a> and <a href="legal/privacy-policy.html" data-legal-open="privacy">Privacy Policy</a>.</span>
     </button>`;
 }
 
@@ -11604,11 +11629,12 @@ function renderSignInScreen(){
         ${renderAuthEmailStep(mode, authErr, busy)}
         <p class="auth-legal">
           By continuing you agree to our<br>
-          <a href="legal/privacy-policy.html" data-auth="privacy">Privacy Policy</a>
-          and <a href="legal/privacy-policy.html" data-auth="terms">Terms of Service</a>.
+          <a href="legal/privacy-policy.html" data-legal-open="privacy">Privacy Policy</a>
+          and <a href="legal/terms-and-conditions.html" data-legal-open="terms">Terms and Conditions</a>.
         </p>
       </div>
-    </div>`;
+    </div>
+    ${renderLegalViewer()}`;
   bindSignInScreen();
 }
 
@@ -11631,11 +11657,11 @@ function bindSignInScreen(){
     const el = document.getElementById(id);
     if(el) el.addEventListener("keydown", (e)=>{ if(e.key === "Enter") submitAuthEmail(); });
   });
+  bindLegalLinks();
   document.querySelectorAll("[data-auth]").forEach(el=>{
     const kind = el.dataset.auth;
     if(kind === "email-mode") return;
     el.addEventListener("click", (e)=>{
-      if(kind === "privacy" || kind === "terms") return;
       e.preventDefault();
       signInAction(kind);
     });
@@ -11689,6 +11715,7 @@ function renderOnboardingWizard(){
         : {})}
       ${step===1 ? `<button class="btn btn-ghost btn-block" data-ob-nav="skip-all" style="margin-top:14px;">${state.editingOnboarding?'Cancel':'Skip for now'}</button>` : ''}
     </div>
+    ${renderLegalViewer()}
   `;
   wireOnboardingWizard();
 }
@@ -11741,6 +11768,7 @@ function wireOnboardingWizard(){
   });
 
   /* A checkbox that is a boolean rather than a value in a set — the Fair Use agreement. */
+  bindLegalLinks();
   document.querySelectorAll("[data-ob-toggle-bool]").forEach(el=>{
     el.addEventListener("click", (e)=>{
       if(e.target.closest("a")) return;               // the policy links are real links
@@ -18003,11 +18031,11 @@ function attachHandlers(){
   if(closePrivacyBtn) closePrivacyBtn.addEventListener("click", ()=>{ state.viewingPrivacyInfo = false; render(); });
   const openLegalPrivacyBtn = document.querySelector('[data-action="open-legal-privacy"]');
   if(openLegalPrivacyBtn) openLegalPrivacyBtn.addEventListener("click", ()=>{ state.viewingLegal = "privacy"; render(); });
+  const openLegalTermsBtn = document.querySelector('[data-action="open-legal-terms"]');
+  if(openLegalTermsBtn) openLegalTermsBtn.addEventListener("click", ()=>{ state.viewingLegal = "terms"; render(); });
   const openLegalDisclaimerBtn = document.querySelector('[data-action="open-legal-disclaimer"]');
   if(openLegalDisclaimerBtn) openLegalDisclaimerBtn.addEventListener("click", ()=>{ state.viewingLegal = "disclaimer"; render(); });
-  document.querySelectorAll('[data-action="close-legal-viewer"]').forEach(el=>{
-    el.addEventListener("click", ()=>{ state.viewingLegal = null; render(); });
-  });
+  bindLegalLinks();
   const testNotifBtn = document.querySelector('[data-action="test-notification"]');
   if(testNotifBtn) testNotifBtn.addEventListener("click", ()=>{
     const plugin = nativeNotify();
