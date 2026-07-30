@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "867400579785-1236bfeludf2s47m2udgv92cg366j3is.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.varun.ignyt",
+            "certificate_hash": "cb2b772b6d0d2750c02644d27393cb91248fdeaa"
+          }
+        },
+        {
           "client_id": "867400579785-gb6n8pchpo025fuqp89k230pcbpvju6m.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
