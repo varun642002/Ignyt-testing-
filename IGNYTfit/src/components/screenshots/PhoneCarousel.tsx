@@ -278,7 +278,11 @@ export function PhoneCarousel({
           <ChevronLeft aria-hidden className="size-5" />
         </button>
 
-        <div className="flex items-center gap-1.5" role="presentation">
+        {/* The dot is 6px because that is what reads well; the *button* is
+            24px square because that is the WCAG 2.2 minimum touch target.
+            Keeping the two separate lets the control stay visually small
+            without being a 6px tap target on a phone. */}
+        <div className="flex items-center" role="presentation">
           {screens.map((screen, screenIndex) => (
             <button
               key={screen.id}
@@ -289,13 +293,18 @@ export function PhoneCarousel({
               }}
               aria-label={`Go to ${screen.title}`}
               aria-current={screenIndex === index ? "true" : undefined}
-              className={cn(
-                "h-1.5 rounded-full transition-all duration-300",
-                screenIndex === index
-                  ? "w-7 bg-ember"
-                  : "w-1.5 bg-surface-3 hover:bg-text-dim",
-              )}
-            />
+              className="group grid h-6 min-w-6 place-items-center px-1"
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  "block h-1.5 rounded-full transition-all duration-300",
+                  screenIndex === index
+                    ? "w-7 bg-ember"
+                    : "w-1.5 bg-surface-3 group-hover:bg-text-dim",
+                )}
+              />
+            </button>
           ))}
         </div>
 

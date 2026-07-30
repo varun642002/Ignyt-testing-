@@ -240,26 +240,27 @@ export function Hero() {
             </span>
           </motion.div>
 
-          <motion.h1
+          {/* The headline and lead are deliberately NOT animated.
+              They are the largest contentful paint, and wrapping them in a
+              Framer entrance meant they shipped as `opacity: 0` and only
+              appeared once the client hydrated — measured at 1,088ms of
+              element render delay on a throttled mobile profile, dragging LCP
+              to 3.8s. Painting them immediately costs nothing visually: the
+              badge, buttons, trust list and device around them still animate,
+              so the section reads as alive while the words are there from the
+              first frame. */}
+          <h1
             id="hero-heading"
             className="mt-6 text-[clamp(2.5rem,6.6vw,4.35rem)] font-black leading-[1.04]"
-            initial={reduceMotion ? false : { opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.07, ease: [0.16, 1, 0.3, 1] }}
           >
             Transform your fitness journey with{" "}
             <span className="text-gradient">IGNYT</span>
-          </motion.h1>
+          </h1>
 
-          <motion.p
-            className="mx-auto mt-6 max-w-xl text-[16.5px] leading-relaxed text-text-mute sm:text-[18px] lg:mx-0"
-            initial={reduceMotion ? false : { opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.14, ease: [0.16, 1, 0.3, 1] }}
-          >
+          <p className="mx-auto mt-6 max-w-xl text-[16.5px] leading-relaxed text-text-mute sm:text-[18px] lg:mx-0">
             Track workouts, nutrition, fasting, supplements, hydration, Health
             Connect and progress — all in one powerful fitness companion.
-          </motion.p>
+          </p>
 
           <motion.div
             className="mt-9 flex flex-col items-center gap-3 sm:flex-row lg:justify-start"

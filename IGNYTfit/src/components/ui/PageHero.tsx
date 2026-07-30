@@ -57,7 +57,12 @@ export function PageHero({
       </div>
 
       <Container className="text-center">
-        <Reveal className="mx-auto max-w-3xl">
+        {/* Above-the-fold text is rendered directly, never inside a Reveal.
+            A scroll-reveal ships its children as `opacity: 0` and clears it
+            on hydration, which for a hero means the largest contentful paint
+            waits on JavaScript — worth over a second of LCP on a throttled
+            mobile profile. Only the call-to-action row animates. */}
+        <div className="mx-auto max-w-3xl">
           {eyebrow ? (
             <p className="mb-5 inline-flex items-center rounded-full border border-line bg-surface/70 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-ember">
               {eyebrow}
@@ -78,11 +83,14 @@ export function PageHero({
           ) : null}
 
           {children ? (
-            <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Reveal
+              delay={0.1}
+              className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"
+            >
               {children}
-            </div>
+            </Reveal>
           ) : null}
-        </Reveal>
+        </div>
       </Container>
     </section>
   );

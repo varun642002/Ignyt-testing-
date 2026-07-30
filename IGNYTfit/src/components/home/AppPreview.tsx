@@ -1,8 +1,22 @@
-"use client";
-
-import { PhoneCarousel } from "@/components/screenshots/PhoneCarousel";
+import dynamic from "next/dynamic";
 import { Section, SectionHeading } from "@/components/ui/Section";
 import { featuredScreens } from "@/lib/screens";
+
+/**
+ * The carousel is the heaviest interactive component on the home page — drag
+ * handling, autoplay, an AnimatePresence transition and seven device screens —
+ * and it sits well below the fold.
+ *
+ * Loading it through `next/dynamic` puts it in its own chunk instead of the
+ * initial bundle, so it no longer competes with the hero for main-thread time
+ * during hydration. It is still server-rendered, so the markup is in the HTML
+ * for crawlers and for anyone who never runs the JavaScript.
+ */
+const PhoneCarousel = dynamic(() =>
+  import("@/components/screenshots/PhoneCarousel").then(
+    (mod) => mod.PhoneCarousel,
+  ),
+);
 
 /**
  * Home-page app preview.
