@@ -86,6 +86,28 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-ink text-text">
+        {/*
+          Scroll-reveal safety net.
+
+          Framer Motion server-renders each reveal wrapper's `initial` state as
+          an inline `opacity:0`, and only clears it once the client runtime
+          observes the element entering the viewport. Without JavaScript that
+          never happens, so every section below the fold would stay invisible
+          forever — the copy is in the DOM, but nobody can read it.
+
+          This restores it for that case only. When scripting is available the
+          rule is inert and the animations run normally.
+        */}
+        <noscript>
+          <style>{`
+            [style*="opacity:0"],
+            [style*="opacity: 0"] {
+              opacity: 1 !important;
+              transform: none !important;
+            }
+          `}</style>
+        </noscript>
+
         {/* First tab stop on every page. */}
         <a
           href="#main"

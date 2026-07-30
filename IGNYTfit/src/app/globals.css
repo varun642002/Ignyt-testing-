@@ -161,7 +161,16 @@
 /* ------------------------------------------------------------- utilities */
 
 @layer utilities {
-  /* Frosted panel used by the navbar, floating cards and glass CTAs. */
+  /* Frosted panel used by the navbar, floating cards and glass CTAs.
+   *
+   * Do NOT hand-write `-webkit-backdrop-filter` here. Lightning CSS (which
+   * Tailwind v4 runs) collapses a standard + prefixed pair down to whichever
+   * form it thinks the build targets need — and with the prefixed one written
+   * last it discarded the standard property outright. The result was a navbar
+   * with no blur in Firefox and in any Chromium lacking the `-webkit-` alias:
+   * a 62%-transparent bar you could read the page straight through.
+   *
+   * Declare the standard property only; the build adds prefixes itself. */
   .glass {
     background-color: color-mix(
       in oklab,
@@ -169,7 +178,6 @@
       transparent
     );
     backdrop-filter: blur(18px) saturate(140%);
-    -webkit-backdrop-filter: blur(18px) saturate(140%);
     border: 1px solid color-mix(in oklab, var(--color-line) 85%, transparent);
   }
 
@@ -180,7 +188,6 @@
       transparent
     );
     backdrop-filter: blur(26px) saturate(150%);
-    -webkit-backdrop-filter: blur(26px) saturate(150%);
     border: 1px solid var(--color-line);
   }
 
@@ -193,7 +200,6 @@
       #fff 100%
     );
     background-size: 220% auto;
-    -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
@@ -205,7 +211,6 @@
       var(--color-sky) 52%,
       var(--color-pulse) 90%
     );
-    -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
@@ -226,10 +231,13 @@
       transparent 42%,
       color-mix(in oklab, var(--color-pulse) 45%, transparent)
     );
-    -webkit-mask:
+    /* Standard properties only — see the note on `.glass`. Hand-written
+       `-webkit-mask` / `-webkit-mask-composite` would risk the same
+       collapse, and the `xor` / `exclude` keywords differ between the two
+       syntaxes, so getting it wrong inverts the cut-out. */
+    mask:
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
   }
