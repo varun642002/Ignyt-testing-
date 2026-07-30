@@ -40,6 +40,12 @@ android {
             }
         }
     }
+    buildFeatures {
+        // AGP 8 stopped generating BuildConfig by default. AuthPlugin needs BuildConfig.DEBUG
+        // to withhold the signing fingerprints from release builds, and a build-type constant
+        // is the only source of that fact the web layer cannot spoof.
+        buildConfig true
+    }
     buildTypes {
         release {
             minifyEnabled true

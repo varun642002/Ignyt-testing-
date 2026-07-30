@@ -140,12 +140,23 @@ class AuthPlugin : com.getcapacitor.Plugin() {
         try {
             val fp = fingerprints()
             val auth = firebaseAuthOrNull()
+            /* Fingerprints are only returned to a DEBUG build. They are public values, but a
+               release app has no reason to put its package name and certificate hashes on
+               screen — that is developer diagnostics leaking into a shipped product, and the
+               gate belongs here rather than in the UI so the web layer cannot decide to show
+               what it was never given. `debug` is BuildConfig.DEBUG, which is set by the build
+               type and cannot be spoofed from JS. */
+            val isDebug: Boolean = com.varun.ignyt.BuildConfig.DEBUG
+            val pkg: String = if (isDebug) context.packageName else ""
+            val sha1: String = if (isDebug) (fp?.first ?: "") else ""
+            val sha256: String = if (isDebug) (fp?.second ?: "") else ""
             resolveSuccess(call, JSObject().apply {
-                put("packageName", context.packageName)
+                put("debug", isDebug)
                 put("firebaseInitialised", auth != null)
-                put("sha1", fp?.first ?: "")
-                put("sha256", fp?.second ?: "")
-                put("readable", fp != null)
+                put("packageName", pkg)
+                put("sha1", sha1)
+                put("sha256", sha256)
+                put("readable", isDebug && fp != null)
             })
         } catch (e: Exception) {
             resolveError(call, "Could not read signing information: ${e.message}")
@@ -451,8 +462,8 @@ class AuthPlugin : com.getcapacitor.Plugin() {
                    Print the fingerprint the project is actually missing rather than telling the
                    user to go and find it — SHA-256 in particular is not in google-services.json,
                    so there is nowhere on disk they could have looked it up. */
-                val sha256 = fingerprints()?.second
-                Log.w("IgnytAuth", "Phone auth rejected this build. SHA-256=$sha256")
+                val sha256 = if (com.varun.ignyt.BuildConfig.DEBUG) fingerprints()?.second else null
+                Log.w("IgnytAuth", "Phone auth rejected this build.")
                 if (sha256 != null)
                     "This build isn't authorized for phone sign-in. Add this SHA-256 fingerprint " +
                     "to the Firebase Console (Project settings ▸ Your apps ▸ ${context.packageName}):\n$sha256"

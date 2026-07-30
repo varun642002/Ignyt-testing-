@@ -8447,7 +8447,11 @@ function renderSigningDiagnostic(){
   const auth = window.IgnytAuth;
   if(!auth || !auth.isNativeAndroid || !auth.isNativeAndroid()) return "";
   const info = auth.getSigningInfo && auth.getSigningInfo();
-  if(!info || !info.sha256) return "";
+  /* Debug builds only. The native layer already withholds the values from a release build, so
+     this is the second of two gates rather than the only one — a shipped app must not put its
+     package name and certificate hashes on a settings screen, however public those values
+     technically are. */
+  if(!info || !info.debug || !info.sha256) return "";
   const esc = v => String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   return `<details class="auth-diag">
     <summary>Build fingerprints</summary>

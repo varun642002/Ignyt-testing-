@@ -268,9 +268,14 @@ const IgnytAuth = (() => {
     if (isNative()) {
       checkSigning().then(info => {
         if (!info) return;
-        console.log("[auth] package " + info.packageName +
-                    " | SHA-1 " + (info.sha1 || "unreadable") +
-                    " | SHA-256 " + (info.sha256 || "unreadable"));
+        // Only a debug build receives the values, and only a debug build logs them. logcat is
+        // readable over adb, so a release build printing its own certificate hashes on every
+        // launch is diagnostics leaking into a shipped product.
+        if (info.debug) {
+          console.log("[auth] package " + info.packageName +
+                      " | SHA-1 " + (info.sha1 || "unreadable") +
+                      " | SHA-256 " + (info.sha256 || "unreadable"));
+        }
         if (!info.firebaseInitialised) {
           console.warn("[auth] Firebase is NOT initialised — google-services.json missing at build time.");
         }
