@@ -486,3 +486,8 @@
   .auth-otp__box{ transition: none; }
   .auth-otp__box.is-active::after{ animation: none; opacity: 1; }
 }
+
+/* Email is the only alternative to phone now that Google Sign-In is gone, so the provider row
+   collapses from a two-up grid to a single full-width button. Left as a grid with one column
+   rather than a special case, so the rule stays true if another provider is ever added back. */
+.auth-social--single { grid-template-columns: 1fr; }

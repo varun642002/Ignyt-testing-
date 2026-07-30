@@ -8396,7 +8396,7 @@ function settingToggle(key, label, desc, icon){
    ONBOARDING — shown once, only for genuinely new installs
 ========================================================= */
 
-/** IGNYT Account (Phase 2A): Google Sign-In identity only — logically separate from the
+/** IGNYT Account: phone/email identity only — logically separate from the
  *  fitness profile (hx_profile) and every other hx_* key, none of which it reads or writes.
  *  Renders from IgnytAuth's cached snapshot (instant + offline); auth.js reconciles that
  *  snapshot against the real persisted Firebase session once per launch. */
@@ -8492,15 +8492,15 @@ function renderAccountSection(){
     return `<div class="pg-card">
       <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Sign in to securely back up your fitness data and enable multi-device sync.</div>
       ${!mode ? errorHtml : ""}
-      <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:${(!mode && errorHtml)?'10px':'0'};padding:12px;" data-action="account-signin" ${busy?'disabled':''}>${busy?'Signing in…':'Continue with Google'}</button>
-      ${!mode ? `<button class="btn btn-ghost btn-block" style="margin-top:8px;" data-action="auth-form-mode" data-auth-mode="signin">Use Email Instead</button>` : ''}
+      ${!mode ? `<button class="rh-btn rh-btn--primary" style="width:100%;margin-top:${errorHtml?'10px':'0'};padding:12px;" data-action="auth-form-mode" data-auth-mode="signin">Sign in with Email</button>` : ''}
       ${emailForm}
       ${renderSigningDiagnostic()}
     </div>`;
   }
 
   const initial = esc((account.displayName || account.email || "?").trim().charAt(0).toUpperCase() || "?");
-  const providerLabel = account.provider === "password" ? "Signed in with email" : "Signed in with Google";
+  const providerLabel = account.provider === "phone" ? "Signed in with your phone number"
+                      : account.provider === "password" ? "Signed in with email" : "Signed in";
   const verifyBanner = (account.provider === "password" && account.emailVerified === false) ? `
     <div style="font-size:11px;color:var(--rh-amber,#d97706);margin-top:8px;padding:8px;background:rgba(217,119,6,.1);border-radius:8px;">
       Email not verified.
@@ -8600,14 +8600,14 @@ function renderPrivacySecurityInfo(){
 
       <div class="pg-card">
         <div style="font-size:15px;font-weight:800;margin-bottom:6px;">Where your data lives</div>
-        <div style="font-size:13px;color:var(--rh-muted);line-height:1.55;">Every workout, weigh-in, food entry, goal and setting is stored locally on this device by default. ${signedIn?'You\'re signed in with Google, so it also backs up to your account\'s cloud storage.':'Nothing leaves this device unless you sign in with Google (Tools → Settings) to enable cloud backup, or you explicitly export a file.'}</div>
+        <div style="font-size:13px;color:var(--rh-muted);line-height:1.55;">Every workout, weigh-in, food entry, goal and setting is stored locally on this device by default. ${signedIn?'You\'re signed in, so it also backs up to your account\'s cloud storage.':'Nothing leaves this device unless you sign in (Tools → Settings) to enable cloud backup, or you explicitly export a file.'}</div>
       </div>
 
       <div class="pg-card" style="margin-top:12px;">
         <div style="font-size:15px;font-weight:800;margin-bottom:10px;">Real permission status</div>
         <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('bell',16)}</span><div class="pi-row__body"><div class="pi-row__label">Notifications</div><div class="pi-row__value" style="text-transform:capitalize;">${notifPerm}</div></div></div>
         <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('health',16)}</span><div class="pi-row__body"><div class="pi-row__label">Health Connect</div><div class="pi-row__value">${hcConnected?'Connected':'Not connected'}</div></div></div>
-        <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('signout',16)}</span><div class="pi-row__body"><div class="pi-row__label">Google Sign-In</div><div class="pi-row__value">${signedIn?'Signed in':'Not signed in'}</div></div></div>
+        <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('signout',16)}</span><div class="pi-row__body"><div class="pi-row__label">Account</div><div class="pi-row__value">${signedIn?'Signed in':'Not signed in'}</div></div></div>
         <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('cloud',16)}</span><div class="pi-row__body"><div class="pi-row__label">Cloud Sync</div><div class="pi-row__value">${cs?cs.getStatus().status:'Not available'}</div></div></div>
       </div>
 
@@ -9403,7 +9403,7 @@ function renderProfileTab(){
         <button class="tl-card" data-nav="settings"><span class="tl-card__icon">${svg('lock',20)}</span><div class="tl-card__body"><div class="tl-card__label">Privacy</div><div class="tl-card__desc">Data storage &amp; reset options</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-nav="settings"><span class="tl-card__icon">${svg('moon',20)}</span><div class="tl-card__body"><div class="tl-card__label">Appearance</div><div class="tl-card__desc">${themeLabel}</div></div><span class="tl-card__chev">›</span></button>
         ${account ? `<button class="tl-card" data-action="account-signout"><span class="tl-card__icon" style="color:var(--rh-red);background:rgba(239,68,68,.1);">${svg('signout',20)}</span><div class="tl-card__body"><div class="tl-card__label">Sign Out</div><div class="tl-card__desc">Log out from your account</div></div><span class="tl-card__chev">›</span></button>`
-          : auth && auth.isNativeAndroid() ? `<button class="tl-card" data-action="account-signin"><span class="tl-card__icon" style="color:var(--rh-red);background:rgba(239,68,68,.1);">${svg('signout',20)}</span><div class="tl-card__body"><div class="tl-card__label">Sign In</div><div class="tl-card__desc">Sync and back up with Google</div></div><span class="tl-card__chev">›</span></button>` : ''}
+          : auth && auth.isNativeAndroid() ? `<button class="tl-card" data-action="open-account-signin"><span class="tl-card__icon" style="color:var(--rh-red);background:rgba(239,68,68,.1);">${svg('signout',20)}</span><div class="tl-card__body"><div class="tl-card__label">Sign In</div><div class="tl-card__desc">Back up and sync your data</div></div><span class="tl-card__chev">›</span></button>` : ''}
       </div>
     </div>`;
 }
@@ -11168,12 +11168,10 @@ function obStepIndexOf(renderer){
    and it appears with no code change. Nothing else needs touching.
 
    The icons are inline SVG because a strict CSP and an offline-first service worker both rule
-   out fetching brand marks from a CDN. Google's four-colour G is drawn to its published
-   geometry rather than approximated with a letter in a coloured circle.
+   out fetching brand marks from a CDN.
 ========================================================= */
 const AUTH_ICONS = {
   email: `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3.2" stroke="#3B82F6" stroke-width="1.7"/><path d="M3.4 6.8 12 12.9l8.6-6.1" stroke="#3B82F6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  google: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.26-2.09 3.56-5.17 3.56-8.87z"/><path fill="#34A853" d="M12 24c3.24 0 5.96-1.08 7.94-2.91l-3.87-3a7.2 7.2 0 0 1-10.75-3.78H1.32v3.09A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.32 14.31a7.19 7.19 0 0 1 0-4.6V6.62H1.32a12 12 0 0 0 0 10.78l4-3.09z"/><path fill="#EA4335" d="M12 4.77c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.18 15.24 0 12 0A12 12 0 0 0 1.32 6.62l4 3.09A7.15 7.15 0 0 1 12 4.77z"/></svg>`,
   bolt: `<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M13.6 1.5 4.2 13.2c-.4.5-.05 1.25.6 1.25h4.9l-1.5 7.9c-.13.7.76 1.1 1.19.54l9.4-11.7c.4-.5.05-1.25-.6-1.25h-4.9l1.5-7.9c.13-.7-.76-1.1-1.19-.54z" fill="#3B82F6"/></svg>`
 };
 
@@ -11276,11 +11274,13 @@ function renderSignInScreen(){
             ${busy ? "Sending…" : "Send OTP"}</button>
         `}
 
-        <div class="auth-div">OR Continue with</div>
+        <div class="auth-div">OR</div>
 
-        <div class="auth-social">
-          <button class="auth-social__btn" data-auth="email">${AUTH_ICONS.email}<span>Email</span></button>
-          <button class="auth-social__btn" data-auth="google">${AUTH_ICONS.google}<span>Google</span></button>
+        <!-- Email is the only alternative now that Google Sign-In is gone. It is deliberately
+             secondary: phone is the primary route, so this is one full-width option rather
+             than a row of provider tiles that would imply a choice that no longer exists. -->
+        <div class="auth-social auth-social--single">
+          <button class="auth-social__btn" data-auth="email">${AUTH_ICONS.email}<span>Continue with Email</span></button>
         </div>
 
         <p class="auth-legal">
@@ -11368,20 +11368,6 @@ function bindSignInScreen(){
    so rather than failing silently or pretending to succeed. */
 function signInAction(kind){
   const auth = window.IgnytAuth;
-  if(kind === "google"){
-    if(!auth || !auth.signIn){
-      showToast("Google sign-in isn't available in this build.", "error", render);
-      return;
-    }
-    // Was fire-and-forget: the promise was dropped, so a successful Google sign-in updated the
-    // account but never advanced past this screen. Await it and route through completeSignIn
-    // like every other provider.
-    auth.signIn().then(res=>{
-      if(res && res.success && res.data && res.data.user) completeSignIn(res.data.user);
-      else if(res && res.error) showToast(res.error, "error", render);
-    });
-    return;
-  }
   if(kind === "email"){
     state.authSeen = true;
     LS.set("hx_auth_seen", true);
@@ -11501,8 +11487,8 @@ async function submitOtp(){
   }
 }
 
-/* The single place that decides what happens after ANY successful sign-in. Google, email and
-   phone all land here, so navigation can never work on one path and silently not on another.
+/* The single place that decides what happens after ANY successful sign-in. Phone and email
+   both land here, so navigation can never work on one path and silently not on another.
    IgnytAuth has already persisted the session (saveAccount + ignyt:auth-changed). */
 function completeSignIn(user){
   state.authSeen = true;
@@ -13641,7 +13627,7 @@ function renderPersonalInfoTab(){
           <div class="pf-avatar" style="width:64px;height:64px;">
             ${account?.photoUrl ? `<img src="${account.photoUrl}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
             <span class="pf-avatar__initial" style="font-size:22px;">${initial}</span>
-            <span class="pf-avatar__edit" title="Photo comes from your Google account" style="pointer-events:none;">${svg('pencil',11)}</span>
+            <span class="pf-avatar__edit" title="Photo comes from your account" style="pointer-events:none;">${svg('pencil',11)}</span>
           </div>
           <div style="flex:1;min-width:0;">
             <label class="pi-label">Full Name</label>
@@ -13651,7 +13637,7 @@ function renderPersonalInfoTab(){
         <label class="pi-label">Username</label>
         <input type="text" id="p-username" class="pi-input" value="${(p.username||'').replace(/"/g,'&quot;')}" placeholder="@username" style="margin-bottom:12px;">
         <div class="pi-grid2">
-          ${row('mail', 'Email Address', `<div class="pi-row__value">${account ? account.email : 'Sign in with Google to add an email'}</div>`)}
+          ${row('mail', 'Email Address', `<div class="pi-row__value">${account ? account.email : 'Sign in to add an email'}</div>`)}
           ${row('phone', 'Phone Number', `<input type="tel" id="p-phone" class="pi-input" style="margin:2px 0 0;padding:6px 0;background:none;border:none;" value="${(p.phone||'').replace(/"/g,'&quot;')}" placeholder="Add phone number">`)}
         </div>
       </div>
@@ -17686,6 +17672,13 @@ function attachHandlers(){
     });
   });
   // IGNYT Account: IgnytAuth handles busy/error state and re-renders Settings itself.
+  const openSignin = document.querySelector('[data-action="open-account-signin"]');
+  if(openSignin) openSignin.addEventListener("click", ()=>{
+    state.tab = "settings";
+    state.authFormMode = "signin";   // land on the form itself, not on a card that hides it
+    render();
+  });
+
   const copyFp = document.querySelector('[data-action="copy-fingerprints"]');
   if(copyFp) copyFp.addEventListener("click", ()=>{
     const info = window.IgnytAuth && window.IgnytAuth.getSigningInfo && window.IgnytAuth.getSigningInfo();
@@ -17698,8 +17691,6 @@ function attachHandlers(){
     } else legacyCopy(info.sha256, done);
   });
 
-  const accountSigninBtn = document.querySelector('[data-action="account-signin"]');
-  if(accountSigninBtn) accountSigninBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signIn(); });
   const accountSignoutBtn = document.querySelector('[data-action="account-signout"]');
   if(accountSignoutBtn) accountSignoutBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signOut(); });
   document.querySelectorAll('[data-action="auth-form-mode"]').forEach(el=>{
