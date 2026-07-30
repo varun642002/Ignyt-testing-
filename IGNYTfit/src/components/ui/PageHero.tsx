@@ -83,10 +83,7 @@ export function PageHero({
           ) : null}
 
           {children ? (
-            <Reveal
-              delay={0.1}
-              className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"
-            >
+            <Reveal className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
               {children}
             </Reveal>
           ) : null}

@@ -18,7 +18,7 @@ export const siteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL ??
   (process.env.VERCEL_ENV === "preview" && process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
-    : "https://ignytfit.com")
+    : "https://ignytfit.in")
 ).replace(/\/$/, "");
 
 export const site = {

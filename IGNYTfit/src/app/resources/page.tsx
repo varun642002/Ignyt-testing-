@@ -110,8 +110,13 @@ const REFERENCE: Resource[] = [
 function ResourceGrid({ items }: { items: Resource[] }) {
   return (
     <RevealGroup as="ul" className="mt-12 grid list-none gap-4 sm:grid-cols-2">
-      {items.map((item) => (
-        <RevealItem as="li" key={item.title} className="h-full">
+      {items.map((item, revealIndex) => (
+        <RevealItem
+          index={revealIndex}
+          as="li"
+          key={item.title}
+          className="h-full"
+        >
           <Card interactive className="h-full p-7">
             <span className="grid size-11 place-items-center rounded-tile border border-ember/30 bg-ember/12 text-ember">
               <item.Icon aria-hidden className="size-5" strokeWidth={2.1} />
@@ -192,8 +197,13 @@ export default function ResourcesPage() {
           as="ul"
           className="mt-12 grid list-none gap-4 md:grid-cols-3"
         >
-          {latest.map((post) => (
-            <RevealItem as="li" key={post.slug} className="h-full">
+          {latest.map((post, revealIndex) => (
+            <RevealItem
+              index={revealIndex}
+              as="li"
+              key={post.slug}
+              className="h-full"
+            >
               <Card interactive className="h-full p-6">
                 <Badge tone="pulse">{post.category}</Badge>
                 <h3 className="mt-4 text-[17px] font-bold leading-snug">

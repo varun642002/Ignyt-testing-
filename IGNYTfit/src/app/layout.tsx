@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist } from "next/font/google";
 import { JsonLd, organizationSchema } from "@/components/seo/JsonLd";
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
@@ -7,17 +7,15 @@ import { site, siteUrl } from "@/lib/site";
 import "./globals.css";
 
 /**
- * Fonts are self-hosted by `next/font` at build time — no runtime request to
+ * One font, self-hosted by `next/font` at build time — no runtime request to
  * Google, no layout shift, and one less origin to allow in the CSP.
+ *
+ * Geist Mono was dropped: `next/font` preloads every declared face, so it
+ * put 30KB on the critical path to style a package name and an error digest.
+ * Those now use the system monospace stack, which costs nothing to fetch.
  */
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
 });
@@ -81,10 +79,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className={`${geistSans.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col bg-ink text-text">
         {/*
           Scroll-reveal safety net.

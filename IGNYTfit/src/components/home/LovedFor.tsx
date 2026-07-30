@@ -76,8 +76,13 @@ export function LovedFor() {
         as="ul"
         className="mt-14 grid list-none gap-4 md:grid-cols-2 lg:grid-cols-3"
       >
-        {REASONS.map((reason) => (
-          <RevealItem as="li" key={reason.title} className="h-full">
+        {REASONS.map((reason, revealIndex) => (
+          <RevealItem
+            index={revealIndex}
+            as="li"
+            key={reason.title}
+            className="h-full"
+          >
             <Card interactive className="h-full p-6">
               <reason.Icon
                 aria-hidden

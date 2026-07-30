@@ -87,10 +87,14 @@ export function FeatureGrid() {
       <RevealGroup
         as="ul"
         className="mt-14 grid list-none gap-4 sm:grid-cols-2 lg:grid-cols-4"
-        stagger={0.045}
       >
-        {features.map((feature) => (
-          <RevealItem as="li" key={feature.id} className="h-full">
+        {features.map((feature, revealIndex) => (
+          <RevealItem
+            index={revealIndex}
+            as="li"
+            key={feature.id}
+            className="h-full"
+          >
             <FeatureCard feature={feature} />
           </RevealItem>
         ))}

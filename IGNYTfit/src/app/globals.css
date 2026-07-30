@@ -49,7 +49,10 @@
   --font-sans:
     var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     Roboto, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+  /* System stack — see the note in layout.tsx on why no webfont here. */
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
 
   /* Radii — mirrors the product's radius scale */
   --radius-tile: 16px;
@@ -277,6 +280,88 @@
   }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
+  }
+
+  /* ------------------------------------------------- scroll-driven reveals
+   *
+   * These replaced a Framer Motion `whileInView` implementation. That version
+   * pulled the animation library into the initial bundle of every page and
+   * server-rendered each wrapper as `opacity: 0`, so content waited on
+   * hydration to appear — worth over a second of LCP on a throttled mobile
+   * profile.
+   *
+   * A scroll-driven CSS animation costs no JavaScript at all: the compositor
+   * runs it, and it works with scripting disabled.
+   *
+   * The `@supports` gate is load-bearing. The hidden start state exists only
+   * inside it, so a browser without `animation-timeline` renders the content
+   * plainly rather than leaving it invisible forever — the exact failure the
+   * Framer version had without JavaScript.
+   */
+  .reveal,
+  .reveal-item {
+    /* Deliberately empty outside @supports: content is simply visible. */
+    opacity: 1;
+  }
+
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal {
+        animation: reveal-rise linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 20%;
+      }
+
+      /* Children of a .reveal-group stagger by nudging each one's scroll
+         range slightly later. `--i` is set inline by RevealItem. */
+      .reveal-item {
+        animation: reveal-rise linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover calc(16% + (var(--i, 0) * 2.5%));
+      }
+
+      .reveal-left {
+        animation-name: reveal-left;
+      }
+      .reveal-right {
+        animation-name: reveal-right;
+      }
+    }
+  }
+}
+
+/* Reveals animate transform ONLY — never opacity.
+ *
+ * A scroll-driven opacity fade parks anything not yet scrolled to at partial
+ * transparency, which is genuinely low contrast for a reader who lands there,
+ * and which automated audits correctly flag (measured at 2.17:1 on an eyebrow
+ * mid-fade). Sliding at full opacity gives the same sense of motion with no
+ * legibility cost, and means no element on the site is ever less than fully
+ * readable — including with JavaScript disabled. */
+@keyframes reveal-rise {
+  from {
+    transform: translateY(26px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes reveal-left {
+  from {
+    transform: translateX(32px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes reveal-right {
+  from {
+    transform: translateX(-32px);
+  }
+  to {
+    transform: none;
   }
 }
 

@@ -246,7 +246,7 @@ export default function AboutPage() {
             </Card>
           </Reveal>
 
-          <Reveal delay={0.1}>
+          <Reveal>
             <Card className="h-full p-8 sm:p-10">
               <Badge tone="pulse">Our vision</Badge>
               <h2 className="mt-5 text-[clamp(1.5rem,3vw,2.1rem)] font-black leading-tight">
@@ -277,8 +277,13 @@ export default function AboutPage() {
           as="ul"
           className="mt-14 grid list-none gap-4 md:grid-cols-2"
         >
-          {PROBLEMS.map((item) => (
-            <RevealItem as="li" key={item.problem} className="h-full">
+          {PROBLEMS.map((item, revealIndex) => (
+            <RevealItem
+              index={revealIndex}
+              as="li"
+              key={item.problem}
+              className="h-full"
+            >
               <Card className="h-full p-6">
                 <h3 className="flex items-start gap-3 text-[16.5px] font-bold text-text">
                   <span
@@ -308,8 +313,13 @@ export default function AboutPage() {
           as="ul"
           className="mt-14 grid list-none gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
-          {VALUES.map((value) => (
-            <RevealItem as="li" key={value.title} className="h-full">
+          {VALUES.map((value, revealIndex) => (
+            <RevealItem
+              index={revealIndex}
+              as="li"
+              key={value.title}
+              className="h-full"
+            >
               <Card interactive className="h-full p-7">
                 <span className="grid size-11 place-items-center rounded-tile border border-ember/30 bg-ember/12 text-ember">
                   <value.Icon
@@ -341,8 +351,13 @@ export default function AboutPage() {
           as="ul"
           className="mt-14 grid list-none gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
-          {STACK.map((item) => (
-            <RevealItem as="li" key={item.name} className="h-full">
+          {STACK.map((item, revealIndex) => (
+            <RevealItem
+              index={revealIndex}
+              as="li"
+              key={item.name}
+              className="h-full"
+            >
               <Card className="h-full p-6">
                 <div className="flex items-center gap-3">
                   <span className="grid size-10 place-items-center rounded-tile border border-pulse/30 bg-pulse/12 text-pulse-strong">
@@ -386,8 +401,13 @@ export default function AboutPage() {
           />
 
           <RevealGroup as="ol" className="flex list-none flex-col gap-7">
-            {ROADMAP.map((item) => (
-              <RevealItem as="li" key={item.title} className="flex gap-5">
+            {ROADMAP.map((item, revealIndex) => (
+              <RevealItem
+                index={revealIndex}
+                as="li"
+                key={item.title}
+                className="flex gap-5"
+              >
                 <span className="relative z-10 grid size-12 shrink-0 place-items-center rounded-2xl border border-pulse/30 bg-ink shadow-[0_0_0_6px_rgba(8,9,13,1)]">
                   <item.Icon
                     aria-hidden
@@ -422,8 +442,13 @@ export default function AboutPage() {
           as="ul"
           className="mt-14 grid list-none gap-4 sm:grid-cols-2 lg:grid-cols-4"
         >
-          {COMMITMENTS.map((item) => (
-            <RevealItem as="li" key={item.title} className="h-full">
+          {COMMITMENTS.map((item, revealIndex) => (
+            <RevealItem
+              index={revealIndex}
+              as="li"
+              key={item.title}
+              className="h-full"
+            >
               <Card interactive className="h-full p-6">
                 <item.Icon
                   aria-hidden

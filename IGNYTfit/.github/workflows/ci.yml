@@ -25,7 +25,7 @@ jobs:
 
     env:
       # Canonical URLs and Open Graph tags need a fixed origin at build time.
-      NEXT_PUBLIC_SITE_URL: https://ignytfit.com
+      NEXT_PUBLIC_SITE_URL: https://ignytfit.in
       NEXT_TELEMETRY_DISABLED: "1"
 
     steps:

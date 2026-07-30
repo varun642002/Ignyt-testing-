@@ -1,12 +1,27 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
 import { Expand } from "lucide-react";
 import { useRef, useState } from "react";
 import { AppScreen } from "@/components/device/screens";
 import { PhoneFrame } from "@/components/device/PhoneFrame";
-import { Lightbox } from "@/components/screenshots/Lightbox";
-import { PhoneCarousel } from "@/components/screenshots/PhoneCarousel";
+import dynamic from "next/dynamic";
+
+/**
+ * The carousel and the lightbox are the only components on the site that
+ * still need an animation library — drag handling, autoplay and a focus-
+ * trapping dialog transition. Loading them through `next/dynamic` keeps
+ * framer-motion out of the initial bundle, so it never competes with the
+ * hero for main-thread time during hydration.
+ */
+const PhoneCarousel = dynamic(() =>
+  import("@/components/screenshots/PhoneCarousel").then(
+    (mod) => mod.PhoneCarousel,
+  ),
+);
+
+const Lightbox = dynamic(() =>
+  import("@/components/screenshots/Lightbox").then((mod) => mod.Lightbox),
+);
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/Section";
 import { screens, type ScreenMeta } from "@/lib/screens";
@@ -36,7 +51,6 @@ function GallerySection({
   index: number;
   onExpand: (index: number, trigger: HTMLButtonElement | null) => void;
 }) {
-  const reduceMotion = useReducedMotion();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const accent = ACCENT[screen.accent];
   const flipped = index % 2 === 1;
@@ -56,15 +70,11 @@ function GallerySection({
           "lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)]",
         )}
       >
-        <motion.div
+        <div
           className={cn(
-            "relative mx-auto flex justify-center",
+            "reveal relative mx-auto flex justify-center",
             flipped && "lg:order-2",
           )}
-          initial={reduceMotion ? false : { opacity: 0, scale: 0.93, y: 30 }}
-          whileInView={{ opacity: 1, scale: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
         >
           <span
             aria-hidden
@@ -73,26 +83,17 @@ function GallerySection({
               background: `radial-gradient(50% 40% at 50% 45%, ${accent.glow}, transparent 70%)`,
             }}
           />
-          <motion.div
-            whileHover={reduceMotion ? undefined : { scale: 1.035 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          >
+          <div className="transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:scale-[1.035]">
             <PhoneFrame
               className="[--pw:236px] sm:[--pw:268px] xl:[--pw:290px]"
               label={`${screen.title}: ${screen.description}`}
             >
               <AppScreen id={screen.id} />
             </PhoneFrame>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
 
-        <motion.div
-          className={flipped ? "lg:order-1" : undefined}
-          initial={reduceMotion ? false : { opacity: 0, y: 26 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.65, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-        >
+        <div className={cn("reveal", flipped && "lg:order-1")}>
           <p
             className={cn(
               "text-[12px] font-bold uppercase tracking-[0.2em]",
@@ -137,7 +138,7 @@ function GallerySection({
             <Expand aria-hidden className="size-4" />
             View {screen.title} full size
           </button>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

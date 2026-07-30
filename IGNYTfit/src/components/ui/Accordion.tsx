@@ -1,8 +1,4 @@
-"use client";
-
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
-import { useId, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export interface AccordionItem {
@@ -11,100 +7,63 @@ export interface AccordionItem {
 }
 
 /**
- * Single accordion row.
+ * FAQ accordion built on native `<details>` / `<summary>`.
  *
- * Built from a real `<button aria-expanded aria-controls>` pair rather than
- * `<details>`, because the open/close height transition needs to be driven by
- * Framer Motion. Keyboard behaviour (Enter/Space, tab order) comes free from
- * the native button.
- */
-function AccordionRow({
-  item,
-  isOpen,
-  onToggle,
-}: {
-  item: AccordionItem;
-  isOpen: boolean;
-  onToggle: () => void;
-}) {
-  const id = useId();
-  const reduceMotion = useReducedMotion();
-
-  return (
-    <div
-      className={cn(
-        "overflow-hidden rounded-tile border transition-colors duration-300",
-        isOpen
-          ? "border-ember/40 bg-surface-2/70"
-          : "border-line bg-surface/60 hover:border-line/80 hover:bg-surface-2/50",
-      )}
-    >
-      <h3>
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={isOpen}
-          aria-controls={`${id}-panel`}
-          id={`${id}-trigger`}
-          className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
-        >
-          <span className="text-[15px] font-semibold text-text">
-            {item.question}
-          </span>
-          <ChevronDown
-            aria-hidden
-            className={cn(
-              "size-5 shrink-0 text-text-mute transition-transform duration-300",
-              isOpen && "rotate-180 text-ember",
-            )}
-          />
-        </button>
-      </h3>
-
-      <AnimatePresence initial={false}>
-        {isOpen ? (
-          <motion.div
-            key="panel"
-            id={`${id}-panel`}
-            role="region"
-            aria-labelledby={`${id}-trigger`}
-            initial={reduceMotion ? false : { height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={reduceMotion ? undefined : { height: 0, opacity: 0 }}
-            transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <p className="px-5 pb-5 text-[14.5px] leading-relaxed text-text-mute">
-              {item.answer}
-            </p>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-/**
- * Accordion list. Only one row is open at a time, which keeps long FAQ
- * sections from turning into an unscannable wall of text.
+ * A **server component** with no JavaScript at all. The previous version was
+ * a client component holding open/closed state, and pages like `/contact`
+ * mounted ten of them — enough hydration work to be visible in total blocking
+ * time on a throttled mobile profile.
+ *
+ * Native disclosure gives us keyboard handling, correct ARIA semantics and
+ * find-in-page support for free, and the answers stay in the DOM whether or
+ * not the row is open — so they are always available to search engines.
+ *
+ * `name` makes the group exclusive (opening one closes the others) in browsers
+ * that support it; elsewhere rows simply open independently, which is a
+ * perfectly reasonable accordion.
  */
 export function Accordion({
   items,
   className,
+  /** Groups rows so only one opens at a time. Must be unique per accordion. */
+  name,
 }: {
   items: AccordionItem[];
   className?: string;
+  name?: string;
 }) {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
-
   return (
     <div className={cn("flex flex-col gap-3", className)}>
-      {items.map((item, index) => (
-        <AccordionRow
+      {items.map((item) => (
+        <details
           key={item.question}
-          item={item}
-          isOpen={openIndex === index}
-          onToggle={() => setOpenIndex(openIndex === index ? null : index)}
-        />
+          name={name}
+          className={cn(
+            "group overflow-hidden rounded-tile border border-line bg-surface/60",
+            "transition-colors duration-300 hover:border-line/80 hover:bg-surface-2/50",
+            "open:border-ember/40 open:bg-surface-2/70",
+          )}
+        >
+          <summary
+            className={cn(
+              "flex cursor-pointer items-center justify-between gap-4 px-5 py-4",
+              // Hide the default disclosure triangle across engines.
+              "list-none [&::-webkit-details-marker]:hidden",
+            )}
+          >
+            <span className="text-[15px] font-semibold text-text">
+              {item.question}
+            </span>
+            <ChevronDown
+              aria-hidden
+              className="size-5 shrink-0 text-text-mute transition-transform duration-300 group-open:rotate-180 group-open:text-ember"
+            />
+          </summary>
+
+          <p className="px-5 pb-5 text-[14.5px] leading-relaxed text-text-mute">
+            {item.answer}
+          </p>
+        </details>
       ))}
     </div>
   );

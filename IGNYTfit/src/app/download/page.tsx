@@ -270,7 +270,7 @@ export default function DownloadPage() {
           as="ul"
           className="mx-auto mt-12 grid max-w-4xl list-none gap-4 md:grid-cols-3"
         >
-          <RevealItem as="li" className="h-full">
+          <RevealItem index={0} as="li" className="h-full">
             <Card className="ring-gradient flex h-full flex-col items-center p-7 text-center">
               <Smartphone
                 aria-hidden
@@ -288,8 +288,8 @@ export default function DownloadPage() {
             </Card>
           </RevealItem>
 
-          <RevealItem as="li" className="h-full">
-            <Card className="flex h-full flex-col items-center p-7 text-center opacity-80">
+          <RevealItem index={1} as="li" className="h-full">
+            <Card className="flex h-full flex-col items-center p-7 text-center">
               <Apple
                 aria-hidden
                 className="size-7 text-text-mute"
@@ -304,14 +304,14 @@ export default function DownloadPage() {
                 from Apple Health the way the Android build reads Health
                 Connect.
               </p>
-              <span className="mt-5 inline-flex h-12 items-center rounded-btn border border-line bg-surface px-4 text-[13.5px] font-semibold text-text-dim">
+              <span className="mt-5 inline-flex h-12 items-center rounded-btn border border-line bg-surface px-4 text-[13.5px] font-semibold text-text-mute">
                 Not yet available
               </span>
             </Card>
           </RevealItem>
 
-          <RevealItem as="li" className="h-full">
-            <Card className="flex h-full flex-col items-center p-7 text-center opacity-80">
+          <RevealItem index={2} as="li" className="h-full">
+            <Card className="flex h-full flex-col items-center p-7 text-center">
               <Monitor
                 aria-hidden
                 className="size-7 text-text-mute"
@@ -325,7 +325,7 @@ export default function DownloadPage() {
                 A read-and-plan surface on a bigger screen, for programme design
                 and long-range analysis.
               </p>
-              <span className="mt-5 inline-flex h-12 items-center rounded-btn border border-line bg-surface px-4 text-[13.5px] font-semibold text-text-dim">
+              <span className="mt-5 inline-flex h-12 items-center rounded-btn border border-line bg-surface px-4 text-[13.5px] font-semibold text-text-mute">
                 Not yet available
               </span>
             </Card>
@@ -344,10 +344,14 @@ export default function DownloadPage() {
         <RevealGroup
           as="ul"
           className="mt-12 grid list-none gap-4 sm:grid-cols-2 lg:grid-cols-4"
-          stagger={0.05}
         >
-          {HIGHLIGHTS.map((item) => (
-            <RevealItem as="li" key={item.title} className="h-full">
+          {HIGHLIGHTS.map((item, revealIndex) => (
+            <RevealItem
+              index={revealIndex}
+              as="li"
+              key={item.title}
+              className="h-full"
+            >
               <Card interactive className="h-full p-6">
                 <item.Icon
                   aria-hidden
@@ -376,8 +380,13 @@ export default function DownloadPage() {
           as="ul"
           className="mt-12 grid list-none gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
-          {REASONS.map((item) => (
-            <RevealItem as="li" key={item.title} className="h-full">
+          {REASONS.map((item, revealIndex) => (
+            <RevealItem
+              index={revealIndex}
+              as="li"
+              key={item.title}
+              className="h-full"
+            >
               <Card interactive className="h-full p-7">
                 <span className="grid size-11 place-items-center rounded-tile border border-line bg-surface-2">
                   <item.Icon
@@ -413,7 +422,12 @@ export default function DownloadPage() {
               className="mt-10 flex list-none flex-col gap-6"
             >
               {STEPS.map((step, index) => (
-                <RevealItem as="li" key={step.title} className="flex gap-5">
+                <RevealItem
+                  index={index}
+                  as="li"
+                  key={step.title}
+                  className="flex gap-5"
+                >
                   <span
                     aria-hidden
                     className="grid size-10 shrink-0 place-items-center rounded-xl border border-ember/30 bg-ember/10 text-[15px] font-black text-ember"
@@ -565,7 +579,10 @@ export default function DownloadPage() {
               <h3 className="mb-4 text-[12px] font-bold uppercase tracking-[0.16em] text-ember">
                 {group.heading}
               </h3>
-              <Accordion items={group.items} />
+              <Accordion
+                items={group.items}
+                name={`download-${group.heading}`}
+              />
             </div>
           ))}
         </div>

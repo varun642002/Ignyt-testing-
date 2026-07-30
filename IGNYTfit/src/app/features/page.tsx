@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { ArrowRight, ShieldCheck, WifiOff, Zap } from "lucide-react";
 import { DownloadCta } from "@/components/home/DownloadCta";
 import { FeatureCard } from "@/components/home/FeatureGrid";
-import { PhoneCarousel } from "@/components/screenshots/PhoneCarousel";
+import Link from "next/link";
+import { AppScreen } from "@/components/device/screens";
+import { PhoneFrame } from "@/components/device/PhoneFrame";
 import { appSchema, breadcrumbSchema, JsonLd } from "@/components/seo/JsonLd";
 import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -83,10 +85,14 @@ export default function FeaturesPage() {
         <RevealGroup
           as="ul"
           className="mt-14 grid list-none gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          stagger={0.04}
         >
-          {features.map((feature) => (
-            <RevealItem as="li" key={feature.id} className="h-full">
+          {features.map((feature, revealIndex) => (
+            <RevealItem
+              index={revealIndex}
+              as="li"
+              key={feature.id}
+              className="h-full"
+            >
               <FeatureCard feature={feature} />
             </RevealItem>
           ))}
@@ -104,8 +110,13 @@ export default function FeaturesPage() {
           as="ul"
           className="mt-14 grid list-none gap-4 lg:grid-cols-3"
         >
-          {PRINCIPLES.map((principle) => (
-            <RevealItem as="li" key={principle.title} className="h-full">
+          {PRINCIPLES.map((principle, revealIndex) => (
+            <RevealItem
+              index={revealIndex}
+              as="li"
+              key={principle.title}
+              className="h-full"
+            >
               <Card className="h-full p-7">
                 <principle.Icon
                   aria-hidden
@@ -131,8 +142,33 @@ export default function FeaturesPage() {
           title="What that looks like on screen"
           lead="The same features, in the app itself."
         />
-        <div className="mt-14">
-          <PhoneCarousel screens={featuredScreens} />
+        {/* Static devices rather than the interactive carousel: this page is
+            already long, and the draggable version on /screenshots is the
+            heaviest client component on the site. Linking there costs one
+            click and keeps this page free of animation-library JavaScript. */}
+        <div className="mt-14 flex flex-wrap items-end justify-center gap-6">
+          {featuredScreens.slice(0, 3).map((screen, index) => (
+            <Link
+              key={screen.id}
+              href={`/screenshots#${screen.id}`}
+              className="group flex flex-col items-center gap-4"
+            >
+              <PhoneFrame
+                glow={index === 1}
+                className={
+                  index === 1
+                    ? "[--pw:236px] xl:[--pw:262px]"
+                    : "hidden [--pw:206px] opacity-85 transition-opacity group-hover:opacity-100 sm:block xl:[--pw:232px]"
+                }
+                label={`The IGNYT ${screen.title} screen`}
+              >
+                <AppScreen id={screen.id} />
+              </PhoneFrame>
+              <span className="text-[13.5px] font-semibold text-text-mute transition-colors group-hover:text-ember">
+                {screen.title}
+              </span>
+            </Link>
+          ))}
         </div>
       </Section>
 

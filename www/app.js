@@ -8520,7 +8520,7 @@ function renderAccountSection(){
   }
 
   const initial = esc((account.displayName || account.email || "?").trim().charAt(0).toUpperCase() || "?");
-  const providerLabel = account.provider === "google" ? "Signed in with Google"
+  const providerLabel = account.provider === "phone" ? "Signed in with your phone number"
                       : account.provider === "password" ? "Signed in with email" : "Signed in";
   const verifyBanner = (account.provider === "password" && account.emailVerified === false) ? `
     <div style="font-size:11px;color:var(--rh-amber,#d97706);margin-top:8px;padding:8px;background:rgba(217,119,6,.1);border-radius:8px;">
@@ -11378,7 +11378,6 @@ function obStepIndexOf(renderer){
 ========================================================= */
 const AUTH_ICONS = {
   email: `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3.2" stroke="#3B82F6" stroke-width="1.7"/><path d="M3.4 6.8 12 12.9l8.6-6.1" stroke="#3B82F6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  google: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.26-2.09 3.56-5.17 3.56-8.87z"/><path fill="#34A853" d="M12 24c3.24 0 5.96-1.08 7.94-2.91l-3.87-3a7.2 7.2 0 0 1-10.75-3.78H1.32v3.09A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.32 14.31a7.19 7.19 0 0 1 0-4.6V6.62H1.32a12 12 0 0 0 0 10.78l4-3.09z"/><path fill="#EA4335" d="M12 4.77c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.18 15.24 0 12 0A12 12 0 0 0 1.32 6.62l4 3.09A7.15 7.15 0 0 1 12 4.77z"/></svg>`,
   bolt: `<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M13.6 1.5 4.2 13.2c-.4.5-.05 1.25.6 1.25h4.9l-1.5 7.9c-.13.7.76 1.1 1.19.54l9.4-11.7c.4-.5.05-1.25-.6-1.25h-4.9l1.5-7.9c.13-.7-.76-1.1-1.19-.54z" fill="#3B82F6"/></svg>`
 };
 
@@ -11604,16 +11603,6 @@ function renderSignInScreen(){
         </div>
         <p class="auth-brand__sub">Your fitness companion for a stronger, healthier life.</p>
         ${renderAuthEmailStep(mode, authErr, busy)}
-
-        <!-- Google Sign-In sits BELOW the email form, not above it: email is the method a Play
-             reviewer uses and the one that works without a certificate being registered
-             correctly, so it stays the primary. -->
-        <div class="auth-div">OR</div>
-        <div class="auth-social auth-social--single">
-          <button class="auth-social__btn" data-auth="google" ${busy ? "disabled" : ""}>
-            ${AUTH_ICONS.google}<span>${busy ? "Signing in…" : "Continue with Google"}</span>
-          </button>
-        </div>
         <p class="auth-legal">
           By continuing you agree to our<br>
           <a href="legal/privacy-policy.html" data-auth="privacy">Privacy Policy</a>
@@ -11665,20 +11654,6 @@ function signInAction(kind){
     return;
   }
   if(kind === "email-submit"){ submitAuthEmail(); return; }
-  if(kind === "google"){
-    if(!auth || !auth.signIn){
-      showToast("Google sign-in isn't available in this build.", "error", render);
-      return;
-    }
-    /* Awaited and routed through completeSignIn(), the same place email lands. When this was
-       fire-and-forget the promise was dropped, so a successful sign-in updated the account and
-       never left the screen. */
-    auth.signIn().then(res=>{
-      if(res && res.success && res.data && res.data.user) completeSignIn(res.data.user);
-      else if(res && res.error) showToast(res.error, "error", render);
-    });
-    return;
-  }
 }
 
 /* skipSignIn() is deliberately gone. The app used to offer "Continue without signing in",

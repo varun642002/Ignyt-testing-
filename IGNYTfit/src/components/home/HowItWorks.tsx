@@ -75,6 +75,7 @@ export function HowItWorks() {
         <RevealGroup as="ol" className="relative flex list-none flex-col gap-8">
           {STEPS.map((step, index) => (
             <RevealItem
+              index={index}
               as="li"
               key={step.title}
               className="flex gap-5 sm:gap-6"

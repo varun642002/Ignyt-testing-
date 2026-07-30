@@ -1,6 +1,5 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -14,16 +13,20 @@ import { cn } from "@/lib/utils";
 /**
  * Sticky site header.
  *
- * Transparent over the hero, then fades to a frosted glass bar once the page
- * scrolls — the effect is driven by a single passive scroll listener writing
+ * Transparent over the hero, then fading to frosted glass once the page
+ * scrolls. The effect is driven by a single passive scroll listener writing
  * one boolean, rather than a scroll-linked animation, so it costs nothing on
  * the main thread while scrolling.
+ *
+ * Deliberately free of any animation library. The header is above the fold on
+ * every page, so anything it imports lands in the critical path — the active
+ * pill and the mobile sheet are plain CSS transitions instead, which the
+ * compositor handles.
  */
 export function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -91,19 +94,13 @@ export function Navbar() {
                   href={route.path}
                   aria-current={isActive(route.path) ? "page" : undefined}
                   className={cn(
-                    "relative inline-flex h-9 items-center rounded-full px-3.5 text-[14px] font-semibold transition-colors duration-200",
+                    "relative inline-flex h-9 items-center rounded-full px-3.5 text-[14px] font-semibold",
+                    "transition-colors duration-200",
                     isActive(route.path)
-                      ? "text-text"
-                      : "text-text-mute hover:text-text",
+                      ? "border border-ember/30 bg-ember/10 text-text"
+                      : "border border-transparent text-text-mute hover:text-text",
                   )}
                 >
-                  {isActive(route.path) ? (
-                    <motion.span
-                      layoutId={reduceMotion ? undefined : "nav-active"}
-                      className="absolute inset-0 -z-10 rounded-full border border-ember/30 bg-ember/10"
-                      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                    />
-                  ) : null}
                   {route.label}
                 </Link>
               </li>
@@ -137,17 +134,22 @@ export function Navbar() {
         </div>
       </Container>
 
-      <AnimatePresence>
-        {menuOpen ? (
-          <motion.div
-            id="mobile-menu"
-            key="sheet"
-            initial={reduceMotion ? false : { opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="glass-strong border-t border-line lg:hidden"
-          >
+      {/* Mobile sheet.
+          Kept mounted and collapsed with a grid-rows transition rather than
+          conditionally rendered, so opening and closing animate without an
+          animation library and without a layout-thrashing height measurement.
+          `invisible` when closed keeps it out of the tab order. */}
+      <div
+        id="mobile-menu"
+        className={cn(
+          "grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:hidden",
+          menuOpen
+            ? "grid-rows-[1fr] opacity-100"
+            : "invisible grid-rows-[0fr] opacity-0",
+        )}
+      >
+        <div className="min-h-0">
+          <div className="glass-strong border-t border-line">
             <Container className="py-4">
               <nav aria-label="Mobile">
                 <ul className="flex flex-col gap-1">
@@ -155,6 +157,7 @@ export function Navbar() {
                     <li key={route.path}>
                       <Link
                         href={route.path}
+                        tabIndex={menuOpen ? undefined : -1}
                         aria-current={isActive(route.path) ? "page" : undefined}
                         className={cn(
                           "flex items-center rounded-xl px-4 py-3 text-[15px] font-semibold transition-colors",
@@ -169,13 +172,17 @@ export function Navbar() {
                   ))}
                 </ul>
               </nav>
-              <ButtonLink href="/download" className="mt-3 w-full">
+              <ButtonLink
+                href="/download"
+                className="mt-3 w-full"
+                tabIndex={menuOpen ? undefined : -1}
+              >
                 Download App
               </ButtonLink>
             </Container>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+          </div>
+        </div>
+      </div>
     </header>
   );
 }

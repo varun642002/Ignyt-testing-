@@ -70,6 +70,12 @@ const nextConfig: NextConfig = {
     // Pull only the icons actually imported out of lucide-react, rather than
     // the whole barrel file.
     optimizePackageImports: ["lucide-react", "framer-motion"],
+
+    // `inlineCss: true` was tried here and measured *worse*: first contentful
+    // paint went 0.9s → 1.3s and total blocking time roughly tripled, because
+    // the stylesheet moves onto the main thread and inflates every HTML
+    // document. Keeping the external stylesheet, which is cached across
+    // navigations. Do not re-enable without measuring.
   },
 
   async headers() {

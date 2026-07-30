@@ -1,148 +1,95 @@
-"use client";
-
-import { motion, useReducedMotion, type Variants } from "framer-motion";
 import type { ReactNode } from "react";
-
-type Direction = "up" | "down" | "left" | "right" | "none";
-
-const OFFSET: Record<Direction, { x: number; y: number }> = {
-  up: { x: 0, y: 28 },
-  down: { x: 0, y: -28 },
-  left: { x: 34, y: 0 },
-  right: { x: -34, y: 0 },
-  none: { x: 0, y: 0 },
-};
+import { cn } from "@/lib/utils";
 
 /**
- * Scroll-triggered entrance animation.
+ * Scroll-triggered entrance animations, implemented entirely in CSS.
  *
- * Animates once (`viewport.once`) so scrolling back up does not re-trigger,
- * and collapses to a plain fade-free render when the visitor has asked for
- * reduced motion. `will-change` is intentionally omitted — Framer Motion sets
- * it for the duration of the animation and clears it afterwards, which avoids
- * pinning dozens of layers for the life of the page.
+ * These are **server components**. There is no `"use client"`, no
+ * IntersectionObserver and no animation library — the motion comes from a
+ * scroll-driven CSS animation defined in `globals.css`, which the compositor
+ * runs without touching the main thread.
+ *
+ * The previous Framer Motion implementation cost real money on two fronts: it
+ * pulled the library into the initial bundle of every page that revealed
+ * anything, and it server-rendered each wrapper as `opacity: 0`, so content
+ * only appeared once the client hydrated. On a throttled mobile profile that
+ * was over a second of largest-contentful-paint delay, and with scripting
+ * disabled the content never appeared at all.
+ *
+ * Browsers without `animation-timeline` (and anyone who has asked for reduced
+ * motion) simply see the content — the hidden start state lives inside the
+ * `@supports` block, so "unsupported" degrades to "visible" rather than to
+ * "blank".
  */
+
+type Direction = "up" | "left" | "right" | "none";
+
+const DIRECTION_CLASS: Record<Direction, string> = {
+  up: "",
+  left: "reveal-left",
+  right: "reveal-right",
+  none: "",
+};
+
+/** Element types the wrappers can render as, so list semantics stay valid. */
+type RevealTag = "div" | "ul" | "li" | "ol";
+
 export function Reveal({
   children,
   direction = "up",
-  delay = 0,
-  duration = 0.65,
   className,
-  amount = 0.25,
+  as: Tag = "div",
 }: {
   children: ReactNode;
   direction?: Direction;
-  delay?: number;
-  duration?: number;
   className?: string;
-  /** Fraction of the element that must be visible before it animates. */
-  amount?: number;
+  as?: RevealTag;
 }) {
-  const reduceMotion = useReducedMotion();
-  const offset = OFFSET[direction];
-
-  if (reduceMotion) {
-    return <div className={className}>{children}</div>;
-  }
-
   return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, x: offset.x, y: offset.y }}
-      whileInView={{ opacity: 1, x: 0, y: 0 }}
-      viewport={{ once: true, amount }}
-      transition={{
-        duration,
-        delay,
-        ease: [0.16, 1, 0.3, 1],
-      }}
-    >
+    <Tag className={cn("reveal", DIRECTION_CLASS[direction], className)}>
       {children}
-    </motion.div>
+    </Tag>
   );
 }
 
 /**
- * Element types the reveal wrappers can render as. Constrained to the tags
- * actually needed so that semantic lists (`ul`/`li`) stay valid HTML — a
- * `<div>` between `<ul>` and `<li>` would not.
- */
-type RevealTag = "div" | "ul" | "li" | "ol";
-
-/**
- * Parent for staggered lists. Pair with `RevealItem` for children — one
- * IntersectionObserver for the whole group instead of one per card.
+ * Parent for staggered lists. Purely a layout element now — the stagger is
+ * produced by each child's own scroll range, not by a shared orchestrator.
  */
 export function RevealGroup({
   children,
   className,
-  stagger = 0.07,
-  delay = 0,
-  amount = 0.15,
-  as = "div",
+  as: Tag = "div",
 }: {
   children: ReactNode;
   className?: string;
-  stagger?: number;
-  delay?: number;
-  amount?: number;
   as?: RevealTag;
 }) {
-  const reduceMotion = useReducedMotion();
-  const Tag = as;
-  const MotionTag = motion[as];
-
-  if (reduceMotion) {
-    return <Tag className={className}>{children}</Tag>;
-  }
-
-  const variants: Variants = {
-    hidden: {},
-    show: { transition: { staggerChildren: stagger, delayChildren: delay } },
-  };
-
-  return (
-    <MotionTag
-      className={className}
-      variants={variants}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, amount }}
-    >
-      {children}
-    </MotionTag>
-  );
+  return <Tag className={className}>{children}</Tag>;
 }
 
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 22 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-
+/**
+ * A staggered child. `index` offsets the scroll range so items resolve in
+ * sequence; it is capped so a long grid does not leave the last card waiting
+ * far past the point it entered the viewport.
+ */
 export function RevealItem({
   children,
   className,
-  as = "div",
+  index = 0,
+  as: Tag = "div",
 }: {
   children: ReactNode;
   className?: string;
+  index?: number;
   as?: RevealTag;
 }) {
-  const reduceMotion = useReducedMotion();
-  const Tag = as;
-  const MotionTag = motion[as];
-
-  if (reduceMotion) {
-    return <Tag className={className}>{children}</Tag>;
-  }
-
   return (
-    <MotionTag className={className} variants={itemVariants}>
+    <Tag
+      className={cn("reveal-item", className)}
+      style={{ "--i": Math.min(index, 6) } as React.CSSProperties}
+    >
       {children}
-    </MotionTag>
+    </Tag>
   );
 }

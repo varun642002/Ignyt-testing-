@@ -77,8 +77,9 @@ export function Stats() {
         </h2>
 
         <RevealGroup className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
-          {STATS.map((stat) => (
+          {STATS.map((stat, revealIndex) => (
             <RevealItem
+              index={revealIndex}
               key={stat.label}
               className="[&:nth-child(5)]:col-span-2 lg:[&:nth-child(5)]:col-span-1"
             >

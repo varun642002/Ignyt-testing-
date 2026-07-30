@@ -1,6 +1,5 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Clock } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -17,7 +16,6 @@ import { cn } from "@/lib/utils";
  */
 export function BlogIndex({ posts }: { posts: Post[] }) {
   const [active, setActive] = useState<string>("All");
-  const reduceMotion = useReducedMotion();
 
   const visible = useMemo(
     () =>
@@ -58,17 +56,10 @@ export function BlogIndex({ posts }: { posts: Post[] }) {
 
       <ul className="mt-12 grid list-none gap-5 md:grid-cols-2">
         {visible.map((post, index) => (
-          <motion.li
+          <li
             key={post.slug}
-            layout={reduceMotion ? false : true}
-            initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              duration: 0.45,
-              delay: Math.min(index * 0.05, 0.3),
-              ease: [0.16, 1, 0.3, 1],
-            }}
-            className="h-full"
+            className="reveal-item h-full"
+            style={{ "--i": Math.min(index, 6) } as React.CSSProperties}
           >
             <Card interactive className="h-full p-7">
               <div className="flex flex-wrap items-center gap-3">
@@ -103,7 +94,7 @@ export function BlogIndex({ posts }: { posts: Post[] }) {
                 </span>
               </div>
             </Card>
-          </motion.li>
+          </li>
         ))}
       </ul>
 

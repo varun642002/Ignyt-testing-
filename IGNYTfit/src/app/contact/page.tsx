@@ -145,8 +145,13 @@ export default function ContactPage() {
           as="ul"
           className="mt-14 grid list-none gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
-          {CHANNELS.map((channel) => (
-            <RevealItem as="li" key={channel.title} className="h-full">
+          {CHANNELS.map((channel, revealIndex) => (
+            <RevealItem
+              index={revealIndex}
+              as="li"
+              key={channel.title}
+              className="h-full"
+            >
               <Card interactive className="h-full p-6">
                 <channel.Icon
                   aria-hidden
@@ -241,7 +246,7 @@ export default function ContactPage() {
               <h3 className="mb-4 text-[12px] font-bold uppercase tracking-[0.16em] text-ember">
                 {group.label}
               </h3>
-              <Accordion items={group.items} />
+              <Accordion items={group.items} name={`faq-${group.id}`} />
             </div>
           ))}
         </div>
@@ -259,8 +264,13 @@ export default function ContactPage() {
           as="ul"
           className="mx-auto mt-14 grid max-w-4xl list-none gap-4 sm:grid-cols-2 lg:grid-cols-4"
         >
-          {COMMUNITY.map((item) => (
-            <RevealItem as="li" key={item.label} className="h-full">
+          {COMMUNITY.map((item, revealIndex) => (
+            <RevealItem
+              index={revealIndex}
+              as="li"
+              key={item.label}
+              className="h-full"
+            >
               <a
                 href={item.href}
                 target="_blank"

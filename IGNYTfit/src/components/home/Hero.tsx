@@ -1,16 +1,13 @@
-"use client";
-
-import { motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
+  Beef,
   BellRing,
+  CircleCheckBig,
   Droplets,
   Flame,
   Footprints,
   HeartPulse,
   Scale,
-  Beef,
-  CircleCheckBig,
   type LucideIcon,
 } from "lucide-react";
 import { AppScreen } from "@/components/device/screens";
@@ -20,6 +17,16 @@ import { Container } from "@/components/ui/Container";
 import { PlayStoreButton } from "@/components/ui/PlayStoreButton";
 import { cn } from "@/lib/utils";
 
+/**
+ * Home hero.
+ *
+ * A **server component**. It previously used Framer Motion for the entrance
+ * and the floating cards, which meant the most important content on the site
+ * shipped as `opacity: 0` and the animation library landed in the critical
+ * path. The float is a CSS keyframe now and the text renders immediately, so
+ * nothing above the fold waits on JavaScript.
+ */
+
 interface FloatingCard {
   label: string;
   value: string;
@@ -27,10 +34,11 @@ interface FloatingCard {
   accent: "ember" | "pulse" | "cyan" | "good";
   /** Position relative to the phone wrapper. */
   position: string;
-  /** Which breakpoint the card appears at — the hero stays legible on small screens. */
+  /** Breakpoint the card appears at — the hero stays legible on small screens. */
   visibility: string;
-  delay: number;
-  drift: number;
+  /** CSS animation class and delay, staggered so they do not bob in unison. */
+  float: string;
+  delay: string;
 }
 
 /**
@@ -48,8 +56,8 @@ const CARDS: FloatingCard[] = [
     accent: "ember",
     position: "-left-6 top-[12%] sm:-left-10",
     visibility: "flex",
-    delay: 0.1,
-    drift: -10,
+    float: "animate-float-slow",
+    delay: "0ms",
   },
   {
     label: "Steps",
@@ -58,8 +66,8 @@ const CARDS: FloatingCard[] = [
     accent: "pulse",
     position: "-right-4 top-[5%] sm:-right-12",
     visibility: "flex",
-    delay: 0.25,
-    drift: 12,
+    float: "animate-float-mid",
+    delay: "-1200ms",
   },
   {
     label: "Workout completed",
@@ -68,8 +76,8 @@ const CARDS: FloatingCard[] = [
     accent: "good",
     position: "-left-10 top-[38%] sm:-left-20",
     visibility: "hidden sm:flex",
-    delay: 0.4,
-    drift: 9,
+    float: "animate-float-fast",
+    delay: "-600ms",
   },
   {
     label: "Water",
@@ -78,8 +86,8 @@ const CARDS: FloatingCard[] = [
     accent: "cyan",
     position: "-right-8 top-[34%] sm:-right-16",
     visibility: "hidden sm:flex",
-    delay: 0.5,
-    drift: -11,
+    float: "animate-float-slow",
+    delay: "-2400ms",
   },
   {
     label: "Protein",
@@ -88,8 +96,8 @@ const CARDS: FloatingCard[] = [
     accent: "ember",
     position: "-left-8 bottom-[24%] sm:-left-16",
     visibility: "hidden lg:flex",
-    delay: 0.6,
-    drift: 10,
+    float: "animate-float-mid",
+    delay: "-1800ms",
   },
   {
     label: "Weight",
@@ -98,8 +106,8 @@ const CARDS: FloatingCard[] = [
     accent: "good",
     position: "-right-6 bottom-[28%] sm:-right-14",
     visibility: "hidden lg:flex",
-    delay: 0.7,
-    drift: -9,
+    float: "animate-float-fast",
+    delay: "-3000ms",
   },
   {
     label: "Notifications",
@@ -108,8 +116,8 @@ const CARDS: FloatingCard[] = [
     accent: "pulse",
     position: "left-2 bottom-[6%] sm:-left-6",
     visibility: "hidden xl:flex",
-    delay: 0.8,
-    drift: 8,
+    float: "animate-float-slow",
+    delay: "-900ms",
   },
   {
     label: "Health Connect",
@@ -118,8 +126,8 @@ const CARDS: FloatingCard[] = [
     accent: "pulse",
     position: "right-0 bottom-[10%] sm:-right-8",
     visibility: "hidden xl:flex",
-    delay: 0.9,
-    drift: -12,
+    float: "animate-float-mid",
+    delay: "-2100ms",
   },
 ];
 
@@ -131,41 +139,18 @@ const ACCENTS = {
 } as const;
 
 function FloatingStat({ card }: { card: FloatingCard }) {
-  const reduceMotion = useReducedMotion();
   const { Icon } = card;
 
   return (
-    <motion.div
-      className={cn("absolute z-20", card.position, card.visibility)}
-      initial={reduceMotion ? false : { opacity: 0, scale: 0.85, y: 14 }}
-      animate={
-        reduceMotion
-          ? { opacity: 1 }
-          : {
-              opacity: 1,
-              scale: 1,
-              y: [0, card.drift, 0],
-            }
-      }
-      transition={
-        reduceMotion
-          ? undefined
-          : {
-              opacity: { duration: 0.5, delay: card.delay },
-              scale: {
-                duration: 0.6,
-                delay: card.delay,
-                ease: [0.34, 1.56, 0.64, 1],
-              },
-              y: {
-                duration: 5 + card.delay * 2,
-                delay: card.delay,
-                repeat: Infinity,
-                ease: "easeInOut",
-              },
-            }
-      }
+    <div
       aria-hidden
+      className={cn(
+        "absolute z-20",
+        card.position,
+        card.visibility,
+        card.float,
+      )}
+      style={{ animationDelay: card.delay }}
     >
       <div className="glass flex items-center gap-2.5 rounded-2xl px-3 py-2.5 shadow-[0_18px_44px_-22px_rgba(0,0,0,0.9)]">
         <span
@@ -183,13 +168,11 @@ function FloatingStat({ card }: { card: FloatingCard }) {
           <span className="text-[13px] font-bold text-text">{card.value}</span>
         </span>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
 export function Hero() {
-  const reduceMotion = useReducedMotion();
-
   return (
     <section
       aria-labelledby="hero-heading"
@@ -226,29 +209,17 @@ export function Hero() {
 
       <Container className="grid items-center gap-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8">
         <div className="mx-auto max-w-2xl text-center lg:mx-0 lg:text-left">
-          <motion.div
-            initial={reduceMotion ? false : { opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/70 px-3.5 py-1.5 text-[12px] font-semibold text-text-mute">
-              <span className="relative flex size-1.5">
-                <span className="absolute inline-flex size-full animate-pulse-ring rounded-full bg-ember" />
-                <span className="relative inline-flex size-1.5 rounded-full bg-ember" />
-              </span>
-              Offline-first · Android · Health Connect
+          <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/70 px-3.5 py-1.5 text-[12px] font-semibold text-text-mute">
+            <span className="relative flex size-1.5">
+              <span className="absolute inline-flex size-full animate-pulse-ring rounded-full bg-ember" />
+              <span className="relative inline-flex size-1.5 rounded-full bg-ember" />
             </span>
-          </motion.div>
+            Offline-first · Android · Health Connect
+          </span>
 
-          {/* The headline and lead are deliberately NOT animated.
-              They are the largest contentful paint, and wrapping them in a
-              Framer entrance meant they shipped as `opacity: 0` and only
-              appeared once the client hydrated — measured at 1,088ms of
-              element render delay on a throttled mobile profile, dragging LCP
-              to 3.8s. Painting them immediately costs nothing visually: the
-              badge, buttons, trust list and device around them still animate,
-              so the section reads as alive while the words are there from the
-              first frame. */}
+          {/* Headline and lead are never animated — they are the largest
+              contentful paint, and hiding them behind an entrance meant LCP
+              waited on hydration. */}
           <h1
             id="hero-heading"
             className="mt-6 text-[clamp(2.5rem,6.6vw,4.35rem)] font-black leading-[1.04]"
@@ -262,12 +233,7 @@ export function Hero() {
             Connect and progress — all in one powerful fitness companion.
           </p>
 
-          <motion.div
-            className="mt-9 flex flex-col items-center gap-3 sm:flex-row lg:justify-start"
-            initial={reduceMotion ? false : { opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.21, ease: [0.16, 1, 0.3, 1] }}
-          >
+          <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
             <PlayStoreButton className="w-full sm:w-auto" />
             <ButtonLink
               href="/features"
@@ -278,14 +244,9 @@ export function Hero() {
               Explore Features
               <ArrowRight aria-hidden className="size-4" />
             </ButtonLink>
-          </motion.div>
+          </div>
 
-          <motion.ul
-            className="mt-9 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13px] text-text-dim lg:justify-start"
-            initial={reduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.7, delay: 0.3 }}
-          >
+          <ul className="mt-9 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13px] text-text-dim lg:justify-start">
             {[
               "No ads, ever",
               "No third-party trackers",
@@ -296,15 +257,10 @@ export function Hero() {
                 {item}
               </li>
             ))}
-          </motion.ul>
+          </ul>
         </div>
 
-        <motion.div
-          className="relative mx-auto flex w-full max-w-md justify-center"
-          initial={reduceMotion ? false : { opacity: 0, scale: 0.92, y: 26 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.9, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-        >
+        <div className="relative mx-auto flex w-full max-w-md justify-center">
           <div className="relative">
             <PhoneFrame
               className="[--pw:236px] sm:[--pw:280px] xl:[--pw:304px]"
@@ -317,7 +273,7 @@ export function Hero() {
               <FloatingStat key={card.label} card={card} />
             ))}
           </div>
-        </motion.div>
+        </div>
       </Container>
     </section>
   );
