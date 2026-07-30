@@ -217,6 +217,12 @@ const IgnytAuth = (() => {
         if (!info.firebaseInitialised) {
           console.warn("[auth] Firebase is NOT initialised — google-services.json missing at build time.");
         }
+      }).catch(function (e) {
+        /* Boot diagnostics must never become an unhandled rejection. checkSigning() itself
+           returns an object rather than throwing, so this only fires if the callback above
+           throws on an unexpected shape — but at boot that would surface as a console error on
+           every launch of a shipped app, for a log line nobody needs. */
+        console.warn("[auth] could not read signing info:", e);
       });
     }
   }
