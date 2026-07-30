@@ -1,6 +1,6 @@
 /* =========================================================
    IGNYT ACCOUNT — JS wrapper around the native IgnytAuth Capacitor
-   plugin (email/password Firebase Authentication session).
+   plugin (Google Sign-In + email/password Firebase Authentication session).
 
    Phase 2A scope: account identity only. Sign-in establishes WHO the
    user is; it never touches the local fitness data (hx_* keys), never
@@ -94,6 +94,21 @@ const IgnytAuth = (() => {
   function notifyUI() {
     if (typeof state === "undefined" || typeof render !== "function") return;
     render();
+  }
+
+  async function signIn() {
+    if (_busy) return { success: false, error: "Already in progress." };
+    _busy = true; _errorMsg = null; notifyUI();
+    const result = await callNative("signIn");
+    _busy = false;
+    if (result.success && result.data && result.data.user) {
+      saveAccount(result.data.user);
+      _errorMsg = null;
+    } else {
+      _errorMsg = result.error || "Sign-in failed.";
+    }
+    notifyUI();
+    return result;
   }
 
   async function signUpWithEmail(email, password) {
@@ -238,6 +253,7 @@ const IgnytAuth = (() => {
     isBusy: () => _busy,
     getError: () => _errorMsg,
     clearError: () => { _errorMsg = null; },
+    signIn,
     checkSigning,
     getSigningInfo: () => _signing,   // sync, cached — null until boot's checkSigning resolves
     signUpWithEmail,
