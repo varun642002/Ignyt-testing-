@@ -11392,273 +11392,13 @@ const AUTH_GRAIN = `<svg class="auth-hero__grain" xmlns="http://www.w3.org/2000/
 const OTP_RESEND_WAIT_MS = 45000;
 const OTP_MAX_RESENDS = 3;
 
-function renderSignInScreen(){
-  const root = document.getElementById("app");
-  const phone = state.authPhone || "";
-  const ready = phone.replace(/\D/g, "").length >= 10;
-  const auth = window.IgnytAuth;
-  // Busy and error come from IgnytAuth, not local state, so there is exactly one source of
-  // truth for "a call is in flight" and it cannot get out of step with the native layer.
-  const busy = !!(auth && auth.isBusy());
-  const errMsg = auth && auth.getError();
-  const otpStep = !!state.authOtpSent;
-  const emailStep = !!state.authEmailMode;
-  const authErr = errMsg ? `<div class="auth-err" role="alert">${escHtml(errMsg)}</div>` : "";
-  /* Resend gating. Both values are derived from timestamps rather than counted down in state,
-     so backgrounding the app or a re-render cannot drift them from the real clock. */
-  const waitLeft = Math.max(0, Math.ceil((OTP_RESEND_WAIT_MS - (Date.now() - (state.authOtpSentAt || 0))) / 1000));
-  const resendsLeft = Math.max(0, OTP_MAX_RESENDS - (state.authOtpResends || 0));
-
-  root.innerHTML = `
-    <div class="auth">
-      <div class="auth-hero">
-        <img class="auth-hero__img" src="assets/images/auth/hero-flatlay.jpg" alt=""
-             onerror="this.remove()">
-        ${AUTH_GRAIN}
-        <div class="auth-hero__scrim"></div>
-        <div class="auth-hero__copy">
-          <h1 class="auth-hero__line">Life at its fullest</h1>
-          <p class="auth-hero__line auth-hero__line--2">Mornings full of energy</p>
-        </div>
-      </div>
-
-      <div class="auth-sheet auth-stagger">
-        <div class="auth-brand">
-          <span class="auth-brand__mark">${AUTH_ICONS.bolt}</span>
-          <h2 class="auth-brand__name">IGNYT</h2>
-        </div>
-        <p class="auth-brand__sub">Your AI-powered fitness companion for a stronger, healthier life.</p>
-
-        ${emailStep ? renderAuthEmailStep(state.authEmailMode, authErr, busy) : otpStep ? `
-          <div class="auth-otp__sent">
-            Code sent to <b>+91 ${escHtml(phone)}</b>
-            <button class="auth-otp__change" data-auth="otp-change" type="button">Change</button>
-          </div>
-
-          <!-- SIX BOXES, ONE INPUT.
-               Six real <input>s is the obvious build and the wrong one: it fights Android's
-               SMS autofill (which targets a single one-time-code field), breaks paste, and
-               turns backspace into focus bookkeeping. So the boxes are presentation only and
-               a single transparent input sits over them, keeping autofill, paste and caret
-               behaviour native while looking like the design. -->
-          <div class="auth-otp__boxes" data-auth="otp-boxes">
-            ${[0,1,2,3,4,5].map(i=>{
-              const ch = (state.authOtpCode || "")[i] || "";
-              const cur = (state.authOtpCode || "").length === i;
-              return `<span class="auth-otp__box${ch ? " is-filled" : ""}${cur ? " is-active" : ""}">${escHtml(ch)}</span>`;
-            }).join("")}
-            <input class="auth-otp__hidden" type="tel" inputmode="numeric" autocomplete="one-time-code"
-                   maxlength="6" data-auth="code" value="${escHtml(state.authOtpCode || "")}"
-                   aria-label="6-digit verification code">
-          </div>
-
-          ${authErr}
-          <button class="auth-cta" data-auth="verify" ${busy || (state.authOtpCode || "").length < 6 ? "disabled" : ""}>
-            ${busy ? "Verifying…" : "Verify &amp; Continue"}</button>
-
-          <!-- Resend is time-gated and capped. The countdown text is written by a 1s interval
-               rather than re-rendered, so typing a code is never interrupted by the clock. -->
-          <div class="auth-otp__resendrow">
-            ${resendsLeft <= 0
-              ? `<span class="auth-otp__spent">No resends left. Check the number or try again later.</span>`
-              : `<button class="auth-otp__resend" data-auth="resend" type="button" ${busy || waitLeft > 0 ? "disabled" : ""}>
-                   <span id="auth-resend-label">${waitLeft > 0
-                     ? `Resend code in ${waitLeft}s`
-                     : "Didn't get it? Resend code"}</span>
-                 </button>
-                 <span class="auth-otp__left">${resendsLeft} resend${resendsLeft === 1 ? "" : "s"} left</span>`}
-          </div>
-        ` : `
-          <div class="auth-field">
-            <button class="auth-field__cc" type="button" data-auth="country" aria-label="Select country code">
-              <span class="auth-field__flag">🇮🇳</span><span>+91</span><span class="auth-field__chev">▼</span>
-            </button>
-            <input class="auth-field__input" type="tel" inputmode="numeric" autocomplete="tel"
-                   maxlength="10" placeholder="Enter mobile number" data-auth="phone"
-                   value="${escHtml(phone)}" aria-label="Mobile number">
-          </div>
-          ${authErr}
-          <button class="auth-cta" data-auth="otp" ${ready && !busy ? "" : "disabled"}>
-            ${busy ? "Sending…" : "Send OTP"}</button>
-        `}
-
-        ${emailStep ? "" : `
-          <div class="auth-div">OR</div>
-
-          <!-- Email is the only alternative now that Google Sign-In is gone. It is deliberately
-               secondary: phone is the primary route, so this is one full-width option rather
-               than a row of provider tiles that would imply a choice that no longer exists. -->
-          <div class="auth-social auth-social--single">
-            <button class="auth-social__btn" data-auth="email">${AUTH_ICONS.email}<span>Continue with Email</span></button>
-          </div>`}
-
-        <p class="auth-legal">
-          By continuing you agree to our<br>
-          <a href="legal/privacy-policy.html" data-auth="privacy">Privacy Policy</a>
-          and <a href="legal/privacy-policy.html" data-auth="terms">Terms of Service</a>.
-          <br>
-          <!-- Not in the reference, and not optional. Every provider here can fail for reasons
-               the user cannot fix from this screen (no SMS coverage, no Play Services, SMS
-               quota exhausted). A way through matters more than matching the mockup exactly. -->
-          <button class="auth-legal__skip" data-auth="skip">Continue without signing in</button>
-        </p>
-      </div>
-    </div>`;
-
-  bindSignInScreen();
+/** The single definition of "signed in". Reads the cached account snapshot, which auth.js
+ *  reconciles against the real Firebase session on every launch — instant, offline-safe, and
+ *  cleared automatically when a session is revoked server-side. */
+function isSignedIn(){
+  try { return !!(window.IgnytAuth && window.IgnytAuth.getAccount()); }
+  catch(e){ return false; }
 }
-
-function bindSignInScreen(){
-  const input = document.querySelector('[data-auth="phone"]');
-  const cta = document.querySelector('[data-auth="otp"]');
-
-  if(input){
-    input.addEventListener("input", ()=>{
-      // Digits only, and the state is updated WITHOUT a re-render — re-rendering on every
-      // keystroke is what destroys the focused field and drops the keyboard.
-      const digits = input.value.replace(/\D/g, "").slice(0, 10);
-      if(input.value !== digits) input.value = digits;
-      state.authPhone = digits;
-      if(cta) cta.disabled = digits.length < 10;
-    });
-  }
-
-  /* Same no-re-render rule as the phone field: update state on keystroke and toggle the
-     button's disabled flag by hand. Re-rendering here would blow away the focused field and
-     drop the keyboard mid-code, which is precisely the bug this pattern exists to avoid. */
-  const codeInput = document.querySelector('[data-auth="code"]');
-  if(codeInput){
-    const verifyBtn = document.querySelector('[data-auth="verify"]');
-    const boxes = [...document.querySelectorAll('.auth-otp__box')];
-
-    /* Paints the visual boxes from the single real input. Done by hand rather than by
-       re-rendering, for the same reason every other text field here does: a render on each
-       keystroke destroys the focused element and drops the keyboard mid-code. */
-    const paint = (digits)=>{
-      boxes.forEach((b,i)=>{
-        b.textContent = digits[i] || "";
-        b.classList.toggle("is-filled", !!digits[i]);
-        b.classList.toggle("is-active", digits.length === i);
-      });
-    };
-
-    codeInput.addEventListener("input", ()=>{
-      const digits = codeInput.value.replace(/\D/g, "").slice(0, 6);
-      if(codeInput.value !== digits) codeInput.value = digits;
-      state.authOtpCode = digits;
-      paint(digits);
-      if(verifyBtn) verifyBtn.disabled = digits.length < 6;
-      // Android's SMS autofill drops all six in at once; verify without a second tap.
-      if(digits.length === 6) signInAction("verify");
-    });
-    // The boxes are decoration; a tap anywhere on them must reach the real field.
-    const boxWrap = document.querySelector('[data-auth="otp-boxes"]');
-    if(boxWrap) boxWrap.addEventListener("click", ()=>codeInput.focus());
-    codeInput.addEventListener("focus", ()=>paint(codeInput.value));
-    codeInput.addEventListener("blur", ()=>paint(codeInput.value));
-    codeInput.focus();
-    paint(codeInput.value);
-    ensureOtpCountdown();
-  }
-
-  document.querySelectorAll("[data-auth=\"email-mode\"]").forEach(el=>{
-    el.addEventListener("click", (e)=>{
-      e.preventDefault();
-      state.authEmailMode = el.dataset.mode;
-      const a = window.IgnytAuth;
-      if(a && a.clearError) a.clearError();   // an error from the previous mode is not this one's
-      render();
-    });
-  });
-
-  /* The address survives a mode switch and a failed submit — retyping it because the password
-     was wrong is the kind of small insult that makes a sign-in screen feel hostile. */
-  const emailField = document.getElementById("auth-email");
-  if(emailField){
-    emailField.addEventListener("input", ()=>{ state.authEmail = emailField.value; });
-    if(!state.authOtpSent) emailField.focus();
-  }
-  const pwField = document.getElementById("auth-password");
-  if(pwField) pwField.addEventListener("keydown", (e)=>{ if(e.key === "Enter") submitAuthEmail(); });
-
-  document.querySelectorAll("[data-auth]").forEach(el=>{
-    const kind = el.dataset.auth;
-    if(kind === "phone" || kind === "code" || kind === "email-mode") return;
-    el.addEventListener("click", (e)=>{
-      if(kind === "privacy" || kind === "terms") return;   // real links, let them navigate
-      e.preventDefault();
-      signInAction(kind);
-    });
-  });
-}
-
-/* Every button routes through here so there is one place that decides what "signed in" means
-   when the backend lands. Today the phone/OTP path is not wired to a provider and says
-   so rather than failing silently or pretending to succeed. */
-function signInAction(kind){
-  const auth = window.IgnytAuth;
-  if(kind === "email"){
-    // Opens the email step ON THIS SCREEN. It used to set authSeen and re-render, which
-    // dismissed the Sign In screen for good and left the user wherever that landed them,
-    // without ever asking for an email address.
-    state.authEmailMode = "signin";
-    if(auth && auth.clearError) auth.clearError();
-    render();
-    return;
-  }
-  if(kind === "email-back"){
-    state.authEmailMode = null;
-    if(auth && auth.clearError) auth.clearError();
-    render();
-    return;
-  }
-  if(kind === "email-submit"){ submitAuthEmail(); return; }
-  if(kind === "otp" || kind === "resend"){ requestOtp(kind === "resend"); return; }
-  if(kind === "verify"){ submitOtp(); return; }
-  if(kind === "otp-change"){
-    // Back to the number field. The pending verification id is abandoned on purpose — a code
-    // sent to the old number must not validate against a new one.
-    state.authOtpSent = false;
-    state.authOtpCode = "";
-    state.authOtpSentAt = 0;
-    state.authOtpResends = 0;   // a different number gets a fresh allowance
-    stopOtpCountdown();
-    if(auth && auth.clearError) auth.clearError();
-    render();
-    return;
-  }
-  if(kind === "country"){
-    showToast("Only +91 is configured right now.", "info", render);
-    return;
-  }
-  if(kind === "skip") skipSignIn();
-}
-
-
-/* Resend countdown. Writes into the label once a second instead of re-rendering, so the clock
-   can never interrupt someone typing the code. Stops itself the moment the label is gone or
-   the wait is over, so navigating away cannot leave it running. */
-let otpCountdownHandle = null;
-function ensureOtpCountdown(){
-  if(otpCountdownHandle) return;
-  otpCountdownHandle = setInterval(()=>{
-    const label = document.getElementById("auth-resend-label");
-    if(!label || !state.authOtpSent){ stopOtpCountdown(); return; }
-    const left = Math.max(0, Math.ceil((OTP_RESEND_WAIT_MS - (Date.now() - (state.authOtpSentAt || 0))) / 1000));
-    if(left > 0){
-      label.textContent = `Resend code in ${left}s`;
-    }else{
-      label.textContent = "Didn't get it? Resend code";
-      const btn = label.closest("button");
-      if(btn) btn.disabled = false;
-      stopOtpCountdown();
-    }
-  }, 1000);
-}
-function stopOtpCountdown(){
-  if(otpCountdownHandle){ clearInterval(otpCountdownHandle); otpCountdownHandle = null; }
-}
-
 
 /* =========================================================
    EMAIL AUTHENTICATION — a step INSIDE the Sign In screen
@@ -11685,7 +11425,6 @@ function renderAuthEmailStep(mode, authErr, busy){
 
   return `
     <div class="auth-email">
-      <button class="auth-email__back" data-auth="email-back" type="button" aria-label="Back">← Back</button>
       <h3 class="auth-email__title">${escHtml(title)}</h3>
       <p class="auth-email__sub">${escHtml(sub)}</p>
 
@@ -11737,7 +11476,12 @@ function validateEmailForm(mode, email, password, confirm){
   if(mode === "forgot") return null;
   if(!password) return "Enter your password.";
   if(mode === "signup"){
-    if(password.length < 6) return "Use at least 6 characters for your password.";
+    /* Firebase's own floor is 6 characters, which is not a password. Length AND a mix is the
+       cheap part; the message states every rule at once rather than revealing them one failed
+       attempt at a time. */
+    if(password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)){
+      return "Use at least 8 characters, with a letter and a number.";
+    }
     if(password !== confirm) return "Those passwords don't match.";
   }
   return null;
@@ -11806,86 +11550,17 @@ async function submitAuthEmail(){
   }
 }
 
-/* Phone sign-in, step 1. Every exit path either advances the step or surfaces an error —
-   there is no branch that leaves the button spinning, which is what "stuck on Signing in…"
-   means in practice. IgnytAuth clears its own busy flag in a finally block and re-renders. */
-async function requestOtp(isResend){
-  const auth = window.IgnytAuth;
-  const digits = (state.authPhone || "").replace(/\D/g, "");
-  if(digits.length < 10){ showToast("Enter a 10-digit mobile number.", "error", render); return; }
-  if(!auth || !auth.sendOtp){
-    showToast("Phone sign-in isn't available in this build.", "error", render);
-    return;
-  }
-  // Both guards are enforced here as well as in the markup: a disabled button is a hint, not
-  // a control, and this is the only path that actually sends.
-  if(isResend){
-    if((state.authOtpResends || 0) >= OTP_MAX_RESENDS){
-      showToast("No resends left. Check the number and start again.", "error", render);
-      return;
-    }
-    const wait = Math.ceil((OTP_RESEND_WAIT_MS - (Date.now() - (state.authOtpSentAt || 0))) / 1000);
-    if(wait > 0){ showToast(`Wait ${wait}s before resending.`, "info", render); return; }
-  }
-  console.log("[auth] OTP requested" + (isResend ? " (resend)" : ""));   // number deliberately not logged
-  const res = await auth.sendOtp("+91" + digits, { resend: !!isResend });
-  if(res && res.success){
-    console.log("[auth] OTP sent; verificationId received");
-    state.authOtpSent = true;
-    state.authOtpCode = "";
-    state.authOtpSentAt = Date.now();
-    // Only a resend counts against the cap; the first send is not a resend.
-    if(isResend) state.authOtpResends = (state.authOtpResends || 0) + 1;
-    render();
-    // Auto-retrieval already read the SMS — finish without making the user type it.
-    if(res.data && res.data.autoVerified){
-      console.log("[auth] SMS auto-retrieved, verifying immediately");
-      state.authOtpCode = res.data.smsCode || "";
-      submitOtp();
-    }
-  } else {
-    // The error is already in IgnytAuth and rendered inline by renderSignInScreen; the toast
-    // is for the case where the user's eyes are on the button rather than the field.
-    console.warn("[auth] OTP request failed:", res && res.error);
-    showToast((res && res.error) || "Could not send the code.", "error", render);
-  }
-}
-
-/** Phone sign-in, step 2: verify, persist, then navigate. */
-async function submitOtp(){
-  const auth = window.IgnytAuth;
-  if(!auth || !auth.verifyOtp) return;
-  const code = (state.authOtpCode || "").replace(/\D/g, "");
-  console.log("[auth] verifying OTP");
-  const res = await auth.verifyOtp(code);
-  if(res && res.success && res.data && res.data.user){
-    console.log("[auth] Firebase sign-in successful");   // uid deliberately not logged
-    completeSignIn(res.data.user);
-  } else {
-    console.warn("[auth] OTP verification failed:", res && res.error);
-    state.authOtpCode = "";
-    // An expired verification id cannot be retried — send the user back to request a new code
-    // instead of letting them retype into something that can never validate.
-    if(!auth.hasPendingOtp || !auth.hasPendingOtp()) state.authOtpSent = false;
-    render();
-    showToast((res && res.error) || "Could not verify the code.", "error", render);
-  }
-}
 
 /* The single place that decides what happens after ANY successful sign-in. Phone and email
    both land here, so navigation can never work on one path and silently not on another.
    IgnytAuth has already persisted the session (saveAccount + ignyt:auth-changed). */
 function completeSignIn(user){
+  /* hx_auth_seen is no longer a gate — isSignedIn() is — but it is still what tells
+     onboarding this is not a first run, so it stays. */
   state.authSeen = true;
   LS.set("hx_auth_seen", true);
-  state.authOtpSent = false;
-  state.authOtpCode = "";
-  state.authPhone = "";
-  state.authOtpSentAt = 0;
-  state.authOtpResends = 0;
   state.authEmailMode = null;
   state.authEmail = "";
-  stopOtpCountdown();
   /* Seed the profile name from the account, but never overwrite one the user already set.
      Wrapped because nothing optional here may block navigation: an exception thrown between
      "signed in" and render() strands the user on the sign-in screen with a valid session,
@@ -11903,10 +11578,98 @@ function completeSignIn(user){
 
 /** Continue into onboarding without signing in. Recorded so the screen does not reappear. */
 function skipSignIn(){
+  /* hx_auth_seen is no longer a gate — isSignedIn() is — but it is still what tells
+     onboarding this is not a first run, so it stays. */
   state.authSeen = true;
   LS.set("hx_auth_seen", true);
   render();
 }
+
+
+function renderSignInScreen(){
+  const root = document.getElementById("app");
+  const auth = window.IgnytAuth;
+  const busy = !!(auth && auth.isBusy());
+  const errMsg = auth && auth.getError();
+  const authErr = errMsg ? `<div class="auth-err" role="alert">${escHtml(errMsg)}</div>` : "";
+  const mode = state.authEmailMode || "signin";
+
+  root.innerHTML = `
+    <div class="auth">
+      <div class="auth-hero">
+        <img class="auth-hero__img" src="assets/images/auth/hero-flatlay.jpg" alt="" onerror="this.remove()">
+        ${AUTH_GRAIN}
+        <div class="auth-hero__scrim"></div>
+        <div class="auth-hero__copy">
+          <h1 class="auth-hero__line">Life at its fullest</h1>
+          <p class="auth-hero__line auth-hero__line--2">Mornings full of energy</p>
+        </div>
+      </div>
+      <div class="auth-sheet auth-stagger">
+        <div class="auth-brand">
+          <span class="auth-brand__mark">${AUTH_ICONS.bolt}</span>
+          <h2 class="auth-brand__name">IGNYT</h2>
+        </div>
+        <p class="auth-brand__sub">Your fitness companion for a stronger, healthier life.</p>
+        ${renderAuthEmailStep(mode, authErr, busy)}
+        <p class="auth-legal">
+          By continuing you agree to our<br>
+          <a href="legal/privacy-policy.html" data-auth="privacy">Privacy Policy</a>
+          and <a href="legal/privacy-policy.html" data-auth="terms">Terms of Service</a>.
+        </p>
+      </div>
+    </div>`;
+  bindSignInScreen();
+}
+
+function bindSignInScreen(){
+  document.querySelectorAll('[data-auth="email-mode"]').forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      e.preventDefault();
+      state.authEmailMode = el.dataset.mode;
+      const a = window.IgnytAuth;
+      if(a && a.clearError) a.clearError();
+      render();
+    });
+  });
+  const emailField = document.getElementById("auth-email");
+  if(emailField){
+    emailField.addEventListener("input", ()=>{ state.authEmail = emailField.value; });
+    emailField.focus();
+  }
+  ["auth-password","auth-password2"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener("keydown", (e)=>{ if(e.key === "Enter") submitAuthEmail(); });
+  });
+  document.querySelectorAll("[data-auth]").forEach(el=>{
+    const kind = el.dataset.auth;
+    if(kind === "email-mode") return;
+    el.addEventListener("click", (e)=>{
+      if(kind === "privacy" || kind === "terms") return;
+      e.preventDefault();
+      signInAction(kind);
+    });
+  });
+}
+
+/* Email is the only route in. Google Sign-In and phone/SMS were both removed; the account
+   layer, the session and the navigation are unchanged — only how you prove who you are. */
+function signInAction(kind){
+  const auth = window.IgnytAuth;
+  if(kind === "email-back"){
+    state.authEmailMode = "signin";
+    if(auth && auth.clearError) auth.clearError();
+    render();
+    return;
+  }
+  if(kind === "email-submit"){ submitAuthEmail(); return; }
+}
+
+/* skipSignIn() is deliberately gone. The app used to offer "Continue without signing in",
+   which made every screen reachable with no account. That is incompatible with protecting
+   authenticated screens, and it is what made the Play submission ambiguous — a reviewer could
+   not tell whether an account was required. render() will no longer leave this screen without
+   a session, so there is exactly one answer. */
 
 function renderOnboardingWizard(){
   const root = document.getElementById("app");
@@ -16334,11 +16097,19 @@ function render(){
       /* Sign In is screen one of the flow, ahead of the questionnaire. Only for a genuinely
          new install: someone re-editing their answers is already in, and anyone who has
          signed in or chosen to skip has hx_auth_seen set and never sees it again. */
-      if(!state.authSeen && !state.editingOnboarding){
+      if(!isSignedIn() && !state.editingOnboarding){
         renderSignInScreen();
         return;
       }
       withFocusPreserved(renderOnboardingWizard);
+      return;
+    }
+    /* THE GATE. Everything past this point assumes a signed-in user, so it is checked once
+       here rather than per screen — a per-screen check is a list somebody eventually forgets
+       to add to. hx_auth_seen is no longer consulted: "has seen the screen" and "has an
+       account" were the same flag only while skipping existed. */
+    if(!isSignedIn()){
+      renderSignInScreen();
       return;
     }
     withFocusPreserved(renderApp);

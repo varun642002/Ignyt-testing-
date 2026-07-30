@@ -10,13 +10,7 @@ import com.getcapacitor.annotation.CapacitorPlugin
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
-import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.PhoneAuthCredential
-import com.google.firebase.auth.PhoneAuthOptions
-import com.google.firebase.auth.PhoneAuthProvider
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,19 +21,18 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
 
 /**
- * Capacitor bridge for the IGNYT account layer: phone (SMS) authentication and email/password,
- * both exchanged for a Firebase Authentication session. Firebase Auth persists the session
- * itself and restores it offline, so getCurrentUser() works with no network after a previous
- * successful sign-in.
+ * Capacitor bridge for the IGNYT account layer: email and password, exchanged for a Firebase
+ * Authentication session. Firebase Auth persists the session itself and restores it offline,
+ * so getCurrentUser() works with no network after a previous successful sign-in.
  *
- * Google Sign-In was removed: phone is the primary and intended method, and keeping a second
- * identity provider meant a second set of certificate fingerprints, OAuth clients and failure
- * modes to maintain for a path nobody was asked to use.
+ * Email/password is the ONLY method. Google Sign-In and phone/SMS were both removed: each
+ * carried its own certificate fingerprints, OAuth clients and verification path, and phone in
+ * particular could not send a single SMS until Play Integrity succeeded. One method that works
+ * everywhere -- including for a Play reviewer with no Indian phone number -- is worth more
+ * than three that each fail differently.
  *
  * Same contract as HealthConnectPlugin: every method resolves {"success": true, "data": ...}
- * or {"success": false, "error": "..."} -- never rejects, and never crashes the app. All
- * Firebase access is lazy and null-checked so a missing/invalid google-services.json degrades
- * to a clean "not configured" error instead of an app-wide IllegalStateException at startup.
+ * or {"success": false, "error": "..."} -- never rejects, and never crashes the app.
  */
 @CapacitorPlugin(name = "IgnytAuth")
 class AuthPlugin : com.getcapacitor.Plugin() {
@@ -71,8 +64,7 @@ class AuthPlugin : com.getcapacitor.Plugin() {
         put("email", user.email ?: "")
         put("photoUrl", user.photoUrl?.toString() ?: "")
         put("emailVerified", user.isEmailVerified)
-        put("phoneNumber", user.phoneNumber ?: "")
-        put("provider", if (user.providerData.any { it.providerId == "phone" }) "phone" else "password")
+        put("provider", "password")   // email/password is the only provider now
     }
 
     /** Maps Firebase Auth's error codes to short, user-facing text. Falls back to the raw
@@ -242,241 +234,6 @@ class AuthPlugin : com.getcapacitor.Plugin() {
         }
     }
 
-    /* =====================================================================
-       PHONE / SMS AUTHENTICATION
-
-       Firebase's phone flow is callback-based, not Task-based, and it has a trap: on a device
-       where Play Integrity auto-retrieval works, onVerificationCompleted can fire BEFORE (or
-       instead of) onCodeSent, and onCodeAutoRetrievalTimeOut fires afterwards regardless. A
-       PluginCall may only be resolved once, so every path goes through `settled` -- resolving
-       twice is what turns a working sign-in into a permanently spinning button.
-
-       Auto-completion is deliberately NOT signed in from inside sendOtp. It reports
-       autoVerified=true and stashes the credential; JS then calls verifyOtp, which consumes
-       it. That keeps "who navigates, and when" in one place in the JS layer instead of
-       splitting it across two callbacks that fire in a device-dependent order.
-    ===================================================================== */
-
-    /** Set by onVerificationCompleted when Android auto-reads the SMS. Consumed by verifyOtp. */
-    private var autoCredential: PhoneAuthCredential? = null
-    private var lastVerificationId: String? = null
-    private var resendToken: PhoneAuthProvider.ForceResendingToken? = null
-
-    @PluginMethod
-    fun sendOtp(call: PluginCall) {
-        val auth = firebaseAuthOrNull()
-        if (auth == null) {
-            resolveError(call, "Sign-in isn't configured in this build (missing Firebase configuration).")
-            return
-        }
-        val currentActivity = activity
-        if (currentActivity == null) {
-            resolveError(call, "Phone sign-in requires a foreground activity.")
-            return
-        }
-        val phone = call.getString("phoneNumber")?.trim().orEmpty()
-        if (!phone.startsWith("+") || phone.length < 8) {
-            resolveError(call, "Enter a valid phone number including the country code.")
-            return
-        }
-
-        autoCredential = null
-        val settled = AtomicBoolean(false)
-
-        val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
-            override fun onVerificationCompleted(credential: PhoneAuthCredential) {
-                Log.d("IgnytAuth", "phone: onVerificationCompleted (auto-retrieved)")
-                autoCredential = credential
-                // smsCode is non-null when Android actually read the message, which lets the
-                // JS layer pre-fill the boxes so the user sees what is happening.
-                if (settled.compareAndSet(false, true)) {
-                    resolveSuccess(call, JSObject().apply {
-                        put("autoVerified", true)
-                        put("verificationId", lastVerificationId ?: "")
-                        put("smsCode", credential.smsCode ?: "")
-                    })
-                }
-            }
-
-            override fun onVerificationFailed(e: com.google.firebase.FirebaseException) {
-                Log.w("IgnytAuth", "phone: onVerificationFailed: ${e.message}")
-                if (settled.compareAndSet(false, true)) resolveError(call, phoneErrorMessage(e))
-            }
-
-            override fun onCodeSent(id: String, token: PhoneAuthProvider.ForceResendingToken) {
-                Log.d("IgnytAuth", "phone: onCodeSent")
-                lastVerificationId = id
-                resendToken = token
-                if (settled.compareAndSet(false, true)) {
-                    resolveSuccess(call, JSObject().apply {
-                        put("autoVerified", false)
-                        put("verificationId", id)
-                        put("codeSent", true)
-                    })
-                }
-            }
-
-            override fun onCodeAutoRetrievalTimeOut(id: String) {
-                // Normal end of the auto-retrieval window, not an error. Only matters if
-                // nothing else resolved first, which would mean the SMS never arrived.
-                Log.d("IgnytAuth", "phone: auto-retrieval timed out")
-                lastVerificationId = id
-                if (settled.compareAndSet(false, true)) {
-                    resolveSuccess(call, JSObject().apply {
-                        put("autoVerified", false)
-                        put("verificationId", id)
-                        put("codeSent", true)
-                    })
-                }
-            }
-        }
-
-        try {
-            val builder = PhoneAuthOptions.newBuilder(auth)
-                .setPhoneNumber(phone)
-                .setTimeout(60L, TimeUnit.SECONDS)
-                .setActivity(currentActivity)
-                .setCallbacks(callbacks)
-            // Resend reuses the token so Firebase treats it as a resend rather than a fresh
-            // request, which is what keeps it from tripping the abuse throttle.
-            if (call.getBoolean("resend", false) == true) {
-                resendToken?.let { builder.setForceResendingToken(it) }
-            }
-            PhoneAuthProvider.verifyPhoneNumber(builder.build())
-
-            /* Watchdog. Every normal outcome arrives as one of the four callbacks above, but
-               there is one path where NONE of them fire: app verification fails, Firebase
-               opens its reCAPTCHA page in a browser, and the user backs out of it. The
-               PluginCall would then never resolve and the JS button would spin forever — the
-               exact "stuck on Signing in" failure this plugin was written to eliminate.
-
-               setTimeout() is 60s, so 90s is comfortably past every legitimate outcome. */
-            pluginScope.launch {
-                kotlinx.coroutines.delay(90_000L)
-                if (settled.compareAndSet(false, true)) {
-                    Log.w("IgnytAuth", "phone: no callback within 90s - app verification likely fell back to the web flow")
-                    resolveError(call,
-                        "Verification didn't complete. If a browser page opened, this build " +
-                        "isn't passing Play Integrity — check that its SHA-256 is registered in " +
-                        "Firebase and that the Play Integrity API is enabled for the project.")
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("IgnytAuth", "phone: verifyPhoneNumber threw", e)
-            if (settled.compareAndSet(false, true)) {
-                resolveError(call, "Could not start phone verification: ${e.message ?: "unknown error"}")
-            }
-        }
-    }
-
-    @PluginMethod
-    fun verifyOtp(call: PluginCall) {
-        val auth = firebaseAuthOrNull()
-        if (auth == null) {
-            resolveError(call, "Sign-in isn't configured in this build (missing Firebase configuration).")
-            return
-        }
-        val code = call.getString("code")?.trim().orEmpty()
-        val verificationId = call.getString("verificationId")?.takeIf { it.isNotBlank() } ?: lastVerificationId
-
-        // An auto-retrieved credential is already complete and is preferred over rebuilding one
-        // from a typed code -- it is the same SMS either way, and this path cannot mistype it.
-        val credential: PhoneAuthCredential = autoCredential ?: run {
-            if (verificationId.isNullOrBlank()) {
-                resolveError(call, "That code has expired. Request a new one.")
-                return
-            }
-            if (code.length < 6) {
-                resolveError(call, "Enter the 6-digit code from the SMS.")
-                return
-            }
-            PhoneAuthProvider.getCredential(verificationId, code)
-        }
-
-        pluginScope.launch {
-            try {
-                val authResult = withTimeout(30_000L) { auth.signInWithCredential(credential).await() }
-                val user = authResult.user
-                if (user == null) {
-                    resolveError(call, "Sign-in completed but no user was returned. Please try again.")
-                    return@launch
-                }
-                Log.d("IgnytAuth", "phone: signInWithCredential OK, uid=${user.uid}")
-                // Single-use: a stale credential must not silently sign in the next attempt.
-                autoCredential = null
-                lastVerificationId = null
-                resolveSuccess(call, JSObject().apply {
-                    put("signedIn", true)
-                    put("isNewUser", authResult.additionalUserInfo?.isNewUser ?: false)
-                    put("user", userJson(user))
-                })
-            } catch (e: FirebaseAuthException) {
-                autoCredential = null
-                /* "Wrong code" and "code expired" need different UI: a typo should leave the
-                   user on the code field to correct it, while an expired session must send
-                   them back to request a new SMS. Firebase distinguishes them by error code,
-                   so report that distinction as a flag -- the JS layer must never have to
-                   pattern-match English prose to decide where to navigate. */
-                val expired = e.errorCode == "ERROR_SESSION_EXPIRED"
-                if (expired) lastVerificationId = null
-                resolveOtpError(
-                    call,
-                    when {
-                        expired -> "That code has expired. Request a new one."
-                        e is FirebaseAuthInvalidCredentialsException ->
-                            "That code isn't right. Check it and try again."
-                        else -> authErrorMessage(e)
-                    },
-                    expired
-                )
-            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                resolveError(call, "Verifying the code timed out. Check your connection and try again.")
-            } catch (e: Exception) {
-                autoCredential = null
-                resolveError(call, "Could not verify the code: ${e.message ?: "unknown error"}")
-            }
-        }
-    }
-
-    /** Phone verification fails through FirebaseException, not only FirebaseAuthException, so
-     *  this matches on the message when there is no error code to read. */
-    private fun phoneErrorMessage(e: com.google.firebase.FirebaseException): String {
-        if (e is FirebaseAuthException) return authErrorMessage(e)
-        val m = e.message ?: return "Could not send the code. Please try again."
-        return when {
-            m.contains("BILLING_NOT_ENABLED", true) ->
-                "Phone sign-in needs billing enabled on the Firebase project (Blaze plan)."
-            m.contains("quota", true) || m.contains("TOO_MANY", true) ->
-                "The SMS quota for this project has been used up. Try again later."
-            m.contains("invalid", true) && m.contains("phone", true) ->
-                "That phone number isn't valid. Include the country code."
-            m.contains("reCAPTCHA", true) || m.contains("captcha", true) ->
-                /* Reaching reCAPTCHA at all means Play Integrity verification failed — the
-                   fallback is the symptom, not the cause, so the message names the cause. */
-                "This build could not be verified with Play Integrity, so Firebase fell back to " +
-                "a web check. Register its SHA-256 in the Firebase Console and enable the Play " +
-                "Integrity API for the project."
-            m.contains("app-not-authorized", true) || m.contains("APP_NOT_VERIFIED", true) ||
-            m.contains("MISSING_CLIENT_IDENTIFIER", true) -> {
-                /* The single most common cause, and the one Firebase's own message never names.
-                   Print the fingerprint the project is actually missing rather than telling the
-                   user to go and find it — SHA-256 in particular is not in google-services.json,
-                   so there is nowhere on disk they could have looked it up. */
-                val sha256 = if (com.varun.ignyt.BuildConfig.DEBUG) fingerprints()?.second else null
-                Log.w("IgnytAuth", "Phone auth rejected this build.")
-                if (sha256 != null)
-                    "This build isn't authorized for phone sign-in. Add this SHA-256 fingerprint " +
-                    "to the Firebase Console (Project settings ▸ Your apps ▸ ${context.packageName}):\n$sha256"
-                else
-                    "This build isn't authorized for phone sign-in. Add its SHA-1 and SHA-256 " +
-                    "fingerprints in the Firebase Console."
-            }
-            m.contains("network", true) ->
-                "Network error. Check your connection and try again."
-            else -> m
-        }
-    }
-
     @PluginMethod
     fun signUpWithEmail(call: PluginCall) {
         val auth = firebaseAuthOrNull()
@@ -638,11 +395,4 @@ class AuthPlugin : com.getcapacitor.Plugin() {
         call.resolve(JSObject().apply { put("success", false); put("error", message) })
     }
 
-    /** As resolveError, plus the expired/not-expired distinction the OTP screen needs to decide
-     *  whether to keep the user on the code field or send them back to request a new SMS. */
-    private fun resolveOtpError(call: PluginCall, message: String, expired: Boolean) {
-        call.resolve(JSObject().apply {
-            put("success", false); put("error", message); put("expired", expired)
-        })
-    }
 }
