@@ -600,7 +600,10 @@ try{
 <script src="js/bloodwork.js"></script>
 <script src="js/goals.js"></script>
 <script src="js/health-uploads.js"></script>
-<script src="js/health/health-security.js"></script>
+<!-- js/health/health-security.js is NOT loaded. It advertises PIN/biometric locking and
+     AES encryption and implements none of it — isUnlocked() returns true unconditionally and
+     the "encryption" is a passthrough. Nothing calls it today, so shipping it only risks a
+     future caller trusting the name. The file stays in the repo for whoever implements it. -->
 <script src="js/health/health-db.js"></script>
 <script src="js/health/health-models.js"></script>
 <script src="js/health/health-utils.js"></script>
