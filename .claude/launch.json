@@ -6,6 +6,20 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["--yes", "http-server", "www", "-p", "4188", "-c-1"],
       "port": 4188
+    },
+    {
+      "name": "ignytfit",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "IGNYTfit", "run", "dev"],
+      "port": 3210,
+      "autoPort": true
+    },
+    {
+      "name": "ignytfit-prod",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "IGNYTfit", "run", "start"],
+      "port": 3211,
+      "autoPort": true
     }
   ]
 }

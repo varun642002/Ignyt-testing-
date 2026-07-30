@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 160" width="720" height="160" role="img" aria-label="IGNYT">
+  <title>IGNYT</title>
+  <defs>
+    <linearGradient id="ignyt-tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff6a2b"/>
+      <stop offset="0.55" stop-color="#ff5a1f"/>
+      <stop offset="1" stop-color="#c9350a"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="140" height="140" rx="34" fill="url(#ignyt-tile)"/>
+  <g transform="translate(10 10) scale(0.2734)">
+    <path d="M344 92 L198 216 L252 216 L168 420 L314 296 L258 296 Z" fill="#ffffff"/>
+  </g>
+  <text x="188" y="108"
+        font-family="Geist, Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="92" font-weight="900" letter-spacing="14" fill="#f7f4ef">IGNYT</text>
+</svg>
