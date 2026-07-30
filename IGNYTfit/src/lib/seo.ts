@@ -39,6 +39,12 @@ export interface PageSeo {
    * page needs this — its title already carries the brand.
    */
   absoluteTitle?: boolean;
+  /**
+   * Override the Open Graph and Twitter title. Social cards have far less room
+   * than a search result, so a page may want a shorter headline there than the
+   * one in <title>. Defaults to the page title.
+   */
+  socialTitle?: string;
 }
 
 /**
@@ -56,9 +62,12 @@ export function createMetadata({
   ogType = "website",
   noIndex = false,
   absoluteTitle = false,
+  socialTitle: socialTitleOverride,
 }: PageSeo): Metadata {
   const url = absoluteUrl(path);
-  const socialTitle = absoluteTitle ? title : `${title} · ${site.name}`;
+  const socialTitle =
+    socialTitleOverride ??
+    (absoluteTitle ? title : `${title} · ${site.name}`);
 
   return {
     title: absoluteTitle ? { absolute: title } : title,

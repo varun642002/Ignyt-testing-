@@ -32,6 +32,17 @@ export const site = {
     "IGNYT is an offline-first Android fitness app for workout tracking, food logging, macros, fasting, hydration, supplements, weight and Health Connect — with your data stored on your device by default.",
   shortDescription:
     "Track workouts, nutrition, fasting, supplements, hydration, Health Connect and progress in one offline-first fitness app.",
+
+  /**
+   * Home-page SEO, kept apart from `description` because they answer different
+   * questions. `description` is the product blurb reused across the site;
+   * these two are written for a search result and for a Google OAuth reviewer
+   * skimming the tab title, so they lead with the product category.
+   */
+  seoTitle: "IGNYT – Complete Fitness & Nutrition Tracker",
+  seoDescription:
+    "IGNYT is a complete fitness and nutrition tracking app that helps you monitor workouts, calories, macros, fasting, hydration, body weight, progress, and Google Health Connect data.",
+  ogTitle: "IGNYT – Complete Fitness Tracker",
   androidPackage: "com.varun.ignyt",
   locale: "en_US",
   themeColor: "#08090d",
@@ -41,8 +52,8 @@ export const site = {
    * the app ships — every page reads these rather than hard-coding a number.
    */
   app: {
-    version: "1.0.35",
-    versionCode: 8,
+    version: "1.0.40",
+    versionCode: 9,
     /** minSdk 26. */
     minAndroid: "8.0",
     minAndroidName: "Oreo",

@@ -101,7 +101,7 @@ export function Footer() {
 
         <div className="mt-12 flex flex-col gap-4 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[13px] text-text-dim">
-            © {new Date().getFullYear()} {site.name}. All rights reserved.
+            © {new Date().getFullYear()} {site.name}. All Rights Reserved.
           </p>
           <p className="text-[13px] text-text-dim">
             IGNYT is not a medical device and does not provide medical advice.{" "}

@@ -23,11 +23,11 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: `${site.name} — ${site.tagline}`,
+    default: site.seoTitle,
     // Every page supplies a bare title; the brand is appended here once.
     template: `%s · ${site.name}`,
   },
-  description: site.description,
+  description: site.seoDescription,
   applicationName: site.name,
   authors: [{ name: site.name, url: site.url }],
   creator: site.name,
@@ -39,14 +39,14 @@ export const metadata: Metadata = {
     type: "website",
     url: site.url,
     siteName: site.name,
-    title: `${site.name} — ${site.tagline}`,
-    description: site.description,
+    title: site.ogTitle,
+    description: site.seoDescription,
     locale: site.locale,
   },
   twitter: {
     card: "summary_large_image",
-    title: `${site.name} — ${site.tagline}`,
-    description: site.description,
+    title: site.ogTitle,
+    description: site.seoDescription,
   },
   robots: {
     index: true,

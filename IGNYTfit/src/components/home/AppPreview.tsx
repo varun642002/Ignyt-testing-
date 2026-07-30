@@ -5,7 +5,7 @@ import { PhoneFrame } from "@/components/device/PhoneFrame";
 import { ButtonLink } from "@/components/ui/Button";
 import { Reveal } from "@/components/ui/Reveal";
 import { Section, SectionHeading } from "@/components/ui/Section";
-import { featuredScreens } from "@/lib/screens";
+import { featuredScreens, screens } from "@/lib/screens";
 
 /**
  * Home-page app preview.
@@ -18,39 +18,64 @@ import { featuredScreens } from "@/lib/screens";
  *
  * The home page does not need a carousel. It needs to show that the app looks
  * good and send people to the page that does have one — which is exactly what
- * three static devices and a list of links do, for zero JavaScript.
+ * static devices and a list of links do, for zero JavaScript.
  */
 
 /**
- * One device, not three.
+ * Three devices, captioned.
  *
- * Each mockup costs roughly 25KB once its markup and its duplicate in the RSC
- * flight payload are counted, and on a simulated slow connection the home
- * page's total document size is what governs first paint. The hero already
- * carries a device; a second one here makes the point, and the screen list
- * below does the rest of the work for a fraction of the bytes.
+ * This was one device. Each mockup costs roughly 25KB once its markup and its
+ * duplicate in the RSC flight payload are counted, so the count is not free —
+ * but Google's OAuth verification asks a reviewer to understand the app from
+ * the home page without navigating, and a single screen does not carry
+ * "workout tracking, nutrition and progress" on its own.
+ *
+ * Three is the compromise: enough to show the product's range, still static
+ * server-rendered markup, and still no framer-motion in the critical path. The
+ * carousel stays on /screenshots where it belongs.
  */
-const SHOWCASE_SCREEN = "workout" as const;
+const SHOWCASE_SCREENS = ["workout", "food-log", "progress"] as const;
 
 export function AppPreview() {
+  const showcase = SHOWCASE_SCREENS.map(
+    (id) => screens.find((screen) => screen.id === id)!,
+  );
+
   return (
     <Section id="app-preview">
       <SectionHeading
         id="app-preview"
-        eyebrow="App preview"
-        title="Look around the app"
-        lead="The screens you will actually use every day — training, the dashboard that ties it together, and the analytics that tell you whether it worked."
+        eyebrow="Screenshots"
+        title={
+          <>
+            See <span className="text-gradient">IGNYT</span> in Action
+          </>
+        }
+        lead="The screens you will actually use every day — training, food logging, and the analytics that tell you whether it worked."
       />
 
       <Reveal className="mt-16">
-        <div className="flex justify-center">
-          <PhoneFrame
-            className="[--pw:250px] sm:[--pw:272px] xl:[--pw:296px]"
-            label="The IGNYT workout screen, showing a live rest timer and set-by-set logging"
-          >
-            <AppScreen id={SHOWCASE_SCREEN} />
-          </PhoneFrame>
-        </div>
+        <ul className="flex list-none flex-wrap items-start justify-center gap-x-10 gap-y-12">
+          {showcase.map((screen) => (
+            <li
+              key={screen.id}
+              className="flex max-w-[300px] flex-col items-center"
+            >
+              <PhoneFrame
+                className="[--pw:216px] sm:[--pw:236px] xl:[--pw:252px]"
+                label={screen.description}
+              >
+                <AppScreen id={screen.id} />
+              </PhoneFrame>
+              <h3 className="mt-7 text-[15.5px] font-bold text-text">
+                {screen.title}
+              </h3>
+              <p className="mt-2 text-center text-[13.5px] leading-relaxed text-text-mute">
+                {screen.description}
+              </p>
+            </li>
+          ))}
+        </ul>
       </Reveal>
 
       <Reveal className="mt-14">

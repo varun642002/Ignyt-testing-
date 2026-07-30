@@ -80,8 +80,11 @@ export const legalRoutes: RouteMeta[] = [
     changeFrequency: "yearly",
   },
   {
+    /* Labelled for the action, not the topic. Google's OAuth and Play reviews
+       both look for an obvious way to delete an account; "Data Deletion" reads
+       as another policy document sitting beside the privacy policy. */
     path: "/data-deletion",
-    label: "Data Deletion",
+    label: "Delete Account",
     priority: 0.6,
     changeFrequency: "yearly",
   },

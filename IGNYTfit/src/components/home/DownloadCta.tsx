@@ -16,7 +16,11 @@ const ASSURANCES = [
  */
 export function DownloadCta() {
   return (
-    <section aria-labelledby="download-cta-heading" className="py-20 sm:py-28">
+    <section
+      id="download"
+      aria-labelledby="download-cta-heading"
+      className="scroll-mt-24 py-20 sm:py-28"
+    >
       <Container>
         <Reveal>
           <div className="ring-gradient relative overflow-hidden rounded-[32px] border border-line bg-[linear-gradient(150deg,#12151d_0%,#0b0d13_45%,#170e0a_100%)] px-6 py-16 text-center sm:px-14 sm:py-20">
@@ -41,18 +45,19 @@ export function DownloadCta() {
               id="download-cta-heading"
               className="relative text-[clamp(1.9rem,4.6vw,3.1rem)] font-black leading-[1.08]"
             >
-              Ready to start your fitness journey?
-              <span className="mt-2 block text-gradient">
-                Download IGNYT today.
-              </span>
+              Download <span className="text-gradient">IGNYT</span>
             </h2>
 
             <p className="relative mx-auto mt-6 max-w-xl text-[16px] leading-relaxed text-text-mute">
-              Free, offline-first, and yours to walk away from at any time —
-              every byte you log can be exported to JSON or CSV whenever you
-              ask.
+              Download IGNYT and take control of your fitness journey with
+              intelligent workout tracking, nutrition management, and progress
+              analytics.
             </p>
 
+            {/* The listing is not public yet, so the store link is labelled for
+                what it currently is. Shipping a Play button that leads to a 404
+                is worse than saying "coming soon" — and an OAuth reviewer
+                clicking through to a dead listing reads as an incomplete app. */}
             <div className="relative mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <PlayStoreButton />
               <ButtonLink href="/download" variant="secondary" size="lg">
@@ -60,6 +65,11 @@ export function DownloadCta() {
                 <ArrowRight aria-hidden className="size-4" />
               </ButtonLink>
             </div>
+
+            <p className="relative mt-5 inline-flex items-center gap-2 rounded-full border border-warn/30 bg-warn/10 px-3.5 py-1.5 text-[12.5px] font-semibold text-warn">
+              <span aria-hidden className="size-1.5 rounded-full bg-warn" />
+              Coming soon to Google Play
+            </p>
 
             <ul className="relative mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-3">
               {ASSURANCES.map(({ Icon, label }) => (

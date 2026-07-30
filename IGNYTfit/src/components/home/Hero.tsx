@@ -14,7 +14,6 @@ import { AppScreen } from "@/components/device/screens";
 import { PhoneFrame } from "@/components/device/PhoneFrame";
 import { ButtonLink } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
-import { PlayStoreButton } from "@/components/ui/PlayStoreButton";
 import { cn } from "@/lib/utils";
 
 /**
@@ -219,40 +218,59 @@ export function Hero() {
 
           {/* Headline and lead are never animated — they are the largest
               contentful paint, and hiding them behind an entrance meant LCP
-              waited on hydration. */}
+              waited on hydration.
+
+              The brand name is the h1 on its own, with the positioning line
+              directly beneath it. This is the first thing an OAuth reviewer
+              reads, and it has to answer "what is this product called and what
+              does it do" before anything else loads or moves. */}
           <h1
             id="hero-heading"
-            className="mt-6 text-[clamp(2.5rem,6.6vw,4.35rem)] font-black leading-[1.04]"
+            className="mt-6 text-[clamp(3rem,8vw,5.25rem)] font-black leading-[1.02] tracking-[0.02em]"
           >
-            Transform your fitness journey with{" "}
             <span className="text-gradient">IGNYT</span>
           </h1>
 
-          <p className="mx-auto mt-6 max-w-xl text-[16.5px] leading-relaxed text-text-mute sm:text-[18px] lg:mx-0">
-            Track workouts, nutrition, fasting, supplements, hydration, Health
-            Connect and progress — all in one powerful fitness companion.
+          <p className="mt-3 text-[clamp(1.15rem,2.6vw,1.6rem)] font-bold leading-tight text-text">
+            Your Complete Fitness &amp; Nutrition Tracker
+          </p>
+
+          <p className="mx-auto mt-5 max-w-xl text-[16.5px] leading-relaxed text-text-mute sm:text-[18px] lg:mx-0">
+            Track workouts, calories, nutrition, macros, fasting, hydration,
+            body weight, progress, and Google Health Connect data in one
+            powerful fitness app.
           </p>
 
           <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
-            <PlayStoreButton className="w-full sm:w-auto" />
+            <ButtonLink href="/download" size="lg" className="w-full sm:w-auto">
+              Download App
+              <ArrowRight aria-hidden className="size-4" />
+            </ButtonLink>
             <ButtonLink
-              href="/features"
+              href="#features"
               variant="secondary"
               size="lg"
               className="w-full sm:w-auto"
             >
-              Explore Features
-              <ArrowRight aria-hidden className="size-4" />
+              Learn More
             </ButtonLink>
           </div>
 
-          <ul className="mt-9 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13px] text-text-dim lg:justify-start">
+          {/* Capability badges, not virtue claims. A reviewer scanning the fold
+              should come away with the feature list, so these name what the app
+              does rather than what it refuses to do. */}
+          <ul className="mt-9 flex flex-wrap items-center justify-center gap-2 lg:justify-start">
             {[
-              "No ads, ever",
-              "Health data never sold",
-              "Works fully offline",
+              "Workout Tracking",
+              "Nutrition Tracking",
+              "Health Connect",
+              "Progress Analytics",
+              "Premium Features",
             ].map((item) => (
-              <li key={item} className="flex items-center gap-2">
+              <li
+                key={item}
+                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/70 px-3 py-1.5 text-[12.5px] font-semibold text-text-mute"
+              >
                 <CircleCheckBig aria-hidden className="size-3.5 text-good" />
                 {item}
               </li>

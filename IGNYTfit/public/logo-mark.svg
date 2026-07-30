@@ -1,12 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="IGNYT">
   <title>IGNYT</title>
-  <defs>
-    <linearGradient id="ignyt-mark-tile" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ff6a2b"/>
-      <stop offset="0.55" stop-color="#ff5a1f"/>
-      <stop offset="1" stop-color="#c9350a"/>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" rx="112" fill="url(#ignyt-mark-tile)"/>
-  <path d="M344 92 L198 216 L252 216 L168 420 L314 296 L258 296 Z" fill="#ffffff"/>
+  <rect width="512" height="512" rx="112" fill="#08090d"/>
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="11" stroke-dasharray="538 90" stroke-dashoffset="45"/>
+  <g stroke="#ffffff" stroke-opacity="0.3" stroke-width="11"><line x1="34" y1="262" x2="96" y2="262"/><line x1="416" y1="262" x2="478" y2="262"/></g>
+  <text x="256" y="262" dx="9" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" fill-opacity="0.3" font-size="86" font-weight="800" letter-spacing="18" font-family="Geist, Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">IGNYT</text>
+  <path d="M372 36 L190 206 L256 206 L250 290 L330 290 Z" fill="#ffffff"/>
+  <path d="M140 476 L322 306 L256 306 L262 222 L182 222 Z" fill="#ffffff"/>
 </svg>
