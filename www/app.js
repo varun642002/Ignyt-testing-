@@ -4682,7 +4682,8 @@ const state = {
   historyPRsOnly: false, historyPage: 1, historyArchived: false, historyBinOpen: false,
   reportPeriod: "week",
   reminderScreen: false,   // transient — Settings > All Reminders is open
-  reminderOpen: null,      // transient — which reminder row is expanded   // Reports view: week | month | year
+  reminderOpen: null,      // transient — which reminder row is expanded
+  supplementUI: { editorOpen: null },   // transient — supplements editor sheet   // Reports view: week | month | year
   historySelectMode: false, historySelected: [], // transient — bulk multi-select
   // Food search (transient — a fresh visit starts with an empty search)
   foodSearchQuery: "", foodSearchSelected: null, foodSearchAmount: null, foodSearchUnit: "g",
@@ -9243,12 +9244,8 @@ function consumeNotificationRoute(){
   if(!route) return;
   delete window.__ignytRoute;
 
-  const TABS = ["home","workout","nutrition","progress","profile","tools","fasting","health","body","insights","settings"];
-  if(route === "supplements"){
-    // Not built yet. Land on Tools rather than nowhere, so the notification still goes
-    // somewhere sensible instead of appearing to do nothing.
-    state.tab = "tools";
-  }else if(TABS.indexOf(route) !== -1){
+  const TABS = ["home","workout","nutrition","progress","profile","tools","fasting","supplements","health","body","insights","settings"];
+  if(TABS.indexOf(route) !== -1){
     state.tab = route;
   }else{
     return;
@@ -9350,6 +9347,7 @@ function renderApp(){
   if(state.tab==="insights") main.innerHTML = renderInsightsTab();
   if(state.tab==="tools") main.innerHTML = renderToolsTab();
   if(state.tab==="fasting") main.innerHTML = renderFastingScreen();
+  if(state.tab==="supplements") main.innerHTML = renderSupplementsScreen();
   if(state.tab==="profile") main.innerHTML = renderProfileTab();
   if(state.tab==="bloodwork") main.innerHTML = window.IgnytBloodwork ? window.IgnytBloodwork.render() : "";
   if(state.tab==="goals") main.innerHTML = window.IgnytGoals ? window.IgnytGoals.render() : "";
@@ -9405,6 +9403,7 @@ function renderToolsTab(){
       /* Fasting sits under Nutrition because that is where a user looks for it, but it is its
          own page and its own store — it never reads or writes the food log. */
       {id:"fasting", label:"Fasting", desc:"Track intermittent fasts & streaks", icon:"timer"},
+      {id:"supplements", label:"Supplements", desc:"Doses, stock & adherence", icon:"nutrition"},
       {id:"calculators", label:"Calculator", desc:"BMI, BMR, TDEE & macros", icon:"calc"}
     ]],
     ["Insights", [
@@ -15166,6 +15165,15 @@ function dur_ft(ms){
   return (neg?"-":"") + (h > 0 ? `${h}h ${m}m` : `${m}m`);
 }
 
+
+/* Supplements — app-side wiring. Screen lives in www/js/pages/supplements.js. */
+function renderSupplementsScreen(){
+  if(!window.IgnytPages || typeof window.IgnytPages.renderSupplements !== "function"){
+    return `<div class="sp"><div class="sp-none">The supplements module failed to load.</div></div>`;
+  }
+  return window.IgnytPages.renderSupplements({ ui: state.supplementUI || {} });
+}
+
 function renderFastingScreen(){
   if(!window.IgnytPages || typeof window.IgnytPages.renderFasting !== "function"){
     return `<div class="ft"><div class="ft-empty-note">The fasting module failed to load.</div></div>`;
@@ -20347,6 +20355,80 @@ function attachHandlers(){
       state.nutritionScreen = "insights";
       render();
     });
+  });
+
+  /* ---- Supplements ----------------------------------------------------------------- */
+  const SUP = window.IgnytSupplements;
+  const supUI = patch => { state.supplementUI = Object.assign({}, state.supplementUI, patch); };
+
+  const supBack = document.querySelector("[data-sup-back]");
+  if(supBack) supBack.addEventListener("click", ()=>{ state.tab = "tools"; render(); });
+
+  document.querySelectorAll("[data-sup-add]").forEach(el=>{
+    el.addEventListener("click", ()=>{ supUI({ editorOpen: "new" }); render(); });
+  });
+  document.querySelectorAll("[data-sup-edit]").forEach(el=>{
+    el.addEventListener("click", ()=>{ supUI({ editorOpen: el.dataset.supEdit }); render(); });
+  });
+  document.querySelectorAll("[data-sup-close]").forEach(el=>{
+    el.addEventListener("click", ()=>{ supUI({ editorOpen: null }); render(); });
+  });
+
+  document.querySelectorAll("[data-sup-take]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(!SUP) return;
+      const nowTaken = SUP.toggle(el.dataset.supTake);
+      // Short tick on completion only, same rule as the habit tracker: buzzing on un-tick
+      // would make correcting a mistap feel like an achievement.
+      if(nowTaken && typeof hapticTick === "function") hapticTick();
+      render();
+    });
+  });
+
+  const supSave = document.querySelector("[data-sup-save]");
+  if(supSave) supSave.addEventListener("click", ()=>{
+    if(!SUP) return;
+    const val = id => { const e = document.getElementById(id); return e ? e.value.trim() : ""; };
+    const num = id => { const v = val(id); return v === "" ? null : Number(v); };
+    const name = val("sup-name");
+    if(!name){ showToast("Give the supplement a name.", "error", render); return; }
+
+    const fields = {
+      name: name, brand: val("sup-brand"), category: val("sup-category") || "other",
+      dosage: num("sup-dosage"), unit: val("sup-unit") || "capsule",
+      quantity: num("sup-quantity") != null ? num("sup-quantity") : 1,
+      timing: val("sup-timing") || "anytime", time: val("sup-time"),
+      frequency: val("sup-frequency") || "daily",
+      inventory: num("sup-inventory"), notes: val("sup-notes")
+    };
+    // "Custom days" has no day picker in this editor yet, so it would silently mean "no days"
+    // and the supplement would never be due. Fall back to every day and say so.
+    if(fields.frequency === "custom"){
+      fields.frequency = "daily";
+      showToast("Custom days aren't editable yet — set to every day.", "info", render);
+    }
+
+    const existing = supSave.dataset.supSave;
+    const ok = existing ? SUP.update(existing, fields) : !!SUP.add(fields);
+    if(!ok){ showToast("Could not save.", "error", render); return; }
+    supUI({ editorOpen: null });
+    showToast(existing ? "Saved." : "Supplement added.", "success", render);
+    render();
+  });
+
+  const supDelete = document.querySelector("[data-sup-delete]");
+  if(supDelete) supDelete.addEventListener("click", async ()=>{
+    if(!SUP) return;
+    const id = supDelete.dataset.supDelete;
+    const sup = SUP.get(id);
+    const ok = await confirmDialog(
+      `Remove ${escHtml(sup ? sup.name : "this supplement")} from your stack? Your dose history is kept.`,
+      render, { title:"Remove supplement", confirmLabel:"Remove", danger:true });
+    if(!ok){ render(); return; }
+    SUP.remove(id);
+    supUI({ editorOpen: null });
+    showToast("Removed.", "success", render);
+    render();
   });
 
   /* ---- Reminders ------------------------------------------------------------------ */

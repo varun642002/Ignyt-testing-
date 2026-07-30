@@ -177,13 +177,13 @@
    without one of these classes gets an invalid value and paints nothing at all. That is how
    the diet plan's bottom sheet ended up transparent with the meal list showing through it —
    not a z-index problem, an undefined background. */
-.home-light, .wk-light, .pg-light, .dp, .ft {
+.home-light, .wk-light, .pg-light, .dp, .ft, .sp {
   --rh-bg: var(--color-bg); --rh-card: var(--color-surface-elevated); --rh-blue: var(--color-interactive);
   --rh-text: var(--color-text-primary); --rh-muted: var(--color-text-secondary); --rh-border: var(--color-border);
   --rh-purple: #A78BFA; --rh-green: var(--color-success); --rh-red: var(--color-error);
 }
 [data-theme="light"] .home-light, [data-theme="light"] .wk-light, [data-theme="light"] .pg-light,
-[data-theme="light"] .dp, [data-theme="light"] .ft {
+[data-theme="light"] .dp, [data-theme="light"] .ft, [data-theme="light"] .sp {
   /* Same ground and text scale as the other two light palettes. Blue is left exactly as it
      was — it is the interactive colour on these screens and the brief asked not to touch it. */
   --rh-bg:#F8FAFC; --rh-card:#FFFFFF; --rh-blue:#2563EB; --rh-text:#111827; --rh-muted:#6B7280;
