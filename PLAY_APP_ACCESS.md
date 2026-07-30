@@ -12,7 +12,7 @@ IGNYT requires an account to reach any feature, so the correct selection is
 It has to be you: creating it means choosing a password, and that is not something to hand to a
 tool or paste into a chat log. It is one flow in the app.
 
-1. Install `IGNYT-1.0.35-vc8.apk` on any device.
+1. Install `IGNYT-1.0.35-vc8-emailonly-r2.apk` on any device.
 2. On the sign-in screen tap **Create account**.
 3. Enter the address and a password you choose.
    - Policy: **at least 8 characters, with a letter and a number.**
@@ -59,7 +59,7 @@ Checked in the shipped build rather than assumed:
 |---|---|
 | Is email verification enforced? | **No.** An unverified account gets full access. The only effect is a dismissible "Email not verified" banner in Settings, next to a Resend button. |
 | Is a phone number needed anywhere? | **No.** Phone/SMS authentication was removed entirely — a reviewer with no Indian number is unaffected. |
-| Is Google Sign-In needed? | **No.** Removed; email and password is the only method. |
+| Is Google Sign-In needed? | **No.** Removed; email and password is the only method. Briefly restored during testing and removed again — it does not appear in any shipped build. |
 | What does the gate actually check? | `isSignedIn()` returns whether a cached account exists. Nothing else — no verification flag, no subscription, no entitlement. |
 | Is there a paid tier to unlock? | **No.** The app has no billing library and no subscription. |
 
@@ -75,8 +75,8 @@ Neither is in the app, and email sign-in will fail for Play-installed users with
    **Play Console → Setup → App integrity → App signing key certificate** and add it under
    **Firebase Console → Project settings → Your apps → com.varun.ignyt**.
 
-   Already registered: debug `B7:55:60:B3…`, upload key `F7:90:11:16…`. The Play signing key is
-   the missing one.
+   **Done.** All six are now registered — SHA-1 and SHA-256 for the debug (`B7:55:60:B3…`),
+   upload (`F7:90:11:16…`) and Play App Signing (`94:1F:08:4F…`) certificates.
 
 2. **Enable the Play Integrity API** on the Cloud project `ignyt-fitness2`:
    https://console.cloud.google.com/apis/library/playintegrity.googleapis.com?project=ignyt-fitness2
@@ -91,7 +91,7 @@ Neither is in the app, and email sign-in will fail for Play-installed users with
 | | |
 |---|---|
 | Version | 1.0.35 (versionCode 8) |
-| Bundle | `IGNYT-1.0.35-vc8-emailonly.aab` |
-| APK | `IGNYT-1.0.35-vc8.apk` |
+| Bundle | `IGNYT-1.0.35-vc8-emailonly-r2.aab` |
+| APK | `IGNYT-1.0.35-vc8-emailonly-r2.apk` |
 | Package | `com.varun.ignyt` |
 | Auth | Email and password only |

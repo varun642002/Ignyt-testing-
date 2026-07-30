@@ -89,10 +89,12 @@ dependencies {
     implementation "androidx.health.connect:connect-client:1.1.0"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
 
-    // IGNYT account: phone (SMS) and email/password via Firebase Authentication.
-    // Google Sign-In was removed, and with it androidx.credentials, credentials-play-services-auth
-    // and googleid — phone is the only primary route, and a second identity provider meant a
-    // second set of fingerprints, OAuth clients and failure modes to keep working.
+    // IGNYT account: email/password via Firebase Authentication, and nothing else.
+    // Phone (SMS) was removed because it could not send until Play Integrity succeeded, and it
+    // asked a Play reviewer for a number they have no reason to give. Google Sign-In was tried
+    // twice and removed twice — androidx.credentials, credentials-play-services-auth and
+    // googleid went with it. A second identity provider means a second set of fingerprints,
+    // OAuth clients and failure modes to keep working, and it did not sign anyone in.
     // Versions deliberately from the Kotlin 1.9-era compatibility set (this project pins
     // kotlin_version 1.9.24): newer Firebase releases ship Kotlin 2.x metadata the 1.9 compiler
     // can't read. Do not bump these without also revisiting kotlin_version in android/build.gradle.

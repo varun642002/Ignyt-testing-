@@ -8520,8 +8520,7 @@ function renderAccountSection(){
   }
 
   const initial = esc((account.displayName || account.email || "?").trim().charAt(0).toUpperCase() || "?");
-  const providerLabel = account.provider === "phone" ? "Signed in with your phone number"
-                      : account.provider === "password" ? "Signed in with email" : "Signed in";
+  const providerLabel = account.provider === "password" ? "Signed in with email" : "Signed in";
   const verifyBanner = (account.provider === "password" && account.emailVerified === false) ? `
     <div style="font-size:11px;color:var(--rh-amber,#d97706);margin-top:8px;padding:8px;background:rgba(217,119,6,.1);border-radius:8px;">
       Email not verified.
