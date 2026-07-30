@@ -14,8 +14,8 @@ export interface RouteMeta {
   changeFrequency: "yearly" | "monthly" | "weekly";
 }
 
-/** Primary marketing pages — these appear in the header navigation. */
-export const primaryRoutes: RouteMeta[] = [
+/** Product pages — what IGNYT is and what it does. */
+export const productRoutes: RouteMeta[] = [
   { path: "/", label: "Home", priority: 1, changeFrequency: "weekly" },
   {
     path: "/features",
@@ -29,13 +29,28 @@ export const primaryRoutes: RouteMeta[] = [
     priority: 0.9,
     changeFrequency: "monthly",
   },
-  { path: "/about", label: "About", priority: 0.8, changeFrequency: "monthly" },
   {
     path: "/download",
     label: "Download",
     priority: 0.9,
     changeFrequency: "monthly",
   },
+];
+
+/** Editorial and support pages. */
+export const learnRoutes: RouteMeta[] = [
+  { path: "/blog", label: "Blog", priority: 0.8, changeFrequency: "weekly" },
+  {
+    path: "/resources",
+    label: "Resources",
+    priority: 0.7,
+    changeFrequency: "monthly",
+  },
+];
+
+/** Who we are and how to reach us. */
+export const companyRoutes: RouteMeta[] = [
+  { path: "/about", label: "About", priority: 0.8, changeFrequency: "monthly" },
   {
     path: "/contact",
     label: "Contact",
@@ -85,31 +100,33 @@ export const legalRoutes: RouteMeta[] = [
 ];
 
 /**
- * Header navigation. The spec calls for Home / Features / Screenshots / About
- * / Privacy / Contact in the centre, with Download promoted to the right-hand
- * call to action — so Download is excluded here and Privacy is pulled in.
+ * Header navigation.
+ *
+ * Deliberately not every route: a header carrying ten links stops being
+ * navigation and becomes a list. Download is promoted to the right-hand call
+ * to action, and the legal suite lives in the footer where people look for it.
  */
-export const navRoutes = [
-  ...primaryRoutes.filter((route) => route.path !== "/download"),
-  legalRoutes[0],
-].sort(
-  (a, b) =>
-    [
-      "/",
-      "/features",
-      "/screenshots",
-      "/about",
-      "/privacy",
-      "/contact",
-    ].indexOf(a.path) -
-    [
-      "/",
-      "/features",
-      "/screenshots",
-      "/about",
-      "/privacy",
-      "/contact",
-    ].indexOf(b.path),
-);
+export const navRoutes: RouteMeta[] = [
+  productRoutes[0], // Home
+  productRoutes[1], // Features
+  productRoutes[2], // Screenshots
+  learnRoutes[0], // Blog
+  learnRoutes[1], // Resources
+  companyRoutes[0], // About
+  companyRoutes[1], // Contact
+];
 
-export const allRoutes: RouteMeta[] = [...primaryRoutes, ...legalRoutes];
+/** Every indexable route, for the sitemap. */
+export const allRoutes: RouteMeta[] = [
+  ...productRoutes,
+  ...learnRoutes,
+  ...companyRoutes,
+  ...legalRoutes,
+];
+
+/** Footer link groups. */
+export const footerGroups: Array<{ heading: string; routes: RouteMeta[] }> = [
+  { heading: "Product", routes: productRoutes },
+  { heading: "Learn", routes: [...learnRoutes, ...companyRoutes] },
+  { heading: "Legal", routes: legalRoutes },
+];

@@ -44,7 +44,7 @@ export function BoltMark({
  * Bolt inside the brand tile — the way the icon appears on a device home
  * screen. Used by the navbar and footer.
  */
-export function LogoTile({ className }: { className?: string }) {
+function LogoTile({ className }: { className?: string }) {
   return (
     <span
       className={cn(

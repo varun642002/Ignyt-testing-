@@ -9,8 +9,6 @@ import { cn } from "@/lib/utils";
  */
 export const FRAME_W = 296;
 export const FRAME_H = 622;
-export const SCREEN_W = 280;
-export const SCREEN_H = 606;
 
 /**
  * Premium device mockup.

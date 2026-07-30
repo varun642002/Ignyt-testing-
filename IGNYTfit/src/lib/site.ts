@@ -36,6 +36,20 @@ export const site = {
   locale: "en_US",
   themeColor: "#08090d",
 
+  /**
+   * Release facts, mirrored from `android/app/build.gradle`. Update here when
+   * the app ships — every page reads these rather than hard-coding a number.
+   */
+  app: {
+    version: "1.0.35",
+    versionCode: 8,
+    /** minSdk 26. */
+    minAndroid: "8.0",
+    minAndroidName: "Oreo",
+    /** compileSdk / targetSdk 36. */
+    targetSdk: 36,
+  },
+
   email: {
     support: "ignytfit@gmail.com",
     privacy: "ignytfit@gmail.com",

@@ -232,7 +232,7 @@ export const screens: ScreenMeta[] = [
 ];
 
 /** Screens shown in the home page preview carousel, in order. */
-export const featuredScreenIds: ScreenId[] = [
+const featuredScreenIds: ScreenId[] = [
   "dashboard",
   "workout",
   "food-log",
@@ -245,9 +245,3 @@ export const featuredScreenIds: ScreenId[] = [
 export const featuredScreens = featuredScreenIds.map((id) =>
   screens.find((screen) => screen.id === id)!,
 );
-
-export function getScreen(id: ScreenId): ScreenMeta {
-  const screen = screens.find((item) => item.id === id);
-  if (!screen) throw new Error(`Unknown screen id: ${id}`);
-  return screen;
-}

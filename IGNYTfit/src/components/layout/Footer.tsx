@@ -9,7 +9,7 @@ import {
 } from "@/components/brand/SocialIcons";
 import { Container } from "@/components/ui/Container";
 import { PlayStoreButton } from "@/components/ui/PlayStoreButton";
-import { legalRoutes, primaryRoutes } from "@/lib/routes";
+import { footerGroups } from "@/lib/routes";
 import { site } from "@/lib/site";
 
 const socials = [
@@ -33,7 +33,7 @@ export function Footer() {
       />
 
       <Container className="py-14">
-        <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
           <div>
             <Logo />
             <p className="mt-4 max-w-xs text-[14px] leading-relaxed text-text-mute">
@@ -42,47 +42,33 @@ export function Footer() {
             <PlayStoreButton size="md" className="mt-5" />
           </div>
 
-          <nav aria-labelledby="footer-explore">
-            <h2
-              id="footer-explore"
-              className="text-[12px] font-bold uppercase tracking-[0.16em] text-text-dim"
-            >
-              Explore
-            </h2>
-            <ul className="mt-4 flex flex-col gap-2.5">
-              {primaryRoutes.map((route) => (
-                <li key={route.path}>
-                  <Link
-                    href={route.path}
-                    className="text-[14px] text-text-mute transition-colors hover:text-ember"
-                  >
-                    {route.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <nav aria-labelledby="footer-legal">
-            <h2
-              id="footer-legal"
-              className="text-[12px] font-bold uppercase tracking-[0.16em] text-text-dim"
-            >
-              Legal
-            </h2>
-            <ul className="mt-4 flex flex-col gap-2.5">
-              {legalRoutes.map((route) => (
-                <li key={route.path}>
-                  <Link
-                    href={route.path}
-                    className="text-[14px] text-text-mute transition-colors hover:text-ember"
-                  >
-                    {route.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          {/* Product / Learn / Legal — driven entirely by the route registry,
+              so a new page appears here without touching this file. */}
+          {footerGroups.map((group) => {
+            const id = `footer-${group.heading.toLowerCase()}`;
+            return (
+              <nav key={group.heading} aria-labelledby={id}>
+                <h2
+                  id={id}
+                  className="text-[12px] font-bold uppercase tracking-[0.16em] text-text-dim"
+                >
+                  {group.heading}
+                </h2>
+                <ul className="mt-4 flex flex-col gap-2.5">
+                  {group.routes.map((route) => (
+                    <li key={route.path}>
+                      <Link
+                        href={route.path}
+                        className="text-[14px] text-text-mute transition-colors hover:text-ember"
+                      >
+                        {route.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            );
+          })}
 
           <div>
             <h2 className="text-[12px] font-bold uppercase tracking-[0.16em] text-text-dim">

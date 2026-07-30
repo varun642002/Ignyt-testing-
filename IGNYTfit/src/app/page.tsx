@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AppPreview } from "@/components/home/AppPreview";
+import { Comparison } from "@/components/home/Comparison";
 import { DownloadCta } from "@/components/home/DownloadCta";
 import { FeatureGrid } from "@/components/home/FeatureGrid";
 import { Hero } from "@/components/home/Hero";
@@ -27,6 +28,7 @@ export default function HomePage() {
       <FeatureGrid />
       <HowItWorks />
       <AppPreview />
+      <Comparison />
       <LovedFor />
       <DownloadCta />
     </>

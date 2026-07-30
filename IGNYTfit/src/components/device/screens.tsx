@@ -1051,7 +1051,7 @@ function Settings() {
         ))}
 
         <p className="pt-1 text-center text-[8px] text-text-dim">
-          IGNYT 1.0.30 · com.varun.ignyt
+          IGNYT 1.0.35 · com.varun.ignyt
         </p>
       </ScreenBody>
     </Screen>
@@ -1065,7 +1065,7 @@ function Settings() {
  * individual components, so a new screen is added in exactly two places:
  * `lib/screens.ts` (copy) and this map (visuals).
  */
-export const SCREEN_COMPONENTS: Record<ScreenId, () => ReactNode> = {
+const SCREEN_COMPONENTS: Record<ScreenId, () => ReactNode> = {
   dashboard: Dashboard,
   workout: Workout,
   exercise: ExerciseDetail,

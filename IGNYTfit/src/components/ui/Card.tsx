@@ -37,34 +37,6 @@ export function Card({
   );
 }
 
-/**
- * Soft radial wash used inside cards and section backgrounds. Purely
- * decorative, so it is always hidden from assistive technology.
- */
-export function Glow({
-  className,
-  color = "ember",
-}: {
-  className?: string;
-  color?: "ember" | "pulse" | "cyan";
-}) {
-  const tint = {
-    ember: "rgba(255,90,31,0.30)",
-    pulse: "rgba(62,130,247,0.28)",
-    cyan: "rgba(85,216,255,0.22)",
-  }[color];
-
-  return (
-    <span
-      aria-hidden
-      className={cn("pointer-events-none absolute rounded-full", className)}
-      style={{
-        background: `radial-gradient(circle, ${tint} 0%, rgba(0,0,0,0) 70%)`,
-      }}
-    />
-  );
-}
-
 export function Badge({
   children,
   className,

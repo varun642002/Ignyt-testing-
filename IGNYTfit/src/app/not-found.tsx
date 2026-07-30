@@ -3,7 +3,7 @@ import { ArrowLeft, Compass } from "lucide-react";
 import { BoltMark } from "@/components/brand/Logo";
 import { ButtonLink } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
-import { primaryRoutes } from "@/lib/routes";
+import { navRoutes } from "@/lib/routes";
 import { createMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = createMetadata({
@@ -54,7 +54,7 @@ export default function NotFound() {
 
         <nav aria-label="All pages" className="mt-12">
           <ul className="flex flex-wrap items-center justify-center gap-2">
-            {primaryRoutes.map((route) => (
+            {navRoutes.map((route) => (
               <li key={route.path}>
                 <ButtonLink href={route.path} variant="glass" size="sm">
                   {route.label}

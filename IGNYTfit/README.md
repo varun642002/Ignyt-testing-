@@ -26,21 +26,27 @@ No analytics, no cookies, no third-party scripts, no runtime font requests.
 
 ## Pages
 
-| Route            | Purpose                                                     |
-| ---------------- | ----------------------------------------------------------- |
-| `/`              | Home — hero, stats, features, how it works, app preview, CTA |
-| `/features`      | All sixteen capabilities, plus the principles behind them    |
-| `/screenshots`   | Carousel and full gallery of all sixteen app screens         |
-| `/about`         | Mission, vision, problems solved, values, stack, roadmap     |
-| `/download`      | Store links, setup steps and device requirements             |
-| `/contact`       | Support channels, contact form, FAQ, community links         |
-| `/privacy`       | Privacy Policy                                               |
-| `/terms`         | Terms & Conditions                                           |
-| `/health-data`   | Health Data Policy (Health Connect compliance)               |
-| `/data-deletion` | Data Deletion Policy (the URL Google Play requires)          |
-| `/cookies`       | Cookie Policy                                                |
-| `/disclaimer`    | Medical, fitness, nutrition and supplement disclaimers       |
-| `/maintenance`   | Maintenance page (`noindex`, not in the sitemap)             |
+| Route | Purpose |
+| --- | --- |
+| `/` | Home — hero, stats, features, how it works, app preview, comparison, CTA |
+| `/features` | All sixteen capabilities, plus the principles behind them |
+| `/screenshots` | Carousel and full gallery of all sixteen app screens |
+| `/download` | Platforms, highlights, setup, system requirements, FAQ |
+| `/blog` | Article index with category filtering |
+| `/blog/[slug]` | Articles (4 published), prerendered |
+| `/blog/rss.xml` | RSS 2.0 feed |
+| `/resources` | Guides, reference, latest articles, support |
+| `/about` | Mission, vision, problems solved, values, stack, roadmap |
+| `/contact` | Support channels, contact form, FAQ, community links |
+| `/privacy` | Privacy Policy |
+| `/terms` | Terms & Conditions |
+| `/health-data` | Health Data Policy (Health Connect compliance) |
+| `/data-deletion` | Data Deletion Policy (the URL Google Play requires) |
+| `/cookies` | Cookie Policy |
+| `/disclaimer` | Medical, fitness, nutrition and supplement disclaimers |
+| `/offline` | Offline fallback (`noindex`) |
+| `/maintenance` | Maintenance page (`noindex`) |
+| 404 / 500 | `not-found.tsx`, `error.tsx`, `global-error.tsx` |
 
 Generated automatically: `/sitemap.xml`, `/robots.txt`,
 `/manifest.webmanifest`, `/opengraph-image`, `/icon.svg`, `/apple-icon.png`.
@@ -64,6 +70,16 @@ Open <http://localhost:3000>.
 | `npm run lint`      | ESLint                                           |
 | `npm run typecheck` | `tsc --noEmit`                                   |
 | `npm run icons`     | Regenerate PNG icons from `public/logo-mark.svg` |
+
+---
+
+## Documentation
+
+| Document | Covers |
+| --- | --- |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How it is built, folder structure, the device mockups, animation, styling, SEO, security |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | GitHub, Vercel, custom domain, Google submissions, rollback |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Conventions, common tasks, and the traps worth knowing |
 
 ---
 
