@@ -12,7 +12,7 @@ IGNYT requires an account to reach any feature, so the correct selection is
 It has to be you: creating it means choosing a password, and that is not something to hand to a
 tool or paste into a chat log. It is one flow in the app.
 
-1. Install `IGNYT-1.0.35-vc8-emailonly-r2.apk` on any device.
+1. Install `IGNYT-1.0.40-vc9.apk` on any device.
 2. On the sign-in screen tap **Create account**.
 3. Enter the address and a password you choose.
    - Policy: **at least 8 characters, with a letter and a number.**
@@ -90,8 +90,8 @@ Neither is in the app, and email sign-in will fail for Play-installed users with
 
 | | |
 |---|---|
-| Version | 1.0.35 (versionCode 8) |
-| Bundle | `IGNYT-1.0.35-vc8-emailonly-r2.aab` |
-| APK | `IGNYT-1.0.35-vc8-emailonly-r2.apk` |
+| Version | 1.0.40 (versionCode 9) |
+| Bundle | `IGNYT-1.0.40-vc9.aab` |
+| APK | `IGNYT-1.0.40-vc9.apk` |
 | Package | `com.varun.ignyt` |
 | Auth | Email and password only |
