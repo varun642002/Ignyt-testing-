@@ -249,8 +249,8 @@ export function Hero() {
           <ul className="mt-9 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13px] text-text-dim lg:justify-start">
             {[
               "No ads, ever",
-              "No third-party trackers",
-              "Your data stays on your device",
+              "Health data never sold",
+              "Works fully offline",
             ].map((item) => (
               <li key={item} className="flex items-center gap-2">
                 <CircleCheckBig aria-hidden className="size-3.5 text-good" />

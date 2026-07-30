@@ -39,7 +39,7 @@ import { site } from "@/lib/site";
 
 export const metadata: Metadata = createMetadata({
   title: "Download",
-  description: `Download IGNYT free on Google Play. Workouts, nutrition, fasting, hydration, supplements and progress in one offline-first app. Requires Android ${site.app.minAndroid} or later.`,
+  description: `Download IGNYT free on Google Play. Workouts, nutrition, fasting, hydration, supplements and progress in one app. Core tracking is free; premium features are an optional subscription. Requires Android ${site.app.minAndroid} or later.`,
   path: "/download",
   keywords: [
     "download IGNYT",
@@ -139,7 +139,7 @@ const REASONS: Highlight[] = [
   },
   {
     title: "Private",
-    body: "No advertising SDKs, no third-party analytics, no data brokers. Every network feature is opt-in.",
+    body: "No advertising SDKs and no data brokers. Health data is never used for advertising, and analytics are limited to anonymous crash and performance metrics.",
     Icon: Lock,
     accent: "text-pulse-strong",
   },
@@ -156,7 +156,7 @@ const REASONS: Highlight[] = [
 const STEPS = [
   {
     title: "Install from Google Play",
-    body: "Open the Play listing and install. No trial, no paywall, and no subscription prompt on first launch.",
+    body: "Open the Play listing and install. The core tracking features are free to use; premium features are available as an optional subscription through Google Play.",
   },
   {
     title: "Set your profile and targets",

@@ -106,12 +106,12 @@ export const faqGroups: FaqGroup[] = [
       {
         question: "Is IGNYT free?",
         answer:
-          "Yes. IGNYT is free on Google Play with no subscription, no premium tier and no in-app purchases. Nothing you have logged is ever locked behind a payment.",
+          "IGNYT is free to download on Google Play and the core tracking features are free to use. Premium features are available as an optional subscription billed through Google Play. Data you have already logged is never locked behind a payment.",
       },
       {
         question: "Are there ads?",
         answer:
-          "No. There are no advertisements and no advertising SDKs in the app.",
+          "No. There are no advertisements and no advertising SDKs in the app, and health data is never used for advertising, marketing or profiling.",
       },
     ],
   },

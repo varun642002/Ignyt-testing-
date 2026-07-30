@@ -51,9 +51,9 @@ export const site = {
   },
 
   email: {
-    support: "ignytfit@gmail.com",
-    privacy: "ignytfit@gmail.com",
-    business: "ignytfit@gmail.com",
+    support: "support@ignytfit.in",
+    privacy: "support@ignytfit.in",
+    business: "support@ignytfit.in",
   },
 
   links: {

@@ -16,7 +16,7 @@ import { site } from "@/lib/site";
 export const metadata: Metadata = createMetadata({
   title: "Cookie Policy",
   description:
-    "IGNYT's website sets no cookies and runs no third-party analytics. This policy explains what that means, what the app stores on your device instead, and how to clear it.",
+    "IGNYT's website sets no cookies and runs no analytics scripts. This policy explains what that means, what the app stores on your device instead, and how to clear it.",
   path: "/cookies",
   ogType: "article",
   keywords: ["IGNYT cookie policy", "no cookies website", "cookie free site"],

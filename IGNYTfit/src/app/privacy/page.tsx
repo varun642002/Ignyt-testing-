@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { JsonLd, legalSchema } from "@/components/seo/JsonLd";
 import {
-  DataTable,
   LegalPage,
   LI,
   List,
@@ -17,156 +16,382 @@ import { site } from "@/lib/site";
 export const metadata: Metadata = createMetadata({
   title: "Privacy Policy",
   description:
-    "How IGNYT handles your data: local-first storage, optional Google sign-in and cloud sync, Android Health Connect, what we never do, and how to export or delete everything.",
+    "How IGNYT collects, uses, stores and protects your information: account and profile data, workouts, nutrition, body measurements, Health Connect, payments, analytics, your rights and account deletion.",
   path: "/privacy",
   ogType: "article",
   keywords: [
     "IGNYT privacy policy",
     "fitness app privacy",
     "health data privacy",
+    "Health Connect privacy",
   ],
 });
 
+/** Google's own documentation, cited where the policy relies on it. */
+const HEALTH_CONNECT_POLICY =
+  "https://support.google.com/googleplay/android-developer/answer/16558241";
+const HEALTH_CONNECT_PERMISSIONS =
+  "https://support.google.com/android/answer/13770320";
+
+function Ref({ href }: { href: string }) {
+  return (
+    <>
+      {" "}
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-[13px] font-semibold text-pulse-strong hover:underline"
+      >
+        (Google Help)
+      </a>
+    </>
+  );
+}
+
 const sections: LegalSectionSpec[] = [
   {
-    id: "overview",
-    heading: "Overview",
+    id: "about-ignyt",
+    heading: "About IGNYT",
     body: (
       <>
         <P>
-          IGNYT (&ldquo;the app&rdquo;, &ldquo;we&rdquo;, &ldquo;our&rdquo;) is
-          a fitness and health tracking application for Android, published under
-          the package name <Strong>{site.androidPackage}</Strong>. This policy
-          explains what data the app handles, where that data lives, who else
-          can see it, and what control you have over it.
+          Welcome to IGNYT (&ldquo;we&rdquo;, &ldquo;our&rdquo;, or
+          &ldquo;us&rdquo;). Your privacy is important to us. This Privacy
+          Policy explains how IGNYT collects, uses, stores, protects and
+          processes your information when you use the IGNYT mobile application
+          and related services. By using IGNYT, you agree to the practices
+          described in this Privacy Policy.
         </P>
         <P>
-          It covers the IGNYT app and this website. It does not cover
-          third-party services you separately choose to connect — Google
-          Sign-In, Google Drive and Android Health Connect each have their own
-          privacy policies.
+          IGNYT is a fitness and wellness application designed to help users:
         </P>
-        <Note tone="ember">
-          <Strong>The short version.</Strong> By default, everything you log
-          stays on your phone. Nothing is uploaded, no advertising or analytics
-          SDK is present, and every feature that involves the network is off
-          until you turn it on.
+        <List>
+          <LI>Track workouts</LI>
+          <LI>Log nutrition and calories</LI>
+          <LI>Monitor body weight</LI>
+          <LI>Record hydration</LI>
+          <LI>Track fasting</LI>
+          <LI>Track supplements</LI>
+          <LI>View fitness progress</LI>
+          <LI>Connect with Google Health Connect</LI>
+          <LI>Synchronise health information (with permission)</LI>
+          <LI>Access premium fitness features</LI>
+        </List>
+        <Note tone="warn">
+          IGNYT is intended for personal fitness tracking only and is{" "}
+          <Strong>not a medical device</Strong>.
         </Note>
       </>
     ),
   },
   {
-    id: "information-collected",
-    heading: "Information collected",
+    id: "information-we-collect",
+    heading: "Information we collect",
     body: (
       <>
         <P>
-          The table below lists every category of data IGNYT handles, why it is
-          handled, and where it is stored.
+          Depending on the features you use, IGNYT may collect the following
+          information.
         </P>
-        <DataTable
-          caption="Categories of data handled by IGNYT"
-          rows={[
-            [
-              "Profile and goals",
-              "Age, height, weight, activity level and objective are used to calculate your calorie, protein, hydration and training targets.",
-              "On your device. Uploaded only if Cloud Sync is enabled.",
-            ],
-            [
-              "Workout data",
-              "Routines, sessions, exercises, sets, reps, load, rest timers, personal records and achievements.",
-              "On your device. Uploaded only if Cloud Sync is enabled.",
-            ],
-            [
-              "Nutrition data",
-              "Food entries, meals, calories, macros, micronutrients, diet plans, fasting windows and hydration logs.",
-              "On your device. Uploaded only if Cloud Sync is enabled.",
-            ],
-            [
-              "Weight and body data",
-              "Weight history, body fat, lean mass, tape measurements and progress photographs.",
-              "On your device. Progress photographs are never uploaded.",
-            ],
-            [
-              "Health Connect data",
-              "Steps, heart rate, sleep, exercise, body composition, hydration and nutrition read from Android Health Connect, with your permission.",
-              "Exchanged on-device through Android. No IGNYT server receives it.",
-            ],
-            [
-              "Account identity",
-              "If — and only if — you sign in with Google: your name, email address and profile photograph, used to identify your account.",
-              "Google Sign-In and, where enabled, Firebase.",
-            ],
-            [
-              "Notifications",
-              "Reminder schedules for water, workouts, meals, supplements, weigh-ins and fasting windows.",
-              "On your device. Notifications are scheduled locally.",
-            ],
-          ]}
-        />
-      </>
-    ),
-  },
-  {
-    id: "authentication",
-    heading: "Authentication, email and phone number",
-    body: (
-      <>
+
         <P>
-          <Strong>Authentication is optional.</Strong> IGNYT is fully usable
-          without an account. Signing in exists for one reason: to make cloud
-          backup and multi-device sync possible.
+          <Strong>Account information.</Strong> When you create an account, we
+          may collect:
         </P>
         <List>
-          <LI>
-            <Strong>Google Sign-In.</Strong> If you sign in, we receive the
-            name, email address and profile photograph associated with your
-            Google account. These are used to identify your account inside the
-            app and to scope your cloud data to you. We do not receive your
-            Google password.
-          </LI>
-          <LI>
-            <Strong>Email address.</Strong> Used as your account identifier and,
-            if you contact support, to reply to you. It is not added to a
-            mailing list and is not shared with anyone.
-          </LI>
-          <LI>
-            <Strong>Phone number.</Strong> IGNYT does not request, collect or
-            store a phone number. There is no SMS or phone-based sign-in.
-          </LI>
+          <LI>Name</LI>
+          <LI>Email address</LI>
+          <LI>Phone number (if using phone authentication)</LI>
+          <LI>Profile photo (Google Sign-In only)</LI>
+          <LI>Firebase User ID</LI>
         </List>
+
         <P>
-          Signing out at any time stops all synchronisation. Data already on
-          your device remains on your device.
+          <Strong>Profile information.</Strong> You may choose to provide age,
+          gender, height, weight, fitness goals and activity level. Providing
+          this information is optional unless required for specific features.
+        </P>
+
+        <P>
+          <Strong>Workout information.</Strong> IGNYT allows you to store
+          exercises, sets, repetitions, weight lifted, workout duration, rest
+          time, workout history and notes.
+        </P>
+
+        <P>
+          <Strong>Nutrition information.</Strong> You may log meals, calories,
+          protein, carbohydrates, fat, fibre, water intake, vitamins and
+          supplements.
+        </P>
+
+        <P>
+          <Strong>Body measurements.</Strong> You may record weight, body fat,
+          BMI, waist, chest, arms, hips, legs and progress photos (if enabled).
         </P>
       </>
     ),
   },
   {
-    id: "health-connect",
+    id: "health-connect-data",
     heading: "Health Connect data",
     body: (
       <>
         <P>
-          If you connect Android Health Connect, IGNYT requests read access to
-          17 data types and write access to 2. Each permission is granted
-          individually by you, in Android&rsquo;s own permission interface, and
-          can be revoked there at any time.
+          IGNYT may request permission to read and/or write selected health and
+          fitness data through Google Health Connect. Depending on the
+          permissions you grant, IGNYT may access:
         </P>
+        <List>
+          <LI>Weight</LI>
+          <LI>Calories burned</LI>
+          <LI>Exercise sessions</LI>
+          <LI>Steps</LI>
+          <LI>Distance</LI>
+          <LI>Active energy</LI>
+          <LI>Hydration</LI>
+          <LI>Sleep (if supported)</LI>
+          <LI>Heart rate (if supported)</LI>
+        </List>
         <P>
-          This exchange happens entirely on the device, through the Android
-          operating system. IGNYT does not operate a server that receives Health
-          Connect data, and Health Connect data is never used for advertising
-          and never sold.
+          IGNYT only accesses the specific data types that are required for the
+          features you choose to use. Health Connect permissions are granted and
+          managed entirely by you.
+          <Ref href={HEALTH_CONNECT_POLICY} />
         </P>
+      </>
+    ),
+  },
+  {
+    id: "how-we-use-your-information",
+    heading: "How we use your information",
+    body: (
+      <>
+        <P>Your information is used to:</P>
+        <List>
+          <LI>Create your account</LI>
+          <LI>Authenticate your identity</LI>
+          <LI>Save workouts</LI>
+          <LI>Display fitness statistics</LI>
+          <LI>Track progress</LI>
+          <LI>Calculate nutrition</LI>
+          <LI>Display charts</LI>
+          <LI>Sync Health Connect data</LI>
+          <LI>Restore backups</LI>
+          <LI>Improve app performance</LI>
+          <LI>Provide customer support</LI>
+          <LI>Process subscriptions</LI>
+        </List>
+        <Note tone="ember">
+          <Strong>We do not sell your personal information.</Strong>
+        </Note>
+      </>
+    ),
+  },
+  {
+    id: "health-data",
+    heading: "Health data",
+    body: (
+      <>
+        <P>Health and fitness information is considered sensitive.</P>
         <P>
-          The full list of data types, permitted uses and revocation steps is
-          set out in the{" "}
+          IGNYT uses Health Connect data only to provide the health and fitness
+          features requested by you. We do not use your health information for:
+        </P>
+        <List>
+          <LI>Advertising</LI>
+          <LI>Marketing</LI>
+          <LI>User profiling</LI>
+          <LI>Selling to third parties</LI>
+        </List>
+        <P>
+          Health data is processed only for the fitness features available
+          inside the application.
+          <Ref href={HEALTH_CONNECT_POLICY} />
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "google-sign-in",
+    heading: "Google Sign-In",
+    body: (
+      <>
+        <P>If you sign in with Google, we may receive:</P>
+        <List>
+          <LI>Name</LI>
+          <LI>Email address</LI>
+          <LI>Profile picture</LI>
+        </List>
+        <P>
+          <Strong>We do not receive your Google password.</Strong>{" "}
+          Authentication is handled securely by Google and Firebase.
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "firebase-authentication",
+    heading: "Firebase Authentication",
+    body: (
+      <>
+        <P>
+          IGNYT uses Firebase Authentication for secure login. Supported methods
+          include:
+        </P>
+        <List>
+          <LI>Google Sign-In</LI>
+          <LI>Email &amp; password</LI>
+          <LI>Phone number authentication</LI>
+        </List>
+        <P>Firebase securely manages authentication credentials.</P>
+      </>
+    ),
+  },
+  {
+    id: "payments",
+    heading: "Payments",
+    body: (
+      <>
+        <P>
+          Premium subscriptions are processed through Google Play Billing. IGNYT
+          does not receive or store:
+        </P>
+        <List>
+          <LI>Credit card numbers</LI>
+          <LI>Debit card numbers</LI>
+          <LI>UPI credentials</LI>
+          <LI>Banking information</LI>
+        </List>
+        <P>Payment processing is handled by Google Play.</P>
+      </>
+    ),
+  },
+  {
+    id: "analytics",
+    heading: "Analytics",
+    body: (
+      <>
+        <P>
+          To improve IGNYT, we may collect anonymous technical information such
+          as:
+        </P>
+        <List>
+          <LI>App version</LI>
+          <LI>Android version</LI>
+          <LI>Device model</LI>
+          <LI>Crash reports</LI>
+          <LI>Performance metrics</LI>
+        </List>
+        <P>
+          This information does not include your workout history or personal
+          health data unless required for troubleshooting, and only where
+          permitted.
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "data-storage",
+    heading: "Data storage",
+    body: (
+      <>
+        <P>Your data may be stored:</P>
+        <List>
+          <LI>On your device</LI>
+          <LI>In secure Firebase services (where applicable)</LI>
+        </List>
+        <P>
+          We implement reasonable technical and organisational measures to
+          protect your information.
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "data-sharing",
+    heading: "Data sharing",
+    body: (
+      <>
+        <P>IGNYT does not sell or rent your personal information.</P>
+        <P>Information may only be shared:</P>
+        <List>
+          <LI>With Google Firebase for authentication and app functionality</LI>
+          <LI>With Google Play for subscription processing</LI>
+          <LI>When required by law</LI>
+          <LI>To protect legal rights or prevent fraud</LI>
+        </List>
+      </>
+    ),
+  },
+  {
+    id: "data-security",
+    heading: "Data security",
+    body: (
+      <>
+        <P>We use industry-standard security practices including:</P>
+        <List>
+          <LI>HTTPS encryption</LI>
+          <LI>Secure authentication</LI>
+          <LI>Firebase security</LI>
+          <LI>Access controls</LI>
+          <LI>Secure cloud infrastructure</LI>
+        </List>
+        <P>
+          While we strive to protect your information, no system can guarantee
+          absolute security.
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "your-rights",
+    heading: "Your rights",
+    body: (
+      <>
+        <P>You may:</P>
+        <List>
+          <LI>Update your profile</LI>
+          <LI>Change your password</LI>
+          <LI>Delete workouts</LI>
+          <LI>Delete nutrition logs</LI>
+          <LI>Delete body measurements</LI>
+          <LI>Disconnect Health Connect</LI>
+          <LI>Revoke Google permissions</LI>
+          <LI>Request account deletion</LI>
+        </List>
+      </>
+    ),
+  },
+  {
+    id: "account-deletion",
+    heading: "Account deletion",
+    body: (
+      <>
+        <P>You may delete your account at any time.</P>
+        <P>When an account is deleted:</P>
+        <List>
+          <LI>
+            Personal profile information is removed or anonymised, subject to
+            applicable legal or operational requirements.
+          </LI>
+          <LI>
+            Stored fitness data associated with the account is deleted according
+            to our retention practices.
+          </LI>
+          <LI>
+            Health Connect permissions can be revoked from your device settings,
+            and Health Connect data remains under your control.
+            <Ref href={HEALTH_CONNECT_PERMISSIONS} />
+          </LI>
+        </List>
+        <P>
+          Step-by-step instructions are in the{" "}
           <Link
-            href="/health-data"
+            href="/data-deletion"
             className="font-semibold text-ember hover:underline"
           >
-            Health Data Policy
+            Data Deletion Policy
           </Link>
           .
         </P>
@@ -174,97 +399,30 @@ const sections: LegalSectionSpec[] = [
     ),
   },
   {
-    id: "analytics-cookies",
-    heading: "Analytics, advertising and cookies",
+    id: "childrens-privacy",
+    heading: "Children’s privacy",
     body: (
-      <>
-        <P>IGNYT contains no advertising and no behavioural tracking.</P>
-        <List>
-          <LI>No advertising SDKs and no ad identifiers.</LI>
-          <LI>No third-party analytics or behavioural tracking SDKs.</LI>
-          <LI>
-            No sale, rental or sharing of your data with data brokers — under
-            any circumstances.
-          </LI>
-          <LI>
-            No cookies on this website. See the{" "}
-            <Link
-              href="/cookies"
-              className="font-semibold text-ember hover:underline"
-            >
-              Cookie Policy
-            </Link>{" "}
-            for detail.
-          </LI>
-        </List>
-      </>
+      <P>
+        IGNYT is not intended for children under the age required by applicable
+        law in their jurisdiction. We do not knowingly collect personal
+        information from children.
+      </P>
     ),
   },
   {
-    id: "storage-and-backup",
-    heading: "Data storage and cloud backup",
-    body: (
-      <>
-        <P>
-          <Strong>Local storage is the default.</Strong> Your logs live in
-          app-sandboxed storage on your device, which other applications cannot
-          read.
-        </P>
-        <P>
-          <Strong>Cloud Sync is opt-in and requires sign-in.</Strong> When
-          enabled, your profile, settings, goals, workouts, routines, nutrition
-          and hydration logs, body measurements, personal records and
-          achievements are written to a private Cloud Firestore database keyed
-          to your account. Security rules restrict every document to the single
-          account that owns it.
-        </P>
-        <P>
-          <Strong>Drive backup is opt-in.</Strong> Where enabled, a backup file
-          is written to your own Google Drive. It is stored under your Google
-          account, not ours.
-        </P>
-        <Note>
-          Progress photographs are never uploaded by IGNYT. They remain in local
-          device storage regardless of your sync settings.
-        </Note>
-      </>
-    ),
-  },
-  {
-    id: "third-parties",
+    id: "third-party-services",
     heading: "Third-party services",
     body: (
       <>
-        <P>
-          Where you opt in, IGNYT uses the following Google services. Your use
-          of each is also governed by that service&rsquo;s own terms and privacy
-          policy.
-        </P>
+        <P>IGNYT may use services including:</P>
         <List>
-          <LI>
-            <Strong>Google Play.</Strong> Distributes the app and handles
-            installation and updates.
-          </LI>
-          <LI>
-            <Strong>Google Sign-In.</Strong> Authenticates you, if you choose to
-            sign in.
-          </LI>
-          <LI>
-            <Strong>Firebase (Cloud Firestore).</Strong> Stores your synced data
-            when Cloud Sync is enabled.
-          </LI>
-          <LI>
-            <Strong>Google Drive.</Strong> Stores your backup file when Drive
-            backup is enabled.
-          </LI>
-          <LI>
-            <Strong>Android Health Connect.</Strong> Provides on-device access
-            to health data you have permitted.
-          </LI>
+          <LI>Firebase Authentication</LI>
+          <LI>Google Play Billing</LI>
+          <LI>Google Health Connect</LI>
+          <LI>Google Sign-In</LI>
         </List>
         <P>
-          We request the minimum access each feature needs, and every one of
-          these connections is off by default. See{" "}
+          Each third-party service has its own privacy policy. See{" "}
           <a
             href="https://policies.google.com/privacy"
             target="_blank"
@@ -279,88 +437,13 @@ const sections: LegalSectionSpec[] = [
     ),
   },
   {
-    id: "security",
-    heading: "Security",
-    body: (
-      <>
-        <List>
-          <LI>
-            Local data is held in app-sandboxed storage, isolated by Android
-            from other applications.
-          </LI>
-          <LI>
-            Cloud data is protected by your Google account&rsquo;s own access
-            controls and by Firestore security rules that scope every document
-            to a single user.
-          </LI>
-          <LI>All network traffic uses encrypted transport (HTTPS/TLS).</LI>
-          <LI>
-            This website is served over HTTPS with a strict Content Security
-            Policy and no third-party scripts.
-          </LI>
-        </List>
-        <P>
-          No system is perfectly secure. If you believe you have found a
-          vulnerability, please email{" "}
-          <a
-            href={`mailto:${site.email.privacy}`}
-            className="font-semibold text-ember hover:underline"
-          >
-            {site.email.privacy}
-          </a>{" "}
-          rather than disclosing it publicly.
-        </P>
-      </>
-    ),
-  },
-  {
-    id: "your-rights",
-    heading: "Your rights and controls",
-    body: (
-      <>
-        <List>
-          <LI>
-            <Strong>Export.</Strong> Settings → Export Data produces a full JSON
-            backup, or CSV files per data type, at any time.
-          </LI>
-          <LI>
-            <Strong>Delete.</Strong> Settings → Danger Zone → Reset All App Data
-            permanently erases local data on that device immediately. Account
-            and cloud deletion are covered in the{" "}
-            <Link
-              href="/data-deletion"
-              className="font-semibold text-ember hover:underline"
-            >
-              Data Deletion Policy
-            </Link>
-            .
-          </LI>
-          <LI>
-            <Strong>Disconnect.</Strong> Sign out, or disconnect Health Connect
-            or Cloud Sync independently, at any time in Settings. Disconnecting
-            does not delete data already on your device.
-          </LI>
-          <LI>
-            <Strong>Access and correction.</Strong> All of your data is visible
-            and editable inside the app. You may also request a copy by email.
-          </LI>
-        </List>
-        <P>
-          Depending on where you live, you may have additional statutory rights
-          — including access, rectification, erasure, restriction and
-          portability. Email us and we will honour them.
-        </P>
-      </>
-    ),
-  },
-  {
-    id: "children",
-    heading: "Children’s privacy",
+    id: "international-users",
+    heading: "International users",
     body: (
       <P>
-        IGNYT is not directed at children under 13, and we do not knowingly
-        collect data from them. If you believe a child has provided us with
-        data, contact us and we will delete it.
+        If you use IGNYT outside India, your information may be processed in
+        countries where our service providers operate, subject to applicable
+        legal safeguards.
       </P>
     ),
   },
@@ -369,26 +452,61 @@ const sections: LegalSectionSpec[] = [
     heading: "Changes to this policy",
     body: (
       <P>
-        If this policy changes materially, the &ldquo;last updated&rdquo; date
-        above will change and, where required, you will be notified in the app.
-        Continued use after a change means you accept the revised policy.
+        We may update this Privacy Policy periodically. The updated version will
+        display a new &ldquo;Last updated&rdquo; date. Continued use of IGNYT
+        after changes means you accept the revised policy.
       </P>
     ),
   },
   {
-    id: "contact",
-    heading: "Contact",
+    id: "contact-us",
+    heading: "Contact us",
     body: (
-      <P>
-        Questions about this policy, or about your data, go to{" "}
-        <a
-          href={`mailto:${site.email.privacy}`}
-          className="font-semibold text-ember hover:underline"
-        >
-          {site.email.privacy}
-        </a>
-        .
-      </P>
+      <>
+        <P>
+          If you have questions regarding this Privacy Policy, please contact:
+        </P>
+        <P>
+          <Strong>IGNYT Support</Strong>
+          <br />
+          Email:{" "}
+          <a
+            href={`mailto:${site.email.support}`}
+            className="font-semibold text-ember hover:underline"
+          >
+            {site.email.support}
+          </a>
+          <br />
+          Website:{" "}
+          <a
+            href={site.url}
+            className="font-semibold text-ember hover:underline"
+          >
+            {site.url}
+          </a>
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "summary",
+    heading: "Summary",
+    body: (
+      <>
+        <P>By using IGNYT you understand that:</P>
+        <List>
+          <LI>Your data is used to provide fitness tracking features.</LI>
+          <LI>
+            Health Connect data is accessed only with your permission and only
+            for supported fitness functionality.
+          </LI>
+          <LI>We do not sell your personal or health information.</LI>
+          <LI>
+            You can revoke permissions and request account deletion at any time.
+            <Ref href={HEALTH_CONNECT_POLICY} />
+          </LI>
+        </List>
+      </>
     ),
   },
 ];
@@ -399,7 +517,7 @@ export default function PrivacyPage() {
       <JsonLd data={legalSchema("Privacy Policy", "/privacy")} />
       <LegalPage
         title="Privacy Policy"
-        summary="IGNYT is local-first. Your training and nutrition data stays on your device unless you explicitly enable a feature that moves it — and you can export or erase all of it at any time."
+        summary="How IGNYT collects, uses, stores, protects and processes your information when you use the IGNYT mobile application and related services. By using IGNYT, you agree to the practices described here."
         sections={sections}
         currentPath="/privacy"
       />

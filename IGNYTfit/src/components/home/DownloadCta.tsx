@@ -7,7 +7,7 @@ import { Reveal } from "@/components/ui/Reveal";
 const ASSURANCES = [
   { Icon: Smartphone, label: "Android 8.0 and later" },
   { Icon: WifiOff, label: "Works fully offline" },
-  { Icon: ShieldCheck, label: "No ads, no trackers" },
+  { Icon: ShieldCheck, label: "No ads, never sold" },
 ];
 
 /**

@@ -50,7 +50,7 @@ const PROBLEMS = [
   {
     problem: "Everything useful is behind a subscription",
     solution:
-      "Macro targets, charts and exports are routinely paywalled. In IGNYT they are simply features — there is no premium tier holding your own data hostage.",
+      "Macro targets, charts and exports are routinely paywalled elsewhere. In IGNYT the core tracking features are free, and your own data is never held behind a subscription.",
   },
   {
     problem: "Fitness apps assume you are always online",
@@ -60,7 +60,7 @@ const PROBLEMS = [
   {
     problem: "Health data is quietly monetised",
     solution:
-      "Bodyweight, sleep and heart rate are unusually sensitive. IGNYT ships no advertising SDKs and no third-party analytics, and every sync is opt-in.",
+      "Bodyweight, sleep and heart rate are unusually sensitive. IGNYT ships no advertising SDKs and never uses health data for advertising, marketing or profiling — and every sync is opt-in.",
   },
   {
     problem: "Nutrition tracking stops at calories",
@@ -188,7 +188,7 @@ const ROADMAP = [
 const COMMITMENTS = [
   {
     title: "Privacy",
-    body: "No advertising SDKs, no third-party analytics, no data brokers. Every network feature is opt-in and can be switched off without losing your history.",
+    body: "No advertising SDKs and no data brokers. Health data is never used for advertising or profiling, and the only analytics collected are anonymous crash and performance metrics.",
     Icon: Lock,
   },
   {

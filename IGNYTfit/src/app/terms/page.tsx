@@ -16,48 +16,48 @@ import { site } from "@/lib/site";
 export const metadata: Metadata = createMetadata({
   title: "Terms & Conditions",
   description:
-    "The terms governing your use of the IGNYT Android application and this website: licence, acceptable use, accounts, disclaimers, liability and termination.",
+    "The terms governing your access to and use of the IGNYT mobile application, website and related services: eligibility, accounts, acceptable use, health disclaimer, subscriptions, liability and governing law.",
   path: "/terms",
   ogType: "article",
-  keywords: ["IGNYT terms", "terms and conditions", "fitness app terms of use"],
+  keywords: [
+    "IGNYT terms",
+    "terms and conditions",
+    "fitness app terms of use",
+    "IGNYT subscription terms",
+  ],
 });
 
 const sections: LegalSectionSpec[] = [
   {
-    id: "acceptance",
-    heading: "Acceptance of these terms",
+    id: "about-ignyt",
+    heading: "About IGNYT",
     body: (
       <>
         <P>
-          These Terms &amp; Conditions govern your use of the IGNYT Android
-          application (package <Strong>{site.androidPackage}</Strong>) and this
-          website. By installing, accessing or using either, you agree to them.
-          If you do not agree, do not use IGNYT.
+          Welcome to IGNYT. These Terms and Conditions (&ldquo;Terms&rdquo;)
+          govern your access to and use of the IGNYT mobile application, website
+          and related services. By downloading, accessing or using IGNYT, you
+          agree to be bound by these Terms. If you do not agree with these
+          Terms, please do not use the application.
         </P>
         <P>
-          These terms should be read together with the{" "}
-          <Link
-            href="/privacy"
-            className="font-semibold text-ember hover:underline"
-          >
-            Privacy Policy
-          </Link>
-          ,{" "}
-          <Link
-            href="/health-data"
-            className="font-semibold text-ember hover:underline"
-          >
-            Health Data Policy
-          </Link>{" "}
-          and{" "}
-          <Link
-            href="/disclaimer"
-            className="font-semibold text-ember hover:underline"
-          >
-            Disclaimer
-          </Link>
-          , each of which forms part of this agreement.
+          IGNYT is a fitness and wellness application designed to help users:
         </P>
+        <List>
+          <LI>Track workouts</LI>
+          <LI>Log nutrition and calories</LI>
+          <LI>Monitor body weight</LI>
+          <LI>Record hydration</LI>
+          <LI>Track fasting</LI>
+          <LI>Monitor supplements</LI>
+          <LI>View fitness progress</LI>
+          <LI>Connect with Google Health Connect</LI>
+          <LI>Access premium fitness features</LI>
+        </List>
+        <Note tone="warn">
+          IGNYT is intended solely for personal fitness and wellness purposes
+          and is <Strong>not a medical device</Strong>.
+        </Note>
       </>
     ),
   },
@@ -66,92 +66,31 @@ const sections: LegalSectionSpec[] = [
     heading: "Eligibility",
     body: (
       <P>
-        You must be at least 13 years old to use IGNYT. If you are under the age
-        of majority where you live, you may use IGNYT only with the consent and
-        supervision of a parent or guardian who accepts these terms on your
-        behalf.
+        You must be at least the minimum age required by the laws of your
+        country to use IGNYT. If you are under the applicable age, you may use
+        the application only with the consent and supervision of a parent or
+        legal guardian.
       </P>
     ),
   },
   {
-    id: "licence",
-    heading: "Licence to use IGNYT",
+    id: "user-accounts",
+    heading: "User accounts",
     body: (
       <>
         <P>
-          Subject to these terms, you are granted a personal, non-exclusive,
-          non-transferable, revocable licence to install and use IGNYT on
-          devices you own or control, for your own non-commercial use.
-        </P>
-        <P>You may not:</P>
-        <List>
-          <LI>
-            copy, sell, sublicense, rent or otherwise distribute the app or any
-            part of it;
-          </LI>
-          <LI>
-            reverse engineer, decompile or disassemble the app, except to the
-            extent that applicable law expressly permits it;
-          </LI>
-          <LI>
-            remove or obscure any proprietary notice, branding or attribution;
-          </LI>
-          <LI>
-            use the app to build a competing product, or to scrape or extract
-            its bundled datasets for redistribution;
-          </LI>
-          <LI>
-            circumvent, disable or interfere with any security or access control
-            feature.
-          </LI>
-        </List>
-      </>
-    ),
-  },
-  {
-    id: "accounts",
-    heading: "Accounts",
-    body: (
-      <>
-        <P>
-          An account is optional. IGNYT is fully usable without one; signing in
-          with Google exists only to enable cloud backup and multi-device sync.
+          To access certain features, you may need to create an account. You
+          agree to:
         </P>
         <List>
+          <LI>Provide accurate and complete information.</LI>
+          <LI>Keep your login credentials secure.</LI>
+          <LI>Be responsible for all activity under your account.</LI>
           <LI>
-            You are responsible for maintaining the security of the Google
-            account you sign in with.
-          </LI>
-          <LI>
-            You are responsible for the accuracy of the information you enter,
-            including bodyweight, height and goals — these drive the targets the
-            app calculates.
-          </LI>
-          <LI>
-            We may suspend or terminate access to cloud features for accounts
-            used in breach of these terms.
+            Notify us immediately if you believe your account has been accessed
+            without authorisation.
           </LI>
         </List>
-      </>
-    ),
-  },
-  {
-    id: "your-content",
-    heading: "Your data and content",
-    body: (
-      <>
-        <P>
-          <Strong>You own your data.</Strong> Workouts, meals, measurements,
-          photographs and notes you enter remain yours. We claim no ownership
-          over them.
-        </P>
-        <P>
-          Where you enable Cloud Sync, you grant us the limited technical
-          permission required to store, transmit and restore that data on your
-          behalf — nothing more. We do not use your content for advertising, for
-          training models, or for any purpose other than delivering the feature
-          you enabled.
-        </P>
       </>
     ),
   },
@@ -160,43 +99,44 @@ const sections: LegalSectionSpec[] = [
     heading: "Acceptable use",
     body: (
       <>
-        <P>You agree not to use IGNYT to:</P>
+        <P>You agree not to:</P>
         <List>
-          <LI>break any applicable law or regulation;</LI>
+          <LI>Use IGNYT for any unlawful purpose.</LI>
+          <LI>Attempt to gain unauthorised access to our systems.</LI>
           <LI>
-            upload unlawful, infringing or malicious content through any feature
-            that accepts input;
+            Reverse engineer, decompile or modify the application except where
+            permitted by law.
           </LI>
-          <LI>
-            attempt to gain unauthorised access to another user&rsquo;s data or
-            to our infrastructure;
-          </LI>
-          <LI>
-            interfere with, overload or disrupt the service or the networks it
-            relies on.
-          </LI>
+          <LI>Upload malicious software or harmful content.</LI>
+          <LI>Interfere with the operation or security of the application.</LI>
         </List>
       </>
     ),
   },
   {
     id: "health-disclaimer",
-    heading: "Health and fitness disclaimer",
+    heading: "Health disclaimer",
     body: (
       <>
-        <Note tone="warn">
-          <Strong>IGNYT is not a medical device.</Strong> It does not diagnose,
-          treat, cure or prevent any disease, and nothing it displays is medical
-          advice. Always consult a qualified healthcare professional before
-          starting a training programme, changing your diet, beginning a fast or
-          taking a supplement.
-        </Note>
         <P>
-          Calorie targets, macro targets, one-rep-max estimates and similar
-          figures are calculated from standard formulae and the information you
-          supply. They are estimates, and they may be wrong for you. You are
-          responsible for the training and dietary decisions you make. The full
-          text is in the{" "}
+          IGNYT is intended to assist with personal fitness tracking and
+          wellness. The information provided by IGNYT:
+        </P>
+        <List>
+          <LI>Is for informational purposes only.</LI>
+          <LI>Does not constitute medical advice.</LI>
+          <LI>
+            Does not replace consultation with a qualified healthcare
+            professional.
+          </LI>
+          <LI>
+            Should not be relied upon for diagnosing, treating, curing or
+            preventing any medical condition.
+          </LI>
+        </List>
+        <Note tone="warn">
+          Always consult a qualified healthcare provider before beginning any
+          exercise, diet or wellness programme. Further detail is in the{" "}
           <Link
             href="/disclaimer"
             className="font-semibold text-ember hover:underline"
@@ -204,26 +144,59 @@ const sections: LegalSectionSpec[] = [
             Disclaimer
           </Link>
           .
+        </Note>
+      </>
+    ),
+  },
+  {
+    id: "health-connect-integration",
+    heading: "Health Connect integration",
+    body: (
+      <>
+        <P>IGNYT may integrate with Google Health Connect.</P>
+        <P>
+          Health data is accessed only with your explicit permission. You may
+          revoke Health Connect permissions at any time through your device
+          settings. IGNYT only accesses the health data necessary to provide the
+          features you choose to use.
+        </P>
+        <P>
+          The data types involved are listed in the{" "}
+          <Link
+            href="/health-data"
+            className="font-semibold text-ember hover:underline"
+          >
+            Health Data Policy
+          </Link>
+          .
         </P>
       </>
     ),
   },
   {
-    id: "availability",
-    heading: "Availability and changes",
+    id: "premium-features-and-payments",
+    heading: "Premium features and payments",
     body: (
       <>
         <P>
-          IGNYT&rsquo;s core features work offline and do not depend on our
-          infrastructure. Optional cloud features may be unavailable from time
-          to time due to maintenance, third-party outages or factors outside our
-          control, and are provided without any uptime guarantee.
+          IGNYT may offer premium subscriptions through Google Play Billing. By
+          purchasing a subscription:
         </P>
+        <List>
+          <LI>
+            You authorise Google Play to charge your selected payment method.
+          </LI>
+          <LI>Subscription billing and renewals are managed by Google Play.</LI>
+          <LI>Prices may change in accordance with Google Play policies.</LI>
+          <LI>
+            Refund requests are handled according to Google Play&rsquo;s refund
+            policies.
+          </LI>
+        </List>
         <P>
-          We may add, change or remove features, and may update these terms.
-          Material changes to these terms will be reflected in the &ldquo;last
-          updated&rdquo; date, and continued use after that date constitutes
-          acceptance.
+          <Strong>
+            IGNYT does not store your payment card or banking information.
+          </Strong>
         </P>
       </>
     ),
@@ -232,77 +205,198 @@ const sections: LegalSectionSpec[] = [
     id: "intellectual-property",
     heading: "Intellectual property",
     body: (
+      <>
+        <P>All content within IGNYT, including but not limited to:</P>
+        <List>
+          <LI>Logos</LI>
+          <LI>Branding</LI>
+          <LI>Design</LI>
+          <LI>Icons</LI>
+          <LI>Graphics</LI>
+          <LI>Source code</LI>
+          <LI>Databases</LI>
+          <LI>Text</LI>
+          <LI>Images</LI>
+          <LI>Features</LI>
+        </List>
+        <P>
+          is owned by IGNYT or its licensors and is protected by applicable
+          intellectual property laws. You may not reproduce, distribute, modify
+          or create derivative works without prior written permission.
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "user-content",
+    heading: "User content",
+    body: (
       <P>
-        The IGNYT name, logo, application, website, design and bundled datasets
-        are protected by intellectual property law and remain the property of
-        their owner. Nothing in these terms transfers any such right to you
-        beyond the limited licence described above.
+        You retain ownership of the information you enter into IGNYT, including
+        workout logs, nutrition entries and personal fitness data. You grant
+        IGNYT a limited licence to process this information solely for providing
+        the application&rsquo;s services.
       </P>
+    ),
+  },
+  {
+    id: "privacy",
+    heading: "Privacy",
+    body: (
+      <P>
+        Your use of IGNYT is also governed by our{" "}
+        <Link
+          href="/privacy"
+          className="font-semibold text-ember hover:underline"
+        >
+          Privacy Policy
+        </Link>
+        . Please review it to understand how your information is collected, used
+        and protected.
+      </P>
+    ),
+  },
+  {
+    id: "service-availability",
+    heading: "Service availability",
+    body: (
+      <>
+        <P>
+          We strive to keep IGNYT available at all times; however, we do not
+          guarantee uninterrupted or error-free operation. We may temporarily
+          suspend access for:
+        </P>
+        <List>
+          <LI>Maintenance</LI>
+          <LI>Security updates</LI>
+          <LI>Technical improvements</LI>
+          <LI>Emergency fixes</LI>
+        </List>
+      </>
+    ),
+  },
+  {
+    id: "limitation-of-liability",
+    heading: "Limitation of liability",
+    body: (
+      <P>
+        To the fullest extent permitted by applicable law, IGNYT and its
+        developers shall not be liable for any indirect, incidental, special,
+        consequential or punitive damages arising from your use of the
+        application. Your use of IGNYT is at your own risk.
+      </P>
+    ),
+  },
+  {
+    id: "disclaimer-of-warranties",
+    heading: "Disclaimer of warranties",
+    body: (
+      <>
+        <P>
+          IGNYT is provided on an &ldquo;as is&rdquo; and &ldquo;as
+          available&rdquo; basis. We make no warranties regarding:
+        </P>
+        <List>
+          <LI>Accuracy of fitness calculations</LI>
+          <LI>Continuous availability</LI>
+          <LI>Compatibility with all devices</LI>
+          <LI>Error-free operation</LI>
+          <LI>Fitness results</LI>
+        </List>
+      </>
+    ),
+  },
+  {
+    id: "suspension-or-termination",
+    heading: "Account suspension or termination",
+    body: (
+      <>
+        <P>We reserve the right to suspend or terminate accounts that:</P>
+        <List>
+          <LI>Violate these Terms.</LI>
+          <LI>Engage in fraudulent activity.</LI>
+          <LI>Misuse the application.</LI>
+          <LI>Attempt to compromise the security or integrity of IGNYT.</LI>
+        </List>
+      </>
+    ),
+  },
+  {
+    id: "account-deletion",
+    heading: "Account deletion",
+    body: (
+      <>
+        <P>You may delete your account at any time.</P>
+        <P>Upon account deletion:</P>
+        <List>
+          <LI>
+            Personal account information will be deleted or anonymised in
+            accordance with our data retention practices.
+          </LI>
+          <LI>
+            Any remaining obligations required by law may continue to apply.
+          </LI>
+        </List>
+        <P>
+          Step-by-step instructions are in the{" "}
+          <Link
+            href="/data-deletion"
+            className="font-semibold text-ember hover:underline"
+          >
+            Data Deletion Policy
+          </Link>
+          .
+        </P>
+      </>
     ),
   },
   {
     id: "third-party-services",
     heading: "Third-party services",
     body: (
-      <P>
-        IGNYT integrates with Google Play, Google Sign-In, Firebase, Google
-        Drive and Android Health Connect. Your use of those services is governed
-        by their own terms. We are not responsible for third-party services, and
-        their availability is outside our control.
-      </P>
-    ),
-  },
-  {
-    id: "warranty",
-    heading: "No warranty",
-    body: (
-      <P>
-        To the fullest extent permitted by law, IGNYT is provided &ldquo;as
-        is&rdquo; and &ldquo;as available&rdquo;, without warranties of any
-        kind, whether express or implied, including implied warranties of
-        merchantability, fitness for a particular purpose, accuracy and
-        non-infringement. We do not warrant that the app will be uninterrupted,
-        error-free, or that any calculated figure is accurate for your body.
-      </P>
-    ),
-  },
-  {
-    id: "liability",
-    heading: "Limitation of liability",
-    body: (
       <>
+        <P>IGNYT relies on third-party services including:</P>
+        <List>
+          <LI>Firebase Authentication</LI>
+          <LI>Google Sign-In</LI>
+          <LI>Google Play Billing</LI>
+          <LI>Google Health Connect</LI>
+        </List>
         <P>
-          To the fullest extent permitted by law, we are not liable for any
-          indirect, incidental, special, consequential or punitive damages, or
-          for any loss of data, profits, revenue or goodwill, arising out of or
-          in connection with your use of IGNYT — including injury, illness or
-          adverse health outcomes resulting from training, dietary,
-          supplementation or fasting decisions you make.
-        </P>
-        <P>
-          Nothing in these terms excludes or limits liability that cannot
-          lawfully be excluded or limited, including liability for death or
-          personal injury caused by negligence, or for fraud.
+          Your use of these services is also subject to their respective terms
+          and policies.
         </P>
       </>
     ),
   },
   {
-    id: "termination",
-    heading: "Termination",
+    id: "updates-to-the-application",
+    heading: "Updates to the application",
+    body: (
+      <>
+        <P>We may update IGNYT periodically to:</P>
+        <List>
+          <LI>Add features</LI>
+          <LI>Improve security</LI>
+          <LI>Fix bugs</LI>
+          <LI>Enhance performance</LI>
+          <LI>Comply with legal requirements</LI>
+        </List>
+        <P>
+          Some updates may be required for continued use of the application.
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "changes-to-these-terms",
+    heading: "Changes to these Terms",
     body: (
       <P>
-        You may stop using IGNYT at any time by uninstalling it. Deleting your
-        account and cloud data is described in the{" "}
-        <Link
-          href="/data-deletion"
-          className="font-semibold text-ember hover:underline"
-        >
-          Data Deletion Policy
-        </Link>
-        . We may suspend or terminate access to optional cloud features if these
-        terms are breached. Provisions on intellectual property, disclaimers and
-        liability survive termination.
+        We may modify these Terms from time to time. The updated version will be
+        published on this page with a revised &ldquo;Last updated&rdquo; date.
+        Continued use of IGNYT after changes become effective constitutes your
+        acceptance of the updated Terms.
       </P>
     ),
   },
@@ -311,27 +405,52 @@ const sections: LegalSectionSpec[] = [
     heading: "Governing law",
     body: (
       <P>
-        These terms are governed by the laws of India, without regard to
-        conflict-of-law rules, and the courts of India shall have jurisdiction —
-        except where mandatory consumer protection law in your country of
-        residence grants you the right to bring proceedings locally.
+        These Terms shall be governed by and interpreted in accordance with the
+        laws of India, without regard to its conflict of law principles. Any
+        disputes arising from these Terms shall be subject to the exclusive
+        jurisdiction of the competent courts in India.
       </P>
     ),
   },
   {
-    id: "contact",
-    heading: "Contact",
+    id: "contact-us",
+    heading: "Contact us",
     body: (
-      <P>
-        Questions about these terms:{" "}
-        <a
-          href={`mailto:${site.email.support}`}
-          className="font-semibold text-ember hover:underline"
-        >
-          {site.email.support}
-        </a>
-        .
-      </P>
+      <>
+        <P>
+          If you have any questions regarding these Terms and Conditions, please
+          contact us:
+        </P>
+        <P>
+          <Strong>IGNYT Support</Strong>
+          <br />
+          Email:{" "}
+          <a
+            href={`mailto:${site.email.support}`}
+            className="font-semibold text-ember hover:underline"
+          >
+            {site.email.support}
+          </a>
+          <br />
+          Website:{" "}
+          <a
+            href={site.url}
+            className="font-semibold text-ember hover:underline"
+          >
+            {site.url}
+          </a>
+        </P>
+      </>
+    ),
+  },
+  {
+    id: "acceptance",
+    heading: "Acceptance",
+    body: (
+      <Note tone="ember">
+        By downloading, installing or using IGNYT, you acknowledge that you have
+        read, understood and agree to be bound by these Terms and Conditions.
+      </Note>
     ),
   },
 ];
@@ -342,7 +461,7 @@ export default function TermsPage() {
       <JsonLd data={legalSchema("Terms & Conditions", "/terms")} />
       <LegalPage
         title="Terms & Conditions"
-        summary="The agreement between you and IGNYT covering how the app may be used, what it does and does not promise, and where responsibility sits."
+        summary="These Terms govern your access to and use of the IGNYT mobile application, website and related services. By downloading, accessing or using IGNYT, you agree to be bound by them."
         sections={sections}
         currentPath="/terms"
       />

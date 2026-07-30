@@ -40,7 +40,7 @@ const PRINCIPLES = [
   {
     Icon: ShieldCheck,
     title: "Private by default",
-    body: "No advertising SDKs, no third-party analytics, no behavioural tracking. Cloud sync and Health Connect are both opt-in and independently revocable, and your data exports in full whenever you ask.",
+    body: "No advertising SDKs and no behavioural tracking. Health data is never used for advertising or profiling, Cloud Sync and Health Connect are both opt-in and independently revocable, and your data exports in full whenever you ask.",
   },
   {
     Icon: Zap,
