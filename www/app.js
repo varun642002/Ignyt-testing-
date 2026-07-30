@@ -4011,8 +4011,19 @@ const ACTIVITY_KCAL_PER_MIN = 8; // rough estimate for mixed strength/conditioni
    The list is stored so custom meal names can be added later without touching code. It is
    read through mealTypes(), never captured in a const, so a change takes effect on the next
    render. */
-const DEFAULT_MEALS = ["Breakfast","Morning Snack","Lunch","Afternoon Snack","Dinner","Bedtime Snack"];
+/* Afternoon Snack is the stored name; the brief calls the same slot "Evening Snack" and that
+   is what the label now says. Renaming the KEY would orphan every entry already logged under
+   the old one, so the key stays and only the display changes — see mealLabel(). */
+const DEFAULT_MEALS = ["Breakfast","Morning Snack","Lunch","Afternoon Snack","Dinner"];
 const MEAL_TYPES_KEY = "hx_meal_types";
+
+
+/* Display name for a meal key. The only entry that differs is Afternoon Snack, which the
+   product calls "Evening Snack". Kept as a lookup rather than a rename so food logged under
+   the stored key keeps rendering — mealTypesInUse() surfaces any key it finds, and a key with
+   no label falls through to itself. */
+const MEAL_LABELS = { "Afternoon Snack": "Evening Snack" };
+function mealLabel(meal){ return MEAL_LABELS[meal] || meal; }
 
 function mealTypes(){
   const stored = LS.get(MEAL_TYPES_KEY, null);
@@ -8236,8 +8247,9 @@ const MEAL_DONUT_COLORS = ["var(--mint)", "var(--steel)", "#FFB020", "#A98BFF", 
 /* Emoji per meal, matching the meal rows in the design. */
 const MEAL_ICONS = {
   "Breakfast":"🍳", "Morning Snack":"🍌", "Lunch":"🥗", "Evening Snack":"🍎",
-  "Afternoon Snack":"🍌", "Dinner":"🍛", "Bedtime Snack":"🌙",
-  "Post Workout":"🥤", "Snacks":"🍿"
+  "Afternoon Snack":"🍪", "Dinner":"🍛",
+  /* legacy keys — entries logged under these still render and still count */
+  "Bedtime Snack":"🌙", "Post Workout":"🥤", "Snacks":"🍿"
 };
 
 /** Short observations derived from the day's totals. Only facts, no advice. */
@@ -14988,7 +15000,8 @@ function ensureFastTimerRunning(){
     const fast = F && F.active();
     const elapsedEl = document.getElementById("ft-elapsed");
     const homeEl = document.getElementById("ft-home-elapsed");
-    if(!fast || (!elapsedEl && !homeEl)){ stopFastTimer(); return; }
+    const nutCheck = document.getElementById("ft-nut-elapsed");
+    if(!fast || (!elapsedEl && !homeEl && !nutCheck)){ stopFastTimer(); return; }
 
     const p = F.progress(fast);
     const fmt = (ms)=>{
@@ -15021,6 +15034,11 @@ function ensureFastTimerRunning(){
     if(homeEl) homeEl.textContent = fmt(p.elapsedMs) + " elapsed";
     const homeRem = document.getElementById("ft-home-remaining");
     if(homeRem) homeRem.textContent = remainText;
+    // ...and the strip on the Food Log dashboard, same nodes-not-render rule.
+    const nutEl = document.getElementById("ft-nut-elapsed");
+    if(nutEl) nutEl.textContent = fmt(p.elapsedMs) + " elapsed";
+    const nutRem = document.getElementById("ft-nut-remaining");
+    if(nutRem) nutRem.textContent = remainText;
   }, 1000);
 }
 function stopFastTimer(){
@@ -15396,6 +15414,38 @@ function sparklineSvg(values, labels){
 }
 
 
+
+/* Fasting, on the Food Log.
+   The two features answer the same question from opposite sides — "may I eat right now" and
+   "what have I eaten" — so a running fast belongs on this dashboard rather than only on its
+   own page. It appears ONLY while a fast is running: a permanent widget for a feature most
+   people are not using is clutter, and the Tools entry covers starting one.
+   Read-only here. Ending a fast stays on the Fasting screen, because ending it from the food
+   dashboard would sit one mistap away from logging a meal. */
+function renderNutritionFastingStrip(){
+  const F = window.IgnytFasting;
+  if(!F) return "";
+  const fast = F.active();
+  if(!fast) return "";
+  const p = F.progress(fast);
+  const over = p.remainingMs < 0;
+  const fmt = (ms)=>{
+    ms = Math.abs(ms);
+    const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
+    return h > 0 ? `${h}h ${String(m).padStart(2,"0")}m` : `${m}m`;
+  };
+  return `
+    <button class="nd-fast" data-open-fasting="1">
+      <span class="nd-fast__ring" style="--pct:${p.pct};"><span>${p.pct}%</span></span>
+      <span class="nd-fast__body">
+        <span class="nd-fast__title">${escHtml(fast.label)} fast · ${escHtml(p.stage.label)}</span>
+        <span class="nd-fast__time" id="ft-nut-elapsed">${fmt(p.elapsedMs)} elapsed</span>
+        <span class="nd-fast__sub" id="ft-nut-remaining">${over ? fmt(p.remainingMs)+" past goal" : fmt(p.remainingMs)+" to go"}</span>
+      </span>
+      <span class="nd-fast__chev">›</span>
+    </button>`;
+}
+
 function renderNutritionTab(){
   if(state.foodFlow && state.foodFlow.screen === "search") return renderFoodSearchPage();
   if(state.foodFlow && state.foodFlow.screen === "detail") return renderFoodDetailPage();
@@ -15498,6 +15548,8 @@ function renderNutritionTab(){
       <span class="nd-hero__chev" aria-hidden="true">›</span>
     </div>
 
+    ${renderNutritionFastingStrip()}
+
     <!-- Three shortcuts. Each goes somewhere that already exists rather than being a tile
          that will be wired up later. -->
     <div class="nd-shortcuts">
@@ -15518,19 +15570,25 @@ function renderNutritionTab(){
       </button>
     </div>
 
-    <!-- MEALS -->
+    <!-- MEALS
+         mealTypesInUse, not mealTypes: the defaults are the meals you PLAN to eat, but the
+         list has to include any meal that actually holds food today. Rendering only the
+         defaults meant an entry logged under a meal since removed from them (Bedtime Snack,
+         Post Workout) still counted toward the day's total while having no visible row — so
+         it could not be seen, edited or deleted. Food must never become unreachable because
+         a default changed. -->
     ${lastDeletedFood ? `<div class="row-between" style="align-items:center;margin-bottom:6px;">
       <div class="eyebrow-label" style="margin:0;">Meals</div>
       <button class="cat-chip" data-action="undo-food-delete" style="margin:0;padding:2px 10px;font-size:11px;">Undo delete</button>
     </div>` : ""}
-    ${mealTypes().map(meal=>{
+    ${mealTypesInUse(dayEntries).map(meal=>{
       const foods = dayEntries.filter(f=>(f.meal||"Lunch")===meal);
       const kcal = Math.round(foods.reduce((a,f)=>a+Number(f.calories||0),0));
       const target = mealCalorieTarget(meal, calorieBudget);
       return `<div class="nd-meal">
         <div class="nd-meal__head">
           <span class="nd-meal__icon" aria-hidden="true">${mealIcon(meal)}</span>
-          <span class="nd-meal__name">${escHtml(meal)}</span>
+          <span class="nd-meal__name">${escHtml(mealLabel(meal))}</span>
           <span class="nd-meal__kcal"><strong>${kcal}</strong> of ${target} Cal</span>
           <button class="nd-meal__add" data-meal-add="${escHtml(meal)}" aria-label="Add food to ${escHtml(meal)}">+</button>
         </div>

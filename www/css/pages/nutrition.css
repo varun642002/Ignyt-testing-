@@ -1287,3 +1287,32 @@ body.kb-open
 }
 
 @media (prefers-reduced-motion: reduce){  }
+
+/* ---- fasting strip on the Food Log dashboard ----
+   Shown only while a fast is running. Read-only: it reports and links, it does not end the
+   fast, because an "end fast" control one mistap from "log a meal" is the wrong neighbour. */
+.nd-fast {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 12px 14px; margin-bottom: 10px;
+  border: 1px solid var(--border); border-radius: 16px;
+  background: var(--surface); color: var(--text);
+  text-align: left; cursor: pointer;
+}
+.nd-fast__ring {
+  width: 46px; height: 46px; flex: none; border-radius: 50%;
+  display: grid; place-items: center;
+  background: conic-gradient(var(--steel, #2563EB) calc(var(--pct,0) * 1%), var(--surface-alt) 0);
+}
+.nd-fast__ring > span {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--surface);
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.nd-fast__body { flex: 1; min-width: 0; }
+.nd-fast__title {
+  display: block; font-size: 11.5px; font-weight: 700; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.nd-fast__time { display: block; font-size: 17px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.nd-fast__sub { display: block; font-size: 11.5px; color: var(--muted); }
+.nd-fast__chev { flex: none; color: var(--muted); font-size: 19px; }
