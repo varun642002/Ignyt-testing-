@@ -11575,14 +11575,6 @@ function completeSignIn(user){
   console.log("[auth] navigation complete");
 }
 
-/** Continue into onboarding without signing in. Recorded so the screen does not reappear. */
-function skipSignIn(){
-  /* hx_auth_seen is no longer a gate — isSignedIn() is — but it is still what tells
-     onboarding this is not a first run, so it stays. */
-  state.authSeen = true;
-  LS.set("hx_auth_seen", true);
-  render();
-}
 
 
 function renderSignInScreen(){
