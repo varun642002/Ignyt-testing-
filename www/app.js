@@ -4124,8 +4124,8 @@ const PREFERRED_CARDIO_OPTIONS = ["Walking","Jogging","Running","Cycling","Swimm
    one thing that can fill several of them in automatically — and by then most people have
    already committed to typing. Asking first also means steps/weight/sleep start flowing from
    the user's first session rather than whenever they later find the toggle. */
-const ONBOARDING_STEP_TITLES = ["Fair Use Policy","Health Connect","Birthday","Gender","Height",
-  "Weight","Fitness Goal","Activity Level","Diet Preference","Workout Preference",
+const ONBOARDING_STEP_TITLES = ["Fair Use Policy","Notifications","Health Connect","Birthday","Gender",
+  "Height","Weight","Fitness Goal","Activity Level","Diet Preference","Workout Preference",
   "AI Personalization"];
 
 /* The brief's six goals, mapped onto the calorie deltas this app already applies. The keys
@@ -8642,7 +8642,22 @@ function renderSettingsTab(){
       <div style="font-size:22px;font-weight:800;">Settings</div>
       <div style="font-size:12px;color:var(--rh-muted);margin-bottom:14px;">Personalise your experience</div>
 
+      <div class="rh-section-head"><span>${svg('signout',13)} Authentication</span></div>
       ${renderAccountSection()}
+
+      <div class="rh-section-head" style="margin-top:16px;"><span>${svg('health',13)} Health Connect</span></div>
+      <div class="pg-card">
+        <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Sync steps, weight, sleep and workouts with Health Connect. IGNYT only ever reads what you grant, and never writes without you asking.</div>
+        <button class="btn btn-steel btn-block" data-nav="health">Open Health Connect</button>
+      </div>
+
+      <div class="rh-section-head" style="margin-top:16px;"><span>${svg('lock',13)} Privacy</span></div>
+      <div class="pg-card">
+        <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">What is stored, where it lives, and how to remove it.</div>
+        <button class="btn btn-steel btn-block" data-action="open-privacy-info">Privacy &amp; Security</button>
+        <button class="btn btn-ghost btn-block" style="margin-top:8px;" data-action="open-legal" data-legal="privacy">Privacy Policy</button>
+      </div>
+
       <div class="rh-section-head" style="margin-top:16px;"><span>${svg('target',13)} Goal Wizard</span></div>
       <div class="pg-card">
         <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Your goal, availability, equipment, and health screening — retake it anytime as your situation changes.</div>
@@ -10573,7 +10588,7 @@ function obTextarea(fieldPath, placeholder){
   return `<textarea class="note-input" data-ob-field="${obEsc(fieldPath)}" placeholder="${obEsc(placeholder||'')}" style="margin-bottom:14px;min-height:52px;">${obEsc(v||'')}</textarea>`;
 }
 
-const ONBOARDING_TOTAL_STEPS = 11;
+const ONBOARDING_TOTAL_STEPS = 12;   // derived from the renderer list below
 
 function onboardingProgressHeader(step){
   return `
@@ -11045,6 +11060,58 @@ function obWorkoutPref(){
     ${obOptionList("onboarding.workoutPreferences", OB_WORKOUT_OPTIONS, true)}`;
 }
 
+/* STEP 2 — Notifications.
+
+   Asked here, immediately after sign-in, because every reminder the app offers is worth
+   nothing if the permission is refused later and nobody goes looking for it. Asked ONCE: a
+   denial moves straight on and says where to change it, because a second prompt for something
+   already declined is how an app teaches people to dismiss its dialogs on sight.
+
+   Android 13+ requires POST_NOTIFICATIONS at runtime; below that it is granted at install and
+   this screen simply confirms what reminders exist. */
+function obNotifications(){
+  const st = state.onboarding.notifState;   // null | "granted" | "denied"
+  const busy = !!state.onboarding.notifBusy;
+  const native = !!nativeNotify();
+
+  const EXAMPLES = [
+    ["\u{1F373}", "Meals", "A nudge at breakfast, lunch and dinner."],
+    ["\u{1F3CB}️", "Workouts", "When you have a session planned."],
+    ["\u{1F4A7}", "Hydration", "So the water target does not end the day at zero."],
+    ["\u{1F4C8}", "Progress", "A weekly summary of what actually happened."]
+  ];
+
+  return `
+    ${obHero("\u{1F514}", "Stay on <span class='ob-accent'>track</span>",
+             "Allow notifications so IGNYT can remind you about workouts, meals, hydration and progress.")}
+    <div class="ob-policy">
+      ${EXAMPLES.map(([i,t,d])=>`<div class="ob-policy__row">
+        <span aria-hidden="true">${i}</span>
+        <span><b>${obEsc(t)}</b><br><span style="color:var(--muted);font-size:12px;">${obEsc(d)}</span></span>
+      </div>`).join("")}
+    </div>
+
+    ${st === "granted" ? `
+      <div class="ob-hc-ok" role="status">
+        <span class="ob-hc-ok__tick" aria-hidden="true">✓</span>
+        <span>Notifications are on. You can fine-tune each reminder in Settings.</span>
+      </div>` : ""}
+    ${st === "denied" ? `
+      <div class="ob-note">No problem — reminders stay off. You can turn them on any time from
+      Settings &rsaquo; Notifications.</div>` : ""}
+
+    ${native && st !== "granted"
+      ? `<button class="btn btn-accent btn-block" data-ob-notif ${busy ? "disabled" : ""}>
+           ${busy ? "Asking…" : "Allow notifications"}
+         </button>`
+      : native ? "" : `<div class="ob-note">Reminders are an Android feature and are not
+         available in this preview. On a device you will be asked here.</div>`}
+
+    <button class="btn btn-ghost btn-block" data-ob-notif-skip style="margin-top:8px;">
+      ${st ? "Continue" : "Not now"}
+    </button>`;
+}
+
 /* STEP 10 — Health Connect. Android only; on anything else the step says so rather than
    offering a button that cannot work. */
 function obHealthConnect(){
@@ -11154,8 +11221,8 @@ function obComputePlan(){
 }
 
 const ONBOARDING_STEP_RENDERERS = [
-  obFairUse, obHealthConnect, obBirthday, obGender, obHeight, obWeight, obGoal,
-  obActivity, obDiet, obWorkoutPref, obPersonalization
+  obFairUse, obNotifications, obHealthConnect, obBirthday, obGender, obHeight, obWeight,
+  obGoal, obActivity, obDiet, obWorkoutPref, obPersonalization
 ];
 
 /* Step gates and the Health Connect auto-advance used to compare against literal step numbers
@@ -11817,6 +11884,53 @@ function wireOnboardingWizard(){
       if(readout) readout.firstChild.textContent = path==="profile.weight" ? v.toFixed(1) : String(v);
     });
     el.addEventListener("change", ()=>{ obSet(path, Number(el.value)); renderOnboardingWizard(); });
+  });
+
+  const notifBtn = document.querySelector("[data-ob-notif]");
+  if(notifBtn) notifBtn.addEventListener("click", async ()=>{
+    const o = state.onboarding;
+    o.notifBusy = true;
+    renderOnboardingWizard();
+    try{
+      const plugin = nativeNotify();
+      const res = plugin && plugin.requestPermission ? await plugin.requestPermission() : null;
+      /* Anything that is not an explicit denial counts as granted. The plugin's shape varies
+         by version and by Android level — below 13 there is no runtime prompt at all and the
+         call resolves with nothing — so demanding one exact shape would report a working
+         permission as a refusal. */
+      const granted = !(res && (res.granted === false || res.success === false));
+      o.notifState = granted ? "granted" : "denied";
+      state.nativeNotifPermissionGranted = granted;
+      if(granted){
+        // Turn on the defaults the screen just promised, rather than granting a permission
+        // that goes on to do nothing.
+        state.settings.workoutReminders = true;
+        state.settings.hydrationReminders = true;
+        await syncAllNativeReminders();
+      }
+    }catch(err){
+      console.warn("[onboarding] notification permission failed:", err);
+      o.notifState = "denied";
+    }
+    o.notifBusy = false;
+    renderOnboardingWizard();
+    // Move on by itself only when it worked; a denial stays put so the "you can change this
+    // in Settings" line is actually read before the screen disappears.
+    if(o.notifState === "granted"){
+      setTimeout(()=>{
+        if(state.onboardingStep === obStepIndexOf(obNotifications)){
+          state.onboardingStep = Math.min(ONBOARDING_TOTAL_STEPS, state.onboardingStep + 1);
+          renderOnboardingWizard();
+        }
+      }, 900);
+    }
+  });
+
+  const notifSkip = document.querySelector("[data-ob-notif-skip]");
+  if(notifSkip) notifSkip.addEventListener("click", ()=>{
+    if(!state.onboarding.notifState) state.onboarding.notifState = "denied";
+    state.onboardingStep = Math.min(ONBOARDING_TOTAL_STEPS, state.onboardingStep + 1);
+    renderOnboardingWizard();
   });
 
   const hcBtn = document.querySelector("[data-ob-health]");
