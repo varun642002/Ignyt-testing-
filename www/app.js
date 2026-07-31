@@ -16482,8 +16482,28 @@ function renderWorkoutComplete(s){
     <div class="pg-light">
       <div style="text-align:center;margin:8px 0 4px;">
         <div style="font-size:24px;font-weight:800;">Workout Complete 🎉</div>
-        <div style="font-size:13px;color:var(--rh-muted);margin-top:4px;">${timeLabel}</div>
       </div>
+
+      <!-- When the workout happened, editable here rather than only from history.
+           Finishing saves with the session's own start and end times, which is right almost
+           always and wrong exactly when it matters: a session left running overnight, or one
+           logged from paper the next morning. Correcting it used to mean finding the workout
+           in history and opening the editor from there — this is that same editor, reached
+           from the screen you are already on.
+
+           It opens renderWorkoutEditor rather than a second date picker on purpose. That
+           editor already validates the range, keeps duration and start/end in step, and
+           writes an audit entry; a private picker here would be a second definition of
+           "when did this happen" that could disagree with it. renderWorkoutTab checks
+           editingWorkout before workoutCompleteId, so closing it lands back here. -->
+      <button class="pg-card wc-when" data-action="edit-complete-datetime" data-workout-id="${escHtml(String(s.id))}">
+        <span class="wc-when__icon">${svg('calendar',18)}</span>
+        <span class="wc-when__body">
+          <span class="wc-when__label">Date &amp; Time</span>
+          <span class="wc-when__value">${escHtml(timeLabel)}</span>
+        </span>
+        <span class="wc-when__go" aria-hidden="true">›</span>
+      </button>
 
       ${prs.length ? `<div class="pg-card" style="margin:12px 0;background:rgba(217,119,6,.06);border-color:rgba(217,119,6,.25);">
         <div style="display:flex;align-items:center;gap:6px;font-weight:800;font-size:15px;color:#D97706;margin-bottom:8px;">${svg('trophy',18)} ${prs.length} Personal Record${prs.length>1?'s':''}</div>
@@ -19178,6 +19198,13 @@ function attachHandlers(){
     });
   });
   /* ---- Post-workout editing ---- */
+  const editWhen = document.querySelector('[data-action="edit-complete-datetime"]');
+  if(editWhen) editWhen.addEventListener("click", ()=>{
+    const w = state.workoutLog.find(x=>String(x.id) === editWhen.dataset.workoutId);
+    if(!w) return;
+    state.editingWorkout = buildWorkoutEditDraft(w);
+    render();
+  });
   document.querySelectorAll('[data-action="edit-workout-details"]').forEach(el=>{
     el.addEventListener("click", ()=>{
       const w = state.workoutLog.find(x=>x.id===Number(el.dataset.workoutId));
