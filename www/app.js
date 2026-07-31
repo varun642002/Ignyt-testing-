@@ -9409,6 +9409,18 @@ function renderNotificationsPanel(notifications){
    Same 10 real destinations as before, just grouped into sections and restyled -- nothing
    was added or removed, and every data-nav target below is unchanged. */
 function renderToolsTab(){
+  /* Read BEFORE the SECTIONS literal, not after it. The Coaching entry's `desc` is a
+     ternary on coachLinked, and an array initialiser runs top to bottom — so declaring
+     these below SECTIONS put the read inside the temporal dead zone and threw
+     "Cannot access 'coachLinked' before initialization", taking the whole Tools tab down
+     with it. It is a `let`, so there is no hoisting to save it.
+
+     Read defensively as well: the grid must still render if the sync module failed to
+     load, and a getter that throws here would be the same outage by a different route. */
+  let coachLinked = false, coachPending = 0;
+  try { coachLinked = !!(window.IgnytTrainerSync && window.IgnytTrainerSync.isLinked()); } catch(e) {}
+  try { coachPending = (window.IgnytCoachPage && window.IgnytCoachPage.pendingCount()) || 0; } catch(e) {}
+
   const SECTIONS = [
     ["Training", [
       {id:"plan", label:"Training Plan", desc:"HYROX schedule & routines", icon:"calendar"},
@@ -9445,11 +9457,6 @@ function renderToolsTab(){
   ];
   let hcConnected = false;
   try { hcConnected = !!(window.HealthConnectIntegration && window.HealthConnectIntegration.loadState().connected); } catch(e) {}
-  // Coach state read defensively: the Tools grid must render even if the sync module failed
-  // to load, and a thrown getter here would take the whole tab down with it.
-  let coachLinked = false, coachPending = 0;
-  try { coachLinked = !!(window.IgnytTrainerSync && window.IgnytTrainerSync.isLinked()); } catch(e) {}
-  try { coachPending = (window.IgnytCoachPage && window.IgnytCoachPage.pendingCount()) || 0; } catch(e) {}
   const streak = computeStreak();
 
   return `
@@ -16138,13 +16145,22 @@ function render(){
     else stopElapsedTimer();
     if(state.raceActive) ensureRaceTimerRunning();
     else stopRaceTimer();
+    _renderCrashed = false;   // a full render got through, so the app is healthy again
   }catch(err){
     console.error("Ignyt render error:", err);
+    _renderCrashed = true;
     renderErrorScreen(err);
   }
 }
 
+/* Set while the error screen is on show. Hardware back consults it before anything else:
+   without that, back ran the normal overlay list, called render(), hit the same broken
+   screen and landed straight back on the error page — the user could not get out by the one
+   gesture they would try first. */
+let _renderCrashed = false;
+
 function renderErrorScreen(err){
+  _renderCrashed = true;
   const root = document.getElementById("app");
   let msg = "Something went wrong displaying this screen.";
   try{ msg = (err && err.message) ? err.message : msg; }catch{}
@@ -21525,6 +21541,20 @@ if("serviceWorker" in navigator){
    its own back-button handling.
 ========================================================= */
 function handleHardwareBack(){
+  /* First, before any overlay check. The error screen has replaced the whole app, so every
+     branch below would be reasoning about state that is not on screen — and each of them
+     ends in render(), which is exactly what just failed. Go somewhere known-good instead,
+     and if even that throws, reload rather than leave the user pressing back forever. */
+  if(_renderCrashed){
+    try{
+      // Only the tab changes. Recovery must not touch the session, the food log or anything
+      // else the user has — a crash is a display failure, not a reason to lose work.
+      state.tab = "home";
+      _renderCrashed = false;
+      render();
+    }catch(e){ location.reload(); }
+    return true;
+  }
   if(state.confirmDialog){ resolveConfirmDialog(false, render); return true; }
   if(state.viewingLegal){ state.viewingLegal = null; render(); return true; }
   if(state.viewingBodyPhotoId!=null){ state.viewingBodyPhotoId = null; render(); return true; }
