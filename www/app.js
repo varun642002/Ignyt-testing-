@@ -5361,6 +5361,18 @@ function renderNotificationsPanel(notifications){
    Same 10 real destinations as before, just grouped into sections and restyled -- nothing
    was added or removed, and every data-nav target below is unchanged. */
 function renderToolsTab(){
+  /* Read BEFORE the SECTIONS literal, not after it. The Coaching entry's `desc` is a
+     ternary on coachLinked, and an array initialiser runs top to bottom — so declaring
+     these below SECTIONS put the read inside the temporal dead zone and threw
+     "Cannot access 'coachLinked' before initialization", taking the whole Tools tab down
+     with it. It is a `let`, so there is no hoisting to save it.
+
+     Read defensively as well: the grid must still render if the sync module failed to
+     load, and a getter that throws here would be the same outage by a different route. */
+  let coachLinked = false, coachPending = 0;
+  try { coachLinked = !!(window.IgnytTrainerSync && window.IgnytTrainerSync.isLinked()); } catch(e) {}
+  try { coachPending = (window.IgnytCoachPage && window.IgnytCoachPage.pendingCount()) || 0; } catch(e) {}
+
   const SECTIONS = [
     ["Training", [
       {id:"plan", label:"Training Plan", desc:"HYROX schedule & routines", icon:"calendar"},
@@ -5389,11 +5401,6 @@ function renderToolsTab(){
   ];
   let hcConnected = false;
   try { hcConnected = !!(window.HealthConnectIntegration && window.HealthConnectIntegration.loadState().connected); } catch(e) {}
-  // Coach state read defensively: the Tools grid must render even if the sync module failed
-  // to load, and a thrown getter here would take the whole tab down with it.
-  let coachLinked = false, coachPending = 0;
-  try { coachLinked = !!(window.IgnytTrainerSync && window.IgnytTrainerSync.isLinked()); } catch(e) {}
-  try { coachPending = (window.IgnytCoachPage && window.IgnytCoachPage.pendingCount()) || 0; } catch(e) {}
   const streak = computeStreak();
 
   return `
