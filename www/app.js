@@ -7250,13 +7250,17 @@ function foodCategoryIcon(name){
  *  removed here is on the Food Details page, one tap away, where the user has actually chosen
  *  something and the numbers answer a question they are asking.
  *
- *  What survives is what identifies a food: picture, name, whether it is verified, and whether
- *  it is one the user has starred. */
+ *  The thumbnail and the favourite star have now gone the same way, for the same reason. A
+ *  column of photographs is the single biggest source of visual noise in a list whose job is
+ *  to be read, and the star was a second tap target on a row whose only purpose is to be
+ *  tapped once. Favouriting lives on the Food Details page, beside the numbers it belongs
+ *  with — it is not lost, just moved to where the user has actually chosen a food.
+ *
+ *  What survives is what identifies a food: the name, the matched span, and whether it is
+ *  verified. The chevron says the row goes somewhere. */
 /** @param {string} [labelOverride] the canonical group name, when this card leads a group */
 function renderFoodResultCard(f, labelOverride){
-  const isFav = (state.favoriteFoods||[]).some(x=>x && String(x.name).toLowerCase()===String(f.name).toLowerCase());
   return `<div class="food-row" data-food-pick="${escHtml(f.id)}">
-    ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(f) : `<span class="food-thumb">${foodCategoryIcon(f.category)}</span>`}
     <div class="food-row__body">
       <!-- The matched span is marked so the eye lands on WHY this row is here, which matters
            most on a fuzzy or synonym hit where the connection is not otherwise obvious. -->
@@ -7264,8 +7268,7 @@ function renderFoodResultCard(f, labelOverride){
         <span class="food-row__text">${highlightMatch(labelOverride || (window.IgnytFoodCuration ? IgnytFoodCuration.displayName(f) : f.name), state.foodSearchQuery)}</span>${
         f.verified ? `<span class="food-row__verified" title="Measured values from a published source" aria-label="Verified">✓</span>` : ""}</div>
     </div>
-    <button class="food-row__fav${isFav?' is-on':''}" data-food-fav="${escHtml(f.id)}"
-      aria-label="${isFav?'Remove from favourites':'Save to favourites'}">${isFav?'★':'☆'}</button>
+    <span class="food-row__go" aria-hidden="true">›</span>
   </div>`;
 }
 
@@ -7859,38 +7862,38 @@ function foodSearchResultsHtml(meal){
         return `
 
           ${yday.length ? `
-            <button class="sp-row sp-row--action" data-copy-yesterday="1">
-              <span class="sp-row__title">Track Yesterday's Meal</span>
-              <span class="sp-row__meta">${yday.length} item${yday.length===1?'':'s'}</span>
-              <span class="sp-plus" aria-hidden="true">+</span>
+            <button class="fs-row fs-row--action" data-copy-yesterday="1">
+              <span class="fs-row__title">Track Yesterday's Meal</span>
+              <span class="fs-row__meta">${yday.length} item${yday.length===1?'':'s'}</span>
+              <span class="fs-plus" aria-hidden="true">+</span>
             </button>` : ""}
 
           ${combos.length ? `
-            <div class="sp-head">
+            <div class="fs-sec">
               <span>My Meals</span>
               ${(state.savedMeals||[]).length > 2
-                ? `<button class="sp-viewall" data-saved-all="1">${state.savedMealsAll?'Show less':'View all'}</button>` : ""}
+                ? `<button class="fs-viewall" data-saved-all="1">${state.savedMealsAll?'Show less':'View all'}</button>` : ""}
             </div>
             ${combos.map(c=>`
-              <div class="sp-row" data-saved-meal="${escHtml(String(c.id))}">
-                <span class="sp-row__body">
-                  <span class="sp-row__title">${escHtml(c.name)}</span>
-                  <span class="sp-row__sub">${escHtml((c.items||[]).map(i=>i.name).join(", ")).slice(0,60)}${(c.items||[]).map(i=>i.name).join(", ").length>60?'…':''}</span>
+              <div class="fs-row" data-saved-meal="${escHtml(String(c.id))}">
+                <span class="fs-row__body">
+                  <span class="fs-row__title">${escHtml(c.name)}</span>
+                  <span class="fs-row__sub">${escHtml((c.items||[]).map(i=>i.name).join(", ")).slice(0,60)}${(c.items||[]).map(i=>i.name).join(", ").length>60?'…':''}</span>
                 </span>
-                <span class="sp-row__cal">${savedMealCalories(c)} Cal</span>
-                <span class="sp-plus" aria-hidden="true">+</span>
+                <span class="fs-row__cal">${savedMealCalories(c)} Cal</span>
+                <span class="fs-plus" aria-hidden="true">+</span>
               </div>`).join("")}` : ""}
 
           ${freq.length ? `
-            <div class="sp-head"><span>Frequently Tracked Foods</span></div>
+            <div class="fs-sec"><span>Frequently Tracked Foods</span></div>
             ${freq.map(f=>`
-              <div class="sp-row" data-quick-recent="${escHtml(String(f.entry.id))}">
-                <span class="sp-row__body">
-                  <span class="sp-row__title">${escHtml(f.entry.name)}${f.fav?' <span class="sp-star">★</span>':''}</span>
-                  <span class="sp-row__sub">${f.entry.grams?`${Math.round(f.entry.grams)} ${escHtml(f.entry.servingUnit||'g')}`:'&mdash;'}${f.count>1?` · ${f.count}×`:''}</span>
+              <div class="fs-row" data-quick-recent="${escHtml(String(f.entry.id))}">
+                <span class="fs-row__body">
+                  <span class="fs-row__title">${escHtml(f.entry.name)}${f.fav?' <span class="fs-star">★</span>':''}</span>
+                  <span class="fs-row__sub">${f.entry.grams?`${Math.round(f.entry.grams)} ${escHtml(f.entry.servingUnit||'g')}`:'&mdash;'}${f.count>1?` · ${f.count}×`:''}</span>
                 </span>
-                <span class="sp-row__cal">${Math.round(f.entry.calories||0)} Cal</span>
-                <span class="sp-plus" aria-hidden="true">+</span>
+                <span class="fs-row__cal">${Math.round(f.entry.calories||0)} Cal</span>
+                <span class="fs-plus" aria-hidden="true">+</span>
               </div>`).join("")}` : ""}
 
           ${!freq.length && !combos.length && !yday.length ? `
@@ -7920,8 +7923,10 @@ function foodSearchResultsHtml(meal){
       })() : ""}
 
       ${(q.trim() || browsing) ? (results.length
-        ? renderFoodList(results, browsing ? state.foodBrowsePage : state.foodResultPage)
-        : `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">No foods match "${escHtml(q)}"${browsing?` in ${escHtml(browsing)}`:""} — enter it manually below.</div>`) : ""}`;
+        ? `<div class="fs-sec"><span>${browsing ? escHtml(browsing) : "Search Results"}</span></div>
+           ${renderFoodList(results, browsing ? state.foodBrowsePage : state.foodResultPage)}`
+        : `<div class="fs-noresult">No foods match "${escHtml(q)}"${browsing?` in ${escHtml(browsing)}`:""}.</div>`) : ""}
+`;
 }
 
 /* Swaps only the results container. The input element is untouched, so focus, the soft
@@ -14688,7 +14693,7 @@ function renderFoodSearchPage(){
     <div class="food-search-bar">
       <span class="food-search-bar__icon" aria-hidden="true">⌕</span>
       <input type="text" id="food-search-input" autocomplete="off"
-        placeholder="Search ${total.toLocaleString()} foods…" value="${escHtml(state.foodSearchQuery||"")}">
+        placeholder="Search by Food Name/Dish" value="${escHtml(state.foodSearchQuery||"")}">
       ${state.foodSearchQuery?`<button class="food-search-bar__clear" data-food-clear="1" aria-label="Clear search">✕</button>`:""}
       <button class="food-search-bar__voice" data-food-voice="1" aria-label="Voice search">🎙</button>
     </div>
@@ -14699,14 +14704,11 @@ function renderFoodSearchPage(){
          Part 1 removed; it is not superseded by anything, so it moves here rather than being
          deleted — without it there is no way to log a food the database does not have.
          Collapsed by default so the search screen does not open with a form in your face. -->
-    <div class="nut-card nut-card--tight" style="margin-top:var(--space-sm);">
-      <button class="row-between" data-action="toggle-manual-entry"
-        style="width:100%;background:none;border:0;padding:0;cursor:pointer;color:inherit;min-height:44px;">
-        <span style="text-align:left;">
-          <span style="font-size:13px;font-weight:700;display:block;">Can't find it?</span>
-          <span style="font-size:11px;color:var(--muted);">Enter the food manually</span>
-        </span>
-        <span style="color:var(--primary);font-size:18px;font-weight:800;">${state.manualEntryOpen?'−':'+'}</span>
+    <div class="food-missing__wrap">
+      <button class="food-missing" data-action="toggle-manual-entry"
+        aria-expanded="${state.manualEntryOpen?'true':'false'}">
+        <span>Can&rsquo;t find your food?</span>
+        <span class="food-missing__go" aria-hidden="true">${state.manualEntryOpen?'−':'→'}</span>
       </button>
 
       ${state.manualEntryOpen ? `

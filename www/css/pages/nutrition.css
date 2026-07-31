@@ -252,11 +252,21 @@
   display: flex;
   align-items: center;
   gap: var(--space-xs);
-  padding: 6px 0;
+  padding: 13px 2px;
   min-height: 48px;   /* one line of content now, but the row stays a comfortable tap target */
   cursor: pointer;
+  border-radius: var(--radius-sm);
+  -webkit-tap-highlight-color: transparent;
 }
-.food-row + .food-row{ border-top: 1px solid var(--surface-alt); }
+/* No rule between rows. A divider under each of thirty results drew thirty lines across a
+   screen whose only job is to be read down; the gap and the bold name group them already. */
+.food-row:active{ background: var(--surface-alt); }
+/* Chevron, not a second control. The row goes to Food Details — the thumbnail and the
+   favourite star that used to sit here are explained in renderFoodResultCard(). */
+.food-row__go{
+  flex: 0 0 auto; color: var(--muted); font-size: 20px; line-height: 1;
+  opacity: .55; padding-left: 4px;
+}
 .food-row__body{ min-width: 0; flex: 1; }
 /* Flex, so the verified badge sits beside the name instead of pushing it to a second line.
    The ellipsis moves to the inner span: a flex container cannot truncate its own text. */
@@ -278,14 +288,9 @@
 
 /* The star is the only control on the row, so it gets a real target rather than the 4px
    padding it inherited from .cat-chip. The row itself stays the tap target for picking. */
-.food-row__fav{
-  flex: none; width: 34px; height: 34px; padding: 0;
-  border: 0; border-radius: 50%; background: transparent;
-  color: var(--muted); font-size: 15px; line-height: 1; cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.food-row__fav.is-on{ color: #F5BB45; }
-.food-row__fav:active{ background: var(--surface-alt); }
+/* .food-row__fav removed with the star it styled. Favouriting is on the Food Details
+   page; see renderFoodResultCard(). .food-thumb stays -- still used by the food hero
+   and by IgnytFoodImages. */
 .food-thumb{
   width: 34px; height: 34px;
   border-radius: var(--radius-sm);
@@ -482,9 +487,12 @@
   align-items: center;
   gap: var(--space-xs);
   background: var(--surface);
+  /* Outlined rather than a filled panel. This is the first control on the screen and the
+     one every visit starts with, so it should read as a field to type in. */
+  border: 1.5px solid var(--primary);
   border-radius: var(--radius-pill);
   padding: 4px 6px 4px 14px;
-  margin-bottom: var(--space-xs);
+  margin-bottom: var(--space-sm);
 }
 .food-search-bar__icon{ color: var(--muted); font-size: 15px; }
 .food-search-bar input{
@@ -1249,41 +1257,77 @@ body.kb-open
    SEARCH PAGE — reference layout
 ========================================================= */
 
-.sp-head{
-  display:flex; align-items:center; justify-content:space-between;
-  margin:18px 0 8px; font-size:13px; font-weight:700; color:var(--muted);
+.fs-noresult{ font-size: 13.5px; color: var(--muted); padding: 18px 2px; }
+
+/* Pinned below the results. Placed after the last row it would be unreachable exactly when
+   it is wanted — the list is long and paged, and "it is not here" is a conclusion reached
+   while still scrolling. Same control and same form as before; only the presentation is new. */
+.food-missing__wrap{ position: sticky; bottom: 0; z-index: 2; margin-top: var(--space-sm); }
+.food-missing{
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; padding: 14px 16px;
+  border: 0; border-radius: 12px;
+  background: var(--surface-alt); color: var(--primary);
+  font: inherit; font-size: 14.5px; font-weight: 700; text-align: left; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-.sp-viewall{
-  border:0; background:none; color:var(--primary);
-  font:inherit; font-size:12.5px; font-weight:700; cursor:pointer;
+.food-missing__go{
+  flex: none; width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--primary); color: #fff; font-size: 15px; line-height: 1; font-weight: 700;
 }
 
-.sp-row{
+/* ---- food search: sections and rows ----
+   These were .sp-* and collided with the supplements page, which also owns an .sp-*
+   family and loads AFTER this file. .sp-row, .sp-head and .sp-row__body were defined
+   in both, so the food search silently rendered with supplement spacing: no row
+   dividers, a header that could not right-align "View all", and the wrong padding.
+   Renamed to fs-*, matching the fs-empty / fs-browse / fs-sugg family this panel
+   already used.
+
+   Separation is whitespace, not rules. A divider under every row turned a nine-item
+   list into nine boxes; the eye groups these by the gap and the bold name alone. */
+.fs-sec{
+  display:flex; align-items:center; justify-content:space-between;
+  margin:24px 0 4px; font-size:13.5px; font-weight:600; color:var(--muted);
+  letter-spacing:.01em;
+}
+.fs-sec:first-child{ margin-top:8px; }
+.fs-viewall{
+  border:0; background:none; color:var(--primary);
+  font:inherit; font-size:13px; font-weight:700; cursor:pointer;
+  padding:4px 0; -webkit-tap-highlight-color:transparent;
+}
+
+.fs-row{
   display:flex; align-items:center; gap:12px; width:100%;
-  padding:12px 2px; border:0; border-bottom:1px solid var(--divider, var(--border));
-  background:none; color:var(--text); font:inherit; text-align:left; cursor:pointer;
+  padding:13px 2px; border:0; background:none; color:var(--text);
+  font:inherit; text-align:left; cursor:pointer;
+  border-radius:var(--radius-sm);
+  -webkit-tap-highlight-color:transparent;
+  transition:background-color .15s ease;
 }
-.sp-row:active{ background:var(--surface-alt); }
-.sp-row--action{ border-bottom:0; padding:14px 2px; }
-.sp-row__body{ flex:1; min-width:0; }
-.sp-row__title{
-  display:block; font-size:15px; font-weight:700; line-height:1.3;
+.fs-row:active{ background:var(--surface-alt); }
+.fs-row--action{ padding:15px 2px; }
+.fs-row__body{ flex:1; min-width:0; }
+.fs-row__title{
+  display:block; font-size:16px; font-weight:700; line-height:1.25;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-.sp-row__sub{
-  display:block; font-size:12.5px; color:var(--muted); margin-top:2px;
+.fs-row__sub{
+  display:block; font-size:13.5px; color:var(--muted); margin-top:3px; line-height:1.35;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-.sp-row__meta{ font-size:12.5px; color:var(--muted); }
-.sp-row__cal{
-  flex-shrink:0; font-size:13.5px; color:var(--muted); font-variant-numeric:tabular-nums;
+.fs-row__meta{ font-size:13.5px; color:var(--muted); }
+.fs-row__cal{
+  flex-shrink:0; font-size:14px; color:var(--muted); font-variant-numeric:tabular-nums;
 }
-.sp-star{ color:var(--primary); font-size:12px; }
-.sp-plus{
-  width:30px; height:30px; flex:0 0 30px; border-radius:var(--radius-sm);
+.fs-star{ color:var(--primary); font-size:12px; }
+.fs-plus{
+  width:34px; height:34px; flex:0 0 34px; border-radius:10px;
   display:grid; place-items:center;
   border:1.5px solid var(--primary); color:var(--primary);
-  font-size:17px; font-weight:700; line-height:1;
+  font-size:19px; font-weight:600; line-height:1;
 }
 
 @media (prefers-reduced-motion: reduce){  }
