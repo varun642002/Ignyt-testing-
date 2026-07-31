@@ -5719,8 +5719,13 @@ function ensureElapsedTimerRunning(){
   if(elapsedTimerHandle) return;
   elapsedTimerHandle = setInterval(()=>{
     if(!state.session){ clearInterval(elapsedTimerHandle); elapsedTimerHandle = null; return; }
+    const text = formatDuration(Date.now()-state.session.startedAt);
+    // Two readouts, one clock: the logger's own stat and the capsule on every other tab.
+    // Whichever is on screen gets updated; neither re-renders, so this stays a text write.
     const el = document.getElementById("session-elapsed");
-    if(el) el.textContent = formatDuration(Date.now()-state.session.startedAt);
+    if(el) el.textContent = text;
+    const pill = document.getElementById("lsb-elapsed");
+    if(pill) pill.textContent = text;
   }, 1000);
 }
 
@@ -9340,6 +9345,7 @@ function renderApp(){
     ${renderToast()}
     ${renderConfirmDialog()}
     ${renderLegalViewer()}
+    ${renderLiveSessionBar()}
     <nav class="bottom-nav ${isLightTab?'bottom-nav--home-light':''}">
       ${navBtn("home","Home")}
       ${navBtn("workout","Workout")}
@@ -17010,6 +17016,49 @@ function stableCompare(a, b){
 let _coachLibCache = null;
 
 /** Turns a coach session into a live workout the existing logger understands. */
+/* ---- live session capsule ----
+   A workout that is running is the only thing in this app that keeps changing while the user
+   is looking at something else, and until now leaving the Workout tab hid it completely: the
+   clock kept counting with nothing on screen to say so. That is how a session gets left open
+   for hours — the app knew, and never mentioned it.
+
+   Pinned above the bottom nav on every tab EXCEPT Workout, where the full logger is already
+   on screen and a second copy of the same clock would just be noise.
+
+   The exercise shown is the first one with an unfinished set, which is where the user left
+   off, falling back to the last one added. */
+function liveSessionExerciseLabel(session){
+  const list = (session.exercises || []).filter(e => e && e.name);
+  if(!list.length) return "No exercises yet";
+  const pending = list.find(e => (e.sets || []).some(x => x && !x.done));
+  return (pending || list[list.length - 1]).name;
+}
+
+function renderLiveSessionBar(){
+  const s = state.session;
+  if(!s) return "";
+  if(state.tab === "workout") return "";      // the logger itself is on screen
+  if(state.showExercisePicker) return "";     // full-screen picker, launched from the logger
+
+  return `
+    <div class="lsb" role="status" aria-label="Workout in progress">
+      <button class="lsb__btn lsb__btn--open" data-action="resume-session" aria-label="Return to workout">
+        <span aria-hidden="true">^</span>
+      </button>
+      <button class="lsb__body" data-action="resume-session">
+        <span class="lsb__top">
+          <span class="lsb__dot" aria-hidden="true"></span>
+          <span class="lsb__label">Workout</span>
+          <span class="lsb__time mono" id="lsb-elapsed">${formatDuration(Date.now() - s.startedAt)}</span>
+        </span>
+        <span class="lsb__ex">${escHtml(liveSessionExerciseLabel(s))}</span>
+      </button>
+      <button class="lsb__btn lsb__btn--discard" data-action="discard-session" aria-label="Discard workout">
+        ${svg('trash', 18)}
+      </button>
+    </div>`;
+}
+
 function renderWorkoutTab(){
   if(state.session && state.showExercisePicker) return renderExercisePicker();
   if(state.routineBuilder && state.showExercisePicker && isRoutinePickerContext()) return renderExercisePicker();
@@ -18556,6 +18605,40 @@ function attachHandlers(){
   // Two buttons can render "Finish Workout" (the header one, and the new sticky bottom bar's) --
   // both share this exact one handler/one guard, so "single save coordinator" still holds no
   // matter which one was tapped.
+  /* Capsule: tapping anywhere but the bin returns to the logger. */
+  document.querySelectorAll('[data-action="resume-session"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.tab = "workout";
+      state.viewingSessionId = null;
+      state.workoutCompleteId = null;
+      render();
+    });
+  });
+
+  /* Discarding throws away real logged sets, so it confirms first and says how many.
+     This is the only route to discarding a session that HAS work in it — finish-session
+     only offers discard when nothing is ticked — so the wording has to be unambiguous.
+     render() ends in persist(), so clearing the session here also clears it from storage. */
+  const discardBtn = document.querySelector('[data-action="discard-session"]');
+  if(discardBtn) discardBtn.addEventListener("click", async ()=>{
+    if(!state.session) return;
+    const done = computeCompletedSets(state.session.exercises);
+    const ok = await confirmDialog(
+      done > 0
+        ? `Discard this workout? ${done} completed set${done===1?'':'s'} will be lost and nothing will be saved.`
+        : "Discard this workout? Nothing will be saved.",
+      render,
+      { title:"Discard Workout", confirmLabel:"Discard", cancelLabel:"Keep Going", danger:true }
+    );
+    if(!ok || !state.session) return;
+    state.session = null;
+    state.editingSessionId = null;
+    state.workoutCompleteId = null;
+    applyWakeLock();   // releases the lock and cancels the left-running reminder
+    showToast("Workout discarded.", "info", render);
+    render();
+  });
+
   const finishBtns = document.querySelectorAll('[data-action="finish-session"]');
   finishBtns.forEach(finishBtn=> finishBtn.addEventListener("click", async ()=>{
     if(_finishingSession) return; // double-tap guard: one workout, one save
