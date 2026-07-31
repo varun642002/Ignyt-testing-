@@ -7579,54 +7579,7 @@ function renderFoodDetail(food, meal){
     </div>`;
 }
 
-function renderFoodSearchPanel(meal){
-  if(!window.IgnytFoodSearch || !window.IgnytFoodDB) return "";
-  const q = state.foodSearchQuery || "";
-  const sel = state.foodSearchSelected;
-  const cat = window.IgnytFoodCatalogue;
-  const browsing = state.foodBrowseCategory;
 
-  // The lazy-load trigger. This panel is the only thing that needs the 3.2 MB catalogue, and
-  // it only renders when a user expands a meal — so the fetch starts here rather than at
-  // boot, and re-renders once when it lands. onReady() is idempotent, so calling it on every
-  // render is safe; until it resolves the panel searches the 273 seed foods, which is
-  // exactly the behaviour that shipped before the catalogue existed.
-  if(cat && cat.status() === "idle") cat.onReady(()=>render());
-
-  const total = cat ? cat.count() : IgnytFoodDB.count();
-  const browseCount = (browsing && cat) ? cat.byCategory(browsing).length : 0;
-
-  return `
-    <div style="margin-bottom:10px;">
-      ${browsing ? `<div class="row-between" style="margin-bottom:6px;">
-        <button class="cat-chip" data-food-browse-back="1" style="margin:0;">← All categories</button>
-        <span class="mono" style="font-size:11px;color:var(--muted);">${foodCategoryIcon(browsing)} ${escHtml(browsing)} · ${browseCount}</span>
-      </div>` : ""}
-
-      <input type="text" id="food-search-input"
-        placeholder="${browsing?`Search in ${escHtml(browsing)}…`:`Search ${total.toLocaleString()} foods…`}" value="${escHtml(q)}"
-        style="width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:13px;color:var(--text);margin-bottom:6px;">
-
-      <!-- Everything that depends on the query lives inside this container so it can be
-           swapped on its own. The <input> above is deliberately OUTSIDE it: see
-           updateFoodSearchResults(). -->
-      <div id="food-search-results">${foodSearchResultsHtml(meal)}</div>
-    </div>`;
-}
-
-/**
- * The query-dependent half of the food panel: loading note, selected-food detail, recent
- * searches, category grid and results.
- *
- * Split out from renderFoodSearchPanel so typing can refresh THIS ONLY. The previous version
- * called the app-wide render() on every keystroke, which destroyed and recreated the focused
- * <input>. On Android that takes the soft keyboard down and brings it back up, and the
- * viewport resizing twice per keystroke is the "jumping" — plus the caret had to be restored
- * by hand, and the whole page (8,000-food catalogue and all) was rebuilt to update a list.
- *
- * This mirrors exercisePickerResultsHtml()/updateExercisePickerResults(), which solved the
- * same problem for the exercise picker.
- */
 /* =========================================================
    SAVED MEALS ("My Meals") + repeat-logging helpers
 
@@ -7813,6 +7766,20 @@ function quickFoodRow(food, sub, action){
   </button>`;
 }
 
+/**
+ * The query-dependent half of the food search screen: loading skeleton, recent searches,
+ * the idle quick-add lists, the category grid and the results.
+ *
+ * Split out from the screen's own render so typing can refresh THIS ONLY. Before that the
+ * app-wide render() ran on every keystroke, which destroyed and recreated the focused
+ * <input>. On Android that takes the soft keyboard down and brings it back up, and the
+ * viewport resizing twice per keystroke is the "jumping" — plus the caret had to be restored
+ * by hand, and the whole page (8,000-food catalogue and all) was rebuilt to update a list.
+ * See updateFoodSearchResults(), which swaps only this container.
+ *
+ * This mirrors exercisePickerResultsHtml()/updateExercisePickerResults(), which solved the
+ * same problem for the exercise picker.
+ */
 function foodSearchResultsHtml(meal){
   if(!window.IgnytFoodSearch || !window.IgnytFoodDB) return "";
   const q = state.foodSearchQuery || "";
