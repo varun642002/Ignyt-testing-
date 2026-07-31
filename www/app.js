@@ -4623,6 +4623,10 @@ const state = {
     sounds:true, vibration:true, defaultRest:0, keepAwake:false,
     plateCalc:true, rpeTracking:true, autoStartRest:true, waterTargetMl:2500,
     workoutReminders:false, hydrationReminders:false, weeklyReports:false,
+    /* On by default, unlike the other reminders: this one only ever fires when a
+       workout really is sitting open, so it cannot become noise for someone who is
+       not using the logger. */
+    workoutLeftReminder:true, workoutLeftAfterMin:15,
     lastWorkoutReminderDate:null, lastHydrationReminderDate:null, lastWeeklyReportAt:null,
     theme:"dark", weightUnit:"kg", exerciseCalorieBudget:true, notificationsSeenAt:0,
     heightUnit:"cm", dateFormat:"DD MMM YYYY", timeFormat:"12h"
@@ -5885,8 +5889,18 @@ async function applyWakeLock(){
       wakeLockHandle = null;
     }
   }catch{ wakeLockHandle = null; }
+
+  /* Riding this deliberately, not by accident. applyWakeLock() is already the app's de-facto
+     "a session started or ended" hook — it is called at every one of those points and
+     nowhere else that matters — and the left-running reminder needs to re-evaluate at
+     exactly the same moments. syncWorkoutLeftNotification() cancels before it decides, so
+     calling it more often than strictly necessary is free and calling it too rarely is not. */
+  if(typeof syncWorkoutLeftNotification === "function") syncWorkoutLeftNotification();
 }
 document.addEventListener("visibilitychange", ()=>{
+  // Runs in BOTH directions: leaving arms the "still running" reminder, returning cancels it.
+  // syncWorkoutLeftNotification() reads visibilityState itself and decides which.
+  if(typeof syncWorkoutLeftNotification === "function") syncWorkoutLeftNotification();
   if(document.visibilityState!=="visible") return;
   applyWakeLock();
   syncTimerAfterResume(); // rest timer catches up from its endsAt timestamp after background
@@ -8798,6 +8812,7 @@ function renderSettingsTab(){
         ${settingToggle("workoutReminders","Workout Reminders","Nudge you in the evening.","calendar")}
         ${settingToggle("hydrationReminders","Hydration Reminders","Nudge you mid-afternoon.","droplet")}
         ${settingToggle("weeklyReports","Weekly Reports","Summary of your training week.","progress")}
+        ${settingToggle("workoutLeftReminder","Workout Left Running",`Remind you ${Math.max(1, Number(state.settings.workoutLeftAfterMin)||15)} min after you leave a workout unfinished.`,"timer")}
         <button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:12px;" data-action="test-notification">Send Test Notification</button>
         ${nativeNotify() ? (state.nativeNotifPermissionGranted===false ? `<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Notifications are blocked — enable them for IGNYT in Android Settings.</div>` : '')
           : (typeof Notification!=='undefined' && Notification.permission==='denied' ? `<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Notifications are blocked for this site in your browser settings.</div>` : '')}
@@ -9264,7 +9279,11 @@ async function refreshNativeNotifPermission(){
 async function syncNativeReminder(key){
   const plugin = nativeNotify();
   if(!plugin) return;
+  /* Not every notification toggle is a fixed daily reminder. workoutLeftReminder is a
+     one-shot armed from the session's own lifecycle, so it has no REMINDER_DEFS entry and
+     owns its own scheduling — without this guard the lookup below dereferences undefined. */
   const def = REMINDER_DEFS[key];
+  if(!def) return;
   try{
     if(state.settings[key]) await plugin.scheduleDaily(def);
     else await plugin.cancel({ id: def.id });
@@ -15271,6 +15290,47 @@ function openFasting(){
    the fast ends — a "time to break your fast" notification arriving after the user already ate
    is worse than no notification. Silently does nothing off-native, where there is no such thing
    as a background alarm. */
+/* ---- "you left a workout running" ----
+   A workout stays open until it is finished; it survives backgrounding, app death and a
+   reboot, because state.session is persisted. That is the right behaviour and it is also
+   how a session gets left running overnight and saved with a nine-hour duration.
+
+   Scheduled when the app goes to the background with a session open, cancelled the moment
+   the user comes back or finishes. The delay matters: firing the instant the app is
+   backgrounded would fire during every workout, since people switch to music, take a call
+   or lock the phone between sets. This is meant to catch a FORGOTTEN workout, so it waits
+   — fifteen minutes by default — and re-arms each time the app is left again.
+
+   The one-shot goes through AlarmManager, so it still arrives if Android kills the app in
+   the meantime. That is precisely the case worth catching. */
+const WORKOUT_LEFT_ID = "workout-left";
+
+async function syncWorkoutLeftNotification(){
+  const plugin = nativeNotify();
+  if(!plugin) return;
+  try{
+    // Any state change cancels first, so there is never more than one of these armed and a
+    // stale one cannot outlive the session it was about.
+    await plugin.cancel({ id: WORKOUT_LEFT_ID });
+
+    if(!state.session) return;
+    if(!state.settings.workoutLeftReminder) return;
+    if(document.visibilityState === "visible") return;   // they are looking at it
+
+    const mins = Math.max(1, Number(state.settings.workoutLeftAfterMin) || 15);
+    const title = (state.session.title || "").trim();
+    await plugin.scheduleAt({
+      id: WORKOUT_LEFT_ID,
+      at: Date.now() + mins * 60000,
+      title: "Workout still running",
+      body: title
+        ? `"${title}" is still in progress. Finish it so the duration stays accurate.`
+        : "You have a workout in progress. Finish it so the duration stays accurate.",
+      route: "workout"
+    });
+  }catch(e){ console.warn("[workout] could not schedule the left-running reminder:", e); }
+}
+
 async function syncFastNotifications(fast){
   const plugin = nativeNotify();
   if(!plugin) return;
@@ -17845,7 +17905,8 @@ function attachHandlers(){
       const key = el.dataset.settingToggle;
       state.settings[key] = !state.settings[key];
       if(key==="keepAwake") applyWakeLock();
-      const NOTIFICATION_KEYS = ["workoutReminders","hydrationReminders","weeklyReports"];
+      if(key==="workoutLeftReminder") syncWorkoutLeftNotification();
+      const NOTIFICATION_KEYS = ["workoutReminders","hydrationReminders","weeklyReports","workoutLeftReminder"];
       if(NOTIFICATION_KEYS.includes(key)){
         const plugin = nativeNotify();
         if(plugin){

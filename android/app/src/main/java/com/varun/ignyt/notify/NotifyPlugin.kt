@@ -129,7 +129,11 @@ class NotifyPlugin : com.getcapacitor.Plugin() {
         if (at == null || at <= 0) { call.reject("at (epoch millis) is required"); return }
         val title = call.getString("title") ?: "IGNYT"
         val body = call.getString("body") ?: ""
-        ReminderScheduler.armOnce(context, id, at.toLong(), title, body)
+        // armOnce has always accepted a route; this simply stopped dropping it. Without it a
+        // one-shot opens the app wherever it was last, which for "your workout is still
+        // running" is the one place the tap should never land.
+        val route = call.getString("route") ?: ""
+        ReminderScheduler.armOnce(context, id, at.toLong(), title, body, route)
         call.resolve(JSObject().apply { put("scheduled", true) })
     }
 
