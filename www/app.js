@@ -5277,7 +5277,7 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","calendar"].includes(state.progressView)))
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="insights" || state.tab==="health" || state.tab==="coach" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","calendar"].includes(state.progressView)))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || state.bodyView==="calculators" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
@@ -5332,6 +5332,7 @@ function renderApp(){
   if(state.tab==="bloodwork") main.innerHTML = window.IgnytBloodwork ? window.IgnytBloodwork.render() : "";
   if(state.tab==="goals") main.innerHTML = window.IgnytGoals ? window.IgnytGoals.render() : "";
   if(state.tab==="uploads") main.innerHTML = window.IgnytHealthUploads ? window.IgnytHealthUploads.render() : "";
+  if(state.tab==="coach") main.innerHTML = window.IgnytCoachPage ? window.IgnytCoachPage.render() : "";
   attachHandlers();
   persist();
 }
@@ -5367,6 +5368,9 @@ function renderToolsTab(){
       {id:"goals", label:"Goals", desc:"Smart goal engine & targets", icon:"target"},
       {id:"body", label:"Log Weight", desc:"Weight, trend & history", icon:"body"}
     ]],
+    ["Coaching", [
+      {id:"coach", label:"My Coach", desc: coachLinked ? "Plans, check-ins & messages" : "Connect with a code", icon:"link"}
+    ]],
     ["Health", [
       // Health Hub ({id:"healthhub"}) intentionally disconnected for this release (not
       // deleted -- renderApp()'s state.tab==="healthhub" route and www/js/health/* are still
@@ -5385,6 +5389,11 @@ function renderToolsTab(){
   ];
   let hcConnected = false;
   try { hcConnected = !!(window.HealthConnectIntegration && window.HealthConnectIntegration.loadState().connected); } catch(e) {}
+  // Coach state read defensively: the Tools grid must render even if the sync module failed
+  // to load, and a thrown getter here would take the whole tab down with it.
+  let coachLinked = false, coachPending = 0;
+  try { coachLinked = !!(window.IgnytTrainerSync && window.IgnytTrainerSync.isLinked()); } catch(e) {}
+  try { coachPending = (window.IgnytCoachPage && window.IgnytCoachPage.pendingCount()) || 0; } catch(e) {}
   const streak = computeStreak();
 
   return `
@@ -5405,12 +5414,21 @@ function renderToolsTab(){
         <div class="tl-grid">
           ${cards.map(c=>{
             const isHealthConnected = c.id==="health" && hcConnected;
-            return `<button class="tl-card ${isHealthConnected?'is-connected':''}" data-nav="${c.id}">
+            const isCoachConnected = c.id==="coach" && coachLinked;
+            // A waiting check-in is the one thing here worth chasing the user about, so it
+            // takes the badge slot when there is one; otherwise the card just says connected.
+            const coachBadge = isCoachConnected
+              ? (coachPending
+                  ? `<span class="tl-card__badge">${svg('bell',11)} ${coachPending} check-in${coachPending===1?'':'s'} due</span>`
+                  : `<span class="tl-card__badge">${svg('check',11)} Connected</span>`)
+              : '';
+            return `<button class="tl-card ${isHealthConnected||isCoachConnected?'is-connected':''}" data-nav="${c.id}">
               <span class="tl-card__icon">${svg(c.icon,22)}</span>
               <div class="tl-card__body">
                 <div class="tl-card__label">${c.label}</div>
                 <div class="tl-card__desc">${c.desc}</div>
                 ${isHealthConnected?`<span class="tl-card__badge">${svg('check',11)} Connected</span>`:''}
+                ${coachBadge}
               </div>
               <span class="tl-card__chev">›</span>
             </button>`;
@@ -10260,6 +10278,7 @@ function attachHandlers(){
   if(window.IgnytBloodwork) window.IgnytBloodwork.attach(); // self-guarded, binds once
   if(window.IgnytGoals) window.IgnytGoals.attach();
   if(window.IgnytHealthUploads) window.IgnytHealthUploads.attach();
+  if(window.IgnytCoachPage) window.IgnytCoachPage.attach();
   if(window.IgnytHealthDashboard) window.IgnytHealthDashboard.attach();
   if(window.IgnytCoach) window.IgnytCoach.attach();
   document.querySelectorAll("[data-nav]").forEach(el=>{
