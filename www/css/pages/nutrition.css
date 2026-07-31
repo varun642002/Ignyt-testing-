@@ -489,7 +489,7 @@
   background: var(--surface);
   /* Outlined rather than a filled panel. This is the first control on the screen and the
      one every visit starts with, so it should read as a field to type in. */
-  border: 1.5px solid var(--primary);
+  border: 1.5px solid var(--accent);
   border-radius: var(--radius-pill);
   padding: 4px 6px 4px 14px;
   margin-bottom: var(--space-sm);
@@ -1055,21 +1055,40 @@ main{ -webkit-overflow-scrolling: touch; }
 .nd-short__chev{ position:absolute; right:9px; top:14px; color:var(--muted); font-size:15px; }
 
 /* Meal cards */
-.nd-meal{
-  border:1px solid var(--border); border-radius:var(--radius-card);
-  background:var(--surface); margin-bottom:10px; overflow:hidden;
+/* ---- meal list ----
+   The wrapper carries no surface of its own. It used to be a bordered card holding both the
+   heading and the contents, which made a five-meal day read as five boxes stacked down the
+   screen. The heading now sits on the page and only the contents are a card, so there is one
+   surface per meal and the rhythm comes from the gap between them. */
+.nd-meal{ margin-bottom:22px; }
+.nd-meal__head{
+  display:flex; align-items:center; gap:12px; padding:0 2px 10px;
 }
-.nd-meal__head{ display:flex; align-items:center; gap:9px; padding:13px 14px; }
-.nd-meal__icon{ font-size:16px; line-height:1; }
-.nd-meal__name{ flex:1; font-size:14.5px; font-weight:800; }
-.nd-meal__kcal{ font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums; }
-.nd-meal__kcal strong{ color:var(--primary); font-size:14px; font-weight:900; }
+.nd-meal__name{
+  flex:1; font-size:19px; font-weight:800; letter-spacing:-.01em; line-height:1.2;
+}
+.nd-meal__kcal{ font-size:14px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.nd-meal__kcal strong{ color:var(--muted); font-weight:400; }
+/* Filled, not outlined. It is the primary action on every one of these rows and the only
+   control in the heading, so it should not have to compete with the calorie figure to be
+   found. */
 .nd-meal__add{
   width:32px; height:32px; flex:0 0 32px; border-radius:50%;
-  border:1.5px solid var(--primary); background:transparent;
-  color:var(--primary); font-size:18px; font-weight:700; line-height:1; cursor:pointer;
+  /* --accent, not --primary. This adds food, and calories are already the accent's job
+     everywhere else on this screen; --primary is the app's generic interactive blue. The
+     two + buttons in the food area (here and in the search list) now agree. */
+  border:0; background:var(--accent);
+  color:#fff; font-size:20px; font-weight:600; line-height:1; cursor:pointer;
+  display:grid; place-items:center;
+  -webkit-tap-highlight-color:transparent;
 }
-.nd-meal__add:active{ background:var(--primary-soft); }
+.nd-meal__add:active{ transform:scale(.92); }
+
+/* The one surface per meal. */
+.nd-meal__body{
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-card); overflow:hidden;
+}
 
 .nd-food{
   display:flex; align-items:center; gap:11px;
@@ -1084,19 +1103,17 @@ main{ -webkit-overflow-scrolling: touch; }
 .m-p{ color:var(--mint); } .m-c{ color:var(--primary); } .m-f{ color:#F59E0B; }
 .nd-food__kcal{ flex-shrink:0; font-size:13.5px; font-weight:800; font-variant-numeric:tabular-nums; }
 
+/* Empty meal: the invitation only. It was a dashed button carrying a plus, a title ("Add a
+   breakfast") and the line below it — three pieces of furniture to say one thing, on a screen
+   that shows up to five of them at once. The whole card is still the tap target; the heading
+   already has a + and the copy already says what to do. */
 .nd-meal__empty{
-  display:flex; align-items:center; gap:12px; width:100%;
-  margin:0 14px 14px; padding:12px; width:calc(100% - 28px);
-  border:1.5px dashed var(--border); border-radius:var(--radius-btn);
-  background:none; color:var(--text); font:inherit; text-align:left; cursor:pointer;
+  display:block; width:100%; padding:26px 18px;
+  border:0; background:none; cursor:pointer;
+  color:var(--muted); font:inherit; font-size:14px; line-height:1.5; text-align:center;
+  -webkit-tap-highlight-color:transparent;
 }
-.nd-meal__emptyplus{
-  width:34px; height:34px; flex:0 0 34px; border-radius:50%;
-  display:grid; place-items:center;
-  background:var(--primary-soft); color:var(--primary); font-size:18px; font-weight:700;
-}
-.nd-meal__emptytitle{ display:block; font-size:13px; font-weight:700; }
-.nd-meal__emptysub{ display:block; font-size:11.5px; color:var(--muted); margin-top:1px; }
+.nd-meal__empty:active{ background:var(--surface-alt); }
 
 /* Snap FAB. Sits above the bottom nav, and hides with the keyboard like the nav does. */
 body.kb-open 
@@ -1326,7 +1343,7 @@ body.kb-open
 .fs-plus{
   width:34px; height:34px; flex:0 0 34px; border-radius:10px;
   display:grid; place-items:center;
-  border:1.5px solid var(--primary); color:var(--primary);
+  border:1.5px solid var(--accent); color:var(--accent);
   font-size:19px; font-weight:600; line-height:1;
 }
 

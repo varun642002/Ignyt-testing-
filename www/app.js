@@ -15042,20 +15042,6 @@ function mealCalorieTarget(meal, dayBudget){
   return Math.round(dayBudget * share);
 }
 
-/* The icon each meal carries in the list. Time-of-day rather than food, matching the
-   reference: a sun for the daytime meals, a moon for the evening ones. */
-function mealIcon(meal){
-  const m = String(meal||"").toLowerCase();
-  if(m.includes("breakfast")) return "☀️";
-  if(m.includes("morning")) return "☕";
-  if(m.includes("lunch")) return "🌤️";
-  // Order matters: "Bedtime Snack" must be caught before the generic fallback, and it gets a
-  // distinct icon from Dinner so two adjacent rows are not both a moon.
-  if(m.includes("bed") || m.includes("night")) return "🌜";
-  if(m.includes("evening") || m.includes("afternoon")) return "🌇";
-  if(m.includes("dinner")) return "🌙";
-  return "🍽️";
-}
 
 function mealEmptyCopy(meal){
   const m = String(meal||"").toLowerCase();
@@ -15766,13 +15752,18 @@ function renderNutritionTab(){
       const foods = dayEntries.filter(f=>(f.meal||"Lunch")===meal);
       const kcal = Math.round(foods.reduce((a,f)=>a+Number(f.calories||0),0));
       const target = mealCalorieTarget(meal, calorieBudget);
+      /* The heading sits on the page, not inside a card. A card that wraps both the title and
+         the contents makes five meals read as five boxes; lifting the title out leaves one
+         surface per meal — the food itself — and the page gets its rhythm from the gaps.
+         The meal emoji went with it: the name is the label, and a glyph beside every heading
+         is decoration competing with the one thing on the row that is actually read. */
       return `<div class="nd-meal">
         <div class="nd-meal__head">
-          <span class="nd-meal__icon" aria-hidden="true">${mealIcon(meal)}</span>
           <span class="nd-meal__name">${escHtml(mealLabel(meal))}</span>
           <span class="nd-meal__kcal"><strong>${kcal}</strong> of ${target} Cal</span>
           <button class="nd-meal__add" data-meal-add="${escHtml(meal)}" aria-label="Add food to ${escHtml(meal)}">+</button>
         </div>
+        <div class="nd-meal__body">
         ${foods.length ? foods.map(f=>`
           <div class="nd-food" data-entry-open="${escHtml(String(f.id))}">
             ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(f, 44) : ""}
@@ -15788,12 +15779,9 @@ function renderNutritionTab(){
             <span class="nd-food__kcal">${Math.round(f.calories||0)}<span class="nut-unit"> kcal</span></span>
           </div>`).join("")
         : `<button class="nd-meal__empty" data-meal-add="${escHtml(meal)}">
-             <span class="nd-meal__emptyplus">+</span>
-             <span>
-               <span class="nd-meal__emptytitle">Add ${/^[aeiou]/i.test(meal)?'an':'a'} ${escHtml(meal.toLowerCase())}</span>
-               <span class="nd-meal__emptysub">${escHtml(mealEmptyCopy(meal))}</span>
-             </span>
+             ${escHtml(mealEmptyCopy(meal))}
            </button>`}
+        </div>
       </div>`;
     }).join("")}
 
