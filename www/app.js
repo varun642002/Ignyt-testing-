@@ -15326,6 +15326,33 @@ function renderNutritionInsightsPage(){
   const sc = nutritionScore(T, targets, tab === "All Meals" ? waterMl : null,
                                         tab === "All Meals" ? waterTarget : null);
 
+  /* Computed here because the water tracker, the insight cards, the energy-balance card and
+     the macro-budget form moved onto this page from the Food Log dashboard. They were below
+     the meal list there, on a page that had grown to four screens; everything on this page
+     is the same kind of thing — the day read back to you — so this is where they belong.
+     Day-level, so they are shown under "All Meals" only, like hydration already is. */
+  const dayEntries = allEntries;
+  const cov = agg.coverage || {};
+  const insights = (typeof nutritionInsights === "function"
+    ? nutritionInsights(T, cov, targets, waterMl, waterTarget) : [])
+    .concat(typeof mealInsights === "function" ? mealInsights(dayEntries) : []);
+
+  const burned = todayBurned();
+  const eatenToday = todayEaten();
+  const netDeficit = burned - eatenToday;
+  const activityKcal = Math.round(todayActivityKcal());
+  const useExerciseBudget = !!state.settings.exerciseCalorieBudget;
+  let hcConnected = false;
+  try { hcConnected = !!JSON.parse(localStorage.getItem("hx_hc_state") || "{}").connected; } catch (e) {}
+  const hcData = window.HealthConnectIntegration ? window.HealthConnectIntegration.getSyncData() : null;
+  let cachedHcData = null;
+  try { cachedHcData = JSON.parse(localStorage.getItem("hx_hc_dashboard_cache") || "null"); } catch (e) {}
+  const activeCalories = (hcData || cachedHcData)?.activeCalories?.kcal;
+
+  const n = state.nutrition;
+  const macroPctTotal = (n.proteinPct||0)+(n.carbPct||0)+(n.fatPct||0);
+  const weeklyLoss = (Math.abs(state.profile.goalDelta)*7)/7700;
+
   const bar = (v, t, tone) => {
     const p = t > 0 ? Math.min(100, Math.round((v/t)*100)) : 0;
     return `<div class="ni-bar ni-bar--${tone}"><i style="width:${p}%"></i></div>`;
@@ -15523,6 +15550,50 @@ function renderNutritionInsightsPage(){
         ${wkTargetNote}
       </div>
 
+    <!-- Insights -->
+    ${insights.length ? `
+    <div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
+      <div style="font-size:13px;font-weight:800;margin-bottom:8px;">Nutrition Insights</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:6px;">
+        ${insights.map(i=>`<div style="background:${INSIGHT_TONES[i.tone].bg};border-radius:var(--radius-xs-plus);padding:8px 10px;">
+          <div style="font-size:11px;font-weight:800;color:${INSIGHT_TONES[i.tone].fg};">${escHtml(i.title)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35;">${escHtml(i.body)}</div>
+        </div>`).join("")}
+      </div>
+    </div>` : ""}
+
+    <!-- Energy balance (kept from the previous dashboard) -->
+    <div class="info-box" style="text-align:center;padding:12px;margin-bottom:8px;background:${netDeficit>=0?'rgba(62,207,142,.08)':'rgba(255,90,31,.08)'};">
+      <div class="stat-label">${netDeficit>=0?'Deficit Created':'Surplus (over target)'}</div>
+      <div class="mono" style="font-weight:900;font-size:22px;color:${netDeficit>=0?'var(--mint)':'var(--accent)'};margin-top:2px;">${netDeficit>=0?'':'+'}${Math.abs(netDeficit)}<span style="font-size:12px;font-weight:700;color:var(--muted);margin-left:4px;">kcal</span></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Burned = ${profileMaintenance()} maintenance + ~${activityKcal} workout est.${!isToday?" (today's figures)":""}</div>
+      ${useExerciseBudget ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">${activeCalories == null ? `Health Connect active calories: ${hcConnected ? 'No data' : 'Permission required'}` : `Budget includes ${Math.round(activeCalories)} kcal from Health Connect.`}</div>` : ''}
+    </div>
+
+    <div class="eyebrow-label">Calorie & Macro Budget</div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:8px;font-size:12px;color:var(--muted);">
+      Your calorie target updates automatically from your weight, stats, and goal (set in the <b style="color:var(--steel);">Body</b> tab). Maintenance right now: <b class="mono" style="color:var(--text);">${profileMaintenance()} kcal</b>.
+    </div>
+    <div class="field"><label>Protein %</label><div><input type="number" id="n-proteinpct" value="${n.proteinPct}"><span class="unit">%</span></div></div>
+    <div class="field"><label>Carb %</label><div><input type="number" id="n-carbpct" value="${n.carbPct}"><span class="unit">%</span></div></div>
+    <div class="field"><label>Fat %</label><div><input type="number" id="n-fatpct" value="${n.fatPct}"><span class="unit">%</span></div></div>
+    <div class="field"><label>Fibre target</label><div><input type="number" id="n-fibre" value="${n.fibreTarget}"><span class="unit">g</span></div></div>
+    <div class="info-box" style="padding:10px 14px;margin-bottom:8px;${macroPctTotal!==100?'background:rgba(255,90,31,.1);':''}">
+      <div class="row-between"><span style="font-size:13px;font-weight:700;">Macro Total</span>
+      <span class="mono" style="font-weight:900;color:${macroPctTotal===100?'var(--mint)':'var(--accent)'};">${macroPctTotal}%</span></div>
+      ${macroPctTotal!==100?`<div style="font-size:11px;color:var(--accent);margin-top:2px;">Should add up to 100%</div>`:""}
+    </div>
+
+    <div class="grid2">
+      <div class="stat-card"><div class="stat-label">Calorie Target</div><div class="stat-value" style="color:var(--accent);">${targets.kcal}<span class="stat-unit">kcal</span></div></div>
+      <div class="stat-card"><div class="stat-label">Weekly Loss (est.)</div><div class="stat-value" style="color:var(--mint);">${displayW(weeklyLoss,2)}<span class="stat-unit">${wUnit()}</span></div></div>
+      <div class="stat-card"><div class="stat-label">Protein Target</div><div class="stat-value" style="color:var(--steel);">${Math.round(targets.protein)}<span class="stat-unit">g</span></div></div>
+      <div class="stat-card"><div class="stat-label">Carb Target</div><div class="stat-value" style="color:var(--steel);">${Math.round(targets.carbs)}<span class="stat-unit">g</span></div></div>
+      <div class="stat-card"><div class="stat-label">Fat Target</div><div class="stat-value" style="color:var(--steel);">${Math.round(targets.fat)}<span class="stat-unit">g</span></div></div>
+      <div class="stat-card"><div class="stat-label">Fibre Target</div><div class="stat-value" style="color:var(--mint);">${targets.fibre}<span class="stat-unit">g</span></div></div>
+    </div>
+    <div class="info-box" style="margin-top:14px;">Recalculate maintenance every 2–3 weeks against your actual weight trend. Don't drop below ~1800–2000 kcal given training volume — recovery beats speed here.</div>
+
       <!-- SUMMARY -->
       <div class="ni-card">
         <div class="ni-card__title">Insights Summary</div>
@@ -15621,9 +15692,7 @@ function renderNutritionTab(){
 
   const n = state.nutrition;
   const targets = macroTargets();
-  const weeklyLoss = (Math.abs(state.profile.goalDelta)*7)/7700;
 
-  const eaten = todayEaten();
   const hcData = window.HealthConnectIntegration ? window.HealthConnectIntegration.getSyncData() : null;
   let cachedHcData = null;
   try { cachedHcData = JSON.parse(localStorage.getItem("hx_hc_dashboard_cache") || "null"); } catch (e) {}
@@ -15632,12 +15701,6 @@ function renderNutritionTab(){
   try { hcConnected = !!JSON.parse(localStorage.getItem("hx_hc_state") || "{}").connected; } catch (e) {}
   const useExerciseBudget = !!state.settings.exerciseCalorieBudget;
   const calorieBudget = targets.kcal + (useExerciseBudget && activeCalories != null ? Math.round(activeCalories) : 0);
-  const remainingCalories = calorieBudget - Math.round(eaten);
-  const burned = todayBurned();
-  const netDeficit = burned - eaten;
-  const activityKcal = Math.round(todayActivityKcal());
-  const macros = todayMacros();
-  const macroPctTotal = (n.proteinPct||0)+(n.carbPct||0)+(n.fatPct||0);
 
   /* ---- Dashboard data, all derived from the selected day ---- */
   const ds = nutritionDateStr();
@@ -15656,27 +15719,11 @@ function renderNutritionTab(){
   // carries more than twice the calories of 1 g of protein, so plotting grams would draw a
   // chart that disagrees with the calorie total sitting next to it.
   const kcalFromProtein = T.protein*4, kcalFromCarbs = T.carbs*4, kcalFromFat = T.fat*9;
-  const macroKcal = kcalFromProtein + kcalFromCarbs + kcalFromFat;
-  const sharePct = v => macroKcal > 0 ? Math.round((v/macroKcal)*100) : 0;
 
-  const mealRows = mealTypesInUse(dayEntries).map(meal=>{
-    const foods = dayEntries.filter(f=>(f.meal||"Lunch")===meal);
-    return { meal, foods, kcal: Math.round(foods.reduce((a,f)=>a+Number(f.calories||0),0)) };
-  });
-  const mealsWithFood = mealRows.filter(m=>m.kcal>0);
 
   const insights = nutritionInsights(T, cov, targets, waterMl, waterTarget)
     .concat(mealInsights(dayEntries));
-  const glasses = 8;
-  const glassesFilled = waterTarget>0 ? Math.min(glasses, Math.round((waterMl/waterTarget)*glasses)) : 0;
 
-  // Coverage: how many of the day's entries carried micronutrient data at all. Foods logged
-  // by hand and pre-USDA entries have none, and a total that silently ignores them would
-  // read as a complete figure when it is really a floor.
-  const microCoverage = (key)=>{
-    const have = cov[key]||0, total = agg.count;
-    return { have, total, partial: total>0 && have<total };
-  };
 
   const pct = Math.min(100, Math.max(0, kcalPct));
 
@@ -15786,136 +15833,6 @@ function renderNutritionTab(){
     }).join("")}
 
 
-    <!-- Calories hero (Phase 3)
-         Ring on the left, the two numbers people act on to its right. "Remaining" carries
-         the second-largest type on the screen because it is the figure that decides what
-         happens next; the daily goal sits under it as context rather than competing. -->
-    <div class="nut-card">
-      <div style="display:flex;gap:var(--space-md);align-items:center;">
-        ${calorieRingSvg(dayKcal, calorieBudget, kcalFromProtein, kcalFromCarbs, kcalFromFat)}
-        <div style="flex:1;min-width:0;">
-          <div class="nut-label">${dayRemaining>=0?'Remaining':'Over budget'}</div>
-          <div class="nut-value nut-value--lg" style="color:${dayRemaining>=0?'var(--mint)':'var(--accent)'};">
-            ${Math.abs(dayRemaining).toLocaleString()}<span class="nut-unit"> kcal</span>
-          </div>
-          <div class="nut-label" style="margin-top:var(--space-sm);">Daily goal</div>
-          <div class="nut-value nut-value--md">${calorieBudget.toLocaleString()}<span class="nut-unit"> kcal</span></div>
-          <div class="nut-bar nut-bar--${dayKcal>calorieBudget?'over':'energy'}" style="margin-top:var(--space-xs);">
-            <i style="width:${Math.min(100,Math.max(0,kcalPct))}%;"></i>
-          </div>
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-sm);margin-top:var(--space-md);">
-        ${[["Protein","protein",T.protein,targets.protein,kcalFromProtein],
-           ["Carbs","carbs",T.carbs,targets.carbs,kcalFromCarbs],
-           ["Fat","fat",T.fat,targets.fat,kcalFromFat]]
-          .map(([label,key,grams,target,kc])=>`<div>
-            <div class="nut-stat__name" style="color:var(--n-${key});">${label}</div>
-            <div class="nut-value nut-value--sm" style="margin-top:2px;">
-              ${Math.round(grams)}<span class="nut-unit">/${Math.round(target)}g</span>
-            </div>
-            <div class="nut-bar nut-bar--${key}" style="margin-top:5px;">
-              <i style="width:${target>0?Math.min(100,Math.round((grams/target)*100)):0}%;"></i>
-            </div>
-            <div class="nut-stat__pct" style="color:var(--muted);">${sharePct(kc)}% of energy</div>
-          </div>`).join("")}
-      </div>
-      <div class="nut-note" style="margin-top:var(--space-xs);">Ring segments are each macro's share of energy, not grams.</div>
-    </div>
-
-    <!-- Micronutrients -->
-    <div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
-      <div class="row-between" style="margin-bottom:8px;">
-        <span style="font-size:13px;font-weight:800;">Micronutrients</span>
-        <button class="cat-chip" data-action="toggle-micros" style="margin:0;padding:2px 9px;font-size:11px;color:var(--steel);">${state.microExpanded?"Show less":"View all"}</button>
-      </div>
-      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;">
-        ${[["fibre","Fibre","g","🌿"],["sugar","Sugar","g","🍬"],["sodium","Sodium","mg","🧂"],
-           ["potassium","Potassium","mg","🍌"],["calcium","Calcium","mg","🦴"],["iron","Iron","mg","🩸"]]
-          .map(([key,label,unit,icon])=>{
-            const target = MICRO_TARGETS[key];
-            const val = T[key]||0;
-            const pct = target ? Math.round((val/target)*100) : null;
-            const c = microCoverage(key);
-            const color = NUTRIENT_COLORS[key] || "var(--muted)";
-            return `<div style="min-width:76px;flex:1;text-align:center;">
-              <div style="font-size:16px;line-height:1.2;">${icon}</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px;">${label}</div>
-              <div class="mono" style="font-size:12px;font-weight:800;margin-top:1px;">${val>0?Math.round(val).toLocaleString():"—"}${val>0?`<span style="font-size:11px;color:var(--muted);"> ${unit}</span>`:""}</div>
-              <div class="mono" style="font-size:11px;color:${pct!=null?color:'var(--muted)'};margin-top:1px;">${pct!=null?pct+"%":"–"}</div>
-              <div style="height:3px;border-radius:2px;background:var(--surface-alt);margin-top:4px;overflow:hidden;">
-                <div style="height:100%;width:${pct!=null?Math.min(100,Math.max(0,pct)):0}%;background:${color};"></div>
-              </div>
-              ${state.microExpanded&&c.partial?`<div style="font-size:11px;color:var(--muted);margin-top:3px;line-height:1.2;">${c.have}/${c.total} foods</div>`:""}
-            </div>`;
-          }).join("")}
-      </div>
-      ${state.microExpanded?`<div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.4;">
-        Totals count only foods that carry a measured value. Manually entered foods and
-        entries logged before micronutrient tracking contribute nothing, so a figure with a
-        partial count is a floor, not a total. Sugar has no percentage: the reference value
-        covers added sugars while these figures are total sugars.
-      </div>`:""}
-    </div>
-
-    <!-- Water -->
-    <div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
-      <div class="row-between" style="margin-bottom:6px;">
-        <span style="font-size:13px;font-weight:800;">Water Intake</span>
-        <span style="font-size:16px;">💧</span>
-      </div>
-      <div class="mono" style="font-size:22px;font-weight:900;color:${NUTRIENT_COLORS.water};">
-        ${(waterMl/1000).toFixed(1)}<span style="font-size:12px;font-weight:700;color:var(--muted);"> L / ${(waterTarget/1000).toFixed(1)} L</span>
-      </div>
-      <div style="font-size:11px;color:${NUTRIENT_COLORS.water};margin-top:2px;">${waterTarget>0?Math.round((waterMl/waterTarget)*100):0}% of daily goal</div>
-      <div style="display:flex;gap:5px;margin:10px 0;">
-        ${Array.from({length:glasses},(_,i)=>`<span style="flex:1;height:22px;border-radius:0 0 5px 5px;border:1.5px solid ${i<glassesFilled?NUTRIENT_COLORS.water:'var(--border)'};background:${i<glassesFilled?NUTRIENT_COLORS.water:'transparent'};opacity:${i<glassesFilled?1:.5};"></span>`).join("")}
-      </div>
-      <div style="display:flex;gap:6px;">
-        ${[250,500,750].map(ml=>`<button class="cat-chip" data-add-water="${ml}" style="flex:1;text-align:center;justify-content:center;margin:0;">+${ml}ml</button>`).join("")}
-        <button class="cat-chip" data-action="undo-water" style="flex:1;text-align:center;justify-content:center;margin:0;color:var(--muted);">Undo</button>
-      </div>
-    </div>
-
-    <!-- Calories by meal -->
-    ${mealsWithFood.length ? `
-    <div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
-      <div style="font-size:13px;font-weight:800;margin-bottom:8px;">Calories by Meal</div>
-      <div style="display:flex;gap:12px;align-items:center;">
-        ${donutSvg(mealsWithFood.map((m,i)=>({value:m.kcal, color:MEAL_DONUT_COLORS[i%MEAL_DONUT_COLORS.length]})), 88, 12, null, null)}
-        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;">
-          ${mealsWithFood.map((m,i)=>`<div class="row-between">
-            <span style="font-size:11px;display:flex;align-items:center;gap:6px;min-width:0;">
-              <span style="width:8px;height:8px;border-radius:2px;background:${MEAL_DONUT_COLORS[i%MEAL_DONUT_COLORS.length]};flex-shrink:0;"></span>
-              <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(m.meal)}</span>
-            </span>
-            <span class="mono" style="font-size:11px;color:var(--muted);white-space:nowrap;">${dayKcal>0?Math.round((m.kcal/dayKcal)*100):0}% · ${m.kcal}</span>
-          </div>`).join("")}
-        </div>
-      </div>
-    </div>` : ""}
-
-    <!-- Insights -->
-    ${insights.length ? `
-    <div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
-      <div style="font-size:13px;font-weight:800;margin-bottom:8px;">Nutrition Insights</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:6px;">
-        ${insights.map(i=>`<div style="background:${INSIGHT_TONES[i.tone].bg};border-radius:var(--radius-xs-plus);padding:8px 10px;">
-          <div style="font-size:11px;font-weight:800;color:${INSIGHT_TONES[i.tone].fg};">${escHtml(i.title)}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35;">${escHtml(i.body)}</div>
-        </div>`).join("")}
-      </div>
-    </div>` : ""}
-
-    <!-- Energy balance (kept from the previous dashboard) -->
-    <div class="info-box" style="text-align:center;padding:12px;margin-bottom:8px;background:${netDeficit>=0?'rgba(62,207,142,.08)':'rgba(255,90,31,.08)'};">
-      <div class="stat-label">${netDeficit>=0?'Deficit Created':'Surplus (over target)'}</div>
-      <div class="mono" style="font-weight:900;font-size:22px;color:${netDeficit>=0?'var(--mint)':'var(--accent)'};margin-top:2px;">${netDeficit>=0?'':'+'}${Math.abs(netDeficit)}<span style="font-size:12px;font-weight:700;color:var(--muted);margin-left:4px;">kcal</span></div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Burned = ${profileMaintenance()} maintenance + ~${activityKcal} workout est.${!isToday?" (today's figures)":""}</div>
-      ${useExerciseBudget ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">${activeCalories == null ? `Health Connect active calories: ${hcConnected ? 'No data' : 'Permission required'}` : `Budget includes ${Math.round(activeCalories)} kcal from Health Connect.`}</div>` : ''}
-    </div>
-
     <!-- Add actions -->
     <div style="display:flex;gap:6px;margin-bottom:8px;">
       <button class="btn btn-ghost" style="flex:1;padding:11px;font-size:11px;" data-action="scan-barcode">Scan Barcode</button>
@@ -15975,29 +15892,7 @@ function renderNutritionTab(){
       </div>`;
     })() : ""}
 
-    <div class="eyebrow-label">Calorie & Macro Budget</div>
-    <div class="info-box" style="padding:12px 14px;margin-bottom:8px;font-size:12px;color:var(--muted);">
-      Your calorie target updates automatically from your weight, stats, and goal (set in the <b style="color:var(--steel);">Body</b> tab). Maintenance right now: <b class="mono" style="color:var(--text);">${profileMaintenance()} kcal</b>.
-    </div>
-    <div class="field"><label>Protein %</label><div><input type="number" id="n-proteinpct" value="${n.proteinPct}"><span class="unit">%</span></div></div>
-    <div class="field"><label>Carb %</label><div><input type="number" id="n-carbpct" value="${n.carbPct}"><span class="unit">%</span></div></div>
-    <div class="field"><label>Fat %</label><div><input type="number" id="n-fatpct" value="${n.fatPct}"><span class="unit">%</span></div></div>
-    <div class="field"><label>Fibre target</label><div><input type="number" id="n-fibre" value="${n.fibreTarget}"><span class="unit">g</span></div></div>
-    <div class="info-box" style="padding:10px 14px;margin-bottom:8px;${macroPctTotal!==100?'background:rgba(255,90,31,.1);':''}">
-      <div class="row-between"><span style="font-size:13px;font-weight:700;">Macro Total</span>
-      <span class="mono" style="font-weight:900;color:${macroPctTotal===100?'var(--mint)':'var(--accent)'};">${macroPctTotal}%</span></div>
-      ${macroPctTotal!==100?`<div style="font-size:11px;color:var(--accent);margin-top:2px;">Should add up to 100%</div>`:""}
-    </div>
 
-    <div class="grid2">
-      <div class="stat-card"><div class="stat-label">Calorie Target</div><div class="stat-value" style="color:var(--accent);">${targets.kcal}<span class="stat-unit">kcal</span></div></div>
-      <div class="stat-card"><div class="stat-label">Weekly Loss (est.)</div><div class="stat-value" style="color:var(--mint);">${displayW(weeklyLoss,2)}<span class="stat-unit">${wUnit()}</span></div></div>
-      <div class="stat-card"><div class="stat-label">Protein Target</div><div class="stat-value" style="color:var(--steel);">${Math.round(targets.protein)}<span class="stat-unit">g</span></div></div>
-      <div class="stat-card"><div class="stat-label">Carb Target</div><div class="stat-value" style="color:var(--steel);">${Math.round(targets.carbs)}<span class="stat-unit">g</span></div></div>
-      <div class="stat-card"><div class="stat-label">Fat Target</div><div class="stat-value" style="color:var(--steel);">${Math.round(targets.fat)}<span class="stat-unit">g</span></div></div>
-      <div class="stat-card"><div class="stat-label">Fibre Target</div><div class="stat-value" style="color:var(--mint);">${targets.fibre}<span class="stat-unit">g</span></div></div>
-    </div>
-    <div class="info-box" style="margin-top:14px;">Recalculate maintenance every 2–3 weeks against your actual weight trend. Don't drop below ~1800–2000 kcal given training volume — recovery beats speed here.</div>
   `;
 }
 
