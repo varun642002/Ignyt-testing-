@@ -552,6 +552,10 @@ try{
 <script src="health-settings-integration.js"></script>
 <script src="auth.js"></script>
 <script src="cloud-sync.js"></script>
+<!-- IGNYT Coach sync. Loads last because it reads app.js globals (state, render,
+     normalizeRoutine) and needs IgnytAuth for the Firebase token. Not js/coach/* — that is
+     the offline AI coach engine; this is the network client for a human trainer. -->
+<script src="js/trainer-sync.js"></script>
 <script src="backup-encryption.js"></script>
 <script src="drive-backup.js"></script>
 </body>

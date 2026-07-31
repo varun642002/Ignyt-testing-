@@ -2280,6 +2280,10 @@ function commitFinishedWorkout(session){
   // (the ledger already blocks a repeat). hx_active_session is left to the caller's render().
   try{ LS.set("hx_workout_log", state.workoutLog); LS.set("hx_prs", state.prs); LS.set("hx_achievements", state.achievements); }catch(e){}
   _logSaveAttempt({ txId, at: now, result: "committed", id: workoutId, prs: newPRs.length, stackHint });
+  /* Announce the commit for listeners that care (js/trainer-sync.js pushes the session to the
+     user's coach). Fired only on a real commit, never on the duplicate-suppressed paths above,
+     and wrapped because a listener throwing must not fail a workout that is already saved. */
+  try{ window.dispatchEvent(new CustomEvent("ignyt:workout-finished", { detail: { id: workoutId } })); }catch(e){}
   return { id: workoutId, duplicate: false, prs: newPRs.length };
 }
 
