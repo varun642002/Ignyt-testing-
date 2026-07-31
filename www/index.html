@@ -551,7 +551,6 @@ main{overflow-x:hidden;}
 <link rel="stylesheet" href="css/pages/profile.css" />
 <link rel="stylesheet" href="css/pages/auth.css" />
 <link rel="stylesheet" href="css/pages/ai-coach.css" />
-<link rel="stylesheet" href="css/pages/coach.css" />
 <link rel="stylesheet" href="css/pages/dark-mode.css" />
 <link rel="stylesheet" href="health-connect.css">
 </head>
@@ -637,14 +636,5 @@ try{
 <script src="health-settings-integration.js"></script>
 <script src="auth.js"></script>
 <script src="cloud-sync.js"></script>
-<!-- IGNYT Coach sync. Loads last because it reads app.js globals (state, render,
-     normalizeRoutine) and needs IgnytAuth for the Firebase token. Not js/coach/* — that is
-     the offline AI coach engine; this is the network client for a human trainer.
-
-     coach-sync also added <script> tags for drive-backup.js and backup-encryption.js. Those
-     files do not exist on this branch — Drive backup was removed — so including them would
-     have put two 404s on every app load. Deliberately omitted. -->
-<script src="js/trainer-sync.js"></script>
-<script src="js/pages/coach.js"></script>
 </body>
 </html>
