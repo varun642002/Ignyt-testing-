@@ -4703,6 +4703,7 @@ const state = {
   // Whether the coach / recovery card detail is expanded (transient).
   // Manual food entry on the search route (transient).
   manualEntryOpen: false,
+  muscleSheetOpen: false,   // Muscle Distribution sheet in the workout logger
   // Which variant groups are expanded, keyed by group key (transient).
   expandedVariants: {},
   /* The two full-screen food routes. null means the dashboard.
@@ -10373,6 +10374,54 @@ function renderRestTimerSheet(){
         <input type="number" inputmode="numeric" id="rest-custom-input" class="pi-input" placeholder="Seconds" value="${isCustom?current:''}" style="flex:1;">
         <button class="rh-btn rh-btn--primary" style="flex:none;padding:10px 16px;" data-action="rest-custom-save">Set</button>
       </div>` : ''}
+    </div>`;
+}
+
+/** Muscle Distribution — what this session has actually worked so far.
+ *
+ *  Reads the live session, so it changes as sets are ticked: it is a readout of the workout
+ *  in progress, not a summary written at the end. Counting and the diagram both live in
+ *  IgnytMuscleMap; this function only decides what the sheet looks like. */
+function renderMuscleDistributionSheet(){
+  if(!state.muscleSheetOpen || !state.session) return "";
+  const MM = window.IgnytMuscleMap;
+  if(!MM) return "";
+
+  const counts = MM.countsFor(state.session.exercises);
+  const rows = MM.rowsFor(counts);
+  const max = rows.length ? rows[0].sets : 0;
+  const unplaced = MM.unattributed(counts);
+
+  return `<div class="sheet-backdrop" data-action="close-muscle-sheet"></div>
+    <div class="sheet mm-sheet">
+      <div class="sheet__handle"></div>
+      <div class="sheet__title">Muscle Distribution</div>
+
+      ${MM.bodyHtml(counts)}
+
+      ${rows.length ? `
+        <div class="mm-head">
+          <span>Muscle</span>
+          <span>Completed Sets</span>
+        </div>
+        <div class="mm-rows">
+          ${rows.map(r=>`
+            <div class="mm-row">
+              <span class="mm-row__name">${escHtml(r.muscle)}</span>
+              <span class="mm-row__bar"><i style="width:${max>0?Math.max(6,Math.round((r.sets/max)*100)):0}%"></i></span>
+              <span class="mm-row__val">${MM.fmt(r.sets)}</span>
+            </div>`).join("")}
+        </div>
+        ${unplaced > 0 ? `<p class="mm-note mm-note--warn">${MM.fmt(unplaced)} completed
+          set${unplaced===1?'':'s'} came from an exercise with no muscle data, so
+          ${unplaced===1?'it is':'they are'} not shown above. Custom exercises have none
+          until the library gains an entry for them.</p>` : ""}
+        <p class="mm-note">The exercise's main muscle counts as a full set; each supporting
+          muscle counts as half, which is where the halves come from. Warmups and unticked
+          sets are not counted.</p>`
+      : `<p class="mm-empty">${unplaced > 0
+            ? `${MM.fmt(unplaced)} completed set${unplaced===1?'':'s'}, but none of the exercises have muscle data yet.`
+            : "Tick off a set and the muscles it worked appear here."}</p>`}
     </div>`;
 }
 
@@ -16947,7 +16996,19 @@ function renderWorkoutTab(){
       </div>
     </div>`}
     <input type="text" id="session-title" class="wk-session__title-input" placeholder="Workout title (e.g. Push Day)" value="${(s.title||'').replace(/"/g,'&quot;')}">
-    ${muscles.length? `<div style="margin:2px 0 4px;">${muscles.map(m=>`<span class="muscle-chip active">${m}</span>`).join("")}</div>`:""}
+    <!-- The worked-muscle chips were a read-only row. They are the natural way in to the
+         distribution sheet — same subject, already in the right place — so the row becomes
+         the control rather than adding a second one competing with it. Shown even before
+         the first set is ticked, because "nothing yet" is a legitimate thing to look at. -->
+    <button class="wk-muscles" data-action="open-muscle-sheet"
+      aria-label="Show muscle distribution for this workout">
+      <span class="wk-muscles__chips">
+        ${muscles.length
+          ? muscles.map(m=>`<span class="muscle-chip active">${escHtml(m)}</span>`).join("")
+          : `<span class="wk-muscles__none">Muscle distribution</span>`}
+      </span>
+      <span class="wk-muscles__go" aria-hidden="true">›</span>
+    </button>
     <div class="wk-session__notes-wrap">${svg('book',16)}<textarea id="session-notes" placeholder="Workout notes (how it felt, conditions, anything worth remembering)…">${s.notes||''}</textarea></div>
 
     <div class="rh-section-head" style="margin-top:18px;"><span>Add Exercise</span></div>
@@ -17072,6 +17133,7 @@ function renderWorkoutTab(){
       `;}).join("")}
     </div>
     <button class="wk-finish-fab" data-action="finish-session" aria-label="${isEditing?'Save workout':'Finish workout'}">${svg('check',22)}</button>
+    ${renderMuscleDistributionSheet()}
     ${renderRestTimerSheet()}
     ${renderRpeSheet()}
     ${renderPlatesSheet()}
@@ -21003,6 +21065,11 @@ function attachHandlers(){
     }
     render();
   });
+  const openMuscleSheet = document.querySelector('[data-action="open-muscle-sheet"]');
+  if(openMuscleSheet) openMuscleSheet.addEventListener("click", ()=>{ state.muscleSheetOpen = true; render(); });
+  document.querySelectorAll('[data-action="close-muscle-sheet"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.muscleSheetOpen = false; render(); });
+  });
   document.querySelectorAll("[data-add-water]").forEach(el=>{
     el.addEventListener("click", ()=>{
       state.waterLog.unshift({ id: nextId(), date: nutritionDateStr(), ml: Number(el.dataset.addWater) });
@@ -21265,6 +21332,7 @@ function handleHardwareBack(){
   if(state.confirmDialog){ resolveConfirmDialog(false, render); return true; }
   if(state.viewingLegal){ state.viewingLegal = null; render(); return true; }
   if(state.viewingBodyPhotoId!=null){ state.viewingBodyPhotoId = null; render(); return true; }
+  if(state.muscleSheetOpen){ state.muscleSheetOpen = false; render(); return true; }
   if(state.rpeSheetTarget){ state.rpeSheetTarget = null; render(); return true; }
   if(state.restTimerSheetExi!=null){ state.restTimerSheetExi = null; state.restCustomOpen = false; render(); return true; }
   if(state.plateCalcOpen!=null){ state.plateCalcOpen = null; render(); return true; }
