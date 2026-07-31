@@ -4124,7 +4124,7 @@ const PREFERRED_CARDIO_OPTIONS = ["Walking","Jogging","Running","Cycling","Swimm
    one thing that can fill several of them in automatically — and by then most people have
    already committed to typing. Asking first also means steps/weight/sleep start flowing from
    the user's first session rather than whenever they later find the toggle. */
-const ONBOARDING_STEP_TITLES = ["Fair Use Policy","Notifications","Health Connect","Birthday","Gender",
+const ONBOARDING_STEP_TITLES = ["Fair Use Policy","About You","Notifications","Health Connect","Birthday","Gender",
   "Height","Weight","Fitness Goal","Activity Level","Diet Preference","Workout Preference",
   "AI Personalization"];
 
@@ -4551,7 +4551,11 @@ const state = {
     distance:null, hours:null, mins:null, secs:null, targetWeight:null, rate:0.5,
     name:"", hyroxExperience:"first-timer", trainingDays:5,
     equipment:["Barbell","Dumbbell","Machines","Sled","Rower","Ski Erg","Kettlebell"],
-    username:"", phone:"", dob:null, medicalConditions:[], allergies:[], bloodGroup:""
+    username:"", phone:"", dob:null, medicalConditions:[], allergies:[], bloodGroup:"",
+    /* Data URI, downscaled before it is stored. It lives in localStorage with everything
+       else, which is why the size is capped rather than trusted: a modern phone camera
+       produces 4-8 MB files and the whole app shares a ~5 MB quota. */
+    photo:""
   }, LS.get("hx_profile",{})),
   onboardingComplete: LS.get("hx_onboarding_complete", null), // resolved to true/false at boot in resolveOnboardingStatus()
   // GOAL WIZARD — everything the wizard collects that ISN'T already a state.profile field
@@ -8521,7 +8525,7 @@ function renderAccountSection(){
 
   return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;">
     <div class="pf-avatar" style="width:52px;height:52px;flex:none;">
-      ${account.photoUrl ? `<img src="${esc(account.photoUrl)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
+      ${(()=>{ const src = profilePhotoSrc(account); return src ? `<img src="${esc(src)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''; })()}
       <span class="pf-avatar__initial" style="font-size:18px;">${initial}</span>
     </div>
     <div style="min-width:0;flex:1;">
@@ -9513,7 +9517,7 @@ function renderProfileTab(){
     <div class="pg-light">
       <div class="pf-header-row">
         <div class="pf-avatar">
-          ${account?.photoUrl ? `<img src="${account.photoUrl}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
+          ${(()=>{ const src = profilePhotoSrc(account); return src ? `<img src="${src}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''; })()}
           <span class="pf-avatar__initial">${initial}</span>
           <button class="pf-avatar__edit" data-action="open-personal-info" aria-label="Edit personal information">${svg('pencil',13)}</button>
         </div>
@@ -10783,7 +10787,7 @@ function obTextarea(fieldPath, placeholder){
   return `<textarea class="note-input" data-ob-field="${obEsc(fieldPath)}" placeholder="${obEsc(placeholder||'')}" style="margin-bottom:14px;min-height:52px;">${obEsc(v||'')}</textarea>`;
 }
 
-const ONBOARDING_TOTAL_STEPS = 12;   // derived from the renderer list below
+const ONBOARDING_TOTAL_STEPS = 13;   // derived from the renderer list below
 
 function onboardingProgressHeader(step){
   return `
@@ -11415,8 +11419,47 @@ function obComputePlan(){
   };
 }
 
+/* Who you are: the three things the app asks for on its own behalf rather than to compute
+   something. Placed straight after the Fair Use gate so it is the first thing after signing
+   in, which is what makes the account feel like an account.
+
+   All three are optional. Name and phone are already real profile fields, editable later in
+   Personal Information; this only asks earlier, while the user is already answering
+   questions. Nothing here gates Next - a phone number the app never uses for anything is
+   not something to hold someone hostage over. */
+function obYourDetails(){
+  const p = state.profile || {};
+  const photo = p.photo || "";
+  /* state.authEmail is cleared by completeSignIn(), so it is always empty by the time this
+     step renders — the account snapshot is what still knows who signed in. */
+  let acctEmail = "";
+  try{ acctEmail = (window.IgnytAuth && IgnytAuth.getAccount() || {}).email || ""; }catch(e){}
+  const initial = ((p.name || acctEmail || "?").trim()[0] || "?").toUpperCase();
+  return `
+    ${obHero("\u{1F464}", "A bit about <span class='ob-accent'>you</span>", "Only the name shows up anywhere in the app. All three are optional and can be changed later.")}
+
+    <div class="ob-photo">
+      <button class="ob-photo__ring" data-ob-photo-pick="1" aria-label="${photo ? 'Change profile photo' : 'Add a profile photo'}">
+        ${photo ? `<img src="${obEsc(photo)}" alt="">` : `<span class="ob-photo__initial">${obEsc(initial)}</span>`}
+        <span class="ob-photo__badge" aria-hidden="true">${svg('pencil',13)}</span>
+      </button>
+      <input type="file" id="ob-photo-input" accept="image/*" hidden>
+      <div class="ob-photo__actions">
+        <button class="cat-chip" data-ob-photo-pick="1" style="margin:0;">${photo ? 'Change photo' : 'Add photo'}</button>
+        ${photo ? `<button class="cat-chip" data-ob-photo-clear="1" style="margin:0;color:var(--muted);">Remove</button>` : ''}
+      </div>
+    </div>
+
+    ${obLabel("Your name")}
+    ${obTextInput("profile.name", "e.g. Varun")}
+
+    ${obLabel("Phone number")}
+    <input type="tel" inputmode="tel" data-ob-field="profile.phone" value="${obEsc(p.phone || '')}"
+      placeholder="Optional" style="width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:11px;font-size:14px;color:var(--text);margin-bottom:14px;border:none;">`;
+}
+
 const ONBOARDING_STEP_RENDERERS = [
-  obFairUse, obNotifications, obHealthConnect, obBirthday, obGender, obHeight, obWeight,
+  obFairUse, obYourDetails, obNotifications, obHealthConnect, obBirthday, obGender, obHeight, obWeight,
   obGoal, obActivity, obDiet, obWorkoutPref, obPersonalization
 ];
 
@@ -11623,6 +11666,54 @@ async function submitAuthEmail(){
 /* The single place that decides what happens after ANY successful sign-in. Phone and email
    both land here, so navigation can never work on one path and silently not on another.
    IgnytAuth has already persisted the session (saveAccount + ignyt:auth-changed). */
+/* Turns a picked image file into a small square data URI.
+ *
+ *  Downscaled and re-encoded rather than stored as picked: a phone camera photo is several
+ *  megabytes, localStorage gives the whole app about five, and a profile picture is rendered
+ *  at 52px. 256px is four times the largest place it appears, which covers a high-DPI screen
+ *  with room to spare.
+ *
+ *  Cropped to a centre square first, so a portrait photo does not arrive squashed. Rejects
+ *  anything that still will not fit rather than throwing a QuotaExceededError somewhere
+ *  unrelated later - a failed avatar must never be able to cost someone their workout log. */
+const PROFILE_PHOTO_PX = 256;
+const PROFILE_PHOTO_MAX_BYTES = 150 * 1024;
+
+function readProfilePhoto(file){
+  return new Promise((resolve, reject) => {
+    if(!file || !/^image\//.test(file.type||"")) return reject(new Error("That file is not an image."));
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try{
+        const side = Math.min(img.naturalWidth, img.naturalHeight);
+        const sx = (img.naturalWidth - side) / 2, sy = (img.naturalHeight - side) / 2;
+        const c = document.createElement("canvas");
+        c.width = c.height = PROFILE_PHOTO_PX;
+        c.getContext("2d").drawImage(img, sx, sy, side, side, 0, 0, PROFILE_PHOTO_PX, PROFILE_PHOTO_PX);
+        // Step the quality down until it fits, rather than guessing one value.
+        let out = "";
+        for(const q of [0.8, 0.65, 0.5, 0.4]){
+          out = c.toDataURL("image/jpeg", q);
+          if(out.length * 0.75 <= PROFILE_PHOTO_MAX_BYTES) break;
+        }
+        if(out.length * 0.75 > PROFILE_PHOTO_MAX_BYTES) return reject(new Error("That image is too large - try a smaller one."));
+        resolve(out);
+      }catch(e){ reject(e); }
+      finally{ URL.revokeObjectURL(url); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("That image could not be read.")); };
+    img.src = url;
+  });
+}
+
+/** The avatar source, in priority order: what the user set, then whatever the account
+ *  carried. Email accounts have no photoUrl, so without the first this is always a letter. */
+function profilePhotoSrc(account){
+  try{ if(state.profile && state.profile.photo) return state.profile.photo; }catch(e){}
+  return (account && account.photoUrl) || "";
+}
+
 function completeSignIn(user){
   /* hx_auth_seen is no longer a gate — isSignedIn() is — but it is still what tells
      onboarding this is not a first run, so it stays. */
@@ -11784,6 +11875,36 @@ function wireOnboardingWizard(){
       renderOnboardingWizard();
     });
   });
+  /* Profile photo. The <input type=file> is hidden and driven from the ring and the chip, so
+     there is one visual control rather than a bare file input sitting in the flow. */
+  const photoInput = document.getElementById("ob-photo-input");
+  document.querySelectorAll("[data-ob-photo-pick]").forEach(el=>{
+    el.addEventListener("click", ()=>{ if(photoInput) photoInput.click(); });
+  });
+  if(photoInput) photoInput.addEventListener("change", async ()=>{
+    const file = photoInput.files && photoInput.files[0];
+    if(!file) return;
+    try{
+      const dataUri = await readProfilePhoto(file);
+      state.profile.photo = dataUri;
+      /* Written on its own rather than waiting for the next render's persist(): if the quota
+         is going to reject a photo it must fail here, where the message can name the photo,
+         not later where it would look like the app losing unrelated data. */
+      try{ persist(); }
+      catch(e){
+        state.profile.photo = "";
+        showToast("Not enough storage for that photo.", "error", render);
+        return;
+      }
+      render();
+    }catch(e){
+      showToast(e && e.message ? e.message : "That photo could not be used.", "error", render);
+    }finally{ photoInput.value = ""; }
+  });
+  document.querySelectorAll("[data-ob-photo-clear]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.profile.photo = ""; persist(); render(); });
+  });
+
   document.querySelectorAll("[data-ob-field]").forEach(el=>{
     el.addEventListener("change", ()=>{
       const fieldPath = el.dataset.obField;
@@ -13886,7 +14007,7 @@ function renderPersonalInfoTab(){
         <div style="font-size:15px;font-weight:800;margin-bottom:12px;">Profile</div>
         <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;">
           <div class="pf-avatar" style="width:64px;height:64px;">
-            ${account?.photoUrl ? `<img src="${account.photoUrl}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
+            ${(()=>{ const src = profilePhotoSrc(account); return src ? `<img src="${src}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''; })()}
             <span class="pf-avatar__initial" style="font-size:22px;">${initial}</span>
             <span class="pf-avatar__edit" title="Photo comes from your account" style="pointer-events:none;">${svg('pencil',11)}</span>
           </div>
