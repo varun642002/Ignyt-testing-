@@ -1,6 +1,31 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android' // ADDED for Health Connect plugin (Kotlin)
 
+/* THE ONLY PLACE THE VERSION IS WRITTEN.
+ *
+ * versionCode used to be a counter maintained by hand next to versionName. It had reached 11
+ * here while Play had already accepted 10 and 11 from builds this repo never recorded, so two
+ * uploads were rejected in a row and nothing in the file could say which number was safe.
+ *
+ * Deriving the code from the name ends that: 1.0.41 is 10041, which clears every code this
+ * project has ever used by three orders of magnitude, and bumping the name is now the whole
+ * job — the code follows and can never drift from it or be forgotten.
+ *
+ * major * 10000 + minor * 100 + patch, so 1.0.41 -> 10041 and 1.1.0 -> 10100. Minor and patch
+ * must stay under 100, which the assert enforces rather than leaving to be noticed later.
+ * Play's ceiling is 2,100,000,000, which this reaches at version 210.
+ *
+ * One-way door: Play only ever accepts an increasing code, so once an upload succeeds this
+ * cannot go back to the small numbers. That is the intent — it is what stops the collisions.
+ */
+ext.appVersionName = "1.0.41"
+ext.appVersionCode = {
+    def parts = appVersionName.replaceAll(/[^0-9.].*$/, "").tokenize(".").collect { it.toInteger() }
+    while (parts.size() < 3) parts << 0
+    assert parts[1] < 100 && parts[2] < 100 : "minor and patch must stay under 100: ${appVersionName}"
+    parts[0] * 10000 + parts[1] * 100 + parts[2]
+}()
+
 // ADDED for Play Store release signing. Reads real secrets from a local, gitignored
 // android/keystore.properties file (see android/keystore.properties.example) -- never
 // hardcoded here. If that file doesn't exist yet (e.g. a fresh checkout, or before the
@@ -21,8 +46,8 @@ android {
         applicationId "com.varun.ignyt"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 11
-        versionName "1.0.41"
+        versionCode appVersionCode
+        versionName appVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
