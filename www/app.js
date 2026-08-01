@@ -3773,10 +3773,29 @@ function calcBodyType(bust, waist, highHip, hip){
  *  Favourites live only in the search index (they are built from state.favoriteFoods, not
  *  the catalogue), so they are looked up by name; everything else comes from the catalogue.
  *  Falls back to the seed DB when the catalogue has not finished loading. */
+/* Catalogue rows that were merged into another, old id -> surviving id.
+ *
+ *  Three products had been added twice, once under "Branded Biscuits" and once under
+ *  "Branded Biscuits & Cookies", because the two rows spelled the apostrophe differently —
+ *  McVitie’s against McVitie's — so nothing matching on name ever saw them as one food. The
+ *  duplicate carrying the category's placeholder figures was removed and the one with real
+ *  per-product figures kept.
+ *
+ *  A log entry stores the food id it was created from, and lookupFood resolves by id with no
+ *  fallback to the name, so an entry logged against a removed row would stop resolving: the
+ *  logged calories would survive, but reopening it to change the amount would find no food.
+ *  Redirecting the id costs three lines and keeps that history editable. */
+const MERGED_FOOD_IDS = {
+  "ignyt:161": "ignyt:261",   // McVitie's Rich Tea
+  "ignyt:195": "ignyt:289",   // Sunfeast Mom's Magic Butter
+  "ignyt:290": "ignyt:196"    // Sunfeast Mom's Magic Cashew
+};
+
 function lookupFood(id, nameHint){
   if(String(id).indexOf("fav:") === 0){
     return IgnytFoodSearch.search(nameHint || "", { limit: 25 }).find(f=>f.id === id) || null;
   }
+  id = MERGED_FOOD_IDS[id] || id;
   return (window.IgnytFoodCatalogue && IgnytFoodCatalogue.byId(id)) || IgnytFoodDB.byId(id);
 }
 
