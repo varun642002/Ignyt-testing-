@@ -1,5 +1,76 @@
 # CLAUDE_PROGRESS.md
 
+## CURRENT STATE — 2 Aug 2026 — iOS compiles on CI; Android 1.0.42 awaiting upload
+
+**Branch:** feature/exercise-library-rebuild (pushed, clean)
+**Head:** 8b0add8 "Build on Node 22; the Capacitor CLI requires it"
+
+### iOS — new this session
+
+There is NO MAC and none is available. Varun has an iPhone, which is a test device only.
+Every iOS build runs on Codemagic's cloud Macs. Do not suggest Xcode, the simulator, or
+xcode-select — anything Xcode would do by ticking a box has to be written into the repo
+by hand instead.
+
+- iOS platform scaffolded (Capacitor 8 / SwiftPM, no CocoaPods). Bundle id and display
+  name already matched Android; version set to 1.0.42 / 10500 to match.
+- Package.swift had Windows backslash paths from being generated on Windows — Swift Package
+  Manager would have failed to resolve before compiling anything. Fixed.
+- HealthKit plugin written: all 29 methods of the Android HealthConnectPlugin, registered
+  under the same JS name "HealthConnect" so www/health-connect.js is unchanged.
+- App.entitlements + CODE_SIGN_ENTITLEMENTS committed by hand, because the Xcode capability
+  checkbox is not reachable.
+- codemagic.yaml: ios-compile-check (unsigned, free) and ios-testflight (signed).
+
+**FIRST SUCCESSFUL iOS BUILD, 2 Aug 2026.** Codemagic build 2, commit 8b0add8, 1m 20s on a
+Mac mini M2. Confirmed from the log that all three Swift files are in the target —
+AppDelegate, HealthConnectPlugin, HealthKitManager — and 534 web files synced. App bundle
+11.64 MB.
+
+**What that proves:** syntax, HealthKit API signatures, async/await, and that the
+project.pbxproj edit registering the files worked.
+
+**What it does NOT prove:** that the plugin is found at runtime. CAPBridgedPlugin
+registration resolves at launch, so Capacitor.Plugins.HealthConnect may still be undefined
+in JS. Permissions, reads and writes are all unverified.
+
+**Two deliberate semantic gaps, documented in the source — not bugs:**
+- iOS never reveals whether a READ permission was granted, so getPermissionStatus reports
+  what it can and sets readAuthorizationIsUnknowable.
+- kcalPerDay carries HealthKit's cumulative basal burn, not Health Connect's kcal/day rate.
+
+**Still Android-only:** notifications, cloud sync, auth, share. Inert on iOS.
+
+### Android
+
+Release AAB built and verified: IGNYT-1.0.42-vc10500.aab, 14.9 MB, signed.
+versionCode is now derived from versionName (major*10000 + minor*100 + patch + offset 458)
+after Play rejected 10 and then 11 as already used.
+
+Play warns the release drops 17,548 devices. Investigated and ruled out this build as the
+cause — manifest and variables.gradle byte-identical to the vc9 release, all three artifacts
+on disk declare minSdk 26 / targetSdk 36 with zero uses-feature and zero native ABIs. It is
+minSdk 26, which Health Connect requires. Varun chose to proceed.
+
+### Pending — needs the user
+
+1. Upload IGNYT-1.0.42-vc10500.aab to Play.
+2. Apple Developer Program ($99/yr) — enrol via the Apple Developer iOS app or the web.
+   Then enable HealthKit on the App ID at developer.apple.com (browser, no Mac needed),
+   create the App Store Connect API key, and add it to Codemagic as
+   "ignyt-app-store-connect" to unlock the ios-testflight workflow.
+3. Play reviewer account — Claude declined (password handling).
+4. Play Integrity API on ignyt-fitness2.
+5. feature/coach-sync is EXCLUDED from every merge until Varun lifts the hold.
+   feature/premium-ui-modular-redesign was deliberately not merged: 244 commits behind,
+   36 conflicts, and it would regress the launcher icon to the old bronze figure.
+
+**Next action:** none pending on Claude. Awaiting the Play upload result, or the Apple
+enrolment before iOS can go further.
+
+---
+
+
 ## CURRENT STATE — 1 Aug 2026 — release 1.0.41 built, awaiting upload
 
 **Feature request:** food measurement units per food type, egg foods, duplicate removal,
