@@ -1,5 +1,70 @@
 # CLAUDE_PROGRESS.md
 
+## CURRENT STATE — 1 Aug 2026 — release 1.0.41 built, awaiting upload
+
+**Feature request:** food measurement units per food type, egg foods, duplicate removal,
+exercise images, then a release build.
+
+**Branch:** feature/exercise-library-rebuild (pushed, clean, level with origin)
+**Head:** e979a1d "Derive versionCode from versionName"
+
+**Build result:** BUILD SUCCESSFUL.
+**Artifact:** android/app/build/outputs/bundle/release/IGNYT-1.0.41-vc10041.aab
+  14.9 MB, signed with android/app/ignyt-release.jks, R8 + resource shrinking on,
+  sha256 starts 4afa5785, zip verified intact.
+**Version:** versionName 1.0.41, versionCode 10041 — decoded from the built manifest
+  (attribute 0x0101021B), not read from build.gradle.
+
+**Completed this session**
+- Exercise library trimmed 458 -> 452; every remaining exercise has an image.
+  445 photos + 7 instruction posters. Retired names' muscles moved to LEGACY_MUSCLE_MAP
+  (290 -> 296) so logged history keeps its attribution.
+- Instruction posters render uncropped on the How To tab at their own aspect; the Library
+  row and detail header keep the icon badge (a poster is unreadable at 38px).
+- Food quantity field: type="number" -> type="text" + inputmode="decimal", because a number
+  input reports selectionStart as null and cannot be selected or caret-positioned. Typing 150
+  into a field pre-filled with 100 was giving 100150.
+- Empty/invalid quantity now shows an em dash and disables Add, instead of silently
+  displaying — and logging — the food's default 100 g.
+- Add-food flicker: results list is patched row by row instead of innerHTML-replaced on every
+  keystroke; serving presets and the unit select update in place instead of calling render().
+- Per-food measurement forms (21 of them) replacing the one universal unit list. All 3,162
+  foods classify; none lacks units; none offers a unit that cannot convert to grams.
+- Fixed two long-standing arithmetic bugs found while checking conversions: portions entries
+  were read as "grams per ONE unit" when the catalogue writes each food's basis (1 ml of soft
+  drink resolved to 100 g, so a glass was 25 kg); and defaultFoodPortion returned a flat
+  amount of 1 for any non-gram serving unit, opening every drink at "1 ml" and 0 kcal.
+- Merged the 3 genuinely duplicated foods (same product under two biscuit categories, hidden
+  by a curly vs straight apostrophe). MERGED_FOOD_IDS redirects the retired ids so logged
+  entries stay editable. Did NOT delete the 1,313 foods that merely share macros — those are
+  distinct products carrying per-category placeholder values.
+- Added rice/flatbread/dosa portions and egg sizes, weights checked against published tables.
+- Added the 5 egg foods (Whole, Boiled, Fried, White, Yolk) with USDA figures; the catalogue
+  had 14 foods named "egg" and no actual egg.
+- versionCode is now derived from versionName (major*10000 + minor*100 + patch) after Play
+  rejected 10 and then 11 as already used — the hand-kept counter was not a record of what
+  Play had seen.
+
+**Pending — needs the user, not Claude**
+1. UPLOAD IGNYT-1.0.41-vc10041.aab to Play. Claude cannot do this: it needs Play Console
+   sign-in and Claude does not handle credentials.
+2. Play warns the release drops support for 17,548 devices. Investigated and ruled out any
+   cause in this build: the merged manifest and variables.gradle are byte-identical to the
+   vc9 release, both bundles declare minSdk 26 / targetSdk 36, zero uses-feature, zero native
+   ABIs, identical 27 permissions. minSdk 26 has been constant in every commit of this repo,
+   so the comparison is against a release predating this history. minSdk 26 is the floor for
+   androidx.health.connect connect-client and is pinned by CLAUDE.md. User chose to proceed.
+3. Play reviewer account — user must create it; Claude declined (password handling).
+4. Play Integrity API still to be enabled on ignyt-fitness2.
+5. Branch consolidation: ~9 branches outstanding. feature/coach-sync is EXCLUDED until Varun
+   lifts the hold — do not merge it anywhere.
+
+**Next action:** none pending on Claude. Awaiting the user's upload result, or the next
+feature request.
+
+---
+
+
 ## SHA-256 fingerprint check — added, BUILD SUCCESSFUL
 
 Verified on this machine (debug keystore, `~/.android/debug.keystore`):
