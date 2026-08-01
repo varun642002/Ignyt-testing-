@@ -192,10 +192,222 @@
     "cucumber":         { piece: 300 }
   };
 
+  /* =========================================================
+     FORM — what kind of thing the food physically is.
+
+     The unit list used to be "everything GENERIC has a number for", which is every food in
+     the catalogue getting the same eight options. That is how whey protein came to offer
+     "bowl" and "piece", milk offered "tbsp" before "glass", and nothing offered a scoop
+     unless its category happened to be one of the handful listed in CATEGORY_UNITS.
+
+     That handful is the real problem: CATEGORY_UNITS was written against category names the
+     catalogue no longer uses. Of the 41 categories actually in clean_foods.json only seven
+     appear there, so 3,000-odd foods were resolving straight to GENERIC.
+
+     Form fixes it at the right level. A food's units follow from what it IS — a powder, a
+     liquid, a countable fruit — not from which of two naming conventions its category was
+     written in. Category still selects the form, but names override it, because a category
+     is often mixed: "Dairy Products" holds both milk and paneer, and only one of those is
+     poured.
+  ========================================================= */
+
+  /* Units offered per form, in display order. This is the whole list — a unit not named
+     here is not offered, which is the point. */
+  var FORM_UNITS = {
+    supplement:  ["scoop", "g"],
+    liquid:      ["ml", "l", "glass", "cup", "bottle", "can"],
+    powder:      ["g", "cup", "bowl", "tbsp", "tsp"],
+    fruit:       ["g", "piece", "small", "medium", "large", "cup", "bowl"],
+    vegetable:   ["g", "piece", "small", "medium", "large", "cup", "bowl"],
+    grain:       ["g", "cup", "bowl", "serving"],
+    bakery:      ["g", "slice", "piece", "serving"],
+    meat:        ["g", "piece", "serving"],
+    egg:         ["g", "egg", "piece"],
+    nuts:        ["g", "cup", "tbsp", "piece", "serving"],
+    oil:         ["ml", "g", "tbsp", "tsp", "cup"],
+    condiment:   ["g", "tbsp", "tsp", "cup", "ml"],
+    spice:       ["g", "tsp", "tbsp"],
+    snack:       ["g", "packet", "piece", "cup", "serving"],
+    sweet:       ["g", "piece", "slice", "cup", "bowl", "serving"],
+    frozen:      ["g", "scoop", "cup", "bowl", "serving"],
+    biscuit:     ["g", "piece", "packet", "serving"],
+    dairySolid:  ["g", "piece", "slice", "cup", "tbsp", "serving"],
+    dish:        ["g", "bowl", "cup", "piece", "serving"],
+    other:       ["g", "serving", "cup", "bowl"]
+  };
+
+  /* Grams for one of each unit, per form. Sits above CATEGORY_UNITS in the resolution order
+     because it is keyed on what the food is rather than on a category name that may or may
+     not still be in use. */
+  var FORM_GRAMS = {
+    supplement:  { scoop: 30, tbsp: 8, serving: 30 },
+    liquid:      { ml: 1, l: 1000, glass: 250, cup: 240, bottle: 500, can: 330, serving: 250 },
+    powder:      { cup: 120, bowl: 150, tbsp: 8, tsp: 3, serving: 30 },
+    fruit:       { piece: 120, cup: 150, bowl: 150, serving: 100 },
+    vegetable:   { piece: 80, cup: 100, bowl: 150, serving: 80 },
+    grain:       { cup: 160, bowl: 200, tbsp: 12, serving: 150 },
+    bakery:      { slice: 30, piece: 40, serving: 60 },
+    meat:        { piece: 100, serving: 150 },
+    egg:         { egg: 50, piece: 50, serving: 50 },
+    nuts:        { cup: 140, tbsp: 10, piece: 1.5, serving: 30 },
+    oil:         { ml: 0.92, l: 920, tbsp: 14, tsp: 4.5, cup: 218, serving: 10 },
+    condiment:   { tbsp: 17, tsp: 6, cup: 240, ml: 1, serving: 15 },
+    spice:       { tsp: 2, tbsp: 6, serving: 2 },
+    snack:       { packet: 50, cup: 30, piece: 15, serving: 30 },
+    sweet:       { piece: 40, slice: 80, cup: 150, bowl: 150, serving: 50 },
+    frozen:      { scoop: 65, cup: 130, bowl: 150, serving: 100 },
+    biscuit:     { piece: 12, packet: 100, serving: 30 },
+    dairySolid:  { piece: 30, slice: 20, cup: 120, tbsp: 15, serving: 50 },
+    dish:        { bowl: 200, cup: 200, piece: 100, serving: 200 },
+    other:       {}
+  };
+
+  /* The serving chips offered per form, so the chips and the unit list tell one story. */
+  var FORM_SHAPES = {
+    supplement:  [["scoop", 1], ["scoop", 2], ["scoop", 0.5]],
+    liquid:      [["glass", 1], ["cup", 1], ["bottle", 1]],
+    powder:      [["tbsp", 1], ["cup", 0.5], ["cup", 1]],
+    fruit:       [["medium", 1], ["small", 1], ["large", 1], ["cup", 1]],
+    vegetable:   [["medium", 1], ["cup", 1], ["bowl", 1]],
+    grain:       [["cup", 0.5], ["cup", 1], ["bowl", 1]],
+    bakery:      [["slice", 1], ["slice", 2], ["piece", 1]],
+    meat:        [["piece", 1], ["serving", 1]],
+    egg:         [["egg", 1], ["egg", 2], ["egg", 3]],
+    nuts:        [["tbsp", 1], ["cup", 0.25], ["serving", 1]],
+    oil:         [["tsp", 1], ["tbsp", 1]],
+    condiment:   [["tsp", 1], ["tbsp", 1]],
+    spice:       [["tsp", 1], ["tbsp", 1]],
+    snack:       [["packet", 1], ["cup", 1], ["piece", 1]],
+    sweet:       [["piece", 1], ["slice", 1], ["bowl", 1]],
+    frozen:      [["scoop", 1], ["scoop", 2], ["cup", 1]],
+    biscuit:     [["piece", 1], ["piece", 2], ["packet", 1]],
+    dairySolid:  [["piece", 1], ["cup", 1], ["tbsp", 1]],
+    dish:        [["bowl", 1], ["cup", 1], ["serving", 1]],
+    other:       [["serving", 1], ["cup", 1]]
+  };
+
+  /* Category -> form. Covers the categories actually present in clean_foods.json, then the
+     older names that earlier releases wrote into saved entries. */
+  var CATEGORY_FORM = {
+    "Branded Whey Protein & Sports Protein Products": "supplement",
+    "Gym Supplements": "supplement",
+    "Protein-Related Products": "supplement",
+    "Branded soft drink": "liquid",
+    "Beverages": "liquid",
+    "Coffee, Tea & Hot Beverages": "liquid",
+    "Branded Coffee, Tea & Hot Drinks": "liquid",
+    "Dairy Products": "dairySolid",
+    "Baking Ingredients & Flours": "powder",
+    "Salt, Sugar & Sweeteners": "powder",
+    "Spices & Seasonings": "spice",
+    "Oil Types": "oil",
+    "Fruits": "fruit",
+    "Vegetables": "vegetable",
+    "Dry Fruits": "nuts",
+    "Nuts & Seeds": "nuts",
+    "Fish (by Species)": "meat",
+    "Seafood": "meat",
+    "Chicken": "meat",
+    "Mutton/Lamb": "meat",
+    "Processed Meat": "meat",
+    "Rice & Bread items": "grain",
+    "Pasta, Noodles & International Staples": "grain",
+    "Branded Noodles & Instant Pasta": "grain",
+    "Dal & Legumes": "grain",
+    "Oats, Cereals & Healthy Breakfast Foods": "grain",
+    "Branded Breakfast Cereals": "grain",
+    "Curries & Gravies": "dish",
+    "South Indian dishes": "dish",
+    "Fast food": "dish",
+    "Frozen & Ready-to-Eat Foods": "dish",
+    "Breakfast Brands": "dish",
+    "Snacks & Street Foods": "snack",
+    "Branded Chocolates & Candy": "sweet",
+    "Cakes & Cake Varieties": "sweet",
+    "Desserts": "sweet",
+    "Branded Ice Cream": "frozen",
+    "Branded Biscuits & Cookies": "biscuit",
+    "Branded Biscuits": "biscuit",
+    "Sauces, Spreads & Condiments": "condiment",
+    "Spreads & Condiments": "condiment",
+
+    /* Older category names. Kept because saved log entries and the USDA import still carry
+       them, and a food whose category no longer resolves would drop to the generic list. */
+    "Rice": "grain", "Grains": "grain", "Grains & Cereals": "grain", "Pasta": "grain",
+    "Legumes": "grain", "Beans": "grain", "Beans & Legumes": "grain",
+    "Bread": "bakery", "Bread & Bakery": "bakery",
+    "Dairy": "dairySolid", "Eggs": "egg",
+    "Nuts": "nuts", "Seeds": "nuts",
+    "Oils": "oil", "Oils & Fats": "oil",
+    "Sauces": "condiment", "Sauces & Condiments": "condiment",
+    "Spices & Herbs": "spice",
+    "Protein Supplements": "supplement",
+    "Beef": "meat", "Pork": "meat", "Fish": "meat", "Turkey": "meat",
+    "Game & Other Meats": "meat", "Processed Meats": "meat",
+    "Snacks": "snack", "Fast Food": "dish", "Indian Foods": "dish",
+    "Soups": "dish", "Meals & Entrees": "dish", "Restaurant Foods": "dish"
+  };
+
+  /* Categories that hold more than one kind of thing, where the name has to decide.
+     "Dairy Products" is milk and paneer and butter; "Rice & Bread items" is a grain and a
+     loaf. Everywhere else the category is the better answer — a food in "Branded Biscuits"
+     is a biscuit even when it is called Milk Bikis, and one in "Curries & Gravies" is a
+     curry even when it is called Kadai Paneer. Letting names win everywhere classified both
+     of those by their ingredient instead of by what they are. */
+  var MIXED_CATEGORIES = {
+    "Dairy Products": 1,
+    "Protein-Related Products": 1,
+    "Rice & Bread items": 1,
+    "Frozen & Ready-to-Eat Foods": 1,
+    "Breakfast Brands": 1,
+    "Oats, Cereals & Healthy Breakfast Foods": 1,
+    "Desserts": 1,
+    "Dairy": 1
+  };
+
+  /* Name signals. They decide for the mixed categories above, and for any food whose
+     category is unknown or missing.
+
+     Order matters. "Protein powder" must reach supplement before powder, and "milk powder"
+     must reach powder before liquid, so the more specific test comes first. */
+  var NAME_FORMS = [
+    [/whey|casein|isolate|mass gainer|bcaa|creatine|pre[\s-]?workout|protein powder|glutamine/, "supplement"],
+    [/\bghee\b|\boil\b/, "oil"],
+    [/\b(flour|atta|maida|besan|sooji|suji|rava|semolina|starch|powder|cocoa|custard)\b/, "powder"],
+    [/\b(milk|juice|water|soda|cola|lassi|buttermilk|smoothie|shake|tea|coffee|drink|beer|wine|squash|sharbat)\b/, "liquid"],
+    [/ice cream|kulfi|gelato|sorbet/, "frozen"],
+    [/\begg\b|omelette|omelet/, "egg"],
+    [/\b(bread|bun|pav|toast|roti|chapati|paratha|naan|kulcha|croissant|bagel)\b/, "bakery"],
+    [/\b(biscuit|cookie|cracker|rusk)\b/, "biscuit"],
+    [/\b(paneer|cheese|butter|curd|yoghurt|yogurt|khoya)\b/, "dairySolid"]
+  ];
+
+  /** What kind of thing this food is: its category, unless that category is mixed. */
+  function formOf(food) {
+    var category = food && food.category;
+    var byCategory = CATEGORY_FORM[category];
+    if (byCategory && !MIXED_CATEGORIES[category]) return byCategory;
+
+    var name = keyOf(food);
+    for (var i = 0; i < NAME_FORMS.length; i++) {
+      if (NAME_FORMS[i][0].test(name)) return NAME_FORMS[i][1];
+    }
+    return byCategory || "other";
+  }
+
+  /* Size words scale the food's own piece weight rather than carrying weights of their own,
+     so "1 large apple" stays tied to whatever an apple weighs. Ratios are about what USDA
+     reports across produce: a small apple is 149 g against a medium 182 g and a large 223 g. */
+  var SIZE_FACTOR = { small: 0.75, medium: 1, large: 1.3 };
+
   /* Display order and labels. `plural` is used when the amount is not exactly 1. */
   var UNIT_LABELS = {
     g:       { label: "g",          plural: "g" },
     ml:      { label: "ml",         plural: "ml" },
+    l:       { label: "litre",      plural: "litres" },
+    small:   { label: "small",      plural: "small" },
+    medium:  { label: "medium",     plural: "medium" },
+    large:   { label: "large",      plural: "large" },
     piece:   { label: "piece",      plural: "pieces" },
     slice:   { label: "slice",      plural: "slices" },
     cup:     { label: "cup",        plural: "cups" },
@@ -220,8 +432,12 @@
   /* Which units are offered, in this order, when a food supports them. Grams is always
      first so the precise option is never buried. */
   var UNIT_ORDER = ["g", "egg", "banana", "apple", "chapati", "roti", "idli", "dosa",
-    "piece", "slice", "scoop", "cup", "bowl", "glass", "bottle", "can", "packet",
-    "tbsp", "tsp", "ml", "serving"];
+    "piece", "small", "medium", "large", "slice", "scoop", "cup", "bowl", "glass",
+    "bottle", "can", "packet", "tbsp", "tsp", "ml", "l", "serving"];
+
+  /* Units named after the food itself. They are offered only when that food actually defines
+     one — "2 chapatis of salmon" is the failure this prevents. */
+  var NAMED_UNITS = { egg: 1, banana: 1, apple: 1, chapati: 1, roti: 1, idli: 1, dosa: 1 };
 
   function keyOf(food) { return String((food && food.name) || "").trim().toLowerCase(); }
 
@@ -239,7 +455,16 @@
     var ps = food && food.portions;
     if (!Array.isArray(ps)) return null;
     for (var i = 0; i < ps.length; i++) {
-      if (ps[i] && ps[i].unit === unit && ps[i].grams > 0) return ps[i].grams;
+      var p = ps[i];
+      if (!p || p.unit !== unit || !(p.grams > 0)) continue;
+      /* How many units the entry describes. USDA rows are "1 cup = 240 g", but the seed
+         catalogue writes each food's own basis — "100 ml = 100 g" — and reading that as the
+         weight of ONE millilitre made a millilitre of soft drink weigh 100 g, so a glass came
+         out at 25 kg. The count is in the label where there is one; absent that, one. */
+      var n = p.amount != null ? Number(p.amount)
+            : (p.label ? parseFloat(String(p.label)) : 1);
+      if (!isFinite(n) || n <= 0) n = 1;
+      return p.grams / n;
     }
     return null;
   }
@@ -252,12 +477,33 @@
    */
   function gramsPerUnit(food, unit) {
     if (unit === "g") return 1;
+
+    /* Size words are a multiple of whatever one of this food weighs, resolved through the
+       same chain. Keeping them derived is what stops "1 large" meaning the same grams for a
+       grape and a watermelon. A food with no piece weight has no size either. */
+    if (SIZE_FACTOR[unit] != null) {
+      var own = measuredPortion(food, unit);
+      if (own != null) return own;              // USDA measured this size for this food
+      var piece = gramsPerUnit(food, "piece");
+      if (piece == null) return null;
+      return Math.round(piece * SIZE_FACTOR[unit] * 10) / 10;
+    }
+
     var measured = measuredPortion(food, unit);
     if (measured != null) return measured;
     var perFood = FOOD_UNITS[keyOf(food)];
     if (perFood && perFood[unit] != null) return perFood[unit];
+    var form = FORM_GRAMS[formOf(food)];
+    if (form && form[unit] != null) return form[unit];
     var cat = CATEGORY_UNITS[food && food.category];
     if (cat && cat[unit] != null) return cat[unit];
+
+    // A litre is a thousand millilitres of whatever this food's millilitre weighs, so the
+    // density only has to be stated once.
+    if (unit === "l") {
+      var ml = gramsPerUnit(food, "ml");
+      return ml == null ? null : ml * 1000;
+    }
     if (GENERIC[unit] != null) return GENERIC[unit];
     return null;
   }
@@ -269,31 +515,41 @@
    */
   function unitsFor(food) {
     var perFood = FOOD_UNITS[keyOf(food)] || {};
-    var cat = CATEGORY_UNITS[food && food.category] || {};
     // A unit USDA measured for this food is always worth offering — that is the strongest
-    // possible evidence the unit applies to it.
+    // possible evidence the unit applies to it, stronger than anything the form assumes.
     var measured = {};
     if (food && Array.isArray(food.portions)) {
-      food.portions.forEach(function (p) { if (p && p.unit) measured[p.unit] = 1; });
+      // A "g" portion is the food's own basis restated, not evidence that grams are a
+      // sensible way to measure it — every food in the catalogue has one. Offering it would
+      // put grams back on the milk that deliberately measures in millilitres.
+      food.portions.forEach(function (p) { if (p && p.unit && p.unit !== "g") measured[p.unit] = 1; });
     }
-    // These only appear when the food (or its category) actually defines them. `slice` is
-    // included because a generic fallback would otherwise offer "2 slices of egg".
-    var COUNTABLE = { egg:1, banana:1, apple:1, chapati:1, roti:1, idli:1, dosa:1, scoop:1, slice:1 };
+
     var out = [];
+    function add(u) {
+      if (out.indexOf(u) < 0 && gramsPerUnit(food, u) != null) out.push(u);
+    }
+
+    /* The food's own name for itself leads: "2 eggs" and "3 chapatis" are how those are
+       counted, and burying them under grams would be perverse. Only ever present when this
+       food actually defines one. */
     UNIT_ORDER.forEach(function (u) {
-      if (u === "g") { out.push(u); return; }
-      // Countable/food-specific units require an explicit definition somewhere.
-      if (COUNTABLE[u]) { if (measured[u] || perFood[u] != null || cat[u] != null) out.push(u); return; }
-      if (measured[u]) { out.push(u); return; }
-      // Volume/portion units are broadly applicable, but drop the ones that make no sense
-      // for a solid food logged by the piece.
-      if (perFood[u] != null || cat[u] != null || GENERIC[u] != null) {
-        if ((u === "glass" || u === "bottle" || u === "can" || u === "ml") &&
-            food && food.category !== "Beverages" && food.category !== "Dairy") return;
-        out.push(u);
-      }
+      if (NAMED_UNITS[u] && (perFood[u] != null || measured[u])) add(u);
     });
+
+    // Then the form's list, in the order the form declares — that order is the answer to
+    // "what does someone measuring this reach for first".
+    (FORM_UNITS[formOf(food)] || FORM_UNITS.other).forEach(add);
+
+    // Finally anything measured for this specific food that the form did not think to offer.
+    UNIT_ORDER.forEach(function (u) { if (measured[u]) add(u); });
+
     return out;
+  }
+
+  /** The serving-chip shapes worth offering for this food, from its form. */
+  function presetShapesFor(food) {
+    return (FORM_SHAPES[formOf(food)] || FORM_SHAPES.other).slice();
   }
 
   /** Converts an amount in `unit` to grams for this food. Returns null if inapplicable. */
@@ -314,6 +570,11 @@
     return (unit === "g" || unit === "ml") ? (shown + word) : (shown + " " + word);
   }
 
+  /** True when this unit measures volume, so the UI can say "quantity" or "volume" honestly. */
+  function isVolumeUnit(unit) {
+    return unit === "ml" || unit === "l";
+  }
+
   function labelFor(unit, amount) {
     var meta = UNIT_LABELS[unit] || { label: unit, plural: unit };
     return Number(amount) === 1 ? meta.label : meta.plural;
@@ -321,10 +582,13 @@
 
   window.IgnytServingConverter = Object.freeze({
     unitsFor: unitsFor,
+    presetShapesFor: presetShapesFor,
+    formOf: formOf,
     gramsPerUnit: gramsPerUnit,
     toGrams: toGrams,
     describe: describe,
     labelFor: labelFor,
+    isVolumeUnit: isVolumeUnit,
     UNIT_LABELS: UNIT_LABELS
   });
 }());

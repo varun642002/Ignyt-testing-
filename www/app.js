@@ -3826,8 +3826,28 @@ function defaultFoodPortion(food){
       }
     }
   }
+  const conv = window.IgnytServingConverter;
   if(food.per != null && food.servingUnit && food.servingUnit !== "g" && food.servingSize > 0){
-    return { amount: 1, unit: food.servingUnit };
+    /* How many of that unit the serving is, not a flat 1. The assumption held while
+       servingUnit was always something countable — one piece, one slice — and broke as soon
+       as drinks arrived with servingUnit "ml" and servingSize 100, which opened every soft
+       drink at "1 ml" and 0 kcal. Dividing by the unit's weight gives 1 for a 50 g piece and
+       100 for 100 ml from the same expression. */
+    const per = conv ? conv.gramsPerUnit(food, food.servingUnit) : null;
+    const amount = per > 0 ? Math.round((food.servingSize / per) * 10) / 10 : 1;
+    return { amount: amount > 0 ? amount : 1, unit: food.servingUnit };
+  }
+  /* Grams is the right default for anything weighed, but not everything is. A drink now
+     offers millilitres and not grams, and defaulting it to "100 g of milk" would open the
+     screen on a unit its own list does not contain. Falling back to whatever the food offers
+     first keeps the default inside the offered set by construction. */
+  const offered = conv ? conv.unitsFor(food) : ["g"];
+  if(offered.indexOf("g") < 0 && offered.length){
+    const unit = offered[0];
+    const per = conv.gramsPerUnit(food, unit) || 1;
+    // Aim at the food's own basis so the opening figures match its per-100 g data.
+    const amount = Math.round(((food.per || 100) / per) * 10) / 10;
+    return { amount: amount > 0 ? amount : 1, unit };
   }
   return { amount: food.per || 100, unit: "g" };
 }
@@ -4040,6 +4060,10 @@ const CATEGORY_SERVING_SHAPES = {
    four so the row never wraps on a narrow phone. */
 const GRAM_ANCHORS = [50, 100, 150, 200];
 
+/* The same idea for anything poured. A glass is 250 ml, so these bracket it rather than
+   sitting at round gram values nobody measures a drink in. */
+const VOLUME_ANCHORS = [100, 200, 250, 500];
+
 /**
  * @returns {Array<{amount:number, unit:string, grams:number, kcal:number, label:string, source:string}>}
  */
@@ -4067,18 +4091,36 @@ function servingPresetsFor(food){
     });
   };
 
-  // 1. What USDA actually measured for this food.
-  (food.portions || []).forEach(p=>{ if(p && p.unit && p.grams > 0) push(1, p.unit, "measured"); });
+  /* 1. What was actually measured for this food. The count comes from the entry rather than
+        being assumed to be one: a USDA row is "1 cup = 240 g", but the seed catalogue writes
+        each food's basis, "100 ml = 100 g". Assuming one turned that into a 1 ml chip sitting
+        at the front of every drink, and a 1 g chip in front of every powder. */
+  (food.portions || []).forEach(p=>{
+    if(!p || !p.unit || !(p.grams > 0)) return;
+    // A "g" portion is the basis restated and every food has one; the gram anchors below
+    // already cover it, and letting it through put a "100 g" chip in the middle of a row of
+    // millilitres for anything poured.
+    if(p.unit === "g") return;
+    const n = p.amount != null ? Number(p.amount) : (p.label ? parseFloat(String(p.label)) : 1);
+    push(isFinite(n) && n > 0 ? n : 1, p.unit, "measured");
+  });
 
-  // 2. Category shape, only for units this food can express.
+  /* 2. The shapes for this food's form — scoops for a supplement, a glass for a liquid,
+        small/medium/large for produce. Read from the converter rather than from a table
+        here, so the chips can never offer a serving the unit list does not. */
   if(out.length < 3){
-    (CATEGORY_SERVING_SHAPES[food.category] || []).forEach(([unit, amount])=>{
+    const shapes = conv.presetShapesFor ? conv.presetShapesFor(food)
+                                        : (CATEGORY_SERVING_SHAPES[food.category] || []);
+    shapes.forEach(([unit, amount])=>{
       if(conv.gramsPerUnit(food, unit) != null) push(amount, unit, "category");
     });
   }
 
-  // 3. Gram anchors, always available.
-  GRAM_ANCHORS.forEach(g=>push(g, "g", "grams"));
+  /* 3. Anchors in the food's own base unit. Grams for a solid; millilitres for something
+        poured, because anchoring milk at "50 g" asks the user to weigh a liquid. */
+  const pourable = conv.isVolumeUnit && conv.unitsFor(food)[0] === "ml";
+  if(pourable) VOLUME_ANCHORS.forEach(ml=>push(ml, "ml", "grams"));
+  else GRAM_ANCHORS.forEach(g=>push(g, "g", "grams"));
 
   // Smallest first reads as a scale rather than an arbitrary list.
   return out.sort((a,b)=>a.grams - b.grams).slice(0, 8);
@@ -11600,6 +11642,11 @@ function renderFoodDetailPage(){
   const calc = scalable ? N.compute(food, grams) : N.compute({ ...food, per:1 }, 1);
   const isFav = (state.favoriteFoods||[]).some(x=>x && String(x.name).toLowerCase()===String(food.name).toLowerCase());
   const units = (scalable && conv) ? conv.unitsFor(food) : ["g"];
+  /* An entry logged before the unit lists were narrowed may carry a unit its food no longer
+     offers — milk saved in grams, whey saved as a "bowl". Keeping it in the list means
+     opening that entry to edit shows what was actually logged instead of silently switching
+     it to the first option and rewriting the amount. It disappears once changed. */
+  if(p.unit && units.indexOf(p.unit) < 0) units.unshift(p.unit);
   const row = k => calc.rows.find(r=>r.key===k);
 
   return `<div class="food-page">
