@@ -26,20 +26,50 @@ const IgnytAuth = (() => {
   let _busy = false;
   let _errorMsg = null;
 
-  function isNative() {
-    return typeof window.Capacitor !== "undefined"
+  function platform() {
+    return (typeof window.Capacitor !== "undefined"
       && typeof window.Capacitor.isNativePlatform === "function"
       && window.Capacitor.isNativePlatform()
-      && window.Capacitor.getPlatform() === "android";
+      && typeof window.Capacitor.getPlatform === "function")
+      ? window.Capacitor.getPlatform() : "web";
+  }
+
+  /* Android only, and it stays that way: this is what the exported isNativeAndroid reports
+     and what the signing-fingerprint diagnostic keys off, neither of which means anything
+     on iOS. Use canSignIn() for "is sign-in possible here". */
+  function isNative() {
+    return platform() === "android";
+  }
+
+  /** The platforms that have a sign-in implementation at all. */
+  function canSignIn() {
+    return platform() === "android" || platform() === "ios";
   }
 
   function bridge() {
     return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytAuth;
   }
 
+  /* Two implementations behind one call, chosen by platform and sharing nothing.
+   *
+   *   android — AuthPlugin.kt over the Capacitor bridge, the Firebase Android SDK. Every
+   *             line below the ios branch is exactly as it was; nothing about the iOS work
+   *             can reach it.
+   *   ios     — js/auth/firebase-rest-auth.js, the Identity Toolkit REST API. No native
+   *             plugin, because there is no Swift AuthPlugin and sign-in gates the whole
+   *             app, so iOS could not get past its first screen without this.
+   *
+   * Both return the same {success, data|error} shape, so everything above this line is
+   * unaware of which one answered. */
   async function callNative(methodName, options) {
+    if (platform() === "ios") {
+      if (!window.IgnytFirebaseRestAuth) {
+        return { success: false, error: "Sign-in is unavailable (auth module failed to load)." };
+      }
+      return await window.IgnytFirebaseRestAuth.call(methodName, options || {});
+    }
     if (!isNative()) {
-      return { success: false, error: "Sign-in is only available in the IGNYT Android app." };
+      return { success: false, error: "Sign-in is only available in the IGNYT mobile app." };
     }
     const plugin = bridge();
     if (!plugin || typeof plugin[methodName] !== "function") {
@@ -166,7 +196,7 @@ const IgnytAuth = (() => {
    *  session. Offline-safe (Firebase restores the session from disk). Never signs anyone in
    *  or out by itself — it only reads. */
   async function refreshFromNative() {
-    if (!isNative()) return;
+    if (!canSignIn()) return;
     const result = await callNative("getCurrentUser");
     if (!result.success || !result.data) return; // transient native issue: keep the cache, don't churn state
     if (result.data.signedIn && result.data.user) {
