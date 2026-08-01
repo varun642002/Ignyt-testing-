@@ -7502,106 +7502,6 @@ function renderServingPresets(food, activeGrams){
     </div>`;
 }
 
-function renderFoodDetail(food, meal){
-  if(!food) return "";
-  const N = window.IgnytNutrition;
-  const conv = window.IgnytServingConverter;
-  if(!N) return "";
-
-  // A saved favourite is one fixed portion with no per-100g basis, so there is nothing to
-  // scale and no serving controls to show.
-  const scalable = food.per != null;
-  const p = resolveFoodPortion(food);
-  const shownAmount = currentFoodAmount(food);
-  const check = scalable ? N.validateQuantity(food, shownAmount, p.unit)
-                         : { ok:true, grams: 1, amount: 1, unit: "g", error: null };
-
-  // An invalid amount must not silently log something else, so the preview and the Add
-  // button both go away until it is fixed.
-  const grams = check.ok ? check.grams : 0;
-  const calc = scalable ? N.compute(food, grams)
-                        : N.compute({ ...food, per: 1 }, 1);   // favourites: values as stored
-
-  const units = (scalable && conv) ? conv.unitsFor(food) : ["g"];
-  const isFav = (state.favoriteFoods||[]).some(x=>x && String(x.name).toLowerCase()===String(food.name).toLowerCase());
-
-  return `
-    <div class="info-box" style="padding:12px;margin-bottom:8px;">
-      <div class="row-between" style="align-items:flex-start;margin-bottom:8px;">
-        ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(food, 44) : ""}
-        <div style="min-width:0;flex:1;margin-left:${window.IgnytFoodImages?'10px':'0'};">
-          <div style="font-size:14px;font-weight:800;line-height:1.3;">${escHtml(food.name)}</div>
-          <div class="mono" style="font-size:11px;color:var(--muted);margin-top:3px;">
-            ${escHtml(food.category||"")}${food.brand?` · ${escHtml(food.brand)}`:""}${scalable?` · per ${food.per} g basis`:" · saved portion"}
-          </div>
-        </div>
-        <button class="cat-chip${isFav?' active':''}" data-food-fav="${escHtml(food.id)}" style="margin:0 0 0 8px;padding:3px 9px;font-size:12px;flex-shrink:0;">${isFav?'★':'☆'}</button>
-      </div>
-
-      ${scalable ? `
-        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
-          <button class="cat-chip" data-food-step="-1" style="margin:0;width:34px;justify-content:center;font-size:16px;font-weight:800;">−</button>
-          <input type="number" id="food-search-amount" value="${escHtml(String(shownAmount))}" min="0" step="any" inputmode="decimal"
-            style="width:66px;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:8px;font-size:13px;color:var(--text);text-align:center;">
-          <button class="cat-chip" data-food-step="1" style="margin:0;width:34px;justify-content:center;font-size:16px;font-weight:800;">+</button>
-          <select id="food-search-unit" style="flex:1;min-width:0;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:8px;font-size:13px;color:var(--text);">
-            ${units.map(u=>`<option value="${u}" ${p.unit===u?'selected':''}>${escHtml(conv?conv.labelFor(u,p.amount):u)}</option>`).join("")}
-          </select>
-        </div>
-
-        ${check.ok
-          ? `<div class="mono" style="font-size:11px;color:var(--muted);margin-bottom:6px;">= ${grams} g${p.unit!=="g"&&conv?` · 1 ${escHtml(conv.labelFor(p.unit,1))} = ${conv.gramsPerUnit(food,p.unit)} g`:""}</div>`
-          : `<div style="font-size:11px;color:var(--accent);margin-bottom:6px;">${escHtml(check.error)}</div>`}
-
-        <!-- Phase 7: real measured servings, each with its own calorie figure, so choosing a
-             portion never requires converting anything. -->
-        ${renderServingPresets(food, grams)}
-
-        <div style="display:flex;gap:4px;overflow-x:auto;margin-bottom:8px;padding-bottom:2px;">
-          ${(p.unit==="g" ? N.GRAM_PRESETS.map(v=>({v,label:v+"g"}))
-                          : N.AMOUNT_FRACTIONS.map(f=>({v:f.value,label:f.label})))
-            .map(x=>`<button class="cat-chip${Math.abs(Number(shownAmount)-x.v)<0.001?' active':''}" data-food-amount="${x.v}" style="margin:0;flex-shrink:0;">${escHtml(x.label)}</button>`).join("")}
-        </div>
-      ` : `<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Saved favourite — logged as one portion.</div>`}
-
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:2px;">Nutrition facts</div>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
-        <tr>
-          <th style="text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);font-weight:700;padding-bottom:2px;">Nutrient</th>
-          <th style="text-align:right;font-size:11px;text-transform:uppercase;color:var(--muted);font-weight:700;padding-bottom:2px;">${scalable?"Serving":"Portion"}</th>
-          <th style="text-align:right;font-size:11px;text-transform:uppercase;color:var(--muted);font-weight:700;padding:0 0 2px 10px;">Per 100 g</th>
-          <th style="text-align:right;font-size:11px;text-transform:uppercase;color:var(--muted);font-weight:700;padding:0 0 2px 8px;">%DV</th>
-        </tr>
-        ${calc.rows.map(r=>renderNutritionRow(r)).join("")}
-      </table>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.4;">
-        — means the value was never measured for this food, not zero. %DV against FDA adult
-        reference values; sugar has none because USDA reports total sugars and the DV covers added sugars.
-      </div>
-
-      ${check.ok ? `
-        <div style="background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:8px 10px;margin-bottom:8px;">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:2px;">Adding to ${escHtml(meal)}</div>
-          <div style="font-size:12px;font-weight:700;">${escHtml(food.name)}</div>
-          <div class="mono" style="font-size:11px;color:var(--muted);margin-top:2px;">
-            ${scalable?escHtml(N.describeServing(food, check.amount, check.unit)):"1 portion"} ·
-            <b style="color:var(--accent);">${N.format("calories", calc.rows[0].serving)}</b> ·
-            P ${N.format("protein", calc.rows[1].serving)} · C ${N.format("carbs", calc.rows[2].serving)} · F ${N.format("fat", calc.rows[3].serving)}
-          </div>
-        </div>` : ""}
-
-      <div style="display:flex;gap:6px;margin-bottom:6px;">
-        <button class="btn btn-accent" style="flex:1;padding:8px;font-size:13px;" data-food-search-add="${escHtml(meal)}" ${check.ok?"":"disabled"}>Add to ${escHtml(meal)}</button>
-        <button class="btn btn-ghost" style="padding:8px 11px;font-size:13px;" data-food-share="1" title="Share" aria-label="Share this food">${svg('upload',14)}</button>
-        <button class="btn btn-ghost" style="padding:8px 11px;font-size:13px;" data-food-search-cancel="1">Cancel</button>
-      </div>
-
-      <div style="display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;">
-        <span style="font-size:11px;color:var(--muted);align-self:center;flex-shrink:0;margin-right:2px;">Quick add:</span>
-        ${mealTypes().filter(m=>m!==meal).map(m=>`<button class="cat-chip" data-food-quick-meal="${escHtml(m)}" style="margin:0;flex-shrink:0;" ${check.ok?"":"disabled"}>${escHtml(m)}</button>`).join("")}
-      </div>
-    </div>`;
-}
 
 
 /* =========================================================
@@ -22088,12 +21988,6 @@ function bindFoodResultHandlers(){
       if((prev === "g") !== (unitSelect.value === "g")) state.foodSearchAmount = null;
       render();
     });
-    /* The only markup carrying data-food-amount is in renderFoodDetail(), which nothing
-       calls — dead, like renderFoodSearchPanel was. Left exactly as it was rather than
-       "improved": editing unreachable code makes it look maintained. */
-    document.querySelectorAll("[data-food-amount]").forEach(el=>{
-      el.addEventListener("click", ()=>{ state.foodSearchAmount = Number(el.dataset.foodAmount); render(); });
-    });
     /* ---- Category browser + recent searches (Phase 3) ---- */
     document.querySelectorAll("[data-food-browse]").forEach(el=>{
       el.addEventListener("click", ()=>{
@@ -22151,23 +22045,6 @@ function bindFoodResultHandlers(){
       });
     });
 
-    const foodCancelBtn = document.querySelector("[data-food-search-cancel]");
-    if(foodCancelBtn) foodCancelBtn.addEventListener("click", ()=>{
-      state.foodSearchSelected = null; state.foodSearchAmount = null; state.foodSearchUnit = "g"; render();
-    });
-
-    const foodAddBtn = document.querySelector("[data-food-search-add]");
-    if(foodAddBtn) foodAddBtn.addEventListener("click", ()=>{
-      commitSelectedFood(foodAddBtn.dataset.foodSearchAdd);
-      render();
-    });
-    document.querySelectorAll("[data-food-quick-meal]").forEach(el=>{
-      el.addEventListener("click", ()=>{
-        if(commitSelectedFood(el.dataset.foodQuickMeal)) showToast("Added to " + el.dataset.foodQuickMeal, "success", render);
-        render();
-      });
-    });
-
     /* Serving controls. Stepping is unit-aware: grams move in 5s, countables in halves. */
     document.querySelectorAll("[data-food-step]").forEach(el=>{
       el.addEventListener("click", ()=>{
@@ -22188,13 +22065,6 @@ function bindFoodResultHandlers(){
         persist();
       });
     });
-    document.querySelectorAll("[data-food-portion]").forEach(el=>{
-      el.addEventListener("click", ()=>{
-        state.foodSearchUnit = el.dataset.foodPortion;
-        state.foodSearchAmount = 1;
-        render();
-      });
-    });
     // Serving presets (Phase 7). Sets amount and unit together — picking "1 cup" must not
     // leave a gram amount behind, which is what made the old two-control version confusing.
     document.querySelectorAll("[data-srv-amount]").forEach(el=>{
@@ -22207,25 +22077,5 @@ function bindFoodResultHandlers(){
         if(state.foodFlow && state.foodFlow.screen === "detail") render();
         else updateFoodSearchResults();
       });
-    });
-    const foodShareBtn = document.querySelector("[data-food-share]");
-    if(foodShareBtn) foodShareBtn.addEventListener("click", async ()=>{
-      const sel = state.foodSearchSelected;
-      const food = sel && lookupFood(sel.id, sel.name);
-      if(!food || !window.IgnytNutrition) return;
-      const p = resolveFoodPortion(food);
-      const text = IgnytNutrition.summaryText(food, currentFoodAmount(food), p.unit);
-      try{
-        // Same escalation the workout share uses: native plugin, then Web Share, then clipboard.
-        const share = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytShare;
-        if(share){ await share.shareText({ fileName:"ignyt-food.txt", content:text, mimeType:"text/plain" }); return; }
-        if(navigator.share){ await navigator.share({ title:"IGNYT", text }); return; }
-        await navigator.clipboard.writeText(text);
-        showToast("Copied to clipboard.", "success", render);
-      }catch(e){
-        if(String(e).toLowerCase().includes("cancel") || String(e).toLowerCase().includes("abort")) return;
-        try{ await navigator.clipboard.writeText(text); showToast("Copied to clipboard.", "success", render); }
-        catch(e2){ showToast("Sharing isn't available on this device.", "error", render); }
-      }
     });
 }
