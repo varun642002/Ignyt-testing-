@@ -90,7 +90,7 @@ out[-1] = out[-1].rstrip(",")
 out.append("};")
 lib = "\n".join(out)
 
-HEADER = """/* The exercise library, rebuilt from the supplied dataset (workout_names.csv, 458 rows).
+HEADER = """/* The exercise library, rebuilt from the supplied dataset (workout_names.csv, %d rows).
    Entry shape is unchanged: [name, default prescription, unit, primary muscle].
 
    Only the name and the muscle came from the dataset. Category is read from the equipment the
@@ -98,10 +98,16 @@ HEADER = """/* The exercise library, rebuilt from the supplied dataset (workout_
    distance, a plank is time, everything else reps - and the prescription is a per-muscle
    default. Those three are inferences, not data: correct them here rather than in the CSV.
 
-   The old EXERCISE_DETAILS records went with the old names. Only 95 of these 458 could have
-   kept theirs, and matching the rest would have meant attaching cable form-cues to dumbbell
-   movements, which is worse than having none. */
-"""
+   The old EXERCISE_DETAILS records went with the old names. Only 95 of the original 458 could
+   have kept theirs, and matching the rest would have meant attaching cable form-cues to
+   dumbbell movements, which is worse than having none.
+
+   Every exercise here has an image - a photo in www/assets/exercises or an instruction poster
+   in www/assets/exercise-posters. The six that never got one were dropped from the CSV rather
+   than left showing an icon badge, and their muscles moved to LEGACY_MUSCLE_MAP so anyone who
+   had already logged them keeps the attribution. Adding a row here without adding an image
+   reintroduces the badge. */
+""" % len(rows)
 
 s = io.open(APP, encoding="utf-8").read()
 i = s.index("const LIBRARY = {")
