@@ -30,7 +30,7 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 30
     environment:
-      node: 20
+      node: 22
       xcode: latest
     scripts:
       - name: Install dependencies
@@ -87,7 +87,7 @@ workflows:
       # Integrations. Name it exactly "ignyt-app-store-connect" or change the name here.
       app_store_connect: ignyt-app-store-connect
     environment:
-      node: 20
+      node: 22
       xcode: latest
       ios_signing:
         # Codemagic creates and manages the certificate and provisioning profile from the API
