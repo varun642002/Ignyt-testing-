@@ -14060,7 +14060,14 @@ function renderExerciseDetail(name){
     <div class="ex-hero">
       <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:12px;" data-action="close-exercise-detail">← Back</button>
       <div style="display:flex;align-items:center;gap:12px;">
-        <span class="tl-card__icon" style="width:52px;height:52px;flex:none;background:${muscleColor}1a;color:${muscleColor};">${svg(rowIcon,26)}</span>
+        ${(()=>{ const img = exerciseImageSrc(name);
+          /* Photo when the dataset shipped one, the muscle-coloured badge when it did not.
+             Larger here than in a Library row because this is the screen where a picture of
+             the movement is the point, rather than a way to tell two rows apart. */
+          return img
+            ? `<span class="ex-hero__photo"><img src="${escHtml(img)}" alt=""></span>`
+            : `<span class="tl-card__icon" style="width:52px;height:52px;flex:none;background:${muscleColor}1a;color:${muscleColor};">${svg(rowIcon,26)}</span>`;
+        })()}
         <div style="min-width:0;flex:1;">
           <div class="ex-hero__name">${escHtml(name)}</div>
           <span class="lib-tag" style="background:${muscleColor}1a;color:${muscleColor};margin-top:4px;">${escHtml(muscle)}</span>
@@ -14132,11 +14139,19 @@ function renderExerciseDetailSummary(name, detail, libEntry, prs){
    Every section is omitted entirely when it has no data -- there are no empty shells. */
 function renderExerciseDetailHowTo(name, nd, libEntry){
   if(!nd){
-    return `<div class="pg-card" style="text-align:center;padding:28px 18px;">
-      <span class="tl-card__icon" style="width:44px;height:44px;margin:0 auto 12px;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('info',22)}</span>
-      <div style="font-size:15px;font-weight:800;">Instructions not available yet</div>
-      ${libEntry?`<div style="font-size:12px;color:var(--rh-muted);margin-top:4px;">Suggested: <span style="color:var(--rh-text);font-weight:700;">${escHtml(libEntry.presc)}</span></div>`:''}
-    </div>`;
+    /* No written instructions: the library was rebuilt from a dataset that carried names and
+       muscles only. Where a photo exists it goes here at full width — a picture of the
+       movement answers "how do I do this" better than a card apologising for having nothing,
+       and this tab is otherwise the emptiest screen in the app. The notice stays underneath,
+       because a photo is not a substitute for cues and should not pretend to be. */
+    const img = exerciseImageSrc(name);
+    return `
+      ${img ? `<div class="ex-howto__photo"><img src="${escHtml(img)}" alt="${escHtml(name)}"></div>` : ""}
+      <div class="pg-card" style="text-align:center;padding:${img ? '18px' : '28px'} 18px;">
+        ${img ? "" : `<span class="tl-card__icon" style="width:44px;height:44px;margin:0 auto 12px;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('info',22)}</span>`}
+        <div style="font-size:15px;font-weight:800;">Instructions not available yet</div>
+        ${libEntry?`<div style="font-size:12px;color:var(--rh-muted);margin-top:4px;">Suggested: <span style="color:var(--rh-text);font-weight:700;">${escHtml(libEntry.presc)}</span></div>`:''}
+      </div>`;
   }
   const open = state.exerciseSectionsOpen || {};
   const isOpen = (k, dflt) => (open[k] === undefined ? dflt : open[k]);
