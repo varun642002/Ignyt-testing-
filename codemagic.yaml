@@ -1,0 +1,141 @@
+# Codemagic CI — builds IGNYT's iOS app on cloud Macs.
+#
+# WHY THIS EXISTS
+# There is no Mac in this project. Android is built locally on Windows; iOS cannot be, and an
+# iPhone is a test device, not a build machine. These workflows are the whole iOS toolchain.
+#
+# TWO WORKFLOWS, AND THE ORDER MATTERS
+#
+#   ios-compile-check   No signing, no Apple account, no money. Compiles the Swift and hands
+#                       back the errors. Run this FIRST and keep running it until it passes.
+#                       The HealthKit plugin was written without a compiler, so it will fail
+#                       the first few times; this is the loop that fixes it, and it costs
+#                       nothing but free-tier minutes.
+#
+#   ios-testflight      Signed build published to TestFlight, so it can be installed on a
+#                       phone. Needs the $99/year Apple Developer Program and a Codemagic
+#                       integration. Only worth setting up once the compile check is green —
+#                       paying Apple to discover a syntax error would be a poor trade.
+#
+# Builds are NOT triggered automatically. The free tier is 500 minutes a month and an iOS
+# build takes 10–20 of them, so a push-triggered build would burn the month on commits that
+# never touched iOS. Start them from the Codemagic UI. To change that, add a `triggering:`
+# block to a workflow.
+
+workflows:
+
+  # ---------------------------------------------------------------------------------------
+  ios-compile-check:
+    name: iOS compile check (unsigned)
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      node: 20
+      xcode: latest
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+
+      - name: Sync the web layer into the iOS project
+        # Required, not optional. ios/App/App/public is gitignored — it is generated — so
+        # without this the app builds and launches to a blank screen. This also resolves the
+        # Swift package that Package.swift points at inside node_modules, which is why it has
+        # to run after npm ci rather than before.
+        script: npx cap sync ios
+
+      - name: Show what will be built
+        script: |
+          echo "Swift sources in the target:"
+          grep -o '[A-Za-z]*\.swift in Sources' ios/App/App.xcodeproj/project.pbxproj | sort -u
+          echo "Web files synced: $(find ios/App/App/public -type f | wc -l)"
+
+      - name: Compile for the simulator, unsigned
+        # CODE_SIGNING_ALLOWED=NO is what removes the need for an Apple account. The
+        # entitlements file is ignored when nothing is being signed, so the HealthKit
+        # capability does not have to be registered yet for this to compile.
+        script: |
+          set -o pipefail
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build 2>&1 | tee /tmp/xcode-build.log
+    artifacts:
+      # Kept whether the build passes or fails — on a failure this log IS the deliverable.
+      - /tmp/xcode-build.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+    publishing:
+      email:
+        recipients:
+          - varun642002@gmail.com
+        notify:
+          success: false      # a green compile needs no email; only failures are news
+          failure: true
+
+  # ---------------------------------------------------------------------------------------
+  ios-testflight:
+    name: iOS release to TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      # Create this in Codemagic: Teams > Integrations > Developer Portal > Add key, using an
+      # App Store Connect API key generated at appstoreconnect.apple.com > Users and Access >
+      # Integrations. Name it exactly "ignyt-app-store-connect" or change the name here.
+      app_store_connect: ignyt-app-store-connect
+    environment:
+      node: 20
+      xcode: latest
+      ios_signing:
+        # Codemagic creates and manages the certificate and provisioning profile from the API
+        # key above. This is the step that normally forces a Mac — Keychain generates the
+        # signing request locally — and is the reason this project can ship without one.
+        distribution_type: app_store
+        bundle_identifier: com.varun.ignyt
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+
+      - name: Sync the web layer into the iOS project
+        script: npx cap sync ios
+
+      - name: Apply the managed signing profile
+        script: xcode-project use-profiles
+
+      - name: Keep the build number ahead of TestFlight
+        # TestFlight rejects a build number it has already seen, the same rule that made
+        # Android's versionCode collide repeatedly. Asking App Store Connect for the current
+        # highest and adding one removes the guesswork entirely; the marketing version still
+        # comes from CURRENT_PROJECT_VERSION in the project file.
+        script: |
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_APPLE_ID" 2>/dev/null || echo "0")
+          agvtool new-version -all $(($LATEST + 1))
+        working_directory: ios/App
+
+      - name: Build the signed archive
+        script: |
+          set -o pipefail
+          xcode-project build-ipa \
+            --project ios/App/App.xcodeproj \
+            --scheme App \
+            --config Release 2>&1 | tee /tmp/xcode-archive.log
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcode-archive.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # Not submitted for App Store review automatically. Review is a one-way door and
+        # health apps get extra scrutiny over HealthKit usage — that submission should be a
+        # deliberate act in the Console, not a side effect of a green build.
+        submit_to_app_store: false
+      email:
+        recipients:
+          - varun642002@gmail.com
+        notify:
+          success: true
+          failure: true
