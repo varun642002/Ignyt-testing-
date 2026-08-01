@@ -14892,6 +14892,75 @@ function renderFoodSearchPage(){
   </div>`;
 }
 
+/* The macro cells, as their own function so the full render and the live amount update draw
+   them from one definition rather than two that can drift. */
+function foodDetailMacrosHtml(calc){
+  const N = window.IgnytNutrition;
+  const row = k => calc.rows.find(r=>r.key===k);
+  return [["calories","kcal","energy"],["protein","Protein","protein"],["carbs","Carbs","carbs"],
+          ["fat","Fat","fat"],["fibre","Fibre","fibre"]].map(([k,label,key])=>`
+    <div class="macro-row__cell">
+      <div class="nut-value nut-value--md">${N.format(k, row(k).serving).replace(/ (kcal|g|mg)$/,"")}<span class="nut-unit">${k==="calories"?"":"g"}</span></div>
+      <div class="macro-row__label" style="color:var(--n-${key});">${label}</div>
+    </div>`).join("");
+}
+
+/* Recomputes the figures the quantity drives and writes them straight into the DOM.
+ *
+ *  Typing used to call the app-wide render() on a 200ms debounce. That rebuilt the entire
+ *  page — including the <input> being typed into, which is what the "blinking" was — and on
+ *  a number input the caret cannot be restored afterwards, because selectionStart throws on
+ *  type="number" and withFocusPreserved has to skip it. So editing the middle of a weight
+ *  jumped the cursor to the end.
+ *
+ *  This is the same fix updateFoodSearchResults() applied to the search box: swap only what
+ *  changed, never the field the user is in. */
+function updateFoodDetailNumbers(){
+  const flow = state.foodFlow;
+  if(!flow || flow.screen !== "detail") return;
+  const N = window.IgnytNutrition;
+  if(!N) return;
+  /* Resolved exactly as the page does: the flow carries a foodId, not the food. Reading
+     flow.food instead returned undefined and this bailed out silently, which looked like the
+     figures simply not reacting. */
+  const food = flow.foodId != null
+    ? lookupFood(flow.foodId, state.foodSearchSelected && state.foodSearchSelected.name)
+    : null;
+  if(!food) return;
+
+  /* Recomputed exactly as renderFoodDetailPage() does, from the same helpers, so the live
+     figures and a full repaint can never disagree. */
+  const scalable = food.per != null;
+  const portion = resolveFoodPortion(food);
+  const shownAmount = currentFoodAmount(food);
+  const check = scalable ? N.validateQuantity(food, shownAmount, portion.unit)
+                         : { ok:true, grams:1, amount:1, unit:"g", error:null };
+  const grams = check.ok ? check.grams : 0;
+  const calc = scalable ? N.compute(food, grams) : N.compute({ ...food, per:1 }, 1);
+
+  const kcal = document.getElementById("fd-kcal");
+  if(kcal) kcal.textContent = N.format("calories", calc.rows.find(r=>r.key==="calories").serving).replace(" kcal","");
+
+  const serving = document.getElementById("fd-serving");
+  if(serving) serving.textContent = scalable ? N.describeServing(food, check.amount, check.unit) : "per portion";
+
+  const macros = document.getElementById("fd-macros");
+  if(macros) macros.innerHTML = foodDetailMacrosHtml(calc);
+
+  const err = document.getElementById("fd-error");
+  if(err) err.innerHTML = check.ok ? "" : `<div style="font-size:11px;color:var(--accent);margin-top:6px;">${escHtml(check.error)}</div>`;
+
+  /* The sticky Add/Save button carries the calorie figure AND its own disabled state, both
+     driven by the amount. Updating everything except this was the gap: the button kept
+     showing the previous serving's calories, and — the part that actually mattered — stayed
+     enabled on an invalid amount, so a zero-gram entry could still be logged. */
+  document.querySelectorAll(".food-sticky__btn").forEach(btn=>{
+    btn.disabled = !check.ok;
+    const kcal = btn.querySelector(".food-sticky__kcal");
+    if(kcal) kcal.textContent = N.format("calories", calc.rows.find(r=>r.key==="calories").serving);
+  });
+}
+
 function renderFoodDetailPage(){
   const flow = state.foodFlow;
   const editing = flow.mode === "edit";
@@ -14945,9 +15014,9 @@ function renderFoodDetailPage(){
         ${food.source==="usda"?`<div class="food-hero__verified">✓ USDA measured</div>`:""}
       </div>
       <div class="food-hero__kcal">
-        <div class="nut-value nut-value--lg" style="color:var(--accent);">${N.format("calories", row("calories").serving).replace(" kcal","")}</div>
+        <div class="nut-value nut-value--lg" id="fd-kcal" style="color:var(--accent);">${N.format("calories", row("calories").serving).replace(" kcal","")}</div>
         <div class="nut-label">kcal</div>
-        <div class="nut-note">${scalable?escHtml(N.describeServing(food, check.amount, check.unit)):"per portion"}</div>
+        <div class="nut-note" id="fd-serving">${scalable?escHtml(N.describeServing(food, check.amount, check.unit)):"per portion"}</div>
       </div>
     </div>
 
@@ -14968,16 +15037,11 @@ function renderFoodDetailPage(){
           ${units.map(u=>`<option value="${u}" ${p.unit===u?'selected':''}>${escHtml(conv?conv.labelFor(u,shownAmount):u)}</option>`).join("")}
         </select>
       </div>
-      ${check.ok?"":`<div style="font-size:11px;color:var(--accent);margin-top:6px;">${escHtml(check.error)}</div>`}
+      <div id="fd-error">${check.ok?"":`<div style="font-size:11px;color:var(--accent);margin-top:6px;">${escHtml(check.error)}</div>`}</div>
     </div>` : `<div class="nut-card nut-card--tight"><div class="nut-note">Saved favourite — logged as one portion.</div></div>`}
 
-    <div class="macro-row">
-      ${[["calories","kcal","energy"],["protein","Protein","protein"],["carbs","Carbs","carbs"],
-         ["fat","Fat","fat"],["fibre","Fibre","fibre"]].map(([k,label,key])=>`
-        <div class="macro-row__cell">
-          <div class="nut-value nut-value--md">${N.format(k, row(k).serving).replace(/ (kcal|g|mg)$/,"")}<span class="nut-unit">${k==="calories"?"":"g"}</span></div>
-          <div class="macro-row__label" style="color:var(--n-${key});">${label}</div>
-        </div>`).join("")}
+    <div class="macro-row" id="fd-macros">
+      ${foodDetailMacrosHtml(calc)}
     </div>
 
     <div class="nut-card nut-card--tight">
@@ -22005,10 +22069,16 @@ function bindFoodResultHandlers(){
     const amountInput = document.getElementById("food-search-amount");
     if(amountInput) amountInput.addEventListener("input", ()=>{
       state.foodSearchAmount = amountInput.value;
-      debounce("food-amount", ()=>{
-        render();
-      }, 200);
+      /* Updates the figures in place instead of calling render(). A full render rebuilt the
+         page around the field being typed into — that was the flicker — and replaced the
+         <input>, which on a number input loses the caret for good, because selectionStart
+         throws on type="number" and cannot be restored. No debounce is needed now: this
+         writes four values, where the old path rebuilt the whole screen. */
+      updateFoodDetailNumbers();
     });
+    /* The value still has to reach storage. Deferred to blur rather than every keystroke,
+       so a half-typed "1" on the way to "150" is never what gets persisted. */
+    if(amountInput) amountInput.addEventListener("change", ()=>{ persist(); });
     const unitSelect = document.getElementById("food-search-unit");
     if(unitSelect) unitSelect.addEventListener("change", ()=>{
       const prev = state.foodSearchUnit;
@@ -22018,6 +22088,9 @@ function bindFoodResultHandlers(){
       if((prev === "g") !== (unitSelect.value === "g")) state.foodSearchAmount = null;
       render();
     });
+    /* The only markup carrying data-food-amount is in renderFoodDetail(), which nothing
+       calls — dead, like renderFoodSearchPanel was. Left exactly as it was rather than
+       "improved": editing unreachable code makes it look maintained. */
     document.querySelectorAll("[data-food-amount]").forEach(el=>{
       el.addEventListener("click", ()=>{ state.foodSearchAmount = Number(el.dataset.foodAmount); render(); });
     });
@@ -22107,7 +22180,12 @@ function bindFoodResultHandlers(){
         const next = Math.round((Number(p.amount) + step * Number(el.dataset.foodStep)) * 100) / 100;
         if(next <= 0) return;                       // never step into an invalid amount
         state.foodSearchAmount = next;
-        render();
+        /* In place, like typing. A full render here replaced the input mid-tap, which on a
+           repeated press of + made the field flicker under the finger. */
+        const box = document.getElementById("food-search-amount");
+        if(box) box.value = String(next);
+        updateFoodDetailNumbers();
+        persist();
       });
     });
     document.querySelectorAll("[data-food-portion]").forEach(el=>{
