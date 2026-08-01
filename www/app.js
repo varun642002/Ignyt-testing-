@@ -3799,7 +3799,14 @@ function resolveFoodPortion(food){
  *  so validateQuantity() sees what they entered and can reject it. */
 function currentFoodAmount(food){
   const raw = state.foodSearchAmount;
-  const typed = raw !== null && raw !== undefined && String(raw).trim() !== "";
+  /* An empty string means the user cleared the box; null/undefined means nothing has been
+     entered yet, which is a different thing. Both used to fall through to the food's default
+     portion, so clearing the field left the page showing the default's calories with no
+     error and the Add button live — press it and 100 g was logged despite an empty box.
+     Only the never-set case gets the default now; a cleared box stays cleared and
+     validateQuantity() answers "Enter an amount." the way it always could have. */
+  if(typeof raw === "string" && raw.trim() === "") return "";
+  const typed = raw !== null && raw !== undefined;
   return typed ? raw : resolveFoodPortion(food).amount;
 }
 
@@ -4418,9 +4425,57 @@ function foodSearchResultsHtml(meal){
 function updateFoodSearchResults(){
   const el = document.getElementById("food-search-results");
   if(!el) return;
-  el.innerHTML = foodSearchResultsHtml(state.mealOpen || mealForNow());
-  // The swap discarded the old nodes and their listeners, so the fresh ones need binding.
+  const html = foodSearchResultsHtml(state.mealOpen || mealForNow());
+
+  /* Nothing changed — leave the DOM alone. Typing past the point where the result set has
+     settled ("chick", "chicke", "chicken" all return the same rows) was still replacing every
+     node in an 800px list on each keystroke. That teardown and rebuild is the blink: the list
+     goes away and comes back a frame later, which is cheap on a desktop and very visible in a
+     WebView on a phone. */
+  if(el.innerHTML === html) return;
+
+  /* Something did change, but usually far less than all of it. Replace only the top-level
+     children that differ, so the suggestion chips and the "load more" button survive a change
+     to the rows below them. */
+  const next = document.createElement("div");
+  next.innerHTML = html;
+  const oldKids = Array.prototype.slice.call(el.children);
+  const newKids = Array.prototype.slice.call(next.children);
+  const sameShape = oldKids.length === newKids.length &&
+    oldKids.every((c, i) => c.tagName === newKids[i].tagName);
+  if(sameShape){
+    oldKids.forEach((c, i) => patchFoodResultSection(c, newKids[i]));
+  }else{
+    el.innerHTML = html;
+  }
+  // Whatever was replaced took its listeners with it, so the fresh nodes need binding.
   bindFoodResultHandlers();
+}
+
+/* Update one section of the results, keeping as much of the existing DOM as possible.
+ *
+ *  The reason this is worth doing rather than assigning innerHTML: every keystroke moves the
+ *  <mark> that highlights the matched part of a name, so "chick", "chicke" and "chicken" all
+ *  produce different HTML for the same eight foods in the same order. Comparing markup alone
+ *  therefore says "everything changed" on every keystroke, and the whole list gets torn down
+ *  and rebuilt — which is what the blinking was.
+ *
+ *  So when the section holds the same foods in the same order, only each row's contents are
+ *  rewritten. The row elements themselves stay put, which means no reflow of the list and no
+ *  frame where the results are missing. */
+function patchFoodResultSection(oldEl, newEl){
+  if(oldEl.outerHTML === newEl.outerHTML) return;
+
+  const oldRows = Array.prototype.slice.call(oldEl.querySelectorAll("[data-food-pick]"));
+  const newRows = Array.prototype.slice.call(newEl.querySelectorAll("[data-food-pick]"));
+  const sameFoods = oldRows.length > 0 && oldRows.length === newRows.length &&
+    oldRows.every((r, i) => r.dataset.foodPick === newRows[i].dataset.foodPick);
+
+  if(sameFoods){
+    oldRows.forEach((r, i) => { if(r.innerHTML !== newRows[i].innerHTML) r.innerHTML = newRows[i].innerHTML; });
+    return;
+  }
+  oldEl.replaceWith(newEl);
 }
 
 function foodsForDate(dateStr){ return state.foodLog.filter(f=>f.date===dateStr); }
@@ -11389,11 +11444,13 @@ function renderFoodSearchPage(){
    them from one definition rather than two that can drift. */
 function foodDetailMacrosHtml(calc){
   const N = window.IgnytNutrition;
-  const row = k => calc.rows.find(r=>r.key===k);
+  // null means the amount is invalid: dashes, so the macros agree with the calorie figure
+  // above rather than quietly showing the default portion's grams.
+  const row = k => calc ? calc.rows.find(r=>r.key===k) : null;
   return [["calories","kcal","energy"],["protein","Protein","protein"],["carbs","Carbs","carbs"],
           ["fat","Fat","fat"],["fibre","Fibre","fibre"]].map(([k,label,key])=>`
     <div class="macro-row__cell">
-      <div class="nut-value nut-value--md">${N.format(k, row(k).serving).replace(/ (kcal|g|mg)$/,"")}<span class="nut-unit">${k==="calories"?"":"g"}</span></div>
+      <div class="nut-value nut-value--md">${calc?N.format(k, row(k).serving).replace(/ (kcal|g|mg)$/,""):"—"}<span class="nut-unit">${(calc && k!=="calories")?"g":""}</span></div>
       <div class="macro-row__label" style="color:var(--n-${key});">${label}</div>
     </div>`).join("");
 }
@@ -11424,6 +11481,7 @@ function updateFoodDetailNumbers(){
   /* Recomputed exactly as renderFoodDetailPage() does, from the same helpers, so the live
      figures and a full repaint can never disagree. */
   const scalable = food.per != null;
+  const conv = window.IgnytServingConverter;
   const portion = resolveFoodPortion(food);
   const shownAmount = currentFoodAmount(food);
   const check = scalable ? N.validateQuantity(food, shownAmount, portion.unit)
@@ -11431,14 +11489,22 @@ function updateFoodDetailNumbers(){
   const grams = check.ok ? check.grams : 0;
   const calc = scalable ? N.compute(food, grams) : N.compute({ ...food, per:1 }, 1);
 
+  /* An invalid amount shows a dash, not a number. compute() treats zero grams as "no amount
+     given" and hands back the food's default portion, so the old code answered a rejected
+     10015 g with the calories for 100 g — a real figure sitting next to an error saying the
+     amount was refused, and next to a serving line reading 0 g. Three elements, three
+     different stories. A dash is the only honest answer while there is nothing valid to
+     scale from. */
+  const kcalText = check.ok ? N.format("calories", calc.rows.find(r=>r.key==="calories").serving).replace(" kcal","") : "—";
+
   const kcal = document.getElementById("fd-kcal");
-  if(kcal) kcal.textContent = N.format("calories", calc.rows.find(r=>r.key==="calories").serving).replace(" kcal","");
+  if(kcal) kcal.textContent = kcalText;
 
   const serving = document.getElementById("fd-serving");
-  if(serving) serving.textContent = scalable ? N.describeServing(food, check.amount, check.unit) : "per portion";
+  if(serving) serving.textContent = scalable ? (check.ok ? N.describeServing(food, check.amount, check.unit) : "—") : "per portion";
 
   const macros = document.getElementById("fd-macros");
-  if(macros) macros.innerHTML = foodDetailMacrosHtml(calc);
+  if(macros) macros.innerHTML = foodDetailMacrosHtml(check.ok ? calc : null);
 
   const err = document.getElementById("fd-error");
   if(err) err.innerHTML = check.ok ? "" : `<div style="font-size:11px;color:var(--accent);margin-top:6px;">${escHtml(check.error)}</div>`;
@@ -11450,7 +11516,49 @@ function updateFoodDetailNumbers(){
   document.querySelectorAll(".food-sticky__btn").forEach(btn=>{
     btn.disabled = !check.ok;
     const kcal = btn.querySelector(".food-sticky__kcal");
-    if(kcal) kcal.textContent = N.format("calories", calc.rows.find(r=>r.key==="calories").serving);
+    if(kcal) kcal.textContent = check.ok ? N.format("calories", calc.rows.find(r=>r.key==="calories").serving) : "—";
+  });
+
+  /* Which serving chip is highlighted, and the unit labels, both depend on the amount too.
+     Updating them here is what lets picking a preset or switching unit stop calling render():
+     a full render on this screen rebuilds the entire page around the control being tapped,
+     which is the most visible flicker in the whole add-food flow. */
+  const presets = document.getElementById("fd-presets");
+  if(presets){
+    const html = renderServingPresets(food, grams);
+    if(presets.innerHTML !== html){ presets.innerHTML = html; bindServingPresets(); }
+  }
+  const unitSel = document.getElementById("food-search-unit");
+  if(unitSel && scalable && conv){
+    if(unitSel.value !== portion.unit) unitSel.value = portion.unit;
+    Array.prototype.forEach.call(unitSel.options, opt=>{
+      const label = conv.labelFor(opt.value, shownAmount);
+      if(opt.textContent !== label) opt.textContent = label;
+    });
+  }
+}
+
+/* Serving preset chips. Split out of bindFoodResultHandlers() because the chips are the one
+ * thing in the detail screen that gets replaced on its own — updateFoodDetailNumbers() rewrites
+ * them when the amount changes. Re-running the whole bind pass instead would stack a second
+ * listener on the amount input, the unit select and the +/- buttons, none of which are ever
+ * replaced. */
+function bindServingPresets(){
+  document.querySelectorAll("[data-srv-amount]").forEach(el=>{
+    if(el.__srvBound) return;
+    el.__srvBound = true;
+    el.addEventListener("click", ()=>{
+      state.foodSearchAmount = Number(el.dataset.srvAmount);
+      state.foodSearchUnit = el.dataset.srvUnit;
+      const box = document.getElementById("food-search-amount");
+      if(box) box.value = String(state.foodSearchAmount);
+      if(state.foodFlow && state.foodFlow.screen === "detail"){
+        updateFoodDetailNumbers();
+        persist();
+      }else{
+        updateFoodSearchResults();
+      }
+    });
   });
 }
 
@@ -11507,20 +11615,27 @@ function renderFoodDetailPage(){
         ${food.source==="usda"?`<div class="food-hero__verified">✓ USDA measured</div>`:""}
       </div>
       <div class="food-hero__kcal">
-        <div class="nut-value nut-value--lg" id="fd-kcal" style="color:var(--accent);">${N.format("calories", row("calories").serving).replace(" kcal","")}</div>
+        <div class="nut-value nut-value--lg" id="fd-kcal" style="color:var(--accent);">${check.ok?N.format("calories", row("calories").serving).replace(" kcal",""):"—"}</div>
         <div class="nut-label">kcal</div>
-        <div class="nut-note" id="fd-serving">${scalable?escHtml(N.describeServing(food, check.amount, check.unit)):"per portion"}</div>
+        <div class="nut-note" id="fd-serving">${scalable?(check.ok?escHtml(N.describeServing(food, check.amount, check.unit)):"—"):"per portion"}</div>
       </div>
     </div>
 
     ${scalable ? `
     <div class="nut-card nut-card--tight">
-      ${renderServingPresets(food, grams)}
+      <div id="fd-presets">${renderServingPresets(food, grams)}</div>
       <div class="row-between" style="margin-top:var(--space-xs);">
         <span class="nut-label">Quantity</span>
         <div class="qty-stepper">
           <button data-food-step="-1" aria-label="Decrease">−</button>
-          <input type="number" id="food-search-amount" value="${escHtml(String(shownAmount))}" min="0" step="any" inputmode="decimal">
+          <!-- Deliberately type="text" with a decimal inputmode, not type="number". Android
+               still shows the numeric keypad, but a number input reports selectionStart as
+               null and throws InvalidStateError on setSelectionRange, so its text cannot be
+               selected or its caret placed. That is what made this field unusable: it opens
+               pre-filled with the default portion, tapping it put the caret at the end
+               instead of selecting the value, and typing 150 gave 100150. -->
+          <input type="text" id="food-search-amount" value="${escHtml(String(shownAmount))}"
+            inputmode="decimal" autocomplete="off" enterkeyhint="done">
           <button data-food-step="1" aria-label="Increase">+</button>
         </div>
       </div>
@@ -11534,7 +11649,7 @@ function renderFoodDetailPage(){
     </div>` : `<div class="nut-card nut-card--tight"><div class="nut-note">Saved favourite — logged as one portion.</div></div>`}
 
     <div class="macro-row" id="fd-macros">
-      ${foodDetailMacrosHtml(calc)}
+      ${foodDetailMacrosHtml(check.ok ? calc : null)}
     </div>
 
     <div class="nut-card nut-card--tight">
@@ -11613,7 +11728,7 @@ function renderFoodDetailPage(){
         </div>`
       : `<button class="btn btn-accent food-sticky__btn" data-food-flow-add="1" ${check.ok?"":"disabled"}>
           <span>Add to ${escHtml(flow.meal)}</span>
-          <span class="food-sticky__kcal">${N.format("calories", row("calories").serving)}</span>
+          <span class="food-sticky__kcal">${check.ok?N.format("calories", row("calories").serving):"—"}</span>
         </button>`}
     </div>
   </div>`;
@@ -18571,6 +18686,13 @@ function bindFoodResultHandlers(){
       });
     });
     document.querySelectorAll("[data-food-pick]").forEach(el=>{
+      /* A row can now survive a results update — patchFoodResultSection() rewrites its
+         contents and leaves the element in place, which is what stops the list flickering.
+         A surviving row keeps the listener it already has, so binding it again would stack a
+         second one and picking a food would fire twice. Flagged as a property rather than a
+         data attribute so it never appears in outerHTML, which the patch compares. */
+      if(el.__foodPickBound) return;
+      el.__foodPickBound = true;
       el.addEventListener("click", ()=>{
         const id = el.dataset.foodPick;
         // Inside the flow this advances to the Food Details route rather than expanding an
@@ -18591,7 +18713,27 @@ function bindFoodResultHandlers(){
       });
     });
     const amountInput = document.getElementById("food-search-amount");
+    /* The box opens pre-filled with the default portion, so the common case is replacing that
+       number rather than editing it. Selecting it on focus makes the first keystroke do the
+       replacing. This is only possible now the field is type="text": a number input reports
+       selectionStart as null and throws on setSelectionRange, so it could not be done before
+       and typing simply appended to the default. */
+    if(amountInput) amountInput.addEventListener("focus", ()=>{
+      // Deferred a tick because Android moves the caret itself after the focus event.
+      setTimeout(()=>{ try{ amountInput.select(); }catch(e){} }, 0);
+    });
     if(amountInput) amountInput.addEventListener("input", ()=>{
+      /* type="text" accepts anything, so the field filters itself: digits and a single
+         decimal point. Rejected characters are dropped rather than left to fail validation,
+         because the keypad offers a comma on some locales and "1,5" is a typo, not a choice.
+         Only rewrites value when something was actually removed — assigning to value resets
+         the caret to the end, which would undo mid-number editing. */
+      const clean = amountInput.value.replace(/[^0-9.]/g, "").replace(/^(\d*\.\d*).*$/, "$1");
+      if(clean !== amountInput.value){
+        const at = amountInput.selectionStart;
+        amountInput.value = clean;
+        try{ amountInput.setSelectionRange(Math.max(0, at - 1), Math.max(0, at - 1)); }catch(e){}
+      }
       state.foodSearchAmount = amountInput.value;
       /* Updates the figures in place instead of calling render(). A full render rebuilt the
          page around the field being typed into — that was the flicker — and replaced the
@@ -18610,7 +18752,21 @@ function bindFoodResultHandlers(){
       // Switching between grams and a countable unit makes the old number meaningless
       // (150 grams -> 150 chapatis), so reset to a sensible default for the new unit.
       if((prev === "g") !== (unitSelect.value === "g")) state.foodSearchAmount = null;
-      render();
+      /* In place on the detail screen. A full render here rebuilt the page around the select
+         that was just used, closing the dropdown with a visible flash; updateFoodDetailNumbers
+         refreshes the figures, the chips and the unit labels, which is everything the unit
+         affects. The search screen has no such controls to preserve. */
+      if(state.foodFlow && state.foodFlow.screen === "detail"){
+        const box = document.getElementById("food-search-amount");
+        const food = state.foodFlow.foodId != null
+          ? lookupFood(state.foodFlow.foodId, state.foodSearchSelected && state.foodSearchSelected.name)
+          : null;
+        if(box && food) box.value = String(currentFoodAmount(food));
+        updateFoodDetailNumbers();
+        persist();
+      }else{
+        render();
+      }
     });
     /* ---- Category browser + recent searches (Phase 3) ---- */
     document.querySelectorAll("[data-food-browse]").forEach(el=>{
@@ -18691,15 +18847,5 @@ function bindFoodResultHandlers(){
     });
     // Serving presets (Phase 7). Sets amount and unit together — picking "1 cup" must not
     // leave a gram amount behind, which is what made the old two-control version confusing.
-    document.querySelectorAll("[data-srv-amount]").forEach(el=>{
-      el.addEventListener("click", ()=>{
-        state.foodSearchAmount = Number(el.dataset.srvAmount);
-        state.foodSearchUnit = el.dataset.srvUnit;
-        // On the detail route there is no #food-search-results to swap, so a container
-        // update would leave the calorie figure and the sticky button showing the old
-        // serving. Only the search route can take the cheap path.
-        if(state.foodFlow && state.foodFlow.screen === "detail") render();
-        else updateFoodSearchResults();
-      });
-    });
+    bindServingPresets();
 }
