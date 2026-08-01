@@ -18,12 +18,30 @@ apply plugin: 'kotlin-android' // ADDED for Health Connect plugin (Kotlin)
  * One-way door: Play only ever accepts an increasing code, so once an upload succeeds this
  * cannot go back to the small numbers. That is the intent — it is what stops the collisions.
  */
-ext.appVersionName = "1.0.41"
+ext.appVersionName = "1.0.42"
+
+/* Added to every derived code. 1.0.42 derives to 10042; the release that first used this
+ * scheme had to clear the codes Play had already taken, so it went out as 10500 — the value
+ * the scheme would give version 1.5.
+ *
+ * It is an offset and not a one-off override because a floor would break the next release:
+ * 1.0.43 derives to 10043, which is BELOW 10500, and Play only ever accepts an increasing
+ * code. Adding a constant keeps every future name mapping to a code above this one —
+ * 1.0.43 -> 10501, 1.1.0 -> 10558, 2.0.0 -> 20458 — so the property that made deriving worth
+ * doing survives the jump.
+ *
+ * Never lower this. Raising it is safe.
+ */
+ext.appVersionCodeOffset = 458
+
 ext.appVersionCode = {
     def parts = appVersionName.replaceAll(/[^0-9.].*$/, "").tokenize(".").collect { it.toInteger() }
     while (parts.size() < 3) parts << 0
     assert parts[1] < 100 && parts[2] < 100 : "minor and patch must stay under 100: ${appVersionName}"
-    parts[0] * 10000 + parts[1] * 100 + parts[2]
+    def code = parts[0] * 10000 + parts[1] * 100 + parts[2] + appVersionCodeOffset
+    // 10500 shipped. Anything at or below it would be rejected as already used.
+    assert code >= 10500 : "versionCode ${code} is not above the 10500 already published"
+    code
 }()
 
 // ADDED for Play Store release signing. Reads real secrets from a local, gitignored
