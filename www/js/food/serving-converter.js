@@ -40,6 +40,7 @@
     "can": 330,
     "packet": 100,
     "bowl": 200,
+    "plate": 250,
     "scoop": 30,
     "slice": 30,
     "piece": 50,
@@ -219,10 +220,13 @@
     powder:      ["g", "cup", "bowl", "tbsp", "tsp"],
     fruit:       ["g", "piece", "small", "medium", "large", "cup", "bowl"],
     vegetable:   ["g", "piece", "small", "medium", "large", "cup", "bowl"],
+    rice:        ["plate", "g", "cup", "bowl", "serving"],
+    flatbread:   ["piece", "g", "serving"],
+    dosa:        ["piece", "g", "serving"],
     grain:       ["g", "cup", "bowl", "serving"],
     bakery:      ["g", "slice", "piece", "serving"],
     meat:        ["g", "piece", "serving"],
-    egg:         ["g", "egg", "piece"],
+    egg:         ["g", "egg", "piece", "small", "medium", "large"],
     nuts:        ["g", "cup", "tbsp", "piece", "serving"],
     oil:         ["ml", "g", "tbsp", "tsp", "cup"],
     condiment:   ["g", "tbsp", "tsp", "cup", "ml"],
@@ -232,7 +236,7 @@
     frozen:      ["g", "scoop", "cup", "bowl", "serving"],
     biscuit:     ["g", "piece", "packet", "serving"],
     dairySolid:  ["g", "piece", "slice", "cup", "tbsp", "serving"],
-    dish:        ["g", "bowl", "cup", "piece", "serving"],
+    dish:        ["g", "plate", "bowl", "cup", "piece", "serving"],
     other:       ["g", "serving", "cup", "bowl"]
   };
 
@@ -245,10 +249,24 @@
     powder:      { cup: 120, bowl: 150, tbsp: 8, tsp: 3, serving: 30 },
     fruit:       { piece: 120, cup: 150, bowl: 150, serving: 100 },
     vegetable:   { piece: 80, cup: 100, bowl: 150, serving: 80 },
+    /* A standard Indian lunch plate is 250 g of cooked rice; a katori is 130-150 g, well under
+       the 240 ml cup that measures 185 g of it. Bowl is the katori, because that is the bowl
+       anyone logging this actually owns. */
+    rice:        { plate: 250, cup: 185, bowl: 150, serving: 150 },
+    // One chapati, roti or idli is 40 g — small 32, large 52 by the same tables. A serving is
+    // two, which is how they are eaten.
+    flatbread:   { piece: 40, serving: 80 },
+    /* A dosa is not a chapati. Published figures put a plain dosa at 60 g homemade and 86 g
+       restaurant-style, against 40 g for a chapati, and FOOD_UNITS has had "dosa" at 85 g and
+       "masala dosa" at 150 g since before forms existed. 85 keeps the named variants and the
+       unnamed ones — Onion Dosa, Neer Dosa — telling the same story instead of one being
+       barely half the other. */
+    dosa:        { piece: 85, serving: 170 },
     grain:       { cup: 160, bowl: 200, tbsp: 12, serving: 150 },
     bakery:      { slice: 30, piece: 40, serving: 60 },
     meat:        { piece: 100, serving: 150 },
-    egg:         { egg: 50, piece: 50, serving: 50 },
+    // Graded sizes, edible portion without shell, from the published egg-size tables.
+    egg:         { egg: 50, piece: 50, small: 37, medium: 44, large: 50, serving: 50 },
     nuts:        { cup: 140, tbsp: 10, piece: 1.5, serving: 30 },
     oil:         { ml: 0.92, l: 920, tbsp: 14, tsp: 4.5, cup: 218, serving: 10 },
     condiment:   { tbsp: 17, tsp: 6, cup: 240, ml: 1, serving: 15 },
@@ -258,7 +276,7 @@
     frozen:      { scoop: 65, cup: 130, bowl: 150, serving: 100 },
     biscuit:     { piece: 12, packet: 100, serving: 30 },
     dairySolid:  { piece: 30, slice: 20, cup: 120, tbsp: 15, serving: 50 },
-    dish:        { bowl: 200, cup: 200, piece: 100, serving: 200 },
+    dish:        { plate: 300, bowl: 200, cup: 200, piece: 100, serving: 200 },
     other:       {}
   };
 
@@ -269,10 +287,13 @@
     powder:      [["tbsp", 1], ["cup", 0.5], ["cup", 1]],
     fruit:       [["medium", 1], ["small", 1], ["large", 1], ["cup", 1]],
     vegetable:   [["medium", 1], ["cup", 1], ["bowl", 1]],
+    rice:        [["plate", 1], ["cup", 1], ["bowl", 1]],
+    flatbread:   [["piece", 1], ["piece", 2], ["piece", 3]],
+    dosa:        [["piece", 1], ["piece", 2]],
     grain:       [["cup", 0.5], ["cup", 1], ["bowl", 1]],
     bakery:      [["slice", 1], ["slice", 2], ["piece", 1]],
     meat:        [["piece", 1], ["serving", 1]],
-    egg:         [["egg", 1], ["egg", 2], ["egg", 3]],
+    egg:         [["egg", 1], ["egg", 2], ["medium", 1], ["large", 1]],
     nuts:        [["tbsp", 1], ["cup", 0.25], ["serving", 1]],
     oil:         [["tsp", 1], ["tbsp", 1]],
     condiment:   [["tsp", 1], ["tbsp", 1]],
@@ -282,7 +303,7 @@
     frozen:      [["scoop", 1], ["scoop", 2], ["cup", 1]],
     biscuit:     [["piece", 1], ["piece", 2], ["packet", 1]],
     dairySolid:  [["piece", 1], ["cup", 1], ["tbsp", 1]],
-    dish:        [["bowl", 1], ["cup", 1], ["serving", 1]],
+    dish:        [["plate", 1], ["bowl", 1], ["cup", 1]],
     other:       [["serving", 1], ["cup", 1]]
   };
 
@@ -310,7 +331,7 @@
     "Chicken": "meat",
     "Mutton/Lamb": "meat",
     "Processed Meat": "meat",
-    "Rice & Bread items": "grain",
+    "Rice & Bread items": "rice",
     "Pasta, Noodles & International Staples": "grain",
     "Branded Noodles & Instant Pasta": "grain",
     "Dal & Legumes": "grain",
@@ -362,6 +383,7 @@
     "Breakfast Brands": 1,
     "Oats, Cereals & Healthy Breakfast Foods": 1,
     "Desserts": 1,
+    "South Indian dishes": 1,
     "Dairy": 1
   };
 
@@ -373,11 +395,32 @@
   var NAME_FORMS = [
     [/whey|casein|isolate|mass gainer|bcaa|creatine|pre[\s-]?workout|protein powder|glutamine/, "supplement"],
     [/\bghee\b|\boil\b/, "oil"],
+    /* An instant mix or a batter is measured by weight, not counted out — "Gits Dosa Mix" is
+       a packet of flour, not a dosa. It has to be tested before the dosa and idli rules that
+       follow. Safe to test this broadly: it is only ever reached for a food whose category is
+       mixed, so "Trail Mix" in Nuts & Seeds never gets here. */
+    [/\b(mix|batter|premix)\b/, "powder"],
+    /* Before the rice rule: a rice kheer is a dessert eaten from a bowl, not a plate of rice.
+       Its category already says dessert; this stops the word "rice" overriding that. */
+    [/\b(kheer|payasam|halwa|pudding|phirni)\b/, "sweet"],
+    /* Before the flour rule, because rava IS semolina — but a rava idli is an idli, not a bag
+       of semolina, and the same goes for a rava dosa. */
+    [/\bdosa\b|\buttapam\b|\bappam\b|\badai\b/, "dosa"],
+    [/\b(chapati|chapathi|roti|phulka|paratha|parantha|naan|kulcha|puri|poori|bhatura|thepla|idli|dhokla)\b/, "flatbread"],
     [/\b(flour|atta|maida|besan|sooji|suji|rava|semolina|starch|powder|cocoa|custard)\b/, "powder"],
+    /* Also before the rice rule: Rice Krispies and Rice Flakes are cereal, eaten by the bowl,
+       and would otherwise be served on a plate like a biryani. */
+    [/\b(cereal|krispies|muesli|granola|cornflakes|flakes)\b/, "grain"],
     [/\b(milk|juice|water|soda|cola|lassi|buttermilk|smoothie|shake|tea|coffee|drink|beer|wine|squash|sharbat)\b/, "liquid"],
     [/ice cream|kulfi|gelato|sorbet/, "frozen"],
-    [/\begg\b|omelette|omelet/, "egg"],
-    [/\b(bread|bun|pav|toast|roti|chapati|paratha|naan|kulcha|croissant|bagel)\b/, "bakery"],
+    /* Egg has to mean the egg itself, not egg as an ingredient. The loose /\begg\b/ this
+       replaces put Egg Biryani and Egg Dosa on the egg form, so a plate of biryani was being
+       counted out in eggs. */
+    [/^(whole |boiled |raw |fried |poached |scrambled |hard[\s-]?boiled )?eggs?$|^egg (whites?|yolks?)$|^omelettes?$/, "egg"],
+    // Last of the grain-ish rules, so "rice flour", "rice kheer" and "rice krispies" have all
+    // been claimed by something more specific before the word "rice" gets to mean the dish.
+    [/\b(rice|biryani|biriyani|pulao|pulav|khichdi|khichri)\b/, "rice"],
+    [/\b(bread|bun|pav|toast|croissant|bagel|sandwich)\b/, "bakery"],
     [/\b(biscuit|cookie|cracker|rusk)\b/, "biscuit"],
     [/\b(paneer|cheese|butter|curd|yoghurt|yogurt|khoya)\b/, "dairySolid"]
   ];
@@ -398,7 +441,7 @@
   /* Size words scale the food's own piece weight rather than carrying weights of their own,
      so "1 large apple" stays tied to whatever an apple weighs. Ratios are about what USDA
      reports across produce: a small apple is 149 g against a medium 182 g and a large 223 g. */
-  var SIZE_FACTOR = { small: 0.75, medium: 1, large: 1.3 };
+  var SIZE_FACTOR = { small: 0.8, medium: 1, large: 1.25 };
 
   /* Display order and labels. `plural` is used when the amount is not exactly 1. */
   var UNIT_LABELS = {
@@ -412,6 +455,7 @@
     slice:   { label: "slice",      plural: "slices" },
     cup:     { label: "cup",        plural: "cups" },
     bowl:    { label: "bowl",       plural: "bowls" },
+    plate:   { label: "plate",      plural: "plates" },
     glass:   { label: "glass",      plural: "glasses" },
     bottle:  { label: "bottle",     plural: "bottles" },
     can:     { label: "can",        plural: "cans" },
@@ -432,7 +476,7 @@
   /* Which units are offered, in this order, when a food supports them. Grams is always
      first so the precise option is never buried. */
   var UNIT_ORDER = ["g", "egg", "banana", "apple", "chapati", "roti", "idli", "dosa",
-    "piece", "small", "medium", "large", "slice", "scoop", "cup", "bowl", "glass",
+    "piece", "small", "medium", "large", "slice", "scoop", "cup", "bowl", "plate", "glass",
     "bottle", "can", "packet", "tbsp", "tsp", "ml", "l", "serving"];
 
   /* Units named after the food itself. They are offered only when that food actually defines
@@ -484,6 +528,13 @@
     if (SIZE_FACTOR[unit] != null) {
       var own = measuredPortion(food, unit);
       if (own != null) return own;              // USDA measured this size for this food
+      var sizedFood = FOOD_UNITS[keyOf(food)];
+      if (sizedFood && sizedFood[unit] != null) return sizedFood[unit];
+      // A form may state its sizes outright where they are graded rather than estimated.
+      // Egg sizes are a published standard — 37 / 44 / 50 g of edible egg — not a ratio of
+      // some nominal egg, so deriving them from a factor would invent numbers that exist.
+      var sizedForm = FORM_GRAMS[formOf(food)];
+      if (sizedForm && sizedForm[unit] != null) return sizedForm[unit];
       var piece = gramsPerUnit(food, "piece");
       if (piece == null) return null;
       return Math.round(piece * SIZE_FACTOR[unit] * 10) / 10;
