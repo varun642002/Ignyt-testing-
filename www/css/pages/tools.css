@@ -114,3 +114,11 @@
 @media (prefers-reduced-motion:reduce){
   .ex-sec__body, .ex-sec__chev { transition:none; }
 }
+
+/* Exercise photo in a Library row. Same footprint as the icon badge it replaces, so a list
+   of mixed photo/no-photo rows still lines up. */
+.lib-ex-row__photo{
+  flex: none; width: 38px; height: 38px; border-radius: 10px;
+  overflow: hidden; background: var(--rh-border, #33333d);
+}
+.lib-ex-row__photo img{ width: 100%; height: 100%; object-fit: cover; display: block; }
