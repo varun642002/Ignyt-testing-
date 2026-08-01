@@ -104,8 +104,15 @@
   var FOOD_UNITS = {
     "whole egg":        { egg: 50, piece: 50 },
     "boiled egg":       { egg: 50, piece: 50 },
-    "egg white":        { egg: 33, piece: 33 },
-    "egg yolk":         { egg: 17, piece: 17 },
+    // A fried egg is a large egg that lost water in the pan: 50 g raw comes out at 46 g. Its
+    // sizes are scaled to match, or "1 large" would have weighed more than "1 piece".
+    "fried egg":        { egg: 46, piece: 46, small: 34, medium: 40, large: 46 },
+    /* Whites and yolks carry their own graded sizes. Without them both would inherit the egg
+       form's 37/44/50, which is the whole egg — so a "small egg white" would have weighed
+       more than the large white it came out of. A white is about two thirds of the edible
+       egg and a yolk a third, at every size. */
+    "egg white":        { egg: 33, piece: 33, small: 24, medium: 29, large: 33 },
+    "egg yolk":         { egg: 17, piece: 17, small: 13, medium: 15, large: 17 },
     "scrambled eggs":   { egg: 60, serving: 120 },
     "omelette":         { piece: 120, serving: 120 },
     "banana":           { banana: 118, piece: 118 },
