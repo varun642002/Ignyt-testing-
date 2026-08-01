@@ -138,3 +138,14 @@
   border-radius: 14px; overflow: hidden; background: var(--rh-border, #33333d);
 }
 .ex-howto__photo img{ width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Instruction poster on the How To tab. No fixed aspect and no cover: the box is sized from
+   the poster's own dimensions (set inline, per poster) because these run from 3:2 to 2:3 and
+   a poster is only useful whole — cropping one loses the step text or the muscle diagram it
+   exists for. contain rather than cover so a rounding difference letterboxes by a pixel
+   instead of shaving an edge off. */
+.ex-howto__poster{
+  width: 100%; margin-bottom: 12px;
+  border-radius: 14px; overflow: hidden; background: var(--rh-border, #33333d);
+}
+.ex-howto__poster img{ width: 100%; height: 100%; object-fit: contain; display: block; }

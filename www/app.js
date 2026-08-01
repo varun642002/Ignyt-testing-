@@ -924,6 +924,24 @@ function exerciseImageSrc(name){
   return "assets/exercises/" + slug + ".jpg";
 }
 
+/* A handful of exercises have a full instruction poster instead of an action shot — steps,
+   a muscles-worked diagram and a sets/reps strip on one sheet. Returns {src,w,h} or null.
+ *
+ *  The size comes back with the source because a poster is only worth showing uncropped, and
+ *  showing it uncropped means knowing its shape before it loads. These range from 3:2 to 2:3,
+ *  so there is no one aspect to assume: forcing them all into the photo box centre-cropped
+ *  the portrait ones by 40-50%, which on a calf raise cut off the calves.
+ *
+ *  Deliberately not used by the Library row or the detail header. Those boxes are 38 and 52px,
+ *  where a sheet of instructions is a grey smudge and the muscle icon badge reads better. */
+function exercisePosterSrc(name){
+  const slug = exerciseImageSlug(name);
+  if(!slug) return null;
+  const size = (window.IGNYT_EXERCISE_POSTERS || {})[slug];
+  if(!size) return null;
+  return { src: "assets/exercise-posters/" + slug + ".jpg", w: size[0], h: size[1] };
+}
+
 function avatarColorFor(muscle){ return MUSCLE_AVATAR_COLOR[muscle] || "#8B8B94"; }
 
 function muscleGroupColor(muscle){
@@ -14144,7 +14162,19 @@ function renderExerciseDetailHowTo(name, nd, libEntry){
        movement answers "how do I do this" better than a card apologising for having nothing,
        and this tab is otherwise the emptiest screen in the app. The notice stays underneath,
        because a photo is not a substitute for cues and should not pretend to be. */
-    const img = exerciseImageSrc(name);
+    /* A poster outranks a photo here: it carries the steps this tab is missing, so where one
+       exists the "no instructions" notice below would be contradicting the image above it. */
+    const poster = exercisePosterSrc(name);
+    const img = poster ? "" : exerciseImageSrc(name);
+    if(poster){
+      return `
+        <div class="ex-howto__poster" style="aspect-ratio:${poster.w} / ${poster.h};">
+          <img src="${escHtml(poster.src)}" alt="How to perform ${escHtml(name)}">
+        </div>
+        ${libEntry?`<div class="pg-card" style="text-align:center;padding:14px 18px;">
+          <div style="font-size:12px;color:var(--rh-muted);">Suggested: <span style="color:var(--rh-text);font-weight:700;">${escHtml(libEntry.presc)}</span></div>
+        </div>`:''}`;
+    }
     return `
       ${img ? `<div class="ex-howto__photo"><img src="${escHtml(img)}" alt="${escHtml(name)}"></div>` : ""}
       <div class="pg-card" style="text-align:center;padding:${img ? '18px' : '28px'} 18px;">
