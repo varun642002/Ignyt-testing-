@@ -37,8 +37,19 @@ const IgnytMuscleMap = (() => {
     "Erector Spinae": "Lats"
   };
 
-  /** Muscles with no meaningful place on a body diagram. Counted, never highlighted. */
-  const NON_ANATOMICAL = new Set(["Cardio", "Mobility", "Other", "Full Body"]);
+  /* Two different things, previously conflated in one set.
+   *
+   *  NOT_DRAWN is a real muscle group with no single region on the diagram — a burpee works
+   *  the whole body, a treadmill run is cardio. These still belong in the table: the user did
+   *  the work and the number is true.
+   *
+   *  UNKNOWN is the absence of data — what getMuscle() returns for an exercise the library
+   *  has no record of. That is the only thing worth reporting as unattributed.
+   *
+   *  Lumping them together meant the rebuilt library's 47 Full Body exercises were each
+   *  reported as "a completed set with no muscle data", which is the opposite of true. */
+  const NOT_DRAWN = new Set(["Cardio", "Mobility", "Full Body"]);
+  const UNKNOWN   = new Set(["Other"]);
 
   /**
    * Per-muscle completed-set counts for a list of session exercises.
@@ -86,21 +97,21 @@ const IgnytMuscleMap = (() => {
    *  but could not be placed. */
   function rowsFor(counts) {
     return Object.keys(counts)
-      .filter(m => counts[m] > 0 && !NON_ANATOMICAL.has(m))
+      .filter(m => counts[m] > 0 && !UNKNOWN.has(m))
       .sort((a, b) => counts[b] - counts[a] || a.localeCompare(b))
       .map(m => ({ muscle: m, sets: counts[m] }));
   }
 
   /** Sets that landed on no named muscle — exercises with no library entry. */
   function unattributed(counts) {
-    return [...NON_ANATOMICAL].reduce((n, m) => n + (counts[m] || 0), 0);
+    return [...UNKNOWN].reduce((n, m) => n + (counts[m] || 0), 0);
   }
 
   /** Counts folded onto the regions the diagram can draw. */
   function regionCounts(counts) {
     const regions = Object.create(null);
     Object.keys(counts).forEach(m => {
-      if (NON_ANATOMICAL.has(m)) return;
+      if (NOT_DRAWN.has(m) || UNKNOWN.has(m)) return;
       const region = REGION_ALIASES[m] || m;
       regions[region] = (regions[region] || 0) + counts[m];
     });
