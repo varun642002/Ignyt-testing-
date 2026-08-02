@@ -18,7 +18,7 @@ apply plugin: 'kotlin-android' // ADDED for Health Connect plugin (Kotlin)
  * One-way door: Play only ever accepts an increasing code, so once an upload succeeds this
  * cannot go back to the small numbers. That is the intent — it is what stops the collisions.
  */
-ext.appVersionName = "1.0.43"
+ext.appVersionName = "1.0.44"
 
 /* Added to every derived code. 1.0.42 derives to 10042; the release that first used this
  * scheme had to clear the codes Play had already taken, so it went out as 10500 — the value
