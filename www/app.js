@@ -977,15 +977,32 @@ function renderUpgradeWall(feature){
     </div>`;
 }
 
-/* Exercise photos and instruction posters were removed once the library gained real written
-   steps. They existed to answer "how do I do this" while EXERCISE_DETAILS was empty; 409 of
-   the 452 exercises now carry numbered instructions, which answer it better and cost 8 MB
-   less. The muscle-coloured icon badge is the only thumbnail now, everywhere.
+function exerciseImageSlug(name){
+  return String(name || "").toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[()']/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
-   These two return nothing rather than being deleted outright: they were called from five
-   screens, and a stub keeps any path missed here rendering the badge instead of throwing. */
-function exerciseImageSrc(){ return ""; }
-function exercisePosterSrc(){ return null; }
+/* The exercise illustrations: an anatomical drawing of the movement with the worked muscles
+   picked out, on white. 437 of the 452 library exercises have one.
+
+   These replaced a set of stock action photos, and they sit ALONGSIDE the written steps rather
+   than instead of them -- the old photos were shown only when there were no instructions,
+   because they were standing in for the missing text. A drawing that highlights the muscle
+   being worked and a numbered list of cues answer different halves of "how do I do this", so
+   the How To tab now shows both.
+
+   The manifest is consulted first so a missing illustration renders the muscle badge instead
+   of firing a request that 404s. */
+function exerciseImageSrc(name){
+  const slug = exerciseImageSlug(name);
+  if(!slug) return "";
+  const have = window.IGNYT_EXERCISE_IMAGES;
+  if(have && !have[slug]) return "";      // manifest says there is none
+  return "assets/exercises/" + slug + ".jpg";
+}
 
 function avatarColorFor(muscle){ return MUSCLE_AVATAR_COLOR[muscle] || "#8B8B94"; }
 
@@ -9965,6 +9982,8 @@ function renderPrExerciseSheet(){
     <div class="sheet prx">
       <div class="sheet__handle"></div>
       <div class="prx__head">
+        ${(()=>{ const img = exerciseImageSrc(name);
+          return img ? `<span class="prx__img"><img src="${escHtml(img)}" alt=""></span>` : ""; })()}
         <div>
           <div class="prx__name">${escHtml(name)}</div>
           <div class="prx__muscle">${escHtml(getMuscle(name)||"")}</div>
@@ -10049,7 +10068,11 @@ function renderProgressPRs(){
     const pct = (pr.previousValue > 0) ? Math.max(6, Math.min(100, Math.round(pr.previousValue / pr.value * 100))) : 100;
     return `<div class="pr-card" data-pr-open="${escHtml(pr.exerciseName||'')}">
       <div class="pr-card__head">
-        <span class="pr-card__icon" style="background:${muscleGroupColor(muscle)}1a;color:${muscleGroupColor(muscle)};">${svg('trophy',18)}</span>
+        ${(()=>{ const img = pr.exerciseName ? exerciseImageSrc(pr.exerciseName) : "";
+          return img
+            ? `<span class="pr-card__img"><img src="${escHtml(img)}" alt="" loading="lazy"></span>`
+            : `<span class="pr-card__icon" style="background:${muscleGroupColor(muscle)}1a;color:${muscleGroupColor(muscle)};">${svg('trophy',18)}</span>`;
+        })()}
         <div class="pr-card__title">
           <div class="pr-card__name">${escHtml(name)}</div>
           <div class="pr-card__type">${escHtml(prTypeLabel(pr))}${muscle?` · ${escHtml(muscle)}`:''}</div>
@@ -14697,7 +14720,11 @@ function renderExerciseDetail(name){
     <div class="ex-hero">
       <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:12px;" data-action="close-exercise-detail">← Back</button>
       <div style="display:flex;align-items:center;gap:12px;">
-        <span class="tl-card__icon" style="width:52px;height:52px;flex:none;background:${muscleColor}1a;color:${muscleColor};">${svg(rowIcon,26)}</span>
+        ${(()=>{ const img = exerciseImageSrc(name);
+          return img
+            ? `<span class="ex-hero__photo"><img src="${escHtml(img)}" alt=""></span>`
+            : `<span class="tl-card__icon" style="width:52px;height:52px;flex:none;background:${muscleColor}1a;color:${muscleColor};">${svg(rowIcon,26)}</span>`;
+        })()}
         <div style="min-width:0;flex:1;">
           <div class="ex-hero__name">${escHtml(name)}</div>
           <span class="lib-tag" style="background:${muscleColor}1a;color:${muscleColor};margin-top:4px;">${escHtml(muscle)}</span>
@@ -14768,6 +14795,15 @@ function renderExerciseDetailSummary(name, detail, libEntry, prs){
    (see normalizeExerciseDetail) so both the original and expanded schemas render here.
    Every section is omitted entirely when it has no data -- there are no empty shells. */
 function renderExerciseDetailHowTo(name, nd, libEntry){
+  /* The illustration heads this tab whether or not there are written steps. The old photos
+     appeared ONLY when instructions were missing, because they were a substitute for them.
+     These are anatomical drawings with the worked muscle picked out, which is a different kind
+     of answer from a numbered list — seeing which muscle should be doing the work and reading
+     the cues for it belong together. */
+  const heroImg = exerciseImageSrc(name);
+  const illustration = heroImg
+    ? `<div class="ex-howto__photo"><img src="${escHtml(heroImg)}" alt="${escHtml(name)}"></div>`
+    : "";
   if(!nd){
     /* No written steps for this one. 409 of the 452 library exercises now have them; the
        remainder are mostly cardio and machine variants the source dataset did not cover.
@@ -14777,8 +14813,9 @@ function renderExerciseDetailHowTo(name, nd, libEntry){
        stock action shot is not worth 8 MB. What is left says plainly that there is nothing
        yet, which is honest, and still gives the suggested prescription, which is useful. */
     return `
-      <div class="pg-card" style="text-align:center;padding:28px 18px;">
-        <span class="tl-card__icon" style="width:44px;height:44px;margin:0 auto 12px;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('info',22)}</span>
+      ${illustration}
+      <div class="pg-card" style="text-align:center;padding:${heroImg ? '18px' : '28px'} 18px;">
+        ${heroImg ? "" : `<span class="tl-card__icon" style="width:44px;height:44px;margin:0 auto 12px;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('info',22)}</span>`}
         <div style="font-size:15px;font-weight:800;">Instructions not available yet</div>
         ${libEntry?`<div style="font-size:12px;color:var(--rh-muted);margin-top:4px;">Suggested: <span style="color:var(--rh-text);font-weight:700;">${escHtml(libEntry.presc)}</span></div>`:''}
       </div>`;
@@ -14844,7 +14881,8 @@ function renderExerciseDetailHowTo(name, nd, libEntry){
   const fallbackPresc = (!program.length && libEntry)
     ? `<div class="pg-card" style="margin-top:10px;font-size:12px;color:var(--rh-muted);">Suggested: <span style="color:var(--rh-text);font-weight:700;">${escHtml(libEntry.presc)}</span></div>` : "";
 
-  return `${renderExerciseAnimation(nd)}
+  return `${illustration}
+    ${renderExerciseAnimation(nd)}
     <div class="ex-sections">${out.join("")}</div>
     ${fallbackPresc}
     <div style="height:16px;"></div>`;
@@ -14916,7 +14954,11 @@ function renderLibraryTab(){
         const saved = state.savedExercises.includes(ex.name);
         const equip = equipMeta(ex.cat);
         return `<div class="pg-card lib-ex-row" data-view-exercise="${escHtml(ex.name)}">
-          <span class="tl-card__icon" style="flex:none;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg(rowIcon(ex.muscle),20)}</span>
+          ${(()=>{ const img = exerciseImageSrc(ex.name);
+            return img
+              ? `<span class="lib-ex-row__photo"><img src="${escHtml(img)}" alt="" loading="lazy"></span>`
+              : `<span class="tl-card__icon" style="flex:none;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg(rowIcon(ex.muscle),20)}</span>`;
+          })()}
           <div class="lib-ex-row__body">
             <div class="lib-ex-row__name">${escHtml(ex.name)}${ex.custom?' <span style="color:var(--rh-blue);font-size:11px;font-weight:800;">CUSTOM</span>':''}</div>
             <div class="lib-tags">

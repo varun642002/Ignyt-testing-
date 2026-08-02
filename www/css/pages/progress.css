@@ -404,3 +404,17 @@
 .rvw__btn:active{ background: var(--rh-border); }
 .rvw__btn svg{ flex: none; fill: none; stroke: currentColor; stroke-width: 2;
                stroke-linecap: round; stroke-linejoin: round; }
+
+
+/* Exercise illustration on PR cards and the per-exercise insight sheet. White tile and
+   object-fit: contain for the same reason as the library rows -- see tools.css. */
+.pr-card__img{
+  width: 38px; height: 38px; flex: none; border-radius: 9px; overflow: hidden;
+  background: #fff; display: block;
+}
+.pr-card__img img{ width: 100%; height: 100%; object-fit: contain; display: block; }
+.prx__img{
+  width: 46px; height: 46px; flex: none; border-radius: 11px; overflow: hidden;
+  background: #fff; display: block;
+}
+.prx__img img{ width: 100%; height: 100%; object-fit: contain; display: block; }

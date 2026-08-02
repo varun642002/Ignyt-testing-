@@ -205,3 +205,33 @@
 .pw-restore{
   display: block; margin: 10px auto 0; font-size: 12px; padding: 6px 12px;
 }
+
+
+/* =========================================================
+   EXERCISE ILLUSTRATIONS
+
+   Anatomical drawings on a white ground, so they are given a white tile rather than a
+   transparent one: on the dark theme an unbacked illustration would sit in a black box with a
+   white rectangle floating inside it. object-fit: contain, not cover -- these are diagrams, and
+   cropping one cuts off the limb doing the work.
+========================================================= */
+.lib-ex-row__photo{
+  width: 38px; height: 38px; flex: none; border-radius: 9px; overflow: hidden;
+  background: #fff; display: block;
+}
+.lib-ex-row__photo img{ width: 100%; height: 100%; object-fit: contain; display: block; }
+
+.ex-hero__photo{
+  width: 52px; height: 52px; flex: none; border-radius: 12px; overflow: hidden;
+  background: #fff; display: block;
+}
+.ex-hero__photo img{ width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* Full width at the head of the How To tab, above the written steps. 3:2 matches the source
+   illustrations, so nothing is letterboxed. */
+.ex-howto__photo{
+  width: 100%; aspect-ratio: 3 / 2; border-radius: var(--radius-tile, 14px);
+  overflow: hidden; background: #fff; margin-bottom: 12px;
+  border: 1px solid var(--rh-border);
+}
+.ex-howto__photo img{ width: 100%; height: 100%; object-fit: contain; display: block; }
