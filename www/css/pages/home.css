@@ -263,3 +263,25 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
   background: linear-gradient(90deg, var(--rh-blue, #2563eb), var(--rh-purple, #7c3aed));
   transition: width .4s ease;
 }
+
+/* Today's challenges. Three a day, fixed by date — a list that reshuffles on every render
+   is not a challenge, and completing one only to watch it be replaced is worse than none. */
+.chal{
+  border: 1px solid var(--rh-border); border-radius: var(--radius-tile, 14px);
+  background: var(--rh-card); overflow: hidden; margin-bottom: 14px;
+}
+.chal__row{
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; font-size: 13px; font-weight: 700;
+}
+.chal__row + .chal__row{ border-top: 1px solid var(--rh-border); }
+.chal__icon{ flex: none; font-size: 16px; line-height: 1; }
+.chal__label{ flex: 1; min-width: 0; }
+.chal__xp{
+  flex: none; font-size: 11.5px; font-weight: 800; color: var(--rh-muted);
+  font-variant-numeric: tabular-nums;
+}
+/* Done reads as struck-through and green rather than hidden — seeing what you finished is
+   most of the reward. */
+.chal__row.is-done .chal__label{ text-decoration: line-through; color: var(--rh-muted); }
+.chal__row.is-done .chal__xp{ color: var(--rh-green, #22c55e); font-size: 14px; }

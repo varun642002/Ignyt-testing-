@@ -257,3 +257,12 @@
 }
 .bmi-note__line{ font-size: 12.5px; line-height: 1.5; font-weight: 600; color: var(--rh-text); }
 .bmi-note__caveat{ font-size: 11px; line-height: 1.45; color: var(--rh-muted); margin-top: 6px; }
+
+/* Weekly and monthly review. Omitted entirely when the period has no data — a grid of zeroes
+   shown to someone who took a week off reads as a reproach rather than a summary. */
+.rvw{ margin-bottom: 12px; }
+.rvw__head{ font-size: 13px; font-weight: 800; margin-bottom: 10px; }
+.rvw__grid{ display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px 8px; }
+.rvw__stat{ text-align: center; }
+.rvw__v{ font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.rvw__l{ font-size: 10.5px; color: var(--rh-muted); font-weight: 600; margin-top: 2px; }

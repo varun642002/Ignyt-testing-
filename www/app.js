@@ -9911,6 +9911,49 @@ function renderProgressPRs(){
 // any real category since ACHIEVEMENT_DEFS has no tier/category field of its own.
 const ACHIEVEMENT_COLORS = ['var(--rh-blue)','var(--rh-purple)','var(--rh-green)','#D97706','var(--rh-red)'];
 
+/* The weekly and monthly reviews. Rendered above the badge grid on Progress > Achievements,
+   because "what did I do" and "what did that earn me" are the same question.
+
+   Returns nothing at all when there is no data for the period. A row of zeroes shown to
+   someone who took a week off is a reproach, not a summary. */
+function renderReviewCards(){
+  if(!window.IgnytReview) return "";
+  const w = IgnytReview.week(state);
+  const m = IgnytReview.month(state);
+  if(!w && !m) return "";
+
+  const kg = v => v == null ? "—" : (v > 0 ? "+" : "") + v + " kg";
+  const stat = (value, label) => `<div class="rvw__stat"><div class="rvw__v">${value}</div><div class="rvw__l">${label}</div></div>`;
+
+  return `
+    ${w ? `
+    <div class="pg-card rvw">
+      <div class="rvw__head"><span>Last 7 days</span></div>
+      <div class="rvw__grid">
+        ${stat(w.workouts, "workouts")}
+        ${stat(w.minutes, "minutes")}
+        ${stat(w.activeDays + "/7", "active days")}
+        ${stat(w.volumeKg.toLocaleString(), "kg lifted")}
+        ${stat(w.mealsLogged, "meals logged")}
+        ${stat(kg(w.weightChangeKg), "weight")}
+      </div>
+    </div>` : ""}
+
+    ${m ? `
+    <div class="pg-card rvw">
+      <div class="rvw__head"><span>Last 30 days</span></div>
+      <div class="rvw__grid">
+        ${stat(m.workouts, "workouts")}
+        ${stat(m.consistencyPct + "%", "consistency")}
+        ${stat(m.volumeKg.toLocaleString(), "kg lifted")}
+        ${stat(m.prs, "new PRs")}
+        ${stat(m.badges, "badges earned")}
+        ${stat(kg(m.weightChangeKg), "weight")}
+      </div>
+    </div>` : ""}
+  `;
+}
+
 function renderProgressAchievements(){
   const unlockedIds = new Set(state.achievements.map(a=>a.id));
   const earnedAt = {};
@@ -9953,6 +9996,8 @@ function renderProgressAchievements(){
   };
 
   return `
+    ${renderReviewCards()}
+
     <div class="pg-card">
       <div class="row-between">
         <span style="font-size:13px;font-weight:700;">${totalEarned} of ${ACHIEVEMENT_DEFS.length} earned</span>

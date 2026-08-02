@@ -254,6 +254,24 @@
         </div>`;
       })()}
 
+      ${window.IgnytReview ? (()=>{
+        const line = IgnytReview.coachLine(state);
+        const ch = IgnytReview.challenges(state);
+        const doneCount = ch.filter(c=>c.done).length;
+        return `
+        ${line ? `<div class="daily-motivation">
+          <span class="daily-motivation__icon">${svg('star',16)}</span>
+          <span class="daily-motivation__text">${line}</span>
+        </div>` : ''}
+        <div class="rh-section-head"><span>Today's Challenges</span><span class="rh-view-all">${doneCount}/${ch.length}</span></div>
+        <div class="chal">
+          ${ch.map(c=>`<div class="chal__row${c.done?' is-done':''}">
+            <span class="chal__icon">${c.icon}</span>
+            <span class="chal__label">${c.label}</span>
+            <span class="chal__xp">${c.done ? '✓' : '+'+c.xp+' XP'}</span>
+          </div>`).join('')}
+        </div>`; })() : ''}
+
       <div class="rh-section-head"><span>Quick Actions</span></div>
       <div class="rh-quick-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));">
         ${quickAction('workout', 'var(--rh-green)', 'Start Workout', 'data-nav="workout"')}
