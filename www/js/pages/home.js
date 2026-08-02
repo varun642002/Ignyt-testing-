@@ -43,7 +43,15 @@
 
     /* One quote per day, chosen by date rather than at random — a line that changes every time
        the tab is re-rendered is noise, and Home re-renders constantly. */
-    const QUOTES = [
+    /* The daily line comes from js/motivation/messages.js. This used to be seven quotes held
+       here, which meant the same one every Tuesday — a rotation short enough to notice is
+       worse than none, because it makes the encouragement feel automated. The library is
+       forty lines for this context alone and seeded by the date, so it is stable through the
+       day and different tomorrow.
+
+       The old list stays as a fallback. Home must render if a script fails to load, and an
+       empty greeting card is a worse failure than a repeated quote. */
+    const FALLBACK_QUOTES = [
       "Consistency creates results.",
       "The work you do today is tomorrow's baseline.",
       "Small sessions still count. Skipped ones do not.",
@@ -52,7 +60,8 @@
       "You do not have to be fresh. You have to turn up.",
       "The plan only works while you are on it."
     ];
-    const quoteOfDay = QUOTES[Math.floor(Date.now() / 86400000) % QUOTES.length];
+    const quoteOfDay = (window.IgnytMessages && IgnytMessages.forDay("daily"))
+      || FALLBACK_QUOTES[Math.floor(Date.now() / 86400000) % FALLBACK_QUOTES.length];
 
     /* Consistency is measured, not asserted: how many of the last 28 days carry a workout or a
        food entry. Anything that only counted workouts would call a diligent rest week

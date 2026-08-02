@@ -1346,6 +1346,8 @@ const state = {
   viewingRaceMode: !!LS.get("hx_race_active", null),
   achievements: LS.get("hx_achievements", []),
   lastUnlockedAchievements: null, // transient celebration, mirrors lastSessionPRs pattern
+  badgeView: "earned",      // Badges screen: "earned" | "remaining"
+  badgeCategory: "all",     // Badges screen: all | milestone | streak | strength | program
   favoriteFoods: LS.get("hx_favorite_foods", []),
   waterLog: LS.get("hx_water_log", []),
   savedExercises: LS.get("hx_saved_exercises", []),
@@ -1697,6 +1699,16 @@ function commitFinishedWorkout(session){
   if(newPRs.length){ state.prs = newPRs.concat(state.prs); state.lastSessionPRs = newPRs; }
   const newlyUnlocked = checkAchievements();
   if(newlyUnlocked.length) state.lastUnlockedAchievements = newlyUnlocked;
+
+  /* Points and celebrations. Keyed by workout id and PR id, so this is safe if the commit
+     path ever runs twice — award() ignores a key it has already paid out, which is the whole
+     reason it takes one. Celebrations queue, so a session that unlocks a badge AND a level
+     shows them one after the other rather than stacking two overlays on each other. */
+  if(window.IgnytXP){
+    IgnytXP.award("workout", workoutId);
+    newPRs.forEach(pr => IgnytXP.award("personalBest", pr.id || (workoutId + ":" + (pr.exerciseName || "volume"))));
+  }
+  if(window.IgnytCelebrate && newlyUnlocked.length) IgnytCelebrate.forAchievements(newlyUnlocked);
 
   _recentCommit = { key: contentKey, at: now, id: workoutId };
   _pushCommitLedger(_recentCommit); // durable dedupe BEFORE anything can reload
@@ -3580,25 +3592,25 @@ function totalLifetimeVolume(){ return state.workoutLog.reduce((a,s)=>a+(s.volum
 function totalWorkingSets(){ return state.workoutLog.reduce((a,s)=>a+s.exercises.reduce((x,e)=>x+e.sets.filter(isCountingSet).length,0),0); }
 
 const ACHIEVEMENT_DEFS = [
-  { id:"first_workout", name:"First Workout", desc:"Complete your first freestyle workout.", check:()=> state.workoutLog.length>=1 },
-  { id:"workouts_5", name:"5 Workouts", desc:"Log 5 freestyle workouts.", check:()=> state.workoutLog.length>=5 },
-  { id:"workouts_10", name:"10 Workouts", desc:"Log 10 freestyle workouts.", check:()=> state.workoutLog.length>=10 },
-  { id:"workouts_25", name:"25 Workouts", desc:"Log 25 freestyle workouts.", check:()=> state.workoutLog.length>=25 },
-  { id:"workouts_50", name:"50 Workouts", desc:"Log 50 freestyle workouts.", check:()=> state.workoutLog.length>=50 },
-  { id:"workouts_100", name:"100 Workouts", desc:"Log 100 freestyle workouts.", check:()=> state.workoutLog.length>=100 },
-  { id:"workouts_250", name:"250 Workouts", desc:"Log 250 freestyle workouts.", check:()=> state.workoutLog.length>=250 },
-  { id:"workouts_500", name:"500 Workouts", desc:"Log 500 freestyle workouts.", check:()=> state.workoutLog.length>=500 },
-  { id:"first_pr", name:"First Personal Record", desc:"Set your first PR.", check:()=> state.prs.length>=1 },
-  { id:"first_100kg", name:"First 100kg Lift", desc:"Hit 100kg or more on any lift.", check:()=> state.prs.some(p=>p.type==="weight" && p.value>=100) },
-  { id:"sets_100", name:"100 Working Sets", desc:"Log 100 working sets total.", check:()=> totalWorkingSets()>=100 },
-  { id:"volume_1m", name:"1,000,000kg Lifetime Volume", desc:"Move a million kg over your lifetime.", check:()=> totalLifetimeVolume()>=1000000 },
-  { id:"hyrox_week1", name:"Complete HYROX Week 1", desc:"Finish every session in Week 1 of the program.", check:()=> weekProgress(WEEKS[0])===100 },
-  { id:"hyrox_full_program", name:"Complete 8-Week HYROX Program", desc:"Finish the entire 8-week structured program.", check:()=> overallPlanProgress()===100 },
-  { id:"streak_3", name:"3-Day Streak", desc:"Train 3 days in a row.", check:()=> computeStreak()>=3 },
-  { id:"streak_7", name:"7-Day Streak", desc:"Train 7 days in a row.", check:()=> computeStreak()>=7 },
-  { id:"streak_14", name:"14-Day Streak", desc:"Train 14 days in a row.", check:()=> computeStreak()>=14 },
-  { id:"streak_30", name:"30-Day Streak", desc:"Train 30 days in a row.", check:()=> computeStreak()>=30 },
-  { id:"streak_60", name:"60-Day Streak", desc:"Train 60 days in a row.", check:()=> computeStreak()>=60 },
+  { id:"first_workout", name:"First Workout", desc:"Complete your first freestyle workout.", check:()=> state.workoutLog.length>=1 , category:"milestone", tier:"bronze", value:"1" },
+  { id:"workouts_5", name:"5 Workouts", desc:"Log 5 freestyle workouts.", check:()=> state.workoutLog.length>=5 , category:"milestone", tier:"bronze", value:"5" },
+  { id:"workouts_10", name:"10 Workouts", desc:"Log 10 freestyle workouts.", check:()=> state.workoutLog.length>=10 , category:"milestone", tier:"bronze", value:"10" },
+  { id:"workouts_25", name:"25 Workouts", desc:"Log 25 freestyle workouts.", check:()=> state.workoutLog.length>=25 , category:"milestone", tier:"silver", value:"25" },
+  { id:"workouts_50", name:"50 Workouts", desc:"Log 50 freestyle workouts.", check:()=> state.workoutLog.length>=50 , category:"milestone", tier:"silver", value:"50" },
+  { id:"workouts_100", name:"100 Workouts", desc:"Log 100 freestyle workouts.", check:()=> state.workoutLog.length>=100 , category:"milestone", tier:"gold", value:"100" },
+  { id:"workouts_250", name:"250 Workouts", desc:"Log 250 freestyle workouts.", check:()=> state.workoutLog.length>=250 , category:"milestone", tier:"gold", value:"250" },
+  { id:"workouts_500", name:"500 Workouts", desc:"Log 500 freestyle workouts.", check:()=> state.workoutLog.length>=500 , category:"milestone", tier:"gold", value:"500" },
+  { id:"first_pr", name:"First Personal Record", desc:"Set your first PR.", check:()=> state.prs.length>=1 , category:"strength", tier:"bronze", value:"1" },
+  { id:"first_100kg", name:"First 100kg Lift", desc:"Hit 100kg or more on any lift.", check:()=> state.prs.some(p=>p.type==="weight" && p.value>=100) , category:"strength", tier:"silver", value:"100kg" },
+  { id:"sets_100", name:"100 Working Sets", desc:"Log 100 working sets total.", check:()=> totalWorkingSets()>=100 , category:"strength", tier:"bronze", value:"100" },
+  { id:"volume_1m", name:"1,000,000kg Lifetime Volume", desc:"Move a million kg over your lifetime.", check:()=> totalLifetimeVolume()>=1000000 , category:"strength", tier:"gold", value:"1M kg" },
+  { id:"hyrox_week1", name:"Complete HYROX Week 1", desc:"Finish every session in Week 1 of the program.", check:()=> weekProgress(WEEKS[0])===100 , category:"program", tier:"bronze", value:"W1" },
+  { id:"hyrox_full_program", name:"Complete 8-Week HYROX Program", desc:"Finish the entire 8-week structured program.", check:()=> overallPlanProgress()===100 , category:"program", tier:"gold", value:"8W" },
+  { id:"streak_3", name:"3-Day Streak", desc:"Train 3 days in a row.", check:()=> computeStreak()>=3 , category:"streak", tier:"bronze", value:"3" },
+  { id:"streak_7", name:"7-Day Streak", desc:"Train 7 days in a row.", check:()=> computeStreak()>=7 , category:"streak", tier:"bronze", value:"7" },
+  { id:"streak_14", name:"14-Day Streak", desc:"Train 14 days in a row.", check:()=> computeStreak()>=14 , category:"streak", tier:"silver", value:"14" },
+  { id:"streak_30", name:"30-Day Streak", desc:"Train 30 days in a row.", check:()=> computeStreak()>=30 , category:"streak", tier:"silver", value:"30" },
+  { id:"streak_60", name:"60-Day Streak", desc:"Train 60 days in a row.", check:()=> computeStreak()>=60 , category:"streak", tier:"gold", value:"60" },
   { id:"streak_100", name:"100-Day Streak", desc:"Train 100 days in a row.", check:()=> computeStreak()>=100 }
 ];
 
@@ -3749,7 +3761,7 @@ function calcBodyFatNavy(gender, heightCm, neckCm, waistCm, hipCm){
 function calcHeartRateZones(age, restingHR){
   const maxHR = 220-age;
   const zones = [
-    {label:"50-60% (Very Light)", lo:0.5, hi:0.6},
+    {label:"50-60% (Very Light)", lo:0.5, hi:0.6, category:"streak", tier:"gold", value:"100" },
     {label:"60-70% (Light)", lo:0.6, hi:0.7},
     {label:"70-80% (Moderate)", lo:0.7, hi:0.8},
     {label:"80-90% (Hard)", lo:0.8, hi:0.9},
@@ -9901,43 +9913,69 @@ const ACHIEVEMENT_COLORS = ['var(--rh-blue)','var(--rh-purple)','var(--rh-green)
 
 function renderProgressAchievements(){
   const unlockedIds = new Set(state.achievements.map(a=>a.id));
-  const unlocked = state.achievements.slice().sort((a,b)=>b.achievedAt-a.achievedAt);
-  const locked = ACHIEVEMENT_DEFS.filter(d=>!unlockedIds.has(d.id));
-  const pct = Math.round(unlocked.length/ACHIEVEMENT_DEFS.length*100);
-  const colorFor = (id) => ACHIEVEMENT_COLORS[Math.max(0,ACHIEVEMENT_DEFS.findIndex(d=>d.id===id)) % ACHIEVEMENT_COLORS.length];
+  const earnedAt = {};
+  state.achievements.forEach(a => { earnedAt[a.id] = a.achievedAt; });
+
+  const showEarned = state.badgeView !== "remaining";
+  const cat = state.badgeCategory || "all";
+
+  const CATEGORIES = [
+    ["all","All"], ["milestone","Milestones"], ["streak","Streaks"],
+    ["strength","Strength"], ["program","Program"]
+  ];
+  const ICONS = { milestone:"trophy", streak:"flame", strength:"dumbbell", program:"calendar" };
+
+  const inCategory = d => cat === "all" || d.category === cat;
+  const pool = ACHIEVEMENT_DEFS.filter(inCategory)
+    .filter(d => unlockedIds.has(d.id) === showEarned);
+
+  // Earned newest first — the one just unlocked should be at the top, not buried in
+  // definition order. Remaining stays in definition order, which is roughly easiest first.
+  if(showEarned) pool.sort((a,b) => (earnedAt[b.id]||0) - (earnedAt[a.id]||0));
+
+  const totalEarned = state.achievements.length;
+  const pct = Math.round(totalEarned / ACHIEVEMENT_DEFS.length * 100);
+
+  const tile = (d) => {
+    const earned = unlockedIds.has(d.id);
+    /* A locked badge shows its shape and its target, not a question mark. Knowing "100
+       workouts, you're at 12" is a reason to come back; a blanked-out mystery is not. */
+    return `<div class="bdg${earned ? " bdg--" + (d.tier||"bronze") : " bdg--locked"}" title="${escHtml(d.desc)}">
+      <div class="bdg__medal">
+        <span class="bdg__icon">${svg(ICONS[d.category] || "trophy", 22)}</span>
+        <span class="bdg__value">${escHtml(d.value||"")}</span>
+      </div>
+      <div class="bdg__name">${escHtml(d.name)}</div>
+      <div class="bdg__meta">${earned
+        ? new Date(earnedAt[d.id]||Date.now()).toLocaleDateString('default',{month:'short',day:'2-digit'})
+        : escHtml(d.desc)}</div>
+    </div>`;
+  };
+
   return `
     <div class="pg-card">
       <div class="row-between">
-        <span style="font-size:13px;font-weight:700;">${unlocked.length} of ${ACHIEVEMENT_DEFS.length} unlocked</span>
+        <span style="font-size:13px;font-weight:700;">${totalEarned} of ${ACHIEVEMENT_DEFS.length} earned</span>
         <span style="font-size:13px;font-weight:800;color:var(--rh-blue);">${pct}%</span>
       </div>
       <div class="rh-progress-track"><div class="rh-progress-fill" style="width:${pct}%;"></div></div>
     </div>
-    ${unlocked.length===0 ? `<div class="empty-note" style="margin:14px 0;">No achievements unlocked yet — your first workout is the first one.</div>` : `
-    <div style="margin-top:14px;">
-      ${unlocked.map(a=>{ const c=colorFor(a.id); return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:12px 14px;">
-        <span class="tl-card__icon" style="width:40px;height:40px;flex:none;background:${c}1a;color:${c};">${svg('trophy',20)}</span>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:15px;font-weight:800;">${a.name}</div>
-          <div style="font-size:12px;color:var(--rh-muted);margin-top:1px;">${a.desc}</div>
-        </div>
-        <span style="font-size:11px;color:var(--rh-muted);font-weight:600;flex:none;">${new Date(a.achievedAt).toLocaleDateString('default',{month:'short',day:'2-digit',year:'numeric'})}</span>
-      </div>`; }).join("")}
-    </div>`}
-    ${locked.length ? `
-    <div class="rh-section-head"><span>Locked</span></div>
-    ${locked.map(d=>`<div class="pg-card" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:12px 14px;opacity:.65;">
-      <span class="tl-card__icon" style="width:40px;height:40px;flex:none;background:var(--rh-bg);color:var(--rh-muted);">${svg('lock',18)}</span>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:15px;font-weight:800;">${d.name}</div>
-        <div style="font-size:12px;color:var(--rh-muted);margin-top:1px;">${d.desc}</div>
-      </div>
-      <span style="font-size:13px;color:var(--rh-muted);flex:none;">—</span>
-    </div>`).join("")}` : ""}
-    <div class="pg-card" style="margin-top:14px;background:rgba(37,99,235,.06);display:flex;align-items:center;gap:10px;">
-      <span style="flex:1;font-size:12px;color:var(--rh-text);line-height:1.4;">Keep training, stay consistent and unlock all achievements!</span>
-      <span style="flex:none;font-size:26px;">🏆</span>
+
+    <div class="bdg-toggle">
+      <button class="bdg-toggle__btn${showEarned?" is-on":""}" data-badge-view="earned">Earned</button>
+      <button class="bdg-toggle__btn${!showEarned?" is-on":""}" data-badge-view="remaining">Remaining</button>
     </div>
+
+    <div class="bdg-cats">
+      ${CATEGORIES.map(([id,label])=>`
+        <button class="bdg-cat${cat===id?" is-on":""}" data-badge-cat="${id}">${label}</button>`).join("")}
+    </div>
+
+    ${pool.length === 0
+      ? `<div class="empty-note" style="margin:18px 0;">${showEarned
+          ? "Nothing here yet — your first workout unlocks the first one."
+          : "Every badge in this category is earned. "}</div>`
+      : `<div class="bdg-grid">${pool.map(tile).join("")}</div>`}
   `;
 }
 
@@ -18273,6 +18311,13 @@ function attachHandlers(){
   if(openMuscleSheet) openMuscleSheet.addEventListener("click", ()=>{ state.muscleSheetOpen = true; render(); });
   document.querySelectorAll('[data-action="close-muscle-sheet"]').forEach(el=>{
     el.addEventListener("click", ()=>{ state.muscleSheetOpen = false; render(); });
+  });
+
+  document.querySelectorAll("[data-badge-view]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.badgeView = el.dataset.badgeView; render(); });
+  });
+  document.querySelectorAll("[data-badge-cat]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.badgeCategory = el.dataset.badgeCat; render(); });
   });
 
   /* ---- Paywall ----

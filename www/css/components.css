@@ -417,3 +417,80 @@ textarea:focus-visible, [tabindex]:focus-visible{
   border: 2px solid var(--bg);
 }
 .ob-photo__actions{ display: flex; gap: 8px; }
+
+/* =========================================================
+   CELEBRATIONS — achievement, level-up, milestone and PR overlays.
+   Queued one at a time by js/motivation/celebrate.js.
+========================================================= */
+
+.celebrate{
+  position: fixed; inset: 0; z-index: 1200;
+  display: grid; place-items: center;
+  opacity: 0; transition: opacity .22s ease;
+  pointer-events: none;
+}
+.celebrate.is-in{ opacity: 1; pointer-events: auto; }
+
+.celebrate__backdrop{ position: absolute; inset: 0; background: rgba(8,9,13,.62); }
+
+.celebrate__card{
+  position: relative; z-index: 1;
+  width: min(320px, calc(100vw - 48px));
+  padding: 26px 22px 18px;
+  border-radius: 20px; text-align: center;
+  background: var(--color-surface, #171b24);
+  border: 1px solid var(--color-border, #262b35);
+  box-shadow: 0 18px 50px rgba(0,0,0,.4);
+  transform: scale(.92) translateY(8px);
+  transition: transform .26s cubic-bezier(.2,.9,.3,1.2);
+}
+.celebrate.is-in .celebrate__card{ transform: none; }
+
+.celebrate__icon{ font-size: 40px; line-height: 1; margin-bottom: 10px; }
+.celebrate__title{ font-size: 19px; font-weight: 900; letter-spacing: -.2px; }
+.celebrate__body{
+  font-size: 13px; line-height: 1.55; margin-top: 8px;
+  color: var(--color-text-secondary, #aaa9b0);
+}
+.celebrate__stat{
+  display: inline-block; margin-top: 12px; padding: 4px 12px;
+  border-radius: 999px; font-size: 12px; font-weight: 800;
+  background: rgba(37,99,235,.12); color: var(--color-interactive, #2563eb);
+  font-variant-numeric: tabular-nums;
+}
+.celebrate__ok{
+  display: block; width: 100%; margin-top: 18px; padding: 12px;
+  border: 0; border-radius: 12px; cursor: pointer;
+  font-size: 14px; font-weight: 800;
+  background: var(--color-interactive, #2563eb); color: #fff;
+}
+
+/* Confetti: plain divs, no library. Not rendered at all under reduced motion. */
+.celebrate__confetti{ position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.celebrate__confetti i{
+  position: absolute; top: -12px;
+  width: 8px; height: 14px; border-radius: 2px;
+  animation: celebrate-fall linear forwards;
+}
+@keyframes celebrate-fall{
+  to{ transform: translateY(105vh) rotate(720deg); opacity: .1; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .celebrate, .celebrate__card{ transition: none; }
+  .celebrate__card{ transform: none; }
+}
+
+/* The daily motivation line on Home. */
+.daily-motivation{
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 14px 16px; margin-bottom: 14px;
+  border-radius: var(--radius-tile, 14px);
+  background: rgba(37,99,235,.07);
+  border: 1px solid rgba(37,99,235,.16);
+}
+.daily-motivation__icon{ flex: none; color: var(--rh-blue, #2563eb); margin-top: 1px; }
+.daily-motivation__text{
+  font-size: 13.5px; line-height: 1.5; font-weight: 600;
+  color: var(--rh-text, #f7f4ef);
+}
