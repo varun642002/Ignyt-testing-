@@ -6059,13 +6059,17 @@ function renderLegacyHomeTab(){
   `;
 }
 
+/* No trailing punctuation. Both call sites append ", <name>" to whatever this returns, and
+   the two late-hours greetings used to carry their own question mark -- which rendered as
+   "Winding down?, varun" on Home every evening after nine, and "Still up?, varun" before
+   five. The comma belongs to the caller, so the greeting must not bring its own. */
 function greeting(){
   const h = new Date().getHours();
-  if(h<5) return "Still up?";
+  if(h<5) return "Still up";
   if(h<12) return "Good morning";
   if(h<17) return "Good afternoon";
   if(h<21) return "Good evening";
-  return "Winding down?";
+  return "Winding down";
 }
 
 /* Contextual, in-session reminders only -- fires while the app is open, since

@@ -336,25 +336,7 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
   font-size: 12.5px; font-weight: 800; color: var(--rh-text);
   font-variant-numeric: tabular-nums;
 }
-/* What is still on the table today, with what each is worth — the score is only motivating
-   if the next move is obvious. Actions already done today are not listed. */
-.ign-todo{
-  border: 1px solid var(--rh-border); border-radius: var(--radius-tile, 14px);
-  background: var(--rh-card); overflow: hidden; margin-bottom: 14px;
-}
-.ign-todo__head{
-  font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
-  color: var(--rh-muted); padding: 11px 14px 9px;
-}
-.ign-todo__row{
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 10px 14px; font-size: 13px; font-weight: 700;
-  border-top: 1px solid var(--rh-border);
-}
-.ign-todo__row b{
-  flex: none; font-size: 12px; font-weight: 800; color: var(--rh-green, #16a34a);
-  font-variant-numeric: tabular-nums;
-}
+
 @media (prefers-reduced-motion: reduce){
   .ign__arc{ transition: none; }
 }
