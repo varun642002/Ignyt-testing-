@@ -5609,19 +5609,6 @@ function renderSettingsTab(){
       <div class="rh-section-head"><span>${svg('signout',13)} Authentication</span></div>
       ${renderAccountSection()}
 
-      <div class="rh-section-head" style="margin-top:16px;"><span>${svg('health',13)} Health Connect</span></div>
-      <div class="pg-card">
-        <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Sync steps, weight, sleep and workouts with Health Connect. IGNYT only ever reads what you grant, and never writes without you asking.</div>
-        <button class="btn btn-steel btn-block" data-nav="health">Open Health Connect</button>
-      </div>
-
-      <div class="rh-section-head" style="margin-top:16px;"><span>${svg('lock',13)} Privacy</span></div>
-      <div class="pg-card">
-        <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">What is stored, where it lives, and how to remove it.</div>
-        <button class="btn btn-steel btn-block" data-action="open-privacy-info">Privacy &amp; Security</button>
-        <button class="btn btn-ghost btn-block" style="margin-top:8px;" data-action="open-legal" data-legal="privacy">Privacy Policy</button>
-      </div>
-
       <div class="rh-section-head" style="margin-top:16px;"><span>${svg('target',13)} Goal Wizard</span></div>
       <div class="pg-card">
         <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Your goal, availability, equipment, and health screening — retake it anytime as your situation changes.</div>
@@ -5705,22 +5692,23 @@ function renderSettingsTab(){
           <div class="tl-card__body"><div class="tl-card__label">Cloud Sync</div><div class="tl-card__desc">${window.IgnytCloudSync?renderCloudSyncStatusText():'Offline — saved on this device'}</div></div>
           ${window.IgnytCloudSync && window.IgnytCloudSync.getStatus().status==='synced' ? badge('Connected','green') : `<span class="tl-card__chev">›</span>`}
         </button>
-        <button class="tl-card" data-action="open-privacy-info">
-          <span class="tl-card__icon">${svg('shield',20)}</span>
-          <div class="tl-card__body"><div class="tl-card__label">Privacy &amp; Security</div><div class="tl-card__desc">Manage your data and permissions</div></div>
-          <span class="tl-card__chev">›</span>
-        </button>
       </div>
 
       <div class="rh-section-head"><span>${svg('download',13)} Export Data</span></div>
-      <div class="pg-card" style="margin-bottom:10px;">
-        <div style="font-size:12px;color:var(--rh-muted);line-height:1.5;">Export your entire workout and measurement history. The JSON backup can be imported back; CSVs are for spreadsheets.</div>
-      </div>
-      <div class="tl-grid" style="grid-template-columns:1fr;">
-        <button class="tl-card" data-action="export-json"><span class="tl-card__icon">${svg('box',20)}</span><div class="tl-card__body"><div class="tl-card__label">Full Backup (JSON)</div><div class="tl-card__desc">Export all app data</div></div><span class="tl-card__chev">›</span></button>
-        <button class="tl-card" data-action="export-workouts-csv"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Export Workouts (CSV)</div><div class="tl-card__desc">Download workout history</div></div><span class="tl-card__chev">›</span></button>
-        <button class="tl-card" data-action="export-measurements-csv"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Export Measurements (CSV)</div><div class="tl-card__desc">Download body metrics</div></div><span class="tl-card__chev">›</span></button>
-        <button class="tl-card" data-action="export-nutrition-csv"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Export Nutrition (CSV)</div><div class="tl-card__desc">Download food log</div></div><span class="tl-card__chev">›</span></button>
+      <div class="pg-card st-export">
+        ${[["export-json","box","Full Backup","JSON · everything, and the only one that imports back"],
+           ["export-workouts-csv","file","Workouts","CSV · every session, set and rep"],
+           ["export-measurements-csv","file","Measurements","CSV · weight and body metrics"],
+           ["export-nutrition-csv","file","Nutrition","CSV · the food log"]
+          ].map(([action,icon,label,desc])=>`
+          <button class="st-export__row" data-action="${action}">
+            <span class="tl-card__icon">${svg(icon,18)}</span>
+            <span class="st-export__body">
+              <span class="st-export__label">${label}</span>
+              <span class="st-export__desc">${desc}</span>
+            </span>
+            <span class="tl-card__chev">›</span>
+          </button>`).join("")}
       </div>
 
       <div class="rh-section-head"><span>${svg('upload',13)} Import Data</span></div>
@@ -5745,6 +5733,14 @@ function renderSettingsTab(){
         <button class="tl-card" data-action="open-legal-privacy"><span class="tl-card__icon">${svg('shield',20)}</span><div class="tl-card__body"><div class="tl-card__label">Privacy Policy</div><div class="tl-card__desc">How your data is stored and shared</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-action="open-legal-terms"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Terms and Conditions</div><div class="tl-card__desc">The terms you agreed to on sign-up</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-action="open-legal-disclaimer"><span class="tl-card__icon">${svg('health',20)}</span><div class="tl-card__body"><div class="tl-card__label">Medical &amp; Fitness Disclaimer</div><div class="tl-card__desc">Read before starting a program</div></div><span class="tl-card__chev">›</span></button>
+      </div>
+
+      <!-- Privacy sits last by request. It was second from the top, above Goal Wizard. -->
+      <div class="rh-section-head" style="margin-top:16px;"><span>${svg('lock',13)} Privacy</span></div>
+      <div class="pg-card">
+        <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">What is stored, where it lives, and how to remove it.</div>
+        <button class="btn btn-steel btn-block" data-action="open-privacy-info">Privacy &amp; Security</button>
+        <button class="btn btn-ghost btn-block" style="margin-top:8px;" data-action="open-legal" data-legal="privacy">Privacy Policy</button>
       </div>
 
       ${window.IgnytAuth && window.IgnytAuth.isNativeAndroid() && window.IgnytAuth.getAccount() ? `

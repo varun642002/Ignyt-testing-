@@ -235,3 +235,24 @@
   border: 1px solid var(--rh-border);
 }
 .ex-howto__photo img{ width: 100%; height: 100%; object-fit: contain; display: block; }
+
+
+/* =========================================================
+   EXPORT DATA — one card, four rows
+
+   These were four full-width tl-cards, which is four card shadows and four gaps for what is
+   really one decision with four answers. Grouped into a single card with hairline-separated
+   rows: same targets, same tap area, a third of the vertical space.
+========================================================= */
+.st-export{ padding: 0; overflow: hidden; }
+.st-export__row{
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 13px 14px; background: none; border: none; cursor: pointer;
+  font-family: inherit; text-align: left; color: var(--rh-text);
+}
+.st-export__row + .st-export__row{ border-top: 1px solid var(--rh-border); }
+.st-export__row:active{ background: var(--rh-bg); }
+.st-export__body{ flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.st-export__label{ font-size: 14px; font-weight: 700; }
+.st-export__desc{ font-size: 11.5px; color: var(--rh-muted); }
+.st-export .tl-card__icon{ flex: none; }
