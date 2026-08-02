@@ -29,10 +29,6 @@
     let health = null;
     try { health = JSON.parse(localStorage.getItem('hx_hc_dashboard_cache') || 'null'); } catch (_) {}
     const steps = healthValue(health, 'steps.steps', null);
-    // Health Connect reports sleep in minutes; null stays null rather than becoming 0,
-    // because "not synced" and "slept nothing" are different facts.
-    const sleepMinutes = healthValue(health, 'sleep.minutes', null);
-    const sleepHours = sleepMinutes == null ? null : sleepMinutes / 60;
 
     const workoutToday = state.workoutLog.find(s => new Date(s.startedAt || s.date).toDateString() === new Date().toDateString());
     const workoutMinutes = workoutToday ? Math.round(workoutToday.durationMin || 0) : null;
@@ -239,8 +235,6 @@
         ${summaryTile('dumbbell', 'rgba(124,58,237,.08)', 'var(--rh-purple)', `${workoutDoneCount}`, `/ ${workoutTotalCount}`, 'Workout', workoutDoneCount >= workoutTotalCount && workoutTotalCount > 0 ? 'Completed' : 'In progress')}
         ${summaryTile('footprints', 'rgba(217,119,6,.08)', '#D97706', steps == null ? '—' : Number(steps).toLocaleString(), '', 'Steps', `/ ${DEFAULT_STEPS_GOAL.toLocaleString()}`)}
         ${summaryTile('timer', 'rgba(37,99,235,.08)', 'var(--rh-blue)', workoutMinutes == null ? '—' : workoutMinutes, '', 'Active Minutes', `/ ${DEFAULT_WORKOUT_MINUTES_GOAL} min`)}
-        ${summaryTile('droplet', 'rgba(8,145,178,.08)', '#0891B2', (water / 1000).toFixed(1), '', 'Water', `/ ${(waterTarget / 1000).toFixed(1)} L`)}
-        ${summaryTile('moon', 'rgba(124,58,237,.08)', 'var(--rh-purple)', sleepHours == null ? '—' : sleepHours.toFixed(1), '', 'Sleep', sleepHours == null ? 'Not synced' : '/ 8.0 h')}
       </div>
 
       ${(window.IgnytPages && window.IgnytPages.renderFastingHomeCard)
