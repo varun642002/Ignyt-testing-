@@ -447,3 +447,41 @@
    A bar plus a word, never a bar alone: "Fatigued" has to survive a colour-blind reading and
    a glance too quick to compare bar lengths. --- */
 
+
+
+/* =========================================================
+   PER-EXERCISE PROGRESS STRIP (active workout)
+
+   Sits below the sticky header rather than inside it: the pin already carries the name, notes,
+   rest timer and column headings, and a taller sticky block eats the set rows it exists to
+   keep visible. This scrolls away with the card, which is right — it is context you read once
+   before the first set, not something you need pinned through every rep.
+========================================================= */
+/* A grid, not a wrapping flex row. As flex the four figures plus the sparkline overflowed
+   305px and re-wrapped into three ragged lines 78px tall; four equal columns with the
+   sparkline spanning underneath is 56px and lines the numbers up with each other. */
+.wk-exprog{
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: center; gap: 8px 6px;
+  padding: 8px 10px; margin: 0 0 8px;
+  border-radius: 10px; background: var(--rh-bg, rgba(128,128,128,.06));
+  border: 1px solid var(--rh-border);
+}
+.wk-exprog__cell{
+  display: flex; flex-direction: column; line-height: 1.15;
+  font-size: 10px; font-weight: 600; color: var(--rh-muted);
+}
+.wk-exprog__cell b{
+  font-size: 13px; font-weight: 800; color: var(--rh-text);
+  font-variant-numeric: tabular-nums;
+}
+/* Direction is coloured, but a drop is muted rather than red: a lighter session is a normal
+   part of training, not an error state. */
+.wk-exprog__cell b.is-up{ color: var(--rh-green, #16a34a); }
+.wk-exprog__cell b.is-down{ color: var(--rh-muted); }
+.wk-exprog__spark{ grid-column: 1 / -1; width: 100%; height: 18px; display: block; }
+.wk-exprog--new{
+  display: block; font-size: 11.5px; font-weight: 600; color: var(--rh-muted);
+}
+.wk-exprog--new{ grid-template-columns: none; }
+.wk-exprog--new svg{ vertical-align: -2px; margin-right: 4px; }

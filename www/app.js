@@ -3668,6 +3668,62 @@ function exercisesWithHistory(){
 
 /* Chronological best-set-per-session series for one exercise: weight + estimated 1RM over time */
 
+/* Per-exercise progress, shown on every exercise while a workout is in progress.
+
+   The set table's PREVIOUS column already answers "what did I do on this set last time". This
+   answers the different question you actually ask before starting: how am I doing on this lift
+   overall, and what am I chasing today.
+
+   Everything is read from logged sets. Best is the heaviest working set ever recorded, last is
+   the heaviest of the most recent session, and the change between them is arithmetic, not a
+   projection. Warm-ups and non-counting sets are excluded, because exerciseProgressTrend()
+   already filters to real working sets.
+
+   Shown only once there is something to say. On the first ever session there is no best, no
+   last and no trend, so it says so in one line instead of printing three dashes. */
+function renderWorkoutExerciseProgress(name){
+  const trend = exerciseProgressTrend(name, 12);
+  if(!trend.length){
+    return `<div class="wk-exprog wk-exprog--new">${svg('star',12)} First time logging this — today sets your baseline.</div>`;
+  }
+  const last = trend[trend.length-1];
+  const best = trend.reduce((a,t)=> t.weight > a.weight ? t : a, trend[0]);
+  // The change is against the session before this one, so it is a real comparison and not a
+  // lift compared with itself on a first session.
+  const prev = trend.length>=2 ? trend[trend.length-2] : null;
+  const delta = prev ? Math.round((last.weight - prev.weight)*10)/10 : null;
+  const sessions = trend.length;
+
+  /* A sparkline of the heaviest set per session. Twelve points at most: enough to read a
+     direction, few enough to stay legible at this size. Drawn only with two or more points --
+     a single dot is not a trend. */
+  const spark = (()=>{
+    if(trend.length < 2) return "";
+    const w = 300, h = 18, pad = 2;   // stretched to the card width by CSS
+    const vals = trend.map(t=>t.weight);
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    const span = (hi - lo) || 1;
+    const pts = vals.map((v,i)=>{
+      const x = pad + (i/(vals.length-1)) * (w - pad*2);
+      const y = h - pad - ((v - lo)/span) * (h - pad*2);
+      return `${Math.round(x*10)/10},${Math.round(y*10)/10}`;
+    }).join(" ");
+    const upward = vals[vals.length-1] >= vals[0];
+    return `<svg class="wk-exprog__spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points="${pts}" fill="none" stroke="${upward ? 'var(--rh-green)' : 'var(--rh-muted)'}" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+  })();
+
+  const cell = (v,l) => `<span class="wk-exprog__cell"><b>${v}</b>${l}</span>`;
+  return `<div class="wk-exprog">
+    ${cell(displayW(best.weight)+" "+wUnit(), "best")}
+    ${cell(displayW(last.weight)+" "+wUnit(), "last")}
+    ${delta !== null ? `<span class="wk-exprog__cell"><b class="${delta>0?'is-up':delta<0?'is-down':''}">${delta>0?'+':''}${displayW(delta)} ${wUnit()}</b>vs prev</span>` : ""}
+    ${cell(sessions, "session"+(sessions!==1?"s":""))}
+    ${spark}
+  </div>`;
+}
+
 function exerciseProgressTrend(name, limit=20){
   const sessions = state.workoutLog.slice().reverse(); // oldest first
   const out = [];
@@ -14443,6 +14499,7 @@ function renderWorkoutTab(){
           </div>`}
           </div>
           ${collapsed ? '' : `
+          ${renderWorkoutExerciseProgress(ex.name)}
           ${ex.sets.map((set,si)=>{
             const prev = getPreviousSet(ex.name, si);
             const prevLabel = previousSetLabel(logType, prev);
@@ -14618,7 +14675,7 @@ function renderExerciseDetail(name){
   const all = allLibraryExercises();
   const libEntry = all.find(e=>e.name===name);
   const muscle = detail ? detail.primaryMuscle : (libEntry ? libEntry.muscle : getMuscle(name));
-  const tab = state.exerciseDetailTab || "summary";
+  const tab = state.exerciseDetailTab || "howto";
   const history = exerciseHistoryEntries(name);
   const prs = exercisePRs(name);
   // Same muscle-group icon/color convention used by the Library rows and PR list rows --
@@ -14650,7 +14707,7 @@ function renderExerciseDetail(name){
     </div>
 
     <div class="lib-cats" style="margin:14px 0;">
-      ${[["summary","Summary"],["history","History"],["howto","How To"]].map(([key,label])=>`
+      ${[["howto","How To"],["summary","Summary"],["history","History"]].map(([key,label])=>`
         <button class="cat-chip ${tab===key?'active':''}" data-ex-detail-tab="${key}" style="flex:1;text-align:center;">${label}</button>
       `).join("")}
     </div>
@@ -16575,7 +16632,7 @@ function attachHandlers(){
   document.querySelectorAll("[data-view-exercise]").forEach(el=>{
     el.addEventListener("click", ()=>{
       state.viewingExerciseDetail = el.dataset.viewExercise;
-      state.exerciseDetailTab = "summary";
+      state.exerciseDetailTab = "howto";
       render();
     });
   });
@@ -16827,7 +16884,7 @@ function attachHandlers(){
       if(viewBtn){
         e.stopPropagation();
         state.viewingExerciseDetail = viewBtn.dataset.viewExerciseFromPicker;
-        state.exerciseDetailTab = "summary";
+        state.exerciseDetailTab = "howto";
         state.showExercisePicker = false;
         state.tab = "library";
         render();
