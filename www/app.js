@@ -5982,7 +5982,8 @@ function renderApp(){
         <button class="page-tools-btn" data-action="toggle-notifications" aria-label="Notifications${unreadCount?` (${unreadCount} new)`:''}">
           ${svg('bell',20)}${unreadCount?'<span class="hdr-badge-dot"></span>':''}
         </button>
-        <button class="page-tools-btn" data-nav="settings" aria-label="Open Settings">${svg('gear',20)}</button>
+        <button class="page-tools-btn${state.tab==='profile'?' is-on':''}" data-nav="profile" aria-label="Open Profile">${svg('profile',20)}</button>
+        <button class="page-tools-btn${state.tab==='settings'?' is-on':''}" data-nav="settings" aria-label="Open Settings">${svg('gear',20)}</button>
         ${state.notificationsOpen ? renderNotificationsPanel(notifications) : ''}
       </div>
     </header>
@@ -5999,7 +6000,7 @@ function renderApp(){
       ${navBtn("workout","Workout")}
       ${navBtn("nutrition","Food Log")}
       ${navBtn("progress","Progress")}
-      ${navBtn("profile","Profile")}
+      ${navBtn("tools","Tools")}
     </nav>
   `;
   const main = document.getElementById("main");
@@ -6088,7 +6089,9 @@ function renderToolsTab(){
   return `
     <div class="pg-light">
       <div class="pg-header">
-        <button class="pg-back" data-nav="profile" aria-label="Back to Profile">‹</button>
+        <!-- No back arrow. Tools is a bottom-nav destination now rather than a page inside
+             Profile, and a back button on a top-level tab points at a parent the user did not
+             come from — it would send them to Profile out of nowhere. -->
         <div class="pg-header__title">Tools</div>
         <div class="pg-header__sub">Everything you need to train smarter</div>
       </div>

@@ -30,3 +30,12 @@ nav.bottom-nav { min-height:var(--nav-height); background:rgba(18,20,24,.95); bo
    is also used for error/warning text and sync-failed states throughout app.js, and turning
    those blue would be a real regression, not a style match to the reference. */
 .nav-btn.active { color: var(--color-interactive); }
+
+/* Header buttons that are also destinations (Profile, Settings) show which one you are on.
+   The bottom nav has always done this; these two became navigation when Profile moved up
+   here, and a destination that gives no sign you have arrived is the reason people tap it
+   twice. Border and colour only — no fill, so it reads as state rather than as a new button. */
+.page-tools-btn.is-on {
+  border-color: var(--color-interactive);
+  color: var(--color-interactive);
+}
