@@ -1346,6 +1346,8 @@ const state = {
   viewingRaceMode: !!LS.get("hx_race_active", null),
   achievements: LS.get("hx_achievements", []),
   lastUnlockedAchievements: null, // transient celebration, mirrors lastSessionPRs pattern
+  prExerciseOpen: null,     // PR screen: which exercise sheet is open
+  prRange: "all",           // PR screen: today | month | 6m | all
   badgeView: "earned",      // Badges screen: "earned" | "remaining"
   badgeCategory: "all",     // Badges screen: all | milestone | streak | strength | program
   favoriteFoods: LS.get("hx_favorite_foods", []),
@@ -6007,6 +6009,7 @@ function renderApp(){
     ${renderLegalViewer()}
     ${renderLiveSessionBar()}
     ${renderPaywallSheet()}
+    ${renderPrExerciseSheet()}
     <nav class="bottom-nav ${isLightTab?'bottom-nav--home-light':''}">
       ${navBtn("home","Home")}
       ${navBtn("workout","Workout")}
@@ -9866,15 +9869,94 @@ const PR_TYPE_KEY = {Weight:"weight","1RM":"1rm",Reps:"reps",Volume:"volume"};
    not computable here — it would need fatigue, sleep, nutrition and programme context, none of
    which this app has — and a made-up probability someone then misses is worse than no number.
    What replaced it is the real gap: the exact next target and how far away it is. */
+/* One exercise, opened by tapping its record card: the progression chart, the numbers behind
+   it, and a coaching line.
+
+   Everything shown is read from logged sets. The brief asked for an "AI Rating ★★★★★" per
+   exercise — that is not built, because a five-star score with no stated basis is decoration
+   pretending to be assessment. What replaced it is consistency, which is a real number:
+   sessions logged against weeks since the first one. */
+function renderPrExerciseSheet(){
+  const name = state.prExerciseOpen;
+  if(!name || !window.IgnytStrength) return "";
+  const ins = IgnytStrength.exerciseInsight(state, name);
+  if(!ins) return "";
+
+  // Heaviest working set per session, oldest first — the shape of the progression.
+  const points = [];
+  state.workoutLog.slice().sort((a,b)=> (a.startedAt||0)-(b.startedAt||0)).forEach(w=>{
+    let best = 0;
+    (w.exercises||[]).forEach(e=>{ if(e.name===name) (e.sets||[]).forEach(st=>{
+      const kg = Number(st.weight)||0; if(kg>best) best = kg; }); });
+    if(best>0) points.push({ date: new Date(w.startedAt||w.date), value: best });
+  });
+
+  const weeks = points.length ? Math.max(1, Math.round((Date.now() - points[0].date.getTime())/(7*86400000))) : 1;
+  const consistency = Math.min(100, Math.round(ins.sessions / weeks * 100));
+  const img = typeof exerciseImageSrc === "function" ? exerciseImageSrc(name) : "";
+
+  /* One line, from what the numbers actually say. Silent rather than generic when there is
+     nothing specific to observe — a coach that always speaks is one nobody listens to. */
+  const coach = (()=>{
+    const daysSince = ins.lastTrainedAt ? Math.floor((Date.now()-ins.lastTrainedAt)/86400000) : null;
+    if(daysSince != null && daysSince >= 21) return `You haven't trained this in ${daysSince} days. Start back a little under your best and build again.`;
+    if(ins.improvementKg != null && ins.improvementKg > 0) return `Up ${ins.improvementKg} kg since you started logging this. Small jumps, kept up, are what did that.`;
+    if(ins.sessions >= 6 && ins.improvementKg === 0) return `Six sessions at the same weight. A small increase, or an extra rep at this one, is the next step.`;
+    if(ins.sessions < 3) return `Only ${ins.sessions} session${ins.sessions!==1?'s':''} logged. A few more and the trend here becomes readable.`;
+    return "";
+  })();
+
+  const stat = (v,l) => `<div class="prx__stat"><b>${v}</b><span>${l}</span></div>`;
+
+  return `<div class="sheet-backdrop" data-action="close-pr-exercise"></div>
+    <div class="sheet prx">
+      <div class="sheet__handle"></div>
+      <div class="prx__head">
+        ${img ? `<span class="prx__img"><img src="${escHtml(img)}" alt=""></span>` : ""}
+        <div>
+          <div class="prx__name">${escHtml(name)}</div>
+          <div class="prx__muscle">${escHtml(getMuscle(name)||"")}</div>
+        </div>
+      </div>
+
+      <div class="prx__chart">${axisAreaChart(points, {color:"var(--rh-blue)", unit:" kg"})}</div>
+
+      <div class="prx__grid">
+        ${stat(ins.sessions, "sessions")}
+        ${stat(ins.bestKg + " kg", "best")}
+        ${stat((ins.averageKg!=null?ins.averageKg:"—") + " kg", "average")}
+        ${stat(ins.improvementKg!=null ? (ins.improvementKg>0?"+":"") + ins.improvementKg + " kg" : "—", "improvement")}
+        ${stat(ins.prCount, ins.prCount===1 ? "record" : "records")}
+        ${stat(consistency + "%", "consistency")}
+      </div>
+
+      ${coach ? `<div class="prx__coach">${escHtml(coach)}</div>` : ""}
+    </div>`;
+}
+
 function renderProgressPRs(){
   const S = window.IgnytStrength;
   if(state.prs.length===0) return `<div class="empty-note">No PRs yet — finish a freestyle workout to start tracking heaviest weight, estimated 1RM and session volume.</div>`;
 
   const q = (state.prSearch||"").trim().toLowerCase();
   const typeFilter = PR_TYPE_FILTERS.includes(state.prTypeFilter) ? state.prTypeFilter : "All";
+  const RANGES = [["today","Today"],["month","30 days"],["6m","6 months"],["all","All time"]];
+  const range = state.prRange || "all";
+  const rangeCutoff = { today: 1, month: 30, "6m": 182, all: null }[range];
+
   let all = state.prs;
   if(q) all = all.filter(pr=> (pr.exerciseName||"Session Volume").toLowerCase().includes(q));
   if(typeFilter!=="All") all = all.filter(pr=> pr.type===PR_TYPE_KEY[typeFilter]);
+  if(rangeCutoff){
+    // "Today" means since midnight, not the last 24 hours — a PR set yesterday evening should
+    // not still be counted as today's when someone opens the app in the morning.
+    const from = range === "today"
+      ? new Date().setHours(0,0,0,0)
+      : Date.now() - rangeCutoff * 86400000;
+    all = all.filter(pr => pr.achievedAt >= from);
+  }
+
+  const prsToday = state.prs.filter(pr => pr.achievedAt >= new Date().setHours(0,0,0,0));
   const showCount = state.prShowCount || 10;
   const shown = all.slice(0, showCount);
   const remaining = all.length - shown.length;
@@ -9938,7 +10020,19 @@ function renderProgressPRs(){
   };
 
   return `
+    ${prsToday.length ? `
+    <div class="pr-today">
+      <div class="pr-today__icon">🏆</div>
+      <div class="pr-today__body">
+        <div class="pr-today__title">New personal record${prsToday.length>1?'s':''} today</div>
+        <div class="pr-today__sub">${prsToday.map(p=>escHtml(p.exerciseName||'Session Volume')).slice(0,3).join(' · ')}</div>
+      </div>
+      <div class="pr-today__xp">+${prsToday.length*75} XP</div>
+    </div>` : ''}
     ${hero}
+    <div class="lib-cats" style="margin-top:14px;">
+      ${RANGES.map(([id,label])=>`<button class="cat-chip ${range===id?'active':''}" data-pr-range="${id}">${label}</button>`).join("")}
+    </div>
     <div style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--rh-muted);font-weight:600;margin:14px 0 10px;">
       ${svg('file',15)} ${state.prs.length} record${state.prs.length!==1?'s':''} total${(q||typeFilter!=='All')?` · ${all.length} shown`:''}
     </div>
@@ -18414,6 +18508,20 @@ function attachHandlers(){
   if(openMuscleSheet) openMuscleSheet.addEventListener("click", ()=>{ state.muscleSheetOpen = true; render(); });
   document.querySelectorAll('[data-action="close-muscle-sheet"]').forEach(el=>{
     el.addEventListener("click", ()=>{ state.muscleSheetOpen = false; render(); });
+  });
+
+  document.querySelectorAll("[data-pr-open]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const name = el.dataset.prOpen;
+      if(!name) return;                       // Session Volume has no per-exercise history
+      state.prExerciseOpen = name; render();
+    });
+  });
+  document.querySelectorAll('[data-action="close-pr-exercise"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.prExerciseOpen = null; render(); });
+  });
+  document.querySelectorAll("[data-pr-range]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.prRange = el.dataset.prRange; state.prShowCount = 10; render(); });
   });
 
   document.querySelectorAll("[data-badge-view]").forEach(el=>{

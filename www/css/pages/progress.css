@@ -353,3 +353,47 @@
   background: rgba(37,99,235,.07); font-size: 11.5px; color: var(--rh-text); font-weight: 600;
 }
 .pr-card__beat b{ font-weight: 900; color: var(--rh-blue); }
+
+/* The banner when a record was set today. Only rendered when one actually was — a permanent
+   "no records today" strip would be a daily reminder of not having achieved anything. */
+.pr-today{
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; margin-bottom: 12px; border-radius: var(--radius-tile, 14px);
+  background: linear-gradient(135deg, rgba(245,158,11,.16), rgba(239,68,68,.10));
+  border: 1px solid rgba(245,158,11,.30);
+}
+.pr-today__icon{ font-size: 26px; line-height: 1; flex: none; }
+.pr-today__body{ flex: 1; min-width: 0; }
+.pr-today__title{ font-size: 14px; font-weight: 900; }
+.pr-today__sub{
+  font-size: 11.5px; color: var(--rh-muted); font-weight: 600; margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pr-today__xp{
+  flex: none; font-size: 12px; font-weight: 900; color: #f59e0b;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The per-exercise sheet opened from a record card. */
+.prx{ padding-bottom: 22px; }
+.prx__head{ display: flex; align-items: center; gap: 12px; padding: 4px 20px 14px; }
+.prx__img{
+  flex: none; width: 52px; height: 52px; border-radius: 13px; overflow: hidden;
+  background: var(--rh-border);
+}
+.prx__img img{ width: 100%; height: 100%; object-fit: cover; display: block; }
+.prx__name{ font-size: 17px; font-weight: 900; line-height: 1.2; }
+.prx__muscle{ font-size: 11.5px; color: var(--rh-muted); font-weight: 700; margin-top: 2px; }
+.prx__chart{ padding: 0 12px; }
+.prx__grid{
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 8px;
+  padding: 16px 20px 0;
+}
+.prx__stat{ text-align: center; }
+.prx__stat b{ display: block; font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.prx__stat span{ font-size: 10.5px; color: var(--rh-muted); font-weight: 600; }
+.prx__coach{
+  margin: 16px 20px 0; padding: 12px 14px; border-radius: 12px;
+  background: rgba(37,99,235,.07); border: 1px solid rgba(37,99,235,.14);
+  font-size: 12.5px; line-height: 1.5; font-weight: 600;
+}

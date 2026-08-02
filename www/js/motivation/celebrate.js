@@ -63,6 +63,7 @@ window.IgnytCelebrate = (function () {
       "</div>";
 
     if (!reducedMotion()) root.appendChild(confetti());
+    buzz();
     document.body.appendChild(root);
     requestAnimationFrame(function () { root.classList.add("is-in"); });
 
@@ -80,6 +81,17 @@ window.IgnytCelebrate = (function () {
     root.querySelector(".celebrate__backdrop").addEventListener("click", close);
     // Auto-dismiss so a celebration never blocks the app if it is missed.
     setTimeout(close, 6000);
+  }
+
+  /* A short double pulse on a celebration. navigator.vibrate rather than a Capacitor haptics
+     plugin: this is the whole requirement, it needs no native code on either platform, and it
+     is a no-op where unsupported — iOS Safari and desktop simply ignore it.
+
+     Skipped under reduced motion. Someone who has asked their device for less movement has
+     asked for less movement, and a buzzing phone is movement. */
+  function buzz() {
+    if (reducedMotion()) return;
+    try { if (navigator.vibrate) navigator.vibrate([18, 60, 28]); } catch (e) { /* never fatal */ }
   }
 
   function confetti() {
