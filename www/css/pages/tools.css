@@ -117,38 +117,18 @@
 
 /* Exercise photo in a Library row. Same footprint as the icon badge it replaces, so a list
    of mixed photo/no-photo rows still lines up. */
-.lib-ex-row__photo{
-  flex: none; width: 38px; height: 38px; border-radius: 10px;
-  overflow: hidden; background: var(--rh-border, #33333d);
-}
-.lib-ex-row__photo img{ width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* Exercise photo on the detail screen. Same 52px footprint as the badge it replaces, so the
    header does not reflow between an exercise that has a photo and one that does not. */
-.ex-hero__photo{
-  flex: none; width: 52px; height: 52px; border-radius: 12px;
-  overflow: hidden; background: var(--rh-border, #33333d);
-}
-.ex-hero__photo img{ width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* Full-width exercise photo on the How To tab. 4:3 to match the supplied crops, so nothing
    is letterboxed and the card below never jumps as images load. */
-.ex-howto__photo{
-  width: 100%; aspect-ratio: 4 / 3; margin-bottom: 12px;
-  border-radius: 14px; overflow: hidden; background: var(--rh-border, #33333d);
-}
-.ex-howto__photo img{ width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* Instruction poster on the How To tab. No fixed aspect and no cover: the box is sized from
    the poster's own dimensions (set inline, per poster) because these run from 3:2 to 2:3 and
    a poster is only useful whole — cropping one loses the step text or the muscle diagram it
    exists for. contain rather than cover so a rounding difference letterboxes by a pixel
    instead of shaving an edge off. */
-.ex-howto__poster{
-  width: 100%; margin-bottom: 12px;
-  border-radius: 14px; overflow: hidden; background: var(--rh-border, #33333d);
-}
-.ex-howto__poster img{ width: 100%; height: 100%; object-fit: contain; display: block; }
 
 /* =========================================================
    PAYWALL + PREMIUM GATE

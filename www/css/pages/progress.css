@@ -320,11 +320,6 @@
   background: var(--rh-card); border: 1px solid var(--rh-border); cursor: pointer;
 }
 .pr-card__head{ display: flex; align-items: center; gap: 10px; }
-.pr-card__img{
-  flex: none; width: 44px; height: 44px; border-radius: 11px; overflow: hidden;
-  background: var(--rh-border);
-}
-.pr-card__img img{ width: 100%; height: 100%; object-fit: cover; display: block; }
 .pr-card__icon{
   flex: none; width: 44px; height: 44px; border-radius: 11px; display: grid; place-items: center;
 }
@@ -377,11 +372,6 @@
 /* The per-exercise sheet opened from a record card. */
 .prx{ padding-bottom: 22px; }
 .prx__head{ display: flex; align-items: center; gap: 12px; padding: 4px 20px 14px; }
-.prx__img{
-  flex: none; width: 52px; height: 52px; border-radius: 13px; overflow: hidden;
-  background: var(--rh-border);
-}
-.prx__img img{ width: 100%; height: 100%; object-fit: cover; display: block; }
 .prx__name{ font-size: 17px; font-weight: 900; line-height: 1.2; }
 .prx__muscle{ font-size: 11.5px; color: var(--rh-muted); font-weight: 700; margin-top: 2px; }
 .prx__chart{ padding: 0 12px; }
