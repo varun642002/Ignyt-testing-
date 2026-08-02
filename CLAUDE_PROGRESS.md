@@ -1,5 +1,83 @@
 # CLAUDE_PROGRESS.md
 
+## CURRENT STATE — 2 Aug 2026 — Motivation brief finished; APK built
+
+**Branch:** feature/premium-subscription
+**Feature:** the last four items of the motivation brief — weekly challenge mode, the monthly
+strength report with image export, share cards, and animated counters.
+
+### New modules
+
+- `www/js/motivation/weekly.js` — one challenge a week, Monday to Sunday, with the target set
+  from the user's OWN previous four weeks (average + 1, floored and capped). Seven challenge
+  types; any that cannot state an honest target for this user is skipped rather than invented.
+  XP is keyed on the ISO week, so a finished week pays exactly once however often Home
+  repaints.
+- `www/js/motivation/counters.js` — numbers count up instead of appearing. Keyed by name, so a
+  re-render does not restart every counter on the page.
+- `www/js/motivation/report.js` — the monthly report and a short progress card, drawn to canvas
+  at 1080x1350 and exported through the app's existing IgnytShare plugin (the same path the
+  workout share card uses), with navigator.share and <a download> as fallbacks.
+
+### Wired in
+
+- Weekly challenge card on Home, above the daily challenges.
+- Share/Save buttons on the "Last 30 days" review card (Progress > Achievements).
+- `IgnytCounters.attach()` at the end of attachHandlers(); the IGNYT Score number animates.
+- `weeklyChallenge` (250 XP) added to xp.js AWARDS.
+- Cache **ignyt-v169 -> ignyt-v170**.
+
+### THE IMPORTANT FIX — service worker was shipping mixed versions
+
+`NETWORK_FIRST` in sw.js covered `/js/pages/` and `app.js` but NOT `/js/motivation/`, so on an
+update the new `home.js` came from the network while `score.js` came from the OLD cache. The
+result was `IgnytScore.summary is not a function` and a BLANK HOME SCREEN for exactly one
+load. This happened three times while building the score feature before the cause was traced.
+It was not a dev artifact — it would have shipped to every user on this update.
+
+All 59 JS assets are now network-first; `auth.js` and `cloud-sync.js` were also root-level and
+cache-first, and are covered too. The large food JSON, icons, manifest and legal pages stay
+cache-first deliberately. Verified by evaluating sw.js and testing every asset path against
+the regex list.
+
+**If you add a JS file, it must match NETWORK_FIRST.** Splitting code between the two
+strategies is the bug: either the whole app is fresh or the whole app is stale, and a mixture
+is a version pair that was never tested.
+
+### Other fixes found during verification
+
+- Both cards ran off the bottom of the canvas — "Best session" printed through the footer.
+  Rewritten with a FOOTER_TOP budget and a room() check, so a section that will not fit is
+  dropped instead of overlapping. Confirmed by rendering the PNGs and looking at them.
+- The counter's first frame would have flashed the FINAL value (the template renders it) then
+  jumped back to the start. It now writes the starting value synchronously.
+- requestAnimationFrame does not run in a non-compositing view — verified, it never fired once
+  in the preview pane. Without a fallback the number would have been stuck on its starting
+  value, which is wrong rather than merely unanimated. A setTimeout safety net now lands the
+  true value.
+- weekly.js counted weeks in milliseconds; across a daylight-saving weekend two consecutive
+  weeks could floor to the same number and so share one XP key, meaning the second week paid
+  nothing. Counted in whole days now. Tested against 156 consecutive weeks.
+- "1 workouts" in the share text.
+
+### Verified
+
+- 45 weekly assertions, 19 counter assertions (virtual clock), 51 score assertions — all green.
+- Live: weekly card renders with real progress; export button click produces
+  `ignyt-report-2026-08-02.png` as a PNG data URI; both cards rendered to disk and inspected;
+  8 tabs and 5 progress sub-views render with zero window errors.
+- `npx cap sync android` OK. `gradlew assembleDebug` -> **BUILD SUCCESSFUL**.
+- APK unzipped: all four modules present, cache v170, handlers and CSS in place.
+
+**APK:** `android/app/build/outputs/apk/debug/app-debug.apk` (21.3 MB)
+
+### Motivation brief is now complete
+
+Weekly challenges, monthly report + image export, share cards and animated counters were the
+last four open items.
+
+---
+
 ## CURRENT STATE — 2 Aug 2026 — IGNYT Score shipped; APK built
 
 **Branch:** feature/premium-subscription

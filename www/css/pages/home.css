@@ -358,3 +358,45 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 @media (prefers-reduced-motion: reduce){
   .ign__arc{ transition: none; }
 }
+
+
+/* =========================================================
+   WEEKLY CHALLENGE — one goal a week, target set from the user's own history.
+   Wider and quieter than the daily challenge rows on purpose: it is one thing, not a list,
+   and it has to hold a bar, a count and an explanation of where the target came from.
+========================================================= */
+.wch{
+  border: 1px solid var(--rh-border); border-radius: var(--radius-tile, 14px);
+  background: var(--rh-card); padding: 14px; margin-bottom: 14px;
+}
+.wch.is-done{ border-color: var(--rh-green, #16a34a); }
+.wch__top{ display: flex; align-items: center; gap: 8px; }
+.wch__icon{ flex: none; font-size: 17px; line-height: 1; }
+.wch__name{ flex: 1; min-width: 0; font-size: 13.5px; font-weight: 800; }
+.wch__xp{
+  flex: none; font-size: 11px; font-weight: 800; color: var(--rh-muted);
+  font-variant-numeric: tabular-nums;
+}
+.wch.is-done .wch__xp{ color: var(--rh-green, #16a34a); }
+.wch__label{ font-size: 12px; font-weight: 600; color: var(--rh-muted); margin-top: 4px; }
+.wch__track{
+  height: 8px; border-radius: 999px; margin-top: 10px; overflow: hidden;
+  background: var(--rh-border, #e9edf3);
+}
+.wch__fill{
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--rh-blue, #2563eb), var(--rh-purple, #7c3aed));
+  transition: width .5s cubic-bezier(.22,1,.36,1);
+}
+.wch.is-done .wch__fill{ background: var(--rh-green, #16a34a); }
+/* The count on the left, where the target came from on the right. Someone told their target
+   is "personalised" deserves to know what it was personalised from. */
+.wch__foot{
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  margin-top: 8px; font-size: 10.5px; font-weight: 600; color: var(--rh-muted);
+}
+.wch__foot b{ font-size: 13px; font-weight: 800; color: var(--rh-text); font-variant-numeric: tabular-nums; }
+.wch__foot span:last-child{ text-align: right; min-width: 0; }
+@media (prefers-reduced-motion: reduce){
+  .wch__fill{ transition: none; }
+}

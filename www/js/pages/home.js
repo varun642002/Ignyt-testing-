@@ -143,7 +143,7 @@
                       style="stroke-dasharray:${C};stroke-dashoffset:${C - C*pct};"></circle>
             </svg>
             <div class="ign__center">
-              <div class="ign__num">${t.score}</div>
+              <div class="ign__num" data-count="${t.score}" data-count-key="ignyt-score">${t.score}</div>
               <div class="ign__cap">IGNYT Score</div>
             </div>
           </div>
@@ -303,6 +303,29 @@
           <span class="daily-motivation__icon">${svg('star',16)}</span>
           <span class="daily-motivation__text">${line}</span>
         </div>` : ''}
+        ${window.IgnytWeekly ? (()=>{
+          /* settle() pays and celebrates a finished week. Safe here: the XP ledger is keyed
+             on the ISO week, so a repaint cannot award twice. */
+          const wc = IgnytWeekly.settle(state);
+          if (!wc) return '';
+          return `
+        <div class="rh-section-head"><span>This Week's Challenge</span><span class="rh-view-all">${wc.daysLeft} day${wc.daysLeft!==1?'s':''} left</span></div>
+        <div class="wch${wc.done?' is-done':''}">
+          <div class="wch__top">
+            <span class="wch__icon">${wc.icon}</span>
+            <span class="wch__name">${escHtml(wc.name)}</span>
+            <span class="wch__xp">${wc.done ? 'Complete ✓' : '+'+wc.xp+' XP'}</span>
+          </div>
+          <div class="wch__label">${escHtml(wc.label)}</div>
+          <div class="wch__track"><div class="wch__fill" style="width:${wc.percent}%"></div></div>
+          <div class="wch__foot">
+            <span><b data-count="${wc.current}" data-count-key="wch-${wc.id}-${wc.weekKey}">${wc.current}</b> / ${wc.target} ${escHtml(wc.unit)}</span>
+            <span>${wc.personalised
+              ? 'Target from your last '+wc.weeksOfHistory+' week'+(wc.weeksOfHistory!==1?'s':'')
+              : 'Starter target — it adapts once you have a few weeks logged'}</span>
+          </div>
+        </div>`; })() : ''}
+
         <div class="rh-section-head"><span>Today's Challenges</span><span class="rh-view-all">${doneCount}/${ch.length}</span></div>
         <div class="chal">
           ${ch.map(c=>`<div class="chal__row${c.done?' is-done':''}">

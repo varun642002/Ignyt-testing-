@@ -33,7 +33,11 @@ window.IgnytXP = (function () {
     weightUpdate: { xp: 10,  label: "Weight updated" },
     proteinGoal:  { xp: 30,  label: "Protein goal reached" },
     achievement:  { xp: 150, label: "Achievement unlocked" },
-    personalBest: { xp: 75,  label: "Personal record" }
+    personalBest: { xp: 75,  label: "Personal record" },
+    /* A week held together is worth more than any single day in it, and there is no way to farm
+       it — the target is set from the user's own recent average and can only be met by a week
+       of real logs. Keyed by ISO week, so it pays exactly once. */
+    weeklyChallenge: { xp: 250, label: "Weekly challenge completed" }
   };
 
   /* Titles by level. Deliberately about commitment rather than physique — the app cannot see

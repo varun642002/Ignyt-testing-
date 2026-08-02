@@ -10096,6 +10096,11 @@ function renderReviewCards(){
         ${stat(m.badges, "badges earned")}
         ${stat(kg(m.weightChangeKg), "weight")}
       </div>
+      ${window.IgnytReport && IgnytReport.data(state) ? `
+      <div class="rvw__export">
+        <button class="rvw__btn" data-action="report-share">${svg("upload",16)}<span>Share report</span></button>
+        <button class="rvw__btn" data-action="report-save">${svg("download",16)}<span>Save image</span></button>
+      </div>` : ""}
     </div>` : ""}
   `;
 }
@@ -16024,6 +16029,21 @@ function attachHandlers(){
 
   attachSwipeToDelete();
   attachRoutineDragReorder();
+
+  /* Monthly report export. Both paths are async and both surface their own toast, so a
+     failure never leaves the button looking like it did nothing. */
+  document.querySelectorAll('[data-action="report-share"],[data-action="report-save"]').forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      if(!window.IgnytReport) return;
+      const kind = "report";
+      if(btn.dataset.action === "report-share") IgnytReport.share(kind, state, state.shareCardTheme||"dark");
+      else IgnytReport.save(kind, state, state.shareCardTheme||"dark");
+    });
+  });
+
+  /* Count the numbers up. Last, so every [data-count] on the freshly rendered screen is in
+     the DOM; the module itself decides which of them are actually new to the user. */
+  if(window.IgnytCounters) IgnytCounters.attach();
   const editWorkoutBtn = document.querySelector('[data-action="edit-workout"]');
   if(editWorkoutBtn) editWorkoutBtn.addEventListener("click", ()=>{
     const s = state.workoutLog.find(x=>x.id===Number(editWorkoutBtn.dataset.sessionId));
