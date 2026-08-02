@@ -9859,8 +9859,17 @@ function renderLegacyProgressHome(){
 const PR_TYPE_FILTERS = ["All","Weight","1RM","Reps","Volume"];
 const PR_TYPE_KEY = {Weight:"weight","1RM":"1rm",Reps:"reps",Volume:"volume"};
 
+/* The Personal Records screen: a hero telling the user where they stand, then one card per
+   record showing what it took and what would beat it.
+
+   The brief asked each card to carry an "estimated success 78%" for the next attempt. That is
+   not computable here — it would need fatigue, sleep, nutrition and programme context, none of
+   which this app has — and a made-up probability someone then misses is worse than no number.
+   What replaced it is the real gap: the exact next target and how far away it is. */
 function renderProgressPRs(){
-  if(state.prs.length===0) return `<div class="empty-note">No PRs yet — finish a freestyle workout to start tracking heaviest weight, estimated 1RM, rep records, and session volume.</div>`;
+  const S = window.IgnytStrength;
+  if(state.prs.length===0) return `<div class="empty-note">No PRs yet — finish a freestyle workout to start tracking heaviest weight, estimated 1RM and session volume.</div>`;
+
   const q = (state.prSearch||"").trim().toLowerCase();
   const typeFilter = PR_TYPE_FILTERS.includes(state.prTypeFilter) ? state.prTypeFilter : "All";
   let all = state.prs;
@@ -9869,38 +9878,81 @@ function renderProgressPRs(){
   const showCount = state.prShowCount || 10;
   const shown = all.slice(0, showCount);
   const remaining = all.length - shown.length;
-  // Same muscle-group icon/color convention as the Exercise Library rows (rowIcon there),
-  // reusing the already-real per-exercise muscle field via getMuscle() -- Session Volume PRs
-  // have no exercise name and fall back to the neutral 'body'/gray pairing.
-  const rowIcon = (muscle) => {
-    const g = FINE_TO_BROAD[muscle];
-    return (g==='Chest'||g==='Shoulders'||g==='Arms') ? 'dumbbell' : (g==='Back') ? 'workout' : 'body';
+
+  const sc = S ? S.score(state) : 0;
+  const lvl = S ? S.levelProgress(sc) : null;
+  const thisMonth = S ? S.prsThisMonth(state) : 0;
+  const streak = typeof computeStreak === "function" ? computeStreak() : 0;
+
+  const hero = S ? `
+    <div class="pr-hero">
+      <div class="pr-hero__top">
+        <div>
+          <div class="pr-hero__eyebrow">Lifetime records</div>
+          <div class="pr-hero__score">${sc.toLocaleString()}<span>strength score</span></div>
+        </div>
+        <div class="pr-hero__level" style="--lvl:${lvl.current.color};">${escHtml(lvl.current.name)}</div>
+      </div>
+      ${lvl.next ? `
+      <div class="pr-hero__track"><div class="pr-hero__fill" style="width:${lvl.percent}%;--lvl:${lvl.current.color};"></div></div>
+      <div class="pr-hero__next">${lvl.toNext.toLocaleString()} to ${escHtml(lvl.next.name)}</div>` : `
+      <div class="pr-hero__next">Top level reached.</div>`}
+      <div class="pr-hero__stats">
+        <div><b>${state.prs.length}</b><span>total PRs</span></div>
+        <div><b>${thisMonth}</b><span>this month</span></div>
+        <div><b>${streak}</b><span>day streak</span></div>
+      </div>
+      <div class="pr-hero__formula">${escHtml(S.FORMULA)}</div>
+    </div>` : "";
+
+  const card = (pr) => {
+    const name = pr.exerciseName || "Session Volume";
+    const muscle = pr.exerciseName ? getMuscle(pr.exerciseName) : null;
+    const img = pr.exerciseName && typeof exerciseImageSrc === "function" ? exerciseImageSrc(pr.exerciseName) : "";
+    const target = S ? S.nextTarget(pr) : null;
+    const up = pr.improvementPct != null && pr.improvementPct > 0;
+    /* The bar is previous against new, so it shows the size of the jump rather than progress
+       toward an invented ceiling. A first-ever record has no previous and gets a full bar. */
+    const pct = (pr.previousValue > 0) ? Math.max(6, Math.min(100, Math.round(pr.previousValue / pr.value * 100))) : 100;
+    return `<div class="pr-card" data-pr-open="${escHtml(pr.exerciseName||'')}">
+      <div class="pr-card__head">
+        ${img ? `<span class="pr-card__img"><img src="${escHtml(img)}" alt="" loading="lazy"></span>`
+              : `<span class="pr-card__icon" style="background:${muscleGroupColor(muscle)}1a;color:${muscleGroupColor(muscle)};">${svg('trophy',18)}</span>`}
+        <div class="pr-card__title">
+          <div class="pr-card__name">${escHtml(name)}</div>
+          <div class="pr-card__type">${escHtml(prTypeLabel(pr))}${muscle?` · ${escHtml(muscle)}`:''}</div>
+        </div>
+        <div class="pr-card__now">${escHtml(prValueLabel(pr))}</div>
+      </div>
+
+      <div class="pr-card__bar"><div class="pr-card__prev" style="width:${pct}%;"></div></div>
+
+      <div class="pr-card__row">
+        <span class="pr-card__was">${pr.previousValue>0 ? `was ${escHtml(String(pr.previousValue))}` : "first record"}</span>
+        ${up ? `<span class="pr-card__gain">+${escHtml(String(Math.round((pr.value-pr.previousValue)*10)/10))} · +${pr.improvementPct}%</span>` : ""}
+        <span class="pr-card__when">${new Date(pr.achievedAt).toLocaleDateString('default',{day:'2-digit',month:'short'})}</span>
+      </div>
+
+      ${target ? `<div class="pr-card__beat">Beat it with <b>${target.target.toLocaleString()}${target.unit==='kg'?' kg':' reps'}</b> — ${Math.round(target.increment*10)/10}${target.unit==='kg'?' kg':' rep'} more</div>` : ""}
+    </div>`;
   };
+
   return `
-    <div style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--rh-muted);font-weight:600;margin-bottom:10px;">
-      ${svg('file',15)} ${state.prs.length} record${state.prs.length!==1?'s':''} total${(q||typeFilter!=='All')?` · ${all.length} matching`:''}
+    ${hero}
+    <div style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--rh-muted);font-weight:600;margin:14px 0 10px;">
+      ${svg('file',15)} ${state.prs.length} record${state.prs.length!==1?'s':''} total${(q||typeFilter!=='All')?` · ${all.length} shown`:''}
     </div>
     <div class="lib-search-wrap">
       ${svg('search',17)}
-      <input type="text" id="pr-search" class="pi-input" placeholder="Search by exercise…" value="${(state.prSearch||'').replace(/"/g,'&quot;')}" aria-label="Search personal records">
+      <input type="text" id="pr-search" class="pi-input" placeholder="Search by exercise…" value="${(state.prSearch||'').replace(/"/g,'&quot;')}">
     </div>
     <div class="lib-cats" style="margin-top:10px;">
       ${PR_TYPE_FILTERS.map(t=>`<button class="cat-chip ${typeFilter===t?'active':''}" data-pr-type-filter="${t}">${t}</button>`).join("")}
     </div>
     ${all.length===0 ? `<div class="empty-note">No records match.</div>` : `
-    ${shown.map(pr=>{
-      const muscle = pr.exerciseName ? getMuscle(pr.exerciseName) : null;
-      const color = muscle ? muscleTagColor(muscle) : '#64748B';
-      return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:12px 14px;">
-        <span class="tl-card__icon" style="width:38px;height:38px;flex:none;background:${color}1a;color:${color};">${svg(rowIcon(muscle),18)}</span>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:15px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pr.exerciseName||'Session Volume'}</div>
-          <div style="font-size:12px;color:var(--rh-muted);margin-top:1px;">${prTypeLabel(pr)} · ${new Date(pr.achievedAt).toLocaleDateString('default',{month:'short',day:'numeric',year:'numeric'})}</div>
-        </div>
-        <span style="font-size:15px;color:var(--rh-blue);font-weight:800;flex:none;">${prValueLabel(pr)}</span>
-      </div>`;
-    }).join("")}
-    ${remaining>0?`<button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:4px;" data-action="pr-show-more">Show ${Math.min(10,remaining)} More (${remaining} remaining)</button>`:""}`}
+      <div class="pr-list">${shown.map(card).join("")}</div>
+      ${remaining>0 ? `<button class="btn btn-ghost" data-action="pr-show-more" style="width:100%;margin-top:6px;">Show ${Math.min(10,remaining)} more</button>` : ""}
+    `}
   `;
 }
 

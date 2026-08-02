@@ -266,3 +266,90 @@
 .rvw__stat{ text-align: center; }
 .rvw__v{ font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
 .rvw__l{ font-size: 10.5px; color: var(--rh-muted); font-weight: 600; margin-top: 2px; }
+
+/* =========================================================
+   PERSONAL RECORDS — hero + record cards.
+   Every number shown is measured; nothing is a projection.
+========================================================= */
+
+.pr-hero{
+  padding: 18px; border-radius: var(--radius-tile, 16px);
+  background: linear-gradient(150deg, rgba(37,99,235,.14), rgba(124,58,237,.10));
+  border: 1px solid rgba(37,99,235,.20);
+}
+.pr-hero__top{ display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.pr-hero__eyebrow{
+  font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--rh-muted);
+}
+.pr-hero__score{
+  font-size: 32px; font-weight: 900; letter-spacing: -.03em; line-height: 1.05; margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.pr-hero__score span{
+  display: block; font-size: 11px; font-weight: 700; letter-spacing: 0;
+  color: var(--rh-muted); margin-top: 2px;
+}
+.pr-hero__level{
+  flex: none; padding: 6px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 900; white-space: nowrap;
+  color: var(--lvl); border: 1.5px solid var(--lvl); background: color-mix(in srgb, var(--lvl) 12%, transparent);
+}
+.pr-hero__track{
+  height: 6px; border-radius: 999px; margin-top: 14px; overflow: hidden;
+  background: rgba(148,163,184,.25);
+}
+.pr-hero__fill{ height: 100%; border-radius: 999px; background: var(--lvl); transition: width .5s ease; }
+.pr-hero__next{ font-size: 11px; font-weight: 700; color: var(--rh-muted); margin-top: 6px; }
+.pr-hero__stats{
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(148,163,184,.20);
+}
+.pr-hero__stats div{ text-align: center; }
+.pr-hero__stats b{ display: block; font-size: 18px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.pr-hero__stats span{ font-size: 10.5px; color: var(--rh-muted); font-weight: 600; }
+/* The formula is on screen because a score nobody can explain is a score nobody trusts. */
+.pr-hero__formula{
+  font-size: 10.5px; line-height: 1.45; color: var(--rh-muted);
+  margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(148,163,184,.16);
+}
+
+.pr-list{ display: flex; flex-direction: column; gap: 10px; }
+.pr-card{
+  padding: 14px; border-radius: var(--radius-tile, 14px);
+  background: var(--rh-card); border: 1px solid var(--rh-border); cursor: pointer;
+}
+.pr-card__head{ display: flex; align-items: center; gap: 10px; }
+.pr-card__img{
+  flex: none; width: 44px; height: 44px; border-radius: 11px; overflow: hidden;
+  background: var(--rh-border);
+}
+.pr-card__img img{ width: 100%; height: 100%; object-fit: cover; display: block; }
+.pr-card__icon{
+  flex: none; width: 44px; height: 44px; border-radius: 11px; display: grid; place-items: center;
+}
+.pr-card__title{ flex: 1; min-width: 0; }
+.pr-card__name{ font-size: 14.5px; font-weight: 800; line-height: 1.25; }
+.pr-card__type{ font-size: 11px; color: var(--rh-muted); font-weight: 600; margin-top: 2px; }
+.pr-card__now{
+  flex: none; font-size: 17px; font-weight: 900; color: var(--rh-blue);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Previous against new, so the bar shows the size of the jump rather than progress toward
+   some invented ceiling. */
+.pr-card__bar{
+  height: 6px; border-radius: 999px; margin: 12px 0 8px; overflow: hidden;
+  background: linear-gradient(90deg, var(--rh-blue), var(--rh-purple, #7c3aed));
+}
+.pr-card__prev{ height: 100%; background: var(--rh-border); border-radius: 0 999px 999px 0; }
+
+.pr-card__row{ display: flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 700; }
+.pr-card__was{ color: var(--rh-muted); }
+.pr-card__gain{ color: var(--rh-green, #22c55e); }
+.pr-card__when{ margin-left: auto; color: var(--rh-muted); font-weight: 600; }
+.pr-card__beat{
+  margin-top: 10px; padding: 8px 10px; border-radius: 10px;
+  background: rgba(37,99,235,.07); font-size: 11.5px; color: var(--rh-text); font-weight: 600;
+}
+.pr-card__beat b{ font-weight: 900; color: var(--rh-blue); }
