@@ -42,15 +42,20 @@
   var CATALOGUE = [
     // ---- meals: one per meal in the default plan ----
     { id: "meal-breakfast", group: "Meals", label: "Breakfast", hour: 8,  minute: 0,
-      title: "Breakfast", body: "Log your breakfast while you remember it.", route: "nutrition", snooze: 15 },
+      title: "Breakfast", body: "Log your breakfast while you remember it.", route: "nutrition", snooze: 15 ,
+        defaultOn: true },
     { id: "meal-morning-snack", group: "Meals", label: "Morning Snack", hour: 10, minute: 30,
-      title: "Morning snack", body: "A snack logged now is one you won't guess at later.", route: "nutrition", snooze: 15 },
+      title: "Morning snack", body: "A snack logged now is one you won't guess at later.", route: "nutrition", snooze: 15 ,
+        defaultOn: true },
     { id: "meal-lunch", group: "Meals", label: "Lunch", hour: 13, minute: 0,
-      title: "Lunch", body: "Time to log lunch.", route: "nutrition", snooze: 15 },
+      title: "Lunch", body: "Time to log lunch.", route: "nutrition", snooze: 15 ,
+        defaultOn: true },
     { id: "meal-evening-snack", group: "Meals", label: "Evening Snack", hour: 17, minute: 0,
-      title: "Evening snack", body: "Anything between lunch and dinner?", route: "nutrition", snooze: 15 },
+      title: "Evening snack", body: "Anything between lunch and dinner?", route: "nutrition", snooze: 15 ,
+        defaultOn: true },
     { id: "meal-dinner", group: "Meals", label: "Dinner", hour: 19, minute: 30,
-      title: "Dinner", body: "Log dinner to close out the day.", route: "nutrition", snooze: 15 },
+      title: "Dinner", body: "Log dinner to close out the day.", route: "nutrition", snooze: 15 ,
+        defaultOn: true },
 
     // ---- training ----
     { id: "workout", group: "Training", label: "Workout", hour: 18, minute: 0,
@@ -58,38 +63,48 @@
       defaultOn: true },
     { id: "missed-workout", group: "Training", label: "Missed workout", hour: 21, minute: 0,
       title: "No workout logged", body: "Still time, or move it to tomorrow.", route: "workout",
-      snooze: 0, conditional: "workout" },
+      snooze: 0, conditional: "workout" ,
+        defaultOn: true },
 
     // ---- daily habits ----
     { id: "water", group: "Daily", label: "Water", hour: 15, minute: 0,
       title: "Hydration", body: "Log what you've drunk so far.", route: "nutrition", snooze: 30,
       defaultOn: true },
     { id: "steps", group: "Daily", label: "Steps", hour: 19, minute: 0,
-      title: "Steps", body: "Check where your step count is.", route: "health", snooze: 30 },
+      title: "Steps", body: "Check where your step count is.", route: "health", snooze: 30 ,
+        defaultOn: true },
     { id: "supplements", group: "Daily", label: "Supplements", hour: 9, minute: 0,
-      title: "Supplements", body: "Take and log today's supplements.", route: "supplements", snooze: 30 },
+      title: "Supplements", body: "Take and log today's supplements.", route: "supplements", snooze: 30 ,
+        defaultOn: true },
     { id: "sleep", group: "Daily", label: "Sleep", hour: 22, minute: 30,
-      title: "Wind down", body: "Aiming for a consistent bedtime makes the rest easier.", route: "health", snooze: 15 },
+      title: "Wind down", body: "Aiming for a consistent bedtime makes the rest easier.", route: "health", snooze: 15 ,
+        defaultOn: true },
 
     // ---- fasting: times come from the ACTIVE FAST, not from settings ----
     { id: "fast-start", group: "Fasting", label: "Fasting starts", hour: 20, minute: 0,
-      title: "Fasting window", body: "Your eating window closes now.", route: "fasting", snooze: 15 },
+      title: "Fasting window", body: "Your eating window closes now.", route: "fasting", snooze: 15 ,
+        defaultOn: true },
     { id: "fast-end", group: "Fasting", label: "Fasting ends", hour: 12, minute: 0,
-      title: "Fast complete", body: "You can break your fast.", route: "fasting", snooze: 15 },
+      title: "Fast complete", body: "You can break your fast.", route: "fasting", snooze: 15 ,
+        defaultOn: true },
 
     // ---- progress ----
     { id: "weight", group: "Progress", label: "Weigh-in", hour: 7, minute: 30,
       title: "Weigh-in", body: "Same time, same conditions — that's what makes the trend readable.",
-      route: "body", snooze: 60, repeat: "custom", days: [1] },
+      route: "body", snooze: 60, repeat: "custom", days: [1] ,
+        defaultOn: true },
     { id: "progress-check", group: "Progress", label: "Progress check", hour: 18, minute: 0,
       title: "Progress check", body: "See how the week is going.", route: "progress", snooze: 0,
-      repeat: "custom", days: [3] },
+      repeat: "custom", days: [3] ,
+        defaultOn: true },
     { id: "weekly-summary", group: "Progress", label: "Weekly summary", hour: 18, minute: 0,
       title: "Your week", body: "Your training and nutrition summary is ready.", route: "progress",
-      snooze: 0, repeat: "custom", days: [0] },
+      snooze: 0, repeat: "custom", days: [0] ,
+        defaultOn: true },
     { id: "inactive", group: "Progress", label: "Inactive nudge", hour: 17, minute: 0,
       title: "Still with us?", body: "Nothing logged in a few days — pick up where you left off.",
-      route: "home", snooze: 0, conditional: "any", repeat: "custom", days: [5] },
+      route: "home", snooze: 0, conditional: "any", repeat: "custom", days: [5] ,
+        defaultOn: true },
 
     // ---- user-defined ----
     { id: "custom", group: "Custom", label: "Custom reminder", hour: 12, minute: 0,
@@ -158,11 +173,25 @@
     return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytNotify) || null;
   }
 
+  /* fast-start and fast-end are switches, not schedules. Their real notifications are
+     one-shots fired at the ACTIVE fast's own times by syncFastNotifications() in app.js, and
+     fastingEnabled() reads these entries to decide whether to fire them at all.
+
+     Scheduling them here would do two wrong things at once: announce an eating window at a
+     fixed 20:00 to someone who is not fasting, and — because app.js uses the same "fast-end"
+     id for the genuine one-shot — overwrite the real notification with a made-up one. They
+     were harmless only because both were off by default; turning every reminder on is exactly
+     what would have exposed it. */
+  var FASTING_SWITCHES = { "fast-start": 1, "fast-end": 1 };
+
   /** Pushes one reminder's current state to the system. Disabled means cancel — the native
    *  side treats an empty day list as a cancel too, so there is only one way to be off. */
   function syncOne(id) {
     var p = plugin();
     if (!p) return Promise.resolve(false);
+    // Neither scheduled nor cancelled here: app.js owns this id's alarm entirely, and
+    // cancelling would delete the real fast notification it had just armed.
+    if (FASTING_SWITCHES[id]) return Promise.resolve(false);
     var s = settings(id);
     if (!s) return Promise.resolve(false);
     if (!s.enabled) {
