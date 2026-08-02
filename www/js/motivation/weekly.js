@@ -30,9 +30,24 @@ window.IgnytWeekly = (function () {
 
   var DAY = 86400000;
 
+  /* Day keys must match the ones the app WRITES.
+
+     app.js stamps every food and water entry with todayStr() -- new Date().toISOString()
+     .slice(0,10), a UTC date -- and computeStreak()/activityDates() key off the same UTC
+     slice, so the app is internally consistent. This module built its key from
+     getFullYear()/getMonth()/getDate() instead, a LOCAL date, and the two disagree for as
+     long as the timezone is ahead of UTC: in IST, every day from 00:00 to 05:30.
+
+     Measured live at 00:16 IST: 5,600 ml of water and a logged meal, both invisible to the
+     score, because it was looking for "2026-08-03" while the app had written "2026-08-02".
+     Water and meals vanished from the breakdown for five and a half hours a day.
+
+     One formatting rule, identical to the app's, for both the no-argument and the with-date
+     case -- an earlier attempt at this fix noon-anchored the with-date path and left the
+     no-argument path alone, which made dateKey() and dateKey(today) disagree inside the very
+     window it was meant to fix. */
   function dateKey(d) {
-    var x = d || new Date();
-    return x.getFullYear() + "-" + String(x.getMonth()+1).padStart(2,"0") + "-" + String(x.getDate()).padStart(2,"0");
+    return (d ? new Date(d) : new Date()).toISOString().slice(0, 10);
   }
 
   /** Monday 00:00 of the week containing d. */
@@ -91,7 +106,12 @@ window.IgnytWeekly = (function () {
   function daysMatching(s, from, to, forDay) {
     var n = 0, cur = new Date(from), end = new Date(to), now = Date.now();
     while (cur.getTime() < end.getTime() && cur.getTime() < now + DAY) {
-      if (forDay(dateKey(cur))) n++;
+      /* Anchored to noon before keying. cur is a LOCAL midnight, and midnight in a UTC+
+         timezone is the previous day in UTC -- keying it directly would shift the whole week
+         back by one. Noon is far enough from both edges to land on the intended day for any
+         real offset. This is the only place that walks days rather than reading a stored one. */
+      var anchored = new Date(cur); anchored.setHours(12, 0, 0, 0);
+      if (forDay(dateKey(anchored))) n++;
       cur.setDate(cur.getDate() + 1);
     }
     return n;

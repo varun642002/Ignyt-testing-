@@ -90,13 +90,23 @@
     if (weeks != null && isFinite(weeks) && deltaKg !== 0) {
       var c = new Date(g.startDate || todayISO()); c.setDate(c.getDate() + Math.round(weeks * 7)); completion = c.toISOString().slice(0, 10);
     }
+    /* Anything that did not come out as a real number becomes null, so a consumer renders a
+       dash rather than the literal string "NaN".
+
+       A goal created in-app always carries height/age/gender/activityMultiplier, so this never
+       fires for a normal record. A goal restored from an older backup, or written before those
+       fields existed, does not -- and calcBMR() on undefined inputs quietly produces NaN, which
+       string-concatenates straight onto the screen as "600 / NaN kcal". Every other value in
+       that card already degrades to a dash; these now do too. */
+    var fin = function (v) { return (typeof v === "number" && isFinite(v)) ? v : null; };
     return {
-      bmr: bmr, maintenance: maintenance, lbm: lbm, bmi: bmi,
-      weeklyRate: Math.round(weeklyRate * 100) / 100, goalDelta: goalDelta, calories: calories,
-      protein: proteinG, fat: fatG, carbs: carbG,
-      targetLeanMass: targetLeanMass, targetFatMass: targetFatMass,
-      weeks: weeks != null ? Math.round(weeks) : null, completion: completion,
-      proteinPct: Math.round(proteinKcal / calories * 100), fatPct: 25, carbPct: Math.round(carbG * 4 / calories * 100)
+      bmr: fin(bmr), maintenance: fin(maintenance), lbm: fin(lbm), bmi: fin(bmi),
+      weeklyRate: fin(Math.round(weeklyRate * 100) / 100), goalDelta: fin(goalDelta), calories: fin(calories),
+      protein: fin(proteinG), fat: fin(fatG), carbs: fin(carbG),
+      targetLeanMass: fin(targetLeanMass), targetFatMass: fin(targetFatMass),
+      weeks: weeks != null ? fin(Math.round(weeks)) : null, completion: completion,
+      proteinPct: fin(Math.round(proteinKcal / calories * 100)), fatPct: 25,
+      carbPct: fin(Math.round(carbG * 4 / calories * 100))
     };
   }
 
@@ -420,10 +430,10 @@
     h += '<div class="rh-section-head"><span>Today\'s Summary</span></div>' +
       '<div class="pg-stat-grid">' +
       '<div class="pg-stat-card"><div style="display:flex;align-items:center;gap:8px;">' + ringHtml(c.calories ? Math.min(100, Math.round(eaten / c.calories * 100)) : null, "var(--rh-blue)") + '<div><div style="font-size:12px;font-weight:700;">Calories</div></div></div>' +
-      '<div style="font-size:11px;color:var(--rh-muted);margin-top:6px;">' + eaten + ' / ' + c.calories + ' kcal</div>' +
+      '<div style="font-size:11px;color:var(--rh-muted);margin-top:6px;">' + eaten + ' / ' + (c.calories != null ? c.calories : "—") + ' kcal</div>' +
       '<button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:8px;padding:8px;font-size:12px;" data-nav="nutrition">+ Food</button></div>' +
       '<div class="pg-stat-card"><div style="display:flex;align-items:center;gap:8px;">' + ringHtml(c.protein ? Math.min(100, Math.round(protToday / c.protein * 100)) : null, "var(--rh-green)") + '<div><div style="font-size:12px;font-weight:700;">Protein</div></div></div>' +
-      '<div style="font-size:11px;color:var(--rh-muted);margin-top:6px;">' + protToday + ' / ' + c.protein + ' g</div>' +
+      '<div style="font-size:11px;color:var(--rh-muted);margin-top:6px;">' + protToday + ' / ' + (c.protein != null ? c.protein : "—") + ' g</div>' +
       '<button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:8px;padding:8px;font-size:12px;" data-nav="nutrition">+ Log</button></div>' +
       '<div class="pg-stat-card"><div style="display:flex;align-items:center;gap:8px;color:var(--rh-purple);">' + svg("dumbbell", 20) + '<div><div style="font-size:12px;font-weight:700;color:var(--rh-text);">Workouts</div></div></div>' +
       '<div style="font-size:19px;font-weight:800;margin-top:6px;">' + wk + '<span style="font-size:11px;color:var(--rh-muted);font-weight:600;"> / ' + (g.trainingDays || "—") + ' this week</span></div>' +
