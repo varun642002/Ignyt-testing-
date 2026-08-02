@@ -223,6 +223,25 @@ input,select,textarea{font-family:inherit; background:transparent; color:var(--t
     background:#fff; display:block;}
 .ex-picker-photo img{width:100%; height:100%; object-fit:contain; display:block;}
 
+/* Multi-select. The tick takes the illustration's place rather than sitting beside it: at 44px
+   the row has no spare width, and swapping the whole thumbnail makes the selected state
+   readable while scrolling a long list. */
+.ex-picker-tick{width:44px; height:44px; border-radius:10px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--color-interactive, #2563eb); color:#fff;}
+.ex-picker-row.is-picked{background:rgba(37,99,235,.06);}
+
+/* Commit bar. Sticks to the bottom of the picker so the count and the action stay reachable
+   however far down the list you have scrolled. */
+.ex-picker-bar{position:sticky; bottom:0; display:flex; gap:10px; align-items:center;
+    padding:10px 0 14px; background:var(--bg, #fff);
+    border-top:1px solid var(--border);}
+.ex-picker-bar__clear{background:none; border:none; cursor:pointer; padding:12px 14px;
+    font-size:14px; font-weight:700; color:var(--muted); font-family:inherit;}
+.ex-picker-bar__add{flex:1; border:none; cursor:pointer; padding:14px 16px; border-radius:12px;
+    background:var(--color-interactive, #2563eb); color:#fff;
+    font-size:15px; font-weight:800; font-family:inherit;}
+
 .ex-picker-info{background:none; border:none; color:var(--muted); padding:8px; flex-shrink:0; cursor:pointer;}
 
 .search-bar input{flex:1; font-size:14px; color:var(--text);}

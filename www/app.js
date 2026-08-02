@@ -1368,6 +1368,9 @@ const state = {
   favoriteFoods: LS.get("hx_favorite_foods", []),
   waterLog: LS.get("hx_water_log", []),
   savedExercises: LS.get("hx_saved_exercises", []),
+  /* Exercise picker multi-select. Transient by design -- an abandoned picker must not leave a
+     half-made selection waiting for the next workout, so it is never persisted. */
+  pickerSelection: [],
   calcHistory: LS.get("hx_calc_history", []),
   timer: null,
   holdTimer: null // {exi,si,targetSec,accumulatedMs,runStartedAt,running,handle,fired} -- see startHoldTimer()
@@ -3608,6 +3611,65 @@ function totalLifetimeVolume(){ return state.workoutLog.reduce((a,s)=>a+(s.volum
 
 function totalWorkingSets(){ return state.workoutLog.reduce((a,s)=>a+s.exercises.reduce((x,e)=>x+e.sets.filter(isCountingSet).length,0),0); }
 
+/* Counters behind the achievement checks. All read logged sets, so an achievement can only be
+   earned by work that is actually in the log -- there is no counter to drift and nothing that
+   can be unlocked by opening a screen. */
+function totalWorkingReps(){
+  return state.workoutLog.reduce((a,s)=>a+s.exercises.reduce((x,e)=>
+    x + e.sets.filter(isCountingSet).reduce((r,st)=>r + (Number(st.reps)||0), 0), 0), 0);
+}
+function totalTrainingMinutes(){ return state.workoutLog.reduce((a,s)=>a+(s.durationMin||0),0); }
+function heaviestLiftKg(){
+  return state.prs.reduce((m,p)=> (p.type==="weight" && p.value>m) ? p.value : m, 0);
+}
+/** Distinct muscles trained across all logged sessions, from the library's own metadata. */
+function distinctMusclesTrained(){
+  const set = new Set();
+  state.workoutLog.forEach(s=>s.exercises.forEach(e=>{
+    if(typeof getMuscle==="function" && e.name){ const m=getMuscle(e.name); if(m && m!=="Other") set.add(m); }
+  }));
+  return set.size;
+}
+/** Distinct exercises that have at least one counting set logged. */
+function distinctExercisesLogged(){
+  const set = new Set();
+  state.workoutLog.forEach(s=>s.exercises.forEach(e=>{
+    if(e.name && (e.sets||[]).some(isCountingSet)) set.add(e.name);
+  }));
+  return set.size;
+}
+/** Sessions whose local start hour satisfies fn -- for the early/late badges. */
+function sessionsAtHour(fn){
+  return state.workoutLog.filter(s=>{
+    const t = s.startedAt ? new Date(s.startedAt) : null;
+    return t && !isNaN(t) && fn(t.getHours());
+  }).length;
+}
+/** Days on which a food entry exists. */
+function daysWithFoodLogged(){ return new Set(state.foodLog.map(f=>f.date)).size; }
+/** Days on which the water goal was met. */
+function daysWaterGoalMet(){
+  const target = (state.settings && state.settings.waterTargetMl) || 2500;
+  const byDay = {};
+  (state.waterLog||[]).forEach(w=>{ byDay[w.date] = (byDay[w.date]||0) + (w.ml||0); });
+  return Object.keys(byDay).filter(d=>byDay[d] >= target).length;
+}
+/** Days recorded in the IGNYT Score history at or above a threshold. */
+function scoreDaysAtLeast(n){
+  try {
+    const h = JSON.parse(localStorage.getItem("hx_score_history") || "{}") || {};
+    return Object.keys(h).filter(k=>h[k] >= n).length;
+  } catch(e){ return 0; }
+}
+/** Weekly challenges completed, read from the XP ledger that pays them. */
+function weeklyChallengesCompleted(){
+  return window.IgnytWeekly ? IgnytWeekly.history().length : 0;
+}
+/** Distinct calendar dates with at least one logged session. */
+function distinctTrainingDays(){
+  return new Set(state.workoutLog.map(s=>new Date(s.startedAt||s.date).toDateString())).size;
+}
+
 const ACHIEVEMENT_DEFS = [
   { id:"first_workout", name:"First Workout", desc:"Complete your first freestyle workout.", check:()=> state.workoutLog.length>=1 , category:"milestone", tier:"bronze", value:"1" },
   { id:"workouts_5", name:"5 Workouts", desc:"Log 5 freestyle workouts.", check:()=> state.workoutLog.length>=5 , category:"milestone", tier:"bronze", value:"5" },
@@ -3628,7 +3690,90 @@ const ACHIEVEMENT_DEFS = [
   { id:"streak_14", name:"14-Day Streak", desc:"Train 14 days in a row.", check:()=> computeStreak()>=14 , category:"streak", tier:"silver", value:"14" },
   { id:"streak_30", name:"30-Day Streak", desc:"Train 30 days in a row.", check:()=> computeStreak()>=30 , category:"streak", tier:"silver", value:"30" },
   { id:"streak_60", name:"60-Day Streak", desc:"Train 60 days in a row.", check:()=> computeStreak()>=60 , category:"streak", tier:"gold", value:"60" },
-  { id:"streak_100", name:"100-Day Streak", desc:"Train 100 days in a row.", check:()=> computeStreak()>=100 }
+  { id:"streak_100", name:"100-Day Streak", desc:"Train 100 days in a row.", check:()=> computeStreak()>=100 , category:"streak", tier:"gold", value:"100" },
+
+  /* ---------------------------------------------------------------------------------------
+     Everything below was added to take the set past fifty. Every check reads logged data --
+     sessions, sets, reps, PRs, food entries, water, the score history, the XP ledger. None of
+     them can be unlocked by opening a screen, and none is awarded for anything the app cannot
+     actually see. Tiers reflect how much work each represents, not which category it is in.
+  --------------------------------------------------------------------------------------- */
+
+  /* ---- volume of work ---- */
+  { id:"workouts_750", name:"750 Workouts", desc:"Log 750 freestyle workouts.", check:()=> state.workoutLog.length>=750 , category:"milestone", tier:"gold", value:"750" },
+  { id:"workouts_1000", name:"1,000 Workouts", desc:"Log 1,000 freestyle workouts.", check:()=> state.workoutLog.length>=1000 , category:"milestone", tier:"gold", value:"1K" },
+  { id:"training_days_50", name:"50 Training Days", desc:"Train on 50 different days.", check:()=> distinctTrainingDays()>=50 , category:"milestone", tier:"silver", value:"50" },
+  { id:"training_days_200", name:"200 Training Days", desc:"Train on 200 different days.", check:()=> distinctTrainingDays()>=200 , category:"milestone", tier:"gold", value:"200" },
+  { id:"hours_10", name:"10 Hours Trained", desc:"Spend 10 hours in logged sessions.", check:()=> totalTrainingMinutes()>=600 , category:"milestone", tier:"bronze", value:"10h" },
+  { id:"hours_50", name:"50 Hours Trained", desc:"Spend 50 hours in logged sessions.", check:()=> totalTrainingMinutes()>=3000 , category:"milestone", tier:"silver", value:"50h" },
+  { id:"hours_100", name:"100 Hours Trained", desc:"Spend 100 hours in logged sessions.", check:()=> totalTrainingMinutes()>=6000 , category:"milestone", tier:"gold", value:"100h" },
+  { id:"hours_500", name:"500 Hours Trained", desc:"Spend 500 hours in logged sessions.", check:()=> totalTrainingMinutes()>=30000 , category:"milestone", tier:"gold", value:"500h" },
+
+  /* ---- sets and reps ---- */
+  { id:"sets_500", name:"500 Working Sets", desc:"Log 500 working sets total.", check:()=> totalWorkingSets()>=500 , category:"strength", tier:"silver", value:"500" },
+  { id:"sets_1000", name:"1,000 Working Sets", desc:"Log 1,000 working sets total.", check:()=> totalWorkingSets()>=1000 , category:"strength", tier:"silver", value:"1K" },
+  { id:"sets_5000", name:"5,000 Working Sets", desc:"Log 5,000 working sets total.", check:()=> totalWorkingSets()>=5000 , category:"strength", tier:"gold", value:"5K" },
+  { id:"reps_1000", name:"1,000 Reps", desc:"Complete 1,000 working reps.", check:()=> totalWorkingReps()>=1000 , category:"strength", tier:"bronze", value:"1K" },
+  { id:"reps_10000", name:"10,000 Reps", desc:"Complete 10,000 working reps.", check:()=> totalWorkingReps()>=10000 , category:"strength", tier:"silver", value:"10K" },
+  { id:"reps_50000", name:"50,000 Reps", desc:"Complete 50,000 working reps.", check:()=> totalWorkingReps()>=50000 , category:"strength", tier:"gold", value:"50K" },
+
+  /* ---- load ---- */
+  { id:"first_60kg", name:"First 60kg Lift", desc:"Hit 60kg or more on any lift.", check:()=> heaviestLiftKg()>=60 , category:"strength", tier:"bronze", value:"60kg" },
+  { id:"first_140kg", name:"First 140kg Lift", desc:"Hit 140kg or more on any lift.", check:()=> heaviestLiftKg()>=140 , category:"strength", tier:"gold", value:"140kg" },
+  { id:"first_180kg", name:"First 180kg Lift", desc:"Hit 180kg or more on any lift.", check:()=> heaviestLiftKg()>=180 , category:"strength", tier:"gold", value:"180kg" },
+  { id:"volume_50k", name:"50,000kg Lifted", desc:"Move 50,000kg over your lifetime.", check:()=> totalLifetimeVolume()>=50000 , category:"strength", tier:"bronze", value:"50K kg" },
+  { id:"volume_250k", name:"250,000kg Lifted", desc:"Move 250,000kg over your lifetime.", check:()=> totalLifetimeVolume()>=250000 , category:"strength", tier:"silver", value:"250K kg" },
+  { id:"volume_500k", name:"500,000kg Lifted", desc:"Move half a million kg over your lifetime.", check:()=> totalLifetimeVolume()>=500000 , category:"strength", tier:"gold", value:"500K kg" },
+  { id:"volume_5m", name:"5,000,000kg Lifted", desc:"Move five million kg over your lifetime.", check:()=> totalLifetimeVolume()>=5000000 , category:"strength", tier:"gold", value:"5M kg" },
+
+  /* ---- records ---- */
+  { id:"prs_10", name:"10 Personal Records", desc:"Set 10 personal records.", check:()=> state.prs.length>=10 , category:"strength", tier:"bronze", value:"10" },
+  { id:"prs_25", name:"25 Personal Records", desc:"Set 25 personal records.", check:()=> state.prs.length>=25 , category:"strength", tier:"silver", value:"25" },
+  { id:"prs_50", name:"50 Personal Records", desc:"Set 50 personal records.", check:()=> state.prs.length>=50 , category:"strength", tier:"gold", value:"50" },
+  { id:"prs_100", name:"100 Personal Records", desc:"Set 100 personal records.", check:()=> state.prs.length>=100 , category:"strength", tier:"gold", value:"100" },
+
+  /* ---- breadth ---- */
+  { id:"muscles_5", name:"Five Muscle Groups", desc:"Train five different muscle groups.", check:()=> distinctMusclesTrained()>=5 , category:"milestone", tier:"bronze", value:"5" },
+  { id:"muscles_10", name:"Ten Muscle Groups", desc:"Train ten different muscle groups.", check:()=> distinctMusclesTrained()>=10 , category:"milestone", tier:"silver", value:"10" },
+  { id:"exercises_25", name:"25 Exercises", desc:"Log 25 different exercises.", check:()=> distinctExercisesLogged()>=25 , category:"milestone", tier:"bronze", value:"25" },
+  { id:"exercises_50", name:"50 Exercises", desc:"Log 50 different exercises.", check:()=> distinctExercisesLogged()>=50 , category:"milestone", tier:"silver", value:"50" },
+  { id:"exercises_100", name:"100 Exercises", desc:"Log 100 different exercises.", check:()=> distinctExercisesLogged()>=100 , category:"milestone", tier:"gold", value:"100" },
+
+  /* ---- when you train ---- */
+  { id:"early_bird", name:"Early Bird", desc:"Start a workout before 6am.", check:()=> sessionsAtHour(h=>h<6)>=1 , category:"consistency", tier:"bronze", value:"5am" },
+  { id:"early_bird_10", name:"Sunrise Regular", desc:"Start ten workouts before 7am.", check:()=> sessionsAtHour(h=>h<7)>=10 , category:"consistency", tier:"silver", value:"10" },
+  { id:"night_owl", name:"Night Owl", desc:"Start a workout after 10pm.", check:()=> sessionsAtHour(h=>h>=22)>=1 , category:"consistency", tier:"bronze", value:"10pm" },
+
+  /* ---- streaks ---- */
+  { id:"streak_21", name:"21-Day Streak", desc:"Train 21 days in a row.", check:()=> computeStreak()>=21 , category:"streak", tier:"silver", value:"21" },
+  { id:"streak_180", name:"180-Day Streak", desc:"Train 180 days in a row.", check:()=> computeStreak()>=180 , category:"streak", tier:"gold", value:"180" },
+  { id:"streak_365", name:"One Year Streak", desc:"Train every day for a year.", check:()=> computeStreak()>=365 , category:"streak", tier:"gold", value:"365" },
+
+  /* ---- the IGNYT Score ---- */
+  { id:"score_70_once", name:"Great Day", desc:"Score 70 or more in a day.", check:()=> scoreDaysAtLeast(70)>=1 , category:"consistency", tier:"bronze", value:"70" },
+  { id:"score_100_once", name:"Excellent Day", desc:"Score 100 or more in a day.", check:()=> scoreDaysAtLeast(100)>=1 , category:"consistency", tier:"silver", value:"100" },
+  { id:"score_130_once", name:"Elite Day", desc:"Score 130 or more in a day.", check:()=> scoreDaysAtLeast(130)>=1 , category:"consistency", tier:"gold", value:"130" },
+  { id:"score_70_x30", name:"Thirty Strong Days", desc:"Score 70 or more on thirty days.", check:()=> scoreDaysAtLeast(70)>=30 , category:"consistency", tier:"gold", value:"30" },
+
+  /* ---- weekly challenges ---- */
+  { id:"weekly_1", name:"First Weekly Challenge", desc:"Complete a weekly challenge.", check:()=> weeklyChallengesCompleted()>=1 , category:"consistency", tier:"bronze", value:"1" },
+  { id:"weekly_5", name:"Five Weekly Challenges", desc:"Complete five weekly challenges.", check:()=> weeklyChallengesCompleted()>=5 , category:"consistency", tier:"silver", value:"5" },
+  { id:"weekly_20", name:"Twenty Weekly Challenges", desc:"Complete twenty weekly challenges.", check:()=> weeklyChallengesCompleted()>=20 , category:"consistency", tier:"gold", value:"20" },
+
+  /* ---- nutrition and hydration ---- */
+  { id:"food_first", name:"First Meal Logged", desc:"Log your first meal.", check:()=> state.foodLog.length>=1 , category:"nutrition", tier:"bronze", value:"1" },
+  { id:"food_days_7", name:"A Week of Food Logs", desc:"Log food on seven different days.", check:()=> daysWithFoodLogged()>=7 , category:"nutrition", tier:"bronze", value:"7" },
+  { id:"food_days_30", name:"A Month of Food Logs", desc:"Log food on thirty different days.", check:()=> daysWithFoodLogged()>=30 , category:"nutrition", tier:"silver", value:"30" },
+  { id:"food_days_100", name:"100 Days Logged", desc:"Log food on a hundred different days.", check:()=> daysWithFoodLogged()>=100 , category:"nutrition", tier:"gold", value:"100" },
+  { id:"food_entries_500", name:"500 Food Entries", desc:"Log 500 individual food entries.", check:()=> state.foodLog.length>=500 , category:"nutrition", tier:"silver", value:"500" },
+  { id:"water_first", name:"Hydrated", desc:"Hit your water goal for a day.", check:()=> daysWaterGoalMet()>=1 , category:"nutrition", tier:"bronze", value:"1" },
+  { id:"water_days_30", name:"Thirty Hydrated Days", desc:"Hit your water goal on thirty days.", check:()=> daysWaterGoalMet()>=30 , category:"nutrition", tier:"silver", value:"30" },
+  { id:"water_days_100", name:"A Hundred Hydrated Days", desc:"Hit your water goal on a hundred days.", check:()=> daysWaterGoalMet()>=100 , category:"nutrition", tier:"gold", value:"100" },
+
+  /* ---- body tracking ---- */
+  { id:"weigh_first", name:"First Weigh-In", desc:"Log your body weight.", check:()=> state.bodylog.length>=1 , category:"consistency", tier:"bronze", value:"1" },
+  { id:"weigh_10", name:"Ten Weigh-Ins", desc:"Log your body weight ten times.", check:()=> state.bodylog.length>=10 , category:"consistency", tier:"bronze", value:"10" },
+  { id:"weigh_50", name:"Fifty Weigh-Ins", desc:"Log your body weight fifty times.", check:()=> state.bodylog.length>=50 , category:"consistency", tier:"silver", value:"50" }
 ];
 
 /* Call after any action that could unlock an achievement (finish workout,
@@ -7035,8 +7180,27 @@ function renderExercisePicker(){
     ` : ""}
 
     <div id="ex-picker-results">${exercisePickerResultsHtml()}</div>
+    ${renderPickerSelectionBar()}
     </div>
   `;
+}
+
+/* The multi-select commit bar. Only for the contexts where adding several at once means
+   something: building a workout or a routine. Replacing an exercise is one-for-one, so that
+   context keeps its original single-tap-and-close behaviour. */
+function pickerIsMultiSelect(){
+  return state.exercisePickerContext !== "replace" && state.exercisePickerContext !== "routine-replace";
+}
+
+function renderPickerSelectionBar(){
+  const n = (state.pickerSelection||[]).length;
+  if(!pickerIsMultiSelect() || !n) return "";
+  return `<div class="ex-picker-bar">
+    <button class="ex-picker-bar__clear" data-action="clear-picker-selection">Clear</button>
+    <button class="ex-picker-bar__add" data-action="add-picked-exercises">
+      Add ${n} exercise${n!==1?'s':''}
+    </button>
+  </div>`;
 }
 
 /* Builds ONLY the filtered results list (recent + all matches). Called both by the full
@@ -7081,6 +7245,44 @@ function updateExercisePickerResults(){
   if(el) el.innerHTML = exercisePickerResultsHtml();
 }
 
+/* Swaps the commit bar in and out in place, for the same reason the results list is patched
+   rather than re-rendered: a full render would rebuild the search input and drop focus. */
+function updatePickerSelectionBar(){
+  const results = document.getElementById("ex-picker-results");
+  if(!results) return;
+  const existing = results.parentElement.querySelector(".ex-picker-bar");
+  const html = renderPickerSelectionBar();
+  if(existing) existing.remove();
+  if(html) results.insertAdjacentHTML("afterend", html);
+  attachPickerSelectionBar();
+}
+
+function attachPickerSelectionBar(){
+  const addBtn = document.querySelector('[data-action="add-picked-exercises"]');
+  if(addBtn) addBtn.addEventListener("click", ()=>{
+    const names = (state.pickerSelection||[]).slice();
+    if(!names.length) return;
+    if(isRoutinePickerContext()){
+      // applyRoutineExercisePick() only appends to the builder -- it does not close the picker
+      // or render -- so calling it once per name is safe and keeps the order they were tapped.
+      names.forEach(n=>applyRoutineExercisePick(n));
+    } else {
+      names.forEach(n=>state.session.exercises.push({
+        name:n, notes:"", restDuration:state.settings.defaultRest, sets:[newSet(n)]
+      }));
+    }
+    state.pickerSelection = [];
+    state.showExercisePicker = false;
+    render();
+  });
+  const clearBtn = document.querySelector('[data-action="clear-picker-selection"]');
+  if(clearBtn) clearBtn.addEventListener("click", ()=>{
+    state.pickerSelection = [];
+    updateExercisePickerResults();
+    updatePickerSelectionBar();
+  });
+}
+
 /* =========================================================
    WORKOUT TAB — freestyle logger, set-table style
 ========================================================= */
@@ -7120,10 +7322,13 @@ function exercisePickerRow(ex){
   const fav = isFavoriteExercise(ex.name);
   const safeName = escHtml(ex.name); // custom exercise names are user input and reach these attributes
   const img = exerciseImageSrc(ex.name);
-  return `<div class="ex-picker-row" data-pick-exercise="${safeName}">
-    ${img
-      ? `<div class="ex-picker-photo"><img src="${escHtml(img)}" alt="" loading="lazy"></div>`
-      : `<div class="ex-picker-avatar" style="background:${color}22;color:${color};">${initial}</div>`}
+  const picked = (state.pickerSelection||[]).indexOf(ex.name) !== -1;
+  return `<div class="ex-picker-row${picked?' is-picked':''}" data-pick-exercise="${safeName}">
+    ${picked
+      ? `<div class="ex-picker-tick">${svg('check',20)}</div>`
+      : img
+        ? `<div class="ex-picker-photo"><img src="${escHtml(img)}" alt="" loading="lazy"></div>`
+        : `<div class="ex-picker-avatar" style="background:${color}22;color:${color};">${initial}</div>`}
     <div style="flex:1;min-width:0;">
       <div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${safeName}${equipSuffix}</div>
       <div style="font-size:12px;color:var(--rh-muted);margin-top:1px;">${ex.muscle}</div>
@@ -9809,11 +10014,8 @@ const PROGRESS_VIEWS = {
   workouts:     { icon:"🗂️", title:"Workout History",   sub:"Search, filter and review every workout you've logged." },
   habits:       { icon:"🔁", title:"Habit Tracker",      sub:"Daily habits, streaks, and completion history." },
   analytics:    { icon:"📊", title:"Workout Analytics",  sub:"Training frequency, volume, duration, and muscle distribution." },
-  exercise:     { icon:"📈", title:"Exercise Progress",  sub:"Weight and estimated 1RM trends for individual exercises." },
-  nutrition:    { icon:"🍎", title:"Nutrition Progress", sub:"Average calories and protein per logged day." },
   body:         { icon:"⚖️", title:"Body Progress",      sub:"Body weight and measurement trends." },
   calendar:     { icon:"📅", title:"Training Calendar",  sub:"See your workout activity by date." },
-  plan:         { icon:"✅", title:"Plan Progress",      sub:"Phase and weekly training-plan completion." },
   reports:      { icon:"🧾", title:"Reports",            sub:"Weekly, monthly and yearly summaries with period-on-period change." },
   /* Photos already had a complete screen (renderBodyScanArchive) reachable from Body — it was
      simply not reachable from Progress, which is where the brief expects it. Routed rather
@@ -9845,10 +10047,9 @@ function renderProgressTab(){
     const detailFns = {
       achievements: renderProgressAchievements, history: renderProgressPRs, workouts: renderProgressWorkouts,
       habits: renderProgressHabits,
-      analytics: renderProgressAnalytics, exercise: renderProgressExercise,
-      nutrition: renderProgressNutrition,
+      analytics: renderProgressAnalytics,
       body: renderProgressBody,
-      calendar: renderProgressCalendar, plan: renderProgressPlan,
+      calendar: renderProgressCalendar,
       reports: renderProgressReports, photos: renderBodyScanArchive
     };
     let body;
@@ -9859,8 +10060,8 @@ function renderProgressTab(){
       body = `<div class="empty-note">This section hit an error and couldn't load. Your data is untouched — try again or reopen the app.</div>`;
     }
     // Only the views in LIGHT_VIEW_HEADERS are light-redesigned so far (matches the reference
-    // given for each); every other detail view (achievements/analytics/exercise/nutrition/
-    // calendar/plan) keeps its existing dark wrapper, same "only restyle what was actually
+    // given for each); every other detail view (achievements/analytics/calendar) keeps its
+    // existing dark wrapper, same "only restyle what was actually
     // shown" rule already applied throughout this session (Progress dashboard vs. its own
     // detail views).
     const LIGHT_VIEW_HEADERS = {
@@ -10204,9 +10405,11 @@ function renderProgressAchievements(){
 
   const CATEGORIES = [
     ["all","All"], ["milestone","Milestones"], ["streak","Streaks"],
-    ["strength","Strength"], ["program","Program"]
+    ["strength","Strength"], ["consistency","Consistency"], ["nutrition","Nutrition"],
+    ["program","Program"]
   ];
-  const ICONS = { milestone:"trophy", streak:"flame", strength:"dumbbell", program:"calendar" };
+  const ICONS = { milestone:"trophy", streak:"flame", strength:"dumbbell", program:"calendar",
+                  consistency:"repeat", nutrition:"nutrition" };
 
   const inCategory = d => cat === "all" || d.category === cat;
   const pool = ACHIEVEMENT_DEFS.filter(inCategory)
@@ -10437,64 +10640,6 @@ function renderProgressAnalytics(){
 
 /* ---------- Exercise Progress ---------- */
 
-function renderProgressExercise(){
-  const names = exercisesWithHistory();
-  if(names.length===0) return `<div class="empty-note">Log the same exercise across a few workouts to see its strength trend here.</div>`;
-  const q = (state.exProgressSearch||"").trim().toLowerCase();
-  const filtered = q ? names.filter(n=>n.toLowerCase().includes(q)) : names;
-  const exName = (state.progressExercise && names.includes(state.progressExercise)) ? state.progressExercise : (filtered[0] || names[0]);
-  const trend = exerciseProgressTrend(exName, 20);
-  const weightPoints = trend.map(t=>({date:t.date, value:displayW(t.weight)}));
-  const ormPoints = trend.map(t=>({date:t.date, value:displayW(t.oneRM)}));
-
-  // Bests from the FULL genuine history (not just the charted window).
-  let bestW=0, best1RM=0, bestReps=0;
-  state.workoutLog.forEach(s=>{
-    const ex = s.exercises.find(e=>e.name===exName);
-    if(!ex) return;
-    ex.sets.forEach(st=>{
-      const w = parseFloat(st.weight), r = parseFloat(st.reps);
-      if(!isNaN(w) && w>bestW) bestW = w;
-      if(!isNaN(w) && !isNaN(r) && r>0){ const orm = w*(1+r/30); if(orm>best1RM) best1RM = orm; }
-      if(!isNaN(r) && r>bestReps) bestReps = r;
-    });
-  });
-  const recent = state.workoutLog.filter(s=>s.exercises.some(e=>e.name===exName)).slice(0,5);
-
-  return `
-    <div class="search-bar"><input type="text" id="ex-progress-search" placeholder="Search exercises…" value="${(state.exProgressSearch||'').replace(/"/g,'&quot;')}" aria-label="Search exercises"></div>
-    ${filtered.length===0 ? `<div class="empty-note">No tracked exercise matches your search.</div>` : `
-    <select class="select-input" id="progress-exercise-select" style="margin-bottom:12px;">
-      ${filtered.map(n=>`<option value="${n}" ${exName===n?'selected':''}>${n}</option>`).join("")}
-    </select>
-    <div class="grid2" style="margin-bottom:14px;">
-      <div class="stat-card"><div class="stat-label">Best Weight</div><div class="stat-value" style="font-size:20px;">${bestW>0?`${displayW(bestW)}<span class="stat-unit">${wUnit()}</span>`:'—'}</div></div>
-      <div class="stat-card"><div class="stat-label">Best Est. 1RM</div><div class="stat-value" style="font-size:20px;">${best1RM>0?`${displayW(best1RM,1)}<span class="stat-unit">${wUnit()}</span>`:'—'}</div></div>
-      <div class="stat-card"><div class="stat-label">Best Reps</div><div class="stat-value">${bestReps>0?bestReps:'—'}</div></div>
-      <div class="stat-card"><div class="stat-label">Sessions</div><div class="stat-value">${recent.length===5?'5+':recent.length}</div></div>
-    </div>
-    <div class="info-box" style="padding:14px;margin-bottom:14px;">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Top Set Weight</div>
-      ${sparklineChart(weightPoints, {color:"var(--accent)", unit:wUnit()})}
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;">Estimated 1RM</div>
-      ${sparklineChart(ormPoints, {color:"var(--mint)", unit:wUnit()})}
-    </div>
-    <div class="eyebrow-label">Recent History</div>
-    <div class="info-box" style="padding:4px 14px;">
-      ${recent.map(s=>{
-        const ex = s.exercises.find(e=>e.name===exName);
-        const top = ex.sets.reduce((best,st)=>{
-          const w = parseFloat(st.weight);
-          return (!isNaN(w) && w>(best.w||0)) ? {w, r:st.reps} : best;
-        }, {});
-        return `<div class="row-between" style="padding:11px 0;border-bottom:1px solid var(--border);">
-          <span style="font-size:14px;color:var(--muted);" class="mono">${s.date}</span>
-          <span class="mono" style="font-size:15px;font-weight:800;">${top.w?`${displayW(top.w)}${wUnit()} × ${top.r||'–'}`:'—'}</span>
-        </div>`;
-      }).join("")}
-    </div>`}
-  `;
-}
 
 /* ---------- Body Progress ---------- */
 
@@ -10565,30 +10710,6 @@ function renderProgressBody(){
 
 /* ---------- Nutrition Progress ---------- */
 
-function renderProgressNutrition(){
-  const days = [30,60,90].includes(state.nutritionRange) ? state.nutritionRange : 30;
-  const ct = calorieProteinTrend(days).filter(d=>d.kcal>0 || d.protein>0);
-  const chips = `<div style="display:flex;gap:6px;margin-bottom:12px;">
-    ${[30,60,90].map(d=>`<button class="cat-chip ${days===d?'active':''}" data-nutrition-range="${d}">${d}d</button>`).join("")}
-  </div>`;
-  if(ct.length<2) return `${chips}<div class="empty-note">Log food for a few more days to see calorie and protein trends.</div>`;
-  const avgK = Math.round(ct.reduce((a,d)=>a+d.kcal,0)/ct.length);
-  const avgP = Math.round(ct.reduce((a,d)=>a+d.protein,0)/ct.length);
-  return `
-    ${chips}
-    <div class="grid2" style="margin-bottom:14px;">
-      <div class="stat-card"><div class="stat-label">Avg Calories / logged day</div><div class="stat-value" style="font-size:20px;">${avgK.toLocaleString()}<span class="stat-unit">kcal</span></div></div>
-      <div class="stat-card"><div class="stat-label">Avg Protein / logged day</div><div class="stat-value" style="font-size:20px;">${avgP}<span class="stat-unit">g</span></div></div>
-    </div>
-    <div class="info-box" style="padding:14px;">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Calories</div>
-      ${sparklineChart(ct.map(d=>({date:d.date,value:Math.round(d.kcal)})), {color:"var(--accent)", unit:"kcal"})}
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;">Protein</div>
-      ${sparklineChart(ct.map(d=>({date:d.date,value:Math.round(d.protein)})), {color:"var(--steel)", unit:"g"})}
-    </div>
-    <div style="font-size:12px;color:var(--muted);margin-top:8px;">Averages cover only days with logged food (${ct.length} of the last ${days}).</div>
-  `;
-}
 
 /* ---------- Workout History ----------
    Browsable, searchable list of every logged workout. Filtering and sorting run over
@@ -10888,35 +11009,6 @@ function renderProgressCalendar(){
 
 /* ---------- Plan Progress ---------- */
 
-function renderProgressPlan(){
-  let total=0, done=0;
-  const perWeek = WEEKS.map(w=>{
-    let wt=0, wd=0;
-    w.days.forEach(d=>d.exercises.forEach(ex=>{ wt++; total++; if(state.completed[`${w.week}|${d.day}|${ex.name}`]){wd++; done++;} }));
-    return {week:w.week, pct: wt?Math.round(wd/wt*100):0, phase:w.phase};
-  });
-  const overall = total? Math.round(done/total*100):0;
-  const phaseColor = {base:'var(--steel)',build:'var(--steel)',load:'var(--accent)',peak:'var(--accent)',deload:'var(--mint)'};
-  const w = thisWeekStats();
-  return `
-    <div class="info-box" style="text-align:center;padding:20px;margin-bottom:14px;">
-      <div class="mono" style="font-weight:900;font-size:38px;color:var(--accent);">${overall}%</div>
-      <div style="font-size:13px;color:var(--muted);margin-top:4px;">${done} of ${total} plan exercises checked off</div>
-    </div>
-    <div class="info-box" style="padding:12px 14px;margin-bottom:14px;">
-      <div class="row-between">
-        <span style="font-size:14px;font-weight:700;">HYROX sessions this week</span>
-        <span class="mono" style="font-size:15px;font-weight:800;">${w.hyroxSessions}</span>
-      </div>
-    </div>
-    <div class="eyebrow-label">By Week</div>
-    ${perWeek.map(pw=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">
-      <div class="mono" style="width:52px;font-size:12px;font-weight:700;color:var(--muted);">WK ${pw.week}</div>
-      <div class="progress-track"><div class="progress-fill" style="width:${pw.pct}%;background:${phaseColor[pw.phase]};"></div></div>
-      <div class="mono" style="width:40px;text-align:right;font-size:12px;">${pw.pct}%</div>
-    </div>`).join("")}
-  `;
-}
 
 /* =========================================================
    BODY-PROGRESS PHOTOS — metadata lives in state.bodyPhotos (in-memory only, loaded from
@@ -16938,6 +17030,7 @@ function attachHandlers(){
     if(state.exercisePickerShowCreate){ state.exercisePickerShowCreate = false; render(); return; }
     state.showExercisePicker = false;
     state.replacingExerciseIndex = null;
+    state.pickerSelection = [];   // cancelling means cancelling; nothing waits for next time
     render();
   });
   const pickerSearchEl = document.getElementById("ex-picker-search");
@@ -16995,6 +17088,20 @@ function attachHandlers(){
       const row = e.target.closest("[data-pick-exercise]");
       if(!row) return;
       const name = row.dataset.pickExercise;
+
+      /* Multi-select: a tap toggles rather than commits, and the bar at the bottom adds the
+         lot. Replacing stays single-tap — swapping one exercise for three is not a thing. */
+      if(pickerIsMultiSelect()){
+        const sel = state.pickerSelection || (state.pickerSelection = []);
+        const i = sel.indexOf(name);
+        if(i >= 0) sel.splice(i, 1); else sel.push(name);
+        /* Only the results list is rebuilt, so the search box keeps focus and the list keeps
+           its scroll position — picking six exercises should not mean six jumps to the top. */
+        updateExercisePickerResults();
+        updatePickerSelectionBar();
+        return;
+      }
+
       if(isRoutinePickerContext()){
         applyRoutineExercisePick(name);
       } else if(state.exercisePickerContext==="replace"){
@@ -17014,6 +17121,7 @@ function attachHandlers(){
       render();
     });
   }
+  attachPickerSelectionBar();
   const showCreateBtn = document.querySelector('[data-action="show-create-in-picker"]');
   if(showCreateBtn) showCreateBtn.addEventListener("click", ()=>{
     state.exercisePickerShowCreate = true;

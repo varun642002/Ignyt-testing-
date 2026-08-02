@@ -207,19 +207,13 @@
     const recentWeightPRs = state.prs.filter(p=>p.type==='weight').slice(0,3);
     const recentPRs = recentWeightPRs.length>=3 ? recentWeightPRs : state.prs.slice(0,3);
 
-    const nutritionTrend = calorieProteinTrend(30).filter(d=>d.kcal>0);
-    const avgKcal = nutritionTrend.length ? Math.round(nutritionTrend.reduce((a,d)=>a+d.kcal,0)/nutritionTrend.length) : null;
-
     const QUICK_ACCESS = [
       ['achievements','trophy','#D97706', `${state.achievements.length}/${ACHIEVEMENT_DEFS.length} unlocked`],
       ['history','file','#64748B', `${state.prs.length} record${state.prs.length!==1?'s':''}`],
       ['habits','check','#16A34A', `${state.habits.length} habit${state.habits.length!==1?'s':''} active`],
       ['analytics','progress','#2563EB', 'View insights'],
-      ['exercise','trend','#7C3AED', 'Track your lifts'],
-      ['nutrition','nutrition','#DC2626', avgKcal!=null ? `${avgKcal.toLocaleString()} kcal avg` : 'No data yet'],
       ['body','body','#0891B2', 'Track your body'],
       ['calendar','calendar','#4F46E5', 'View your activity'],
-      ['plan','plan','#CA8A04', 'Follow your plan'],
       ['reports','file','#0D9488', 'Weekly · monthly · yearly'],
       ['photos','body','#DB2777', `${(state.bodyPhotos||[]).length} photo${(state.bodyPhotos||[]).length!==1?'s':''}`]
     ];
