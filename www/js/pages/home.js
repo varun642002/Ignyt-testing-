@@ -125,6 +125,46 @@
       ${renderAchievementCelebration ? (state.lastUnlockedAchievements && state.lastUnlockedAchievements.length ? renderAchievementCelebration() : '') : ''}
       ${renderPRCelebration ? (state.lastSessionPRs && state.lastSessionPRs.length ? renderPRCelebration() : '') : ''}
 
+      ${window.IgnytScore ? (()=>{
+        // One pass over the logs for the whole block -- see IgnytScore.summary().
+        const sum = IgnytScore.summary(state);
+        const t = sum.today, st = sum.stats, line = sum.coachLine;
+        const sug = sum.suggestions.slice(0,3);
+        // 46 radius, 289.03 circumference. Stroke-dashoffset draws the arc; the CSS transition
+        // on it is what animates the ring when the score changes.
+        const C = 289.03;
+        const pct = Math.min(1, t.score / 160);
+        return `
+        <div class="ign" style="--ign:${t.level.color};">
+          <div class="ign__ring">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <circle class="ign__track" cx="50" cy="50" r="46"></circle>
+              <circle class="ign__arc" cx="50" cy="50" r="46"
+                      style="stroke-dasharray:${C};stroke-dashoffset:${C - C*pct};"></circle>
+            </svg>
+            <div class="ign__center">
+              <div class="ign__num">${t.score}</div>
+              <div class="ign__cap">IGNYT Score</div>
+            </div>
+          </div>
+          <div class="ign__side">
+            <div class="ign__level">${escHtml(t.level.name)}</div>
+            <div class="ign__line">${escHtml(line)}</div>
+            <div class="ign__mini">
+              <span><b>${st.yesterday!=null?st.yesterday:'—'}</b>yesterday</span>
+              <span><b>${st.best}</b>best</span>
+              <span><b>${st.weekAverage!=null?st.weekAverage:'—'}</b>7-day avg</span>
+              <span><b>${st.streak}</b>day streak</span>
+            </div>
+          </div>
+        </div>
+        ${sug.length ? `
+        <div class="ign-todo">
+          <div class="ign-todo__head">Still available today</div>
+          ${sug.map(x=>`<div class="ign-todo__row"><span>${escHtml(x.label)}</span><b>+${x.points}</b></div>`).join('')}
+        </div>` : ''}
+        `; })() : ''}
+
       <div class="pg-card hm-greet">
         <div class="hm-greet__left">
           <div class="hm-greet__hello">${greeting()}, ${state.profile.name || 'Athlete'} 👋</div>

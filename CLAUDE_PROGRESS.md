@@ -1,5 +1,63 @@
 # CLAUDE_PROGRESS.md
 
+## CURRENT STATE — 2 Aug 2026 — IGNYT Score shipped; APK built
+
+**Branch:** feature/premium-subscription
+**Feature:** The IGNYT Score — one daily number, a level band, and a coach that says
+exactly what is still available today and what each thing is worth.
+
+### What was built
+
+- `www/js/motivation/score.js` (new) — the engine. 13 scored actions, 6 level bands
+  (0 / 40 / 70 / 100 / 130 / 160), a 200-point daily cap, goal-based 1.5x emphasis on two
+  categories, day-keyed history in `hx_score_history`, and `summary()` as the one-call API.
+- `www/js/pages/home.js` — animated ring, level, coach line, four comparison figures
+  (yesterday / best / 7-day average / streak) and a "Still available today" list showing the
+  three highest-value remaining actions with their point values.
+- `www/css/pages/home.css` — `.ign*` styles, both themes, reduced-motion honoured.
+- Wired into `www/index.html` and `www/sw.js`; cache bumped **ignyt-v168 -> ignyt-v169**.
+
+### Decisions worth remembering
+
+- **Meditation is not scored.** The brief asked for it; IGNYT has no meditation tracking of
+  any kind, so points for it would be points for nothing. Stretching IS scored — the exercise
+  library has a real Mobility category.
+- **Steps and sleep are "unavailable", not "not done", without Health Connect.** They are
+  never offered as suggestions, because telling someone to log what they cannot log is worse
+  than staying quiet.
+- **History is stored, never recomputed**, and `record()` only ever raises a day's value. A
+  changed water target must not silently rewrite last week.
+- **No negative points.** A bad day scores low; it does not score against you.
+- **coachLine() will not name a band that is out of reach** for the rest of the day.
+
+### Bug found and fixed during verification
+
+A memo cache was added to stop `today()` running six times per render. It cached on the state
+object identity and cleared in a microtask — which is wrong, because the app mutates state and
+calls `render()` in the same synchronous block. Caught live: 60 g of protein logged and the
+score stayed at 77 instead of moving to 92. Replaced with `summary()`, which computes once and
+passes the result down. Same cost, cannot go stale.
+
+### Verified
+
+- 51 assertions green under node (levels, caps, emphasis, thresholds, history, streaks).
+- Live in the running app: 77 -> 105 within one synchronous block after logging protein,
+  correct on all four figures, both themes, no layout overflow at 375px, all five tabs render
+  with zero window errors.
+- `npx cap sync android` OK. `gradlew clean assembleDebug` -> **BUILD SUCCESSFUL** (38s).
+- Confirmed by unzipping the APK: score.js present, `summary()` in it, sw cache reads
+  ignyt-v169, script tag and CSS present.
+
+**APK:** `android/app/build/outputs/apk/debug/app-debug.apk` (21.0 MB)
+
+### Still open from the motivation brief
+
+Weekly challenge mode, monthly strength report with image export, share card, animated
+counters. Play Console still needs the `ignyt_premium` subscription created by hand, and
+`GRANDFATHER_BEFORE` in entitlements.js is still `null` (off).
+
+---
+
 ## CURRENT STATE — 2 Aug 2026 — iOS compiles on CI; Android 1.0.42 awaiting upload
 
 **Branch:** feature/exercise-library-rebuild (pushed, clean)
