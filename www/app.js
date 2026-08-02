@@ -19224,6 +19224,28 @@ function handleHardwareBack(){
   return false;
 }
 
+/* "Welcome back" fires once per app OPEN, not once per render. The flag is set here on cold
+   start, and again whenever the app returns from the background after being away a while --
+   flicking to another app for five seconds and back is not a return worth greeting. Home reads
+   the flag and clears it. sessionStorage, so it cannot survive into tomorrow. */
+(function(){
+  const MIN_AWAY_MS = 5 * 60 * 1000;
+  try { sessionStorage.setItem("hx_fresh_open", "1"); } catch(e){}
+  let leftAt = 0;
+  const markOpen = ()=>{ try { sessionStorage.setItem("hx_fresh_open", "1"); } catch(e){} };
+  try {
+    const App = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+    if(App && App.addListener) App.addListener("appStateChange", st=>{
+      if(st && st.isActive){ if(leftAt && Date.now()-leftAt >= MIN_AWAY_MS) markOpen(); }
+      else leftAt = Date.now();
+    });
+  } catch(e){}
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.visibilityState === "hidden") leftAt = Date.now();
+    else if(leftAt && Date.now()-leftAt >= MIN_AWAY_MS) markOpen();
+  });
+})();
+
 // Live workout notification: watches app foreground/background and mirrors the open session.
 if(window.IgnytActiveWorkout) IgnytActiveWorkout.start();
 

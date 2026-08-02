@@ -56,8 +56,24 @@
       "You do not have to be fresh. You have to turn up.",
       "The plan only works while you are on it."
     ];
-    const quoteOfDay = (window.IgnytMessages && IgnytMessages.forDay("daily"))
+    /* Before noon the line comes from the `morning` context, which is written for that hour --
+       "Rest tonight, build tomorrow" reads oddly at 6am. Both are seeded by the date, so the
+       line is stable through the morning and different tomorrow, and the two libraries share
+       no lines, so the morning card and the daily card can never say the same thing. */
+    const beforeNoon = new Date().getHours() < 12;
+    const quoteOfDay = (window.IgnytMessages && IgnytMessages.forDay(beforeNoon ? "morning" : "daily"))
       || FALLBACK_QUOTES[Math.floor(Date.now() / 86400000) % FALLBACK_QUOTES.length];
+
+    /* Welcome back, once per app open rather than once per render. IgnytSession stamps the
+       open; Home reads it and clears it, so tapping between tabs does not re-greet you. A
+       greeting that fires on every render stops being a greeting. */
+    const welcomeBack = (() => {
+      try {
+        if (!window.IgnytMessages || !sessionStorage.getItem("hx_fresh_open")) return "";
+        sessionStorage.removeItem("hx_fresh_open");
+        return IgnytMessages.next("welcomeBack") || "";
+      } catch (e) { return ""; }
+    })();
 
     /* Consistency is measured, not asserted: how many of the last 28 days carry a workout or a
        food entry. Anything that only counted workouts would call a diligent rest week
@@ -120,6 +136,8 @@
     <div class="home-light">
       ${renderAchievementCelebration ? (state.lastUnlockedAchievements && state.lastUnlockedAchievements.length ? renderAchievementCelebration() : '') : ''}
       ${renderPRCelebration ? (state.lastSessionPRs && state.lastSessionPRs.length ? renderPRCelebration() : '') : ''}
+
+      ${welcomeBack ? `<div class="hm-welcome">${svg('bolt', 15)}<span>${escHtml(welcomeBack)}</span></div>` : ''}
 
       <div class="pg-card hm-greet">
         <div class="hm-greet__left">

@@ -382,3 +382,17 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 @media (prefers-reduced-motion: reduce){
   .wch__fill{ transition: none; }
 }
+
+
+/* "Welcome back" banner. Above the greeting card and visually lighter than it: it is a
+   one-line hello that appears once per app open, not a section. Tinted rather than carded so
+   it reads as a passing note instead of another block competing with the score ring. */
+.hm-welcome{
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; margin-bottom: 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--rh-blue) 10%, transparent);
+  color: var(--rh-blue);
+  font-size: 13px; font-weight: 700;
+}
+.hm-welcome svg{ flex: none; fill: currentColor; }
