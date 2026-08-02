@@ -684,9 +684,7 @@ const PREFERRED_CARDIO_OPTIONS = ["Walking","Jogging","Running","Cycling","Swimm
    one thing that can fill several of them in automatically — and by then most people have
    already committed to typing. Asking first also means steps/weight/sleep start flowing from
    the user's first session rather than whenever they later find the toggle. */
-const ONBOARDING_STEP_TITLES = ["Fair Use Policy","About You","Notifications","Health Connect","Birthday","Gender",
-  "Height","Weight","Fitness Goal","Activity Level","Diet Preference","Workout Preference",
-  "AI Personalization"];
+const ONBOARDING_STEP_TITLES = ["Fair Use Policy","About You","Permissions","Your Numbers"];
 
 /* The brief's six goals, mapped onto the calorie deltas this app already applies. The keys
    ARE the GOAL_TO_CALORIE_DELTA keys, so the mapping lives in one place instead of becoming a
@@ -7834,7 +7832,7 @@ function obTextarea(fieldPath, placeholder){
   return `<textarea class="note-input" data-ob-field="${obEsc(fieldPath)}" placeholder="${obEsc(placeholder||'')}" style="margin-bottom:14px;min-height:52px;">${obEsc(v||'')}</textarea>`;
 }
 
-const ONBOARDING_TOTAL_STEPS = 13;   // derived from the renderer list below
+const ONBOARDING_TOTAL_STEPS = 4;   // derived from the renderer list below
 
 function onboardingProgressHeader(step){
   return `
@@ -8470,10 +8468,11 @@ function obComputePlan(){
    something. Placed straight after the Fair Use gate so it is the first thing after signing
    in, which is what makes the account feel like an account.
 
-   All three are optional. Name and phone are already real profile fields, editable later in
-   Personal Information; this only asks earlier, while the user is already answering
-   questions. Nothing here gates Next - a phone number the app never uses for anything is
-   not something to hold someone hostage over. */
+   Name and mobile number are REQUIRED; the photo is not. They were all optional when this sat
+   inside a thirteen-step flow, where someone who skipped them still answered ten other
+   questions. In the four-page flow this is the only page that asks who the person is, and the
+   app addresses them by name throughout, so Next is gated on both. Both remain editable later
+   in Personal Information. */
 function obYourDetails(){
   const p = state.profile || {};
   const photo = p.photo || "";
@@ -8483,7 +8482,7 @@ function obYourDetails(){
   try{ acctEmail = (window.IgnytAuth && IgnytAuth.getAccount() || {}).email || ""; }catch(e){}
   const initial = ((p.name || acctEmail || "?").trim()[0] || "?").toUpperCase();
   return `
-    ${obHero("\u{1F464}", "A bit about <span class='ob-accent'>you</span>", "Only the name shows up anywhere in the app. All three are optional and can be changed later.")}
+    ${obHero("\u{1F464}", "A bit about <span class='ob-accent'>you</span>", "Your name and mobile number are required. The photo is optional, and all three can be changed later.")}
 
     <div class="ob-photo">
       <button class="ob-photo__ring" data-ob-photo-pick="1" aria-label="${photo ? 'Change profile photo' : 'Add a profile photo'}">
@@ -8498,16 +8497,60 @@ function obYourDetails(){
     </div>
 
     ${obLabel("Your name")}
-    ${obTextInput("profile.name", "e.g. Varun")}
+    ${obTextInput("profile.name", "Required")}
 
-    ${obLabel("Phone number")}
+    ${obLabel("Mobile number")}
     <input type="tel" inputmode="tel" data-ob-field="profile.phone" value="${obEsc(p.phone || '')}"
-      placeholder="Optional" style="width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:11px;font-size:14px;color:var(--text);margin-bottom:14px;border:none;">`;
+      placeholder="Required" style="width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:11px;font-size:14px;color:var(--text);margin-bottom:14px;border:none;">`;
 }
 
+/* Page 3 of the shortened flow: both permissions on one screen. They are asked together
+   because from the user's side they are the same question -- what may the app reach -- and
+   two consecutive permission screens read as nagging. Each keeps its own renderer, so the
+   Connect and Allow buttons and their busy states behave exactly as they did when the two
+   were separate steps. */
+function obPermissions(){
+  return obNotifications() + '<div class="ob-perm-divider"></div>' + obHealthConnect();
+}
+
+/* Page 4: the figures the app actually computes with, on one screen instead of four.
+
+   Gender is here as well, and deliberately so. calcBMR() is Mifflin-St Jeor, which steps 161
+   kcal between the male and female equations, profile.gender defaults to "male", and no other
+   screen in the app can change it -- obStep6, which used to, is dead code reachable from
+   nowhere. Leaving it out would have handed every female user a calorie target several hundred
+   over with no way to correct it. It is one chip on a page that was being built anyway. */
+function obBasics(){
+  const b = state.onboarding.birthday || "";
+  const age = obAgeFromBirthday(b);
+  const cm = Number(state.profile.height) || 0;
+  const kg = Number(state.profile.weight) || 0;
+  return `
+    ${obHero("\u{1F4CA}", "A few <span class='ob-accent'>numbers</span>", "Your calorie and training targets are calculated from these.")}
+
+    ${obLabel("Date of birth")}
+    <input type="date" class="ob-date" data-ob-field="onboarding.birthday" value="${obEsc(b)}" max="${new Date().toISOString().slice(0,10)}">
+    ${age!=null ? `<div class="ob-derived" style="margin-bottom:14px;">You are <strong>${age}</strong> years old</div>` : '<div style="height:10px;"></div>'}
+
+    ${obLabel("Height")}
+    <div class="ob-bigvalue" style="font-size:34px;">${cm||'\u2014'}<span class="ob-bigvalue__unit">cm</span></div>
+    <input type="range" class="ob-range" min="120" max="220" step="1" value="${cm||170}" data-ob-range="profile.height" aria-label="Height in centimetres">
+
+    ${obLabel("Weight")}
+    <div class="ob-bigvalue" style="font-size:34px;">${kg?kg.toFixed(1):'\u2014'}<span class="ob-bigvalue__unit">kg</span></div>
+    <input type="range" class="ob-range" min="30" max="200" step="0.5" value="${kg||70}" data-ob-range="profile.weight" aria-label="Weight in kilograms">
+
+    ${obLabel("Gender")}
+    ${obChipSingle("profile.gender", [{key:"male",label:"Male"},{key:"female",label:"Female"}])}
+    <div class="ob-note" style="margin-top:10px;">Used only to pick the right metabolic formula for your calorie target.</div>`;
+}
+
+/* Four pages: terms, who you are, permissions, numbers. The longer flow that also asked for
+   goal, activity level, diet preference, workout preference and the AI personalisation block
+   was cut on request. Those fields still exist on state.onboarding and still default sensibly,
+   so nothing downstream reads an undefined -- they are simply no longer collected up front. */
 const ONBOARDING_STEP_RENDERERS = [
-  obFairUse, obYourDetails, obNotifications, obHealthConnect, obBirthday, obGender, obHeight, obWeight,
-  obGoal, obActivity, obDiet, obWorkoutPref, obPersonalization
+  obFairUse, obYourDetails, obPermissions, obBasics
 ];
 
 /* Step gates and the Health Connect auto-advance used to compare against literal step numbers
@@ -9035,16 +9078,12 @@ function wireOnboardingWizard(){
     }
     o.notifBusy = false;
     renderOnboardingWizard();
-    // Move on by itself only when it worked; a denial stays put so the "you can change this
-    // in Settings" line is actually read before the screen disappears.
-    if(o.notifState === "granted"){
-      setTimeout(()=>{
-        if(state.onboardingStep === obStepIndexOf(obNotifications)){
-          state.onboardingStep = Math.min(ONBOARDING_TOTAL_STEPS, state.onboardingStep + 1);
-          renderOnboardingWizard();
-        }
-      }, 900);
-    }
+    /* No auto-advance any more. Notifications and Health Connect now share one page, so
+       moving on the moment notifications were granted would carry the user straight past the
+       Health Connect prompt they had not answered yet. They tap Next when both are dealt
+       with. (The old obStepIndexOf(obNotifications) test would have returned 0 here anyway,
+       since that renderer is no longer in the step list -- a silent no-op rather than a
+       visible bug, which is exactly the kind of thing that survives unnoticed.) */
   });
 
   const notifSkip = document.querySelector("[data-ob-notif-skip]");
@@ -9088,22 +9127,16 @@ function wireOnboardingWizard(){
     }
     o.healthConnectBusy = false;
     renderOnboardingWizard();
-    /* Advance on success, so a granted permission does not leave the user staring at a screen
-       whose job is done. A denial stays put and shows the "anytime from Profile" line. */
-    if(o.healthConnectState === "ok"){
-      setTimeout(()=>{
-        if(state.onboardingStep === obStepIndexOf(obHealthConnect)){
-          state.onboardingStep = Math.min(ONBOARDING_TOTAL_STEPS, state.onboardingStep + 1);
-          renderOnboardingWizard();
-        }
-      }, 900);
-    }
+    /* No auto-advance, for the same reason as notifications above: this page holds both
+       permissions, so connecting one must not skip the other. */
   });
 
   const hcSkip = document.querySelector("[data-ob-health-skip]");
   if(hcSkip) hcSkip.addEventListener("click", ()=>{
+    /* Records the choice and stays put. It used to advance a step, which was right when
+       Health Connect had a page to itself; now it shares one with notifications, and skipping
+       one permission must not skip the other. */
     state.onboarding.healthConnectState = "skipped";
-    state.onboardingStep = Math.min(ONBOARDING_TOTAL_STEPS, state.onboardingStep + 1);
     renderOnboardingWizard();
   });
   const backBtn = document.querySelector('[data-ob-nav="back"]');
@@ -9116,12 +9149,23 @@ function wireOnboardingWizard(){
       showToast("Please accept the Fair Use Policy to continue.", "error", render);
       return;
     }
-    /* Workout preferences gate. These drive the home dashboard, recommendations and the
-       coach, so an empty array is not a neutral default — it is a plan with nothing to plan
-       around. The other steps stay skippable; this one asks for a single tap. */
-    if(state.onboardingStep === obStepIndexOf(obWorkoutPref) && !(state.onboarding.workoutPreferences||[]).length){
-      showToast("Pick at least one workout type to continue.", "error", render);
-      return;
+    /* Name and phone number are required. They were optional in the long flow, where a user
+       who skipped them still answered ten other questions; in a four-page flow this is the
+       only page that asks who the person is, and the app addresses them by name throughout. */
+    if(state.onboardingStep === obStepIndexOf(obYourDetails)){
+      const nm = String((state.profile.name || "")).trim();
+      const ph = String((state.profile.phone || "")).replace(/[^0-9]/g, "");
+      if(!nm){
+        showToast("Please enter your name to continue.", "error", render);
+        return;
+      }
+      /* Digits only, and at least eight of them: enough to reject a stray tap or a partly
+         typed number without trying to validate an international numbering plan, which this
+         app has no business enforcing. */
+      if(ph.length < 8){
+        showToast("Please enter a valid mobile number to continue.", "error", render);
+        return;
+      }
     }
     if(state.onboardingStep < ONBOARDING_TOTAL_STEPS){
       state.onboardingStep++;

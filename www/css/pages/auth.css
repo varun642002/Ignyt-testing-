@@ -529,3 +529,12 @@
   border: 0; background: none; padding: 4px 0;
   color: var(--auth-primary); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
 }
+
+
+/* Separates the two permission blocks now that notifications and Health Connect share a page.
+   A rule rather than a card each: they are one question asked twice, and boxing them
+   separately made the page read as two screens stacked. */
+.ob-perm-divider{
+  height: 1px; background: var(--border, rgba(128,128,128,.25));
+  margin: 26px 0 22px;
+}
