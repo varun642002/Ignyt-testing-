@@ -215,6 +215,14 @@ input,select,textarea{font-family:inherit; background:transparent; color:var(--t
 .ex-picker-avatar{width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center;
     font-weight:900; font-size:16px; flex-shrink:0;}
 
+/* The exercise illustration, in place of the letter avatar. Same 44px footprint so a row with
+   artwork and one without line up. Square-with-rounded-corners rather than a circle: these are
+   wide drawings and a circular mask clips the equipment off both sides. White tile and
+   object-fit:contain for the same reason as everywhere else they appear. */
+.ex-picker-photo{width:44px; height:44px; border-radius:10px; overflow:hidden; flex-shrink:0;
+    background:#fff; display:block;}
+.ex-picker-photo img{width:100%; height:100%; object-fit:contain; display:block;}
+
 .ex-picker-info{background:none; border:none; color:var(--muted); padding:8px; flex-shrink:0; cursor:pointer;}
 
 .search-bar input{flex:1; font-size:14px; color:var(--text);}

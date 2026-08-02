@@ -7103,11 +7103,27 @@ function toggleFavoriteExercise(name){
 function exercisePickerRow(ex){
   const initial = ex.name.trim().charAt(0).toUpperCase();
   const color = avatarColorFor(ex.muscle);
-  const equipSuffix = ex.cat && !["Custom"].includes(ex.cat) ? ` (${ex.cat})` : "";
+  /* The equipment suffix exists for names that do not say what they are performed with:
+     "Landmine Row" reads better as "Landmine Row (Barbell)". Appending it unconditionally
+     produced "Bench Press (Barbell) (Barbell)" on 148 of the 452 rows.
+
+     The test is whether the name already ends in a parenthetical, not whether it contains the
+     category word. ex.cat is a broad bucket -- "Machine" covers Cable, Smith and Pec Deck --
+     so matching on the word still left "Bench Press (Cable) (Machine)", which reads as a bug
+     and tells the user nothing. Any trailing "(...)" is already the qualifier that distinguishes
+     this row from its siblings, so the bucket adds nothing after it. The name is also checked
+     for the bucket word itself, which catches "Dumbbell Row" -- no parenthetical, but appending
+     "(Dumbbell)" to it is the same redundancy in a different shape. */
+  const alreadyQualified = /\([^)]+\)\s*$/.test(ex.name)
+    || (ex.cat && ex.name.toLowerCase().includes(ex.cat.toLowerCase()));
+  const equipSuffix = (ex.cat && ex.cat !== "Custom" && !alreadyQualified) ? ` (${ex.cat})` : "";
   const fav = isFavoriteExercise(ex.name);
   const safeName = escHtml(ex.name); // custom exercise names are user input and reach these attributes
+  const img = exerciseImageSrc(ex.name);
   return `<div class="ex-picker-row" data-pick-exercise="${safeName}">
-    <div class="ex-picker-avatar" style="background:${color}22;color:${color};">${initial}</div>
+    ${img
+      ? `<div class="ex-picker-photo"><img src="${escHtml(img)}" alt="" loading="lazy"></div>`
+      : `<div class="ex-picker-avatar" style="background:${color}22;color:${color};">${initial}</div>`}
     <div style="flex:1;min-width:0;">
       <div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${safeName}${equipSuffix}</div>
       <div style="font-size:12px;color:var(--rh-muted);margin-top:1px;">${ex.muscle}</div>
