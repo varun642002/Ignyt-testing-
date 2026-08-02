@@ -15975,6 +15975,7 @@ function attachHandlers(){
     );
     if(!ok || !state.session) return;
     state.session = null;
+    if(window.IgnytActiveWorkout) IgnytActiveWorkout.clear();
     state.editingSessionId = null;
     state.workoutCompleteId = null;
     applyWakeLock();   // releases the lock and cancels the left-running reminder
@@ -16001,6 +16002,7 @@ function attachHandlers(){
       if(!discard) return; // "Continue Workout" — keep the live session open, save nothing.
       // "Discard Workout" — clear the live session with no save side-effects.
       state.session = null;
+      if(window.IgnytActiveWorkout) IgnytActiveWorkout.clear();
       state.editingSessionId = null;
       state.workoutCompleteId = null;
       applyWakeLock();
@@ -16051,6 +16053,7 @@ function attachHandlers(){
         }
       }
       state.session = null;
+      if(window.IgnytActiveWorkout) IgnytActiveWorkout.clear();
       // Dedicated Workout Complete screen (summary + share cards) for real finishes with content;
       // edits and empty sessions go back to the list as before.
       state.workoutCompleteId = completedId;
@@ -16064,6 +16067,7 @@ function attachHandlers(){
   const cancelEditBtn = document.querySelector('[data-action="cancel-edit-session"]');
   if(cancelEditBtn) cancelEditBtn.addEventListener("click", ()=>{
     state.session = null;
+    if(window.IgnytActiveWorkout) IgnytActiveWorkout.clear();
     state.editingSessionId = null;
     applyWakeLock();
     render();
@@ -16114,6 +16118,12 @@ function attachHandlers(){
   /* Count the numbers up. Last, so every [data-count] on the freshly rendered screen is in
      the DOM; the module itself decides which of them are actually new to the user. */
   if(window.IgnytCounters) IgnytCounters.attach();
+
+  /* Reconcile the live workout notification with the current session. Cheap and idempotent, so
+     it goes on the render path rather than being toggled at each of the four places a session
+     can end -- a toggle that misses one leaves a notification insisting a finished workout is
+     still running. */
+  if(window.IgnytActiveWorkout) IgnytActiveWorkout.sync();
   const editWorkoutBtn = document.querySelector('[data-action="edit-workout"]');
   if(editWorkoutBtn) editWorkoutBtn.addEventListener("click", ()=>{
     const s = state.workoutLog.find(x=>x.id===Number(editWorkoutBtn.dataset.sessionId));
@@ -18997,6 +19007,9 @@ function handleHardwareBack(){
   if(state.timer){ if(state.timer.handle) clearInterval(state.timer.handle); state.timer = null; render(); return true; }
   return false;
 }
+
+// Live workout notification: watches app foreground/background and mirrors the open session.
+if(window.IgnytActiveWorkout) IgnytActiveWorkout.start();
 
 (function(){
   const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();

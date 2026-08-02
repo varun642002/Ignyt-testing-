@@ -3,11 +3,15 @@ package com.varun.ignyt.notify
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.varun.ignyt.MainActivity
 import com.getcapacitor.JSObject
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
@@ -38,6 +42,12 @@ class NotifyPlugin : com.getcapacitor.Plugin() {
            channels rather than flags. Three channels, one per combination the settings offer. */
         const val CHANNEL_NO_VIBRATE = "ignyt_reminders_quiet"
         const val CHANNEL_SILENT = "ignyt_reminders_silent"
+        /* The live workout notification. Its own channel, at IMPORTANCE_LOW, because it is a
+           status and not an alert: it is on screen for the whole session, so a sound or a
+           vibration would fire every time it was updated. A user who wants it gone can turn
+           off this channel alone without losing their reminders. */
+        const val CHANNEL_WORKOUT = "ignyt_active_workout"
+        const val WORKOUT_NOTIFICATION_ID = 4711
         const val PREFS = "ignyt_reminders_prefs"
     }
 
@@ -64,6 +74,15 @@ class NotifyPlugin : com.getcapacitor.Plugin() {
             description = "Reminders that appear without sound or vibration"
             enableVibration(false)
             setSound(null, null)
+        })
+
+        nm.createNotificationChannel(NotificationChannel(
+            CHANNEL_WORKOUT, "Active workout", NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Shows while a workout is in progress, with the elapsed time"
+            enableVibration(false)
+            setSound(null, null)
+            setShowBadge(false)
         })
     }
 
@@ -194,6 +213,79 @@ class NotifyPlugin : com.getcapacitor.Plugin() {
         val body = call.getString("body") ?: "Notifications are working."
         ReminderNotifier.show(context, "test", title, body)
         call.resolve(JSObject().apply { put("sent", true) })
+    }
+
+    /**
+     * The live workout notification: shown while a session is in progress and the app is not in
+     * front, cleared when the session ends.
+     *
+     * NOT a foreground service, deliberately. A foreground service is the right tool when work
+     * must keep running with the app in the background; nothing here does. A session's duration
+     * is derived from its startedAt timestamp, so the elapsed time is correct on return even if
+     * Android killed the process meanwhile. A service would buy nothing and cost a
+     * FOREGROUND_SERVICE_HEALTH declaration plus one of the sensor permissions that type
+     * requires under this target SDK -- a real permission ask, and a Play data-safety entry, for
+     * a notification.
+     *
+     * A posted notification already survives process death, which is the property that actually
+     * matters here: minimise the app, get killed for memory, and the notification is still there
+     * to bring you back.
+     *
+     * @param startedAt epoch millis the session began. Drives a live-counting chronometer, so
+     *                  the notification ticks on its own without the app waking to update it.
+     */
+    @PluginMethod
+    fun showActiveWorkout(call: PluginCall) {
+        if (!hasPermission()) {
+            call.resolve(JSObject().apply { put("shown", false); put("reason", "no-permission") })
+            return
+        }
+        val title = call.getString("title") ?: "Workout in progress"
+        val body = call.getString("body") ?: "Tap to finish your workout."
+        val startedAt = call.getLong("startedAt") ?: 0L
+
+        val openIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("ignyt_route", "workout")
+        }
+        val pi = PendingIntent.getActivity(
+            context, WORKOUT_NOTIFICATION_ID, openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_WORKOUT)
+            .setSmallIcon(context.applicationInfo.icon)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setContentIntent(pi)
+            .setOngoing(true)              // not swipeable while the session is genuinely open
+            .setAutoCancel(false)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(true)
+            .setCategory(NotificationCompat.CATEGORY_WORKOUT)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+
+        /* A chronometer rather than a rendered duration string: Android counts it up itself, so
+           the notification stays accurate with the app asleep and nothing has to wake to redraw
+           it every minute. */
+        if (startedAt > 0L) {
+            builder.setWhen(startedAt).setUsesChronometer(true)
+        }
+
+        try {
+            NotificationManagerCompat.from(context).notify(WORKOUT_NOTIFICATION_ID, builder.build())
+            call.resolve(JSObject().apply { put("shown", true) })
+        } catch (e: SecurityException) {
+            // Permission revoked between the check above and the post.
+            call.resolve(JSObject().apply { put("shown", false); put("reason", "denied") })
+        }
+    }
+
+    /** Clears it. Safe to call when nothing is showing. */
+    @PluginMethod
+    fun hideActiveWorkout(call: PluginCall) {
+        NotificationManagerCompat.from(context).cancel(WORKOUT_NOTIFICATION_ID)
+        call.resolve(JSObject().apply { put("hidden", true) })
     }
 
     private fun keyFor(id: String) = "reminder_$id"
