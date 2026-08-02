@@ -247,3 +247,19 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 @media (prefers-reduced-motion: reduce) {
   .hb-fill, .hb-box, .hb-name { transition: none; }
 }
+
+/* Level and XP on the Home greeting card. Small on purpose — it should reward a glance,
+   not compete with the day's actual numbers. */
+.hm-xp{ margin-top: 10px; }
+.hm-xp__row{ display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.hm-xp__level{ font-size: 11.5px; font-weight: 800; color: var(--rh-blue, #2563eb); }
+.hm-xp__next{ font-size: 10.5px; font-weight: 600; color: var(--rh-muted); font-variant-numeric: tabular-nums; }
+.hm-xp__track{
+  height: 5px; border-radius: 999px; margin-top: 5px; overflow: hidden;
+  background: var(--rh-border, #e9edf3);
+}
+.hm-xp__fill{
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--rh-blue, #2563eb), var(--rh-purple, #7c3aed));
+  transition: width .4s ease;
+}

@@ -11251,6 +11251,12 @@ function renderBodyTab(){
           <div class="pg-stat-card__label">TDEE</div><div class="pg-stat-card__sub">daily maintenance</div></div>
       </div>
 
+      ${bmiValue!=null && window.IgnytMilestones ? `
+      <div class="bmi-note">
+        <div class="bmi-note__line">${escHtml(IgnytMilestones.bmiEncouragement(bmiValue))}</div>
+        <div class="bmi-note__caveat">${escHtml(IgnytMilestones.bmiCaveat())}</div>
+      </div>` : ''}
+
       <div class="pg-stat-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-top:8px;">
         <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(22,163,74,.1);color:var(--rh-green);">${svg('chevronUp',16)}</span>
           <div class="pg-stat-card__value">${rangeHighKg!=null?displayW(rangeHighKg):'—'}<span class="pg-stat-card__unit">${wUnit()}</span></div>
@@ -18577,6 +18583,37 @@ try{
      paint and not awaited: the cached entitlement already drove that paint, so a slow or
      unreachable Play service delays nothing the user sees. If Play's answer differs from the
      cache, the re-render corrects it a moment later. */
+  /* Milestones, evaluated once per launch from the real numbers. Every one is claimed by a
+     key that includes the day where it is a daily thing, so this is safe to call repeatedly —
+     the engine fires each threshold once and ignores it forever after. Wrapped because a
+     celebration is a nicety and must never take the boot path down. */
+  try{
+    if(window.IgnytMilestones){
+      const ds = todayStr();
+      const nut = nutritionTotalsFor(ds);
+      const totals = (nut && nut.totals) || {};
+      const weights = (state.bodylog||[]).filter(b=>b && b.weight>0)
+                        .sort((a,b)=> new Date(a.date) - new Date(b.date));
+      const goalDelta = Number(state.profile && state.profile.goalDelta) || 0;
+      IgnytMilestones.checkAll({
+        // Direction comes from the user's own calorie goal. No goal, no weight milestone —
+        // congratulating someone for losing weight they are trying to gain is worse than silence.
+        weight: weights.length >= 2 && goalDelta !== 0 ? {
+          startKg: weights[0].weight,
+          nowKg: weights[weights.length-1].weight,
+          direction: goalDelta < 0 ? "lose" : "gain"
+        } : null,
+        water: { ml: todayWater(), targetMl: state.settings && state.settings.waterTargetMl },
+        protein: totals.protein != null && state.profile ? {
+          grams: totals.protein, targetG: Math.round((state.profile.weight||0) * 1.6)
+        } : null,
+        calories: totals.calories != null ? {
+          kcal: totals.calories, targetKcal: profileCalorieTarget()
+        } : null
+      });
+    }
+  }catch(e){ /* never let a milestone break boot */ }
+
   if(window.IgnytEntitlements){
     const wasPremium = IgnytEntitlements.isPremium();
     IgnytEntitlements.refresh().then(nowPremium=>{

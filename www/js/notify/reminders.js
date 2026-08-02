@@ -184,6 +184,23 @@
      what would have exposed it. */
   var FASTING_SWITCHES = { "fast-start": 1, "fast-end": 1 };
 
+  /* The workout and streak reminders rotate their wording through the motivation library.
+     These are the app's most repeated sentences — a daily reminder saying the same eleven
+     words for a year stops being read, and an unread reminder is a reminder that does not
+     work. Everything else keeps its catalogue text, which is specific enough to be worth
+     repeating ("Log your breakfast" does not benefit from variety).
+
+     An alarm carries the text it was scheduled with, so the wording changes when the alarm is
+     re-armed — at launch — rather than at fire time. That is the right cadence anyway: it
+     varies across days without varying within one. */
+  var ROTATING = { workout: "notifyWorkout", "missed-workout": "notifyStreak" };
+
+  function bodyFor(id, s) {
+    var context = ROTATING[id];
+    if (!context || !window.IgnytMessages) return s.body;
+    return window.IgnytMessages.next(context) || s.body;
+  }
+
   /** Pushes one reminder's current state to the system. Disabled means cancel — the native
    *  side treats an empty day list as a cancel too, so there is only one way to be off. */
   function syncOne(id) {
@@ -202,7 +219,7 @@
       id: id,
       days: daysFor(s),
       hour: s.hour, minute: s.minute,
-      title: s.title, body: s.body,
+      title: s.title, body: bodyFor(id, s),
       route: byId(id).route || "",
       snoozeMinutes: s.snooze,
       vibrate: s.vibrate, silent: s.silent

@@ -129,6 +129,14 @@
         <div class="hm-greet__left">
           <div class="hm-greet__hello">${greeting()}, ${state.profile.name || 'Athlete'} 👋</div>
           <div class="hm-greet__quote">${quoteOfDay}</div>
+          ${window.IgnytXP ? (()=>{ const x = IgnytXP.progress(); return `
+          <div class="hm-xp">
+            <div class="hm-xp__row">
+              <span class="hm-xp__level">Level ${x.level} &middot; ${x.title}</span>
+              <span class="hm-xp__next">${x.toNext} XP to go</span>
+            </div>
+            <div class="hm-xp__track"><div class="hm-xp__fill" style="width:${x.percent}%;"></div></div>
+          </div>`; })() : ''}
           <div class="hm-greet__chips">
             <span class="hm-chip hm-chip--streak">🔥 ${streak} day${streak === 1 ? '' : 's'}</span>
             <span class="hm-chip hm-chip--${consistency.tone}">${consistency.icon} ${consistency.label}</span>

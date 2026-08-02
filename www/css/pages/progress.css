@@ -248,3 +248,12 @@
    come back; "100 workouts" does. */
 .bdg--locked{ opacity: .55; }
 .bdg--locked .bdg__medal{ --bdg-fill: var(--rh-bg); --bdg-ring: var(--rh-border); --bdg-ink: var(--rh-muted); }
+
+/* The line under BMI. Encouragement plus the caveat that BMI cannot tell muscle from fat —
+   which matters more than usual in an app whose users lift. */
+.bmi-note{
+  margin-top: 10px; padding: 12px 14px; border-radius: var(--radius-tile, 14px);
+  background: rgba(37,99,235,.06); border: 1px solid rgba(37,99,235,.14);
+}
+.bmi-note__line{ font-size: 12.5px; line-height: 1.5; font-weight: 600; color: var(--rh-text); }
+.bmi-note__caveat{ font-size: 11px; line-height: 1.45; color: var(--rh-muted); margin-top: 6px; }
