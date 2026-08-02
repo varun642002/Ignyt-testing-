@@ -14720,7 +14720,9 @@ function renderExerciseDetail(name){
   const detail = EXERCISE_DETAILS[name];
   const all = allLibraryExercises();
   const libEntry = all.find(e=>e.name===name);
-  const muscle = detail ? detail.primaryMuscle : (libEntry ? libEntry.muscle : getMuscle(name));
+  /* detail.primaryMuscle is absent on an instructions-only record, which would have left the
+     hero with no muscle and no colour. The library's own muscle is the reliable answer. */
+  const muscle = (detail && detail.primaryMuscle) || (libEntry ? libEntry.muscle : getMuscle(name));
   const tab = state.exerciseDetailTab || "howto";
   const history = exerciseHistoryEntries(name);
   const prs = exercisePRs(name);
@@ -14778,12 +14780,27 @@ function renderExerciseDetailSummary(name, detail, libEntry, prs){
     <div style="font-size:15px;font-weight:800;">${title}</div>
     <div style="font-size:12px;color:var(--rh-muted);margin-top:4px;line-height:1.4;">${sub}</div>
   </div>`;
+  /* Read through normalizeExerciseDetail(), like every other consumer of a detail record.
+     This one took the raw object and assumed that if it existed at all it carried every field.
+     That held only while EXERCISE_DETAILS was empty and `detail` was therefore always
+     undefined; the imported instructions fill it with records that carry `execution` and
+     nothing else, so detail.secondaryMuscles.join() threw and the whole screen failed to
+     render. The normalizer guarantees the shape -- arrays are arrays, strings are strings --
+     which is exactly what it exists for. */
+  const nd = normalizeExerciseDetail(detail, libEntry);
+  /* And each card is emitted only if it has a value, rather than the block being all-or-
+     nothing. A record with steps but no equipment metadata should show its steps and simply
+     not show an "Equipment: undefined" tile. */
+  const facts = nd ? [
+    ["Equipment", nd.equipment],
+    ["Difficulty", nd.difficulty],
+    ["Movement Pattern", nd.movementType],
+    ["Secondary Muscles", nd.secondaryMuscles.join(", ")]
+  ].filter(f => f[1]) : [];
+
   return `
-    ${detail ? `<div class="pg-stat-grid" style="margin-top:2px;margin-bottom:14px;">
-      <div class="pg-stat-card"><div class="pg-stat-card__label">Equipment</div><div class="pg-stat-card__value" style="font-size:15px;">${detail.equipment}</div></div>
-      <div class="pg-stat-card"><div class="pg-stat-card__label">Difficulty</div><div class="pg-stat-card__value" style="font-size:15px;">${detail.difficulty}</div></div>
-      <div class="pg-stat-card"><div class="pg-stat-card__label">Movement Pattern</div><div class="pg-stat-card__value" style="font-size:15px;">${detail.movementPattern}</div></div>
-      <div class="pg-stat-card"><div class="pg-stat-card__label">Secondary Muscles</div><div class="pg-stat-card__value" style="font-size:12px;line-height:1.4;">${detail.secondaryMuscles.join(", ")||'–'}</div></div>
+    ${facts.length ? `<div class="pg-stat-grid" style="margin-top:2px;margin-bottom:14px;">
+      ${facts.map(([k,v])=>`<div class="pg-stat-card"><div class="pg-stat-card__label">${escHtml(k)}</div><div class="pg-stat-card__value" style="font-size:${k==="Secondary Muscles"?"12px;line-height:1.4":"15px"};">${escHtml(v)}</div></div>`).join("")}
     </div>` : ""}
 
     <div class="rh-section-head" style="margin-top:0;"><span>Performance</span></div>
