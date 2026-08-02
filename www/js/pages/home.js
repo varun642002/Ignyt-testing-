@@ -3,7 +3,7 @@
 
    This pass rebuilds Home to match a newer "premium reference" mockup (simple greeting +
    weekly-goal ring, a real weight-goal progress card, a Today's Summary strip, Quick Actions,
-   and Recent Workouts) -- replacing the previous hero-image/recovery-score layout, which the
+   and Quick Actions) -- replacing the previous hero-image/recovery-score layout, which the
    newer reference deck no longer shows. Every value is genuinely sourced from existing app
    state / Health Connect / the Smart Goal Engine (window.IgnytGoals) -- no fabricated numbers.
    Where the reference shows something this app has no real source for, that element is
@@ -99,12 +99,6 @@
       daysLeft = Math.max(0, Math.round((new Date(goalCompute.completion) - new Date()) / 86400000));
     }
     const weightDeltaKg = (activeGoal && currentWeightKg != null) ? (activeGoal.targetWeight - currentWeightKg) : null;
-
-    const recentSessions = state.workoutLog.slice(0, 3);
-    const rowIcon = (muscles) => {
-      const g = muscles.length ? FINE_TO_BROAD[muscles[0]] : null;
-      return (g === 'Chest' || g === 'Shoulders' || g === 'Arms') ? 'dumbbell' : (g === 'Back') ? 'workout' : 'body';
-    };
 
     const summaryTile = (icon, bg, color, value, unit, label, goalText) => `<div class="pg-card" style="padding:14px;background:${bg};border-color:transparent;">
       <span style="color:${color};">${svg(icon, 18)}</span>
@@ -252,24 +246,6 @@
         ${quickAction('progress', 'var(--rh-purple)', 'Progress', 'data-nav="progress"')}
         ${quickAction('more', 'var(--rh-muted)', 'More', 'data-nav="tools"')}
       </div>
-
-      <div class="rh-section-head"><span>Recent Workouts</span><a href="#" class="rh-view-all" data-nav="workout">View All</a></div>
-      ${recentSessions.length === 0 ? `<div class="pg-card" style="text-align:center;padding:20px;font-size:13px;color:var(--rh-muted);">No workouts logged yet.</div>` :
-        recentSessions.map(s => {
-          const muscles = sessionMuscles(s.exercises);
-          return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;cursor:pointer;" data-view-session="${s.id}">
-            <span class="tl-card__icon" style="flex:none;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg(rowIcon(muscles), 20)}</span>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:15px;font-weight:800;">${sessionTitle(s)}</div>
-              <div style="font-size:12px;color:var(--rh-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${muscles.length ? muscles.join(', ') : `${(s.exercises||[]).length} exercise${(s.exercises||[]).length!==1?'s':''}`}</div>
-            </div>
-            <div style="flex:none;text-align:right;">
-              <div style="font-size:13px;font-weight:700;">${workoutDurationLabel(s)}</div>
-              <div style="font-size:11px;color:var(--rh-muted);margin-top:2px;">${new Date(s.date).toLocaleDateString('default',{day:'2-digit',month:'short',year:'numeric'})}</div>
-            </div>
-            <span style="color:var(--rh-muted);flex:none;">›</span>
-          </div>`;
-        }).join('')}
     </div>`;
   };
 })();
