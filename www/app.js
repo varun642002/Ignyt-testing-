@@ -6070,7 +6070,9 @@ function renderToolsTab(){
       {id:"health", label:"Health Connect", desc:"Sync with apps, track all metrics", icon:"health"}
     ]],
     ["Nutrition", [
-      {id:"nutrition", label:"Food Log", desc:"Meals, macros & calorie budget", icon:"nutrition"},
+      /* Food Log is deliberately not listed. It is a bottom-nav tab, permanently one tap
+         away, and a card duplicating a primary destination lengthens Tools without making
+         anything reachable that was not already. */
       /* Fasting sits under Nutrition because that is where a user looks for it, but it is its
          own page and its own store — it never reads or writes the food log. */
       {id:"fasting", label:"Fasting", desc:"Track intermittent fasts & streaks", icon:"timer"},
@@ -6078,8 +6080,8 @@ function renderToolsTab(){
       {id:"calculators", label:"Calculator", desc:"BMI, BMR, TDEE & macros", icon:"calc"}
     ]],
     ["Insights", [
-      {id:"insights", label:"Insights", desc:"Day, week, month & year trends", icon:"progress"},
-      {id:"settings", label:"Settings", desc:"Backups & preferences", icon:"gear"}
+      {id:"insights", label:"Insights", desc:"Day, week, month & year trends", icon:"progress"}
+      /* Settings is not listed either — it is the gear in the header, on every screen. */
     ]]
   ];
   let hcConnected = false;
