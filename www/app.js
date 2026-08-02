@@ -14481,6 +14481,13 @@ function renderWorkoutTab(){
           <div class="row-between" style="margin-bottom:4px;position:relative;">
             <button class="wk-ex-card__collapse-toggle" data-toggle-ex-collapse="${exi}" style="min-width:0;flex:1;text-align:left;background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;">
               <span style="transform:rotate(${collapsed?'-90deg':'0deg'});transition:transform .15s ease;flex:none;color:var(--rh-muted);">${svg('chevronDown',14)}</span>
+              ${(()=>{ const img = exerciseImageSrc(ex.name);
+                /* The illustration leads the row, same as it does in the Library. Mid-set you
+                   are scanning for "which exercise is this" and the picture answers that
+                   faster than the name does. Falls back to nothing rather than to an icon
+                   badge: the chevron and name already identify the row, and an empty 34px box
+                   on the 15 exercises without artwork would misalign the whole header. */
+                return img ? `<span class="wk-ex-card__photo"><img src="${escHtml(img)}" alt="" loading="lazy"></span>` : ""; })()}
               <span style="min-width:0;">
                 <span class="wk-ex-card__name" style="display:block;">${escHtml(ex.name)}</span>
                 <span class="muscle-chip">${muscle}</span>
