@@ -64,16 +64,10 @@
     const quoteOfDay = (window.IgnytMessages && IgnytMessages.forDay(beforeNoon ? "morning" : "daily"))
       || FALLBACK_QUOTES[Math.floor(Date.now() / 86400000) % FALLBACK_QUOTES.length];
 
-    /* Welcome back, once per app open rather than once per render. IgnytSession stamps the
-       open; Home reads it and clears it, so tapping between tabs does not re-greet you. A
-       greeting that fires on every render stops being a greeting. */
-    const welcomeBack = (() => {
-      try {
-        if (!window.IgnytMessages || !sessionStorage.getItem("hx_fresh_open")) return "";
-        sessionStorage.removeItem("hx_fresh_open");
-        return IgnytMessages.next("welcomeBack") || "";
-      } catch (e) { return ""; }
-    })();
+    /* The one-line welcome banner that used to live here is gone. The full welcome card
+       (js/motivation/welcome.js) now owns the app-open moment, and both read and CLEARED the
+       same hx_fresh_open flag -- Home renders first, so the banner consumed the flag and the
+       card could never appear. One owner for one flag. */
 
     /* Consistency is measured, not asserted: how many of the last 28 days carry a workout or a
        food entry. Anything that only counted workouts would call a diligent rest week
@@ -136,8 +130,6 @@
     <div class="home-light">
       ${renderAchievementCelebration ? (state.lastUnlockedAchievements && state.lastUnlockedAchievements.length ? renderAchievementCelebration() : '') : ''}
       ${renderPRCelebration ? (state.lastSessionPRs && state.lastSessionPRs.length ? renderPRCelebration() : '') : ''}
-
-      ${welcomeBack ? `<div class="hm-welcome">${svg('bolt', 15)}<span>${escHtml(welcomeBack)}</span></div>` : ''}
 
       <div class="pg-card hm-greet">
         <div class="hm-greet__left">

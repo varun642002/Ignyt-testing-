@@ -19246,6 +19246,20 @@ function handleHardwareBack(){
   });
 })();
 
+/* The daily welcome card. Shown AFTER the first render, deliberately: the app is already
+   painted behind it, so dismissing costs nothing and a slow first paint never leaves the user
+   staring at a gradient with nothing underneath. It declines to show itself during a workout,
+   more than once a day, or on anything that is not a genuine app open -- see shouldShow(). */
+/* The module check is INSIDE the callback, not around it. app.js is loaded before
+   js/motivation/*, so window.IgnytWelcome does not exist yet while this line is being
+   evaluated -- an `if(window.IgnytWelcome)` wrapper here is always false and silently
+   registers nothing. Every other motivation module gets away with the outer form only because
+   it is referenced from inside a render function that runs long after load. */
+setTimeout(()=>{
+  if(!window.IgnytWelcome) return;
+  try { IgnytWelcome.show(state); } catch(e){ console.warn("welcome card failed:", e); }
+}, 60);
+
 // Live workout notification: watches app foreground/background and mirrors the open session.
 if(window.IgnytActiveWorkout) IgnytActiveWorkout.start();
 
