@@ -149,3 +149,79 @@
   border-radius: 14px; overflow: hidden; background: var(--rh-border, #33333d);
 }
 .ex-howto__poster img{ width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* =========================================================
+   PAYWALL + PREMIUM GATE
+   The wall replaces a gated feature's content; the sheet is the offer itself, raised over
+   whatever screen the user was on so dismissing it returns them there rather than to Home.
+========================================================= */
+
+.pw-wall{
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 10px; padding: 40px 24px;
+}
+.pw-wall__badge{
+  width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center;
+  background: rgba(37,99,235,.12); color: var(--rh-blue, #2563eb);
+}
+.pw-wall__title{ font-size: 17px; font-weight: 800; }
+.pw-wall__body{
+  font-size: 13px; line-height: 1.55; color: var(--rh-muted, #8b8b94); max-width: 34ch;
+}
+.pw-wall__cta{ margin-top: 6px; min-width: 190px; }
+.pw-wall__restore{ font-size: 12px; padding: 6px 12px; }
+
+.pw-sheet{ padding-bottom: 20px; }
+.pw-head{ text-align: center; padding: 4px 20px 14px; }
+.pw-head__title{ font-size: 20px; font-weight: 900; letter-spacing: -.2px; }
+.pw-head__sub{
+  font-size: 12.5px; color: var(--rh-muted, #8b8b94); margin-top: 4px; line-height: 1.5;
+}
+
+.pw-list{
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px;
+  padding: 0 20px 16px;
+}
+.pw-item{
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--rh-text, #f7f4ef);
+}
+.pw-item svg{ flex: none; color: var(--rh-blue, #2563eb); }
+
+/* One row per plan. The whole row is the control, not a small radio — this is the primary
+   decision on the sheet and it is being made with a thumb. */
+.pw-plan{
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: calc(100% - 40px); margin: 0 20px 8px; padding: 14px 16px;
+  border-radius: 14px; border: 1.5px solid var(--rh-border, #2a2a33);
+  background: transparent; color: inherit; text-align: left; cursor: pointer;
+}
+.pw-plan.is-on{
+  border-color: var(--rh-blue, #2563eb);
+  background: rgba(37,99,235,.08);
+}
+.pw-plan__name{ font-size: 14px; font-weight: 800; }
+.pw-plan__trial{ font-size: 11.5px; color: var(--rh-muted, #8b8b94); margin-top: 2px; }
+.pw-plan__right{ text-align: right; }
+.pw-plan__price{ font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.pw-plan__save{
+  font-size: 11px; font-weight: 800; margin-top: 2px;
+  color: var(--rh-green, #22c55e);
+}
+
+.pw-buy{ width: calc(100% - 40px); margin: 8px 20px 0; }
+.pw-fine{
+  font-size: 11px; line-height: 1.5; color: var(--rh-muted, #8b8b94);
+  padding: 10px 20px 0; text-align: center;
+}
+.pw-error{
+  margin: 0 20px 10px; padding: 12px 14px; border-radius: 12px;
+  background: rgba(239,68,68,.1); color: #ef4444; font-size: 12.5px; line-height: 1.5;
+}
+.pw-loading{
+  padding: 24px 20px; text-align: center;
+  font-size: 13px; color: var(--rh-muted, #8b8b94);
+}
+.pw-restore{
+  display: block; margin: 10px auto 0; font-size: 12px; padding: 6px 12px;
+}

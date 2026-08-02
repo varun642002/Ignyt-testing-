@@ -921,6 +921,40 @@ function formatTime(s){ const m=Math.floor(s/60); const r=s%60; return `${m}:${r
  *
  *  Names are checked against a manifest rather than probed, because a bare <img> onerror
  *  fallback would flash a broken icon on 145 rows every time the Library is opened. */
+/* =========================================================
+   PREMIUM GATING
+
+   Two functions, used at six render seams. Gating at the seam rather than at every button
+   that can reach a feature is what keeps this honest: there are a dozen routes into the AI
+   Coach and only one place it renders.
+
+   premiumAllows() is deliberately tolerant of the entitlements module being absent — a
+   billing failure must never blank a screen. If it did not load, everything is allowed.
+========================================================= */
+
+function premiumAllows(feature){
+  if(!window.IgnytEntitlements) return true;
+  try { return IgnytEntitlements.has(feature); }
+  catch(e){ return true; }
+}
+
+/** The upsell shown in place of a gated feature. Never a dead end: it explains what the
+ *  feature does, what it costs, and leaves everything the user has logged reachable. */
+function renderUpgradeWall(feature){
+  const name = (window.IgnytEntitlements && IgnytEntitlements.label(feature)) || "This feature";
+  return `
+    <div class="pw-wall">
+      <div class="pw-wall__badge">${svg('lock', 22)}</div>
+      <div class="pw-wall__title">${escHtml(name)} is part of Premium</div>
+      <div class="pw-wall__body">
+        Your workouts, food log, weight history and the full exercise library stay free —
+        and everything you have already logged is still here.
+      </div>
+      <button class="btn btn-accent pw-wall__cta" data-action="open-paywall">See Premium</button>
+      <button class="btn btn-ghost pw-wall__restore" data-action="restore-purchases">Restore purchase</button>
+    </div>`;
+}
+
 function exerciseImageSlug(name){
   return String(name || "").toLowerCase()
     .replace(/&/g, " and ")
@@ -5959,6 +5993,7 @@ function renderApp(){
     ${renderConfirmDialog()}
     ${renderLegalViewer()}
     ${renderLiveSessionBar()}
+    ${renderPaywallSheet()}
     <nav class="bottom-nav ${isLightTab?'bottom-nav--home-light':''}">
       ${navBtn("home","Home")}
       ${navBtn("workout","Workout")}
@@ -6200,6 +6235,7 @@ function renderProfileTab(){
 /* Honest navigation shell: AI assistance is not implemented in this repository, so this
    screen never implies that prompts, plans, or data analysis are being generated. */
 function renderAiCoachTab(){
+  if(!premiumAllows("coach")) return renderUpgradeWall("coach");
   // Rule-based, data-driven coach (offline, no LLM). Falls back to the honest empty state only
   // if the module failed to load.
   if(window.IgnytCoach) return window.IgnytCoach.render();
@@ -6644,6 +6680,7 @@ function renderHealthInsightMetrics(d, period, light) {
 }
 
 function renderHealthDashboard() {
+  if(!premiumAllows("health")) return renderUpgradeWall("health");
   const isNative = window.HealthConnect && HealthConnect.isNativeAndroid();
   const integ = window.HealthConnectIntegration;
   const hcState = integ ? integ.loadState() : { connected: false, lastSyncAt: null };
@@ -6757,6 +6794,7 @@ const INSIGHTS_RANGES = [["day","Day"],["week","Week"],["month","Month"],["year"
 const INSIGHTS_RANGE_LABEL = { day:"Today", week:"Last 7 days", month:"Last 30 days", year:"Last 365 days" };
 
 function renderInsightsTab(){
+  if(!premiumAllows("insights")) return renderUpgradeWall("insights");
   const backBtn = `<button class="rh-btn rh-btn--ghost" data-action="close-insights" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:10px;">← Back</button>`;
   const isNative = window.HealthConnect && HealthConnect.isNativeAndroid();
 
@@ -7020,6 +7058,94 @@ function renderRestTimerSheet(){
  *  Reads the live session, so it changes as sets are ticked: it is a readout of the workout
  *  in progress, not a summary written at the end. Counting and the diagram both live in
  *  IgnytMuscleMap; this function only decides what the sheet looks like. */
+/* The paywall. A sheet rather than a screen, so it can be raised from any gated feature and
+   dismissed back to where the user was — a paywall that traps you is a paywall you uninstall.
+
+   Every price here comes from Play. The app never formats currency: Play returns a string
+   already localised, tax-inclusive and correct for whatever regional pricing or promotion
+   applies to this user, so what is shown is exactly what Google will charge.
+
+   The saving on the yearly plan is computed from the two prices Play returned rather than
+   stated as a constant. A hardcoded "Save 33%" becomes a lie the moment either price changes,
+   and it would be wrong in every currency but the one it was written for. */
+/** Raises the paywall and fetches the current plans from Play. */
+async function openPaywall(){
+  state.paywallOpen = true;
+  state.paywallError = null;
+  state.paywallPlans = null;
+  render();
+  const res = await IgnytEntitlements.getPlans();
+  if(res && res.success && res.data){
+    state.paywallPlans = res.data;
+    const plans = res.data.plans || [];
+    // Default to yearly where it exists: it is the better deal and the one worth nudging to.
+    const yearly = plans.find(p => /P1Y/.test(p.period || ""));
+    state.paywallChoice = (yearly || plans[0] || {}).basePlanId || null;
+  }else{
+    state.paywallError = (res && res.error) || "Could not load plans.";
+  }
+  render();
+}
+
+function renderPaywallSheet(){
+  if(!state.paywallOpen) return "";
+  const E = window.IgnytEntitlements;
+  const plans = (state.paywallPlans && state.paywallPlans.plans) || [];
+  const err = state.paywallError;
+
+  const monthly = plans.find(p => /P1M/.test(p.period || ""));
+  const yearly  = plans.find(p => /P1Y/.test(p.period || ""));
+
+  let saving = null;
+  if(monthly && yearly && monthly.priceMicros > 0 && yearly.priceMicros > 0){
+    const pct = Math.round((1 - (yearly.priceMicros / (monthly.priceMicros * 12))) * 100);
+    if(pct > 0) saving = pct;
+  }
+
+  const planRow = (plan, isYearly) => {
+    if(!plan) return "";
+    const chosen = state.paywallChoice === plan.basePlanId;
+    return `<button class="pw-plan${chosen ? " is-on" : ""}" data-paywall-plan="${escHtml(plan.basePlanId)}">
+      <div class="pw-plan__left">
+        <div class="pw-plan__name">${isYearly ? "Yearly" : "Monthly"}</div>
+        ${plan.hasFreeTrial ? `<div class="pw-plan__trial">7 days free, then</div>` : ""}
+      </div>
+      <div class="pw-plan__right">
+        <div class="pw-plan__price">${escHtml(plan.price)}</div>
+        ${isYearly && saving ? `<div class="pw-plan__save">Save ${saving}%</div>` : ""}
+      </div>
+    </button>`;
+  };
+
+  const body = err
+    ? `<div class="pw-error">${escHtml(err)}</div>
+       <button class="btn btn-ghost" data-action="reload-paywall">Try again</button>`
+    : (plans.length
+        ? `${planRow(monthly, false)}${planRow(yearly, true)}
+           <button class="btn btn-accent pw-buy" data-action="paywall-buy"${state.paywallBusy ? " disabled" : ""}>
+             ${state.paywallBusy ? "Opening Google Play…" : "Start free trial"}
+           </button>
+           <div class="pw-fine">
+             Billed through Google Play. Cancel any time in Play &rsaquo; Subscriptions —
+             cancel before the trial ends and you are not charged.
+           </div>`
+        : `<div class="pw-loading">Loading plans…</div>`);
+
+  return `<div class="sheet-backdrop" data-action="close-paywall"></div>
+    <div class="sheet pw-sheet">
+      <div class="sheet__handle"></div>
+      <div class="pw-head">
+        <div class="pw-head__title">IGNYT Premium</div>
+        <div class="pw-head__sub">Everything you already log stays free. Premium adds the coaching.</div>
+      </div>
+      <div class="pw-list">
+        ${Object.keys((E && E.FEATURES) || {}).map(k => `<div class="pw-item">${svg('check',15)}<span>${escHtml(E.FEATURES[k])}</span></div>`).join("")}
+      </div>
+      ${body}
+      <button class="btn btn-ghost pw-restore" data-action="restore-purchases">Restore purchase</button>
+    </div>`;
+}
+
 function renderMuscleDistributionSheet(){
   if(!state.muscleSheetOpen || !state.session) return "";
   const MM = window.IgnytMuscleMap;
@@ -12075,6 +12201,7 @@ function dur_ft(ms){
 
 /* Supplements — app-side wiring. Screen lives in www/js/pages/supplements.js. */
 function renderSupplementsScreen(){
+  if(!premiumAllows("supplements")) return renderUpgradeWall("supplements");
   if(!window.IgnytPages || typeof window.IgnytPages.renderSupplements !== "function"){
     return `<div class="sp"><div class="sp-none">The supplements module failed to load.</div></div>`;
   }
@@ -12082,6 +12209,7 @@ function renderSupplementsScreen(){
 }
 
 function renderFastingScreen(){
+  if(!premiumAllows("fasting")) return renderUpgradeWall("fasting");
   if(!window.IgnytPages || typeof window.IgnytPages.renderFasting !== "function"){
     return `<div class="ft"><div class="ft-empty-note">The fasting module failed to load.</div></div>`;
   }
@@ -12222,6 +12350,7 @@ async function syncFastNotifications(fast){
 }
 
 function renderDietPlanScreen(){
+  if(!premiumAllows("diet")) return renderUpgradeWall("diet");
   /* The catalogue loads lazily on the first food UI. The Diet Plan is one — it re-scales plan
      items against catalogue foods when a serving is edited — but it can be opened from Profile
      or the Food Log shortcut without search ever running. Without this, editing a serving hit
@@ -18140,6 +18269,50 @@ function attachHandlers(){
   document.querySelectorAll('[data-action="close-muscle-sheet"]').forEach(el=>{
     el.addEventListener("click", ()=>{ state.muscleSheetOpen = false; render(); });
   });
+
+  /* ---- Paywall ----
+     openPaywall reloads the plans from Play each time rather than caching them: prices,
+     promotions and trial eligibility are Google's to decide and can differ between one
+     opening and the next. */
+  document.querySelectorAll('[data-action="open-paywall"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ openPaywall(); });
+  });
+  document.querySelectorAll('[data-action="close-paywall"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.paywallOpen = false; state.paywallError = null; render(); });
+  });
+  document.querySelectorAll('[data-action="reload-paywall"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ openPaywall(); });
+  });
+  document.querySelectorAll("[data-paywall-plan]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.paywallChoice = el.dataset.paywallPlan; render(); });
+  });
+  document.querySelectorAll('[data-action="paywall-buy"]').forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const plans = (state.paywallPlans && state.paywallPlans.plans) || [];
+      const plan = plans.find(p => p.basePlanId === state.paywallChoice) || plans[0];
+      if(!plan){ state.paywallError = "No plan selected."; render(); return; }
+      state.paywallBusy = true; render();
+      /* The offer token is passed through so the user is charged the offer they were shown.
+         Buying by base-plan id alone can select a different offer and skip the free trial. */
+      const res = await IgnytEntitlements.purchase(plan.basePlanId, plan.offerToken);
+      state.paywallBusy = false;
+      if(res && res.success){
+        state.paywallOpen = false;
+        state.paywallError = null;
+        if(res.data && res.data.entitled) showToast("Welcome to Premium.", "success", render);
+      }else{
+        state.paywallError = (res && res.error) || "Purchase failed.";
+      }
+      render();
+    });
+  });
+  document.querySelectorAll('[data-action="restore-purchases"]').forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const premium = await IgnytEntitlements.refresh();
+      showToast(premium ? "Premium restored." : "No active subscription found.", premium ? "success" : "info", render);
+      render();
+    });
+  });
   document.querySelectorAll("[data-add-water]").forEach(el=>{
     el.addEventListener("click", ()=>{
       state.waterLog.unshift({ id: nextId(), date: nutritionDateStr(), ml: Number(el.dataset.addWater) });
@@ -18350,6 +18523,16 @@ window.addEventListener("storage", (e)=>{
 try{
   render();
   if(window.__hideBootSplash) window.__hideBootSplash();
+  /* Ask Play what this user is entitled to, once per launch. Deliberately after the first
+     paint and not awaited: the cached entitlement already drove that paint, so a slow or
+     unreachable Play service delays nothing the user sees. If Play's answer differs from the
+     cache, the re-render corrects it a moment later. */
+  if(window.IgnytEntitlements){
+    const wasPremium = IgnytEntitlements.isPremium();
+    IgnytEntitlements.refresh().then(nowPremium=>{
+      if(nowPremium !== wasPremium && typeof render === "function") render();
+    }).catch(()=>{ /* billing is never allowed to break boot */ });
+  }
 }catch(err){
   console.error("Ignyt failed to boot:", err);
   renderErrorScreen(err);
