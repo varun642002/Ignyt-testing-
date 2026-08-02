@@ -126,25 +126,6 @@ const IgnytAuth = (() => {
     render();
   }
 
-  /* Google Sign-In. The native side shows the account picker and does the token-for-session
-     exchange; this only records the result and tells the UI. No timeout is imposed here --
-     the picker is system UI and legitimately waits on the user, and a cancellation comes back
-     as an ordinary error result rather than a rejection. */
-  async function signIn() {
-    if (_busy) return { success: false, error: "Already in progress." };
-    _busy = true; _errorMsg = null; notifyUI();
-    const result = await callNative("signIn");
-    _busy = false;
-    if (result.success && result.data && result.data.user) {
-      saveAccount(result.data.user);
-      _errorMsg = null;
-    } else {
-      _errorMsg = result.error || "Sign-in failed.";
-    }
-    notifyUI();
-    return result;
-  }
-
   async function signUpWithEmail(email, password) {
     if (_busy) return { success: false, error: "Already in progress." };
     _busy = true; _errorMsg = null; notifyUI();
@@ -290,7 +271,6 @@ const IgnytAuth = (() => {
     checkSigning,
     getSigningInfo: () => _signing,   // sync, cached — null until boot's checkSigning resolves
     signUpWithEmail,
-    signIn,
     signInWithEmail,
     sendPasswordReset,
     resendVerificationEmail,
