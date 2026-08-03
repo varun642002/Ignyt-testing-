@@ -14784,6 +14784,73 @@ function buildWorkoutSummaryText(s){
   return lines.join("\n");
 }
 
+/* =========================================================
+   "YOU LIFTED A GIRAFFE" — total volume, in something a person can picture.
+
+   Volume is the one number on this screen nobody has intuition for. 12,400 kg is meaningless;
+   two horses is not. This turns the figure into a comparison and does nothing else.
+
+   THE WEIGHTS ARE REAL, AND THE COPY SAYS "ABOUT".
+   These are approximate adult averages — a real giraffe is anywhere from 800 to 1,900 kg — so
+   the card says "about the weight of" rather than stating an equivalence it cannot support.
+   Rounding a session to the nearest animal is a bit of fun; quoting a false figure to do it
+   is not, and the numbers below are the ones a reference would give.
+
+   ON THE GRAPHIC: these are emoji, not drawn silhouettes. A hand-authored SVG animal has to be
+   LOOKED at to know whether it reads as a rhino or as a grey blob, and this environment cannot
+   render a screenshot to check. An emoji is unambiguous on every Android, needs no asset, and
+   survives the CSP and offline. If you want real illustrations, that is a design pass with a
+   pair of eyes on it, not something to guess at.
+========================================================= */
+const VOLUME_ANIMALS = [
+  /* `plural` is stated, not derived. Stripping the article and adding "s" produced
+     "persons" and "bisons"; English takes no rule here, so the data carries it. */
+  { kg: 4.5,     emoji: "\u{1F408}", name: "a cat", plural: "cats" },
+  { kg: 25,      emoji: "\u{1F415}", name: "a labrador", plural: "labradors" },
+  { kg: 62,      emoji: "\u{1F9CD}", name: "an adult person", plural: "people" },
+  { kg: 100,     emoji: "\u{1F43C}", name: "a giant panda", plural: "giant pandas" },
+  { kg: 160,     emoji: "\u{1F98D}", name: "a gorilla", plural: "gorillas" },
+  { kg: 190,     emoji: "\u{1F981}", name: "a lion", plural: "lions" },
+  { kg: 270,     emoji: "\u{1F43B}", name: "a grizzly bear", plural: "grizzly bears" },
+  { kg: 500,     emoji: "\u{1F40E}", name: "a horse", plural: "horses" },
+  { kg: 750,     emoji: "\u{1F404}", name: "a cow", plural: "cows" },
+  { kg: 900,     emoji: "\u{1F9AC}", name: "a bison", plural: "bison" },
+  { kg: 1200,    emoji: "\u{1F992}", name: "a giraffe", plural: "giraffes" },
+  { kg: 1500,    emoji: "\u{1F99B}", name: "a hippo", plural: "hippos" },
+  { kg: 2300,    emoji: "\u{1F98F}", name: "a rhino", plural: "rhinos" },
+  { kg: 6000,    emoji: "\u{1F418}", name: "an elephant", plural: "elephants" },
+  { kg: 150000,  emoji: "\u{1F40B}", name: "a blue whale", plural: "blue whales" }
+];
+
+/** The heaviest animal this volume covers, and how many of it. Null under the lightest one —
+ *  a session that has not moved a cat has nothing to compare. Always in KILOGRAMS: the animals
+ *  are metric facts, so converting them to pounds for a lb user would make the comparison
+ *  wrong rather than localised. */
+function volumeAsAnimal(volumeKg){
+  const v = Number(volumeKg) || 0;
+  if(v < VOLUME_ANIMALS[0].kg) return null;
+  let pick = VOLUME_ANIMALS[0];
+  for(const a of VOLUME_ANIMALS) if(v >= a.kg) pick = a;
+  return { animal: pick, count: Math.max(1, Math.round(v / pick.kg)) };
+}
+
+function renderVolumeAnimalCard(volumeKg){
+  const m = volumeAsAnimal(volumeKg);
+  if(!m) return "";
+  const { animal, count } = m;
+  return `
+    <div class="pg-card wk-animal">
+      <div class="wk-animal__art" aria-hidden="true">
+        <span class="wk-animal__emoji">${animal.emoji}</span>
+        ${count > 1 ? `<span class="wk-animal__count">×${count}</span>` : ""}
+      </div>
+      <div class="wk-animal__text">
+        <div class="wk-animal__lead">You lifted ${count > 1 ? `${count} × ${escHtml(animal.name)}` : escHtml(animal.name)}</div>
+        <div class="wk-animal__sub">${Math.round(volumeKg).toLocaleString()} kg moved · about the weight of ${count > 1 ? escHtml(animal.plural) : escHtml(animal.name)}</div>
+      </div>
+    </div>`;
+}
+
 function renderWorkoutComplete(s){
   const completedSets = computeCompletedSets(s.exercises);
   const breakdown = workoutBreakdown(s);
@@ -14884,6 +14951,11 @@ function renderWorkoutComplete(s){
         <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(217,119,6,.12);color:#D97706;">${svg('body',18)}</span>
           <div class="pg-stat-card__value">${s.exercises.length}</div><div class="pg-stat-card__label">Exercises</div></div>
       </div>
+
+      ${/* Directly under the stat grid, because it is the Volume tile restated in something a
+            person can picture. Anywhere further down and it reads as a separate fact rather
+            than as the answer to "is 12,400 kg a lot?". */''}
+      ${renderVolumeAnimalCard(s.volume || 0)}
 
       <div class="rh-section-head" style="margin-top:0;"><span>Exercise Breakdown</span></div>
       <div class="pg-card" style="padding:6px 14px;">

@@ -412,11 +412,14 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; background:rgba(37,9
    leave a band of dead space beneath the arcs and push the card taller than its own content.
 ========================================================= */
 
-.hm-gauge { display: flex; align-items: center; gap: 16px; }
-.hm-gauge__arcs { flex: none; width: 132px; }
+/* The legend sets the card's height (three rows), and the arc block is much shorter, so the
+   semicircle was sitting with 46px of dead space above and below it -- centred, but stranded.
+   A wider arc column and a tighter row gap bring the two sides to a comparable height. */
+.hm-gauge { display: flex; align-items: center; gap: 14px; }
+.hm-gauge__arcs { flex: none; width: 152px; }
 .hm-gauge__arcs svg { width: 100%; height: auto; display: block; overflow: visible; }
 
-.hm-gauge__legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.hm-gauge__legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
 .hm-gauge__row { min-width: 0; }
 .hm-gauge__name { display: block; font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
 .hm-gauge__val {
@@ -428,5 +431,5 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; background:rgba(37,9
 
 @media (max-width: 340px) {
   .hm-gauge { gap: 10px; }
-  .hm-gauge__arcs { width: 112px; }
+  .hm-gauge__arcs { width: 124px; }
 }

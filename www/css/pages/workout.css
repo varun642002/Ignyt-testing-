@@ -504,3 +504,25 @@
   background: #fff; display: block;
 }
 .wk-ex-card__photo img{ width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* =========================================================
+   "You lifted a giraffe" — the volume comparison on the workout summary.
+   The emoji is the graphic, so it is sized like one rather than like text, and sits on a
+   tinted disc so it reads as an illustration instead of a stray character in a sentence.
+========================================================= */
+.wk-animal { display:flex; align-items:center; gap:14px; margin:12px 0; }
+.wk-animal__art {
+  position:relative; flex:none; width:64px; height:64px; border-radius:50%;
+  display:grid; place-items:center;
+  background:rgba(217,119,6,.12);
+}
+.wk-animal__emoji { font-size:34px; line-height:1; }
+.wk-animal__count {
+  position:absolute; right:-4px; bottom:-2px;
+  background:var(--rh-card); border:1px solid var(--rh-border); border-radius:999px;
+  padding:1px 7px; font-size:11px; font-weight:800; color:var(--rh-text);
+  font-variant-numeric:tabular-nums;
+}
+.wk-animal__text { flex:1; min-width:0; }
+.wk-animal__lead { font-size:16px; font-weight:800; letter-spacing:-.01em; line-height:1.25; }
+.wk-animal__sub { font-size:12px; color:var(--rh-muted); margin-top:3px; line-height:1.4; }
