@@ -1,5 +1,33 @@
 # CLAUDE_PROGRESS.md
 
+### Achievement badges redesigned — flat vector labels
+
+Reference given: a sheet of flat gym-label badges (hexagons, octagons, shields; heavy outline,
+a band across the middle, stars). Rebuilt as inline SVG in `achievementBadgeSvg()`, because a
+border-radius and a gradient cannot make a hexagon.
+
+- **Shape = category**, held across every badge in it, so the grid is scannable before a word
+  is read. milestone hexagon (flat top), streak hexagon (pointed top), strength octagon,
+  program shield (chamfered shoulders), consistency pentagon, nutrition circle.
+- **Colour = tier, and star count = tier.** Five tiers now: bronze 1 star through platinum 5.
+  copper / steel / gold / ice / violet. Platinum is violet, not a literal platinum grey, because
+  a pale grey badge is indistinguishable from silver at 84px.
+- **The trophy is gone** — from the milestone badges and from the Achievements header. A trophy
+  is a prize for beating someone; these mark work done. milestone takes the dumbbell (it counts
+  workouts), strength the bolt.
+- **Re-tiered all 82 defs**: 33 of them were gold, which makes a top tier meaningless once it
+  has a star count. Now bronze 26, silver 23, gold 18, diamond 12, platinum 3.
+- The band-flanking stars from the first pass were removed: they made a bronze badge look like
+  it carried three, which defeats the count.
+- Dropped `.bdg__medal` / `.bdg__icon` / `.bdg__value` / `.bdg--bronze|silver|gold` CSS and the
+  unused `ACHIEVEMENT_COLORS`. `.bdg__svg` sizes the badge; everything else is drawn in the SVG.
+- Verified in the browser at 375px in BOTH themes, every shape against every tier, plus
+  `scratchpad/test_badges.js` — 82 badges × earned/locked, checking star count against tier,
+  unknown tiers/categories, clip-id uniqueness, band-value width and stray tokens. 0 problems.
+- Cache **v191 -> v192**. BUILD SUCCESSFUL, APK 23,065,772 bytes.
+
+---
+
 ## CURRENT STATE — 3 Aug 2026 — Weight + BMI motivation shipped; premium gating off; APK built
 
 **Branch:** feature/premium-subscription

@@ -3758,11 +3758,11 @@ const ACHIEVEMENT_DEFS = [
   { id:"workouts_50", name:"50 Workouts", desc:"Log 50 freestyle workouts.", check:()=> state.workoutLog.length>=50 , category:"milestone", tier:"silver", value:"50" },
   { id:"workouts_100", name:"100 Workouts", desc:"Log 100 freestyle workouts.", check:()=> state.workoutLog.length>=100 , category:"milestone", tier:"gold", value:"100" },
   { id:"workouts_250", name:"250 Workouts", desc:"Log 250 freestyle workouts.", check:()=> state.workoutLog.length>=250 , category:"milestone", tier:"gold", value:"250" },
-  { id:"workouts_500", name:"500 Workouts", desc:"Log 500 freestyle workouts.", check:()=> state.workoutLog.length>=500 , category:"milestone", tier:"gold", value:"500" },
+  { id:"workouts_500", name:"500 Workouts", desc:"Log 500 freestyle workouts.", check:()=> state.workoutLog.length>=500 , category:"milestone", tier:"diamond", value:"500" },
   { id:"first_pr", name:"First Personal Record", desc:"Set your first PR.", check:()=> state.prs.length>=1 , category:"strength", tier:"bronze", value:"1" },
   { id:"first_100kg", name:"First 100kg Lift", desc:"Hit 100kg or more on any lift.", check:()=> state.prs.some(p=>p.type==="weight" && p.value>=100) , category:"strength", tier:"silver", value:"100kg" },
   { id:"sets_100", name:"100 Working Sets", desc:"Log 100 working sets total.", check:()=> totalWorkingSets()>=100 , category:"strength", tier:"bronze", value:"100" },
-  { id:"volume_1m", name:"1,000,000kg Lifetime Volume", desc:"Move a million kg over your lifetime.", check:()=> totalLifetimeVolume()>=1000000 , category:"strength", tier:"gold", value:"1M kg" },
+  { id:"volume_1m", name:"1,000,000kg Lifetime Volume", desc:"Move a million kg over your lifetime.", check:()=> totalLifetimeVolume()>=1000000 , category:"strength", tier:"diamond", value:"1M kg" },
   { id:"hyrox_week1", name:"Complete HYROX Week 1", desc:"Finish every session in Week 1 of the program.", check:()=> weekProgress(WEEKS[0])===100 , category:"program", tier:"bronze", value:"W1" },
   { id:"hyrox_full_program", name:"Complete 8-Week HYROX Program", desc:"Finish the entire 8-week structured program.", check:()=> overallPlanProgress()===100 , category:"program", tier:"gold", value:"8W" },
   { id:"streak_3", name:"3-Day Streak", desc:"Train 3 days in a row.", check:()=> computeStreak()>=3 , category:"streak", tier:"bronze", value:"3" },
@@ -3770,7 +3770,7 @@ const ACHIEVEMENT_DEFS = [
   { id:"streak_14", name:"14-Day Streak", desc:"Train 14 days in a row.", check:()=> computeStreak()>=14 , category:"streak", tier:"silver", value:"14" },
   { id:"streak_30", name:"30-Day Streak", desc:"Train 30 days in a row.", check:()=> computeStreak()>=30 , category:"streak", tier:"silver", value:"30" },
   { id:"streak_60", name:"60-Day Streak", desc:"Train 60 days in a row.", check:()=> computeStreak()>=60 , category:"streak", tier:"gold", value:"60" },
-  { id:"streak_100", name:"100-Day Streak", desc:"Train 100 days in a row.", check:()=> computeStreak()>=100 , category:"streak", tier:"gold", value:"100" },
+  { id:"streak_100", name:"100-Day Streak", desc:"Train 100 days in a row.", check:()=> computeStreak()>=100 , category:"streak", tier:"diamond", value:"100" },
 
   /* ---------------------------------------------------------------------------------------
      Everything below was added to take the set past fifty. Every check reads logged data --
@@ -3780,37 +3780,37 @@ const ACHIEVEMENT_DEFS = [
   --------------------------------------------------------------------------------------- */
 
   /* ---- volume of work ---- */
-  { id:"workouts_750", name:"750 Workouts", desc:"Log 750 freestyle workouts.", check:()=> state.workoutLog.length>=750 , category:"milestone", tier:"gold", value:"750" },
-  { id:"workouts_1000", name:"1,000 Workouts", desc:"Log 1,000 freestyle workouts.", check:()=> state.workoutLog.length>=1000 , category:"milestone", tier:"gold", value:"1K" },
+  { id:"workouts_750", name:"750 Workouts", desc:"Log 750 freestyle workouts.", check:()=> state.workoutLog.length>=750 , category:"milestone", tier:"diamond", value:"750" },
+  { id:"workouts_1000", name:"1,000 Workouts", desc:"Log 1,000 freestyle workouts.", check:()=> state.workoutLog.length>=1000 , category:"milestone", tier:"platinum", value:"1K" },
   { id:"training_days_50", name:"50 Training Days", desc:"Train on 50 different days.", check:()=> distinctTrainingDays()>=50 , category:"milestone", tier:"silver", value:"50" },
   { id:"training_days_200", name:"200 Training Days", desc:"Train on 200 different days.", check:()=> distinctTrainingDays()>=200 , category:"milestone", tier:"gold", value:"200" },
   { id:"hours_10", name:"10 Hours Trained", desc:"Spend 10 hours in logged sessions.", check:()=> totalTrainingMinutes()>=600 , category:"milestone", tier:"bronze", value:"10h" },
   { id:"hours_50", name:"50 Hours Trained", desc:"Spend 50 hours in logged sessions.", check:()=> totalTrainingMinutes()>=3000 , category:"milestone", tier:"silver", value:"50h" },
   { id:"hours_100", name:"100 Hours Trained", desc:"Spend 100 hours in logged sessions.", check:()=> totalTrainingMinutes()>=6000 , category:"milestone", tier:"gold", value:"100h" },
-  { id:"hours_500", name:"500 Hours Trained", desc:"Spend 500 hours in logged sessions.", check:()=> totalTrainingMinutes()>=30000 , category:"milestone", tier:"gold", value:"500h" },
+  { id:"hours_500", name:"500 Hours Trained", desc:"Spend 500 hours in logged sessions.", check:()=> totalTrainingMinutes()>=30000 , category:"milestone", tier:"diamond", value:"500h" },
 
   /* ---- sets and reps ---- */
   { id:"sets_500", name:"500 Working Sets", desc:"Log 500 working sets total.", check:()=> totalWorkingSets()>=500 , category:"strength", tier:"silver", value:"500" },
   { id:"sets_1000", name:"1,000 Working Sets", desc:"Log 1,000 working sets total.", check:()=> totalWorkingSets()>=1000 , category:"strength", tier:"silver", value:"1K" },
-  { id:"sets_5000", name:"5,000 Working Sets", desc:"Log 5,000 working sets total.", check:()=> totalWorkingSets()>=5000 , category:"strength", tier:"gold", value:"5K" },
+  { id:"sets_5000", name:"5,000 Working Sets", desc:"Log 5,000 working sets total.", check:()=> totalWorkingSets()>=5000 , category:"strength", tier:"diamond", value:"5K" },
   { id:"reps_1000", name:"1,000 Reps", desc:"Complete 1,000 working reps.", check:()=> totalWorkingReps()>=1000 , category:"strength", tier:"bronze", value:"1K" },
   { id:"reps_10000", name:"10,000 Reps", desc:"Complete 10,000 working reps.", check:()=> totalWorkingReps()>=10000 , category:"strength", tier:"silver", value:"10K" },
-  { id:"reps_50000", name:"50,000 Reps", desc:"Complete 50,000 working reps.", check:()=> totalWorkingReps()>=50000 , category:"strength", tier:"gold", value:"50K" },
+  { id:"reps_50000", name:"50,000 Reps", desc:"Complete 50,000 working reps.", check:()=> totalWorkingReps()>=50000 , category:"strength", tier:"diamond", value:"50K" },
 
   /* ---- load ---- */
   { id:"first_60kg", name:"First 60kg Lift", desc:"Hit 60kg or more on any lift.", check:()=> heaviestLiftKg()>=60 , category:"strength", tier:"bronze", value:"60kg" },
   { id:"first_140kg", name:"First 140kg Lift", desc:"Hit 140kg or more on any lift.", check:()=> heaviestLiftKg()>=140 , category:"strength", tier:"gold", value:"140kg" },
-  { id:"first_180kg", name:"First 180kg Lift", desc:"Hit 180kg or more on any lift.", check:()=> heaviestLiftKg()>=180 , category:"strength", tier:"gold", value:"180kg" },
+  { id:"first_180kg", name:"First 180kg Lift", desc:"Hit 180kg or more on any lift.", check:()=> heaviestLiftKg()>=180 , category:"strength", tier:"diamond", value:"180kg" },
   { id:"volume_50k", name:"50,000kg Lifted", desc:"Move 50,000kg over your lifetime.", check:()=> totalLifetimeVolume()>=50000 , category:"strength", tier:"bronze", value:"50K kg" },
   { id:"volume_250k", name:"250,000kg Lifted", desc:"Move 250,000kg over your lifetime.", check:()=> totalLifetimeVolume()>=250000 , category:"strength", tier:"silver", value:"250K kg" },
   { id:"volume_500k", name:"500,000kg Lifted", desc:"Move half a million kg over your lifetime.", check:()=> totalLifetimeVolume()>=500000 , category:"strength", tier:"gold", value:"500K kg" },
-  { id:"volume_5m", name:"5,000,000kg Lifted", desc:"Move five million kg over your lifetime.", check:()=> totalLifetimeVolume()>=5000000 , category:"strength", tier:"gold", value:"5M kg" },
+  { id:"volume_5m", name:"5,000,000kg Lifted", desc:"Move five million kg over your lifetime.", check:()=> totalLifetimeVolume()>=5000000 , category:"strength", tier:"platinum", value:"5M kg" },
 
   /* ---- records ---- */
   { id:"prs_10", name:"10 Personal Records", desc:"Set 10 personal records.", check:()=> state.prs.length>=10 , category:"strength", tier:"bronze", value:"10" },
   { id:"prs_25", name:"25 Personal Records", desc:"Set 25 personal records.", check:()=> state.prs.length>=25 , category:"strength", tier:"silver", value:"25" },
   { id:"prs_50", name:"50 Personal Records", desc:"Set 50 personal records.", check:()=> state.prs.length>=50 , category:"strength", tier:"gold", value:"50" },
-  { id:"prs_100", name:"100 Personal Records", desc:"Set 100 personal records.", check:()=> state.prs.length>=100 , category:"strength", tier:"gold", value:"100" },
+  { id:"prs_100", name:"100 Personal Records", desc:"Set 100 personal records.", check:()=> state.prs.length>=100 , category:"strength", tier:"diamond", value:"100" },
 
   /* ---- breadth ---- */
   { id:"muscles_5", name:"Five Muscle Groups", desc:"Train five different muscle groups.", check:()=> distinctMusclesTrained()>=5 , category:"milestone", tier:"bronze", value:"5" },
@@ -3826,8 +3826,8 @@ const ACHIEVEMENT_DEFS = [
 
   /* ---- streaks ---- */
   { id:"streak_21", name:"21-Day Streak", desc:"Train 21 days in a row.", check:()=> computeStreak()>=21 , category:"streak", tier:"silver", value:"21" },
-  { id:"streak_180", name:"180-Day Streak", desc:"Train 180 days in a row.", check:()=> computeStreak()>=180 , category:"streak", tier:"gold", value:"180" },
-  { id:"streak_365", name:"One Year Streak", desc:"Train every day for a year.", check:()=> computeStreak()>=365 , category:"streak", tier:"gold", value:"365" },
+  { id:"streak_180", name:"180-Day Streak", desc:"Train 180 days in a row.", check:()=> computeStreak()>=180 , category:"streak", tier:"diamond", value:"180" },
+  { id:"streak_365", name:"One Year Streak", desc:"Train every day for a year.", check:()=> computeStreak()>=365 , category:"streak", tier:"platinum", value:"365" },
 
   /* ---- the IGNYT Score ---- */
   { id:"score_70_once", name:"Great Day", desc:"Score 70 or more in a day.", check:()=> scoreDaysAtLeast(70)>=1 , category:"consistency", tier:"bronze", value:"70" },
@@ -3865,9 +3865,9 @@ const ACHIEVEMENT_DEFS = [
   { id:"weight_moved_5", name:"5 kg Toward Your Goal", desc:"Move 5 kg in the direction of your goal.", check:()=> weightMovedTowardGoalKg()>=5 , category:"consistency", tier:"bronze", value:"5 kg" },
   { id:"weight_moved_10", name:"10 kg Toward Your Goal", desc:"Move 10 kg in the direction of your goal.", check:()=> weightMovedTowardGoalKg()>=10 , category:"consistency", tier:"silver", value:"10 kg" },
   { id:"weight_moved_20", name:"20 kg Toward Your Goal", desc:"Move 20 kg in the direction of your goal.", check:()=> weightMovedTowardGoalKg()>=20 , category:"consistency", tier:"gold", value:"20 kg" },
-  { id:"weight_goal_reached", name:"Goal Achieved", desc:"Reach your target weight.", check:()=> weightGoalReached() , category:"consistency", tier:"gold", value:"🎯" },
+  { id:"weight_goal_reached", name:"Goal Achieved", desc:"Reach your target weight.", check:()=> weightGoalReached() , category:"consistency", tier:"diamond", value:"GOAL" },
   { id:"weigh_champion", name:"Consistency Champion", desc:"Weigh in at least once a week for twelve weeks running.", check:()=> weightWeeksRunning()>=12 , category:"consistency", tier:"gold", value:"12w" },
-  { id:"habit_hero", name:"Healthy Habit Hero", desc:"Log your weight, a meal and a workout on the same day, thirty times.", check:()=> daysWithFullLog()>=30 , category:"consistency", tier:"gold", value:"30" }
+  { id:"habit_hero", name:"Healthy Habit Hero", desc:"Log your weight, a meal and a workout on the same day, thirty times.", check:()=> daysWithFullLog()>=30 , category:"consistency", tier:"diamond", value:"30" }
 ];
 
 /* Call after any action that could unlock an achievement (finish workout,
@@ -10216,7 +10216,7 @@ function renderProgressTab(){
       body:         { icon:'scale' },
       habits:       { icon:'repeat', bg:'rgba(217,119,6,.1)', color:'#D97706', sub:'Build consistency. Build you.' },
       analytics:    { icon:'progress', sub:'Track your progress. Improve every day.' },
-      achievements: { icon:'trophy', bg:'rgba(217,119,6,.1)', color:'#D97706' },
+      achievements: { icon:'flag', bg:'rgba(217,119,6,.1)', color:'#D97706' },
       history:      { icon:'file', bg:'var(--rh-bg)', color:'var(--rh-muted)',
         sub:"Dates show when each achievement was unlocked in IGNYT. For imported workout history, that's the day of the import — the counts themselves are always genuine." },
       workouts:     { icon:'calendar', bg:'rgba(37,99,235,.1)', color:'var(--rh-blue)',
@@ -10490,10 +10490,10 @@ function renderProgressPRs(){
 
 /* ---------- Achievements ---------- */
 
-// Cycled by each achievement's fixed position in ACHIEVEMENT_DEFS (not by unlock order, so a
-// given achievement always gets the same color) -- purely a display palette, doesn't encode
-// any real category since ACHIEVEMENT_DEFS has no tier/category field of its own.
-const ACHIEVEMENT_COLORS = ['var(--rh-blue)','var(--rh-purple)','var(--rh-green)','#D97706','var(--rh-red)'];
+// ACHIEVEMENT_COLORS was a five-colour cycle keyed to a badge's position in ACHIEVEMENT_DEFS.
+// Nothing referenced it, and its own comment said the defs had no tier or category to colour
+// by -- which stopped being true some time ago. Badges now take their colour from tier and
+// their shape from category, both in achievementBadgeSvg().
 
 /* The weekly and monthly reviews. Rendered above the badge grid on Progress > Achievements,
    because "what did I do" and "what did that earn me" are the same question.
@@ -10543,6 +10543,146 @@ function renderReviewCards(){
   `;
 }
 
+/* =========================================================
+   ACHIEVEMENT BADGES — flat vector labels, not metal medallions.
+
+   Drawn as SVG rather than styled with CSS because the shape is the point: a heavy outline,
+   a thin inner rule tracking it, and a band straight across the middle carrying the number.
+   A border-radius and a gradient cannot make a hexagon or a shield.
+
+   THE SHAPE CARRIES INFORMATION.
+   One shape per category, held for every badge in it, so the grid is scannable before a word
+   is read — all the streak badges are the same pointed hexagon, all the strength ones the same
+   octagon. Six categories, six shapes. Assigning them at random would look identical and mean
+   nothing.
+
+   COLOUR IS TIER, AND ONLY TIER.
+   Bronze, silver, gold — significance, not rarity. Sixty badges in sixty colours is noise, and
+   the reference this follows gets its variety from a collection of different labels rather
+   than from one grid. The interior is var(--rh-card) and the locked state var(--rh-muted), so
+   both themes are handled by the tokens instead of a second palette.
+
+   The band ink is per tier for one honest reason: white reversed out of the gold is not
+   readable, so gold takes near-black text the way the yellow labels in the reference do.
+========================================================= */
+
+const BADGE_SHAPES = {
+  /* Points on a 100x100 viewBox. Each is inset ~4 units so the 6px stroke does not clip at
+     the edges of the box. */
+  milestone:   "22,5 78,5 97,50 78,95 22,95 3,50",                    // hexagon, flat top
+  streak:      "50,3 95,26 95,74 50,97 5,74 5,26",                    // hexagon, pointed top
+  strength:    "31,4 69,4 96,31 96,69 69,96 31,96 4,69 4,31",         // octagon
+  program:     "18,4 82,4 96,18 96,55 50,96 4,55 4,18",               // shield, chamfered shoulders
+  consistency: "50,3 96,37 78,94 22,94 4,37",                         // pentagon
+  nutrition:   null                                                    // circle, see below
+};
+
+/* Five tiers, and the STAR COUNT is what says which: bronze one star through platinum five.
+   That is the whole reason there is no decorative star anywhere else on the badge — a pair
+   flanking the number looked good and made a bronze badge appear to carry three, which is
+   exactly the kind of detail that quietly stops meaning anything.
+
+   Colour runs copper -> steel -> gold -> ice -> violet. Platinum is violet rather than a
+   literal platinum grey for one practical reason: a pale grey badge is indistinguishable from
+   the silver one at 84px, and the top tier being mistakable for the second is worse than the
+   name being loose. Gold and diamond take near-black band ink because white reversed out of
+   either is not readable. */
+const BADGE_TIER_ORDER = ["bronze", "silver", "gold", "diamond", "platinum"];
+const BADGE_TIERS = {
+  bronze:   { hue: "#A85A29", ink: "#FFFFFF" },
+  silver:   { hue: "#5A6B7D", ink: "#FFFFFF" },
+  gold:     { hue: "#E0A800", ink: "#1A1205" },
+  diamond:  { hue: "#3FBBE0", ink: "#052A3A" },
+  platinum: { hue: "#7C5CD6", ink: "#FFFFFF" }
+};
+
+/* The trophy is gone. A trophy is a prize for beating someone and none of these are that --
+   they mark work done. Every icon here is now equipment or the thing being counted, which is
+   also what the flat gym-label look this follows uses. Milestone counts workouts, so it takes
+   the dumbbell; strength (PRs, heaviest lift, lifetime volume) takes the bolt. All six read at
+   26px, which a trophy outline barely did. */
+const BADGE_ICONS = { milestone:"dumbbell", streak:"flame", strength:"bolt",
+                      program:"calendar", consistency:"repeat", nutrition:"nutrition" };
+
+/**
+ * One badge, as inline SVG.
+ * @param {object} d      an ACHIEVEMENT_DEFS entry
+ * @param {boolean} earned locked badges keep their shape and their target — a blanked-out
+ *                         mystery gives nobody a reason to come back, "100 workouts" does.
+ */
+function achievementBadgeSvg(d, earned){
+  const tier = BADGE_TIERS[d.tier] || BADGE_TIERS.bronze;
+  // Star count is the tier. An unknown tier string falls back to one star rather than none,
+  // so a badge added later without a tier still draws something sensible.
+  const stars = Math.max(1, BADGE_TIER_ORDER.indexOf(d.tier) + 1);
+  const hue = earned ? tier.hue : "var(--rh-muted)";
+  const ink = earned ? tier.ink : "var(--rh-card)";
+  const pts = BADGE_SHAPES[d.category];
+  const id = "bdgclip-" + String(d.id).replace(/[^a-z0-9_-]/gi, "");
+
+  // The outline, drawn twice: heavy on the edge, hairline inset. Circle is its own element
+  // rather than a 40-point polygon.
+  const shape = (scale, w) => pts
+    ? `<polygon points="${pts}" transform="translate(${50 - 50 * scale},${50 - 50 * scale}) scale(${scale})"
+         fill="${scale === 1 ? "var(--rh-card)" : "none"}" stroke="${hue}" stroke-width="${w / scale}" stroke-linejoin="round"/>`
+    : `<circle cx="50" cy="50" r="${47 * scale}" fill="${scale === 1 ? "var(--rh-card)" : "none"}" stroke="${hue}" stroke-width="${w}"/>`;
+
+  const v = String(d.value || "").toUpperCase();
+  // Long values step down rather than overflow the band. "1M KG" and "100KG" are the widest
+  // in the set at five characters.
+  const fs = v.length <= 2 ? 27 : v.length === 3 ? 21 : v.length <= 5 ? 15 : 12;
+  const icon = ICONS[BADGE_ICONS[d.category]] || ICONS.dumbbell;
+
+  return `<svg viewBox="0 0 100 100" class="bdg__svg" role="img" aria-label="${escHtml(d.name)}">
+    <defs><clipPath id="${id}">${pts
+      ? `<polygon points="${pts}"/>`
+      : `<circle cx="50" cy="50" r="47"/>`}</clipPath></defs>
+    ${shape(1, 6)}
+    ${shape(0.82, 2)}
+    <g style="color:${hue};" transform="translate(37,11) scale(1.06)">${icon}</g>
+    <g clip-path="url(#${id})"><rect x="0" y="41" width="100" height="20" fill="${hue}"/></g>
+    ${v ? `<text x="50" y="51" text-anchor="middle" fill="${ink}"
+      font-size="${fs}" font-weight="900" letter-spacing="0.4"
+      style="font-family:inherit;dominant-baseline:middle;">${escHtml(v)}</text>` : ""}
+    ${badgeStars(stars, hue)}
+  </svg>`;
+}
+
+/**
+ * The tier row: one star per tier level, centred under the band.
+ *
+ * The geometry is set by the narrowest shape at this height, which is the shield — five stars
+ * at this spacing clear its inner rule by about two units. Widening the row or dropping it any
+ * lower puts the outer pair through the outline on that one shape.
+ */
+function badgeStars(n, fill){
+  const gap = 9.2, y = 69, r = 4;
+  const startX = 50 - (n - 1) * gap / 2;
+  let out = "";
+  for(let i = 0; i < n; i++) out += badgeStar(startX + i * gap, y, r, fill);
+  return out;
+}
+
+/**
+ * A five-pointed star, point up. Used for the pair flanking the value on the band and the
+ * three beneath it — the same device the flat gym labels this follows use to fill the space
+ * a shape leaves below its centre line.
+ * @param {number} r outer radius; the inner radius is the usual 0.45 of it.
+ */
+function badgeStar(cx, cy, r, fill){
+  let dPath = "";
+  for(let i = 0; i < 10; i++){
+    const rad = (i % 2 ? r * 0.45 : r);
+    const a = (-90 + i * 36) * Math.PI / 180;
+    dPath += (i ? "L" : "M") + (cx + rad * Math.cos(a)).toFixed(2) + "," + (cy + rad * Math.sin(a)).toFixed(2);
+  }
+  // The class is not styling — nothing targets it in CSS. It marks these paths as the tier
+  // row so counting them is exact: several of the category icons are themselves paths whose
+  // data starts the same way, and a check that could not tell them apart was counting the
+  // dumbbell's bar as a star.
+  return `<path class="bdg__star" d="${dPath}Z" fill="${fill}"/>`;
+}
+
 function renderProgressAchievements(){
   const unlockedIds = new Set(state.achievements.map(a=>a.id));
   const earnedAt = {};
@@ -10556,9 +10696,6 @@ function renderProgressAchievements(){
     ["strength","Strength"], ["consistency","Consistency"], ["nutrition","Nutrition"],
     ["program","Program"]
   ];
-  const ICONS = { milestone:"trophy", streak:"flame", strength:"dumbbell", program:"calendar",
-                  consistency:"repeat", nutrition:"nutrition" };
-
   const inCategory = d => cat === "all" || d.category === cat;
   const pool = ACHIEVEMENT_DEFS.filter(inCategory)
     .filter(d => unlockedIds.has(d.id) === showEarned);
@@ -10572,13 +10709,8 @@ function renderProgressAchievements(){
 
   const tile = (d) => {
     const earned = unlockedIds.has(d.id);
-    /* A locked badge shows its shape and its target, not a question mark. Knowing "100
-       workouts, you're at 12" is a reason to come back; a blanked-out mystery is not. */
-    return `<div class="bdg${earned ? " bdg--" + (d.tier||"bronze") : " bdg--locked"}" title="${escHtml(d.desc)}">
-      <div class="bdg__medal">
-        <span class="bdg__icon">${svg(ICONS[d.category] || "trophy", 22)}</span>
-        <span class="bdg__value">${escHtml(d.value||"")}</span>
-      </div>
+    return `<div class="bdg${earned ? "" : " bdg--locked"}" title="${escHtml(d.desc)}">
+      ${achievementBadgeSvg(d, earned)}
       <div class="bdg__name">${escHtml(d.name)}</div>
       <div class="bdg__meta">${earned
         ? new Date(earnedAt[d.id]||Date.now()).toLocaleDateString('default',{month:'short',day:'2-digit'})

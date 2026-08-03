@@ -213,41 +213,30 @@
 }
 .bdg-cat.is-on{ border-color: var(--rh-blue); color: var(--rh-blue); background: rgba(37,99,235,.08); }
 
-.bdg-grid{ display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px 10px; }
+.bdg-grid{ display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px 10px; }
 
 .bdg{ display: flex; flex-direction: column; align-items: center; text-align: center; }
-.bdg__medal{
-  position: relative; width: 68px; height: 68px; border-radius: 50%;
-  display: grid; place-items: center;
-  background: var(--bdg-fill, var(--rh-border));
-  box-shadow: inset 0 -3px 8px rgba(0,0,0,.25), 0 2px 8px rgba(0,0,0,.18);
-  border: 2px solid var(--bdg-ring, var(--rh-border));
+
+/* The badge itself is SVG (app.js achievementBadgeSvg) — shape per category, colour per tier,
+   both drawn there rather than here, because a polygon is not something CSS can express. All
+   this rule does is size it. The tier classes and the medal/icon/value elements this file used
+   to style were dropped with the old circular medallion. */
+.bdg__svg{
+  display: block; width: 100%; max-width: 84px; aspect-ratio: 1;
+  overflow: visible;   /* the 6px outline sits on the edge of the viewBox */
 }
-.bdg__icon{ color: var(--bdg-ink, #fff); display: grid; place-items: center; }
-/* The number sits on the rim rather than under the badge, so the tile reads at a glance:
-   what it is, and how far in. */
-.bdg__value{
-  position: absolute; right: -2px; bottom: -2px;
-  min-width: 22px; padding: 1px 5px; border-radius: 999px;
-  background: var(--rh-card); border: 1.5px solid var(--bdg-ring, var(--rh-border));
-  color: var(--rh-text); font-size: 10.5px; font-weight: 900;
-  font-variant-numeric: tabular-nums; line-height: 1.5;
-}
+
 .bdg__name{ font-size: 12px; font-weight: 800; margin-top: 8px; line-height: 1.25; }
 .bdg__meta{
   font-size: 10.5px; color: var(--rh-muted); margin-top: 2px; line-height: 1.3;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 
-/* Tiers. Significance, not rarity — bronze is a first step, gold took months. */
-.bdg--bronze{ --bdg-fill: linear-gradient(160deg,#c88a52,#8a5527); --bdg-ring:#e0a86a; --bdg-ink:#fff5e8; }
-.bdg--silver{ --bdg-fill: linear-gradient(160deg,#d8dde4,#8f98a3); --bdg-ring:#e8edf3; --bdg-ink:#2b3038; }
-.bdg--gold{   --bdg-fill: linear-gradient(160deg,#f2c14e,#c08a1e); --bdg-ring:#ffdd82; --bdg-ink:#3d2c05; }
-
-/* Locked keeps the shape and the target. A blanked-out mystery gives nobody a reason to
-   come back; "100 workouts" does. */
-.bdg--locked{ opacity: .55; }
-.bdg--locked .bdg__medal{ --bdg-fill: var(--rh-bg); --bdg-ring: var(--rh-border); --bdg-ink: var(--rh-muted); }
+/* Locked keeps the shape and the target. A blanked-out mystery gives nobody a reason to come
+   back; "100 workouts" does. The SVG already draws itself muted — this only softens it
+   further, so an earned badge is the thing the eye lands on first. */
+.bdg--locked{ opacity: .6; }
+.bdg--locked .bdg__name{ color: var(--rh-muted); }
 
 /* .bmi-note was the small encouragement strip under the old BMI stat. Both it and that stat
    were replaced by the full BMI card (app.js renderBmiCard), which carries its own styles
