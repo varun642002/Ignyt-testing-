@@ -6829,10 +6829,10 @@ function renderProfileTab(){
         <button class="tl-card" data-open-diet-settings="1"><span class="tl-card__icon" style="color:var(--rh-green);background:rgba(22,163,74,.1);">${svg('nutrition',20)}</span><div class="tl-card__body"><div class="tl-card__label">Diet Settings</div><div class="tl-card__desc">Meals per day, plan &amp; meal times</div></div><span class="tl-card__chev">›</span></button>
       </div>
 
-      <div class="rh-section-head"><span>Tools</span></div>
-      <div class="tl-grid" style="grid-template-columns:1fr;">
-        <button class="tl-card" data-nav="tools"><span class="tl-card__icon" style="color:var(--rh-blue);background:rgba(37,99,235,.1);">${svg('more',20)}</span><div class="tl-card__body"><div class="tl-card__label">All Tools</div><div class="tl-card__desc">Calculators, Insights, Health Connect &amp; more</div></div><span class="tl-card__chev">›</span></button>
-      </div>
+      ${/* The Tools section was one card -- "All Tools" -- pointing at a screen that already
+            has its own tab in the bottom nav. A shortcut to something one tap away in every
+            other context is a row that costs a scroll and gains nothing. Removed; Tools is
+            unaffected and still reached from the nav. */''}
 
       <div class="rh-section-head"><span>Data &amp; Settings</span></div>
       <div class="tl-grid" style="grid-template-columns:1fr;">

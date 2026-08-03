@@ -60,10 +60,19 @@
     const scoreToday = (() => {
       try { return window.IgnytScore ? IgnytScore.summary(state).today.score : null; } catch (_) { return null; }
     })();
+    /* IGNYT's own palette, not the reference's. These are the app's tokens rather than fixed
+       hexes, so the card follows the theme instead of carrying a second set of colours that
+       only look right on one ground.
+
+       The IGNYT Score takes --accent, the brand orange. It is the app's own named metric and
+       the one thing on this card that belongs to IGNYT rather than to a sensor, so it gets the
+       colour the app is named in. Steps take the interactive blue and Training the success
+       green -- the same pairing the rest of the app already uses for "a number from elsewhere"
+       and "you finished something". */
     const gauge = [
-      { label: 'Steps',       color: '#BF5AF2', now: steps == null ? null : Number(steps), goal: DEFAULT_STEPS_GOAL,           unit: '' },
-      { label: 'IGNYT Score', color: '#30D158', now: scoreToday,                           goal: 160,                          unit: '' },
-      { label: 'Training',    color: '#8CE01F', now: trainedMin,                           goal: DEFAULT_WORKOUT_MINUTES_GOAL, unit: 'min' }
+      { label: 'Steps',       color: 'var(--rh-blue)',  now: steps == null ? null : Number(steps), goal: DEFAULT_STEPS_GOAL,           unit: '' },
+      { label: 'IGNYT Score', color: 'var(--accent)',   now: scoreToday,                           goal: 160,                          unit: '' },
+      { label: 'Training',    color: 'var(--rh-green)', now: trainedMin,                           goal: DEFAULT_WORKOUT_MINUTES_GOAL, unit: 'min' }
     ];
 
     const weeklyGoalPct = weekStats.workoutsGoal ? Math.min(100, Math.round(weekStats.workoutsCompleted / weekStats.workoutsGoal * 100)) : 0;
@@ -223,6 +232,7 @@
 
             Calories and Active Minutes are not here. Calories has the Nutrition card further
             down this page and its own tab; active minutes was the same figure as Training. */''}
+      <div class="rh-section-head"><span>Today's Summary</span></div>
       <div class="pg-card hm-gauge">
         <div class="hm-gauge__arcs">
           <svg viewBox="0 0 120 72" aria-hidden="true">
