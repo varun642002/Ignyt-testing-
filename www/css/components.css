@@ -210,9 +210,39 @@
 #app .wk-primary-btn,
 #app .food-sticky__btn,
 #app .coach-toggle,
-#app .btn-block {
+#app .btn-block,
+/* The three header icon buttons. layout.css already asks for 44px on .page-tools-btn, but
+   `#app button` above is (1,0,1) against that rule's (0,1,0), so the 32px floor won here and
+   they measured 44x32 — the most-tapped controls on Home, under the target size on the axis
+   that matters. Listed here, at matching specificity, rather than raising layout.css's
+   specificity: this is the block that decides tap-target policy, so the exceptions belong
+   where the policy is stated. */
+#app .page-tools-btn {
   min-height: 44px;
 }
+
+/* Hit area without layout change.
+   The two below are visually right at their current size — the chips are a deliberately dense
+   row, and growing them is what the note above warns against. So the TARGET grows and the box
+   does not: a transparent overlay centred on the element, which costs nothing and moves
+   nothing. `position:relative` is already set on the chip; the link needs it. */
+#app .hb-sugg__chip,
+#app .rh-view-all {
+  position: relative;
+}
+#app .hb-sugg__chip::after,
+#app .rh-view-all::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%;
+  height: 44px;
+  transform: translateY(-50%);
+}
+/* "View All" is an <a>, so the 32px floor above never applied to it at all — it measured
+   50x18. Its overlay handles the vertical axis; this widens the horizontal one a little
+   without moving the text. */
+#app .rh-view-all::after { left: -8px; right: -8px; }
 
 
 /* =========================================================

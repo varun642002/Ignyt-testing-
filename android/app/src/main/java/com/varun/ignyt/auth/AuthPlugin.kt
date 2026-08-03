@@ -387,6 +387,66 @@ class AuthPlugin : com.getcapacitor.Plugin() {
         }
     }
 
+    /**
+     * Deletes the signed-in Firebase user, permanently.
+     *
+     * Google Play's User Data policy requires any app that lets someone create an account to
+     * offer an in-app route to delete it. IGNYT had sign-out and nothing else: "Reset all data"
+     * cleared local storage while the account and anything synced under it survived, which is
+     * the exact gap that gets an app rejected at review.
+     *
+     * REAUTHENTICATION IS NOT OPTIONAL. Firebase refuses delete() on a session older than a few
+     * minutes with RECENT_LOGIN_REQUIRED, so the caller passes the password and this signs in
+     * again first. That is also the right behaviour on its own terms: an unattended phone should
+     * not be one tap away from destroying an account.
+     *
+     * Deletes the Auth user only. Whatever the account owns server-side is the caller's job to
+     * remove FIRST — once the user is gone the client can no longer authenticate to reach it.
+     */
+    @PluginMethod
+    fun deleteAccount(call: PluginCall) {
+        val auth = firebaseAuthOrNull()
+        if (auth == null) {
+            resolveError(call, "Account deletion isn't available in this build (missing Firebase configuration).")
+            return
+        }
+        val user = auth.currentUser
+        if (user == null) {
+            resolveError(call, "You're not signed in.")
+            return
+        }
+        val email = user.email
+        val password = call.getString("password") ?: ""
+        if (email.isNullOrEmpty()) {
+            resolveError(call, "This account has no email address, so it can't be verified for deletion. Contact support.")
+            return
+        }
+        if (password.isEmpty()) {
+            resolveError(call, "Enter your password to confirm.")
+            return
+        }
+        pluginScope.launch {
+            try {
+                // Re-auth by signing in again: works on every provider this app supports and
+                // avoids depending on EmailAuthProvider credential plumbing.
+                withTimeout(30_000L) { auth.signInWithEmailAndPassword(email, password).await() }
+                val fresh = auth.currentUser
+                if (fresh == null) {
+                    resolveError(call, "Could not confirm your identity. Please try again.")
+                    return@launch
+                }
+                withTimeout(30_000L) { fresh.delete().await() }
+                resolveSuccess(call, JSObject().apply { put("deleted", true) })
+            } catch (e: FirebaseAuthException) {
+                resolveError(call, authErrorMessage(e))
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                resolveError(call, "The request timed out. Check your internet connection and try again.")
+            } catch (e: Exception) {
+                resolveError(call, "Account deletion failed: ${e.message ?: "unknown error"}")
+            }
+        }
+    }
+
     private fun resolveSuccess(call: PluginCall, data: JSObject) {
         call.resolve(JSObject().apply { put("success", true); put("data", data) })
     }

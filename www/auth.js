@@ -195,18 +195,30 @@ const IgnytAuth = (() => {
   /** Called once on startup: reconciles the cached snapshot with the real persisted Firebase
    *  session. Offline-safe (Firebase restores the session from disk). Never signs anyone in
    *  or out by itself — it only reads. */
+  /* Reconciles the cached account against what Firebase actually says.
+   *
+   * EVERY EXIT PATH RE-RENDERS. It used to return early on "not native" and on a transient
+   * native failure, both without calling notifyUI(). That was invisible while auth.js loaded
+   * before the first paint — but app.js renders at its top level, so the first paint asks
+   * isSignedIn() and, on the web or on a failed native call, was left showing the Sign In
+   * screen to a user whose cached account was valid, with nothing scheduled to correct it.
+   * Loading auth.js earlier fixes the ordering; this makes sure a failure here cannot strand
+   * a stale screen either. A render costs nothing and the state may have changed. */
   async function refreshFromNative() {
-    if (!canSignIn()) return;
-    const result = await callNative("getCurrentUser");
-    if (!result.success || !result.data) return; // transient native issue: keep the cache, don't churn state
-    if (result.data.signedIn && result.data.user) {
-      saveAccount(result.data.user);
-    } else if (result.data.configured) {
-      // Firebase is configured and definitively says "nobody is signed in" (e.g. session
-      // expired/revoked server-side) — drop a stale cached snapshot.
-      clearAccount();
+    try {
+      if (!canSignIn()) return;
+      const result = await callNative("getCurrentUser");
+      if (!result.success || !result.data) return; // transient native issue: keep the cache, don't churn state
+      if (result.data.signedIn && result.data.user) {
+        saveAccount(result.data.user);
+      } else if (result.data.configured) {
+        // Firebase is configured and definitively says "nobody is signed in" (e.g. session
+        // expired/revoked server-side) — drop a stale cached snapshot.
+        clearAccount();
+      }
+    } finally {
+      notifyUI();
     }
-    notifyUI();
   }
 
   /** Returns a short-lived Firebase ID token for backend calls (IGNYT Integration Service),
@@ -220,6 +232,48 @@ const IgnytAuth = (() => {
     const result = await callNative("checkSigning");
     _signing = (result && result.success && result.data) ? result.data : null;
     return _signing;
+  }
+
+  /**
+   * Permanently deletes the account: cloud data first, then the Firebase user, then everything
+   * local.
+   *
+   * THE ORDER IS THE WHOLE DESIGN. Once the Auth user is gone the client can no longer
+   * authenticate to Firestore, so anything still there becomes unreachable rather than deleted
+   * — data that outlives the account it belonged to is exactly what Play's policy exists to
+   * prevent. So: Firestore, then Auth, then local. If the cloud step fails, nothing else runs
+   * and the account is left intact and usable; a partial deletion that has taken the data but
+   * left the login is the one outcome nobody can recover from.
+   *
+   * Local data is cleared by the caller after this resolves, so the wipe cannot happen for an
+   * account that is still alive.
+   */
+  async function deleteAccount(password) {
+    if (_busy) return { success: false, error: "Already in progress." };
+    if (!canSignIn()) return { success: false, error: "Account deletion is only available in the app." };
+    _busy = true; _errorMsg = null; notifyUI();
+    try {
+      const cloud = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytCloudSync;
+      if (cloud && cloud.deleteAllUserData) {
+        const wiped = await cloud.deleteAllUserData();
+        if (wiped && wiped.success === false) {
+          _errorMsg = wiped.error || "Could not delete your cloud data.";
+          return { success: false, error: _errorMsg };
+        }
+      }
+      const result = await callNative("deleteAccount", { password: password });
+      if (!result || result.success === false) {
+        _errorMsg = (result && result.error) || "Could not delete your account.";
+        return { success: false, error: _errorMsg };
+      }
+      clearAccount();
+      return { success: true };
+    } catch (e) {
+      _errorMsg = "Could not delete your account: " + (e && e.message ? e.message : "unknown error");
+      return { success: false, error: _errorMsg };
+    } finally {
+      _busy = false; notifyUI();
+    }
   }
 
   async function getIdToken(forceRefresh) {
@@ -276,6 +330,7 @@ const IgnytAuth = (() => {
     resendVerificationEmail,
     reloadUser,
     signOut,
+    deleteAccount,
     refreshFromNative,
     getIdToken   // short-lived Firebase ID token for backend (Integration Service) calls
   };

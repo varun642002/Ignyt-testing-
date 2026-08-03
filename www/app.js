@@ -12,6 +12,16 @@ const SCHEMA_VERSION = 1; // bump when localStorage shape changes; add a migrate
 const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_profile","hx_nutrition","hx_bodylog","hx_custom_exercises",
   "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history","hx_deleted_workouts"];
 
+/* The subset of the above whose values are arrays of RECORD OBJECTS — the ones the UI reads
+   fields off, and so the ones a null element inside can crash. Used by LS.records() on load
+   and by validateBackupPayload() on import, so both boundaries agree on what "a record array"
+   means instead of keeping two lists.
+   Deliberately NOT included: hx_favorite_exercises and hx_saved_exercises hold plain strings
+   (exercise names), and hx_completed is an object map, not an array. */
+const RECORD_ARRAY_KEYS = ["hx_bodylog","hx_custom_exercises","hx_workout_log","hx_food_log",
+  "hx_routines","hx_prs","hx_achievements","hx_favorite_foods","hx_water_log","hx_race_log",
+  "hx_calc_history","hx_deleted_workouts"];
+
 // Single source of truth for every trackable body measurement beyond weight -- the entry
 // form, CSV export/import, and the chart metric switcher all read this list instead of each
 // hardcoding their own field set, so adding a future measurement is a one-line change here.
@@ -1164,9 +1174,38 @@ const LS = {
     try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
     catch { return fallback; }
   },
+  /**
+   * A stored array of RECORDS, with anything unusable dropped.
+   *
+   * A single null in state.achievements, state.prs, state.workoutLog, state.foodLog or
+   * state.bodylog used to take down EVERY screen, not just the one that owned the data: the
+   * reads that threw sit in shared chrome (the header notification feed, the score engine),
+   * so the whole app fell to the error screen and stayed there until the user reset their data.
+   *
+   * Guarding the five known read sites would have fixed those five. Cleaning at the load
+   * boundary fixes every reader, including the ones nobody has found yet — and, more to the
+   * point, it repairs devices that are ALREADY holding a bad record. No validator can help
+   * those; they have the data on disk.
+   *
+   * Non-objects go too, not just null: a stray string or number in a record array breaks the
+   * same reads in the same way.
+   */
+  records(key) {
+    const raw = LS.get(key, []);
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(r => r != null && typeof r === "object");
+  },
   set(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
-  }
+    try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+    catch (e) {
+      /* Almost always QuotaExceededError. Swallowed silently before, which meant a full
+         localStorage looked exactly like a successful save — the user kept logging and kept
+         losing it. The caller can now tell, and persist() warns once. */
+      try { LS._lastError = e && e.name ? e.name : "StorageError"; } catch (_) {}
+      return false;
+    }
+  },
+  _lastError: null
 };
 
 /* ---------- Hyrox 8-week plan data ---------- */
@@ -1226,16 +1265,16 @@ const state = {
   nutrition: Object.assign({proteinPct:30,carbPct:45,fatPct:25,fibreTarget:30},
     LS.get("hx_nutrition",{})),
   mealOpen: null,
-  bodylog: LS.get("hx_bodylog",[]),
-  customExercises: LS.get("hx_custom_exercises",[]),
-  workoutLog: LS.get("hx_workout_log",[]),
-  foodLog: LS.get("hx_food_log",[]),
-  routines: LS.get("hx_routines",[]),
+  bodylog: LS.records("hx_bodylog"),
+  customExercises: LS.records("hx_custom_exercises"),
+  workoutLog: LS.records("hx_workout_log"),
+  foodLog: LS.records("hx_food_log"),
+  routines: LS.records("hx_routines"),
   routineBuilder: null,      // { id?, name, description, notes, exercises:[normalized] } when the editor is open
   editingRoutineId: null,    // set => the editor is PATCHING this routine in place; null => creating a new one
   routineExerciseOpen: null, // id of the one exercise expanded for editing (one at a time — small screens)
   replacingRoutineExerciseId: null, // id of the routine exercise awaiting a replacement pick
-  habits: LS.get("hx_habits",[]),
+  habits: LS.records("hx_habits"),
   habitCompletions: LS.get("hx_habit_completions",{}),
   habitBuilderName: "",
   editingHabitId: null,
@@ -1283,7 +1322,7 @@ const state = {
   plateCalcOpen: null, // element id string when plate calc popover open
   restDuration: LS.get("hx_rest_duration",90),
   session: LS.get("hx_active_session", null),
-  prs: LS.get("hx_prs", []),
+  prs: LS.records("hx_prs"),
   lastSessionPRs: null, // transient — set right after finishing a workout, shown as a celebration banner
   viewingSessionId: null, // when set, Workout tab shows the detailed history view for this session
   showAllSessions: false,
@@ -1298,6 +1337,9 @@ const state = {
   showAllCalcHistory: false,
   progressExercise: null,
   viewingExerciseDetail: null,
+  // Delete-account sheet. Transient by design — never persisted, so a crash or a force-quit
+  // mid-flow reopens the app in a normal state rather than back on a destructive confirmation.
+  deleteAccountOpen: false, deleteAccountBusy: false, deleteAccountError: null,
   showExercisePicker: false,
   exercisePickerSearch: "",
   exercisePickerEquipment: "All",
@@ -1333,7 +1375,7 @@ const state = {
   foodBrowseCategory: null,
   // Categories are behind a button now rather than the default view.
   foodBrowseOpen: false,
-  savedMeals: LS.get("hx_saved_meals", []),   // "My Meals" — named combos logged in one tap
+  savedMeals: LS.records("hx_saved_meals"),   // "My Meals" — named combos logged in one tap
   savedMealsAll: false,       // transient — "View all" expands the My Meals list
   nutritionScreen: null,      // null | "insights"
   insightsMeal: "All Meals",  // which meal tab the Insights page is filtered to
@@ -1361,21 +1403,21 @@ const state = {
   // Id of the entry just logged, so the dashboard can highlight it once and forget it.
   justAddedFoodId: null,
   raceActive: LS.get("hx_race_active", null),
-  raceLog: LS.get("hx_race_log", []),
+  raceLog: LS.records("hx_race_log"),
   viewingRaceMode: !!LS.get("hx_race_active", null),
-  achievements: LS.get("hx_achievements", []),
+  achievements: LS.records("hx_achievements"),
   lastUnlockedAchievements: null, // transient celebration, mirrors lastSessionPRs pattern
   prExerciseOpen: null,     // PR screen: which exercise sheet is open
   prRange: "all",           // PR screen: today | month | 6m | all
   badgeView: "earned",      // Badges screen: "earned" | "remaining"
   badgeCategory: "all",     // Badges screen: all | milestone | streak | strength | program
-  favoriteFoods: LS.get("hx_favorite_foods", []),
-  waterLog: LS.get("hx_water_log", []),
+  favoriteFoods: LS.records("hx_favorite_foods"),
+  waterLog: LS.records("hx_water_log"),
   savedExercises: LS.get("hx_saved_exercises", []),
   /* Exercise picker multi-select. Transient by design -- an abandoned picker must not leave a
      half-made selection waiting for the next workout, so it is never persisted. */
   pickerSelection: [],
-  calcHistory: LS.get("hx_calc_history", []),
+  calcHistory: LS.records("hx_calc_history"),
   timer: null,
   holdTimer: null // {exi,si,targetSec,accumulatedMs,runStartedAt,running,handle,fired} -- see startHoldTimer()
 };
@@ -1411,8 +1453,23 @@ function persist(){
   LS.set("hx_rest_duration", state.restDuration);
   LS.set("hx_active_session", state.session);
   LS.set("hx_prs", state.prs);
-  LS.set("hx_schema_version", SCHEMA_VERSION);
+  const ok = LS.set("hx_schema_version", SCHEMA_VERSION);
+
+  /* A save that silently fails is worse than one that fails loudly: the user goes on logging
+     workouts and meals that are never written, and only finds out when the app restarts. The
+     whole app shares a ~5 MB localStorage quota and a heavy user gets there (measured: ~3.3 MB
+     at 4,000 workouts and 20,000 food entries), so this is a real end state, not a hypothetical.
+
+     Warned once per session. It fires on every write once storage is full, and a toast on
+     every keystroke would be its own bug. */
+  if(!ok && !_storageWarned){
+    _storageWarned = true;
+    try{
+      showToast("Storage is full — recent changes may not have been saved. Export your data from Settings, then remove old entries.", "error", render);
+    }catch(e){ console.error("Ignyt: localStorage write failed and the warning could not be shown.", LS._lastError); }
+  }
 }
+let _storageWarned = false;
 
 /* ---------- Migration: runs once on boot if stored schema is older than current ---------- */
 
@@ -1943,8 +2000,26 @@ function validateBackupPayload(parsed){
   const badKeys = [];
   Object.entries(parsed.data).forEach(([k,v])=>{
     if(!ALL_DATA_KEYS.includes(k)) return; // ignore unknown/future keys rather than failing
-    try{ JSON.parse(v); staged[k] = v; }
-    catch(e){ badKeys.push(k); }
+    let value;
+    try{ value = JSON.parse(v); }
+    catch(e){ badKeys.push(k); return; }
+    /* "It parses" is not "it is usable". `[null]` is valid JSON, and one null inside any of
+       these arrays used to throw from the header notification feed and the score engine —
+       shared chrome — which took EVERY screen down to the error screen, not just the one that
+       owned the data. A backup file was enough to do it, which made this an untrusted-input
+       path rather than a corruption edge case.
+
+       Records are cleaned rather than rejected: dropping one bad row from a year of history is
+       a far better outcome than refusing the whole restore. A file with nothing usable left in
+       a key is a different matter and is named as corrupt. */
+    if(RECORD_ARRAY_KEYS.includes(k)){
+      if(!Array.isArray(value)){ badKeys.push(k); return; }
+      const clean = value.filter(r=>r != null && typeof r === "object");
+      if(clean.length === 0 && value.length > 0){ badKeys.push(k); return; }
+      staged[k] = JSON.stringify(clean);
+      return;
+    }
+    staged[k] = v;
   });
   if(badKeys.length) return { ok:false, error:"This backup is corrupted (bad data for: "+badKeys.join(", ")+")." };
   if(Object.keys(staged).length===0) return { ok:false, error:"This backup has no recognizable Ignyt data." };
@@ -3119,7 +3194,7 @@ function getMuscle(name){
     const hit = items.find(i=>i[0]===name);
     if(hit) return hit[3];
   }
-  const custom = LS.get("hx_custom_exercises", []);
+  const custom = LS.records("hx_custom_exercises");
   const c = custom.find(i=>i.name===name);
   if(c) return c.muscle || "Other";
   if(PLAN_MUSCLE_MAP[name]) return PLAN_MUSCLE_MAP[name];
@@ -5915,9 +5990,53 @@ function renderSettingsTab(){
 
       ${window.IgnytAuth && window.IgnytAuth.isNativeAndroid() && window.IgnytAuth.getAccount() ? `
       <button class="rh-btn" style="width:100%;margin-top:16px;padding:14px;background:rgba(239,68,68,.1);color:var(--rh-red);" data-action="account-signout">${svg('signout',16)} Sign Out</button>
+      <!-- Play's User Data policy requires an in-app route to delete the account and its
+           server-side data for any app that offers account creation. Sign-out is not that, and
+           "Reset all data" was local only — the Firebase user and everything synced under it
+           survived it. Deliberately plain text rather than a red button: this is not a thing to
+           make tappable by accident, and the flow behind it asks for the password. -->
+      <button class="btn btn-ghost btn-block" style="margin-top:10px;font-size:13px;color:var(--rh-muted);" data-action="account-delete">Delete account</button>
+      <div style="font-size:11px;color:var(--rh-muted);text-align:center;margin-top:6px;line-height:1.5;">
+        Permanently removes your account, your cloud backup and everything on this device. This cannot be undone.
+      </div>
       ` : ''}
     </div>
+    ${renderDeleteAccountSheet()}
   `;
+}
+
+/* =========================================================
+   DELETE ACCOUNT
+
+   Three things have to go, in this order: the Firestore documents, the Firebase user, then
+   local storage. Reversing any pair leaves a worse state than doing nothing — deleting the
+   user first strands the cloud data behind an account nobody can sign in as, and wiping local
+   first loses the user's copy while the account is still alive.
+
+   The password is required because Firebase refuses delete() on a stale session, and because
+   an unattended phone should not be one tap from destroying an account. The export button is
+   offered in the same sheet: someone deleting an account is exactly who most wants their data
+   out first, and making them hunt for it in another screen is how people lose years of logs.
+========================================================= */
+function renderDeleteAccountSheet(){
+  if(!state.deleteAccountOpen) return "";
+  const busy = !!state.deleteAccountBusy;
+  const err = state.deleteAccountError;
+  return `
+    <div class="sheet-backdrop" data-action="close-delete-account"></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Delete account" style="padding:20px;">
+      <div style="font-size:18px;font-weight:900;margin-bottom:6px;">Delete your account?</div>
+      <div style="font-size:13px;color:var(--rh-muted);line-height:1.6;margin-bottom:14px;">
+        This permanently deletes your IGNYT account, your cloud backup, and every workout, meal
+        and weigh-in stored on this device. It cannot be undone and support cannot restore it.
+      </div>
+      <button class="btn btn-steel btn-block" data-action="delete-account-export" ${busy?'disabled':''}>${svg('download',15)} Export my data first</button>
+      <div style="font-size:12px;color:var(--rh-muted);margin:16px 0 6px;font-weight:700;">Enter your password to confirm</div>
+      <input type="password" id="delete-account-password" class="pi-input" autocomplete="current-password" placeholder="Password" ${busy?'disabled':''} style="width:100%;">
+      ${err ? `<div style="font-size:12px;color:var(--rh-red);margin-top:10px;line-height:1.5;">${escHtml(err)}</div>` : ''}
+      <button class="btn btn-block" style="margin-top:16px;background:var(--rh-red);color:#fff;" data-action="delete-account-confirm" ${busy?'disabled':''}>${busy?'Deleting…':'Delete my account permanently'}</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px;" data-action="close-delete-account" ${busy?'disabled':''}>Cancel</button>
+    </div>`;
 }
 
 /* =========================================================
@@ -16086,6 +16205,42 @@ function attachHandlers(){
 
   const accountSignoutBtn = document.querySelector('[data-action="account-signout"]');
   if(accountSignoutBtn) accountSignoutBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signOut(); });
+
+  /* ---- account deletion (Play User Data policy) ---- */
+  const delOpen = document.querySelector('[data-action="account-delete"]');
+  if(delOpen) delOpen.addEventListener("click", ()=>{
+    state.deleteAccountOpen = true; state.deleteAccountError = null; state.deleteAccountBusy = false; render();
+  });
+  document.querySelectorAll('[data-action="close-delete-account"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(state.deleteAccountBusy) return;   // never dismiss mid-delete
+      state.deleteAccountOpen = false; state.deleteAccountError = null; render();
+    });
+  });
+  const delExport = document.querySelector('[data-action="delete-account-export"]');
+  if(delExport) delExport.addEventListener("click", ()=>{ try{ exportAllJSON(); }catch(e){ console.error(e); } });
+  const delGo = document.querySelector('[data-action="delete-account-confirm"]');
+  if(delGo) delGo.addEventListener("click", async ()=>{
+    const pw = (document.getElementById("delete-account-password") || {}).value || "";
+    if(!pw){ state.deleteAccountError = "Enter your password to confirm."; render(); return; }
+    state.deleteAccountBusy = true; state.deleteAccountError = null; render();
+    let res;
+    try{ res = await IgnytAuth.deleteAccount(pw); }
+    catch(e){ res = { success:false, error: e && e.message ? e.message : "Something went wrong." }; }
+    if(!res || !res.success){
+      /* Nothing has been destroyed at this point — deleteAccount() stops at the first failure
+         and leaves the account usable. Say so, because "delete failed" otherwise reads as
+         "your data is in an unknown state". */
+      state.deleteAccountBusy = false;
+      state.deleteAccountError = (res && res.error) || "Could not delete your account. Nothing was deleted — please try again.";
+      render();
+      return;
+    }
+    // The account is gone. Only now is it safe to drop the local copy.
+    try{ ALL_DATA_KEYS.forEach(k=>localStorage.removeItem(k)); localStorage.removeItem("hx_auth_account"); localStorage.removeItem("hx_auth_seen"); }
+    catch(e){ /* the account is already deleted; a failed local wipe must not block the reload */ }
+    location.reload();
+  });
   document.querySelectorAll('[data-action="auth-form-mode"]').forEach(el=>{
     el.addEventListener("click", ()=>{
       if(window.IgnytAuth) IgnytAuth.clearError();
@@ -19627,12 +19782,12 @@ window.addEventListener("beforeunload", (e)=>{
 window.addEventListener("storage", (e)=>{
   if(!e.key || _finishingSession) return;
   const reload = {
-    hx_workout_log: ()=>{ state.workoutLog = enforceWorkoutLogIntegrity(LS.get("hx_workout_log", [])); },
-    hx_prs:         ()=>{ state.prs = LS.get("hx_prs", []); },
-    hx_achievements:()=>{ state.achievements = LS.get("hx_achievements", []); },
-    hx_routines:    ()=>{ state.routines = LS.get("hx_routines", []); },
+    hx_workout_log: ()=>{ state.workoutLog = enforceWorkoutLogIntegrity(LS.records("hx_workout_log")); },
+    hx_prs:         ()=>{ state.prs = LS.records("hx_prs"); },
+    hx_achievements:()=>{ state.achievements = LS.records("hx_achievements"); },
+    hx_routines:    ()=>{ state.routines = LS.records("hx_routines"); },
     hx_favorite_exercises: ()=>{ state.favoriteExercises = LS.get("hx_favorite_exercises", []); },
-    hx_bodylog:     ()=>{ state.bodylog = LS.get("hx_bodylog", []); }
+    hx_bodylog:     ()=>{ state.bodylog = LS.records("hx_bodylog"); }
   };
   if(reload[e.key]){
     // Re-rendering mid-edit would discard the editor's uncontrolled inputs, so the open routine
