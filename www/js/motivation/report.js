@@ -34,13 +34,13 @@ window.IgnytReport = (function () {
      top-level const lives in the script's lexical scope and never becomes a window property.
      window.SHARE_THEMES is undefined even though SHARE_THEMES resolves fine. */
   var FALLBACK_THEME = {
-    dark: { label: "Dark", bg0: "#121216", bg1: "#121216", text: "#F2F1ED", muted: "#8B8B94", accent: "#FF5A1F" }
+    steel: { label: "Steel", bg0: "#0E1B26", bg1: "#121216", text: "#F2F1ED", muted: "#8FA7B5", accent: "#4FA8D8" }
   };
   function theme(key) {
     var themes = FALLBACK_THEME;
     try { if (typeof SHARE_THEMES !== "undefined" && SHARE_THEMES) themes = SHARE_THEMES; }
     catch (e) { /* not loaded yet — the fallback is the same dark card */ }
-    return themes[key] || themes.dark || themes[Object.keys(themes)[0]];
+    return themes[key] || themes.steel || themes[Object.keys(themes)[0]];
   }
 
   function font(weight, px) {

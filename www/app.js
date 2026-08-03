@@ -14731,9 +14731,15 @@ function renderAchievementCelebration(){
    just-saved workoutLog entry: no synthetic stats, ever.
 ========================================================= */
 
+/* One theme. Dark and Ember were removed on request, and the picker row went with them --
+   a chooser with a single option is not a choice, it is a chip that is always on.
+
+   Every default below now names `steel` rather than `dark`. That matters more than it looks:
+   an existing user has "dark" or "ember" persisted in state.shareCardTheme, and the lookups
+   fell back to a literal "dark" that would no longer resolve. The guard is `SHARE_THEMES[key]
+   ? key : "steel"`, so a stored key that no longer exists lands on the one that does instead
+   of on undefined and a blank card. */
 const SHARE_THEMES = {
-  dark:  { label:"Dark",  bg0:"#121216", bg1:"#121216", text:"#F2F1ED", muted:"#8B8B94", accent:"#FF5A1F" },
-  ember: { label:"Ember", bg0:"#31150a", bg1:"#121216", text:"#F2F1ED", muted:"#B79F92", accent:"#FF5A1F" },
   steel: { label:"Steel", bg0:"#0E1B26", bg1:"#121216", text:"#F2F1ED", muted:"#8FA7B5", accent:"#4FA8D8" }
 };
 
@@ -14873,7 +14879,7 @@ function renderWorkoutComplete(s){
   const breakdown = workoutBreakdown(s);
   const muscles = workoutMusclesTrained(s);
   const prs = state.prs.filter(p=>p.workoutId===s.id);
-  const theme = SHARE_THEMES[state.shareCardTheme] ? state.shareCardTheme : "dark";
+  const theme = SHARE_THEMES[state.shareCardTheme] ? state.shareCardTheme : "steel";
   const name = workoutShareName();
   const timeLabel = s.startedAt ? new Date(s.startedAt).toLocaleString([], {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"}) : s.date;
 
@@ -14995,9 +15001,6 @@ function renderWorkoutComplete(s){
       <div class="share-dots" id="share-dots">
         ${[0,1,2].map(i=>`<span class="share-dot ${i===(state.shareCardIndex||0)?'active':''}"></span>`).join("")}
       </div>
-      <div style="display:flex;gap:6px;margin:8px 0 12px;justify-content:center;">
-        ${Object.entries(SHARE_THEMES).map(([key,t])=>`<button class="cat-chip ${theme===key?'active':''}" data-share-theme="${key}">${t.label}</button>`).join("")}
-      </div>
       <div class="pg-card-row" style="margin-top:0;">
         <button class="rh-btn" style="padding:13px;background:rgba(37,99,235,.1);color:var(--rh-blue);" data-action="share-workout-image" aria-label="Share workout card image">${svg('upload',15)} Share Image</button>
         <button class="rh-btn" style="padding:13px;background:rgba(22,163,74,.1);color:var(--rh-green);" data-action="save-workout-image" aria-label="Save workout card image">${svg('download',15)} Save Image</button>
@@ -15011,7 +15014,7 @@ function renderWorkoutComplete(s){
 /* Draws one share card onto a 1080×1350 canvas — same real data as the DOM cards.
    All text/shapes are drawn by hand (no external assets, nothing fabricated). */
 function drawShareCard(canvas, s, cardIndex, themeKey){
-  const t = SHARE_THEMES[themeKey] || SHARE_THEMES.dark;
+  const t = SHARE_THEMES[themeKey] || SHARE_THEMES.steel;
   const W = canvas.width = 1080, H = canvas.height = 1350;
   const ctx = canvas.getContext("2d");
   const grad = ctx.createLinearGradient(0,0,0,H);
@@ -15094,7 +15097,7 @@ function roundRect(ctx,x,y,w,h,r){
    a blank screen, and never touches the saved workout itself. */
 async function generateShareImageBase64(s){
   const canvas = document.createElement("canvas");
-  drawShareCard(canvas, s, state.shareCardIndex||0, state.shareCardTheme||"dark");
+  drawShareCard(canvas, s, state.shareCardIndex||0, state.shareCardTheme||"steel");
   return canvas.toDataURL("image/png").split(",")[1];
 }
 
@@ -17231,9 +17234,6 @@ function attachHandlers(){
     if(saveBtn) saveBtn.addEventListener("click", ()=> saveWorkoutImage(completeWorkout));
     const copyBtn = document.querySelector('[data-action="copy-workout-summary"]');
     if(copyBtn) copyBtn.addEventListener("click", ()=> copyWorkoutSummary(completeWorkout));
-    document.querySelectorAll("[data-share-theme]").forEach(el=>{
-      el.addEventListener("click", ()=>{ state.shareCardTheme = el.dataset.shareTheme; render(); });
-    });
     const carousel = document.getElementById("share-carousel");
     if(carousel){
       // Dot indicator follows the scroll-snap position; direct DOM update, no re-render.
@@ -17257,8 +17257,8 @@ function attachHandlers(){
     btn.addEventListener("click", ()=>{
       if(!window.IgnytReport) return;
       const kind = "report";
-      if(btn.dataset.action === "report-share") IgnytReport.share(kind, state, state.shareCardTheme||"dark");
-      else IgnytReport.save(kind, state, state.shareCardTheme||"dark");
+      if(btn.dataset.action === "report-share") IgnytReport.share(kind, state, state.shareCardTheme||"steel");
+      else IgnytReport.save(kind, state, state.shareCardTheme||"steel");
     });
   });
 
