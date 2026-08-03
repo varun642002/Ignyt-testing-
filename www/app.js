@@ -18626,7 +18626,6 @@ function attachHandlers(){
       const kind = el.dataset.progressRange;
       if(kind==="volume") state.pgVolumeRange = el.value;
       else if(kind==="weight") state.pgWeightRange = Number(el.value);
-      else if(kind==="heatmap") state.pgHeatmapRange = el.value;
       render();
     });
   });

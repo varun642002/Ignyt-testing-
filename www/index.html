@@ -332,9 +332,18 @@ input,select,textarea{font-family:inherit; background:transparent; color:var(--t
   .timer-action-bar{ flex-direction:column; max-width:150px; }
 }
 
-nav.bottom-nav{position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px;
-    display:flex; padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px)); gap:2px;
-    background:rgba(23,23,28,.85); backdrop-filter:blur(14px); border-top:1px solid #2a2a32; z-index:40;
+/* THE BOTTOM BAR IS A FLOATING PILL, not a docked strip.
+   It sits inset from all three edges with a full-round radius, so the page scrolls visibly
+   underneath it rather than stopping at a hard border. `bottom` carries the safe-area inset,
+   which is what keeps it clear of the home indicator without padding the bar itself taller.
+   The old version was flush to the bottom, square, and separated by a 1px border-top. */
+nav.bottom-nav{position:fixed; left:50%; transform:translateX(-50%);
+    bottom:calc(10px + env(safe-area-inset-bottom,0px));
+    width:calc(100% - 24px); max-width:456px;
+    display:flex; padding:6px; gap:2px;
+    background:rgba(23,23,28,.86); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    border:1px solid rgba(255,255,255,.08); border-radius:999px; z-index:40;
+    box-shadow:0 8px 30px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.2);
     transition:transform .18s ease;}
 
 /* Keyboard-aware layout: body.kb-open is toggled by the visualViewport listener in app.js
@@ -346,11 +355,15 @@ body.kb-open nav.bottom-nav{transform:translate(-50%, 100%);}
 /* min-width:0 matters now that the bar carries six items rather than five: without it a
    flex item refuses to shrink below its content, so "Food Log" would push the row wider than
    the screen instead of the labels ellipsing. */
-.nav-btn{flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 1px;
-    border-radius:10px; background:none; border:none; color:var(--muted); cursor:pointer;}
+.nav-btn{flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:8px 1px; border-radius:999px; background:none; border:none; color:var(--muted);
+    cursor:pointer; transition:color .16s ease, background-color .16s ease;}
 .nav-btn span{max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 
-.nav-btn.active{color:var(--accent);}
+/* The selected tab carries its own pill inside the bar. That highlight is what makes this read
+   as a segmented control rather than a row of icons -- colour alone did the job before, and at
+   a glance a coloured icon among grey ones is easy to miss. */
+.nav-btn.active{color:var(--accent); background:rgba(255,255,255,.10);}
 
 .nav-btn svg{width:19px; height:19px;}
 

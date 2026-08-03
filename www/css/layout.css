@@ -20,8 +20,17 @@ header.app-header { padding: calc(var(--safe-top) + var(--space-sm)) var(--space
   background:var(--color-interactive-soft); color:var(--color-interactive); }
 .hdr-notif-item__text { font-size:13px; font-weight:600; color:var(--color-text-primary); line-height:1.35; }
 .hdr-notif-item__time { font-size:11px; color:var(--color-text-secondary); margin-top:2px; }
-nav.bottom-nav { min-height:var(--nav-height); background:rgba(18,20,24,.95); border-color:var(--color-border); }
-[data-theme="light"] nav.bottom-nav { background:rgba(255,255,255,.95); }
+/* The bar is a floating pill (see index.html) -- these only re-skin it per theme. No
+   border-color here: a docked strip wanted a top border, a pill wants a hairline all the way
+   round, and setting both left a heavier line across the top edge than the other three. */
+nav.bottom-nav { min-height:64px; background:rgba(18,20,24,.92); }
+[data-theme="light"] nav.bottom-nav {
+  background:rgba(255,255,255,.94); border-color:rgba(15,23,42,.08);
+  box-shadow:0 8px 28px rgba(15,23,42,.12), 0 2px 6px rgba(15,23,42,.06);
+}
+/* On a white pill a white highlight is invisible, so the selected tab tints toward the
+   interactive colour instead. */
+[data-theme="light"] .nav-btn.active { background:var(--color-interactive-soft, rgba(37,99,235,.10)); }
 .nav-btn { min-height:52px; }
 .nav-btn span { font-size:11px; }
 /* Reference: "blue primary accent for active tab" -- overrides the legacy orange active

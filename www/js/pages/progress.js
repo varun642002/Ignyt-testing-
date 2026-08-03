@@ -69,37 +69,6 @@
       .map(e=>({date:new Date(e.date), value:Number(e.weight)}));
   }
 
-  /** Calendar-style workout heatmap. "week" = the current week only (1 row of 7 real days).
-   *  "month" = the current calendar month, one row per week it spans. Intensity is a quartile
-   *  of that day's real logged volume relative to the max day in the shown range -- never a
-   *  fabricated scale, and a day with no session is always tier 0. */
-  function heatmapGrid(workoutLog, range){
-    const byDate = {};
-    workoutLog.forEach(s=>{ byDate[s.date] = (byDate[s.date]||0) + (s.volume||0); });
-    const now = new Date();
-    let start;
-    if(range==='month'){ start = new Date(now.getFullYear(), now.getMonth(), 1); }
-    else { const dow=now.getDay(); const off=dow===0?6:dow-1; start=new Date(now); start.setHours(0,0,0,0); start.setDate(now.getDate()-off); }
-    const end = range==='month' ? new Date(now.getFullYear(), now.getMonth()+1, 0) : new Date(start.getTime()+6*86400000);
-    const totalDays = Math.round((end-start)/86400000)+1;
-    const cells = [];
-    for(let i=0;i<totalDays;i++){
-      const d = new Date(start); d.setDate(start.getDate()+i);
-      // Local key. `d` walks local midnights, and formatting a local midnight as UTC lands on
-      // the PREVIOUS day for any positive offset -- so every heatmap cell east of Greenwich was
-      // labelled a day behind the volume it was showing.
-      const ds = (typeof dayKey === "function") ? dayKey(d) : d.toISOString().slice(0,10);
-      cells.push({date:ds, dow:(d.getDay()+6)%7, volume: byDate[ds]||0}); // dow: 0=Mon..6=Sun
-    }
-    const max = Math.max(1, ...cells.map(c=>c.volume));
-    cells.forEach(c=>{ c.tier = c.volume<=0?0 : c.volume>=max*0.66?3 : c.volume>=max*0.33?2 : 1; });
-    const rows = [];
-    let row = new Array(7).fill(null);
-    cells.forEach(c=>{ row[c.dow] = c; if(c.dow===6){ rows.push(row); row=new Array(7).fill(null); } });
-    if(row.some(c=>c)) rows.push(row);
-    return rows;
-  }
-
   // ---------------------------------------------------------------------
   // SVG chart drawing (string-generating, no chart library -- same approach used elsewhere)
   // ---------------------------------------------------------------------
@@ -160,16 +129,6 @@
     <div class="pg-chart-bubble" style="color:${color};">${lastVal}</div>`;
   }
 
-  function heatmapHtml(rows){
-    const dayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-    return `
-      <div class="pg-heatmap">
-        <div class="pg-heatmap__row pg-heatmap__row--labels">${dayLabels.map(d=>`<span>${d}</span>`).join('')}</div>
-        ${rows.map(row=>`<div class="pg-heatmap__row">${row.map(c=>`<span class="pg-heatmap__cell pg-tier-${c?c.tier:0}" title="${c?c.date+': '+Math.round(c.volume)+' vol':''}"></span>`).join('')}</div>`).join('')}
-      </div>
-      <div class="pg-heatmap__legend">Less <span class="pg-heatmap__cell pg-tier-0"></span><span class="pg-heatmap__cell pg-tier-1"></span><span class="pg-heatmap__cell pg-tier-2"></span><span class="pg-heatmap__cell pg-tier-3"></span> More</div>`;
-  }
-
   function ring(pct, color){
     const clamped = pct==null ? 0 : Math.max(0, Math.min(100, pct));
     return `<div class="pg-ring" style="--pct:${clamped};--ring-color:${color};"><div class="pg-ring__inner">${clamped}%</div></div>`;
@@ -196,8 +155,6 @@
     const isLossGoal = (state.profile.goalDelta||0) < 0, isGainGoal = (state.profile.goalDelta||0) > 0;
     const weightDeltaGood = weightDelta==null ? null : isLossGoal ? weightDelta<0 : isGainGoal ? weightDelta>0 : null;
 
-    const heatmapRange = state.pgHeatmapRange==='month' ? 'month' : 'week';
-    const heatmapRows = heatmapGrid(state.workoutLog, heatmapRange);
 
     const weeklyGoalPct = weekStats.workoutsGoal ? Math.min(100, Math.round(weekStats.workoutsCompleted/weekStats.workoutsGoal*100)) : null;
     const goalMsg = weeklyGoalPct==null ? "Set weekly training days in your Profile to track this."
@@ -277,18 +234,12 @@
         ${weightAreaChart(weightPoints, '#2563EB')}
       </div>
 
-      <div class="pg-card-row">
-        <div class="pg-card pg-card--half">
-          <div class="pg-card__head">
-            <span class="pg-card__title">Workout Heatmap</span>
-            <select class="wk-sort-select" data-progress-range="heatmap">
-              <option value="week" ${heatmapRange==='week'?'selected':''}>This Week</option>
-              <option value="month" ${heatmapRange==='month'?'selected':''}>This Month</option>
-            </select>
-          </div>
-          ${heatmapHtml(heatmapRows)}
-        </div>
-        <div class="pg-card pg-card--half">
+      ${/* The Workout Heatmap was the left half of this row. Removed on request. Weekly Goal
+            takes the full width rather than being left as a half-width card with a hole beside
+            it -- .pg-card-row is a 1fr 1fr grid, so a lone child would sit in the left column.
+            heatmapGrid(), heatmapHtml() and the pgHeatmapRange read went with it. */''}
+      <div style="margin-top:12px;">
+        <div class="pg-card">
           <div class="pg-card__head"><span class="pg-card__title">Weekly Goal</span><span class="pg-card__badge">${svg('trophy',18)}</span></div>
           <div class="pg-weekly-goal">
             ${ring(weeklyGoalPct, '#2563EB')}

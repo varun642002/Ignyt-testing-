@@ -20,9 +20,12 @@
 .app-header--home-light .eyebrow-dash { background:#2563EB; }
 .app-header--home-light .title { color:#0F172A; }
 .app-header--home-light .page-tools-btn { background:#FFFFFF; border-color:#E9EDF3; color:#2563EB; box-shadow:0 1px 3px rgba(15,23,42,.08); }
-nav.bottom-nav--home-light { background:#FFFFFF !important; border-top:1px solid #E9EDF3; }
+nav.bottom-nav--home-light {
+  background:rgba(255,255,255,.94) !important; border:1px solid rgba(15,23,42,.08);
+  box-shadow:0 8px 28px rgba(15,23,42,.12), 0 2px 6px rgba(15,23,42,.06);
+}
 nav.bottom-nav--home-light .nav-btn { color:#94A3B8; }
-nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
+nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; background:rgba(37,99,235,.10); }
 
 /* ---------- Hero card ---------- */
 .rh-hero { background:var(--rh-card); border-radius:var(--radius-card); padding:20px; margin-top:4px; box-shadow:0 2px 10px rgba(15,23,42,.06); overflow:hidden; }

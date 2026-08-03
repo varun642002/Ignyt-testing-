@@ -81,14 +81,8 @@
   font-size:11px; font-weight:800; padding:3px 8px; border-radius:var(--radius-xs-plus); position:relative; }
 
 /* ---------- Heatmap ---------- */
-.pg-heatmap__row { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:4px; }
-.pg-heatmap__row--labels span { font-size:11px; color:var(--rh-muted); text-align:center; font-weight:700; }
-.pg-heatmap__cell { display:block; width:100%; aspect-ratio:1; border-radius:var(--radius-2xs); background:#EEF1F6; }
-.pg-tier-1 { background:#BFDBFE; }
-.pg-tier-2 { background:#60A5FA; }
-.pg-tier-3 { background:#2563EB; }
-.pg-heatmap__legend { display:flex; align-items:center; gap:4px; margin-top:8px; font-size:11px; color:var(--rh-muted); font-weight:600; }
-.pg-heatmap__legend .pg-heatmap__cell { width:12px; height:12px; flex:none; }
+/* The .pg-heatmap rules were here. The card was removed from Progress, and these were
+   the only markup that used them. */
 
 /* ---------- Weekly goal ring ---------- */
 .pg-weekly-goal { display:flex; align-items:center; gap:12px; margin-top:6px; }
