@@ -9185,8 +9185,23 @@ function renderOnboardingWizard(){
       ${ONBOARDING_STEP_RENDERERS[step-1]()}
       ${onboardingNav(step, isLast
         ? { nextLabel: state.editingOnboarding ? "Save & Done" : "Get Started", skipHint:false }
-        : {})}
-      ${step===1 ? `<button class="btn btn-ghost btn-block" data-ob-nav="skip-all" style="margin-top:14px;">${state.editingOnboarding?'Cancel':'Skip for now'}</button>` : ''}
+        /* No "Not sure? Skip it" under a page that will not let you skip. Both gated steps
+           reject Continue until they are answered — Fair Use needs the policy accepted, About
+           You needs a name and a mobile number — so the hint was offering something the page
+           refuses, and the toast that follows reads as a bug rather than a rule. The
+           permissions and numbers pages keep it: those genuinely are skippable. */
+        : { skipHint: step !== obStepIndexOf(obFairUse) && step !== obStepIndexOf(obYourDetails) })}
+      ${/* "Skip for now" is gone: it set onboardingComplete and walked past the Fair Use
+            Policy, which is the one thing in this flow the app cannot assume on someone's
+            behalf — the Continue button refuses without it, and a skip beside that button
+            granted the same exit with no acceptance recorded.
+
+            "Cancel" stays. It is the same element but a different job: it appears only when an
+            existing user opened this from Settings to edit, and removing it would leave them
+            with no way out but completing all five pages again. */
+        state.editingOnboarding && step===1
+          ? `<button class="btn btn-ghost btn-block" data-ob-nav="skip-all" style="margin-top:14px;">Cancel</button>`
+          : ''}
     </div>
     ${renderLegalViewer()}
   `;
