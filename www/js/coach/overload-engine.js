@@ -33,7 +33,7 @@
    The first matching rule wins and returns; the rules are written most-severe first so a
    dangerous condition can never be outvoted by a cosmetic one.
 ========================================================= */
-window.IgnytOverload = (function () {
+window.IgnytCoachOverload = (function () {
   "use strict";
 
   var RULES = {
@@ -150,13 +150,26 @@ window.IgnytOverload = (function () {
    * one increment instead. A progression that silently prescribes last week's numbers reads as
    * the app having forgotten.
    */
-  function roundLoad(kg, equipment, previousKg) {
-    var step = equipment === "dumbbell" ? RULES.dumbbellStepKg : RULES.plateStepKg;
+  var LB_PER_KG = 2.2046226218;
+
+  function roundLoad(kg, equipment, previousKg, unit) {
+    /* Round in the unit the user's gym is actually plated in, then store back in kg.
+       Rounding to 2.5 kg and converting produces "181.9 lb" for a pound user — a number no
+       rack can make, from an app that looks like it has never seen one. A pound gym steps in
+       5 lb (2.5 per side) and its dumbbells in 5 lb, so those are the increments to snap to. */
+    var lb = unit === "lb";
+    var step = lb
+      ? (equipment === "dumbbell" ? 5 : 5) / LB_PER_KG
+      : (equipment === "dumbbell" ? RULES.dumbbellStepKg : RULES.plateStepKg);
+
     var rounded = Math.round(kg / step) * step;
+    /* Never hand back the load they already used. If the percentage increase rounds away to
+       nothing, step up one increment — a "progression" that prescribes last week's numbers
+       reads as the app having forgotten. */
     if (previousKg != null && rounded <= previousKg && kg > previousKg) {
       rounded = previousKg + step;
     }
-    return Math.round(rounded * 100) / 100;
+    return Math.round(rounded * 1000) / 1000;
   }
 
   /* ---- the rules ------------------------------------------------------------------------- */
@@ -232,6 +245,7 @@ window.IgnytOverload = (function () {
 
     var last = history[0], prev = history[1];
     var equipment = equipmentOf(exerciseName);
+    var unit = s.unit || "kg";          // caller passes the user's display unit
     var lastLoad = last.topWeight;
 
     /* 1. STALLED — checked first, deliberately. A week that hits the top of the rep range can
@@ -241,7 +255,7 @@ window.IgnytOverload = (function () {
     if (stalled >= RULES.stallWeeks) {
       return {
         action: "deload",
-        load: roundLoad(lastLoad * (1 - RULES.deloadPct), equipment),
+        load: roundLoad(lastLoad * (1 - RULES.deloadPct), equipment, null, unit),
         reps: minReps,
         sets: last.sets.length,
         why: "No progress in " + Math.round(stalled) + " weeks — taking 10% off to rebuild."
@@ -253,7 +267,7 @@ window.IgnytOverload = (function () {
     if (missedTarget(last, minReps) && missedTarget(prev, minReps)) {
       return {
         action: "backoff",
-        load: roundLoad(lastLoad * (1 - RULES.failureBackoff), equipment),
+        load: roundLoad(lastLoad * (1 - RULES.failureBackoff), equipment, null, unit),
         reps: minReps,
         sets: last.sets.length,
         why: "Missed the target twice — dropping 5% to get the reps back."
@@ -286,7 +300,7 @@ window.IgnytOverload = (function () {
       var pct = isLowerBody(exerciseName) ? RULES.incrementLower : RULES.incrementUpper;
       return {
         action: "add_load",
-        load: roundLoad(lastLoad * (1 + pct), equipment, lastLoad),
+        load: roundLoad(lastLoad * (1 + pct), equipment, lastLoad, unit),
         reps: minReps,
         sets: last.sets.length,
         why: "Hit " + maxReps + " on every set — up in weight, back to " + minReps + " reps."
@@ -319,7 +333,7 @@ window.IgnytOverload = (function () {
     return { multiplier: 1, why: "" };
   }
 
-  return {
+  return Object.freeze({
     next: next,
     historyFor: historyFor,
     workingSets: workingSets,
@@ -328,5 +342,5 @@ window.IgnytOverload = (function () {
     e1rm: e1rm,
     weeksWithoutProgress: weeksWithoutProgress,
     RULES: RULES
-  };
+  });
 })();

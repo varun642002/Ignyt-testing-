@@ -485,6 +485,39 @@
 .wk-exprog__cell b.is-up{ color: var(--rh-green, #16a34a); }
 .wk-exprog__cell b.is-down{ color: var(--rh-muted); }
 .wk-exprog__spark{ grid-column: 1 / -1; width: 100%; height: 18px; display: block; }
+
+/* Next-set target from the overload engine. Sits under the history strip: that one says where
+   you are, this one says what to do about it. Tone is carried by the left rule and the number
+   only -- an entire row tinted red for a deload reads as an error state, and being told to
+   take 10% off is a normal, healthy week, not a failure. */
+.wk-target{
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  margin: 6px 0 2px; padding: 7px 10px;
+  border-radius: var(--radius-xs-plus, 8px);
+  border-left: 2px solid var(--rh-blue);
+  background: color-mix(in srgb, var(--rh-blue) 7%, transparent);
+  font-size: 12px; line-height: 1.45;
+}
+.wk-target--push{ border-left-color: var(--rh-green); background: color-mix(in srgb, var(--rh-green) 8%, transparent); }
+.wk-target--ease{ border-left-color: var(--rh-blue);  background: color-mix(in srgb, var(--rh-blue) 7%, transparent); }
+.wk-target--hold{ border-left-color: var(--rh-muted); background: color-mix(in srgb, var(--rh-muted) 8%, transparent); }
+.wk-target__icon{ flex: none; display: inline-flex; align-items: center; color: var(--rh-blue); }
+.wk-target--push .wk-target__icon{ color: var(--rh-green); }
+.wk-target--hold .wk-target__icon{ color: var(--rh-muted); }
+/* Tabular figures: this number sits directly above a column of logged numbers and a
+   proportional font makes the two look like different kinds of value. */
+.wk-target__num{ font-weight: 800; color: var(--rh-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wk-target__why{ color: var(--rh-muted); min-width: 0; }
+
+/* color-mix is Chrome 111+. Android's WebView updates through Play so this is current on
+   nearly every device, but the fallback matters on the few that are not: without it the
+   background is invalid and drops to transparent, leaving the left rule alone to carry the
+   tone -- which still reads correctly, just more quietly. */
+@supports not (background: color-mix(in srgb, red 10%, transparent)){
+  .wk-target{ background: rgba(127,127,127,.08); }
+  .wk-target--push, .wk-target--ease, .wk-target--hold{ background: rgba(127,127,127,.08); }
+}
+
 .wk-exprog--new{
   display: block; font-size: 11.5px; font-weight: 600; color: var(--rh-muted);
 }

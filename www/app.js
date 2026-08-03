@@ -4255,6 +4255,64 @@ function exercisesWithHistory(){
 
    Shown only once there is something to say. On the first ever session there is no best, no
    last and no trend, so it says so in one line instead of printing three dashes. */
+/* The next-set target, from the progressive overload engine.
+   Renders above the sets, under the history strip: history answers "where am I", this answers
+   "what now".
+
+   IT DOES NOT PREFILL THE INPUTS, and that is the whole design.
+   Writing the suggested weight into the weight field would be one tap from becoming a logged
+   record of a lift that never happened — the user taps the checkmark, the set is "done", and
+   the app's own history now contains a number it invented. Every downstream thing that reads
+   that history, this engine included, would then be reasoning about fiction. A line of text
+   the lifter reads and acts on keeps the log a record of what was actually done.
+
+   Strength only. The engine progresses by load, and a plank or a 5 km row has no load to add. */
+function renderNextTargetHint(name){
+  if(!window.IgnytCoachOverload) return "";
+  if(exerciseLogType(name) !== "strength") return "";
+  let rec = null;
+  try{
+    rec = IgnytCoachOverload.next(state.workoutLog, name, {
+      reps: coachRepRange(),
+      maxSets: 5,
+      unit: wUnit()          // so the load is rounded to plates this user's gym actually has
+    });
+  }catch(e){ console.warn("overload hint failed:", e); return ""; }
+
+  /* Nothing to say, or nothing worth saying twice. `establish` is skipped because the history
+     strip directly above already tells a first-timer they are setting a baseline, and two
+     lines saying the same thing reads as a bug rather than as encouragement. */
+  if(!rec || rec.action === "establish") return "";
+
+  const tone = rec.action === "deload" || rec.action === "backoff" ? "ease"
+             : rec.action === "add_load" || rec.action === "add_set" ? "push" : "hold";
+  const target = `${displayW(rec.load)}${wUnit()} × ${rec.reps}${rec.action==="add_set" ? ` · ${rec.sets} sets` : ""}`;
+  return `<div class="wk-target wk-target--${tone}">
+    <span class="wk-target__icon">${svg(tone==="ease"?'shield':tone==="push"?'trend':'target',12)}</span>
+    <span class="wk-target__num">${target}</span>
+    <span class="wk-target__why">${escHtml(rec.why)}</span>
+  </div>`;
+}
+
+/* Rep range for progression. Comes from the coach's goal engine when the user has a goal set,
+   so "strength" progresses in a 3-6 range rather than being told to chase 12 reps. Falls back
+   to 8-12 -- the range the library's own default prescriptions sit in -- rather than to a
+   number invented here. */
+function coachRepRange(){
+  try{
+    /* Both calls, in this order. IgnytCoachGoal.resolve() takes a RESOLVED profile from
+       IgnytCoachProfile.resolve(state) and reads `primaryGoal` off it — passing a raw goal
+       string, or state.profile (which has no `goal` field at all), silently resolves to
+       "general" and the goal engine may as well not be wired in. Same call coach.js makes. */
+    if(window.IgnytCoachGoal && window.IgnytCoachProfile){
+      const resolved = IgnytCoachProfile.resolve(state);
+      const intent = IgnytCoachGoal.resolve(resolved);
+      if(intent && Array.isArray(intent.repRange)) return intent.repRange;
+    }
+  }catch(e){}
+  return [8, 12];
+}
+
 function renderWorkoutExerciseProgress(name){
   const trend = exerciseProgressTrend(name, 12);
   if(!trend.length){
@@ -15788,6 +15846,7 @@ function renderWorkoutTab(){
           </div>
           ${collapsed ? '' : `
           ${renderWorkoutExerciseProgress(ex.name)}
+          ${renderNextTargetHint(ex.name)}
           ${ex.sets.map((set,si)=>{
             const prev = getPreviousSet(ex.name, si);
             const prevLabel = previousSetLabel(logType, prev);
