@@ -142,8 +142,16 @@ window.IgnytWeight = (function () {
     list.forEach(function (e) { seen[e.date] = 1; });
     var streak = 0;
     var cur = new Date(list[0].t);
+    var keyOf = function (dt) {
+      /* The same local rule the rest of the app uses. `cur` is a noon-LOCAL instant, and
+         formatting it as UTC returns the right day only where the offset is small enough that
+         noon stays inside the same UTC day — at +13 (Auckland) noon local is 23:00 the previous
+         day in UTC, so every streak there was counted against the wrong dates. */
+      if (typeof dayKey === "function") return dayKey(dt);
+      return new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    };
     for (var i = 0; i < 400; i++) {
-      var key = cur.toISOString().slice(0, 10);
+      var key = keyOf(cur);
       if (!seen[key]) break;
       streak++;
       cur.setDate(cur.getDate() - 1);

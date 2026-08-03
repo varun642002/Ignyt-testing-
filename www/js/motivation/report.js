@@ -370,7 +370,7 @@ window.IgnytReport = (function () {
       var base64 = toBase64(kind, s, themeKey);
       if (!base64) { toast("Not enough logged yet to build a report.", "error"); return false; }
       var fileName = "ignyt-" + (kind === "progress" ? "progress" : "report") + "-" +
-                     new Date().toISOString().slice(0, 10) + ".png";
+                     (typeof dayKey === "function" ? dayKey() : new Date().toISOString().slice(0, 10)) + ".png";
       var plugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytShare;
       if (plugin) {
         var res = await plugin.shareImage({ base64: base64, fileName: fileName, text: summaryText(s) });
@@ -393,7 +393,7 @@ window.IgnytReport = (function () {
       var base64 = toBase64(kind, s, themeKey);
       if (!base64) { toast("Not enough logged yet to build a report.", "error"); return false; }
       var fileName = "ignyt-" + (kind === "progress" ? "progress" : "report") + "-" +
-                     new Date().toISOString().slice(0, 10) + ".png";
+                     (typeof dayKey === "function" ? dayKey() : new Date().toISOString().slice(0, 10)) + ".png";
       var plugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytShare;
       if (plugin) {
         var res = await plugin.saveImage({ base64: base64, fileName: fileName });

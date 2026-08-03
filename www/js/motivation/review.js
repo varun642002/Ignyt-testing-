@@ -41,7 +41,14 @@ window.IgnytReview = (function () {
      no-argument path alone, which made dateKey() and dateKey(today) disagree inside the very
      window it was meant to fix. */
   function dateKey(d) {
-    return (d ? new Date(d) : new Date()).toISOString().slice(0, 10);
+    /* Delegates to the app's dayKey(), which is the LOCAL calendar day. These modules used to
+       format as UTC to match app.js -- correct at the time, because app.js was UTC too. app.js
+       has since moved to the local day, so matching it now means moving with it. A private
+       copy of the rule here is what let the two drift apart in the first place. */
+    if (typeof dayKey === "function") return dayKey(d);
+    var t = d ? new Date(d) : new Date();
+    if (isNaN(t.getTime())) return "";
+    return new Date(t.getTime() - t.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   }
 
   /* ---- weekly ------------------------------------------------------------------------ */

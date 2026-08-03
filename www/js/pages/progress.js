@@ -85,7 +85,10 @@
     const cells = [];
     for(let i=0;i<totalDays;i++){
       const d = new Date(start); d.setDate(start.getDate()+i);
-      const ds = d.toISOString().slice(0,10);
+      // Local key. `d` walks local midnights, and formatting a local midnight as UTC lands on
+      // the PREVIOUS day for any positive offset -- so every heatmap cell east of Greenwich was
+      // labelled a day behind the volume it was showing.
+      const ds = (typeof dayKey === "function") ? dayKey(d) : d.toISOString().slice(0,10);
       cells.push({date:ds, dow:(d.getDay()+6)%7, volume: byDate[ds]||0}); // dow: 0=Mon..6=Sun
     }
     const max = Math.max(1, ...cells.map(c=>c.volume));

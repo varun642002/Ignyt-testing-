@@ -1119,7 +1119,37 @@ function calcPlates(target, barWeight){
   return { perSide, remainder: rem };
 }
 
-function todayStr(){ return new Date().toISOString().slice(0,10); }
+/* =========================================================
+   THE DAY KEY — one definition, and it is the user's calendar day.
+
+   This used to be `new Date().toISOString().slice(0,10)`, which is the UTC day. For anyone
+   not on UTC that is the wrong day for part of every night: in IST (+5:30) everything logged
+   between 00:00 and 05:30 local was stamped with YESTERDAY's date, so a meal eaten after
+   midnight landed on the previous day's calorie total. The window is the size of the offset —
+   8 hours in Singapore, 11 in Auckland — and runs the other way west of Greenwich.
+
+   The Habit Tracker already corrected for this with habitDateStr(); everything else did not,
+   so the two disagreed nightly. There is now one helper and habitDateStr() delegates to it.
+
+   Subtracting the offset before formatting is what makes toISOString() render the LOCAL
+   calendar date: it shifts the instant so that the UTC fields of the shifted value read as the
+   local fields of the original.
+========================================================= */
+function dayKey(d){
+  const t = (d == null) ? new Date() : (d instanceof Date ? d : new Date(d));
+  if(isNaN(t.getTime())) return "";
+  return new Date(t.getTime() - t.getTimezoneOffset()*60000).toISOString().slice(0,10);
+}
+
+/** The UTC day key — what dayKey() used to return. Kept ONLY so the migration below can
+ *  recognise a record that was stamped by the old helper. Nothing else should call it. */
+function dayKeyUTC(d){
+  const t = (d == null) ? new Date() : (d instanceof Date ? d : new Date(d));
+  if(isNaN(t.getTime())) return "";
+  return t.toISOString().slice(0,10);
+}
+
+function todayStr(){ return dayKey(); }
 
 function svg(name, size=19){ return `<svg width="${size}" height="${size}" viewBox="0 0 24 24">${ICONS[name]}</svg>`; }
 // Icon-size scale (Phase 1 design tokens): svg() takes a raw pixel number, not a CSS custom
@@ -1207,6 +1237,60 @@ const LS = {
   },
   _lastError: null
 };
+
+/* =========================================================
+   MIGRATION: UTC day keys -> local day keys.
+
+   Every logged record used to be stamped with the UTC day. At +5:30 that means anything logged
+   between 00:00 and 05:30 local carries YESTERDAY's date; at -5:00, anything after 19:00 carries
+   TOMORROW's. dayKey() is the local calendar day now, so those records have to move or they read
+   as the wrong day forever.
+
+   IT RUNS HERE, NOT IN runMigrations(). This is the whole reason it is a separate function.
+   `const state = {...}` below loads every array out of storage, and runMigrations() is not called
+   until the bottom of this file — so a migration that rewrote storage from there was overwritten
+   by the first persist(), which wrote the stale in-memory copy straight back on top. It ran, it
+   reported success, and it changed nothing. Caught only by checking stored data after a real
+   reload; the unit test on the rule itself passed the whole time.
+
+   THE RULE, AND WHY IT IS SAFE
+   A record moves only when its stored date equals the UTC day of its own creation instant. That
+   equality is proof the key came from the old machine stamp. Anything else — a weigh-in backdated
+   with the date picker, a meal copied to another day, a CSV import that assigned ids at import
+   time — fails the test and is left exactly as it is. A date a human chose is never second-guessed.
+
+   The instant comes from `at`, else `startedAt`, else `id`: nextId() returns Date.now(), so an id
+   IS a creation timestamp. A record with none of the three is skipped rather than guessed at.
+
+   Runs once, and only where the offset is non-zero — on UTC both keys are the same string.
+========================================================= */
+function migrateDayKeysToLocal(){
+  if(LS.get("hx_local_datekey_v1", false)) return;
+  try{
+    if(new Date().getTimezoneOffset() !== 0){
+      let moved = 0, skipped = 0;
+      RECORD_ARRAY_KEYS.forEach(key=>{
+        const rows = LS.records(key);
+        if(!rows.length) return;
+        let touched = false;
+        rows.forEach(r=>{
+          if(!r || typeof r.date !== "string" || r.date.length !== 10) return;
+          const ts = Number(r.at) || Number(r.startedAt) || Number(r.id);
+          // Ids only became timestamps once nextId() did; anything smaller is a legacy counter
+          // (1, 2, 3...) and says nothing about when the record was made.
+          if(!isFinite(ts) || ts < 946684800000){ skipped++; return; }   // 2000-01-01
+          if(r.date !== dayKeyUTC(ts)){ skipped++; return; }             // human-chosen date
+          const local = dayKey(ts);
+          if(local && local !== r.date){ r.date = local; moved++; touched = true; }
+        });
+        if(touched) LS.set(key, rows);
+      });
+      if(moved > 0) console.info("Ignyt: moved " + moved + " record(s) from UTC to local day keys (" + skipped + " left as-is).");
+    }
+  }catch(e){ /* a migration must never break boot */ }
+  LS.set("hx_local_datekey_v1", true);
+}
+migrateDayKeysToLocal();
 
 /* ---------- Hyrox 8-week plan data ---------- */
 
@@ -1772,7 +1856,7 @@ function commitFinishedWorkout(session){
   const workoutId = nextId();
   const newPRs = detectPRs(session, workoutId, finishedAt, volume);
   state.workoutLog.unshift({
-    id: workoutId, date: new Date().toISOString().slice(0, 10),
+    id: workoutId, date: dayKey(),
     startedAt: session.startedAt, finishedAt, durationMin, volume,
     exercises: session.exercises, notes: session.notes || "", title: session.title || ""
   });
@@ -1926,7 +2010,11 @@ function runMigrations(){
      out of a rename is worse than crediting the pull they almost certainly also did. */
   if(!LS.get("hx_plan_exercise_rename_v1", false)){
     try{
-      const done = LS.get("hx_completed", null);
+      /* state.completed, NOT a fresh LS.get. runMigrations() runs at the bottom of this file,
+         long after `const state` loaded its own copy — so rewriting a re-parsed object here
+         updated storage and left memory stale, and the first persist() wrote the old keys
+         straight back. Mutating the live object means the change survives that write. */
+      const done = state.completed;
       if(done && typeof done === "object"){
         let moved = 0;
         Object.keys(done).forEach(key=>{
@@ -1944,6 +2032,7 @@ function runMigrations(){
     }catch(e){ /* a migration must never break boot */ }
     LS.set("hx_plan_exercise_rename_v1", true);
   }
+
 
   const stored = LS.get("hx_schema_version", null);
   if(stored===null){
@@ -2089,7 +2178,7 @@ function exportWorkoutsCSV(){
   // plan completions as their own rows
   Object.entries(state.completed).forEach(([key,ts])=>{
     const [wk,day,exName] = key.split("|");
-    rows.push([new Date(ts).toISOString().slice(0,10), "Plan "+wk+" "+day, exName, getMuscle(exName), "", "", "", "", "", "", "", "", "", "plan check-off"]);
+    rows.push([dayKey(ts), "Plan "+wk+" "+day, exName, getMuscle(exName), "", "", "", "", "", "", "", "", "", "plan check-off"]);
   });
   const csv = rows.map(r=>r.map(csvEscape).join(",")).join("\n");
   downloadFile("ignyt-workouts-"+todayStr()+".csv", csv, "text/csv");
@@ -2355,7 +2444,7 @@ function validateWorkoutCsv(text){
     const volume = computeSessionVolume(exercises);
     const session = {
       id: s.startedAt, // stable id derived from the real timestamp so re-import dedup works
-      date: new Date(s.startedAt).toISOString().slice(0,10),
+      date: dayKey(s.startedAt),
       startedAt: s.startedAt, finishedAt: s.finishedAt, durationMin, volume,
       exercises, notes: s.notes, title: s.title
     };
@@ -2686,12 +2775,12 @@ document.addEventListener("visibilitychange", ()=>{
 function renderBodyDistribution(weekOffset){
   const { start, end } = weekRange(weekOffset);
   const dates = activityDates();
-  const todayStr0 = new Date().toISOString().slice(0,10);
+  const todayStr0 = dayKey();
   const dayLabels = ["M","T","W","T","F","S","S"];
   let strip = "";
   for(let i=0;i<7;i++){
     const d = new Date(start); d.setDate(start.getDate()+i);
-    const dStr = d.toISOString().slice(0,10);
+    const dStr = dayKey(d);
     const active = dates.has(dStr);
     const isToday = dStr===todayStr0;
     strip += `<div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
@@ -2895,7 +2984,7 @@ function renderCalendarMonth(monthOffset){
   for(let d=1; d<=daysInMonth; d++){
     const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const active = dates.has(dateStr);
-    const isToday = dateStr === new Date().toISOString().slice(0,10);
+    const isToday = dateStr === dayKey();
     const selected = state.calendarSelectedDate === dateStr;
     // Only genuinely-active days are tappable (data-cal-day) — empty days never highlight.
     cells += `<div ${active?`data-cal-day="${dateStr}"`:''} style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-xs-plus);
@@ -3527,7 +3616,7 @@ function exercisePRs(name){
 function activityDates(){
   // Set of "YYYY-MM-DD" strings with any logged activity (plan completions or freestyle sessions)
   const dates = new Set();
-  Object.values(state.completed).forEach(ts=> dates.add(new Date(ts).toISOString().slice(0,10)));
+  Object.values(state.completed).forEach(ts=> dates.add(dayKey(ts)));
   state.workoutLog.forEach(s=> dates.add(s.date));
   return dates;
 }
@@ -3538,8 +3627,8 @@ function computeStreak(){
   let cursor = new Date();
   cursor.setHours(0,0,0,0);
   // if today has no activity yet, start counting from yesterday (still an active streak)
-  if(!dates.has(cursor.toISOString().slice(0,10))) cursor.setDate(cursor.getDate()-1);
-  while(dates.has(cursor.toISOString().slice(0,10))){
+  if(!dates.has(dayKey(cursor))) cursor.setDate(cursor.getDate()-1);
+  while(dates.has(dayKey(cursor))){
     streak++;
     cursor.setDate(cursor.getDate()-1);
   }
@@ -3562,22 +3651,23 @@ function computeNotifications(){
 }
 
 /* =========================================================
-   HABIT TRACKER — genuinely new feature (Progress page). Deliberately does NOT reuse
-   todayStr()/computeStreak()'s date pattern (new Date().toISOString().slice(0,10) on a
-   local-midnight Date): that pattern converts to UTC before formatting, which is off by one
-   day for any user whose local timezone offset is non-zero at midnight (e.g. a fixed +5:30
-   offset always maps local midnight to the previous UTC day). It's a pre-existing quirk in
-   the rest of the app's date handling that's out of scope to change here (it would touch
-   historical data keys across food/body/workout logging), but the master request explicitly
-   asks to avoid exactly this class of bug for the new Habit Tracker, so habitDateStr() below
-   corrects for local timezone offset before formatting.
+   HABIT TRACKER — Progress page.
+
+   This block used to explain that habitDateStr() deliberately did NOT follow the rest of the
+   app, because the rest of the app formatted a local-midnight Date as UTC and so was a day out
+   for any non-zero offset. That was true, and correcting only this feature was the right call
+   at the time — converting everything meant touching historical keys across food, body and
+   workout logging, which needed a migration nobody had written.
+
+   That migration now exists (migrateDayKeysToLocal, near the top of this file), the whole app
+   keys on the local calendar day via dayKey(), and habitDateStr() simply delegates to it.
+   Habits were the only correct clock in the app; now they are the same clock as everything else.
 ========================================================= */
 
-function habitDateStr(d){
-  d = d || new Date();
-  const tzCorrected = new Date(d.getTime() - d.getTimezoneOffset()*60000);
-  return tzCorrected.toISOString().slice(0,10);
-}
+/* Delegates now. It was the only local-corrected key in the app and therefore the only one
+   that disagreed with the rest; dayKey() is that same correction applied everywhere, so this
+   is kept as a name its callers already use rather than as a second implementation. */
+function habitDateStr(d){ return dayKey(d); }
 
 function habitStreak(habitId){
   const done = state.habitCompletions[habitId] || {};
@@ -3879,12 +3969,12 @@ function weightWeeksRunning(){
 function daysWithFullLog(){
   const weigh = new Set((state.bodylog||[]).map(b=>b && b.date).filter(Boolean));
   const food  = new Set((state.foodLog||[]).map(f=>f && f.date).filter(Boolean));
-  // Keyed the same way the app stamps every other date -- todayStr() is UTC, so bodylog and
-  // foodLog day keys are UTC too. Deriving a local key here would put a session and the meal
-  // logged beside it on different days for anyone east of Greenwich.
+  // Keyed the same way the app stamps every other date. That used to mean UTC; it means the
+  // local calendar day now, via dayKey(). The point is unchanged -- a session and the meal
+  // logged beside it must land on the same day -- only the definition of "day" moved.
   const train = new Set((state.workoutLog||[]).map(s=>{
     const t = new Date(s.startedAt||s.date);
-    return isNaN(t) ? null : t.toISOString().slice(0,10);
+    return isNaN(t) ? null : dayKey(t);
   }).filter(Boolean));
   let n = 0;
   weigh.forEach(d=>{ if(food.has(d) && train.has(d)) n++; });
@@ -4706,7 +4796,7 @@ function frequentlyTrackedFoods(limit){
 function yesterdayEntries(){
   const d = new Date(nutritionDateStr() + "T12:00:00");
   d.setDate(d.getDate() - 1);
-  const ds = d.toISOString().slice(0,10);
+  const ds = dayKey(d);
   return state.foodLog.filter(f=>f.date === ds);
 }
 
@@ -5452,7 +5542,7 @@ function last7DaysCalories(){
   const out = [];
   for(let i=6;i>=0;i--){
     const d = new Date(); d.setDate(d.getDate()-i);
-    const ds = d.toISOString().slice(0,10);
+    const ds = dayKey(d);
     const kcal = foodsForDate(ds).reduce((a,f)=>a+Number(f.calories||0),0);
     out.push({label: d.toLocaleDateString('default',{weekday:'short'}), date: ds, kcal});
   }
@@ -5472,7 +5562,7 @@ function calorieProteinTrend(days=30){
   const out = [];
   for(let i=days-1;i>=0;i--){
     const d = new Date(); d.setDate(d.getDate()-i);
-    const ds = d.toISOString().slice(0,10);
+    const ds = dayKey(d);
     const foods = foodsForDate(ds);
     out.push({
       date: ds,
@@ -8511,7 +8601,7 @@ function obBirthday(){
   const age = obAgeFromBirthday(b);
   return `
     ${obHero("\u{1F382}", "When's your <span class='ob-accent'>birthday</span>?", "We use your age to personalise your workout plans and nutrition targets.")}
-    <input type="date" class="ob-date" data-ob-field="onboarding.birthday" value="${obEsc(b)}" max="${new Date().toISOString().slice(0,10)}">
+    <input type="date" class="ob-date" data-ob-field="onboarding.birthday" value="${obEsc(b)}" max="${dayKey()}">
     ${age!=null ? `<div class="ob-derived">You are <strong>${age}</strong> years old</div>` : ''}`;
 }
 
@@ -8828,7 +8918,7 @@ function obBasics(){
     ${obHero("\u{1F4CA}", "A few <span class='ob-accent'>numbers</span>", "Your calorie and training targets are calculated from these.")}
 
     ${obLabel("Date of birth")}
-    <input type="date" class="ob-date" data-ob-field="onboarding.birthday" value="${obEsc(b)}" max="${new Date().toISOString().slice(0,10)}">
+    <input type="date" class="ob-date" data-ob-field="onboarding.birthday" value="${obEsc(b)}" max="${dayKey()}">
     ${age!=null ? `<div class="ob-derived" style="margin-bottom:14px;">You are <strong>${age}</strong> years old</div>` : '<div style="height:10px;"></div>'}
 
     <!-- data-ob-readout names which slider each number belongs to. This is the only page with
@@ -11543,7 +11633,7 @@ function renderProgressCalendar(){
   let selHtml = "";
   if(sel){
     const sessions = state.workoutLog.filter(s=>s.date===sel);
-    const planCount = Object.values(state.completed).filter(ts=> new Date(ts).toISOString().slice(0,10)===sel).length;
+    const planCount = Object.values(state.completed).filter(ts=> dayKey(ts)===sel).length;
     const dayLabel = new Date(sel+"T12:00:00").toLocaleDateString('default',{weekday:'long', month:'long', day:'numeric'});
     selHtml = `
       <div class="rh-section-head"><span>${dayLabel}</span></div>
@@ -12398,7 +12488,7 @@ function renderBodyTab(){
       <div class="rh-section-head"><span>Log Entry</span></div>
       <div class="pg-card" id="body-log-entry">
         <div class="pi-grid2">
-          <div><label class="pi-label">Date</label><input type="date" id="b-date" value="${new Date().toISOString().slice(0,10)}" class="pi-input"></div>
+          <div><label class="pi-label">Date</label><input type="date" id="b-date" value="${dayKey()}" class="pi-input"></div>
           ${fieldSm("b-weight",`Weight (${wUnit()})`,wUnit()==='lb'?'220':'101.0',"var(--rh-blue)")}
         </div>
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">Body</div>
@@ -16489,7 +16579,7 @@ function attachHandlers(){
     if(r.currentIndex >= RACE_SEGMENTS.length-1){
       // Race complete -- auto-save to history, same "commit on finish" pattern as regular workouts
       const totalMs = now - r.startedAt;
-      state.raceLog.unshift({ id: now, date: new Date().toISOString().slice(0,10), totalMs, segments: r.segments });
+      state.raceLog.unshift({ id: now, date: dayKey(), totalMs, segments: r.segments });
       state.raceActive = null;
       state.viewingRaceMode = false; // return to Plan home rather than parking on the race sub-screen
       stopRaceTimer();
