@@ -104,10 +104,12 @@
     const quoteOfDay = (window.IgnytMessages && IgnytMessages.forDay(beforeNoon ? "morning" : "daily"))
       || FALLBACK_QUOTES[Math.floor(Date.now() / 86400000) % FALLBACK_QUOTES.length];
 
-    /* The one-line welcome banner that used to live here is gone. The full welcome card
-       (js/motivation/welcome.js) now owns the app-open moment, and both read and CLEARED the
-       same hx_fresh_open flag -- Home renders first, so the banner consumed the flag and the
-       card could never appear. One owner for one flag. */
+    /* Nothing greets the app-open moment any more. A one-line banner lived here, then the
+       full welcome card took the job, and now the card is gone too by request -- the app
+       opens straight onto Home. If a greeting ever comes back, note the trap that caught the
+       pair of them: both read and CLEARED the same hx_fresh_open flag, and Home renders
+       first, so the banner consumed the flag and the card could never appear. One owner for
+       one flag. */
 
     /* Consistency is measured, not asserted: how many of the last 28 days carry a workout or a
        food entry. Anything that only counted workouts would call a diligent rest week
