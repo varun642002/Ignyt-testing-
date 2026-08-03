@@ -1,0 +1,198 @@
+/* =========================================================
+   IGNYT GLOSS — the premium finish layer.
+
+   Loaded LAST, on purpose. Every rule here refines a surface that already works rather than
+   redefining it, so the layout, the palette and the component structure are untouched and this
+   file can be deleted in one line if the finish is ever unwanted. Nothing here changes a
+   colour's meaning, a size, or a position.
+
+   THE CONSTRAINT THAT SHAPED ALL OF IT
+   "Glossy" and "very smooth" pull against each other on a phone. The effects that read as
+   expensive — backdrop blur, large soft shadows, gradients — are the same ones that make an
+   Android WebView drop frames, and they get worse the more of the screen they cover and the
+   more often they repaint. So every effect below is chosen from the cheap half of that trade:
+
+     - gradients as background-image on an element that already paints, not extra layers
+     - shadows and inset highlights, which paint once and are cached until something changes
+     - transform and opacity for anything that MOVES, because those skip layout and paint
+       entirely and run on the compositor
+
+   What is deliberately NOT here: no backdrop-filter added to anything that scrolls, no
+   animated shadows, no animated gradients, no filter on large surfaces, no will-change left
+   on permanently. The one blur in the app is the nav pill, which already existed — it is
+   ~60px tall and fixed, which is the only shape of blur worth its cost.
+
+   THE HIGHLIGHT IS THE WHOLE TRICK
+   A single inset hairline along the top edge is what separates a flat rectangle from something
+   that looks like a physical object with a light above it. It costs one shadow. Everything
+   else here is in service of that one line reading correctly.
+========================================================= */
+
+:root {
+  /* Dark ground: light falls from above, so the top edge catches it and the surface fades
+     from very slightly lit to nothing by its own midpoint. Past 60% the gradient would start
+     to read as a colour change rather than a highlight. */
+  --gloss-surface: linear-gradient(180deg, rgba(255,255,255,.055) 0%, rgba(255,255,255,.012) 55%, rgba(255,255,255,0) 100%);
+  --gloss-edge: inset 0 1px 0 rgba(255,255,255,.085);
+  --gloss-edge-strong: inset 0 1px 0 rgba(255,255,255,.16);
+  /* Two shadows, not one. A tight contact shadow anchors the card to the surface below it and
+     a broad ambient one gives it height; a single mid-sized shadow reads as neither and is the
+     main reason a card can look "stuck on" rather than resting. */
+  --gloss-shadow: 0 1px 2px rgba(0,0,0,.28), 0 8px 24px -6px rgba(0,0,0,.42);
+  --gloss-shadow-lift: 0 2px 4px rgba(0,0,0,.30), 0 16px 40px -10px rgba(0,0,0,.50);
+  --gloss-hairline: rgba(255,255,255,.07);
+}
+
+[data-theme="light"] {
+  /* On white, a white highlight is invisible, so the light theme earns its depth from shadow
+     instead — and the shadow is tinted toward the app's blue rather than neutral grey. Real
+     shadows take colour from the light around them; a pure-black shadow on a white card is
+     the single most common tell of an interface that was never art-directed. */
+  --gloss-surface: linear-gradient(180deg, rgba(255,255,255,.9) 0%, rgba(248,250,253,.55) 100%);
+  --gloss-edge: inset 0 1px 0 rgba(255,255,255,1);
+  --gloss-edge-strong: inset 0 1px 0 rgba(255,255,255,1);
+  --gloss-shadow: 0 1px 2px rgba(30,41,59,.06), 0 8px 24px -8px rgba(30,58,138,.13);
+  --gloss-shadow-lift: 0 2px 6px rgba(30,41,59,.08), 0 18px 44px -12px rgba(30,58,138,.20);
+  --gloss-hairline: rgba(255,255,255,.9);
+}
+
+/* =========================================================
+   TEXT
+   Antialiasing is a finish, not a nicety: at these weights the default subpixel rendering on
+   a dark ground makes bold text look heavier and slightly fringed, which is most of what
+   reads as "not premium" before anyone can say why.
+========================================================= */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+/* Large numerics are the thing a fitness screen is actually about. Tightening their tracking
+   is the difference between a number that is displayed and one that is designed. */
+.pg-card__big, .rh-stat-value, .home-metric__value, .wlc__title {
+  letter-spacing: -.022em;
+  font-variant-numeric: tabular-nums;
+}
+/* Anywhere digits change in place — timers, rep counters, live totals — proportional figures
+   make the whole line jitter as the glyphs change width. */
+.rest-timer, .tm-time, .ft-clock, .set-counter, [data-live-number] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* =========================================================
+   SURFACES
+========================================================= */
+.pg-card,
+.tl-card,
+.sheet,
+.st-export {
+  background-image: var(--gloss-surface);
+  box-shadow: var(--gloss-edge), var(--gloss-shadow);
+}
+
+/* The sheet sits above a scrim and reads as closer to the viewer, so it takes the taller
+   shadow and the brighter edge. */
+.sheet {
+  box-shadow: var(--gloss-edge-strong), var(--gloss-shadow-lift);
+}
+
+/* Rows inside an already-glossed card must NOT gloss again. Two stacked highlights on nested
+   surfaces is the fastest way to make a clean design look plastic — the child gets the edge
+   only, and no shadow, because it is not floating above anything. */
+.st-export__row {
+  background-image: none;
+  box-shadow: none;
+}
+.st-export__row + .st-export__row {
+  box-shadow: inset 0 1px 0 var(--gloss-hairline);
+}
+
+/* =========================================================
+   CONTROLS
+   The primary action gets a real gradient and a brighter top edge — it should look like the
+   lit face of a button, not a coloured rectangle.
+========================================================= */
+.auth-cta,
+.btn-block[style*="--accent"],
+.rh-btn--primary,
+.btn-primary {
+  background-image: linear-gradient(180deg, rgba(255,255,255,.17) 0%, rgba(255,255,255,0) 58%);
+  box-shadow: var(--gloss-edge-strong), 0 1px 2px rgba(0,0,0,.22), 0 6px 18px -6px rgba(0,0,0,.36);
+}
+
+/* The floating nav pill already had its blur; this only refines the edge so it matches the
+   cards it sits above. Its shadow is left alone — it was tuned for a pill that floats clear
+   of the content and is not a card. */
+nav.bottom-nav {
+  box-shadow: var(--gloss-edge), 0 8px 30px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.2);
+}
+
+/* =========================================================
+   MOTION — all of it transform/opacity, none of it touching layout.
+========================================================= */
+
+/* Press feedback. A surface that does not react to a finger reads as unresponsive no matter
+   how fast it actually is, and this is the cheapest possible acknowledgement: one composited
+   transform, no repaint. Scale is deliberately small — 0.985 is felt rather than seen, and
+   anything stronger looks like the card is being squashed.
+
+   `transition` carries the RELEASE (the settle back to rest) and is the slower half;
+   the press itself is near-instant so the tap feels connected to the finger. */
+.pg-card[data-action], .pg-card[data-nav],
+.tl-card, .st-export__row, button.pg-card {
+  transition: transform var(--duration-base) var(--ease-standard),
+              box-shadow var(--duration-base) var(--ease-standard);
+}
+.pg-card[data-action]:active, .pg-card[data-nav]:active,
+.tl-card:active, .st-export__row:active, button.pg-card:active {
+  transform: scale(.985);
+  transition-duration: 60ms;
+}
+
+/* Page transition on tab change.
+   Applied to a class that JS puts on `main` AFTER a render that changed tabs — never in CSS
+   alone. render() rebuilds #app on every state change, including a tap inside the current
+   page, so an animation attached to `main` itself would replay on every interaction and the
+   whole screen would flash. A fresh `main` without the class is the natural stop condition:
+   the class is added once, and the next render simply does not carry it.
+
+   The nav and header are OUTSIDE this element and stay perfectly still, which is what makes
+   the change read as navigation rather than as a reload. */
+@keyframes ignyt-page-in {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+/* NO fill-mode, and this is the important part.
+   `both` was here first, to hold the from-state for the frame before the animation starts. It
+   also holds that state when the animation does not START — and this was caught in the act: in
+   a tab that had stopped compositing, requestAnimationFrame never fired, the document timeline
+   stayed frozen at 0, and `main` sat at opacity 0 indefinitely. Every screen was blank.
+
+   That was a stalled test environment rather than a phone, but the failure mode is real
+   wherever frames stall: a backgrounded WebView, a device under load. Weigh the two sides —
+   `both` buys one frame of polish and risks an invisible app; without it, an animation that
+   never runs leaves the element at its normal style, which is visible and correct. A page
+   container must never be able to hold opacity 0 as a resting state. */
+#app > main.page-enter {
+  animation: ignyt-page-in var(--duration-base) var(--ease-standard);
+}
+
+/* Momentum scrolling, and a compositor hint that costs nothing because it is permanent and
+   correct: the page scrolls, so promoting it is not speculative. */
+body {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* =========================================================
+   REDUCED MOTION
+   Everything above degrades to the same design without movement. The gloss stays — a finish
+   is not motion — and only the things that move stop moving.
+========================================================= */
+@media (prefers-reduced-motion: reduce) {
+  #app > main.page-enter { animation: none; }
+  .pg-card[data-action], .pg-card[data-nav],
+  .tl-card, .st-export__row, button.pg-card { transition: none; }
+  .pg-card[data-action]:active, .pg-card[data-nav]:active,
+  .tl-card:active, .st-export__row:active, button.pg-card:active { transform: none; }
+}

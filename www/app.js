@@ -14497,6 +14497,33 @@ function macroBar(label, val, target, color, unit){
      scroll intact   preventScroll, because re-focusing an offscreen field would otherwise
                      yank the page to it.
 ========================================================= */
+/* Tags the freshly-rendered <main> so css/gloss.css animates it in — but ONLY when the tab
+   actually changed.
+
+   render() rebuilds #app for every state change, which on this app means every tap: completing
+   a set, opening a sheet, typing in a field. An animation attached to `main` in CSS alone would
+   therefore replay on all of them and the screen would flash constantly. Gating on a tab change
+   is what makes it read as navigation.
+
+   No cleanup is needed and that is deliberate rather than an oversight: `main` is a brand new
+   element after every render, so the next one arrives without the class and simply does not
+   animate. A timer or an animationend listener to strip the class would be a second thing to
+   get wrong, and would race with the next render. */
+let _lastRenderedTab = null;
+function markPageEnterIfTabChanged(){
+  const tab = state.tab;
+  if(tab === _lastRenderedTab) return;
+  // Captured BEFORE the assignment. Testing _lastRenderedTab for null after writing to it
+  // would test the value just written, so the guard below could never fire.
+  const isFirstPaint = _lastRenderedTab === null;
+  _lastRenderedTab = tab;
+  // The first paint of the session is not a navigation — the app arriving IS the transition,
+  // and animating it here would fight the boot splash's own fade.
+  if(isFirstPaint) return;
+  const main = document.querySelector("#app > main");
+  if(main) main.classList.add("page-enter");
+}
+
 function withFocusPreserved(fn){
   const active = document.activeElement;
   const id = active && active.id;
@@ -14541,6 +14568,7 @@ function render(){
       return;
     }
     withFocusPreserved(renderApp);
+    markPageEnterIfTabChanged();
     // A running fast ticks wherever it is visible — the Fasting page or the Home card.
     if(window.IgnytFasting && IgnytFasting.active()) ensureFastTimerRunning();
     else stopFastTimer();
