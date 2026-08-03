@@ -3565,7 +3565,7 @@ function exerciseLogType(name){
   /* Conditioning terms added alongside the machines: a sprint, a bound and a skip are measured
      in distance or time, never in reps, and this list only covered machines. Blast radius was
      measured against all 452 existing entries before widening — none changed type. */
-  if(/running|\bwalk|\bjog|cycling|\bswim|rowing|ski ?erg|bike ?erg|assault bike|jump rope|stair climber|stairmaster|elliptical|\bhiking\b|treadmill|stationary (bike|cycling)|jacob's ladder|versaclimber|\bsprints?\b|shuttle run|sled drag|battle ropes?|shadow boxing|butt kicks|\bbounding\b|power skip/.test(n)) return "cardio";
+  if(/running|\bwalk|\bjog|cycling|\bswim|rowing|ski ?erg|bike ?erg|assault bike|jump rope|stair climber|stairmaster|elliptical|\bhiking\b|treadmill|stationary (bike|cycling)|jacob's ladder|versaclimber|\bsprints?\b|shuttle run|sled drag|battle ropes?|shadow boxing|butt kicks|\bbounding\b|power skip|\brun\b|\bskips?\b|boxing|agility|\bdrill\b/.test(n)) return "cardio";
   return "strength";
 }
 // New set object for a given real exercise, shaped for its real log type. `prefillFrom`

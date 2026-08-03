@@ -294,3 +294,79 @@ Lacrosse Ball Foot Release Stretch,Bodyweight,2x60s,time,Mobility
 Banded Hip Distraction Stretch,Bodyweight,2x60s,time,Mobility
 Banded Shoulder Distraction Stretch,Bodyweight,2x60s,time,Mobility
 Banded Ankle Distraction Stretch,Bodyweight,2x60s,time,Mobility
+External Rotation (Cable),Machine,3x15,reps,Shoulders
+Internal Rotation (Cable),Machine,3x15,reps,Shoulders
+Prone External Rotation,Dumbbell,3x15,reps,Shoulders
+Side Lying External Rotation,Dumbbell,3x15,reps,Shoulders
+Full Can Raise,Dumbbell,3x15,reps,Shoulders
+Empty Can Raise,Dumbbell,3x12,reps,Shoulders
+Scaption Raise,Dumbbell,3x15,reps,Shoulders
+Sleeper Stretch,Bodyweight,2x45s,time,Mobility
+Wall Angel,Bodyweight,3x15,reps,Upper Back
+Band Pull Apart Overhead,Bodyweight,3x15,reps,Shoulders
+Blackburn Exercise,Bodyweight,3x12,reps,Upper Back
+Bottoms Up Carry,Kettlebell,3x30m,distance,Shoulders
+Neck Curl,Bodyweight,3x15,reps,Neck
+Neck Lateral Flexion,Bodyweight,3x15,reps,Neck
+Neck Harness Extension,Machine,3x15,reps,Neck
+Plate Pinch Hold,Bodyweight,3x30s,time,Forearms
+Fat Grip Hold,Barbell,3x30s,time,Forearms
+Farmer Hold,Dumbbell,3x45s,time,Forearms
+Captains of Crush Grip,Bodyweight,3x10,reps,Forearms
+Towel Pull Up Hold,Bodyweight,3x20s,time,Forearms
+Bar Hang Hold,Bodyweight,3x45s,time,Forearms
+Two Finger Hang Hold,Bodyweight,3x15s,time,Forearms
+Hub Lift,Bodyweight,3x8,reps,Forearms
+Smith Machine Calf Raise,Machine,4x15,reps,Calves
+Leg Press Calf Raise,Machine,4x15,reps,Calves
+Standing Leg Curl,Machine,3x12,reps,Hamstrings
+Reverse Pec Deck,Machine,3x15,reps,Upper Back
+Assisted Pull Up Machine,Machine,3x10,reps,Lats
+Nautilus Pullover,Machine,3x12,reps,Lats
+Cable Crossover High,Machine,3x15,reps,Chest
+Cable Crossover Low,Machine,3x15,reps,Chest
+Kneeling Cable Crunch,Machine,3x15,reps,Abdominals
+Bayesian Curl,Machine,3x12,reps,Biceps
+Cable Rope Hammer Curl,Machine,3x15,reps,Biceps
+Single Arm Cable Kickback,Machine,3x15,reps,Triceps
+Bench Dip Weighted,Bodyweight,3x12,reps,Triceps
+Leaning Cable Lateral Raise,Machine,3x15,reps,Shoulders
+Cable Rear Delt Row,Machine,3x15,reps,Upper Back
+Face Pull Rope,Machine,3x15,reps,Upper Back
+Boxing Heavy Bag,Conditioning,3x3min,time,Cardio
+Speed Bag Boxing,Conditioning,3x2min,time,Shoulders
+Jump Rope Crossover,Conditioning,3x60s,time,Cardio
+Sprint Start,Cardio Outdoor,6x20m,distance,Cardio
+Agility Ladder,Conditioning,4x30s,time,Cardio
+Cone Drill,Conditioning,4x30s,time,Cardio
+T Drill,Conditioning,4x1,reps,Cardio
+Pro Agility Shuttle,Cardio Outdoor,6x20m,distance,Cardio
+Sledge Tire Strike,Conditioning,4x20,reps,Full Body
+Climbing Hangboard Hold,Bodyweight,5x10s,time,Forearms
+Campus Board,Bodyweight,4x6,reps,Lats
+Rowing Erg Sprint,Cardio Machine,6x250m,distance,Cardio
+Swim Freestyle,Cardio Outdoor,4x100m,distance,Cardio
+Swim Breaststroke,Cardio Outdoor,4x100m,distance,Cardio
+Swim Butterfly,Cardio Outdoor,4x50m,distance,Cardio
+Pilates Hundred,Bodyweight,3x100,reps,Abdominals
+Pilates Roll Up,Bodyweight,3x10,reps,Abdominals
+Pilates Teaser,Bodyweight,3x8,reps,Abdominals
+Pilates Swan,Bodyweight,3x10,reps,Lower Back
+Pilates Side Kick,Bodyweight,3x15,reps,Glutes
+Beast Crawl,Bodyweight,3x20,reps,Full Body
+Crab Reach,Bodyweight,3x10,reps,Shoulders
+Ape Reach,Bodyweight,3x10,reps,Adductors
+Scorpion Reach,Bodyweight,3x10,reps,Lower Back
+Loaded Beast Hold,Bodyweight,3x30s,time,Shoulders
+Bear Complex,Barbell,5x7,reps,Full Body
+A Skip,Cardio Outdoor,4x20m,distance,Cardio
+B Skip,Cardio Outdoor,4x20m,distance,Cardio
+High Knee Run,Cardio Outdoor,4x20m,distance,Cardio
+Butt Kick Run,Cardio Outdoor,4x20m,distance,Cardio
+Wall Drill,Conditioning,4x20s,time,Quadriceps
+Falling Start Sprint,Cardio Outdoor,6x15m,distance,Cardio
+Flying Sprint,Cardio Outdoor,5x30m,distance,Cardio
+Tempo Run,Cardio Outdoor,3x1000m,distance,Cardio
+Fartlek Run,Cardio Outdoor,1x5000m,distance,Cardio
+Hill Sprint,Cardio Outdoor,8x40m,distance,Cardio
+Stride Out Run,Cardio Outdoor,6x100m,distance,Cardio
