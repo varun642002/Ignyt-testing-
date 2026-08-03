@@ -9509,15 +9509,19 @@ function wireOnboardingWizard(){
     const file = photoInput.files && photoInput.files[0];
     if(!file) return;
     try{
-      const dataUri = await readProfilePhoto(file);
-      state.profile.photo = dataUri;
+      const previous = state.profile.photo;
+      state.profile.photo = await readProfilePhoto(file);
       /* Written on its own rather than waiting for the next render's persist(): if the quota
          is going to reject a photo it must fail here, where the message can name the photo,
-         not later where it would look like the app losing unrelated data. */
-      try{ persist(); }
-      catch(e){
-        state.profile.photo = "";
-        showToast("Not enough storage for that photo.", "error", render);
+         not later where it would look like the app losing unrelated data.
+
+         Checked by RETURN VALUE, not by catch. This was `try{ persist() }catch{}`, and
+         persist() cannot throw — LS.set swallows the QuotaExceededError and always has — so
+         the rollback below has never once run. A rejected photo stayed in memory looking
+         saved until the next launch dropped it. */
+      if(!LS.set("hx_profile", state.profile)){
+        state.profile.photo = previous;
+        showToast("Not enough storage for that photo. Try a smaller image.", "error", render);
         return;
       }
       render();
@@ -11877,11 +11881,23 @@ function renderPersonalInfoTab(){
 
       <div class="pg-card" style="margin-top:14px;">
         <div style="font-size:15px;font-weight:800;margin-bottom:12px;">Profile</div>
+        ${/* The avatar is a real picker now. It carried a pencil badge with pointer-events:none
+              and the tooltip "Photo comes from your account" — it looked like the thing you tap
+              to change your photo and did nothing, on the one screen called Personal
+              Information. Onboarding has had a working picker since it was built; this reuses
+              the same readProfilePhoto(), which downscales and caps the file, so there is one
+              implementation rather than a second that could accept a photo the first would
+              reject. */''}
         <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;">
-          <div class="pf-avatar" style="width:64px;height:64px;">
-            ${(()=>{ const src = profilePhotoSrc(account); return src ? `<img src="${src}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''; })()}
-            <span class="pf-avatar__initial" style="font-size:22px;">${initial}</span>
-            <span class="pf-avatar__edit" title="Photo comes from your account" style="pointer-events:none;">${svg('pencil',11)}</span>
+          <div style="flex:none;">
+            <button class="pf-avatar" style="width:64px;height:64px;border:none;padding:0;cursor:pointer;"
+                    data-pi-photo-pick="1" aria-label="${state.profile.photo ? 'Change profile photo' : 'Add a profile photo'}">
+              ${(()=>{ const src = profilePhotoSrc(account); return src ? `<img src="${src}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''; })()}
+              <span class="pf-avatar__initial" style="font-size:22px;">${initial}</span>
+              <span class="pf-avatar__edit">${svg('pencil',11)}</span>
+            </button>
+            <input type="file" id="pi-photo-input" accept="image/*" hidden>
+            ${state.profile.photo ? `<button class="pi-photo-remove" data-pi-photo-clear="1">Remove</button>` : ''}
           </div>
           <div style="flex:1;min-width:0;">
             <label class="pi-label">Full Name</label>
@@ -18082,6 +18098,40 @@ function attachHandlers(){
   openPiBtns.forEach(el=>el.addEventListener("click", ()=>{ state.tab = "body"; state.bodyView = "personal-info"; render(); }));
   const closePiBtns = document.querySelectorAll('[data-action="close-personal-info"]');
   closePiBtns.forEach(el=>el.addEventListener("click", ()=>{ state.tab = "profile"; state.bodyView = null; render(); }));
+
+  /* Profile photo. Same readProfilePhoto() and the same failure handling as onboarding's
+     picker — one implementation, so a photo this screen accepts is one that screen would too.
+     The write is its own persist() rather than waiting for render()'s: if the storage quota
+     is going to reject a photo it has to fail HERE, where the message can name the photo,
+     instead of later where it would look like the app losing unrelated data. */
+  const piPhotoInput = document.getElementById("pi-photo-input");
+  document.querySelectorAll("[data-pi-photo-pick]").forEach(el=>{
+    el.addEventListener("click", ()=>{ if(piPhotoInput) piPhotoInput.click(); });
+  });
+  if(piPhotoInput) piPhotoInput.addEventListener("change", async ()=>{
+    const file = piPhotoInput.files && piPhotoInput.files[0];
+    if(!file) return;
+    const previous = state.profile.photo;
+    try{
+      state.profile.photo = await readProfilePhoto(file);
+      /* LS.set on the profile specifically, not persist(). persist() returns nothing and
+         writes twenty keys; this needs to know whether THE ONE carrying the photo landed, so
+         a rejected photo can be rolled back instead of sitting in memory until the next
+         reload silently drops it. */
+      if(!LS.set("hx_profile", state.profile)){
+        state.profile.photo = previous;
+        showToast("Not enough storage for that photo. Try a smaller image.", "error", render);
+        return;
+      }
+      render();
+    }catch(e){
+      state.profile.photo = previous;
+      showToast(e && e.message ? e.message : "That photo could not be used.", "error", render);
+    }finally{ piPhotoInput.value = ""; }
+  });
+  document.querySelectorAll("[data-pi-photo-clear]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.profile.photo = ""; persist(); render(); });
+  });
   const pUsername = document.getElementById("p-username");
   if(pUsername) pUsername.addEventListener("change", ()=>{ state.profile.username = pUsername.value; render(); });
   const pPhone = document.getElementById("p-phone");
