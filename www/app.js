@@ -1010,8 +1010,72 @@ function exerciseImageSlug(name){
 
    The manifest is consulted first so a missing illustration renders the muscle badge instead
    of firing a request that 404s. */
+/* =========================================================
+   LEGACY EXERCISE NAMES -> the current library
+
+   The library was rebuilt and almost everything was renamed: "Bench Press" became
+   "Bench Press (Barbell)", "DB Row" became "Bent Over Row (Dumbbell)". Renaming the built-in
+   plan fixed the plan. It did nothing for a saved ROUTINE, a session already in progress, or a
+   workout logged before the change — those still carry the old name, and the How To screen
+   opened on one shows "Instructions not available yet" for an exercise the app demonstrably
+   has instructions for.
+
+   Resolving at LOOKUP time rather than migrating the data is the deliberate choice. A session
+   is a historical record of what was lifted; rewriting the names inside it to match a later
+   library edits history. This leaves the record alone and answers "what is this exercise
+   called now" only when something needs artwork or instructions for it.
+
+   FOUR RULES, ALL EXACT — no fuzzy matching. A wrong match here would put the instructions for
+   one movement under the name of another, which is worse than the honest empty state:
+     1. already a library name        -> itself
+     2. the plan's own rename table   -> its target
+     3. "Name" + exactly one "Name (X)" in the library, or an unambiguous (Barbell)
+     4. equipment-first old style     -> "Rest (Equipment)", e.g. "DB Row" -> "Row (Dumbbell)"
+
+   This resolves 55 of the 296 recorded legacy names, 52 of which gain real instructions. The
+   rest are genuinely different movements from the old library ("Air Squat", "Assault Bike")
+   with no current equivalent, and they keep the honest empty state rather than a guess.
+========================================================= */
+const LEGACY_EQUIPMENT_PREFIXES = [
+  ["DB", "Dumbbell"], ["Dumbbell", "Dumbbell"], ["Barbell", "Barbell"],
+  ["Kettlebell", "Kettlebell"], ["Cable", "Cable"], ["Smith Machine", "Smith Machine"],
+  ["Machine", "Machine"], ["Resistance Band", "Band"], ["Band", "Band"],
+  ["Suspension", "Suspension"], ["Trap-Bar", "Trap bar"]
+];
+
+function resolveExerciseName(name){
+  if(!name) return null;
+  const all = allLibraryExercises();
+  const names = all.map(e => e.name);
+  const set = new Set(names);
+  if(set.has(name)) return name;
+
+  const planned = PLAN_EXERCISE_RENAMES[name];
+  if(planned && set.has(planned[0])) return planned[0];
+
+  for(const [prefix, equip] of LEGACY_EQUIPMENT_PREFIXES){
+    if(name.startsWith(prefix + " ")){
+      const rest = name.slice(prefix.length + 1);
+      if(set.has(rest + " (" + equip + ")")) return rest + " (" + equip + ")";
+      if(set.has(rest)) return rest;
+    }
+  }
+
+  const cands = names.filter(n => n.startsWith(name + " ("));
+  if(cands.length === 1) return cands[0];
+  if(cands.length > 1){
+    // The old names came from a barbell-first library, so that is the honest default when
+    // several variants now share the base name. Anything still ambiguous stays unresolved.
+    const barbell = cands.filter(n => /\(Barbell\)$/.test(n));
+    if(barbell.length === 1) return barbell[0];
+  }
+  return null;
+}
+
 function exerciseImageSrc(name){
-  const slug = exerciseImageSlug(name);
+  // A pre-rename name has no slug of its own; resolving first is what puts the illustration
+  // back on an old routine's rows and on a session that was already running.
+  const slug = exerciseImageSlug(resolveExerciseName(name) || name);
   if(!slug) return "";
   const have = window.IGNYT_EXERCISE_IMAGES;
   if(have && !have[slug]) return "";      // manifest says there is none
@@ -15614,9 +15678,14 @@ function exDetailList(items, glyph, color){
 }
 
 function renderExerciseDetail(name){
-  const detail = EXERCISE_DETAILS[name];
+  /* Look everything up under the CURRENT library name, but keep showing the user the name
+     their session/routine actually holds. Opening "Bench Press" from a live workout was
+     finding no EXERCISE_DETAILS entry and no library row, so How To said "not available yet"
+     for an exercise with seven steps written for it under "Bench Press (Barbell)". */
+  const resolved = resolveExerciseName(name) || name;
+  const detail = EXERCISE_DETAILS[resolved];
   const all = allLibraryExercises();
-  const libEntry = all.find(e=>e.name===name);
+  const libEntry = all.find(e=>e.name===resolved);
   /* detail.primaryMuscle is absent on an instructions-only record, which would have left the
      hero with no muscle and no colour. The library's own muscle is the reliable answer. */
   const muscle = (detail && detail.primaryMuscle) || (libEntry ? libEntry.muscle : getMuscle(name));
