@@ -3555,8 +3555,17 @@ const EXERCISE_LOG_TYPES = {
 function exerciseLogType(name){
   const n = (name||"").toLowerCase();
   if(/\bcarry\b|sled push|sled pull|yoke walk/.test(n)) return "carry";
-  if(/\bplank\b|wall sit|dead hang|hollow (hold|body)|\bl-sit\b|handstand hold|stretch|\bpose\b|foam rolling|dislocate|ankle circles|cat-cow|child's pose|downward-facing dog|warrior (i|ii)|deep squat hold|bird dog|90\/90 hip switch|thoracic rotation|meditation|\byoga\b/.test(n)) return "hold";
-  if(/running|\bwalk|\bjog|cycling|\bswim|rowing|ski ?erg|bike ?erg|assault bike|jump rope|stair climber|stairmaster|elliptical|\bhiking\b|treadmill|stationary (bike|cycling)|jacob's ladder/.test(n)) return "cardio";
+  /* `hold` and `isometric` added as general keywords rather than continuing to list every
+     movement one at a time. The list was already 20 entries and still missed things: "Front
+     Lever Hold" logged as reps, which asks how many front levers you did rather than for how
+     long. Anything whose NAME says it is held is timed. Checked against the whole library
+     before widening — Front Lever Hold was the only existing entry it changed, and changing
+     it was the point. */
+  if(/\bplank\b|wall sit|dead hang|hollow (hold|body)|\bl-sit\b|\bhold\b|isometric|stretch|\bpose\b|foam rolling|dislocate|ankle circles|cat-cow|child's pose|downward-facing dog|warrior (i|ii)|bird dog|90\/90 hip switch|thoracic rotation|meditation|\byoga\b/.test(n)) return "hold";
+  /* Conditioning terms added alongside the machines: a sprint, a bound and a skip are measured
+     in distance or time, never in reps, and this list only covered machines. Blast radius was
+     measured against all 452 existing entries before widening — none changed type. */
+  if(/running|\bwalk|\bjog|cycling|\bswim|rowing|ski ?erg|bike ?erg|assault bike|jump rope|stair climber|stairmaster|elliptical|\bhiking\b|treadmill|stationary (bike|cycling)|jacob's ladder|versaclimber|\bsprints?\b|shuttle run|sled drag|battle ropes?|shadow boxing|butt kicks|\bbounding\b|power skip/.test(n)) return "cardio";
   return "strength";
 }
 // New set object for a given real exercise, shaped for its real log type. `prefillFrom`
