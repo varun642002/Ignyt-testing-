@@ -396,3 +396,126 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
   font-size: 13px; font-weight: 700;
 }
 .hm-welcome svg{ flex: none; fill: currentColor; }
+
+/* =========================================================
+   HOME — the minimal summary layout (.hm2)
+
+   A title, a rings card, and a grid of tiles that are mostly number. Everything the old Home
+   carried still exists on its own screen; it is simply not on the front page any more, so the
+   rules for the blocks it used are left above rather than deleted — the classes are unused by
+   Home now but several are shared with other screens.
+
+   Sized for one screenful on a 375x812 phone: header ~72px, rings card ~168px, and six tiles
+   at ~132px in two columns.
+========================================================= */
+
+.hm2 { padding-top: 4px; }
+
+/* No avatar here any more — the shared header's profile button is the same control, and two
+   of them on a screen built around having fewer elements was the wrong trade. */
+.hm2__head { margin: 2px 0 16px; }
+.hm2__title { font-size: 34px; font-weight: 800; letter-spacing: -.02em; margin: 0; line-height: 1.05; }
+.hm2__date { font-size: 13px; color: var(--rh-muted); margin-top: 3px; }
+
+.hm2__card {
+  background: var(--rh-card); border: 1px solid var(--rh-border);
+  border-radius: 18px; padding: 16px;
+}
+
+/* ---- the semicircle gauge ----
+   Three nested half arcs. The wrapper is deliberately half as tall as it is wide: the SVG
+   viewBox is 120x72, so a square box would leave a band of dead space under the arcs and push
+   the card taller than anything on it. */
+.hm2__gauge { display: flex; align-items: center; gap: 16px; }
+.hm2__arcwrap { flex: none; width: 132px; }
+.hm2__arcwrap svg { width: 100%; height: auto; display: block; overflow: visible; }
+
+.hm2__legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.hm2__leg { min-width: 0; }
+.hm2__legname { display: block; font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+.hm2__legval {
+  display: block; font-size: 13px; font-weight: 700; color: var(--rh-text);
+  font-variant-numeric: tabular-nums; margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hm2__legval em { font-style: normal; font-weight: 500; color: var(--rh-muted); }
+
+/* ---- weight: three figures on one row ----
+   Full width because it carries current, target and days-left. A number and its label stack,
+   and the three columns share the width evenly so the row reads as one statement rather than
+   three tiles crammed together. */
+.hm2__weight {
+  display: block; width: 100%; text-align: left; margin-top: 10px;
+  cursor: pointer; color: var(--rh-text); font: inherit;
+}
+#app .hm2__weight { min-height: 0; }
+.hm2__wrow { display: flex; gap: 8px; margin-top: 12px; }
+.hm2__wcell { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.hm2__wcell b {
+  font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hm2__wcell em {
+  font-style: normal; font-size: 11px; color: var(--rh-muted); margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ---- tiles ---- */
+.hm2__grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px; margin-top: 10px;
+}
+
+.hm2__tile {
+  /* `#app button` sets a 32px floor; a tile needs a real height, and stating it here at
+     matching specificity is what stops that rule flattening the grid. */
+  min-height: 132px;
+  display: flex; flex-direction: column; align-items: stretch; text-align: left;
+  background: var(--rh-card); border: 1px solid var(--rh-border);
+  border-radius: 18px; padding: 14px; cursor: pointer; color: var(--rh-text);
+  font: inherit;
+}
+#app .hm2__tile { min-height: 132px; }
+
+.hm2__tiletop {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  font-size: 14px; font-weight: 700; letter-spacing: -.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hm2__chev { flex: none; color: var(--rh-muted); transform: rotate(-90deg); display: inline-flex; }
+
+.hm2__big {
+  font-size: 30px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1;
+  font-variant-numeric: tabular-nums; margin-top: 10px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hm2__sub { font-size: 12px; color: var(--rh-muted); margin-top: 2px; }
+
+/* The chart sits on the floor of the tile so tiles with and without one stay the same height
+   and the grid does not go ragged. */
+.hm2__spark {
+  margin-top: auto; padding-top: 10px;
+  display: flex; align-items: flex-end; gap: 4px; height: 34px;
+}
+.hm2__spark i { flex: 1; min-width: 0; border-radius: 2px; opacity: .55; }
+.hm2__spark i:last-child { opacity: 1; }
+
+.hm2__tile--award { align-items: center; text-align: center; }
+.hm2__badge { margin-top: 6px; width: 62px; }
+.hm2__badge svg { width: 100%; height: auto; display: block; overflow: visible; }
+.hm2__tile--award .hm2__sub { margin-top: 6px; line-height: 1.3; }
+
+@media (max-width: 340px) {
+  .hm2__title { font-size: 29px; }
+  .hm2__gauge { gap: 10px; }
+  .hm2__arcwrap { width: 112px; }
+  .hm2__big { font-size: 26px; }
+  .hm2__wcell b { font-size: 22px; }
+}
+
+/* Home carries its own "Summary" title, so the shared header drops the wordmark there and
+   keeps only its controls. Two titles stacked on one screen is the opposite of what this
+   layout is for. Every other tab keeps the full header. */
+.app-header--bare { padding-top: 6px; padding-bottom: 2px; align-items: center; }
+.app-header--bare .title, .app-header--bare .eyebrow-row { display: none; }

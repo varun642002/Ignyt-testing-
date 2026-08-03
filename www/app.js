@@ -6580,11 +6580,12 @@ function renderApp(){
   const notifications = computeNotifications();
   const unreadCount = notifications.filter(n=>n.ts>(state.settings.notificationsSeenAt||0)).length;
   root.innerHTML = `
-    <header class="app-header page-title-row ${isLightTab?'app-header--home-light':''}">
+    <header class="app-header page-title-row ${isLightTab?'app-header--home-light':''}${state.tab==="home"?' app-header--bare':''}">
+      ${state.tab==="home" ? `<div></div>` : `
       <div>
         <div class="eyebrow-row"><div class="eyebrow-dash"></div><span class="eyebrow">Train with intent</span></div>
         <h1 class="title">IGNYT</h1>
-      </div>
+      </div>`}
       <div style="display:flex;gap:8px;position:relative;">
         <button class="page-tools-btn" data-action="toggle-notifications" aria-label="Notifications${unreadCount?` (${unreadCount} new)`:''}">
           ${svg('bell',20)}${unreadCount?'<span class="hdr-badge-dot"></span>':''}
