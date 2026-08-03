@@ -89,6 +89,17 @@ workflows:
     environment:
       node: 22
       xcode: latest
+      vars:
+        # The app's numeric Apple ID (App Store Connect > your app > App Information >
+        # "Apple ID" — a 10-digit number, NOT the bundle id and NOT your email). Set it in
+        # Codemagic as an environment variable so it is not committed here.
+        #
+        # It was referenced by the build-number step below and never defined anywhere, which
+        # is worse than it sounds: the lookup failed silently, the `|| echo 0` caught it, and
+        # every build got number 1. The first TestFlight upload would have worked and the
+        # second would have been rejected as a duplicate — exactly the versionCode collision
+        # Android hit three times.
+        APP_APPLE_ID: $APP_APPLE_ID
       ios_signing:
         # Codemagic creates and manages the certificate and provisioning profile from the API
         # key above. This is the step that normally forces a Mac — Keychain generates the
@@ -109,9 +120,26 @@ workflows:
         # TestFlight rejects a build number it has already seen, the same rule that made
         # Android's versionCode collide repeatedly. Asking App Store Connect for the current
         # highest and adding one removes the guesswork entirely; the marketing version still
-        # comes from CURRENT_PROJECT_VERSION in the project file.
+        # comes from MARKETING_VERSION in the project file.
+        #
+        # A missing APP_APPLE_ID stops the build instead of falling through to 1. The two
+        # cases look identical to the old `|| echo 0` and are not remotely the same: "no
+        # builds yet" genuinely means 1, while "the variable is unset" means every build is
+        # numbered 1 forever and the second upload is rejected. Guessing between them is how
+        # the Android version numbering went wrong three times.
         script: |
-          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_APPLE_ID" 2>/dev/null || echo "0")
+          set -e
+          if [ -z "$APP_APPLE_ID" ]; then
+            echo "APP_APPLE_ID is not set. Add it in Codemagic > Environment variables."
+            echo "Find it at App Store Connect > your app > App Information > Apple ID."
+            exit 1
+          fi
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_APPLE_ID" || echo "")
+          if [ -z "$LATEST" ]; then
+            echo "No existing TestFlight build found — treating this as the first upload."
+            LATEST=0
+          fi
+          echo "Latest on TestFlight: $LATEST -> building $(($LATEST + 1))"
           agvtool new-version -all $(($LATEST + 1))
         working_directory: ios/App
 

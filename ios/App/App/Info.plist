@@ -36,9 +36,16 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	<!--
+	  arm64, not armv7. armv7 is the Capacitor scaffold default and it is a contradiction here:
+	  the deployment target is iOS 15, and no armv7 device ever ran past iOS 10. An app that
+	  requires a CPU no supported device has is something App Store Connect validation objects
+	  to on upload, so this would have failed the first submission for a reason that has
+	  nothing to do with the app.
+	-->
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
