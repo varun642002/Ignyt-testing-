@@ -90,13 +90,23 @@
     if (weeks != null && isFinite(weeks) && deltaKg !== 0) {
       var c = new Date(g.startDate || todayISO()); c.setDate(c.getDate() + Math.round(weeks * 7)); completion = c.toISOString().slice(0, 10);
     }
+    /* Anything that did not come out as a real number becomes null, so a consumer renders a
+       dash rather than the literal string "NaN".
+
+       A goal created in-app always carries height/age/gender/activityMultiplier, so this never
+       fires for a normal record. A goal restored from an older backup, or written before those
+       fields existed, does not -- and calcBMR() on undefined inputs quietly produces NaN, which
+       string-concatenates straight onto the screen as "600 / NaN kcal". Every other value in
+       that card already degrades to a dash; these now do too. */
+    var fin = function (v) { return (typeof v === "number" && isFinite(v)) ? v : null; };
     return {
-      bmr: bmr, maintenance: maintenance, lbm: lbm, bmi: bmi,
-      weeklyRate: Math.round(weeklyRate * 100) / 100, goalDelta: goalDelta, calories: calories,
-      protein: proteinG, fat: fatG, carbs: carbG,
-      targetLeanMass: targetLeanMass, targetFatMass: targetFatMass,
-      weeks: weeks != null ? Math.round(weeks) : null, completion: completion,
-      proteinPct: Math.round(proteinKcal / calories * 100), fatPct: 25, carbPct: Math.round(carbG * 4 / calories * 100)
+      bmr: fin(bmr), maintenance: fin(maintenance), lbm: fin(lbm), bmi: fin(bmi),
+      weeklyRate: fin(Math.round(weeklyRate * 100) / 100), goalDelta: fin(goalDelta), calories: fin(calories),
+      protein: fin(proteinG), fat: fin(fatG), carbs: fin(carbG),
+      targetLeanMass: fin(targetLeanMass), targetFatMass: fin(targetFatMass),
+      weeks: weeks != null ? fin(Math.round(weeks)) : null, completion: completion,
+      proteinPct: fin(Math.round(proteinKcal / calories * 100)), fatPct: 25,
+      carbPct: fin(Math.round(carbG * 4 / calories * 100))
     };
   }
 
@@ -199,7 +209,7 @@
         var n = st[0], active = n <= s, current = n === s;
         var circle = '<div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex:none;' +
           (active ? "background:var(--rh-blue);color:#fff;" : "background:var(--rh-card);color:var(--rh-muted);border:1px solid var(--rh-border);") + '">' + n + '</div>';
-        var label = '<div style="font-size:10px;font-weight:' + (current ? 800 : 600) + ';color:' + (current ? "var(--rh-text)" : "var(--rh-muted)") + ';margin-top:5px;white-space:nowrap;text-align:center;">' + st[1] + '</div>';
+        var label = '<div style="font-size:11px;font-weight:' + (current ? 800 : 600) + ';color:' + (current ? "var(--rh-text)" : "var(--rh-muted)") + ';margin-top:5px;white-space:nowrap;text-align:center;">' + st[1] + '</div>';
         var connector = i < steps.length - 1 ? '<div style="flex:1;height:1px;background:' + (n < s ? "var(--rh-blue)" : "var(--rh-border)") + ';margin:15px 6px 0;"></div>' : '';
         return '<div style="display:flex;flex-direction:column;align-items:center;">' + circle + label + '</div>' + connector;
       }).join('') + '</div>';
@@ -257,8 +267,8 @@
           '<div><div style="font-size:11px;color:var(--rh-muted);">Target date</div><div style="font-size:13px;font-weight:800;margin-top:4px;">' + (cp.completion ? fmtDate(cp.completion) : "—") + '</div></div>' +
           '</div>' +
           '<div style="display:flex;gap:14px;margin-top:14px;border-top:1px solid var(--rh-border);padding-top:12px;">' +
-          '<div style="flex:1;display:flex;align-items:center;gap:8px;"><span style="flex:none;color:var(--rh-green);">' + svg("trend", 16) + '</span><div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Required weekly ' + (tgtW < curW ? "loss" : "gain") + '</div><div style="font-size:13px;font-weight:800;color:var(--rh-green);">' + paceAbs + ' ' + wUnit() + '/week</div></div></div>' +
-          '<div style="flex:1;display:flex;align-items:center;gap:8px;"><span style="flex:none;color:' + paceColor + ';">' + svg("check", 16) + '</span><div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Goal pace</div><div style="font-size:13px;font-weight:800;color:' + paceColor + ';">' + pace + '</div></div></div>' +
+          '<div style="flex:1;display:flex;align-items:center;gap:8px;"><span style="flex:none;color:var(--rh-green);">' + svg("trend", 16) + '</span><div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Required weekly ' + (tgtW < curW ? "loss" : "gain") + '</div><div style="font-size:13px;font-weight:800;color:var(--rh-green);">' + paceAbs + ' ' + wUnit() + '/week</div></div></div>' +
+          '<div style="flex:1;display:flex;align-items:center;gap:8px;"><span style="flex:none;color:' + paceColor + ';">' + svg("check", 16) + '</span><div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Goal pace</div><div style="font-size:13px;font-weight:800;color:' + paceColor + ';">' + pace + '</div></div></div>' +
           '</div>' +
           '<div style="margin-top:14px;background:' + (pace === "Healthy" ? "rgba(22,163,74,.08)" : "rgba(217,119,6,.08)") + ';border-radius:10px;padding:12px;display:flex;gap:10px;align-items:flex-start;">' +
           '<span style="flex:none;font-size:18px;">' + (pace === "Healthy" ? "🚀" : "⚠️") + '</span>' +
@@ -401,7 +411,7 @@
     h += '<div class="pg-card" style="margin-top:12px;display:flex;align-items:center;gap:16px;">' +
       '<div class="pg-ring" style="--pct:' + (pct || 0) + ';--ring-color:var(--rh-blue);width:96px;height:96px;flex:none;">' +
       '<div class="pg-ring__inner" style="width:76px;height:76px;flex-direction:column;">' +
-      '<div style="font-size:20px;font-weight:800;">' + (pct == null ? "—" : pct + "%") + '</div><div style="font-size:9px;color:var(--rh-muted);font-weight:700;">Complete</div></div></div>' +
+      '<div style="font-size:20px;font-weight:800;">' + (pct == null ? "—" : pct + "%") + '</div><div style="font-size:11px;color:var(--rh-muted);font-weight:700;">Complete</div></div></div>' +
       '<div style="flex:1;min-width:0;">' +
       '<div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Current Weight</div><div style="font-size:19px;font-weight:800;margin-bottom:6px;">' + (cur != null ? dW(cur) + " " + wUnit() : "—") + '</div>' +
       '<div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Target Weight</div><div style="font-size:19px;font-weight:800;">' + (g.targetWeight != null ? dW(g.targetWeight) + " " + wUnit() : "—") + '</div>' +
@@ -420,10 +430,10 @@
     h += '<div class="rh-section-head"><span>Today\'s Summary</span></div>' +
       '<div class="pg-stat-grid">' +
       '<div class="pg-stat-card"><div style="display:flex;align-items:center;gap:8px;">' + ringHtml(c.calories ? Math.min(100, Math.round(eaten / c.calories * 100)) : null, "var(--rh-blue)") + '<div><div style="font-size:12px;font-weight:700;">Calories</div></div></div>' +
-      '<div style="font-size:11px;color:var(--rh-muted);margin-top:6px;">' + eaten + ' / ' + c.calories + ' kcal</div>' +
+      '<div style="font-size:11px;color:var(--rh-muted);margin-top:6px;">' + eaten + ' / ' + (c.calories != null ? c.calories : "—") + ' kcal</div>' +
       '<button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:8px;padding:8px;font-size:12px;" data-nav="nutrition">+ Food</button></div>' +
       '<div class="pg-stat-card"><div style="display:flex;align-items:center;gap:8px;">' + ringHtml(c.protein ? Math.min(100, Math.round(protToday / c.protein * 100)) : null, "var(--rh-green)") + '<div><div style="font-size:12px;font-weight:700;">Protein</div></div></div>' +
-      '<div style="font-size:11px;color:var(--rh-muted);margin-top:6px;">' + protToday + ' / ' + c.protein + ' g</div>' +
+      '<div style="font-size:11px;color:var(--rh-muted);margin-top:6px;">' + protToday + ' / ' + (c.protein != null ? c.protein : "—") + ' g</div>' +
       '<button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:8px;padding:8px;font-size:12px;" data-nav="nutrition">+ Log</button></div>' +
       '<div class="pg-stat-card"><div style="display:flex;align-items:center;gap:8px;color:var(--rh-purple);">' + svg("dumbbell", 20) + '<div><div style="font-size:12px;font-weight:700;color:var(--rh-text);">Workouts</div></div></div>' +
       '<div style="font-size:19px;font-weight:800;margin-top:6px;">' + wk + '<span style="font-size:11px;color:var(--rh-muted);font-weight:600;"> / ' + (g.trainingDays || "—") + ' this week</span></div>' +
@@ -453,7 +463,7 @@
       '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin-bottom:8px;">Body Metrics</div>' +
       '<div class="pf-progress-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));">' +
       '<div class="pf-progress-item"><div class="pf-progress-item__head">Lean Mass</div><div class="pf-progress-item__value">' + (c.lbm != null ? c.lbm : "—") + '<span class="pf-progress-item__unit"> kg</span></div></div>' +
-      '<div class="pf-progress-item"><div class="pf-progress-item__head">BMI</div><div style="display:flex;align-items:center;gap:8px;"><div class="pf-progress-item__value">' + (c.bmi != null ? c.bmi : "—") + '</div>' + (bmiCat ? '<span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:' + bmiColor + '1a;color:' + bmiColor + ';">' + bmiCat + '</span>' : "") + '</div></div>' +
+      '<div class="pf-progress-item"><div class="pf-progress-item__head">BMI</div><div style="display:flex;align-items:center;gap:8px;"><div class="pf-progress-item__value">' + (c.bmi != null ? c.bmi : "—") + '</div>' + (bmiCat ? '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:' + bmiColor + '1a;color:' + bmiColor + ';">' + bmiCat + '</span>' : "") + '</div></div>' +
       '</div></div>' +
       '<div style="font-size:11px;color:var(--rh-muted);margin:8px 2px 0;">These targets drive your Nutrition and Home calorie/macro goals automatically.</div>';
 

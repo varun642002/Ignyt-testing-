@@ -4,9 +4,13 @@
    The active-session renderer (sets, supersets, rest timer, plate calc) is large and
    deeply stateful — left in app.js and extracted in a later, dedicated pass.
 
-   This pass restyles the list view to match a light "premium reference" mockup (Today's
-   Workout hero, This Week stats, Quick Actions, category filter chips, routine cards with
-   a real per-routine completion ring, Recent Sessions) using the same light design system
+   Order: Quick Actions, then routines (filter chips and cards), then Recent Sessions. Do,
+   choose, review. The This Week stat grid used to lead -- workouts, total time, PRs and volume
+   against last week -- but that is a report, and this is the screen someone opens to start
+   training. Those four figures live on Progress, which is where you go to read them.
+
+   Light "premium reference" styling: category filter chips, routine cards with a real
+   per-routine completion ring, recent sessions -- using the same light design system
    introduced for Home (see home.css's --rh-* tokens, duplicated locally here so this module
    stays self-contained). Every value is genuinely sourced from existing app state -- no
    fabricated numbers, no invented charts. */
@@ -46,9 +50,11 @@
   }
 
   window.IgnytPages.renderWorkoutList = function renderWorkoutList(ctx) {
+    /* week / weekStats / prsThisWeek / volumeTrend / todayMuscles / routineEstimatedMinutes went
+       with the This Week grid. app.js still passes them and other screens still use them; this
+       one simply stopped asking. */
     const { state, svg, renderPRCelebration, renderRoutineBuilder, sessionMuscles, sessionTitle,
-      workoutDurationLabel, displayW, wUnit, week, plannedDay, weekStats, prsThisWeek,
-      volumeTrend, todayMuscles, ROUTINE_CATEGORIES, routineEstimatedMinutes, escHtml } = ctx;
+      workoutDurationLabel, displayW, wUnit, plannedDay, ROUTINE_CATEGORIES, escHtml } = ctx;
 
     const showAll = state.showAllSessions;
     const recent = showAll ? state.workoutLog : state.workoutLog.slice(0, 2);
@@ -66,26 +72,12 @@
       <div class="wk-light">
         ${renderPRCelebration && state.lastSessionPRs && state.lastSessionPRs.length ? renderPRCelebration() : ''}
 
-        <div class="rh-section-head"><span>This Week</span><a href="#" class="rh-view-all" data-nav="plan">Week ${week.week} of 8 ›</a></div>
-        <div class="wk-stat-grid">
-          <div class="wk-stat-card"><span class="wk-stat-card__icon" style="background:rgba(37,99,235,.1);color:#2563EB;">${svg('dumbbell',18)}</span>
-            <div class="wk-stat-card__value">${weekStats.workoutsCompleted}</div>
-            <div class="wk-stat-card__label">Workouts</div>
-            <div class="wk-stat-card__sub">${weekStats.workoutsGoal ? `Goal ${weekStats.workoutsGoal}` : ''}</div></div>
-          <div class="wk-stat-card"><span class="wk-stat-card__icon" style="background:rgba(22,163,74,.1);color:#16A34A;">${svg('timer',18)}</span>
-            <div class="wk-stat-card__value">${fmtMinutes(weekStats.trainingMinutes)}</div>
-            <div class="wk-stat-card__label">Total Time</div>
-            <div class="wk-stat-card__sub">${weekStats.workoutsGoal ? `Goal ${weekStats.workoutsGoal}h` : ''}</div></div>
-          <div class="wk-stat-card"><span class="wk-stat-card__icon" style="background:rgba(245,158,11,.12);color:#D97706;">${svg('trophy',18)}</span>
-            <div class="wk-stat-card__value">${prsThisWeek}</div>
-            <div class="wk-stat-card__label">PRs</div>
-            <div class="wk-stat-card__sub">This Week</div></div>
-          <div class="wk-stat-card"><span class="wk-stat-card__icon" style="background:rgba(124,58,237,.1);color:#7C3AED;">${svg('flame',18)}</span>
-            <div class="wk-stat-card__value">${displayW(weekStats.weeklyVolume,0).toLocaleString()}<span class="wk-stat-card__unit">${wUnit()}</span></div>
-            <div class="wk-stat-card__label">Volume</div>
-            <div class="wk-stat-card__sub ${volumeTrend.positive?'is-up':'is-down'}">${volumeTrend.text} vs last week</div></div>
-        </div>
 
+        ${/* The This Week stat grid -- workouts, total time, PRs, volume vs last week -- was
+              the first thing on this screen. It is a report, and this screen is for starting a
+              session: the four figures are all on Progress, which is where someone goes to
+              read them. Quick Actions leads now, then routines, then what was logged recently.
+              Order: do, then choose, then review. */''}
         <div class="rh-section-head"><span>Quick Actions</span></div>
         <div class="wk-quick-grid">
           <button class="rh-quick-card" data-action="toggle-routine-builder">${svg('plus',20)}<span>New Routine</span></button>
@@ -113,13 +105,13 @@
             const last = lastSessionForRoutine(state, r.name);
             const pct = last ? sessionCompletionPct(last) : null;
             const color = r.category ? CATEGORY_COLOR[r.category] : '#64748B';
-            const preview = r.exercises.slice(0, 3).map(e => e.name).join(' • ') + (r.exercises.length > 3 ? ` • +${r.exercises.length - 3} more` : '');
+            const preview = r.exercises.slice(0, 3).map(e => escHtml(e.name)).join(' • ') + (r.exercises.length > 3 ? ` • +${r.exercises.length - 3} more` : '');
             return `<div class="wk-routine-card" data-routine-card="${r.id}">
               <button class="rt-drag" data-routine-drag="${r.id}" aria-label="Reorder ${escHtml(r.name)}" title="Drag to reorder">${svg('drag',16)}</button>
               <div class="wk-routine-card__badge" style="background:${color}1a;color:${color};">${svg('dumbbell', 20)}</div>
               <div class="wk-routine-card__body">
                 <div class="wk-routine-card__top">
-                  <span class="wk-routine-card__name">${r.name}</span>
+                  <span class="wk-routine-card__name">${escHtml(r.name)}</span>
                   ${plannedDay && plannedDay.session===r.name ? `<span class="wk-badge-today">Today</span>` : ''}
                 </div>
                 <div class="wk-routine-card__meta">
@@ -142,7 +134,7 @@
                 <button class="del" data-dup-routine="${r.id}" aria-label="Duplicate routine">${svg('copy',16)}</button>
                 <button class="del" data-del-routine="${r.id}" aria-label="Delete routine">${svg('x',16)}</button>
               </div>
-              <button class="wk-routine-card__start" data-start-routine="${r.id}" aria-label="Start ${r.name}">▶</button>
+              <button class="wk-routine-card__start" data-start-routine="${r.id}" aria-label="Start ${escHtml(r.name)}">▶</button>
             </div>`;
           }).join('') + `</div>`}
 

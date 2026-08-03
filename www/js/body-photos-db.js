@@ -94,7 +94,10 @@
         const rows = (req.result || []).map(r => ({
           id: r.id, date: r.date, category: r.category, note: r.note, createdAt: r.createdAt,
           hasThumb: !!r.thumb, weight: r.weight != null ? r.weight : null, bodyfat: r.bodyfat != null ? r.bodyfat : null,
-          goal: r.goal || "", tags: r.tags || [], milestone: !!r.milestone, rotation: r.rotation || 0
+          goal: r.goal || "", tags: r.tags || [], milestone: !!r.milestone, rotation: r.rotation || 0,
+          // Session measurements. Optional and absent by default — a photo with no waist
+          // recorded reports null, never 0, so the UI can show "—" instead of a false reading.
+          waist: r.waist != null ? r.waist : null, chest: r.chest != null ? r.chest : null
         }));
         rows.sort((a, b) => b.createdAt - a.createdAt);
         resolve(rows);

@@ -23,6 +23,18 @@
 .pg-header__title { font-size:28px; font-weight:800; letter-spacing:-.02em; }
 .pg-header__sub { font-size:13px; color:var(--rh-muted); margin-top:2px; }
 
+/* Back affordance for .pg-light screens that are pushed rather than tabbed. Tools needs this
+   now that it is reached from Profile instead of the bottom nav — without a way back, a tab
+   demoted to a subpage is a dead end. 44px hit target, per touch guidance. */
+.pg-back {
+  display:flex; align-items:center; justify-content:center;
+  width:36px; height:36px; margin:0 0 6px -8px; padding:0;
+  border:0; border-radius:50%; background:transparent;
+  color:var(--rh-text); font-size:30px; line-height:1;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.pg-back:active { background:var(--rh-border); }
+
 /* Shared .cat-chip reskin for every .pg-light screen (Log Weight ranges, Body Progress
    week-nav, Exercise Library category filter, etc.) -- same idea as .wk-light .cat-chip
    in workout.css, just scoped to the broader .pg-light wrapper instead of one page. */
@@ -36,12 +48,12 @@
 
 /* ---------- This Week stat grid ---------- */
 .pg-stat-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:14px; }
-.pg-stat-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px; }
-.pg-stat-card__icon { display:inline-flex; width:34px; height:34px; border-radius:10px; align-items:center; justify-content:center; }
+.pg-stat-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-card); padding:14px; }
+.pg-stat-card__icon { display:inline-flex; width:34px; height:34px; border-radius:var(--radius-sm); align-items:center; justify-content:center; }
 .pg-stat-card__value { font-size:20px; font-weight:800; margin-top:10px; letter-spacing:-.02em; }
 .pg-stat-card__unit { font-size:11px; font-weight:600; color:var(--rh-muted); margin-left:2px; }
 .pg-stat-card__label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:2px; }
-.pg-stat-card__sub { font-size:10px; font-weight:700; color:#B6BEC9; margin-top:5px; }
+.pg-stat-card__sub { font-size:11px; font-weight:700; color:#B6BEC9; margin-top:5px; }
 .pg-stat-card__sub.is-up { color:var(--rh-green); }
 .pg-stat-card__sub.is-down { color:var(--rh-red); }
 
@@ -52,7 +64,7 @@
    text node has no color of its own -- without this, those buttons default to black text via
    the UA button stylesheet, invisible in light theme, unreadable in dark. No-op for the many
    existing div usages (they already resolved to this value via inheritance). */
-.pg-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:16px; color:var(--rh-text); }
+.pg-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-card); padding:16px; color:var(--rh-text); }
 .pg-card-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; align-items:stretch; }
 .pg-card--half { padding:14px; }
 .pg-card__head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
@@ -66,17 +78,11 @@
 .pg-card__sub-label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:8px; }
 
 .pg-chart-bubble { display:inline-block; margin-top:-26px; margin-left:calc(100% - 46px); background:var(--rh-blue); color:#fff;
-  font-size:11px; font-weight:800; padding:3px 8px; border-radius:8px; position:relative; }
+  font-size:11px; font-weight:800; padding:3px 8px; border-radius:var(--radius-xs-plus); position:relative; }
 
 /* ---------- Heatmap ---------- */
-.pg-heatmap__row { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:4px; }
-.pg-heatmap__row--labels span { font-size:9px; color:var(--rh-muted); text-align:center; font-weight:700; }
-.pg-heatmap__cell { display:block; width:100%; aspect-ratio:1; border-radius:4px; background:#EEF1F6; }
-.pg-tier-1 { background:#BFDBFE; }
-.pg-tier-2 { background:#60A5FA; }
-.pg-tier-3 { background:#2563EB; }
-.pg-heatmap__legend { display:flex; align-items:center; gap:4px; margin-top:8px; font-size:10px; color:var(--rh-muted); font-weight:600; }
-.pg-heatmap__legend .pg-heatmap__cell { width:12px; height:12px; flex:none; }
+/* The .pg-heatmap rules were here. The card was removed from Progress, and these were
+   the only markup that used them. */
 
 /* ---------- Weekly goal ring ---------- */
 .pg-weekly-goal { display:flex; align-items:center; gap:12px; margin-top:6px; }
@@ -91,12 +97,12 @@
 /* ---------- Personal records row ---------- */
 .pg-pr-row { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
 .pg-pr-row::-webkit-scrollbar { display:none; }
-.pg-pr-card { scroll-snap-align:start; flex:none; width:130px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px; }
+.pg-pr-card { scroll-snap-align:start; flex:none; width:130px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-tile); padding:14px; }
 .pg-pr-card__icon { display:inline-flex; width:34px; height:34px; border-radius:50%; align-items:center; justify-content:center; background:rgba(37,99,235,.1); color:var(--rh-blue); }
 .pg-pr-card__name { font-size:12px; color:var(--rh-muted); font-weight:600; margin-top:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pg-pr-card__value { font-size:18px; font-weight:800; margin-top:2px; }
 .pg-pr-card__delta { font-size:11px; font-weight:700; color:var(--rh-green); margin-top:2px; }
-.pg-pr-card__date { font-size:10px; color:var(--rh-muted); margin-top:4px; }
+.pg-pr-card__date { font-size:11px; color:var(--rh-muted); margin-top:4px; }
 
 /* ---------- Quick access grid ---------- */
 .pg-quick-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
@@ -108,11 +114,285 @@
    <button> on the Progress dashboard and the one place that inheritance silently broke --
    invisible in light theme (black-on-white still reads), unreadable in dark theme
    (black-on-#171b24). Audited: no other <button> in progress.js/progress.css. */
-.pg-quick-card { display:flex; align-items:center; gap:10px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:14px; padding:12px; cursor:pointer; text-align:left; color:var(--rh-text); }
-.pg-quick-card__icon { display:flex; width:34px; height:34px; border-radius:10px; align-items:center; justify-content:center; flex:none; }
+.pg-quick-card { display:flex; align-items:center; gap:10px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-md); padding:12px; cursor:pointer; text-align:left; color:var(--rh-text); }
+.pg-quick-card__icon { display:flex; width:34px; height:34px; border-radius:var(--radius-sm); align-items:center; justify-content:center; flex:none; }
 .pg-quick-card__body { flex:1; min-width:0; }
 .pg-quick-card__title { font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.pg-quick-card__sub { font-size:10px; color:var(--rh-muted); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pg-quick-card__sub { font-size:11px; color:var(--rh-muted); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pg-quick-card__chev { color:var(--rh-muted); font-size:16px; flex:none; }
 
 @media (max-width:374px) { .pg-card-row { grid-template-columns:1fr; } }
+
+/* =========================================================
+   REPORTS — weekly / monthly / yearly
+========================================================= */
+.rp-tabs{ display:flex; gap:6px; margin-bottom:12px; }
+.rp-tab{
+  flex:1; padding:9px 8px; border-radius:var(--radius-btn);
+  border:1px solid var(--rh-border); background:var(--rh-card);
+  color:var(--rh-muted); font:inherit; font-size:12.5px; font-weight:700; cursor:pointer;
+}
+.rp-tab.is-on{ background:var(--rh-blue); border-color:var(--rh-blue); color:#fff; }
+
+.rp-head{
+  display:flex; align-items:baseline; justify-content:space-between; gap:8px;
+  font-size:14px; font-weight:800; margin-bottom:10px;
+}
+.rp-head span{ font-size:11.5px; font-weight:600; color:var(--rh-muted); }
+
+.rp-row{
+  display:flex; align-items:center; gap:10px;
+  padding:9px 0; border-bottom:1px solid var(--rh-border);
+}
+.rp-row:last-child{ border-bottom:0; }
+.rp-row__label{ flex:1; font-size:13px; color:var(--rh-muted); }
+.rp-row__value{
+  font-size:15px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--rh-text);
+}
+
+/* Direction is carried by an arrow as well as colour — a red/green pair alone is unreadable
+   for the ~8% of men with a red-green deficiency. */
+.rp-delta{
+  flex-shrink:0; min-width:66px; text-align:right;
+  font-size:11.5px; font-weight:800; font-variant-numeric:tabular-nums;
+}
+.rp-delta--up{ color:var(--rh-green,#16A34A); }
+.rp-delta--down{ color:#D97706; }
+.rp-delta--flat{ color:var(--rh-muted); font-weight:600; }
+
+.rp-none{ font-size:12.5px; color:var(--rh-muted); padding:4px 0; }
+.rp-note{ font-size:11px; color:var(--rh-muted); line-height:1.5; margin-top:10px; }
+
+/* ---- habit manager: reorder + show-on-Home controls ----
+   A third row inside the flex card, forced onto its own line so the arrows and the toggle do
+   not compete with the habit name for width. */
+.hbm-tools {
+  flex-basis: 100%; display: flex; align-items: center; gap: 6px;
+  padding-top: 10px; margin-top: 2px; border-top: 1px solid var(--rh-border);
+}
+.hbm-tools > button {
+  padding: 6px 10px; border: 1px solid var(--rh-border); border-radius: 8px;
+  background: transparent; color: var(--rh-text);
+  font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.hbm-tools > button[disabled] { opacity: .35; cursor: default; }
+.hbm-toggle { margin-left: auto; }
+.hbm-toggle.is-on { border-color: var(--rh-blue); color: var(--rh-blue); }
+
+/* =========================================================
+   BADGES — the earned/remaining grid on Progress > Achievements.
+
+   The medallions are CSS, not artwork. Illustrated badges would mean sourcing and shipping
+   forty images that then need a variant per tier; a gradient ring with the app's own icon
+   set scales to any size, themes with the rest of the app, and costs nothing to add a badge
+   to. It is the same information design, drawn differently.
+========================================================= */
+
+.bdg-toggle{
+  display: flex; gap: 4px; padding: 4px; margin: 14px 0 12px;
+  background: var(--rh-bg); border: 1px solid var(--rh-border); border-radius: 999px;
+}
+.bdg-toggle__btn{
+  flex: 1; padding: 9px 12px; border: 0; border-radius: 999px; cursor: pointer;
+  background: transparent; color: var(--rh-muted);
+  font-size: 13px; font-weight: 800;
+}
+.bdg-toggle__btn.is-on{ background: var(--rh-card); color: var(--rh-text); box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+
+.bdg-cats{ display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px; }
+.bdg-cat{
+  flex: none; padding: 7px 14px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--rh-border); background: transparent;
+  color: var(--rh-muted); font-size: 12.5px; font-weight: 700; white-space: nowrap;
+}
+.bdg-cat.is-on{ border-color: var(--rh-blue); color: var(--rh-blue); background: rgba(37,99,235,.08); }
+
+.bdg-grid{ display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px 10px; }
+
+.bdg{ display: flex; flex-direction: column; align-items: center; text-align: center; }
+
+/* The badge itself is SVG (app.js achievementBadgeSvg) — shape per category, colour per tier,
+   both drawn there rather than here, because a polygon is not something CSS can express. All
+   this rule does is size it. The tier classes and the medal/icon/value elements this file used
+   to style were dropped with the old circular medallion. */
+.bdg__svg{
+  display: block; width: 100%; max-width: 84px; aspect-ratio: 1;
+  overflow: visible;   /* the 6px outline sits on the edge of the viewBox */
+}
+
+.bdg__name{ font-size: 12px; font-weight: 800; margin-top: 8px; line-height: 1.25; }
+.bdg__meta{
+  font-size: 10.5px; color: var(--rh-muted); margin-top: 2px; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* Locked keeps the shape and the target. A blanked-out mystery gives nobody a reason to come
+   back; "100 workouts" does. The SVG already draws itself muted — this only softens it
+   further, so an earned badge is the thing the eye lands on first. */
+.bdg--locked{ opacity: .6; }
+.bdg--locked .bdg__name{ color: var(--rh-muted); }
+
+/* .bmi-note was the small encouragement strip under the old BMI stat. Both it and that stat
+   were replaced by the full BMI card (app.js renderBmiCard), which carries its own styles
+   inline alongside the band scale it draws. */
+
+/* Weekly and monthly review. Omitted entirely when the period has no data — a grid of zeroes
+   shown to someone who took a week off reads as a reproach rather than a summary. */
+.rvw{ margin-bottom: 12px; }
+.rvw__head{ font-size: 13px; font-weight: 800; margin-bottom: 10px; }
+.rvw__grid{ display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px 8px; }
+.rvw__stat{ text-align: center; }
+.rvw__v{ font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.rvw__l{ font-size: 10.5px; color: var(--rh-muted); font-weight: 600; margin-top: 2px; }
+
+/* =========================================================
+   PERSONAL RECORDS — hero + record cards.
+   Every number shown is measured; nothing is a projection.
+========================================================= */
+
+.pr-hero{
+  padding: 18px; border-radius: var(--radius-tile, 16px);
+  background: linear-gradient(150deg, rgba(37,99,235,.14), rgba(124,58,237,.10));
+  border: 1px solid rgba(37,99,235,.20);
+}
+.pr-hero__top{ display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.pr-hero__eyebrow{
+  font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--rh-muted);
+}
+.pr-hero__score{
+  font-size: 32px; font-weight: 900; letter-spacing: -.03em; line-height: 1.05; margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.pr-hero__score span{
+  display: block; font-size: 11px; font-weight: 700; letter-spacing: 0;
+  color: var(--rh-muted); margin-top: 2px;
+}
+.pr-hero__level{
+  flex: none; padding: 6px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 900; white-space: nowrap;
+  color: var(--lvl); border: 1.5px solid var(--lvl); background: color-mix(in srgb, var(--lvl) 12%, transparent);
+}
+.pr-hero__track{
+  height: 6px; border-radius: 999px; margin-top: 14px; overflow: hidden;
+  background: rgba(148,163,184,.25);
+}
+.pr-hero__fill{ height: 100%; border-radius: 999px; background: var(--lvl); transition: width .5s ease; }
+.pr-hero__next{ font-size: 11px; font-weight: 700; color: var(--rh-muted); margin-top: 6px; }
+.pr-hero__stats{
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(148,163,184,.20);
+}
+.pr-hero__stats div{ text-align: center; }
+.pr-hero__stats b{ display: block; font-size: 18px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.pr-hero__stats span{ font-size: 10.5px; color: var(--rh-muted); font-weight: 600; }
+/* The formula is on screen because a score nobody can explain is a score nobody trusts. */
+.pr-hero__formula{
+  font-size: 10.5px; line-height: 1.45; color: var(--rh-muted);
+  margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(148,163,184,.16);
+}
+
+.pr-list{ display: flex; flex-direction: column; gap: 10px; }
+.pr-card{
+  padding: 14px; border-radius: var(--radius-tile, 14px);
+  background: var(--rh-card); border: 1px solid var(--rh-border); cursor: pointer;
+}
+.pr-card__head{ display: flex; align-items: center; gap: 10px; }
+.pr-card__icon{
+  flex: none; width: 44px; height: 44px; border-radius: 11px; display: grid; place-items: center;
+}
+.pr-card__title{ flex: 1; min-width: 0; }
+.pr-card__name{ font-size: 14.5px; font-weight: 800; line-height: 1.25; }
+.pr-card__type{ font-size: 11px; color: var(--rh-muted); font-weight: 600; margin-top: 2px; }
+.pr-card__now{
+  flex: none; font-size: 17px; font-weight: 900; color: var(--rh-blue);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Previous against new, so the bar shows the size of the jump rather than progress toward
+   some invented ceiling. */
+.pr-card__bar{
+  height: 6px; border-radius: 999px; margin: 12px 0 8px; overflow: hidden;
+  background: linear-gradient(90deg, var(--rh-blue), var(--rh-purple, #7c3aed));
+}
+.pr-card__prev{ height: 100%; background: var(--rh-border); border-radius: 0 999px 999px 0; }
+
+.pr-card__row{ display: flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 700; }
+.pr-card__was{ color: var(--rh-muted); }
+.pr-card__gain{ color: var(--rh-green, #22c55e); }
+.pr-card__when{ margin-left: auto; color: var(--rh-muted); font-weight: 600; }
+.pr-card__beat{
+  margin-top: 10px; padding: 8px 10px; border-radius: 10px;
+  background: rgba(37,99,235,.07); font-size: 11.5px; color: var(--rh-text); font-weight: 600;
+}
+.pr-card__beat b{ font-weight: 900; color: var(--rh-blue); }
+
+/* The banner when a record was set today. Only rendered when one actually was — a permanent
+   "no records today" strip would be a daily reminder of not having achieved anything. */
+.pr-today{
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; margin-bottom: 12px; border-radius: var(--radius-tile, 14px);
+  background: linear-gradient(135deg, rgba(245,158,11,.16), rgba(239,68,68,.10));
+  border: 1px solid rgba(245,158,11,.30);
+}
+.pr-today__icon{ font-size: 26px; line-height: 1; flex: none; }
+.pr-today__body{ flex: 1; min-width: 0; }
+.pr-today__title{ font-size: 14px; font-weight: 900; }
+.pr-today__sub{
+  font-size: 11.5px; color: var(--rh-muted); font-weight: 600; margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pr-today__xp{
+  flex: none; font-size: 12px; font-weight: 900; color: #f59e0b;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The per-exercise sheet opened from a record card. */
+.prx{ padding-bottom: 22px; }
+.prx__head{ display: flex; align-items: center; gap: 12px; padding: 4px 20px 14px; }
+.prx__name{ font-size: 17px; font-weight: 900; line-height: 1.2; }
+.prx__muscle{ font-size: 11.5px; color: var(--rh-muted); font-weight: 700; margin-top: 2px; }
+.prx__chart{ padding: 0 12px; }
+.prx__grid{
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 8px;
+  padding: 16px 20px 0;
+}
+.prx__stat{ text-align: center; }
+.prx__stat b{ display: block; font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.prx__stat span{ font-size: 10.5px; color: var(--rh-muted); font-weight: 600; }
+.prx__coach{
+  margin: 16px 20px 0; padding: 12px 14px; border-radius: 12px;
+  background: rgba(37,99,235,.07); border: 1px solid rgba(37,99,235,.14);
+  font-size: 12.5px; line-height: 1.5; font-weight: 600;
+}
+
+
+/* Export buttons on the monthly review card. Two equal actions, so they share the row rather
+   than one being promoted -- saving and sharing are the same decision made differently. */
+.rvw__export{
+  display: flex; gap: 8px; margin-top: 12px;
+  padding-top: 12px; border-top: 1px solid var(--rh-border);
+}
+.rvw__btn{
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 8px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--rh-border); background: transparent; color: var(--rh-text);
+  font-size: 12.5px; font-weight: 700; font-family: inherit;
+}
+.rvw__btn:active{ background: var(--rh-border); }
+.rvw__btn svg{ flex: none; fill: none; stroke: currentColor; stroke-width: 2;
+               stroke-linecap: round; stroke-linejoin: round; }
+
+
+/* Exercise illustration on PR cards and the per-exercise insight sheet. White tile and
+   object-fit: contain for the same reason as the library rows -- see tools.css. */
+.pr-card__img{
+  width: 38px; height: 38px; flex: none; border-radius: 9px; overflow: hidden;
+  background: #fff; display: block;
+}
+.pr-card__img img{ width: 100%; height: 100%; object-fit: contain; display: block; }
+.prx__img{
+  width: 46px; height: 46px; flex: none; border-radius: 11px; overflow: hidden;
+  background: #fff; display: block;
+}
+.prx__img img{ width: 100%; height: 100%; object-fit: contain; display: block; }

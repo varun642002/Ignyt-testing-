@@ -1,6 +1,538 @@
 # CLAUDE_PROGRESS.md
 
-## Current task (this session) — 8-item backlog, ALL COMPLETE, one branch per item, all pushed
+### Onboarding page 5, and three bugs
+
+**Onboarding is five pages now.** New last page (`obBmiSummary`): BMI, the healthy weight range
+for that height, distance to it, and one line of encouragement from IgnytBMI's per-band library
+— the daily line, not a fresh random one, so it does not reshuffle when the wizard re-renders.
+The caveat travels with it. Page 4 asked for height and weight and then went straight to Home;
+this is the acknowledgement that was missing.
+
+**Bug: dragging the weight slider changed the height number.** The live-drag handler found its
+readout with `document.querySelector(".ob-bigvalue")` — the FIRST one on the page. Correct when
+height and weight were separate steps with one readout each, wrong the moment obBasics put both
+on one page. Display only (obSet always had the right path, and the re-render on release
+restored the true value), but a number that moves when you touch something else is not
+something a user can be expected to distrust correctly. Each readout now carries
+`data-ob-readout="<path>"` and the handler asks for its own.
+
+**Bug: tapping "Male" on page 4 cleared the gender.** `obChipSingle` emitted `data-ob-select`,
+which TOGGLES. Gender defaults to "male", so the first tap on the already-selected value set it
+to null. This is exactly what the note above `obOptionRow` documents — it came back when the
+numbers page was consolidated. `obChipSingle` takes a `required` flag now and page 4 passes it.
+
+**Bug: the built-in plan and the exercise library were not in sync.** 16 of the plan's 20
+exercise names were pre-rebuild names ("Back Squat", "Bench Press", "Farmer's Carry") that the
+library has not carried since it was renamed — so inside a plan workout every exercise resolved
+to nothing: no illustration on the card, empty How To screen. Renamed to exact library names;
+"Sled Push/Pull" split into two, since one row could never be a library exercise and a Hyrox
+plan naming only one of the two stations is wrong about the race. 16 of 21 now resolve with
+instructions AND artwork; the 5 that do not are session instructions (Warm-up, Intervals,
+Cool-down, and the two "pick one" lines), which were never library entries.
+`state.completed` is keyed "week|day|exerciseName", so a one-time migration
+(`hx_plan_exercise_rename_v1`) rewrites the keys and keeps the timestamps — without it every
+tick a user had earned would point at a name the plan no longer contains.
+
+**Also: tapping an exercise in a live workout now opens it.** It only collapsed the row before,
+so the instructions were three taps deep in the ⋮ menu and easy to miss — which is what "not
+available during a live workout" was. Chevron collapses; picture and name open the same detail
+screen the library opens.
+
+Cache **v192 -> v193**. BUILD SUCCESSFUL. Verified in the APK; migration covered by
+`scratchpad/test_migration.js` (13 assertions, including idempotence and the one-to-two split).
+
+**Known gap, not a regression:** "Bent Over Row (Barbell)" has artwork but no instruction record
+— it is one of the 43 library exercises the source CSV never covered. Substituting a different
+row that does have text would be filling a screen with the wrong exercise.
+
+---
+
+### Achievement badges redesigned — flat vector labels
+
+Reference given: a sheet of flat gym-label badges (hexagons, octagons, shields; heavy outline,
+a band across the middle, stars). Rebuilt as inline SVG in `achievementBadgeSvg()`, because a
+border-radius and a gradient cannot make a hexagon.
+
+- **Shape = category**, held across every badge in it, so the grid is scannable before a word
+  is read. milestone hexagon (flat top), streak hexagon (pointed top), strength octagon,
+  program shield (chamfered shoulders), consistency pentagon, nutrition circle.
+- **Colour = tier, and star count = tier.** Five tiers now: bronze 1 star through platinum 5.
+  copper / steel / gold / ice / violet. Platinum is violet, not a literal platinum grey, because
+  a pale grey badge is indistinguishable from silver at 84px.
+- **The trophy is gone** — from the milestone badges and from the Achievements header. A trophy
+  is a prize for beating someone; these mark work done. milestone takes the dumbbell (it counts
+  workouts), strength the bolt.
+- **Re-tiered all 82 defs**: 33 of them were gold, which makes a top tier meaningless once it
+  has a star count. Now bronze 26, silver 23, gold 18, diamond 12, platinum 3.
+- The band-flanking stars from the first pass were removed: they made a bronze badge look like
+  it carried three, which defeats the count.
+- Dropped `.bdg__medal` / `.bdg__icon` / `.bdg__value` / `.bdg--bronze|silver|gold` CSS and the
+  unused `ACHIEVEMENT_COLORS`. `.bdg__svg` sizes the badge; everything else is drawn in the SVG.
+- Verified in the browser at 375px in BOTH themes, every shape against every tier, plus
+  `scratchpad/test_badges.js` — 82 badges × earned/locked, checking star count against tier,
+  unknown tiers/categories, clip-id uniqueness, band-value width and stray tokens. 0 problems.
+- Cache **v191 -> v192**. BUILD SUCCESSFUL, APK 23,065,772 bytes.
+
+---
+
+## CURRENT STATE — 3 Aug 2026 — Weight + BMI motivation shipped; premium gating off; APK built
+
+**Branch:** feature/premium-subscription
+**Features:** the Intelligent Weight Motivation System, the BMI Companion, and (a separate
+mid-turn request) removing every premium block.
+
+### New modules
+
+- `www/js/motivation/weight.js` — the weigh-in analysis engine. Compares the new reading with
+  the previous entry, the 7-day average, the 30-day average and the goal, and reads the goal's
+  DIRECTION, so +0.3kg is progress for a muscle-gain user and noise for a fat-loss user. Picks
+  one of five message contexts from the trend rather than from today's number. Awards XP and
+  raises milestone celebrations through the XP ledger, so a re-render cannot pay twice.
+  Comparisons with no data behind them are absent rather than assumed.
+- `www/js/motivation/bmi.js` — six WHO bands, the healthy weight range for the user's height,
+  the distance to that range, and a band-specific message. Rejects impossible inputs (BMI < 5
+  or > 100) so a typo cannot render a card. Labels are the app's own wording, not clinical
+  terms: the cut-offs are standard, the framing is not a verdict about a person.
+
+### Messages
+
+`messages.js` went from 1,101 to **1,782 lines across 26 contexts**. New:
+weightProgress 205, weightSteady 60, weightFluctuation 60, weightMilestone 25,
+weightGoalReached 25, and 51 each for the six BMI bands (306).
+Generated by `scratchpad/build_weight_bmi.py`, which REFUSES TO WRITE on exact duplicates,
+≥85% near-duplicates, cross-context duplicates, >130 chars, missing terminal punctuation,
+population comparisons, medical claims, and — for BMI only — any promise of a weight change,
+a timeframe or a health outcome. It caught 3 real problems on first run.
+
+### Wired in
+
+- Weigh-in card + BMI card on the Log Weight screen (`renderWeighInCard`, `renderBmiCard`).
+- BMI card on Log Weight only. It was on Home too and was removed on request; the ctx
+  parameter and the card's `compact` variant went with it, so it is defined once and
+  called once.
+- `IgnytWeight.reward()` + `checkAchievements()` on the weight-save path (app.js, after
+  `state.bodylog.unshift(entry)`).
+- Eight new weight badges: 5/30 consecutive logs, 5/10/20 kg toward goal, Goal Achieved,
+  Consistency Champion (12 weeks running), Healthy Habit Hero (30 full-log days). "First
+  Weight Log" already existed as `weigh_first`. The kg badges measure movement toward the
+  user's OWN goal, so a gain user earns them going up.
+- Three XP kinds in xp.js: weightStreakWeek 30, weightStreakMonth 100, weightGoalReached 500.
+- Cache **ignyt-v189 -> ignyt-v191**; both modules in ASSETS and covered by NETWORK_FIRST
+  (which already matches all of `/js/`).
+
+### Removed to avoid duplicates
+
+- The small BMI stat tile on Log Weight (grid is now BMR/TDEE, 2 columns) and the `.bmi-note`
+  strip beneath it — both superseded by the full BMI card. `.bmi-note` CSS and
+  `IgnytMilestones.bmiEncouragement`/`bmiCaveat` deleted with them.
+- `bmiCategory()` in app.js now delegates to `IgnytBMI.bandFor().label` so the app has one BMI
+  vocabulary. Its old labels called 18.5-25 "Normal".
+
+### PREMIUM GATING IS OFF
+
+`PREMIUM_FEATURES` in `www/js/billing/entitlements.js` is now `{}`. `has()` returns true for
+anything not in that map, so all six `premiumAllows()` seams pass and `renderUpgradeWall()` is
+never reached; because the wall is the ONLY route to the paywall sheet, the paywall is
+unreachable too. The billing stack (Play query, entitlement cache, grace period, purchase,
+restore) is intact and untouched. **Turning gating back on is restoring that one map** — the
+original contents are in a comment directly above it.
+
+### Tests
+
+Three harnesses in scratchpad, all green against the shipped source:
+- `test_weight_bmi.js` — 86 assertions. Trend analysis, direction inference, all six BMI band
+  boundaries (18.5/25/30/35/40), logging streaks, reward idempotency, empty/single-entry
+  states, every band having copy behind it.
+- `test_weight_badges.js` — 22 assertions. Extracts the five new counters out of app.js by name
+  so it runs the shipped code, not a copy.
+- `test_cards.js` — 16 assertions. Renders both cards for every band and every empty state,
+  checking for thrown errors, unbalanced divs and stray undefined/NaN in the output.
+
+### Build
+
+`npx cap sync android` OK. `.\gradlew.bat clean assembleDebug` — **BUILD SUCCESSFUL in 32s**.
+APK 23,065,084 bytes at `android/app/build/outputs/apk/debug/app-debug.apk`.
+Verified inside the artifact, not from the log: sw cache `ignyt-v191`, both modules present in
+`assets/public/js/motivation/`, both in index.html and sw.js, both card functions defined and
+called, `PREMIUM_FEATURES = {}`, 8 badge ids, and messages.js evaluating to 1,782 lines / 26
+contexts with the per-context counts above.
+
+### Not done
+
+- BMI card appears on Log Weight only — not during onboarding, and no longer on Home.
+- `GRANDFATHER_BEFORE` in entitlements.js still `null` (moot while gating is off).
+- `ignyt_premium` subscription still not created in Play Console (user).
+
+---
+
+
+## CURRENT STATE — 2 Aug 2026 — Motivation brief finished; APK built
+
+**Branch:** feature/premium-subscription
+**Feature:** the last four items of the motivation brief — weekly challenge mode, the monthly
+strength report with image export, share cards, and animated counters.
+
+### New modules
+
+- `www/js/motivation/weekly.js` — one challenge a week, Monday to Sunday, with the target set
+  from the user's OWN previous four weeks (average + 1, floored and capped). Seven challenge
+  types; any that cannot state an honest target for this user is skipped rather than invented.
+  XP is keyed on the ISO week, so a finished week pays exactly once however often Home
+  repaints.
+- `www/js/motivation/counters.js` — numbers count up instead of appearing. Keyed by name, so a
+  re-render does not restart every counter on the page.
+- `www/js/motivation/report.js` — the monthly report and a short progress card, drawn to canvas
+  at 1080x1350 and exported through the app's existing IgnytShare plugin (the same path the
+  workout share card uses), with navigator.share and <a download> as fallbacks.
+
+### Wired in
+
+- Weekly challenge card on Home, above the daily challenges.
+- Share/Save buttons on the "Last 30 days" review card (Progress > Achievements).
+- `IgnytCounters.attach()` at the end of attachHandlers(); the IGNYT Score number animates.
+- `weeklyChallenge` (250 XP) added to xp.js AWARDS.
+- Cache **ignyt-v169 -> ignyt-v170**.
+
+### THE IMPORTANT FIX — service worker was shipping mixed versions
+
+`NETWORK_FIRST` in sw.js covered `/js/pages/` and `app.js` but NOT `/js/motivation/`, so on an
+update the new `home.js` came from the network while `score.js` came from the OLD cache. The
+result was `IgnytScore.summary is not a function` and a BLANK HOME SCREEN for exactly one
+load. This happened three times while building the score feature before the cause was traced.
+It was not a dev artifact — it would have shipped to every user on this update.
+
+All 59 JS assets are now network-first; `auth.js` and `cloud-sync.js` were also root-level and
+cache-first, and are covered too. The large food JSON, icons, manifest and legal pages stay
+cache-first deliberately. Verified by evaluating sw.js and testing every asset path against
+the regex list.
+
+**If you add a JS file, it must match NETWORK_FIRST.** Splitting code between the two
+strategies is the bug: either the whole app is fresh or the whole app is stale, and a mixture
+is a version pair that was never tested.
+
+### Other fixes found during verification
+
+- Both cards ran off the bottom of the canvas — "Best session" printed through the footer.
+  Rewritten with a FOOTER_TOP budget and a room() check, so a section that will not fit is
+  dropped instead of overlapping. Confirmed by rendering the PNGs and looking at them.
+- The counter's first frame would have flashed the FINAL value (the template renders it) then
+  jumped back to the start. It now writes the starting value synchronously.
+- requestAnimationFrame does not run in a non-compositing view — verified, it never fired once
+  in the preview pane. Without a fallback the number would have been stuck on its starting
+  value, which is wrong rather than merely unanimated. A setTimeout safety net now lands the
+  true value.
+- weekly.js counted weeks in milliseconds; across a daylight-saving weekend two consecutive
+  weeks could floor to the same number and so share one XP key, meaning the second week paid
+  nothing. Counted in whole days now. Tested against 156 consecutive weeks.
+- "1 workouts" in the share text.
+
+### Verified
+
+- 45 weekly assertions, 19 counter assertions (virtual clock), 51 score assertions — all green.
+- Live: weekly card renders with real progress; export button click produces
+  `ignyt-report-2026-08-02.png` as a PNG data URI; both cards rendered to disk and inspected;
+  8 tabs and 5 progress sub-views render with zero window errors.
+- `npx cap sync android` OK. `gradlew assembleDebug` -> **BUILD SUCCESSFUL**.
+- APK unzipped: all four modules present, cache v170, handlers and CSS in place.
+
+**APK:** `android/app/build/outputs/apk/debug/app-debug.apk` (21.3 MB)
+
+### Motivation brief is now complete
+
+Weekly challenges, monthly report + image export, share cards and animated counters were the
+last four open items.
+
+---
+
+## CURRENT STATE — 2 Aug 2026 — IGNYT Score shipped; APK built
+
+**Branch:** feature/premium-subscription
+**Feature:** The IGNYT Score — one daily number, a level band, and a coach that says
+exactly what is still available today and what each thing is worth.
+
+### What was built
+
+- `www/js/motivation/score.js` (new) — the engine. 13 scored actions, 6 level bands
+  (0 / 40 / 70 / 100 / 130 / 160), a 200-point daily cap, goal-based 1.5x emphasis on two
+  categories, day-keyed history in `hx_score_history`, and `summary()` as the one-call API.
+- `www/js/pages/home.js` — animated ring, level, coach line, four comparison figures
+  (yesterday / best / 7-day average / streak) and a "Still available today" list showing the
+  three highest-value remaining actions with their point values.
+- `www/css/pages/home.css` — `.ign*` styles, both themes, reduced-motion honoured.
+- Wired into `www/index.html` and `www/sw.js`; cache bumped **ignyt-v168 -> ignyt-v169**.
+
+### Decisions worth remembering
+
+- **Meditation is not scored.** The brief asked for it; IGNYT has no meditation tracking of
+  any kind, so points for it would be points for nothing. Stretching IS scored — the exercise
+  library has a real Mobility category.
+- **Steps and sleep are "unavailable", not "not done", without Health Connect.** They are
+  never offered as suggestions, because telling someone to log what they cannot log is worse
+  than staying quiet.
+- **History is stored, never recomputed**, and `record()` only ever raises a day's value. A
+  changed water target must not silently rewrite last week.
+- **No negative points.** A bad day scores low; it does not score against you.
+- **coachLine() will not name a band that is out of reach** for the rest of the day.
+
+### Bug found and fixed during verification
+
+A memo cache was added to stop `today()` running six times per render. It cached on the state
+object identity and cleared in a microtask — which is wrong, because the app mutates state and
+calls `render()` in the same synchronous block. Caught live: 60 g of protein logged and the
+score stayed at 77 instead of moving to 92. Replaced with `summary()`, which computes once and
+passes the result down. Same cost, cannot go stale.
+
+### Verified
+
+- 51 assertions green under node (levels, caps, emphasis, thresholds, history, streaks).
+- Live in the running app: 77 -> 105 within one synchronous block after logging protein,
+  correct on all four figures, both themes, no layout overflow at 375px, all five tabs render
+  with zero window errors.
+- `npx cap sync android` OK. `gradlew clean assembleDebug` -> **BUILD SUCCESSFUL** (38s).
+- Confirmed by unzipping the APK: score.js present, `summary()` in it, sw cache reads
+  ignyt-v169, script tag and CSS present.
+
+**APK:** `android/app/build/outputs/apk/debug/app-debug.apk` (21.0 MB)
+
+### Still open from the motivation brief
+
+Weekly challenge mode, monthly strength report with image export, share card, animated
+counters. Play Console still needs the `ignyt_premium` subscription created by hand, and
+`GRANDFATHER_BEFORE` in entitlements.js is still `null` (off).
+
+---
+
+## CURRENT STATE — 2 Aug 2026 — iOS compiles on CI; Android 1.0.42 awaiting upload
+
+**Branch:** feature/exercise-library-rebuild (pushed, clean)
+**Head:** 8b0add8 "Build on Node 22; the Capacitor CLI requires it"
+
+### iOS — new this session
+
+There is NO MAC and none is available. Varun has an iPhone, which is a test device only.
+Every iOS build runs on Codemagic's cloud Macs. Do not suggest Xcode, the simulator, or
+xcode-select — anything Xcode would do by ticking a box has to be written into the repo
+by hand instead.
+
+- iOS platform scaffolded (Capacitor 8 / SwiftPM, no CocoaPods). Bundle id and display
+  name already matched Android; version set to 1.0.42 / 10500 to match.
+- Package.swift had Windows backslash paths from being generated on Windows — Swift Package
+  Manager would have failed to resolve before compiling anything. Fixed.
+- HealthKit plugin written: all 29 methods of the Android HealthConnectPlugin, registered
+  under the same JS name "HealthConnect" so www/health-connect.js is unchanged.
+- App.entitlements + CODE_SIGN_ENTITLEMENTS committed by hand, because the Xcode capability
+  checkbox is not reachable.
+- codemagic.yaml: ios-compile-check (unsigned, free) and ios-testflight (signed).
+
+**FIRST SUCCESSFUL iOS BUILD, 2 Aug 2026.** Codemagic build 2, commit 8b0add8, 1m 20s on a
+Mac mini M2. Confirmed from the log that all three Swift files are in the target —
+AppDelegate, HealthConnectPlugin, HealthKitManager — and 534 web files synced. App bundle
+11.64 MB.
+
+**What that proves:** syntax, HealthKit API signatures, async/await, and that the
+project.pbxproj edit registering the files worked.
+
+**What it does NOT prove:** that the plugin is found at runtime. CAPBridgedPlugin
+registration resolves at launch, so Capacitor.Plugins.HealthConnect may still be undefined
+in JS. Permissions, reads and writes are all unverified.
+
+**Two deliberate semantic gaps, documented in the source — not bugs:**
+- iOS never reveals whether a READ permission was granted, so getPermissionStatus reports
+  what it can and sets readAuthorizationIsUnknowable.
+- kcalPerDay carries HealthKit's cumulative basal burn, not Health Connect's kcal/day rate.
+
+**Still Android-only:** notifications, cloud sync, auth, share. Inert on iOS.
+
+### Android
+
+Release AAB built and verified: IGNYT-1.0.42-vc10500.aab, 14.9 MB, signed.
+versionCode is now derived from versionName (major*10000 + minor*100 + patch + offset 458)
+after Play rejected 10 and then 11 as already used.
+
+Play warns the release drops 17,548 devices. Investigated and ruled out this build as the
+cause — manifest and variables.gradle byte-identical to the vc9 release, all three artifacts
+on disk declare minSdk 26 / targetSdk 36 with zero uses-feature and zero native ABIs. It is
+minSdk 26, which Health Connect requires. Varun chose to proceed.
+
+### Pending — needs the user
+
+1. Upload IGNYT-1.0.42-vc10500.aab to Play.
+2. Apple Developer Program ($99/yr) — enrol via the Apple Developer iOS app or the web.
+   Then enable HealthKit on the App ID at developer.apple.com (browser, no Mac needed),
+   create the App Store Connect API key, and add it to Codemagic as
+   "ignyt-app-store-connect" to unlock the ios-testflight workflow.
+3. Play reviewer account — Claude declined (password handling).
+4. Play Integrity API on ignyt-fitness2.
+5. feature/coach-sync is EXCLUDED from every merge until Varun lifts the hold.
+   feature/premium-ui-modular-redesign was deliberately not merged: 244 commits behind,
+   36 conflicts, and it would regress the launcher icon to the old bronze figure.
+
+**Next action:** none pending on Claude. Awaiting the Play upload result, or the Apple
+enrolment before iOS can go further.
+
+---
+
+
+## CURRENT STATE — 1 Aug 2026 — release 1.0.41 built, awaiting upload
+
+**Feature request:** food measurement units per food type, egg foods, duplicate removal,
+exercise images, then a release build.
+
+**Branch:** feature/exercise-library-rebuild (pushed, clean, level with origin)
+**Head:** e979a1d "Derive versionCode from versionName"
+
+**Build result:** BUILD SUCCESSFUL.
+**Artifact:** android/app/build/outputs/bundle/release/IGNYT-1.0.41-vc10041.aab
+  14.9 MB, signed with android/app/ignyt-release.jks, R8 + resource shrinking on,
+  sha256 starts 4afa5785, zip verified intact.
+**Version:** versionName 1.0.41, versionCode 10041 — decoded from the built manifest
+  (attribute 0x0101021B), not read from build.gradle.
+
+**Completed this session**
+- Exercise library trimmed 458 -> 452; every remaining exercise has an image.
+  445 photos + 7 instruction posters. Retired names' muscles moved to LEGACY_MUSCLE_MAP
+  (290 -> 296) so logged history keeps its attribution.
+- Instruction posters render uncropped on the How To tab at their own aspect; the Library
+  row and detail header keep the icon badge (a poster is unreadable at 38px).
+- Food quantity field: type="number" -> type="text" + inputmode="decimal", because a number
+  input reports selectionStart as null and cannot be selected or caret-positioned. Typing 150
+  into a field pre-filled with 100 was giving 100150.
+- Empty/invalid quantity now shows an em dash and disables Add, instead of silently
+  displaying — and logging — the food's default 100 g.
+- Add-food flicker: results list is patched row by row instead of innerHTML-replaced on every
+  keystroke; serving presets and the unit select update in place instead of calling render().
+- Per-food measurement forms (21 of them) replacing the one universal unit list. All 3,162
+  foods classify; none lacks units; none offers a unit that cannot convert to grams.
+- Fixed two long-standing arithmetic bugs found while checking conversions: portions entries
+  were read as "grams per ONE unit" when the catalogue writes each food's basis (1 ml of soft
+  drink resolved to 100 g, so a glass was 25 kg); and defaultFoodPortion returned a flat
+  amount of 1 for any non-gram serving unit, opening every drink at "1 ml" and 0 kcal.
+- Merged the 3 genuinely duplicated foods (same product under two biscuit categories, hidden
+  by a curly vs straight apostrophe). MERGED_FOOD_IDS redirects the retired ids so logged
+  entries stay editable. Did NOT delete the 1,313 foods that merely share macros — those are
+  distinct products carrying per-category placeholder values.
+- Added rice/flatbread/dosa portions and egg sizes, weights checked against published tables.
+- Added the 5 egg foods (Whole, Boiled, Fried, White, Yolk) with USDA figures; the catalogue
+  had 14 foods named "egg" and no actual egg.
+- versionCode is now derived from versionName (major*10000 + minor*100 + patch) after Play
+  rejected 10 and then 11 as already used — the hand-kept counter was not a record of what
+  Play had seen.
+
+**Pending — needs the user, not Claude**
+1. UPLOAD IGNYT-1.0.41-vc10041.aab to Play. Claude cannot do this: it needs Play Console
+   sign-in and Claude does not handle credentials.
+2. Play warns the release drops support for 17,548 devices. Investigated and ruled out any
+   cause in this build: the merged manifest and variables.gradle are byte-identical to the
+   vc9 release, both bundles declare minSdk 26 / targetSdk 36, zero uses-feature, zero native
+   ABIs, identical 27 permissions. minSdk 26 has been constant in every commit of this repo,
+   so the comparison is against a release predating this history. minSdk 26 is the floor for
+   androidx.health.connect connect-client and is pinned by CLAUDE.md. User chose to proceed.
+3. Play reviewer account — user must create it; Claude declined (password handling).
+4. Play Integrity API still to be enabled on ignyt-fitness2.
+5. Branch consolidation: ~9 branches outstanding. feature/coach-sync is EXCLUDED until Varun
+   lifts the hold — do not merge it anywhere.
+
+**Next action:** none pending on Claude. Awaiting the user's upload result, or the next
+feature request.
+
+---
+
+
+## SHA-256 fingerprint check — added, BUILD SUCCESSFUL
+
+Verified on this machine (debug keystore, `~/.android/debug.keystore`):
+
+    SHA-1    44:7C:FA:B0:43:F2:7D:6A:1F:93:DE:CF:47:90:A1:EB:2B:FB:14:78
+    SHA-256  B7:55:60:B3:6A:5B:D5:73:39:61:43:F2:7D:95:D1:D2:31:A9:A4:DF:12:25:AD:BB:26:07:5C:F7:56:3F:1A:F0
+
+Chain confirmed with apksigner against the built APK: its V2 signer cert SHA-1 is
+`447cfab043f27d6a1f93decf4790a1eb2bfb1478`, which is byte-for-byte the `certificate_hash` in
+`android/app/google-services.json`. So the debug build's SHA-1 IS registered on the
+`ignyt-fitness2` project.
+
+SHA-256 registration CANNOT be determined from any local file — Firebase writes only SHA-1
+into google-services.json. Only the Console shows it. Hence the check is a runtime one:
+
+- `AuthPlugin.checkSigning()` reads the running app's own certificate (signingInfo on API 28+,
+  the deprecated `signatures` below it, since minSdk is 26) and returns both fingerprints.
+- The app-not-authorized / MISSING_CLIENT_IDENTIFIER branch of `phoneErrorMessage()` now prints
+  the actual SHA-256 to register, instead of telling the user to go find a value that is not on
+  disk anywhere.
+- Logged once per launch, and shown on-device under Settings > account card > "Build
+  fingerprints", with a copy button (clipboard API + textarea fallback, since
+  navigator.clipboard is unavailable in some WebView configs).
+
+Fingerprints are public — derived from the certificate inside every copy of the APK.
+
+## Phone auth + navigation + Tools move + Health Connect first — BUILD SUCCESSFUL, pushed
+
+Branch `feature/v1.1`. The brief was "debug phone auth", but phone auth had never been
+implemented — `AuthPlugin.kt` had no `PhoneAuthProvider` and `signInAction("otp")` only fired
+a toast reading "not wired up yet". Built it, and fixed three real navigation bugs found on
+the way.
+
+Root causes of "stuck on Signing in…", all three independent:
+1. `notifyUI()` in `www/auth.js` re-rendered ONLY when `state.tab === "settings"`. Sign-in also
+   lives on Tools and the first-run screen, where the busy flag changed and nothing repainted.
+2. `signInAction("google")` called `auth.signIn()` without awaiting — the promise was dropped,
+   so a successful Google sign-in never advanced past the screen.
+3. The busy guards (`if (_busy) return;`) returned `undefined`, and callers read `res.success`
+   off it.
+
+Built: `sendOtp`/`verifyOtp` on the native plugin (AtomicBoolean `settled` guard — Firebase's
+`onVerificationCompleted` can fire before `onCodeSent`, and resolving a PluginCall twice is
+itself a hang), JS wrappers with `finally`-clearing busy state, a two-step OTP screen, and one
+`completeSignIn()` that every provider routes through so navigation cannot work on one path and
+not another.
+
+Also this session, per user request mid-turn:
+- Tools removed from the bottom nav (6 tabs → 5), now reached from Profile → All Tools; added
+  `.pg-back` so the demoted tab is not a dead end.
+- Health Connect moved from onboarding step 10 to step 2. The step gates keyed off literal
+  numbers (`=== 1`, `=== 9`, `=== 10`) and the reorder silently pointed them at the wrong
+  screens — replaced with `obStepIndexOf(renderer)` so the order array is the only source of
+  truth.
+
+Verified in the browser pane with a stubbed Capacitor bridge: wrong code stays on the field and
+shows the error, correct code navigates, busy always clears, zero console errors.
+
+NOT verified on a real device — SMS delivery, Play Integrity and the reCAPTCHA fallback cannot
+run outside a real Android device with Play Services. That is the one open risk.
+
+## Batch 1 catalogue enrichment — 100 South Indian breakfast foods — BLOCKED ON SOURCES
+
+Branch `feature/v1.1`. Brief's binding rules: never invent or estimate values; use only USDA /
+IFCT / NIN / Open Food Facts (packaged only) / government databases; skip any food whose values
+cannot be verified; do not duplicate a food that already exists.
+
+Result: **1 of 100 addable.** Not a tooling problem — a source-coverage problem.
+
+- 37 of the 100 already exist in `www/data/food/clean_foods.json` → skipped as duplicates.
+- IFCT 2017 (`C:/Users/varun/Downloads/IFCT2017.pdf`) contains NONE of these dishes. Confirmed
+  two ways: full-text scan of all 585 pages (the only "dosa" hits are "Dosa kaya", the Telugu
+  word for cucumber), and IFCT's own front matter on p.26 — "All data except for poultry and
+  egg pertains to raw food", 528 raw commodities. NIN publishes IFCT, so NIN adds nothing.
+- USDA SR Legacy + Foundation (both on disk) carry only `Bread, chapati or roti` (2 rows).
+  No idli, dosa, upma, pongal, vada, appam, puttu, paniyaram, idiyappam, poori, sevai.
+- Open Food Facts is excluded by the brief itself — packaged foods only; these are homemade.
+- The 37 existing rows cannot be enriched either: they hold macros only (0 of 23 micronutrients),
+  and no permitted source has the micros.
+
+Added: **Plain Chapati** (`ignyt:3208`), 25 verified nutrients from USDA fdcId 171844, 68 g
+piece weight from the source, `verified: true` — the catalogue's first verified row. The 8
+nutrients USDA does not report are left null, not estimated.
+
+Note for whoever picks this up: the 37 existing South Indian rows are already labelled
+`"sourceNote": "Representative recipe estimate (per 100 g, cooked)"` with `verified: false`.
+The catalogue therefore already has a convention for unverifiable dishes. Extending it —
+recipe-computed from IFCT raw ingredients, flagged `verified: false` — is the only route to the
+remaining 62, and it needs the user's explicit go-ahead because the brief forbids estimation.
+
+Next action: user decides between (a) ship the 1 verified food only, (b) supply a trusted
+source file covering cooked Indian dishes, or (c) authorise recipe-computed rows marked
+unverified. No APK built — a one-row data change does not warrant one.
+
+## Earlier task (this session) — 8-item backlog, ALL COMPLETE, one branch per item, all pushed
 Request: Cardio/Timed-Hold/Carry exercise logging, Notifications, Dark Mode, Splash Screen,
 Export Data, Built-in Exercise Timer, Smart Exercise Logging, Testing. Google Drive
 Backup/Sync (expanded scope) queued separately, blocked on user OAuth setup — not started.

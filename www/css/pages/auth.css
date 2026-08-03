@@ -1,0 +1,569 @@
+/* =========================================================
+   IGNYT AUTH — the Sign In screen
+
+   A DELIBERATELY SEPARATE VISUAL WORLD. The app proper is a light theme built on a blue
+   --primary, tuned over several passes and not to be disturbed. This screen is dark rather
+   than light. Auth screens carrying their own ground is normal — it is the brand moment before the
+   product starts — but it means every value here is LOCAL. Nothing below reads an app token
+   and nothing below leaks out: the palette is scoped to .auth, so switching the app between
+   light and dark cannot alter this screen and this screen cannot alter the app.
+
+   Sized for a 20:9 Android panel (412 x 915 dp) and fluid either side of it. Heights come
+   from dvh rather than vh so the arrival of the keyboard does not push the OTP button under
+   the fold on a real handset.
+========================================================= */
+.auth{
+  --auth-bg:        #0D0D0D;
+  --auth-card:      #1A1A1A;
+  /* Blue, matching the rest of the app. This screen keeps its own scoped palette — the app
+     behind it is a light theme and this is deliberately dark — but the ACCENT is now the same
+     IGNYT blue as every other surface, so the brand does not change colour at the door. */
+  --auth-primary:   #3B82F6;
+  --auth-primary-2: #2563EB;   /* gradient partner, kept close so the button reads as one hue */
+  --auth-text:      #FFFFFF;
+  --auth-muted:     #9CA3AF;
+  --auth-border:    #2B2B2B;
+
+  --auth-radius:    24px;
+  --auth-radius-sm: 16px;
+  --auth-gutter:    24px;
+
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--auth-bg);
+  color: var(--auth-text);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------------------------------------------------------
+   HERO — upper 55%
+
+   The brief asks for a photographic flat-lay. There is no such photograph in this repo, so
+   the layer stack degrades in a defined order rather than showing a broken image:
+
+     1. .auth-hero__img   a real photo, if www/assets/images/auth/hero-flatlay.jpg exists.
+                          It removes itself on error, revealing what is underneath.
+     2. .auth-hero        a warm-morning-light composition in pure CSS — low sun raking across
+                          a dark surface. Not a substitute for the photograph, but it is a
+                          deliberate image rather than a grey box, and it holds the same
+                          tonal shape so the type contrast does not change when the photo
+                          lands.
+
+   Either way the bottom third carries the same downward gradient into --auth-bg, which is
+   what makes white type legible over an image whose brightness is not known in advance.
+--------------------------------------------------------- */
+.auth-hero{
+  position: relative;
+  flex: 0 0 auto;
+  height: 55dvh;
+  min-height: 300px;
+  overflow: hidden;
+  background:
+    /* raking morning sun from the upper right */
+    radial-gradient(120% 90% at 78% 8%,  rgba(255,214,170,.30) 0%, rgba(255,170,120,.10) 34%, transparent 68%),
+    /* warm bounce off the tabletop */
+    radial-gradient(90% 70% at 20% 78%,  rgba(190,120,80,.20)  0%, transparent 62%),
+    /* the wooden surface itself */
+    linear-gradient(168deg, #2A2018 0%, #1A1512 46%, #0F0D0C 100%);
+}
+
+.auth-hero__img{
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 40%;
+}
+
+/* A whisper of grain. Flat CSS gradients on a dark panel band visibly on OLED; noise at this
+   opacity is invisible as texture and breaks the banding up. */
+.auth-hero__grain{
+  position: absolute;
+  inset: 0;
+  opacity: .045;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+/* The readability gradient. Tall and eased — a short hard fade reads as a band across the
+   image, which is the thing that makes a hero look pasted on. */
+.auth-hero__scrim{
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 72%;
+  background: linear-gradient(
+    to bottom,
+    rgba(13,13,13,0)    0%,
+    rgba(13,13,13,.35) 38%,
+    rgba(13,13,13,.82) 72%,
+    var(--auth-bg)     100%
+  );
+  pointer-events: none;
+}
+
+.auth-hero__copy{
+  position: absolute;
+  left: var(--auth-gutter);
+  right: var(--auth-gutter);
+  bottom: 30px;
+}
+.auth-hero__line{
+  margin: 0;
+  font-size: clamp(28px, 8.2vw, 36px);
+  line-height: 1.14;
+  font-weight: 800;
+  letter-spacing: -.022em;
+  text-wrap: balance;
+  /* The type sits on an image whose luminance is not fixed. The shadow is the guarantee. */
+  text-shadow: 0 2px 18px rgba(0,0,0,.55);
+}
+.auth-hero__line--2{
+  font-weight: 500;
+  color: rgba(255,255,255,.74);
+  font-size: clamp(15px, 4.2vw, 17px);
+  line-height: 1.4;
+  letter-spacing: -.005em;
+  margin-top: 10px;
+  text-shadow: 0 1px 12px rgba(0,0,0,.5);
+}
+
+/* ---------------------------------------------------------
+   SHEET — the lower 45%, lifted over the hero
+
+   Pulled up so its rounded top overlaps the image. That overlap is what makes it read as a
+   surface resting on the photograph rather than a second rectangle stacked below it.
+--------------------------------------------------------- */
+.auth-sheet{
+  position: relative;
+  z-index: 1;
+  margin-top: -28px;
+  padding: 0 var(--auth-gutter) calc(20px + env(safe-area-inset-bottom, 0px));
+  border-radius: var(--auth-radius) var(--auth-radius) 0 0;
+  background: var(--auth-bg);
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Glass: a real backdrop blur where it is supported, and a solid tint where it is not. Left
+   as a bare rgba() it looks like a cheap grey overlay on Android WebView. */
+.auth-brand{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 0 6px;
+}
+.auth-brand__mark{
+  width: 46px; height: 46px;
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+  border-radius:15px;
+  border: 1px solid rgba(59,130,246,.28);
+  background: linear-gradient(150deg, rgba(59,130,246,.20), rgba(59,130,246,.05));
+  box-shadow: 0 8px 26px -10px rgba(59,130,246,.55);
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)){
+  .auth-brand__mark{ backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+}
+.auth-brand__name{
+  margin: 0;
+  font-size: 25px;
+  font-weight: 800;
+  /* The wordmark is the one place tracking is opened up — it is a logotype, not running text */
+  letter-spacing: .17em;
+  line-height: 1;
+}
+.auth-brand__sub{
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--auth-muted);
+  max-width: 34ch;
+}
+
+/* ---- phone ---- */
+.auth-field{
+  display: flex;
+  align-items: stretch;
+  margin-top: 22px;
+  border: 1px solid var(--auth-border);
+  border-radius: var(--auth-radius-sm);
+  background: var(--auth-card);
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.auth-field:focus-within{
+  border-color: rgba(59,130,246,.55);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.13);
+}
+.auth-field__cc{
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px 0 16px;
+  border: 0;
+  border-right: 1px solid var(--auth-border);
+  background: transparent;
+  color: var(--auth-text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  border-radius: var(--auth-radius-sm) 0 0 var(--auth-radius-sm);
+}
+.auth-field__flag{ font-size: 17px; line-height: 1; }
+.auth-field__chev{ color: var(--auth-muted); font-size: 10px; }
+.auth-field__input{
+  flex: 1;
+  min-width: 0;
+  padding: 17px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--auth-text);
+  font: inherit;
+  font-size: 15.5px;
+  letter-spacing: .01em;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+.auth-field__input::placeholder{ color: #6B7280; }
+
+/* ---- primary ---- */
+.auth-cta{
+  width: 100%;
+  margin-top: 14px;
+  padding: 17px 20px;
+  border: 0;
+  border-radius: var(--auth-radius-sm);
+  background: linear-gradient(135deg, var(--auth-primary) 0%, var(--auth-primary-2) 100%);
+  color: #fff;
+  font: inherit;
+  font-size: 15.5px;
+  font-weight: 700;
+  letter-spacing: .012em;
+  cursor: pointer;
+  /* Two shadows: a tight one for the edge, a wide tinted one for the glow. A single large
+     black shadow on a saturated button reads as dirt around it. */
+  box-shadow: 0 2px 6px rgba(0,0,0,.34), 0 12px 30px -10px rgba(59,130,246,.52);
+  transition: transform .14s cubic-bezier(.34,1.4,.64,1), box-shadow .18s ease, opacity .18s ease;
+}
+.auth-cta:active{ transform: translateY(1px) scale(.988); box-shadow: 0 1px 4px rgba(0,0,0,.34), 0 6px 18px -10px rgba(59,130,246,.42); }
+.auth-cta[disabled]{ opacity: .45; box-shadow: none; cursor: default; }
+
+/* ---- OTP step ----
+   The code field is one input, not six boxes. Six boxes look neater in a mockup and are worse
+   in the hand: they fight SMS autofill, paste, and backspace, and every keystroke moves focus
+   between elements. One wide, letter-spaced field gets autofill and paste for free. */
+.auth-otp__sent{
+  margin-top: 4px;
+  font-size: 13.5px;
+  color: var(--auth-muted, #9CA3AF);
+  text-align: center;
+}
+.auth-otp__sent b{ color: var(--auth-text); font-weight: 700; }
+.auth-otp__change{
+  margin-left: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--auth-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+/* Six boxes drawn as spans, with ONE transparent input stretched across them. The input keeps
+   the caret, the keyboard, SMS autofill and paste; the spans are painted from its value. A
+   real input per box would look identical and break all four. */
+.auth-otp__boxes{
+  position: relative;
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+  margin-top: 16px;
+}
+.auth-otp__box{
+  display: grid; place-items: center;
+  aspect-ratio: 1 / 1.18;
+  border: 1.5px solid var(--auth-border);
+  border-radius: 12px;
+  background: var(--auth-card);
+  color: var(--auth-text);
+  font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums;
+  transition: border-color .16s ease, background-color .16s ease, transform .16s cubic-bezier(.34,1.4,.64,1);
+}
+.auth-otp__box.is-filled{ border-color: var(--auth-primary); transform: scale(1.03); }
+/* The caret cannot be seen through a transparent input, so the next empty box carries a
+   pulsing bar instead — otherwise there is no cue where typing will land. */
+.auth-otp__box.is-active{ border-color: var(--auth-primary); }
+.auth-otp__box.is-active::after{
+  content: ""; width: 2px; height: 46%;
+  background: var(--auth-primary); border-radius: 1px;
+  animation: auth-caret 1.05s steps(1,end) infinite;
+}
+@keyframes auth-caret{ 0%,49%{opacity:1} 50%,100%{opacity:0} }
+
+.auth-otp__hidden{
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  border: 0; padding: 0; margin: 0;
+  background: transparent;
+  /* transparent, not opacity:0 or visibility:hidden — the field must stay focusable and must
+     still receive autofill, which a hidden element does not. */
+  color: transparent; caret-color: transparent;
+  font-size: 22px; letter-spacing: 3em; text-indent: -9999px;
+  outline: none; -webkit-text-fill-color: transparent;
+}
+
+.auth-otp__resendrow{
+  display: flex; flex-direction: column; align-items: center; gap: 3px; margin-top: 14px;
+}
+.auth-otp__resend{
+  border: 0; background: none; padding: 6px;
+  color: var(--auth-primary);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.auth-otp__resend[disabled]{ opacity: .45; cursor: default; }
+.auth-otp__left{ font-size: 11.5px; color: var(--auth-muted); }
+.auth-otp__spent{ font-size: 12.5px; color: var(--auth-muted); text-align: center; line-height: 1.45; }
+
+/* Inline, in the flow, above the button — an error the user must read before they tap again.
+   A toast alone would let them retry into the same failure without ever seeing why. */
+.auth-err{
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, .12);
+  border: 1px solid rgba(239, 68, 68, .3);
+  color: #FCA5A5;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* ---- divider ---- */
+.auth-div{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 24px 0 16px;
+  color: var(--auth-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: .04em;
+}
+.auth-div::before, .auth-div::after{
+  content: "";
+  flex: 1;
+  height: 1px;
+  /* Fading the rule out at the screen edges stops it reading as a hard cut across the sheet */
+  background: linear-gradient(to right, transparent, var(--auth-border) 42%, var(--auth-border) 58%, transparent);
+}
+
+/* ---- social ----
+   auto-fit rather than a hard-coded 3, so removing a provider re-balances the row instead of
+   leaving a hole where Facebook used to be. Two buttons split the width evenly; a third would
+   too, with no CSS change. */
+.auth-social{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 11px;
+}
+.auth-social__btn{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 74px;
+  padding: 12px 6px;
+  border: 1px solid var(--auth-border);
+  border-radius: var(--auth-radius-sm);
+  background: var(--auth-card);
+  color: var(--auth-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 24px -18px rgba(0,0,0,.9);
+  transition: transform .14s cubic-bezier(.34,1.4,.64,1), border-color .18s ease, background .18s ease;
+}
+.auth-social__btn:active{ transform: scale(.972); border-color: #3A3A3A; background: #202020; }
+.auth-social__btn svg{ width: 21px; height: 21px; display: block; }
+
+/* ---- legal ---- */
+.auth-legal{
+  margin: auto 0 0;
+  padding-top: 22px;
+  text-align: center;
+  font-size: 11.5px;
+  line-height: 1.62;
+  color: #6B7280;
+}
+.auth-legal a{
+  color: var(--auth-muted);
+  text-decoration: none;
+  border-bottom: 1px solid #333;
+  padding-bottom: 1px;
+}
+.auth-legal a:active{ color: var(--auth-text); }
+.auth-legal__skip{
+  display: inline-block;
+  margin-top: 12px;
+  padding: 6px 2px;
+  border: 0;
+  background: none;
+  color: var(--auth-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.auth-legal__skip:active{ color: var(--auth-text); }
+
+/* ---- entrance ----
+   One short orchestrated sequence rather than a per-element flourish. Everything travels the
+   same 12px on the same curve, staggered, so the screen assembles once and settles. */
+@keyframes authRise{
+  from{ opacity: 0; transform: translateY(12px); }
+  to  { opacity: 1; transform: none; }
+}
+.auth-stagger > *{
+  animation: authRise .5s cubic-bezier(.22,.9,.28,1) backwards;
+}
+.auth-stagger > *:nth-child(1){ animation-delay: .04s; }
+.auth-stagger > *:nth-child(2){ animation-delay: .09s; }
+.auth-stagger > *:nth-child(3){ animation-delay: .14s; }
+.auth-stagger > *:nth-child(4){ animation-delay: .19s; }
+.auth-stagger > *:nth-child(5){ animation-delay: .24s; }
+.auth-stagger > *:nth-child(6){ animation-delay: .29s; }
+.auth-stagger > *:nth-child(7){ animation-delay: .34s; }
+
+@media (prefers-reduced-motion: reduce){
+  .auth-stagger > *{ animation: none; }
+  .auth-cta, .auth-social__btn{ transition: none; }
+}
+
+/* Short panels: give the sheet the room and let the hero take the cut. */
+@media (max-height: 680px){
+  .auth-hero{ height: 44dvh; min-height: 240px; }
+  .auth-hero__line{ font-size: 26px; }
+  .auth-brand{ padding-top: 18px; }
+  .auth-field{ margin-top: 18px; }
+}
+
+/* ---- signing diagnostic (Settings ▸ account card) ----
+   Lives in auth.css because it belongs to the account surface, but it is deliberately styled
+   as a utility panel rather than in the dark sign-in world: it renders inside the normal app
+   chrome, so it uses the app tokens, not the --auth-* ones. */
+.auth-diag{ margin-top: 12px; border-top: 1px solid var(--rh-border); padding-top: 10px; }
+.auth-diag > summary{
+  font-size: 12px; font-weight: 700; color: var(--rh-muted);
+  cursor: pointer; list-style: none; padding: 2px 0;
+}
+.auth-diag > summary::-webkit-details-marker{ display: none; }
+.auth-diag > summary::before{ content: "▸ "; }
+.auth-diag[open] > summary::before{ content: "▾ "; }
+.auth-diag__body{ margin-top: 8px; }
+.auth-diag__row{
+  display: flex; gap: 8px; align-items: baseline;
+  margin-top: 6px; font-size: 11px;
+}
+.auth-diag__row > span{ flex: none; width: 62px; color: var(--rh-muted); font-weight: 700; }
+/* Fingerprints are long colon-separated hex; wrap on the colons rather than overflowing. */
+.auth-diag__row > code{
+  flex: 1; min-width: 0; font-size: 10.5px; line-height: 1.5;
+  word-break: break-all; color: var(--rh-text);
+}
+.auth-diag__note{ margin-top: 10px; font-size: 11px; line-height: 1.5; color: var(--rh-muted); }
+
+@media (prefers-reduced-motion: reduce){
+  .auth-otp__box{ transition: none; }
+  .auth-otp__box.is-active::after{ animation: none; opacity: 1; }
+}
+
+/* Email is the only alternative to phone now that Google Sign-In is gone, so the provider row
+   collapses from a two-up grid to a single full-width button. Left as a grid with one column
+   rather than a special case, so the rule stays true if another provider is ever added back. */
+.auth-social--single { grid-template-columns: 1fr; }
+
+/* ---- email step ----
+   Lives inside .auth, so it inherits the screen's own dark palette rather than the app's. */
+.auth-email__back{
+  border: 0; background: none; padding: 4px 0; margin-top: 18px;
+  color: var(--auth-muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.auth-email__title{ margin: 10px 0 0; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.auth-email__sub{ margin: 5px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--auth-muted); }
+
+.auth-email__field{ display: block; margin-top: 16px; }
+.auth-email__field > span{
+  display: block; margin-bottom: 6px;
+  font-size: 12px; font-weight: 700; color: var(--auth-muted);
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.auth-email__field input{
+  width: 100%; box-sizing: border-box; padding: 15px 16px;
+  border: 1px solid var(--auth-border); border-radius: var(--auth-radius-sm);
+  background: var(--auth-card); color: var(--auth-text);
+  font: inherit; font-size: 15.5px; outline: none;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.auth-email__field input::placeholder{ color: #6B7280; }
+.auth-email__field input:focus{
+  border-color: rgba(59,130,246,.55);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.13);
+}
+
+/* Password field with a reveal toggle. The wrapper is the positioning context and the input
+   keeps its own full width, so the eye overlays rather than shrinking the field — a flex row
+   would have made the input narrower than the email field above it and the column would read
+   as ragged. The extra right padding is what keeps a long password from running under it. */
+.pwd-wrap{ display: block; position: relative; }
+.pwd-wrap input{ padding-right: 48px; }
+.auth-email__field .pwd-wrap input{ padding-right: 48px; }
+.pwd-eye{
+  position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+  display: flex; align-items: center; justify-content: center;
+  /* 40px, not the icon's 18 — this is a tap target on a phone, and one that sits a thumb's
+     width from the Submit button. */
+  width: 40px; height: 40px; padding: 0;
+  border: none; background: none; cursor: pointer;
+  color: var(--auth-muted); border-radius: var(--auth-radius-sm);
+  transition: color .15s ease, background .15s ease;
+}
+.pwd-eye:hover{ color: var(--auth-text); }
+.pwd-eye:disabled{ opacity: .4; cursor: default; }
+.pwd-eye:active{ background: rgba(255,255,255,.06); }
+.pwd-eye:focus-visible{ outline: 2px solid rgba(59,130,246,.6); outline-offset: 1px; }
+
+/* States the whole rule up front. It used to say "At least 6 characters" in the placeholder
+   while validateEmailForm() required 8 plus a letter and a number, so the first thing a new
+   user met was a rejection for following the instruction they were given. */
+.auth-email__hint{
+  margin-top: 7px; font-size: 12px; line-height: 1.5; color: var(--auth-muted);
+}
+
+/* Two links on one row for sign-in, one centred for the other modes — space-between on a
+   single child would shove it to the left, so the row centres and gaps instead. */
+.auth-email__links{
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin-top: 16px;
+}
+.auth-email__links button{
+  border: 0; background: none; padding: 4px 0;
+  color: var(--auth-primary); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+
+
+/* Separates the two permission blocks now that notifications and Health Connect share a page.
+   A rule rather than a card each: they are one question asked twice, and boxing them
+   separately made the page read as two screens stacked. */
+.ob-perm-divider{
+  height: 1px; background: var(--border, rgba(128,128,128,.25));
+  margin: 26px 0 22px;
+}

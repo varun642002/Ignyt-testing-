@@ -10,7 +10,17 @@ const SCHEMA_VERSION = 1; // bump when localStorage shape changes; add a migrate
 /* ---------- Storage ---------- */
 
 const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_profile","hx_nutrition","hx_bodylog","hx_custom_exercises",
-  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history"];
+  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history","hx_deleted_workouts"];
+
+/* The subset of the above whose values are arrays of RECORD OBJECTS — the ones the UI reads
+   fields off, and so the ones a null element inside can crash. Used by LS.records() on load
+   and by validateBackupPayload() on import, so both boundaries agree on what "a record array"
+   means instead of keeping two lists.
+   Deliberately NOT included: hx_favorite_exercises and hx_saved_exercises hold plain strings
+   (exercise names), and hx_completed is an object map, not an array. */
+const RECORD_ARRAY_KEYS = ["hx_bodylog","hx_custom_exercises","hx_workout_log","hx_food_log",
+  "hx_routines","hx_prs","hx_achievements","hx_favorite_foods","hx_water_log","hx_race_log",
+  "hx_calc_history","hx_deleted_workouts"];
 
 // Single source of truth for every trackable body measurement beyond weight -- the entry
 // form, CSV export/import, and the chart metric switcher all read this list instead of each
@@ -83,41 +93,303 @@ const LEVELS = {
   advanced:    { label:"Advanced",    note:"Higher volume, heavier loads, race-pace conditioning.", vol:"higher" }
 };
 
+/* The exercise library, rebuilt from the supplied dataset (workout_names.csv, 458 rows).
+   Entry shape is unchanged: [name, default prescription, unit, primary muscle].
+
+   Only the name and the muscle came from the dataset. Category is read from the equipment the
+   name states, unit from what a set of the movement is actually measured in - a carry is
+   distance, a plank is time, everything else reps - and the prescription is a per-muscle
+   default. Those three are inferences, not data: correct them here rather than in the CSV.
+
+   The old EXERCISE_DETAILS records went with the old names. Only 95 of these 458 could have
+   kept theirs, and matching the rest would have meant attaching cable form-cues to dumbbell
+   movements, which is worse than having none. */
+/* The exercise library, rebuilt from the supplied dataset (workout_names.csv, 452 rows).
+   Entry shape is unchanged: [name, default prescription, unit, primary muscle].
+
+   Only the name and the muscle came from the dataset. Category is read from the equipment the
+   name states, unit from what a set of the movement is actually measured in - a carry is
+   distance, a plank is time, everything else reps - and the prescription is a per-muscle
+   default. Those three are inferences, not data: correct them here rather than in the CSV.
+
+   The old EXERCISE_DETAILS records went with the old names. Only 95 of the original 458 could
+   have kept theirs, and matching the rest would have meant attaching cable form-cues to
+   dumbbell movements, which is worse than having none.
+
+   Exercise photos and instruction posters have been removed. They were added when this library
+   had no written instructions at all and were the only answer to "how do I do this"; 409 of
+   these exercises now carry real numbered steps (js/workout/exercise-instructions.js), which
+   answer it better and cost 8 MB less. Every row shows the muscle-coloured icon badge.
+
+   Six exercises were dropped from the CSV back when a missing image was the problem, and their
+   muscles live on in LEGACY_MUSCLE_MAP so anyone who had already logged them keeps the
+   attribution. Adding them back is now only a question of whether the movement belongs. */
 const LIBRARY = {
-  "Barbell":[["Back Squat","4x6","reps","Quadriceps"],["Front Squat","4x6","reps","Quadriceps"],["Deadlift","4x5","reps","Hamstrings"],
-    ["Romanian Deadlift","3x8","reps","Hamstrings"],["Sumo Deadlift","4x5","reps","Glutes"],["Bench Press","4x6","reps","Chest"],
-    ["Incline Bench Press","4x8","reps","Chest"],["Overhead Press","3x8","reps","Shoulders"],["Push Press","3x6","reps","Shoulders"],
-    ["Bent-Over Row","4x8","reps","Lats"],["Barbell Curl","3x10","reps","Biceps"],["Hip Thrust","3x10","reps","Glutes"],["Barbell Bench Press","3x10","reps","Chest"],["Decline Barbell Bench Press","3x10","reps","Chest"],["Meadows Row","3x10","reps","Lats"],["Barbell Bent-Over Row","3x10","reps","Lats"],["Landmine Press","3x10","reps","Shoulders"],["Reverse-Grip Barbell Curl","3x10","reps","Biceps"],["Dumbbell EZ-Bar Curl","3x10","reps","Biceps"],["Resistance Band Preacher Curl","3x10","reps","Biceps"],["Dumbbell Close-Grip Bench Press","3x10","reps","Triceps"],["Barbell Close-Grip Bench Press","3x10","reps","Triceps"],["Kettlebell Skull Crusher","3x10","reps","Triceps"],["Cable Close-Grip Bench Press","3x10","reps","Triceps"],["Resistance Band Skull Crusher","3x10","reps","Triceps"],["Barbell Back Squat","3x10","reps","Quadriceps"],["Pin Barbell Back Squat","3x10","reps","Quadriceps"],["Tempo Front Squat","3x10","reps","Quadriceps"],["Single-Leg Dumbbell Romanian Deadlift","3x10","reps","Hamstrings"],["Snatch-Grip Romanian Deadlift","3x10","reps","Hamstrings"],["Good Morning","3x10","reps","Hamstrings"],["Barbell Romanian Deadlift","3x10","reps","Hamstrings"],["Barbell Good Morning","3x10","reps","Hamstrings"],["Cable Stiff-Leg Deadlift","3x10","reps","Hamstrings"],["Resistance Band Romanian Deadlift","3x10","reps","Hamstrings"],["Barbell Hip Thrust","3x10","reps","Glutes"],["Banded Barbell Hip Thrust","3x10","reps","Glutes"],["Conventional Deadlift","3x10","reps","Glutes"],["Paused Conventional Deadlift","3x10","reps","Glutes"],["Deficit Conventional Deadlift","3x10","reps","Glutes"],["Rack Pull Conventional Deadlift","3x10","reps","Glutes"],["Block Pull Conventional Deadlift","3x10","reps","Glutes"],["Snatch-Grip Conventional Deadlift","3x10","reps","Glutes"],["Paused Sumo Deadlift","3x10","reps","Glutes"],["Deficit Sumo Deadlift","3x10","reps","Glutes"],["Block Pull Sumo Deadlift","3x10","reps","Glutes"],["Dumbbell Conventional Deadlift","3x10","reps","Glutes"],["Dumbbell Sumo Deadlift","3x10","reps","Glutes"],["Barbell Conventional Deadlift","3x10","reps","Glutes"],["Barbell Sumo Deadlift","3x10","reps","Glutes"],["Kettlebell Conventional Deadlift","3x10","reps","Glutes"],["Kettlebell Sumo Deadlift","3x10","reps","Glutes"],["Cable Conventional Deadlift","3x10","reps","Glutes"],["Cable Sumo Deadlift","3x10","reps","Glutes"],["Resistance Band Conventional Deadlift","3x10","reps","Glutes"],["Resistance Band Sumo Deadlift","3x10","reps","Glutes"],["Power Clean","3x10","reps","Glutes"],["Hang Power Clean","3x10","reps","Glutes"],["Block Power Clean","3x10","reps","Glutes"],["High-Hang Power Clean","3x10","reps","Glutes"],["Muscle Power Clean","3x10","reps","Glutes"],["Clean and Jerk","3x10","reps","Cardio"],["Snatch","3x10","reps","Cardio"],["Hang Snatch","3x10","reps","Cardio"],["Block Snatch","3x10","reps","Cardio"],["High-Hang Snatch","3x10","reps","Cardio"],["Muscle Snatch","3x10","reps","Cardio"],["Split Snatch","3x10","reps","Cardio"],["Power Snatch","3x10","reps","Cardio"],["Hang Clean","3x10","reps","Glutes"],["Dumbbell Power Clean","3x10","reps","Glutes"],["Dumbbell Clean and Jerk","3x10","reps","Cardio"],["Dumbbell Snatch","3x10","reps","Cardio"],["Dumbbell Power Snatch","3x10","reps","Cardio"],["Dumbbell Hang Clean","3x10","reps","Glutes"],["Dumbbell Push Press","3x10","reps","Shoulders"],["Barbell Power Clean","3x10","reps","Glutes"],["Barbell Clean and Jerk","3x10","reps","Cardio"],["Barbell Snatch","3x10","reps","Cardio"],["Barbell Power Snatch","3x10","reps","Cardio"],["Barbell Hang Clean","3x10","reps","Glutes"],["Barbell Push Press","3x10","reps","Shoulders"],["Kettlebell Power Clean","3x10","reps","Glutes"],["Kettlebell Clean and Jerk","3x10","reps","Cardio"],["Kettlebell Power Snatch","3x10","reps","Cardio"],["Kettlebell Hang Clean","3x10","reps","Glutes"],["Kettlebell Push Press","3x10","reps","Shoulders"],["Cable Power Clean","3x10","reps","Glutes"],["Cable Clean and Jerk","3x10","reps","Cardio"],["Cable Snatch","3x10","reps","Cardio"],["Cable Power Snatch","3x10","reps","Cardio"],["Cable Hang Clean","3x10","reps","Glutes"],["Cable Push Press","3x10","reps","Shoulders"],["Resistance Band Power Clean","3x10","reps","Glutes"],["Resistance Band Clean and Jerk","3x10","reps","Cardio"],["Resistance Band Snatch","3x10","reps","Cardio"],["Resistance Band Power Snatch","3x10","reps","Cardio"],["Resistance Band Hang Clean","3x10","reps","Glutes"],["Resistance Band Push Press","3x10","reps","Shoulders"],["Jefferson Curl","3x10","reps","Abdominals"],["Trap-Bar Deadlift","3x10","reps","Glutes"],["Dumbbell Trap-Bar Deadlift","3x10","reps","Glutes"],["Barbell Trap-Bar Deadlift","3x10","reps","Glutes"],["Kettlebell Trap-Bar Deadlift","3x10","reps","Glutes"],["Cable Trap-Bar Deadlift","3x10","reps","Glutes"],["Resistance Band Trap-Bar Deadlift","3x10","reps","Glutes"]],
-  "Dumbbell":[["DB Bench Press","4x8","reps","Chest"],["DB Row","4x10","reps","Lats"],["DB Shoulder Press","3x10","reps","Shoulders"],
-    ["Goblet Squat","3x12","reps","Quadriceps"],["Walking Lunges","3x12/leg","reps","Quadriceps"],["Bulgarian Split Squat","3x10/leg","reps","Quadriceps"],
-    ["Farmer's Carry","4x40m","distance","Forearms"],["DB Curl","3x12","reps","Biceps"],["Lateral Raise","3x12","reps","Shoulders"],
-    ["DB RDL","3x10","reps","Hamstrings"],["Renegade Row","3x8/side","reps","Lats"],["Dumbbell Bench Press","3x10","reps","Chest"],["Dumbbell Fly","3x10","reps","Chest"],["Incline Dumbbell Press","3x10","reps","Chest"],["One-Arm Dumbbell Row","3x10","reps","Lats"],["Dumbbell Lateral Raise","3x10","reps","Shoulders"],["One-Arm Dumbbell Lateral Raise","3x10","reps","Shoulders"],["Kettlebell Arnold Press","3x10","reps","Shoulders"],["Dumbbell Rear Delt Fly","3x10","reps","Shoulders"],["Cable Arnold Press","3x10","reps","Shoulders"],["Alternating Dumbbell Curl","3x10","reps","Biceps"],["Zottman Dumbbell Curl","3x10","reps","Biceps"],["Rope Cable Hammer Curl","3x10","reps","Biceps"],["Dumbbell Concentration Curl","3x10","reps","Biceps"],["Barbell Hammer Curl","3x10","reps","Biceps"],["Incline Dumbbell Curl","3x10","reps","Biceps"],["Kettlebell Hammer Curl","3x10","reps","Biceps"],["Cable Hammer Curl","3x10","reps","Biceps"],["Front-Rack Walking Lunge","3x10","reps","Quadriceps"],["Front-Rack Reverse Lunge","3x10","reps","Quadriceps"],["High-Box Step-Up","3x10","reps","Quadriceps"]],
-  "Machine":[["Leg Press","4x10","reps","Quadriceps"],["Hack Squat","4x10","reps","Quadriceps"],["Leg Extension","3x12","reps","Quadriceps"],
-    ["Leg Curl","3x12","reps","Hamstrings"],["Lat Pulldown","4x10","reps","Lats"],["Seated Cable Row","4x10","reps","Lats"],
-    ["Chest Press Machine","4x10","reps","Chest"],["Shoulder Press Machine","3x10","reps","Shoulders"],["Pec Deck","3x12","reps","Chest"],
-    ["Cable Crossover","3x12","reps","Chest"],["Smith Machine Squat","4x8","reps","Quadriceps"],["Assisted Pull-up","3x8","reps","Lats"],
-    ["Assisted Dip","3x8","reps","Triceps"],["Cable Tricep Pushdown","3x12","reps","Triceps"],["Cable Face Pull","3x15","reps","Traps"],
-    ["Hip Abductor Machine","3x15","reps","Abductors"],["Hip Adductor Machine","3x15","reps","Adductors"],["Calf Raise Machine","4x15","reps","Calves"],["Cable Pec Deck Fly","3x10","reps","Chest"],["Resistance Band Pec Deck Fly","3x10","reps","Chest"],["T-Bar Row","3x10","reps","Lats"],["Cable Lat Pulldown","3x10","reps","Lats"],["Cable Straight-Arm Pulldown","3x10","reps","Lats"],["Resistance Band Straight-Arm Pulldown","3x10","reps","Lats"],["Face Pull","3x10","reps","Shoulders"],["Cuff Cable Lateral Raise","3x10","reps","Shoulders"],["Dumbbell Reverse Pec Deck Fly","3x10","reps","Shoulders"],["Cable Curl","3x10","reps","Biceps"],["Triceps Pushdown","3x10","reps","Triceps"],["Straight-Bar Triceps Pushdown","3x10","reps","Triceps"],["Reverse-Grip Triceps Pushdown","3x10","reps","Triceps"],["Overhead Cable Triceps Extension","3x10","reps","Triceps"],["Barbell Triceps Pushdown","3x10","reps","Triceps"],["Kettlebell Triceps Pushdown","3x10","reps","Triceps"],["Resistance Band Triceps Pushdown","3x10","reps","Triceps"],["Kettlebell Leg Press","3x10","reps","Quadriceps"],["Cable Leg Extension","3x10","reps","Quadriceps"],["Resistance Band Leg Extension","3x10","reps","Quadriceps"],["Seated Leg Curl","3x10","reps","Hamstrings"],["Dumbbell Seated Leg Curl","3x10","reps","Hamstrings"],["Barbell Lying Leg Curl","3x10","reps","Hamstrings"],["Kettlebell Lying Leg Curl","3x10","reps","Hamstrings"],["Resistance Band Seated Leg Curl","3x10","reps","Hamstrings"],["Cable Glute Kickback","3x10","reps","Glutes"],["Hip Abduction Machine","3x10","reps","Glutes"],["Cable Pull-Through","3x10","reps","Glutes"],["Standing Calf Raise","3x10","reps","Calves"],["Single-Leg Standing Calf Raise","3x10","reps","Calves"],["Dumbbell Standing Calf Raise","3x10","reps","Calves"],["Smith Machine Standing Calf Raise","3x10","reps","Calves"],["Donkey Standing Calf Raise","3x10","reps","Calves"],["Dumbbell Seated Calf Raise","3x10","reps","Calves"],["Kettlebell Standing Calf Raise","3x10","reps","Calves"],["Cable Standing Calf Raise","3x10","reps","Calves"],["Cable Seated Calf Raise","3x10","reps","Calves"],["Resistance Band Standing Calf Raise","3x10","reps","Calves"],["Resistance Band Seated Calf Raise","3x10","reps","Calves"],["Tall-Kneeling Pallof Press","3x10","reps","Abdominals"],["Reverse Hyperextension","3x10","reps","Glutes"],["Back Extension","3x10","reps","Abdominals"],["Dumbbell Reverse Hyperextension","3x10","reps","Glutes"],["Dumbbell Back Extension","3x10","reps","Abdominals"],["Barbell Reverse Hyperextension","3x10","reps","Glutes"],["Barbell Back Extension","3x10","reps","Abdominals"],["Kettlebell Reverse Hyperextension","3x10","reps","Glutes"],["Kettlebell Back Extension","3x10","reps","Abdominals"],["Cable Reverse Hyperextension","3x10","reps","Glutes"],["Cable Back Extension","3x10","reps","Abdominals"],["Resistance Band Reverse Hyperextension","3x10","reps","Glutes"],["Resistance Band Back Extension","3x10","reps","Abdominals"],["Hip Adduction Machine","3x10","reps","Adductors"]],
-  "Bodyweight":[["Push-up","3x15","reps","Chest"],["Pull-up","3x8","reps","Lats"],["Chin-up","3x8","reps","Biceps"],
-    ["Dip","3x10","reps","Triceps"],["Plank","3x45s","time","Abdominals"],["Sit-up","3x15","reps","Abdominals"],["Air Squat","3x20","reps","Quadriceps"],
-    ["Burpee","3x10","reps","Cardio"],["Mountain Climbers","3x30s","time","Abdominals"],["Jump Squat","3x12","reps","Quadriceps"],
-    ["Handstand Hold","3x20s","time","Shoulders"],["Pistol Squat","3x5/leg","reps","Quadriceps"],["Close-Grip Push-Up","3x10","reps","Chest"],["Deficit Push-Up","3x10","reps","Chest"],["Commando Pull-Up","3x10","reps","Lats"],["Weighted Chin-Up","3x10","reps","Lats"],["Barbell Pull-Up","3x10","reps","Lats"],["Barbell Inverted Row","3x10","reps","Traps"],["Kettlebell Chin-Up","3x10","reps","Lats"],["Kettlebell Inverted Row","3x10","reps","Traps"],["Bench Dip","3x10","reps","Triceps"],["Kettlebell Bench Dip","3x10","reps","Triceps"],["Barbell Sissy Squat","3x10","reps","Quadriceps"],["Kettlebell Sissy Squat","3x10","reps","Quadriceps"],["Kettlebell Nordic Hamstring Curl","3x10","reps","Hamstrings"],["Cable Nordic Hamstring Curl","3x10","reps","Hamstrings"],["Glute Bridge","3x10","reps","Glutes"],["Weighted Glute Bridge","3x10","reps","Glutes"],["Dumbbell Glute Bridge","3x10","reps","Glutes"],["Dumbbell Frog Pump","3x10","reps","Glutes"],["Kettlebell Frog Pump","3x10","reps","Glutes"],["Cable Glute Bridge","3x10","reps","Glutes"],["Tibialis Raise","3x10","reps","Calves"],["Dumbbell Tibialis Raise","3x10","reps","Calves"],["Barbell Tibialis Raise","3x10","reps","Calves"],["Kettlebell Tibialis Raise","3x10","reps","Calves"],["Stability Ball Plank","3x10","reps","Abdominals"],["Hip Dip Side Plank","3x10","reps","Abdominals"],["Toes-to-Bar Hanging Leg Raise","3x10","reps","Abdominals"],["Dead Bug","3x10","reps","Abdominals"],["Dragon Flag","3x10","reps","Abdominals"],["Dumbbell Dead Bug","3x10","reps","Abdominals"],["Dumbbell Hollow Body Hold","3x10","reps","Abdominals"],["Barbell Bird Dog","3x10","reps","Abdominals"],["Kettlebell Side Plank","3x10","reps","Abdominals"],["Cable Hanging Leg Raise","3x10","reps","Abdominals"],["Cable Dragon Flag","3x10","reps","Abdominals"],["Resistance Band Dead Bug","3x10","reps","Abdominals"],["Muscle-Up","3x10","reps","Lats"],["Front Lever","3x10","reps","Lats"],["Dumbbell Handstand Push-Up","3x10","reps","Shoulders"],["Dumbbell L-Sit","3x10","reps","Abdominals"],["Barbell Muscle-Up","3x10","reps","Lats"],["Barbell Pistol Squat","3x10","reps","Quadriceps"],["Barbell Front Lever","3x10","reps","Lats"],["Kettlebell Handstand Push-Up","3x10","reps","Shoulders"],["Kettlebell L-Sit","3x10","reps","Abdominals"],["Cable Muscle-Up","3x10","reps","Lats"],["Cable Pistol Squat","3x10","reps","Quadriceps"],["Cable Front Lever","3x10","reps","Lats"],["Resistance Band Handstand Push-Up","3x10","reps","Shoulders"],["Resistance Band L-Sit","3x10","reps","Abdominals"],["Outdoor Running","3x30s","time","Cardio"],["Zone 2 Outdoor Running","3x30s","time","Cardio"],["Tempo Outdoor Running","3x30s","time","Cardio"],["Interval Outdoor Running","3x30s","time","Cardio"],["Hill Sprint Outdoor Running","3x30s","time","Cardio"],["Fartlek Outdoor Running","3x30s","time","Cardio"],["Long Run Outdoor Running","3x30s","time","Cardio"],["Recovery Outdoor Running","3x30s","time","Cardio"],["Cat-Cow Stretch","3x10","reps","Abdominals"],["Cossack Squat","3x10","reps","Adductors"],["Dumbbell Cossack Squat","3x10","reps","Adductors"],["Barbell Cossack Squat","3x10","reps","Adductors"],["Kettlebell Cossack Squat","3x10","reps","Adductors"],["Cable Cossack Squat","3x10","reps","Adductors"],["Resistance Band Cossack Squat","3x10","reps","Adductors"],["Bear Crawl","3x10","reps","Abdominals"],["Crab Walk","3x10","reps","Triceps"],["Dumbbell Bear Crawl","3x10","reps","Abdominals"],["Dumbbell Crab Walk","3x10","reps","Triceps"],["Barbell Bear Crawl","3x10","reps","Abdominals"],["Barbell Crab Walk","3x10","reps","Triceps"],["Kettlebell Bear Crawl","3x10","reps","Abdominals"],["Kettlebell Crab Walk","3x10","reps","Triceps"],["Cable Bear Crawl","3x10","reps","Abdominals"],["Cable Crab Walk","3x10","reps","Triceps"],["Resistance Band Bear Crawl","3x10","reps","Abdominals"],["Resistance Band Crab Walk","3x10","reps","Triceps"],["Broad Jump","3x10","reps","Glutes"],["Skater Jump","3x10","reps","Glutes"],["Dumbbell Broad Jump","3x10","reps","Glutes"],["Dumbbell Skater Jump","3x10","reps","Glutes"],["Barbell Broad Jump","3x10","reps","Glutes"],["Barbell Skater Jump","3x10","reps","Glutes"],["Kettlebell Broad Jump","3x10","reps","Glutes"],["Kettlebell Skater Jump","3x10","reps","Glutes"],["Cable Broad Jump","3x10","reps","Glutes"],["Cable Skater Jump","3x10","reps","Glutes"],["Resistance Band Broad Jump","3x10","reps","Glutes"],["Resistance Band Skater Jump","3x10","reps","Glutes"]],
-  "Cardio Machine":[["Treadmill","20 min","time","Cardio"],["Rowing Machine","2000m","distance","Cardio"],
-    ["Ski Erg","1000m","distance","Cardio"],["Assault Bike","15 min","time","Cardio"],["Stationary Bike","30 min","time","Cardio"],
-    ["Elliptical","25 min","time","Cardio"],["Stairmaster","20 min","time","Cardio"],["Jacob's Ladder","10 min","time","Cardio"],["Treadmill Running","15 min","time","Cardio"],["Zone 2 Treadmill Running","15 min","time","Cardio"],["Tempo Treadmill Running","15 min","time","Cardio"],["Interval Treadmill Running","15 min","time","Cardio"],["Incline Treadmill Running","15 min","time","Cardio"],["Sprint Treadmill Running","15 min","time","Cardio"],["Recovery Treadmill Running","15 min","time","Cardio"],["Stationary Cycling","15 min","time","Cardio"],["Stair Climber","15 min","time","Cardio"],["Elliptical Trainer","15 min","time","Cardio"]],
-  "Cardio Outdoor":[["Running","5 km","distance","Cardio"],["Cycling","20 km","distance","Cardio"],["Swimming","1500m","distance","Cardio"],
-    ["Walking","30 min","time","Cardio"],["Hiking","60 min","time","Cardio"],["Jump Rope","10 min","time","Cardio"],["Single-Under Jump Rope","15 min","time","Cardio"],["Double-Under Jump Rope","15 min","time","Cardio"],["Cross-Over Jump Rope","15 min","time","Cardio"],["High-Knee Jump Rope","15 min","time","Cardio"],["Boxer Step Jump Rope","15 min","time","Cardio"]],
-  "Hyrox Station":[["Sled Push","4x25m","distance","Quadriceps"],["Sled Pull","4x25m","distance","Lats"],
-    ["Sandbag Lunges","4x25m","distance","Quadriceps"],["Wall Balls","4x15","reps","Quadriceps"],["Burpee Broad Jumps","4x10","reps","Cardio"],
-    ["Farmer's Carry (station)","4x200m","distance","Forearms"],["Ski Erg (station)","4x250m","distance","Cardio"],["Rowing (station)","4x250m","distance","Cardio"],["SkiErg","3x30s","time","Lats"],["Zone 2 SkiErg","3x30s","time","Lats"],["Sprint Interval SkiErg","3x30s","time","Lats"],["Double-Pole SkiErg","3x30s","time","Lats"],["Alternating-Arm SkiErg","3x30s","time","Lats"],["Heavy Sled Push","4x20m","distance","Quadriceps"],["Light Sprint Sled Push","4x20m","distance","Quadriceps"],["Low-Handle Sled Push","4x20m","distance","Quadriceps"],["High-Handle Sled Push","4x20m","distance","Quadriceps"],["Backward Sled Pull","4x20m","distance","Lats"],["Rope Sled Pull","4x20m","distance","Lats"],["Hand-over-Hand Sled Pull","4x20m","distance","Lats"],["Harness Sled Pull","4x20m","distance","Lats"],["Burpee Broad Jump","4x20m","distance","Cardio"],["Rowing","3x30s","time","Lats"],["Zone 2 Rowing","3x30s","time","Lats"],["Sprint Interval Rowing","3x30s","time","Lats"],["Tempo Rowing","3x30s","time","Lats"],["500 m Time Trial Rowing","3x30s","time","Lats"],["2000 m Time Trial Rowing","3x30s","time","Lats"],["Farmers Carry","4x20m","distance","Forearms"],["Heavy Farmers Carry","4x20m","distance","Forearms"],["Single-Arm Suitcase Farmers Carry","4x20m","distance","Forearms"],["Trap-Bar Farmers Carry","4x20m","distance","Forearms"],["Overhead Farmers Carry","4x20m","distance","Forearms"],["Sandbag Walking Lunge","4x20m","distance","Quadriceps"],["Wall Ball","4x20m","distance","Quadriceps"],["Dumbbell Sled Push","4x20m","distance","Quadriceps"],["Dumbbell Sled Pull","4x20m","distance","Lats"],["Dumbbell Burpee Broad Jump","4x20m","distance","Cardio"],["Dumbbell Farmers Carry","4x20m","distance","Forearms"],["Dumbbell Wall Ball","4x20m","distance","Quadriceps"],["Barbell Sled Push","4x20m","distance","Quadriceps"],["Barbell Sled Pull","4x20m","distance","Lats"],["Barbell Burpee Broad Jump","4x20m","distance","Cardio"],["Barbell Farmers Carry","4x20m","distance","Forearms"],["Barbell Wall Ball","4x20m","distance","Quadriceps"],["Kettlebell Sled Push","4x20m","distance","Quadriceps"],["Kettlebell Sled Pull","4x20m","distance","Lats"],["Kettlebell Burpee Broad Jump","4x20m","distance","Cardio"],["Kettlebell Farmers Carry","4x20m","distance","Forearms"],["Kettlebell Wall Ball","4x20m","distance","Quadriceps"],["Cable Sled Push","4x20m","distance","Quadriceps"],["Cable Sled Pull","4x20m","distance","Lats"],["Cable Burpee Broad Jump","4x20m","distance","Cardio"],["Cable Farmers Carry","4x20m","distance","Forearms"],["Cable Wall Ball","4x20m","distance","Quadriceps"],["Resistance Band Sled Push","4x20m","distance","Quadriceps"],["Resistance Band Sled Pull","4x20m","distance","Lats"],["Resistance Band Burpee Broad Jump","4x20m","distance","Cardio"],["Resistance Band Farmers Carry","4x20m","distance","Forearms"],["Resistance Band Wall Ball","4x20m","distance","Quadriceps"]],
-  "Mobility / Stretch":[["Hip Flexor Stretch","2x30s/side","time","Mobility"],["Couch Stretch","2x45s/side","time","Mobility"],
-    ["Pigeon Pose","2x45s/side","time","Mobility"],["World's Greatest Stretch","2x5/side","reps","Mobility"],
-    ["Thoracic Rotation","2x10/side","reps","Mobility"],["Shoulder Dislocate","2x10","reps","Mobility"],["Cat-Cow","2x10","reps","Mobility"],
-    ["90/90 Hip Switch","2x8/side","reps","Mobility"],["Hamstring Stretch","2x30s/side","time","Mobility"],["Calf Stretch","2x30s/side","time","Mobility"],
-    ["Ankle Circles","2x10/side","reps","Mobility"],["Foam Rolling — Quads","2 min/side","time","Mobility"],
-    ["Foam Rolling — Back","2 min","time","Mobility"],["Band Pull-Apart","3x15","reps","Traps"],["Deep Squat Hold","3x30s","time","Mobility"],["Dumbbell Spanish Squat","3x10","reps","Quadriceps"],["Cable Spanish Squat","3x10","reps","Quadriceps"],["Child's Pose","3x10","reps","Lats"],["Downward-Facing Dog","3x10","reps","Hamstrings"],["Warrior I","3x10","reps","Quadriceps"],["Warrior II","3x10","reps","Quadriceps"],["Boat Pose","3x10","reps","Abdominals"],["Dumbbell Boat Pose","3x10","reps","Abdominals"],["Barbell Boat Pose","3x10","reps","Abdominals"],["Kettlebell Boat Pose","3x10","reps","Abdominals"],["Cable Boat Pose","3x10","reps","Abdominals"],["Resistance Band Boat Pose","3x10","reps","Abdominals"]],
-  "Kettlebell":[["Dumbbell Goblet Squat","3x10","reps","Quadriceps"],["Kettlebell Swing","3x10","reps","Glutes"],["Turkish Get-Up","3x10","reps","Cardio"],["Kettlebell Clean","3x10","reps","Glutes"],["Kettlebell Snatch","3x10","reps","Glutes"],["Kettlebell Windmill","3x10","reps","Abdominals"],["Dumbbell Turkish Get-Up","3x10","reps","Cardio"],["Barbell Turkish Get-Up","3x10","reps","Cardio"],["Kettlebell Turkish Get-Up","3x10","reps","Cardio"],["Cable Turkish Get-Up","3x10","reps","Cardio"],["Resistance Band Turkish Get-Up","3x10","reps","Cardio"]],
-  "Conditioning":[["Kettlebell Russian Twist","3x10","reps","Abdominals"],["Battle Rope Alternating Waves","3x10","reps","Shoulders"],["Battle Rope Slams","3x10","reps","Shoulders"],["Medicine Ball Slam","3x10","reps","Lats"],["Tire Flip","3x10","reps","Glutes"],["Atlas Stone Load","3x10","reps","Glutes"],["Yoke Walk","3x10","reps","Traps"],["Log Press","3x10","reps","Shoulders"],["Dumbbell Tire Flip","3x10","reps","Glutes"],["Dumbbell Atlas Stone Load","3x10","reps","Glutes"],["Dumbbell Yoke Walk","3x10","reps","Traps"],["Dumbbell Log Press","3x10","reps","Shoulders"],["Barbell Tire Flip","3x10","reps","Glutes"],["Barbell Atlas Stone Load","3x10","reps","Glutes"],["Barbell Yoke Walk","3x10","reps","Traps"],["Barbell Log Press","3x10","reps","Shoulders"],["Kettlebell Tire Flip","3x10","reps","Glutes"],["Kettlebell Atlas Stone Load","3x10","reps","Glutes"],["Kettlebell Yoke Walk","3x10","reps","Traps"],["Kettlebell Log Press","3x10","reps","Shoulders"],["Cable Tire Flip","3x10","reps","Glutes"],["Cable Atlas Stone Load","3x10","reps","Glutes"],["Cable Yoke Walk","3x10","reps","Traps"],["Cable Log Press","3x10","reps","Shoulders"],["Resistance Band Tire Flip","3x10","reps","Glutes"],["Resistance Band Atlas Stone Load","3x10","reps","Glutes"],["Resistance Band Yoke Walk","3x10","reps","Traps"],["Resistance Band Log Press","3x10","reps","Shoulders"],["Box Jump","3x10","reps","Quadriceps"],["Depth Jump","3x10","reps","Quadriceps"],["Dumbbell Box Jump","3x10","reps","Quadriceps"],["Dumbbell Depth Jump","3x10","reps","Quadriceps"],["Barbell Box Jump","3x10","reps","Quadriceps"],["Barbell Depth Jump","3x10","reps","Quadriceps"],["Kettlebell Box Jump","3x10","reps","Quadriceps"],["Kettlebell Depth Jump","3x10","reps","Quadriceps"],["Cable Box Jump","3x10","reps","Quadriceps"],["Cable Depth Jump","3x10","reps","Quadriceps"],["Resistance Band Box Jump","3x10","reps","Quadriceps"],["Resistance Band Depth Jump","3x10","reps","Quadriceps"],["Medicine Ball Chest Pass","3x10","reps","Chest"],["Medicine Ball Rotational Throw","3x10","reps","Abdominals"]]
+  "Barbell":[
+    ["Behind the Back Wrist Curl (Barbell)","3x15","reps","Forearms"],["Bench Press (Barbell)","4x8","reps","Chest"],
+    ["Bench Press - Close Grip (Barbell)","4x8","reps","Chest"],
+    ["Bench Press - Wide Grip (Barbell)","4x8","reps","Chest"],["Bent Over Row (Barbell)","4x8","reps","Upper Back"],
+    ["Bent Over Row - Underhand (Barbell)","4x8","reps","Upper Back"],
+    ["Bicep Curl (Barbell)","3x12","reps","Biceps"],["Box Squat (Barbell)","4x8","reps","Quadriceps"],
+    ["Bulgarian Split Squat (Barbell)","4x8","reps","Quadriceps"],["Deadlift (Barbell)","4x8","reps","Glutes"],
+    ["Deadlift (Trap bar)","4x8","reps","Glutes"],["Decline Bench Press (Barbell)","4x8","reps","Chest"],
+    ["EZ Bar Biceps Curl","3x12","reps","Biceps"],["Feet Up Bench Press (Barbell)","4x8","reps","Chest"],
+    ["Floor Press (Barbell)","4x8","reps","Chest"],["Front Raise (Barbell)","3x12","reps","Shoulders"],
+    ["Glute Bridge (Barbell)","4x8","reps","Glutes"],["Good Morning (Barbell)","4x8","reps","Hamstrings"],
+    ["Hip Thrust (Barbell)","4x8","reps","Glutes"],["Incline Bench Press (Barbell)","4x8","reps","Chest"],
+    ["JM Press (Barbell)","3x12","reps","Triceps"],["Landmine 180","3x15","reps","Abdominals"],
+    ["Landmine Row","4x8","reps","Upper Back"],["Landmine Squat and Press","4x8","reps","Full Body"],
+    ["Lunge (Barbell)","4x8","reps","Quadriceps"],["Meadows Rows (Barbell)","4x8","reps","Upper Back"],
+    ["Overhead Press (Barbell)","3x12","reps","Shoulders"],["Partial Glute Bridge (Barbell)","4x8","reps","Glutes"],
+    ["Pause Squat (Barbell)","4x8","reps","Quadriceps"],["Pendlay Row (Barbell)","4x8","reps","Upper Back"],
+    ["Preacher Curl (Barbell)","3x12","reps","Biceps"],["Reverse Curl (Barbell)","3x12","reps","Biceps"],
+    ["Reverse Lunge (Barbell)","4x8","reps","Quadriceps"],["Romanian Deadlift (Barbell)","4x8","reps","Hamstrings"],
+    ["Seal Row (Barbell)","4x8","reps","Upper Back"],["Seated Overhead Press (Barbell)","3x12","reps","Shoulders"],
+    ["Seated Wrist Curl (Barbell)","3x15","reps","Forearms"],
+    ["Seated Wrist Extension (Barbell)","3x15","reps","Forearms"],["Shrug (Barbell)","3x12","reps","Traps"],
+    ["Single Arm Landmine Press (Barbell)","3x12","reps","Shoulders"],
+    ["Single Leg Romanian Deadlift (Barbell)","4x8","reps","Hamstrings"],
+    ["Skullcrusher (Barbell)","3x12","reps","Triceps"],["Spider Curl (Barbell)","3x12","reps","Biceps"],
+    ["Squat (Barbell)","4x8","reps","Quadriceps"],["Standing Calf Raise (Barbell)","3x15","reps","Calves"],
+    ["Standing Military Press (Barbell)","3x12","reps","Shoulders"],
+    ["Sumo Squat (Barbell)","4x8","reps","Quadriceps"],["Thruster (Barbell)","4x8","reps","Full Body"],
+    ["Triceps Extension (Barbell)","3x12","reps","Triceps"],["Upright Row (Barbell)","3x12","reps","Shoulders"]
+  ],
+  "Dumbbell":[
+    ["Arnold Press (Dumbbell)","3x12","reps","Shoulders"],["Bench Press (Dumbbell)","4x8","reps","Chest"],
+    ["Bent Over Row (Dumbbell)","4x8","reps","Upper Back"],["Bicep Curl (Dumbbell)","3x12","reps","Biceps"],
+    ["Bulgarian Split Squat (Dumbbell)","4x8","reps","Quadriceps"],["Chest Fly (Dumbbell)","4x8","reps","Chest"],
+    ["Chest Supported Incline Row (Dumbbell)","4x8","reps","Upper Back"],
+    ["Chest Supported Reverse Fly (Dumbbell)","3x12","reps","Shoulders"],
+    ["Chest Supported Y Raise (Dumbbell)","3x12","reps","Shoulders"],
+    ["Curtsy Lunge (Dumbbell)","4x8","reps","Quadriceps"],["Deadlift (Dumbbell)","4x8","reps","Glutes"],
+    ["Decline Bench Press (Dumbbell)","4x8","reps","Chest"],["Decline Chest Fly (Dumbbell)","4x8","reps","Chest"],
+    ["Dumbbell Row","4x8","reps","Lats"],["Dumbbell Snatch","4x8","reps","Full Body"],
+    ["Dumbbell Squeeze Press","4x8","reps","Chest"],["Dumbbell Step Up","4x8","reps","Quadriceps"],
+    ["Floor Press (Dumbbell)","4x8","reps","Chest"],["Frog Pumps (Dumbbell)","4x8","reps","Glutes"],
+    ["Front Raise (Dumbbell)","3x12","reps","Shoulders"],["Hammer Curl (Dumbbell)","3x12","reps","Biceps"],
+    ["Hex Press (Dumbbell)","4x8","reps","Chest"],["Hip Thrust (Dumbbell)","4x8","reps","Glutes"],
+    ["Incline Bench Press (Dumbbell)","4x8","reps","Chest"],["Incline Chest Fly (Dumbbell)","4x8","reps","Chest"],
+    ["Lateral Raise (Dumbbell)","3x12","reps","Shoulders"],["Lunge (Dumbbell)","4x8","reps","Quadriceps"],
+    ["Overhead Dumbbell Lunge","4x8","reps","Quadriceps"],["Overhead Press (Dumbbell)","3x12","reps","Shoulders"],
+    ["Pinwheel Curl (Dumbbell)","3x12","reps","Biceps"],["Preacher Curl (Dumbbell)","3x12","reps","Biceps"],
+    ["Pullover (Dumbbell)","4x8","reps","Lats"],["Rear Delt Reverse Fly (Dumbbell)","3x12","reps","Shoulders"],
+    ["Renegade Row (Dumbbell)","4x8","reps","Upper Back"],["Reverse Curl (Dumbbell)","3x12","reps","Biceps"],
+    ["Reverse Lunge (Dumbbell)","4x8","reps","Quadriceps"],
+    ["Reverse Wrist Curl (Dumbbell)","3x15","reps","Forearms"],
+    ["Romanian Deadlift (Dumbbell)","4x8","reps","Hamstrings"],["Seal Row (Dumbbell)","4x8","reps","Upper Back"],
+    ["Seated Incline Curl (Dumbbell)","3x12","reps","Biceps"],
+    ["Seated Incline Hammer Curl (Dumbbell)","3x12","reps","Biceps"],
+    ["Seated Lateral Raise (Dumbbell)","3x12","reps","Shoulders"],
+    ["Seated Overhead Press (Dumbbell)","3x12","reps","Shoulders"],
+    ["Shoulder Press (Dumbbell)","3x12","reps","Shoulders"],["Shrug (Dumbbell)","3x12","reps","Traps"],
+    ["Side Bend (Dumbbell)","3x15","reps","Abdominals"],["Single Leg Hip Thrust (Dumbbell)","4x8","reps","Glutes"],
+    ["Single Leg Romanian Deadlift (Dumbbell)","4x8","reps","Hamstrings"],
+    ["Single Leg Standing Calf Raise (Dumbbell)","3x15","reps","Calves"],
+    ["Skullcrusher (Dumbbell)","3x12","reps","Triceps"],["Spider Curl (Dumbbell)","3x12","reps","Biceps"],
+    ["Split Squat (Dumbbell)","4x8","reps","Quadriceps"],["Squat (Dumbbell)","4x8","reps","Quadriceps"],
+    ["Standing Calf Raise (Dumbbell)","3x15","reps","Calves"],
+    ["Stiff Leg Deadlift (Dumbbell)","4x8","reps","Hamstrings"],
+    ["Suitcase Carry (Dumbbell)","3x400m","distance","Full Body"],
+    ["Sumo Squat (Dumbbell)","4x8","reps","Quadriceps"],["Triceps Extension (Dumbbell)","3x12","reps","Triceps"],
+    ["Triceps Kickback (Dumbbell)","3x12","reps","Triceps"],["Upright Row (Dumbbell)","3x12","reps","Shoulders"],
+    ["Waiter Curl (Dumbbell)","3x12","reps","Biceps"],["Walking Lunge (Dumbbell)","3x400m","distance","Quadriceps"],
+    ["Wide-Elbow Triceps Press (Dumbbell)","3x12","reps","Triceps"],
+    ["Zottman Curl (Dumbbell)","3x12","reps","Biceps"]
+  ],
+  "Machine":[
+    ["Back Extension (Machine)","4x8","reps","Lower Back"],["Behind the Back Curl (Cable)","3x12","reps","Biceps"],
+    ["Belt Squat (Machine)","4x8","reps","Quadriceps"],["Bench Press (Cable)","4x8","reps","Chest"],
+    ["Bench Press (Smith Machine)","4x8","reps","Chest"],["Bent Over Row (Smith Machine)","4x8","reps","Upper Back"],
+    ["Bicep Curl (Cable)","3x12","reps","Biceps"],["Bicep Curl (Machine)","3x12","reps","Biceps"],
+    ["Butterfly (Pec Deck)","4x8","reps","Chest"],["Cable Core Pallof Press","3x15","reps","Abdominals"],
+    ["Cable Crunch","3x400m","distance","Abdominals"],["Cable Fly Crossovers","4x8","reps","Chest"],
+    ["Cable Kickback","4x8","reps","Glutes"],["Cable Pull Through","4x8","reps","Glutes"],
+    ["Cable Twist (Down to up)","3x15","reps","Abdominals"],["Cable Twist (Up to down)","3x15","reps","Abdominals"],
+    ["Calf Extension (Machine)","3x15","reps","Calves"],["Calf Press (Machine)","3x15","reps","Calves"],
+    ["Chest Fly (Machine)","4x8","reps","Chest"],["Chest Press (Machine)","4x8","reps","Chest"],
+    ["Crunch (Machine)","3x400m","distance","Abdominals"],["Deadlift (Smith Machine)","4x8","reps","Glutes"],
+    ["Decline Bench Press (Machine)","4x8","reps","Chest"],
+    ["Decline Bench Press (Smith Machine)","4x8","reps","Chest"],["Front Raise (Cable)","3x12","reps","Shoulders"],
+    ["Glute Kickback (Machine)","4x8","reps","Glutes"],["Hack Squat (Machine)","4x8","reps","Quadriceps"],
+    ["Hammer Curl (Cable)","3x12","reps","Biceps"],["Hip Abduction (Cable)","4x8","reps","Abductors"],
+    ["Hip Abduction (Machine)","4x8","reps","Abductors"],["Hip Adduction (Cable)","4x8","reps","Adductors"],
+    ["Hip Adduction (Machine)","4x8","reps","Adductors"],["Hip Thrust (Machine)","4x8","reps","Glutes"],
+    ["Hip Thrust (Smith Machine)","4x8","reps","Glutes"],
+    ["Incline Bench Press (Smith Machine)","4x8","reps","Chest"],
+    ["Incline Chest Press (Machine)","4x8","reps","Chest"],
+    ["Iso-Lateral Chest Press (Machine)","4x8","reps","Chest"],
+    ["Iso-Lateral High Row (Machine)","4x8","reps","Lats"],["Iso-Lateral Row (Machine)","4x8","reps","Upper Back"],
+    ["Lat Pulldown (Cable)","4x8","reps","Lats"],["Lat Pulldown (Machine)","4x8","reps","Lats"],
+    ["Lat Pulldown - Close Grip (Cable)","4x8","reps","Lats"],["Lateral Raise (Cable)","3x12","reps","Shoulders"],
+    ["Lateral Raise (Machine)","3x12","reps","Shoulders"],["Leg Extension (Machine)","4x8","reps","Quadriceps"],
+    ["Leg Press (Machine)","4x8","reps","Quadriceps"],["Leg Press Horizontal (Machine)","4x8","reps","Quadriceps"],
+    ["Low Cable Fly Crossovers","4x8","reps","Chest"],["Lying Leg Curl (Machine)","4x8","reps","Hamstrings"],
+    ["Overhead Curl (Cable)","3x12","reps","Biceps"],["Overhead Press (Smith Machine)","3x12","reps","Shoulders"],
+    ["Overhead Triceps Extension (Cable)","3x12","reps","Triceps"],
+    ["Pendulum Squat (Machine)","4x8","reps","Quadriceps"],["Preacher Curl (Machine)","3x12","reps","Biceps"],
+    ["Pullover (Machine)","4x8","reps","Lats"],["Rear Delt Reverse Fly (Cable)","3x12","reps","Shoulders"],
+    ["Rear Delt Reverse Fly (Machine)","3x12","reps","Shoulders"],["Rear Kick (Machine)","4x8","reps","Glutes"],
+    ["Reverse Curl (Cable)","3x12","reps","Biceps"],["Reverse Fly Single Arm (Cable)","3x12","reps","Shoulders"],
+    ["Reverse Grip Lat Pulldown (Cable)","4x8","reps","Lats"],
+    ["Romanian Deadlift (Smith Machine)","4x8","reps","Hamstrings"],["Rope Cable Curl","3x12","reps","Biceps"],
+    ["Rowing Machine","3x400m","distance","Cardio"],["Seated Cable Row - Bar Grip","4x8","reps","Upper Back"],
+    ["Seated Cable Row - Bar Wide Grip","4x8","reps","Upper Back"],
+    ["Seated Cable Row - V Grip (Cable)","4x8","reps","Upper Back"],
+    ["Seated Chest Flys (Cable)","4x8","reps","Chest"],["Seated Dip Machine","3x12","reps","Triceps"],
+    ["Seated Leg Curl (Machine)","4x8","reps","Hamstrings"],["Seated Row (Machine)","4x8","reps","Upper Back"],
+    ["Seated Shoulder Press (Machine)","3x12","reps","Shoulders"],
+    ["Shoulder Press (Machine Plates)","3x12","reps","Shoulders"],["Shrug (Cable)","3x12","reps","Traps"],
+    ["Shrug (Machine)","3x12","reps","Traps"],["Shrug (Smith Machine)","3x12","reps","Traps"],
+    ["Single Arm Cable Crossover","4x8","reps","Chest"],["Single Arm Cable Row","4x8","reps","Upper Back"],
+    ["Single Arm Curl (Cable)","3x12","reps","Biceps"],
+    ["Single Arm Lateral Raise (Cable)","3x12","reps","Shoulders"],
+    ["Single Arm Triceps Pushdown (Cable)","3x12","reps","Triceps"],
+    ["Single Leg Press (Machine)","4x8","reps","Quadriceps"],
+    ["Single Leg Standing Calf Raise (Machine)","3x15","reps","Calves"],
+    ["Squat (Machine)","4x8","reps","Quadriceps"],["Squat (Smith Machine)","4x8","reps","Quadriceps"],
+    ["Stair Machine (Floors)","3x400m","distance","Cardio"],["Stair Machine (Steps)","3x400m","distance","Cardio"],
+    ["Standing Cable Glute Kickbacks","4x8","reps","Glutes"],
+    ["Standing Calf Raise (Machine)","3x15","reps","Calves"],["Standing Y Raise (Cable)","3x12","reps","Shoulders"],
+    ["Straight Arm Lat Pulldown (Cable)","4x8","reps","Lats"],["Triceps Extension (Cable)","3x12","reps","Triceps"],
+    ["Triceps Extension (Machine)","3x12","reps","Triceps"],["Triceps Kickback (Cable)","3x12","reps","Triceps"],
+    ["Upright Row (Cable)","3x12","reps","Shoulders"],["Vertical Traction (Machine)","4x8","reps","Lats"]
+  ],
+  "Kettlebell":[
+    ["Gorilla Row (Kettlebell)","4x8","reps","Upper Back"],["Kettlebell Around the World","3x12","reps","Shoulders"],
+    ["Kettlebell Clean","4x8","reps","Full Body"],["Kettlebell Curl","3x12","reps","Biceps"],
+    ["Kettlebell Goblet Squat","4x8","reps","Quadriceps"],["Kettlebell Halo","3x12","reps","Shoulders"],
+    ["Kettlebell High Pull","4x8","reps","Full Body"],["Kettlebell Shoulder Press","3x12","reps","Shoulders"],
+    ["Kettlebell Snatch","4x8","reps","Full Body"],["Kettlebell Swing","4x8","reps","Full Body"],
+    ["Kettlebell Turkish Get Up","4x8","reps","Full Body"],["Sumo Squat (Kettlebell)","4x8","reps","Quadriceps"],
+    ["Thruster (Kettlebell)","4x8","reps","Full Body"]
+  ],
+  "Bodyweight":[
+    ["21s Bicep Curl","3x12","reps","Biceps"],["Ab Scissors","3x15","reps","Abdominals"],
+    ["Ab Wheel","3x15","reps","Abdominals"],["Around The World","4x8","reps","Chest"],
+    ["Back Extension (Hyperextension)","4x8","reps","Lower Back"],
+    ["Back Extension (Weighted Hyperextension)","4x8","reps","Lower Back"],
+    ["Band Pullaparts","3x12","reps","Shoulders"],["Bear Crawl","3x45s","time","Full Body"],
+    ["Bench Dip","3x12","reps","Triceps"],["Bent Over Row (Band)","4x8","reps","Upper Back"],
+    ["Bicep Curl (Suspension)","3x12","reps","Biceps"],["Bicycle Crunch","3x400m","distance","Abdominals"],
+    ["Bicycle Crunch Raised Legs","3x400m","distance","Abdominals"],["Bird Dog","4x8","reps","Glutes"],
+    ["Box Jump","4x8","reps","Quadriceps"],["Chest Dip","4x8","reps","Chest"],
+    ["Chest Dip (Assisted)","4x8","reps","Chest"],["Chest Dip (Weighted)","4x8","reps","Chest"],
+    ["Chest Fly (Band)","4x8","reps","Chest"],["Chest Fly (Suspension)","4x8","reps","Chest"],
+    ["Chest Press (Band)","4x8","reps","Chest"],["Chest Supported T Bar Row","4x8","reps","Upper Back"],
+    ["Chin Up","4x8","reps","Lats"],["Chin Up (Assisted)","4x8","reps","Lats"],
+    ["Chin Up (Weighted)","4x8","reps","Lats"],["Clamshell","4x8","reps","Glutes"],
+    ["Clap Push Ups","4x8","reps","Chest"],["Clean","4x8","reps","Full Body"],
+    ["Clean Pull","4x8","reps","Full Body"],["Clean and Jerk","4x8","reps","Full Body"],
+    ["Clean and Press","4x8","reps","Full Body"],["Concentration Curl","3x12","reps","Biceps"],
+    ["Cross Body Hammer Curl","3x12","reps","Biceps"],["Crunch","3x400m","distance","Abdominals"],
+    ["Crunch (Weighted)","3x400m","distance","Abdominals"],["Dead Bug","3x15","reps","Abdominals"],
+    ["Dead Hang","3x45s","time","Upper Back"],["Deadlift (Band)","4x8","reps","Glutes"],
+    ["Deadlift High Pull","4x8","reps","Full Body"],["Decline Crunch","3x400m","distance","Abdominals"],
+    ["Decline Crunch (Weighted)","3x400m","distance","Abdominals"],["Decline Push Up","4x8","reps","Chest"],
+    ["Diamond Push Up","3x12","reps","Triceps"],["Drag Curl","3x12","reps","Biceps"],
+    ["Dragon Flag","3x15","reps","Abdominals"],["Dragonfly","3x15","reps","Abdominals"],
+    ["Elbow to Knee","3x15","reps","Abdominals"],["Face Pull","3x12","reps","Shoulders"],
+    ["Fire Hydrants","4x8","reps","Glutes"],["Floor Triceps Dip","3x12","reps","Triceps"],
+    ["Flutter Kicks","3x45s","time","Abdominals"],["Frog Jumps","4x8","reps","Quadriceps"],
+    ["Front Lever Hold","3x45s","time","Full Body"],["Front Lever Raise","4x8","reps","Full Body"],
+    ["Front Raise (Band)","3x12","reps","Shoulders"],["Front Raise (Suspension)","3x12","reps","Shoulders"],
+    ["Front Squat","4x8","reps","Quadriceps"],["Full Squat","4x8","reps","Quadriceps"],
+    ["Glute Bridge","4x8","reps","Glutes"],["Glute Ham Raise","4x8","reps","Hamstrings"],
+    ["Glute Kickback on Floor","4x8","reps","Glutes"],["Goblet Squat","4x8","reps","Quadriceps"],
+    ["Hack Squat","4x8","reps","Quadriceps"],["Hammer Curl (Band)","3x12","reps","Biceps"],
+    ["Handstand Hold","3x45s","time","Full Body"],["Handstand Push Up","3x12","reps","Shoulders"],
+    ["Hang Clean","4x8","reps","Full Body"],["Hang Snatch","4x8","reps","Full Body"],
+    ["Hanging Knee Raise","3x15","reps","Abdominals"],["Hanging Leg Raise","3x15","reps","Abdominals"],
+    ["Heel Taps","3x15","reps","Abdominals"],["High Knee Skips","4x8","reps","Full Body"],
+    ["High Knees","3x45s","time","Full Body"],["Hip Thrust","4x8","reps","Glutes"],
+    ["Hollow Rock","3x15","reps","Abdominals"],["Incline Push Ups","4x8","reps","Chest"],
+    ["Inverted Row","4x8","reps","Upper Back"],["Iso-Lateral Low Row","4x8","reps","Upper Back"],
+    ["Jack Knife (Suspension)","3x15","reps","Abdominals"],["Jackknife Sit Up","3x15","reps","Abdominals"],
+    ["Jump Shrug","4x8","reps","Full Body"],["Jump Squat","4x8","reps","Quadriceps"],
+    ["Jumping Jack","4x8","reps","Full Body"],["Jumping Lunge","4x8","reps","Quadriceps"],
+    ["Kipping Pull Up","4x8","reps","Lats"],["Knee Raise Parallel Bars","3x15","reps","Abdominals"],
+    ["Kneeling Pulldown (band)","4x8","reps","Lats"],["Kneeling Push Up","4x8","reps","Chest"],
+    ["L-Sit Hold","3x45s","time","Abdominals"],["Lat Pulldown (Band)","4x8","reps","Lats"],
+    ["Lat closed grip pull down","4x8","reps","Lats"],["Lateral Band Walks","3x400m","distance","Glutes"],
+    ["Lateral Box Jump","4x8","reps","Quadriceps"],["Lateral Leg Raises","4x8","reps","Glutes"],
+    ["Lateral Lunge","4x8","reps","Quadriceps"],["Lateral Raise (Band)","3x12","reps","Shoulders"],
+    ["Lateral Squat","4x8","reps","Quadriceps"],["Leg Raise Parallel Bars","3x15","reps","Abdominals"],
+    ["Low Row (Suspension)","4x8","reps","Upper Back"],["Low row","4x8","reps","Upper Back"],
+    ["Lunge","4x8","reps","Quadriceps"],["Lying Knee Raise","3x15","reps","Abdominals"],
+    ["Lying Leg Raise","3x15","reps","Abdominals"],["Lying Neck Curls","3x15","reps","Neck"],
+    ["Lying Neck Curls (Weighted)","3x15","reps","Neck"],["Lying Neck Extension","3x15","reps","Neck"],
+    ["Lying Neck Extension (Weighted)","3x15","reps","Neck"],["Mountain Climber","3x45s","time","Full Body"],
+    ["Muscle Up","4x8","reps","Full Body"],["Negative Pull Up","4x8","reps","Lats"],
+    ["Nordic Hamstrings Curls","4x8","reps","Hamstrings"],["Oblique Crunch","3x400m","distance","Abdominals"],
+    ["One Arm Push Up","4x8","reps","Chest"],["Overhead Plate Raise","3x12","reps","Shoulders"],
+    ["Overhead Squat","4x8","reps","Full Body"],["Pike Pushup","3x12","reps","Shoulders"],
+    ["Pistol Squat","4x8","reps","Quadriceps"],["Plank","3x45s","time","Abdominals"],
+    ["Plank Pushup","3x45s","time","Chest"],["Plate Curl","3x12","reps","Biceps"],
+    ["Plate Front Raise","3x12","reps","Shoulders"],["Plate Press","4x8","reps","Chest"],
+    ["Plate Squeeze (Svend Press)","4x8","reps","Chest"],["Power Clean","4x8","reps","Full Body"],
+    ["Power Snatch","4x8","reps","Full Body"],["Press Under","4x8","reps","Full Body"],
+    ["Pull Up","4x8","reps","Lats"],["Pull Up (Assisted)","4x8","reps","Lats"],
+    ["Pull Up (Band)","4x8","reps","Lats"],["Pull Up (Weighted)","4x8","reps","Lats"],
+    ["Push Press","3x12","reps","Shoulders"],["Push Up","4x8","reps","Chest"],
+    ["Push Up (Weighted)","4x8","reps","Chest"],["Rack Pull","4x8","reps","Upper Back"],
+    ["Reverse Crunch","3x400m","distance","Abdominals"],["Reverse Grip Concentration Curl","3x12","reps","Biceps"],
+    ["Reverse Grip Triceps Pushdown","3x12","reps","Triceps"],["Reverse Hyperextension","4x8","reps","Glutes"],
+    ["Reverse Lunge","4x8","reps","Quadriceps"],["Reverse Plank","3x45s","time","Abdominals"],
+    ["Ring Dips","4x8","reps","Chest"],["Ring Pull Up","4x8","reps","Lats"],["Ring Push Up","4x8","reps","Chest"],
+    ["Rope Straight Arm Pulldown","4x8","reps","Lats"],["Russian Twist (Bodyweight)","3x15","reps","Abdominals"],
+    ["Russian Twist (Weighted)","3x15","reps","Abdominals"],["Scapular Pull Ups","4x8","reps","Upper Back"],
+    ["Seated Calf Raise","3x15","reps","Calves"],["Seated Palms Up Wrist Curl","3x15","reps","Forearms"],
+    ["Seated Triceps Press","3x12","reps","Triceps"],["Shoulder Taps","3x12","reps","Shoulders"],
+    ["Side Bend","3x15","reps","Abdominals"],["Side Plank","3x45s","time","Abdominals"],
+    ["Single Arm Lat Pulldown","4x8","reps","Lats"],["Single Leg Extensions","4x8","reps","Quadriceps"],
+    ["Single Leg Glute Bridge","4x8","reps","Glutes"],["Single Leg Hip Thrust","4x8","reps","Glutes"],
+    ["Single Leg Standing Calf Raise","3x15","reps","Calves"],["Sissy Squat (Weighted)","4x8","reps","Quadriceps"],
+    ["Sit Up","3x15","reps","Abdominals"],["Sit Up (Weighted)","3x15","reps","Abdominals"],
+    ["Snatch","4x8","reps","Full Body"],["Spiderman","3x15","reps","Abdominals"],
+    ["Split Jerk","4x8","reps","Full Body"],["Squat (Band)","4x8","reps","Quadriceps"],
+    ["Squat (Bodyweight)","4x8","reps","Quadriceps"],["Squat (Suspension)","4x8","reps","Quadriceps"],
+    ["Squat Row","4x8","reps","Full Body"],["Standing Calf Raise","3x15","reps","Calves"],
+    ["Standing Calf Raise (Smith)","3x15","reps","Calves"],["Standing Leg Curls","4x8","reps","Hamstrings"],
+    ["Step Up","4x8","reps","Quadriceps"],["Sternum Pull up (Gironda)","4x8","reps","Lats"],
+    ["Straight Leg Deadlift","4x8","reps","Hamstrings"],["Sumo Deadlift","4x8","reps","Glutes"],
+    ["Sumo Squat","4x8","reps","Quadriceps"],["Superman","4x8","reps","Lower Back"],
+    ["T Bar Row","4x8","reps","Upper Back"],["Toe Touch","3x15","reps","Abdominals"],
+    ["Toes to Bar","3x15","reps","Abdominals"],["Torso Rotation","3x15","reps","Abdominals"],
+    ["Triceps Dip","3x12","reps","Triceps"],["Triceps Dip (Assisted)","3x12","reps","Triceps"],
+    ["Triceps Dip (Weighted)","3x12","reps","Triceps"],["Triceps Extension (Suspension)","3x12","reps","Triceps"],
+    ["Triceps Pressdown","3x12","reps","Triceps"],["Triceps Pushdown","3x12","reps","Triceps"],
+    ["Triceps Rope Pushdown","3x12","reps","Triceps"],["V Up","3x15","reps","Abdominals"],
+    ["Walking Lunge","3x400m","distance","Quadriceps"],["Wall Sit","3x45s","time","Quadriceps"],
+    ["Wide Pull Up","4x8","reps","Lats"],["Wrist Roller","3x15","reps","Forearms"],
+    ["Zercher Squat","4x8","reps","Quadriceps"]
+  ],
+  "Conditioning":[
+    ["Ball Slams","4x8","reps","Full Body"],["Burpee","4x8","reps","Full Body"],
+    ["Burpee Broad Jumps","4x8","reps","Full Body"],["Burpee Over the Bar","4x8","reps","Full Body"],
+    ["Farmers Walk","3x400m","distance","Full Body"],["Sled Pull","3x400m","distance","Full Body"],
+    ["Sled Push","3x400m","distance","Full Body"],["Walking Lunge (Sandbag)","3x400m","distance","Quadriceps"],
+    ["Wall Ball","3x45s","time","Full Body"]
+  ],
+  "Cardio Machine":[
+    ["Air Bike","3x400m","distance","Cardio"],["Elliptical Trainer","3x400m","distance","Cardio"],
+    ["Recumbent Bike","3x400m","distance","Cardio"],["Ski Erg","3x400m","distance","Cardio"],
+    ["Spinning","3x45s","time","Cardio"],["Treadmill","3x400m","distance","Cardio"]
+  ],
+  "Cardio Outdoor":[
+    ["Aerobics","3x45s","time","Cardio"],["Battle Ropes","3x45s","time","Cardio"],["Boxing","3x45s","time","Cardio"],
+    ["Climbing","3x400m","distance","Cardio"],["Cycling","3x400m","distance","Cardio"],
+    ["HIIT","3x45s","time","Cardio"],["Hiking","3x400m","distance","Cardio"],["Jump Rope","3x45s","time","Cardio"],
+    ["Running","3x400m","distance","Cardio"],["Skating","3x400m","distance","Cardio"],
+    ["Skiing","3x400m","distance","Cardio"],["Snowboarding","3x400m","distance","Cardio"],
+    ["Sprints","3x400m","distance","Cardio"],["Swimming","3x400m","distance","Cardio"],
+    ["Walking","3x400m","distance","Cardio"]
+  ],
+  "Mobility / Stretch":[
+    ["Downward Dog","4x8","reps","Full Body"],["Pilates","3x45s","time","Full Body"],
+    ["Stretching","3x45s","time","Full Body"],["Warm Up","3x45s","time","Full Body"],
+    ["Yoga","3x45s","time","Full Body"]
+  ]
 };
 
 // Names that appear only in the Hyrox 8-week Plan (slightly different wording than library entries)
@@ -132,8 +404,12 @@ const PLAN_MUSCLE_MAP = {
 
 // Fine-grained muscle categories shown in the Body Distribution table (order matches display order)
 
+/* Upper Back, Lower Back, Neck and Full Body arrived with the rebuilt library. They have to be
+   here or computeMuscleDistributionFine() silently drops them: it only counts a muscle it
+   already has a key for, so 84 of the 458 exercises would have registered as no work at all. */
 const BODY_MUSCLES = ["Abdominals","Abductors","Adductors","Biceps","Calves","Cardio","Chest","Forearms",
-  "Glutes","Hamstrings","Lats","Quadriceps","Shoulders","Traps","Triceps"];
+  "Full Body","Glutes","Hamstrings","Lats","Lower Back","Neck","Quadriceps","Shoulders","Traps",
+  "Triceps","Upper Back"];
 
 const VALID_MUSCLES = [...BODY_MUSCLES, "Cardio", "Mobility"];
 
@@ -142,7 +418,12 @@ const VALID_MUSCLES = [...BODY_MUSCLES, "Cardio", "Mobility"];
 const RADAR_MUSCLES = ["Back","Chest","Legs","Core","Arms","Shoulders"];
 
 const FINE_TO_BROAD = {
-  Lats:"Back", Traps:"Back",
+  Lats:"Back", Traps:"Back", "Upper Back":"Back", "Lower Back":"Back",
+  /* Neck rides with Shoulders: the radar has six axes and no anatomical home for it, and a
+     seventh axis for four exercises would be a spoke that is empty for nearly everyone.
+     "Full Body" is deliberately absent — a compound movement that inflated one axis would
+     misreport the radar, and an unmapped muscle is skipped rather than counted. */
+  Neck:"Shoulders",
   Chest:"Chest",
   Quadriceps:"Legs", Hamstrings:"Legs", Glutes:"Legs", Calves:"Legs", Abductors:"Legs", Adductors:"Legs",
   Abdominals:"Core",
@@ -168,1125 +449,39 @@ const FINE_TO_BROAD = {
    activate automatically the moment real URLs are supplied here.
 ========================================================= */
 
-const EXERCISE_DETAILS = {
-  "Barbell Back Squat": {
-    primaryMuscle: "Quadriceps",
-    secondaryMuscles: ["Glutes","Hamstrings","Lower Back","Core"],
-    equipment: "Barbell",
-    difficulty: "Intermediate",
-    movementPattern: "Squat",
-    instructions: [
-      "Set the bar in a rack at roughly chest height and step under it, resting it across your upper traps.",
-      "Unrack the bar, step back, and set feet shoulder-width apart with toes slightly turned out.",
-      "Brace your core, break at the hips and knees together, and descend until thighs are at least parallel to the floor.",
-      "Drive through the whole foot to stand back up, keeping the chest up and the bar path vertical."
-    ],
-    formTips: [
-      "Keep the bar over your mid-foot throughout the movement, not drifting forward.",
-      "Take a full breath and brace your core before each rep.",
-      "Track your knees in line with your toes as you descend."
-    ],
-    commonMistakes: [
-      "Letting the knees cave inward on the way up.",
-      "Rounding the lower back at the bottom of the squat.",
-      "Rising onto the toes instead of driving through the whole foot."
-    ],
-    animationWebmUrl: null,
-    animationMp4Url: null,
-    thumbnailUrl: null,
-    animationAvailable: false
-  },
-  "Barbell Bench Press": {
-    primaryMuscle: "Chest",
-    secondaryMuscles: ["Triceps","Anterior Deltoids"],
-    equipment: "Barbell",
-    difficulty: "Intermediate",
-    movementPattern: "Horizontal Push",
-    instructions: [
-      "Lie on the bench with eyes roughly under the bar, feet flat on the floor.",
-      "Grip the bar slightly wider than shoulder-width and unrack it over your chest.",
-      "Lower the bar under control to the mid-chest, keeping elbows at roughly a 45° angle to your torso.",
-      "Press the bar back up to full lockout in a slight arc back toward the rack position."
-    ],
-    formTips: [
-      "Keep your shoulder blades pulled back and down against the bench throughout.",
-      "Keep a slight, natural arch in your lower back — don't flatten it completely.",
-      "Drive your feet into the floor for stability, not to bounce the bar."
-    ],
-    commonMistakes: [
-      "Flaring the elbows out to 90°, which stresses the shoulders.",
-      "Bouncing the bar off the chest instead of a controlled touch.",
-      "Losing shoulder blade retraction partway through the set."
-    ],
-    animationWebmUrl: null,
-    animationMp4Url: null,
-    thumbnailUrl: null,
-    animationAvailable: false
-  },
-  "Conventional Deadlift": {
-    primaryMuscle: "Glutes",
-    secondaryMuscles: ["Hamstrings","Lower Back","Lats","Forearms"],
-    equipment: "Barbell",
-    difficulty: "Intermediate",
-    movementPattern: "Hip Hinge",
-    instructions: [
-      "Stand with feet hip-width apart, bar over mid-foot, shins close to the bar.",
-      "Hinge at the hips and bend the knees to grip the bar just outside your legs.",
-      "Brace your core, flatten your back, and pull the slack out of the bar before lifting.",
-      "Drive through the floor, extending hips and knees together until standing tall.",
-      "Reverse the motion under control to return the bar to the floor."
-    ],
-    formTips: [
-      "Keep the bar in contact with your legs throughout the entire pull.",
-      "Push the floor away with your legs rather than yanking with your back.",
-      "Finish with hips fully extended — don't lean back past neutral."
-    ],
-    commonMistakes: [
-      "Letting the bar drift away from the shins, turning it into a squat-pull hybrid.",
-      "Rounding the lower back to reach the bar.",
-      "Hyperextending the lower back at lockout."
-    ],
-    animationWebmUrl: null,
-    animationMp4Url: null,
-    thumbnailUrl: null,
-    animationAvailable: false
-  }
-,
-  "Back Squat": {
-    primaryMuscle: "Quadriceps",
-    secondaryMuscles: ["Glutes", "Hamstrings", "Core"],
-    equipment: "Barbell",
-    difficulty: "Intermediate",
-    movementPattern: "Squat",
-    instructions: ["Set the bar in a rack at roughly chest height and step under it, resting it across your upper traps.", "Unrack the bar, step back, and set feet shoulder-width apart with toes slightly turned out.", "Brace your core, break at the hips and knees together, and descend until thighs are at least parallel to the floor.", "Drive through the whole foot to stand back up, keeping the chest up and the bar path vertical."],
-    formTips: ["Keep the bar over your mid-foot throughout, not drifting forward.", "Take a full breath and brace your core before each rep.", "Track your knees in line with your toes as you descend."],
-    commonMistakes: ["Letting the knees cave inward on the way up.", "Rounding the lower back at the bottom.", "Rising onto the toes instead of driving through the whole foot."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Front Squat": {
-    primaryMuscle: "Quadriceps",
-    secondaryMuscles: ["Core", "Upper Back"],
-    equipment: "Barbell",
-    difficulty: "Advanced",
-    movementPattern: "Squat",
-    instructions: ["Rack the bar across your front shoulders, elbows high, fingertips lightly supporting the bar.", "Step back, feet shoulder-width apart, and keep your torso as upright as possible.", "Descend by bending hips and knees together, keeping elbows up throughout.", "Drive up through your heels and mid-foot, maintaining an upright torso to lockout."],
-    formTips: ["Keep your elbows as high as you can \u2014 that's what keeps the bar from rolling forward.", "Stay more upright than a back squat; this isn't a hip-hinge movement.", "Brace hard \u2014 the front rack position rewards a tight core."],
-    commonMistakes: ["Letting the elbows drop, which tips the bar forward.", "Leaning too far forward at the bottom.", "Using a grip so tight it limits ankle/wrist mobility."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Deadlift": {
-    primaryMuscle: "Hamstrings",
-    secondaryMuscles: ["Glutes", "Lower Back", "Lats", "Forearms"],
-    equipment: "Barbell",
-    difficulty: "Intermediate",
-    movementPattern: "Hip Hinge",
-    instructions: ["Stand with feet hip-width apart, bar over mid-foot, shins close to the bar.", "Hinge at the hips and bend the knees to grip the bar just outside your legs.", "Brace your core, flatten your back, and pull the slack out of the bar before lifting.", "Drive through the floor, extending hips and knees together until standing tall.", "Reverse the motion under control to return the bar to the floor."],
-    formTips: ["Keep the bar in contact with your legs throughout the pull.", "Push the floor away with your legs rather than yanking with your back.", "Finish with hips fully extended \u2014 don't lean back past neutral."],
-    commonMistakes: ["Letting the bar drift away from the shins.", "Rounding the lower back to reach the bar.", "Hyperextending the lower back at lockout."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Romanian Deadlift": {
-    primaryMuscle: "Hamstrings",
-    secondaryMuscles: ["Glutes", "Lower Back"],
-    equipment: "Barbell",
-    difficulty: "Intermediate",
-    movementPattern: "Hip Hinge",
-    instructions: ["Start standing tall holding the bar at hip height, feet hip-width apart.", "Push your hips back while keeping a slight bend in the knees, lowering the bar down the front of your legs.", "Lower until you feel a strong hamstring stretch, roughly mid-shin, keeping the back flat.", "Drive your hips forward to return to standing, squeezing the glutes at the top."],
-    formTips: ["This is a hip-hinge, not a squat \u2014 knees stay only slightly bent throughout.", "Keep the bar close to your legs the entire time.", "Stop the descent when your lower back would otherwise round."],
-    commonMistakes: ["Squatting the weight down instead of hinging.", "Rounding the back to chase more range of motion.", "Letting the bar drift forward, away from the legs."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Sumo Deadlift": {
-    primaryMuscle: "Glutes",
-    secondaryMuscles: ["Hamstrings", "Quadriceps", "Adductors"],
-    equipment: "Barbell",
-    difficulty: "Intermediate",
-    movementPattern: "Hip Hinge",
-    instructions: ["Set up with a wide stance, toes turned out, gripping the bar inside your knees.", "Drop your hips low with a vertical torso, shins nearly touching the bar.", "Brace and drive through the floor, pushing your knees out as you stand.", "Lock out with hips fully extended, then reverse under control."],
-    formTips: ["Push your knees out in line with your toes throughout the pull.", "Keep the torso more upright than a conventional deadlift.", "Drive the floor apart with your feet as you initiate the pull."],
-    commonMistakes: ["Knees caving in during the pull.", "Hips rising faster than the chest, turning it into a stiff-leg pull.", "Stance so wide it limits your ability to keep the torso upright."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Bench Press": {
-    primaryMuscle: "Chest",
-    secondaryMuscles: ["Triceps", "Anterior Deltoids"],
-    equipment: "Barbell",
-    difficulty: "Intermediate",
-    movementPattern: "Horizontal Push",
-    instructions: ["Lie on the bench with eyes roughly under the bar, feet flat on the floor.", "Grip the bar slightly wider than shoulder-width and unrack it over your chest.", "Lower the bar under control to the mid-chest, keeping elbows at roughly a 45\u00b0 angle to your torso.", "Press the bar back up to full lockout in a slight arc back toward the rack position."],
-    formTips: ["Keep your shoulder blades pulled back and down against the bench throughout.", "Keep a slight, natural arch in your lower back.", "Drive your feet into the floor for stability, not to bounce the bar."],
-    commonMistakes: ["Flaring the elbows out to 90\u00b0, which stresses the shoulders.", "Bouncing the bar off the chest.", "Losing shoulder blade retraction partway through the set."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Incline Bench Press": {
-    primaryMuscle: "Chest",
-    secondaryMuscles: ["Anterior Deltoids", "Triceps"],
-    equipment: "Barbell",
-    difficulty: "Intermediate",
-    movementPattern: "Horizontal Push",
-    instructions: ["Set the bench to a 30\u201345\u00b0 incline and lie back with eyes under the bar.", "Grip slightly wider than shoulder-width and unrack the bar over your upper chest.", "Lower to the upper chest with control, elbows at roughly 45\u00b0.", "Press back up to lockout, keeping the bar path slightly back toward your face."],
-    formTips: ["A steeper incline shifts more work to the front delts \u2014 30\u201345\u00b0 keeps it chest-focused.", "Keep shoulder blades retracted throughout, same as flat bench.", "Don't let the bar drift too far forward over your face."],
-    commonMistakes: ["Setting the incline too steep, turning it into a shoulder press.", "Bouncing the bar off the chest.", "Flaring the elbows excessively."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Overhead Press": {
-    primaryMuscle: "Shoulders",
-    secondaryMuscles: ["Triceps", "Upper Chest", "Core"],
-    equipment: "Barbell",
-    difficulty: "Intermediate",
-    movementPattern: "Vertical Push",
-    instructions: ["Set the bar at rack height, grip just outside shoulder-width, and unrack it to rest on your front delts.", "Brace your core and glutes hard before pressing.", "Press the bar straight up, moving your head back slightly to let the bar pass, then through once it clears.", "Lock out overhead with the bar directly above your mid-foot."],
-    formTips: ["Squeeze your glutes and brace your core to avoid leaning back excessively.", "Keep the bar path as vertical as possible.", "Finish with your head through, bar stacked over your shoulders."],
-    commonMistakes: ["Leaning back excessively to press around the face instead of through it.", "Flaring elbows too wide at the start.", "Using leg drive when the goal is a strict press."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Push Press": {
-    primaryMuscle: "Shoulders",
-    secondaryMuscles: ["Triceps", "Quadriceps", "Core"],
-    equipment: "Barbell",
-    difficulty: "Intermediate",
-    movementPattern: "Vertical Push",
-    instructions: ["Start in the same rack position as an overhead press, feet hip-width apart.", "Dip straight down a few inches by bending the knees, keeping the torso upright.", "Drive explosively through the legs and immediately press the bar overhead.", "Lock out with the bar stacked over your shoulders as your legs reach full extension."],
-    formTips: ["Keep the dip short and vertical \u2014 this is a leg drive, not a squat.", "Time the press to start right as the legs finish driving.", "Keep your torso upright through the dip; don't lean forward."],
-    commonMistakes: ["Dipping too deep, which turns it into a push jerk.", "Pressing before the leg drive finishes, losing the power transfer.", "Leaning back excessively at lockout."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Bent-Over Row": {
-    primaryMuscle: "Lats",
-    secondaryMuscles: ["Upper Back", "Biceps", "Rear Deltoids"],
-    equipment: "Barbell",
-    difficulty: "Intermediate",
-    movementPattern: "Horizontal Pull",
-    instructions: ["Hold the bar with an overhand grip, hinge at the hips until your torso is roughly 45\u00b0 or lower.", "Let the bar hang with arms extended, keeping a flat back.", "Row the bar toward your lower ribs, driving your elbows back.", "Lower under control back to the start without losing the hip hinge."],
-    formTips: ["Keep your torso angle consistent throughout the set \u2014 don't stand up on each rep.", "Drive with your elbows, not just your hands.", "Keep the bar close to your body on the way up."],
-    commonMistakes: ["Using body momentum to heave the weight up.", "Rounding the lower back under load.", "Standing more upright each rep as fatigue sets in."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Barbell Curl": {
-    primaryMuscle: "Biceps",
-    secondaryMuscles: ["Forearms"],
-    equipment: "Barbell",
-    difficulty: "Beginner",
-    movementPattern: "Elbow Flexion",
-    instructions: ["Stand holding the bar with an underhand, shoulder-width grip, arms extended.", "Keeping your elbows pinned to your sides, curl the bar up toward your shoulders.", "Squeeze at the top without letting the elbows drift forward.", "Lower under control back to full extension."],
-    formTips: ["Keep your elbows stationary at your sides throughout the movement.", "Avoid swinging your torso to help lift the weight.", "Control the lowering phase \u2014 don't just drop the bar."],
-    commonMistakes: ["Swinging the hips/torso to cheat the weight up.", "Letting the elbows travel forward as the set gets hard.", "Only performing the top half of the range of motion."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Hip Thrust": {
-    primaryMuscle: "Glutes",
-    secondaryMuscles: ["Hamstrings", "Core"],
-    equipment: "Barbell",
-    difficulty: "Intermediate",
-    movementPattern: "Hip Extension",
-    instructions: ["Sit on the ground with your upper back against a bench, a padded barbell over your hips.", "Plant your feet flat, roughly shin-vertical when at the top of the movement.", "Drive through your heels, extending your hips until your torso is in line with your thighs.", "Squeeze your glutes hard at the top, then lower under control."],
-    formTips: ["Keep your chin tucked slightly \u2014 don't hyperextend your neck at the top.", "Drive through your heels, not your toes.", "Pause and squeeze at the top of every rep."],
-    commonMistakes: ["Overextending the lower back at the top instead of stopping at hip extension.", "Feet placed too far forward or back for a good shin angle.", "Rushing through reps without a top-position squeeze."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Power Clean": {
-    primaryMuscle: "Glutes",
-    secondaryMuscles: ["Hamstrings", "Traps", "Quadriceps", "Core"],
-    equipment: "Barbell",
-    difficulty: "Advanced",
-    movementPattern: "Olympic",
-    instructions: ["Start with the bar over mid-foot, shins close, in a deadlift-like starting position.", "Pull the bar from the floor keeping it close, extending hips and knees as it passes the knees.", "Explosively extend through the hips, shrug, and pull yourself under the bar.", "Catch the bar on your front shoulders in a quarter-squat position, then stand tall."],
-    formTips: ["This is a technical lift \u2014 start with light weight and drill the pull sequence.", "Keep the bar close to your body throughout the pull.", "The power comes from hip extension, not arm pulling."],
-    commonMistakes: ["Pulling early with the arms instead of the hips and legs.", "Letting the bar drift away from the body.", "Catching the bar too low, in a full squat, before mastering the technique."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Hang Power Clean": {
-    primaryMuscle: "Glutes",
-    secondaryMuscles: ["Hamstrings", "Traps", "Core"],
-    equipment: "Barbell",
-    difficulty: "Advanced",
-    movementPattern: "Olympic",
-    instructions: ["Start standing with the bar at mid-thigh, knees softly bent.", "Hinge slightly, keeping the bar close, then explosively extend the hips.", "Shrug and pull yourself under the bar as it rises.", "Catch on the front shoulders in a quarter-squat and stand tall."],
-    formTips: ["Because there's no floor pull, focus entirely on the hip-hinge-and-extend timing.", "Keep the bar traveling close to your thighs.", "Let the legs re-bend slightly to receive the bar in the catch."],
-    commonMistakes: ["Starting the pull with the arms instead of the hips.", "Hinging too low, turning it into a mini deadlift.", "Reaching for the bar instead of pulling yourself under it."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Clean and Jerk": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Glutes", "Shoulders", "Quadriceps", "Core"],
-    equipment: "Barbell",
-    difficulty: "Advanced",
-    movementPattern: "Olympic",
-    instructions: ["Perform a clean, catching the bar on your front shoulders in a quarter or full squat, then stand.", "Reset with the bar racked on your shoulders, feet hip-width.", "Dip slightly and drive explosively upward, punching the bar overhead.", "Split or squat under the bar to catch it locked out overhead, then recover to standing."],
-    formTips: ["Master the clean and the jerk separately before combining them.", "Keep the dip for the jerk short and vertical.", "Fully lock the elbows overhead before standing tall."],
-    commonMistakes: ["Pressing the jerk out with the arms rather than driving with the legs.", "Catching the jerk with arms not fully locked.", "Standing up from the clean catch too slowly, losing momentum for the jerk."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Snatch": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Glutes", "Shoulders", "Hamstrings", "Core"],
-    equipment: "Barbell",
-    difficulty: "Advanced",
-    movementPattern: "Olympic",
-    instructions: ["Start with a wide, snatch-grip, bar over mid-foot.", "Pull the bar close to the body, extending hips and knees together as it passes the knees.", "Explosively extend and pull yourself under the bar into an overhead squat catch.", "Stand up to full lockout with the bar directly overhead."],
-    formTips: ["This is the most technical barbell lift \u2014 build it up progressively from lighter positions (hang, blocks) first.", "Keep the bar path close and vertical.", "The wide grip means mobility matters \u2014 don't force a catch you can't control."],
-    commonMistakes: ["Pressing the bar out overhead instead of catching it locked.", "Catching too far forward or behind the body.", "Rushing the technique progression before it's grooved."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Trap-Bar Deadlift": {
-    primaryMuscle: "Glutes",
-    secondaryMuscles: ["Quadriceps", "Hamstrings", "Core"],
-    equipment: "Barbell",
-    difficulty: "Beginner",
-    movementPattern: "Hip Hinge",
-    instructions: ["Step inside the trap bar, feet hip-width, and grip the handles.", "Set your hips and back as you would for a squat-deadlift hybrid \u2014 chest up, back flat.", "Drive through the floor, extending hips and knees together.", "Lock out standing tall, then lower under control."],
-    formTips: ["The trap bar's neutral grip and centered load make this the most beginner-friendly deadlift variant.", "Keep the weight balanced through your whole foot.", "Stand up and sit down through the hips and knees together, not knees-first."],
-    commonMistakes: ["Squatting it up with an overly upright torso and no hip hinge.", "Letting the hips shoot up first, turning it into a stiff-leg pull.", "Rounding the back to reach the handles."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Good Morning": {
-    primaryMuscle: "Hamstrings",
-    secondaryMuscles: ["Glutes", "Lower Back"],
-    equipment: "Barbell",
-    difficulty: "Advanced",
-    movementPattern: "Hip Hinge",
-    instructions: ["Rest a barbell across your upper back as in a back squat, feet shoulder-width.", "Keeping a soft bend in the knees and a flat back, hinge forward at the hips.", "Lower until you feel a strong hamstring stretch, roughly torso parallel to the floor.", "Drive your hips forward to return to standing."],
-    formTips: ["Start light \u2014 this loads the lower back and hamstrings hard for the range of motion.", "Keep the bar path directly over your mid-foot throughout.", "Stop the descent before your back would round."],
-    commonMistakes: ["Rounding the lower back to go deeper.", "Bending the knees too much, turning it into a squat.", "Using too much weight before the hip hinge pattern is grooved."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "DB Bench Press": {
-    primaryMuscle: "Chest",
-    secondaryMuscles: ["Triceps", "Anterior Deltoids"],
-    equipment: "Dumbbell",
-    difficulty: "Beginner",
-    movementPattern: "Horizontal Push",
-    instructions: ["Lie back on a bench holding a dumbbell in each hand at chest level, palms forward.", "Press both dumbbells up until your arms are extended, without locking the elbows harshly.", "Lower under control until the dumbbells are level with your chest, elbows at roughly 45\u00b0.", "Press back up, keeping both sides moving evenly."],
-    formTips: ["The extra range of motion versus a barbell is a benefit \u2014 use it, but stay controlled.", "Keep your shoulder blades retracted throughout.", "Bring the dumbbells together slightly at the top rather than clanking them."],
-    commonMistakes: ["Letting the dumbbells drift out wide, stressing the shoulders.", "Uneven pressing between arms.", "Losing control on the descent."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "DB Row": {
-    primaryMuscle: "Lats",
-    secondaryMuscles: ["Biceps", "Upper Back"],
-    equipment: "Dumbbell",
-    difficulty: "Beginner",
-    movementPattern: "Horizontal Pull",
-    instructions: ["Place one knee and hand on a bench, other foot on the floor, back flat and parallel to the ground.", "Let the dumbbell hang straight down from the working shoulder.", "Row the dumbbell up toward your hip, driving the elbow back.", "Lower under control back to a full stretch."],
-    formTips: ["Keep your torso still \u2014 the movement should come from the shoulder and elbow, not rotation.", "Drive the elbow back and up, not out to the side.", "Fully extend at the bottom of each rep for full range."],
-    commonMistakes: ["Twisting the torso to help lift the weight.", "Using momentum instead of a controlled pull.", "Shrugging the shoulder up instead of pulling with the lat."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "DB Shoulder Press": {
-    primaryMuscle: "Shoulders",
-    secondaryMuscles: ["Triceps", "Upper Chest"],
-    equipment: "Dumbbell",
-    difficulty: "Beginner",
-    movementPattern: "Vertical Push",
-    instructions: ["Sit or stand holding a dumbbell in each hand at shoulder height, palms forward.", "Brace your core and press both dumbbells straight overhead.", "Lock out with the dumbbells over your shoulders, not out in front.", "Lower under control back to the starting position."],
-    formTips: ["Keep the dumbbells tracking straight up rather than flaring outward.", "Brace your core, especially if standing, to avoid arching your lower back.", "Control the descent \u2014 don't let the weight free-fall."],
-    commonMistakes: ["Excessive lower-back arch, especially standing.", "Pressing the dumbbells too far forward instead of straight up.", "Uneven timing between arms."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Goblet Squat": {
-    primaryMuscle: "Quadriceps",
-    secondaryMuscles: ["Glutes", "Core"],
-    equipment: "Dumbbell",
-    difficulty: "Beginner",
-    movementPattern: "Squat",
-    instructions: ["Hold a dumbbell vertically at chest height, cupping the top end with both hands.", "Stand with feet shoulder-width, toes slightly out.", "Squat down, letting your elbows track just inside your knees.", "Drive back up through your whole foot to standing."],
-    formTips: ["The front-loaded weight is a great cue for staying upright \u2014 use it.", "Let your elbows brush your knees at the bottom as a depth guide.", "Keep your heels planted throughout."],
-    commonMistakes: ["Leaning too far forward as the weight gets heavy.", "Only squatting to a shallow depth.", "Letting the knees cave inward."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Walking Lunges": {
-    primaryMuscle: "Quadriceps",
-    secondaryMuscles: ["Glutes", "Hamstrings"],
-    equipment: "Dumbbell",
-    difficulty: "Beginner",
-    movementPattern: "Lunge",
-    instructions: ["Hold a dumbbell in each hand at your sides, standing tall.", "Step forward into a lunge, lowering until both knees are at roughly 90\u00b0.", "Push off the front foot to bring the back leg through into the next lunge.", "Continue walking forward, alternating legs."],
-    formTips: ["Keep your torso upright throughout \u2014 avoid leaning forward.", "Take a stride length that lets your front knee stay roughly over your ankle.", "Control the descent rather than dropping into each lunge."],
-    commonMistakes: ["Taking too short a stride, causing the front knee to travel past the toes.", "Letting the back knee slam into the floor.", "Leaning the torso forward under load."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Bulgarian Split Squat": {
-    primaryMuscle: "Quadriceps",
-    secondaryMuscles: ["Glutes", "Hamstrings"],
-    equipment: "Dumbbell",
-    difficulty: "Intermediate",
-    movementPattern: "Lunge",
-    instructions: ["Stand a couple feet in front of a bench, resting the top of your back foot on it.", "Hold a dumbbell in each hand, torso upright.", "Lower straight down until your front thigh is roughly parallel to the floor.", "Drive through the front foot to return to standing."],
-    formTips: ["Most of your weight should stay on the front leg \u2014 the back foot is just for balance.", "Keep your torso fairly upright for a quad-focused version.", "Find a stance length where your front knee doesn't travel far past your toes."],
-    commonMistakes: ["Placing too much weight through the back leg.", "Stance too short, driving the front knee forward excessively.", "Rushing the descent instead of controlling it."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Farmer's Carry": {
-    primaryMuscle: "Forearms",
-    secondaryMuscles: ["Traps", "Core", "Glutes"],
-    equipment: "Dumbbell",
-    difficulty: "Beginner",
-    movementPattern: "Carry",
-    instructions: ["Pick up a heavy dumbbell in each hand, standing tall.", "Brace your core and keep your shoulders pulled back and down.", "Walk forward with controlled, even steps, keeping the weights from swinging.", "Set the weights down under control at the end of the distance or time."],
-    formTips: ["Keep your chest up and shoulders back the entire carry \u2014 don't let them roll forward as you fatigue.", "Take normal-length steps rather than shuffling.", "Grip hard through the whole carry."],
-    commonMistakes: ["Letting the shoulders round forward as grip fatigues.", "Leaning to one side to compensate for uneven weights.", "Taking overly short, shuffling steps."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "DB Curl": {
-    primaryMuscle: "Biceps",
-    secondaryMuscles: ["Forearms"],
-    equipment: "Dumbbell",
-    difficulty: "Beginner",
-    movementPattern: "Elbow Flexion",
-    instructions: ["Stand holding a dumbbell in each hand at your sides, palms forward.", "Keeping your elbows pinned to your sides, curl both dumbbells up.", "Squeeze at the top without letting the elbows drift forward.", "Lower under control back to full extension."],
-    formTips: ["Keep your elbows stationary throughout the movement.", "Avoid swinging your torso to help lift the weight.", "Control the lowering phase."],
-    commonMistakes: ["Swinging the body to cheat the weight up.", "Letting the elbows travel forward.", "Only using the top half of the range of motion."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Lateral Raise": {
-    primaryMuscle: "Shoulders",
-    secondaryMuscles: ["Traps"],
-    equipment: "Dumbbell",
-    difficulty: "Beginner",
-    movementPattern: "Shoulder Abduction",
-    instructions: ["Stand holding a light dumbbell in each hand at your sides.", "With a slight bend in the elbows, raise both arms out to the sides.", "Lift until your arms are roughly parallel to the floor, leading with the elbows.", "Lower under control back to the start."],
-    formTips: ["Use a lighter weight than you think \u2014 this movement is easy to cheat with momentum.", "Lead with your elbows, not your hands.", "Stop at shoulder height; going higher shifts the work to your traps."],
-    commonMistakes: ["Using momentum/swinging to raise the weight.", "Shrugging the traps to assist the lift.", "Raising the arms above shoulder height."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "DB RDL": {
-    primaryMuscle: "Hamstrings",
-    secondaryMuscles: ["Glutes", "Lower Back"],
-    equipment: "Dumbbell",
-    difficulty: "Beginner",
-    movementPattern: "Hip Hinge",
-    instructions: ["Stand holding a dumbbell in each hand in front of your thighs.", "Push your hips back while keeping a slight bend in the knees, lowering the dumbbells down your legs.", "Lower until you feel a strong hamstring stretch, keeping your back flat.", "Drive your hips forward to return to standing."],
-    formTips: ["This is a hip-hinge \u2014 knees stay only slightly bent throughout.", "Keep the dumbbells close to your legs the entire time.", "Stop the descent when your back would otherwise round."],
-    commonMistakes: ["Squatting the weight down instead of hinging.", "Rounding the back to chase more range.", "Letting the dumbbells drift away from the legs."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Incline Dumbbell Press": {
-    primaryMuscle: "Chest",
-    secondaryMuscles: ["Anterior Deltoids", "Triceps"],
-    equipment: "Dumbbell",
-    difficulty: "Beginner",
-    movementPattern: "Horizontal Push",
-    instructions: ["Set a bench to a 30\u201345\u00b0 incline and lie back holding a dumbbell in each hand at shoulder level.", "Press both dumbbells up until arms are extended.", "Lower under control to the upper chest, elbows at roughly 45\u00b0.", "Press back up, keeping both sides moving evenly."],
-    formTips: ["A moderate incline keeps this chest-focused \u2014 too steep shifts it to the shoulders.", "Keep shoulder blades retracted throughout.", "Control the descent rather than dropping the weight."],
-    commonMistakes: ["Incline set too steep.", "Letting the dumbbells drift too wide.", "Uneven pressing between arms."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Leg Press": {
-    primaryMuscle: "Quadriceps",
-    secondaryMuscles: ["Glutes", "Hamstrings"],
-    equipment: "Machine",
-    difficulty: "Beginner",
-    movementPattern: "Squat",
-    instructions: ["Sit in the leg press with feet shoulder-width on the platform, mid-foot centered.", "Release the safeties and lower the platform by bending your knees toward your chest.", "Lower until your knees reach roughly 90\u00b0, without your lower back lifting off the pad.", "Press through your whole foot to extend back to the start, without locking the knees hard."],
-    formTips: ["Keep your lower back flat against the pad throughout \u2014 that's your depth limit.", "Press through your whole foot, not just your toes.", "Control the descent rather than letting the weight drop."],
-    commonMistakes: ["Letting the lower back round off the pad at the bottom.", "Locking the knees out hard at the top.", "Placing feet too low on the platform, overloading the knees."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Hack Squat": {
-    primaryMuscle: "Quadriceps",
-    secondaryMuscles: ["Glutes"],
-    equipment: "Machine",
-    difficulty: "Intermediate",
-    movementPattern: "Squat",
-    instructions: ["Position yourself in the hack squat machine with shoulders under the pads, feet shoulder-width on the platform.", "Release the safety and lower yourself by bending your knees.", "Descend until your thighs are at least parallel, keeping your back flat against the pad.", "Press through your feet to return to the start."],
-    formTips: ["Keep your back flat against the pad the whole way down.", "Feet slightly forward of your hips generally feels more comfortable on the knees.", "Control the eccentric \u2014 this machine makes it easy to just drop into the bottom."],
-    commonMistakes: ["Letting the knees travel far past the toes without a foot-position adjustment.", "Bouncing out of the bottom position.", "Only performing partial reps."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Leg Extension": {
-    primaryMuscle: "Quadriceps",
-    secondaryMuscles: [],
-    equipment: "Machine",
-    difficulty: "Beginner",
-    movementPattern: "Knee Extension",
-    instructions: ["Sit in the machine with the pad resting on the front of your lower shins, knees at 90\u00b0.", "Extend your knees to lift the pad until your legs are straight.", "Squeeze your quads at the top.", "Lower under control back to the start."],
-    formTips: ["Avoid using momentum \u2014 a controlled tempo hits the quads harder.", "Adjust the seat so the machine's pivot lines up with your knee joint.", "Squeeze and briefly pause at full extension."],
-    commonMistakes: ["Swinging the weight up with momentum.", "Not adjusting the seat/pad for your leg length.", "Slamming the weight stack on the way down."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Leg Curl": {
-    primaryMuscle: "Hamstrings",
-    secondaryMuscles: ["Calves"],
-    equipment: "Machine",
-    difficulty: "Beginner",
-    movementPattern: "Knee Flexion",
-    instructions: ["Lie face down with the pad resting against the back of your lower legs.", "Curl your heels toward your glutes, keeping your hips pressed into the bench.", "Squeeze your hamstrings at the top.", "Lower under control back to the start."],
-    formTips: ["Keep your hips down on the bench \u2014 they'll want to lift as the weight gets heavy.", "Avoid using momentum to jerk the weight up.", "Control the negative on the way down."],
-    commonMistakes: ["Hips rising off the bench.", "Using momentum instead of a controlled curl.", "Only doing partial-range reps."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Lat Pulldown": {
-    primaryMuscle: "Lats",
-    secondaryMuscles: ["Biceps", "Upper Back"],
-    equipment: "Machine",
-    difficulty: "Beginner",
-    movementPattern: "Vertical Pull",
-    instructions: ["Sit at the machine with thighs secured under the pad, gripping the bar wider than shoulder-width.", "Lean back slightly and pull the bar down to your upper chest.", "Drive your elbows down and back, squeezing your shoulder blades together.", "Let the bar rise under control back to full arm extension."],
-    formTips: ["Lead with your elbows, not your hands.", "Avoid leaning back excessively \u2014 a slight lean is fine, swinging is not.", "Control the return to a full stretch at the top."],
-    commonMistakes: ["Using body swing/momentum to pull the weight down.", "Pulling behind the neck, which stresses the shoulders.", "Not achieving a full stretch at the top of each rep."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Seated Cable Row": {
-    primaryMuscle: "Lats",
-    secondaryMuscles: ["Biceps", "Upper Back", "Traps"],
-    equipment: "Machine",
-    difficulty: "Beginner",
-    movementPattern: "Horizontal Pull",
-    instructions: ["Sit at the cable row station with feet on the platform, knees slightly bent.", "Grip the handle and sit tall with a flat back.", "Row the handle to your lower ribs, driving your elbows back.", "Extend back forward under control, allowing a stretch through your lats."],
-    formTips: ["Keep your torso still \u2014 row with your arms and back, not by rocking.", "Drive your elbows straight back, close to your body.", "Sit tall throughout instead of hunching."],
-    commonMistakes: ["Using torso momentum to yank the weight.", "Rounding the lower back.", "Shrugging the shoulders instead of pulling with the back."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Chest Press Machine": {
-    primaryMuscle: "Chest",
-    secondaryMuscles: ["Triceps", "Anterior Deltoids"],
-    equipment: "Machine",
-    difficulty: "Beginner",
-    movementPattern: "Horizontal Push",
-    instructions: ["Adjust the seat so the handles line up with mid-chest height.", "Grip the handles and press forward until your arms are extended.", "Control the return, allowing your elbows to travel back without banging the stack.", "Repeat for reps, keeping shoulder blades pinned to the pad."],
-    formTips: ["Keep your shoulder blades pressed into the pad throughout.", "Adjust seat height before you start so the handles match your chest level.", "Control both the press and the return."],
-    commonMistakes: ["Letting the shoulder blades lift off the pad.", "Locking the elbows out harshly at the top.", "Using a seat height that turns this into a shoulder press."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Shoulder Press Machine": {
-    primaryMuscle: "Shoulders",
-    secondaryMuscles: ["Triceps"],
-    equipment: "Machine",
-    difficulty: "Beginner",
-    movementPattern: "Vertical Push",
-    instructions: ["Adjust the seat so the handles start at shoulder height.", "Grip the handles and press straight overhead.", "Extend without locking the elbows harshly.", "Lower under control back to the start."],
-    formTips: ["Set the seat height correctly before loading the weight.", "Keep your back flat against the pad throughout.", "Control the descent."],
-    commonMistakes: ["Wrong seat height, changing the pressing angle.", "Arching the lower back off the pad.", "Using momentum on the way up."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Pec Deck": {
-    primaryMuscle: "Chest",
-    secondaryMuscles: ["Anterior Deltoids"],
-    equipment: "Machine",
-    difficulty: "Beginner",
-    movementPattern: "Horizontal Adduction",
-    instructions: ["Sit with your back flat against the pad, forearms or hands on the pads/handles.", "Bring your arms together in front of your chest in a hugging motion.", "Squeeze your chest at full contraction.", "Return under control, allowing a stretch across the chest."],
-    formTips: ["Keep the movement slow and controlled \u2014 this exercise is easy to cheat with momentum.", "Squeeze and briefly pause at the point of full contraction.", "Don't let the pads slam together."],
-    commonMistakes: ["Using momentum instead of a squeeze.", "Arching the back off the pad.", "Going too heavy and using partial range."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Assisted Pull-up": {
-    primaryMuscle: "Lats",
-    secondaryMuscles: ["Biceps", "Upper Back"],
-    equipment: "Machine",
-    difficulty: "Beginner",
-    movementPattern: "Vertical Pull",
-    instructions: ["Set the assistance weight \u2014 more assistance for beginners, less as you progress.", "Kneel or stand on the platform, gripping the handles wider than shoulder-width.", "Pull yourself up until your chin clears the bar.", "Lower under control back to a full arm extension."],
-    formTips: ["Reduce assistance over time as a real progression toward unassisted pull-ups.", "Control the descent \u2014 don't just drop.", "Full range of motion beats a lighter assistance with partial reps."],
-    commonMistakes: ["Using so much assistance that no real strength is built.", "Kipping/swinging instead of a controlled pull.", "Not achieving a full stretch at the bottom."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Cable Face Pull": {
-    primaryMuscle: "Shoulders",
-    secondaryMuscles: ["Traps", "Rear Deltoids"],
-    equipment: "Machine",
-    difficulty: "Beginner",
-    movementPattern: "Horizontal Pull",
-    instructions: ["Set a rope attachment at roughly face height on the cable machine.", "Grip the rope with both hands, palms facing each other.", "Pull the rope toward your face, flaring your elbows out and back.", "Squeeze your shoulder blades together at the end, then return under control."],
-    formTips: ["Aim the pull toward your face/forehead, not your chest.", "Externally rotate your hands as you pull for full rear-delt engagement.", "Keep the weight light \u2014 this is a technique-focused movement."],
-    commonMistakes: ["Using too much weight and turning it into a lat pulldown.", "Pulling toward the chest instead of the face.", "Rushing through reps without the external rotation finish."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Triceps Pushdown": {
-    primaryMuscle: "Triceps",
-    secondaryMuscles: [],
-    equipment: "Machine",
-    difficulty: "Beginner",
-    movementPattern: "Elbow Extension",
-    instructions: ["Grip a bar or rope attached to a high cable, elbows pinned to your sides.", "Push the attachment down until your arms are fully extended.", "Squeeze your triceps at the bottom.", "Let the weight rise under control back to the start, elbows staying stationary."],
-    formTips: ["Keep your elbows locked at your sides throughout \u2014 don't let them drift forward.", "Avoid leaning over the bar to use body weight.", "Control the return; don't let the cable snap back."],
-    commonMistakes: ["Elbows drifting away from the body as the set gets hard.", "Using body lean/momentum instead of triceps.", "Only training the bottom half of the range."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Standing Calf Raise": {
-    primaryMuscle: "Calves",
-    secondaryMuscles: [],
-    equipment: "Machine",
-    difficulty: "Beginner",
-    movementPattern: "Plantar Flexion",
-    instructions: ["Position your shoulders under the pads with the balls of your feet on the platform, heels hanging off.", "Lower your heels down for a full stretch.", "Rise up onto your toes as high as possible.", "Lower back down under control."],
-    formTips: ["Use a full range of motion \u2014 a deep stretch at the bottom and a full rise at the top.", "Pause briefly at the top to maximize contraction.", "Control the tempo instead of bouncing."],
-    commonMistakes: ["Using a small, bouncy partial range instead of full stretch-to-contraction.", "Letting the knees bend, taking work off the calves.", "Rushing through reps."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Back Extension": {
-    primaryMuscle: "Abdominals",
-    secondaryMuscles: ["Lower Back", "Glutes", "Hamstrings"],
-    equipment: "Machine",
-    difficulty: "Beginner",
-    movementPattern: "Hip Extension",
-    instructions: ["Position your hips on the pad with your feet secured, upper body hanging forward.", "Cross your arms over your chest or hold weight if adding load.", "Raise your torso up until your body forms a straight line.", "Lower back down under control to a comfortable stretch."],
-    formTips: ["Avoid hyperextending past a straight line at the top.", "Move through your hips, not by arching your lower back.", "Control the descent rather than dropping."],
-    commonMistakes: ["Hyperextending the lower back at the top.", "Using momentum to snap up.", "Rounding excessively at the bottom."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Push-up": {
-    primaryMuscle: "Chest",
-    secondaryMuscles: ["Triceps", "Anterior Deltoids", "Core"],
-    equipment: "Bodyweight",
-    difficulty: "Beginner",
-    movementPattern: "Horizontal Push",
-    instructions: ["Start in a plank position, hands slightly wider than shoulder-width.", "Keep your body in a straight line from head to heels.", "Lower your chest toward the floor, elbows at roughly 45\u00b0.", "Press back up to full arm extension."],
-    formTips: ["Keep your core braced so your hips don't sag or pike.", "Lower until your chest nearly touches the floor for full range.", "Keep your elbows at roughly 45\u00b0, not flared to 90\u00b0."],
-    commonMistakes: ["Letting the hips sag toward the floor.", "Only performing a partial range of motion.", "Flaring the elbows straight out to the sides."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Pull-up": {
-    primaryMuscle: "Lats",
-    secondaryMuscles: ["Biceps", "Upper Back"],
-    equipment: "Bodyweight",
-    difficulty: "Intermediate",
-    movementPattern: "Vertical Pull",
-    instructions: ["Hang from a bar with an overhand grip, hands wider than shoulder-width.", "Start from a full dead hang.", "Pull yourself up until your chin clears the bar.", "Lower under control back to a full hang."],
-    formTips: ["Full range of motion \u2014 from a dead hang to chin over the bar \u2014 builds real strength.", "Avoid kipping/swinging unless training that specifically.", "Keep your core engaged to limit swinging."],
-    commonMistakes: ["Using momentum/kipping instead of a controlled pull.", "Only performing partial reps.", "Not fully extending the arms at the bottom."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Chin-up": {
-    primaryMuscle: "Biceps",
-    secondaryMuscles: ["Lats", "Forearms"],
-    equipment: "Bodyweight",
-    difficulty: "Intermediate",
-    movementPattern: "Vertical Pull",
-    instructions: ["Hang from a bar with an underhand, shoulder-width grip.", "Start from a full dead hang.", "Pull yourself up until your chin clears the bar, keeping elbows close to your body.", "Lower under control back to a full hang."],
-    formTips: ["The underhand grip lets biceps assist more than a pull-up \u2014 still aim for full range.", "Avoid swinging to generate momentum.", "Keep your shoulders down and back rather than shrugged up."],
-    commonMistakes: ["Using momentum instead of a controlled pull.", "Partial range of motion.", "Shrugging the shoulders up toward the ears."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Dip": {
-    primaryMuscle: "Triceps",
-    secondaryMuscles: ["Chest", "Anterior Deltoids"],
-    equipment: "Bodyweight",
-    difficulty: "Intermediate",
-    movementPattern: "Vertical Push",
-    instructions: ["Support yourself on parallel bars with arms extended.", "Lower your body by bending your elbows, leaning slightly forward for more chest emphasis.", "Descend until your shoulders are roughly level with your elbows.", "Press back up to full arm extension."],
-    formTips: ["A more upright torso emphasizes triceps; leaning forward emphasizes chest.", "Control the descent rather than dropping.", "Avoid going so deep that it strains the shoulders."],
-    commonMistakes: ["Descending too deep, stressing the shoulder joint.", "Using momentum/bouncing at the bottom.", "Flaring the elbows out excessively."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Plank": {
-    primaryMuscle: "Abdominals",
-    secondaryMuscles: ["Shoulders", "Glutes"],
-    equipment: "Bodyweight",
-    difficulty: "Beginner",
-    movementPattern: "Isometric Core",
-    instructions: ["Support yourself on your forearms and toes, elbows under your shoulders.", "Keep your body in a straight line from head to heels.", "Brace your core and squeeze your glutes.", "Hold the position for time without letting your hips sag or pike."],
-    formTips: ["A straight line from head to heels is the goal \u2014 check yourself in a mirror if possible.", "Breathe normally throughout; don't hold your breath.", "Squeeze your glutes to help maintain the line."],
-    commonMistakes: ["Letting the hips sag toward the floor.", "Piking the hips up too high.", "Holding your breath instead of breathing normally."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Sit-up": {
-    primaryMuscle: "Abdominals",
-    secondaryMuscles: ["Hip Flexors"],
-    equipment: "Bodyweight",
-    difficulty: "Beginner",
-    movementPattern: "Trunk Flexion",
-    instructions: ["Lie on your back with knees bent, feet flat, hands lightly behind your head or crossed on your chest.", "Curl your torso up off the floor, leading with your chest.", "Continue until your torso is roughly upright.", "Lower back down under control."],
-    formTips: ["Curl up through the spine rather than yanking with your neck.", "Keep your feet planted or anchored for stability.", "Control the descent instead of dropping."],
-    commonMistakes: ["Pulling on the neck with your hands.", "Using momentum/swinging the arms to get up.", "Only performing a small partial range."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Air Squat": {
-    primaryMuscle: "Quadriceps",
-    secondaryMuscles: ["Glutes", "Hamstrings"],
-    equipment: "Bodyweight",
-    difficulty: "Beginner",
-    movementPattern: "Squat",
-    instructions: ["Stand with feet shoulder-width, toes slightly turned out.", "Push your hips back and bend your knees to descend.", "Lower until your thighs are at least parallel to the floor.", "Drive through your whole foot to stand back up."],
-    formTips: ["Keep your chest up and weight balanced through your whole foot.", "Track your knees in line with your toes.", "Descend under control rather than dropping."],
-    commonMistakes: ["Letting the knees cave inward.", "Rising onto the toes.", "Only squatting to a shallow depth."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Burpee": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Chest", "Quadriceps", "Shoulders", "Core"],
-    equipment: "Bodyweight",
-    difficulty: "Intermediate",
-    movementPattern: "Full Body",
-    instructions: ["Start standing, then drop into a squat and place your hands on the floor.", "Kick your feet back into a plank position.", "Perform a push-up (or just lower your chest), then jump your feet back to your hands.", "Explosively jump up, reaching your arms overhead."],
-    formTips: ["Keep your core braced through the plank/push-up phase to protect your lower back.", "Land the jumps softly, bending your knees to absorb impact.", "Pace yourself \u2014 burpees fatigue fast under high volume."],
-    commonMistakes: ["Letting the hips sag during the plank phase.", "Landing stiff-legged from the jumps.", "Rushing the form as fatigue sets in, especially the hand placement."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Mountain Climbers": {
-    primaryMuscle: "Abdominals",
-    secondaryMuscles: ["Hip Flexors", "Shoulders"],
-    equipment: "Bodyweight",
-    difficulty: "Beginner",
-    movementPattern: "Core/Cardio",
-    instructions: ["Start in a plank position, hands under your shoulders.", "Drive one knee toward your chest, then quickly switch legs.", "Continue alternating at a controlled or fast pace depending on the goal.", "Keep your hips low and core braced throughout."],
-    formTips: ["Keep your hips level \u2014 don't let them pike up as you speed up.", "Land lightly on the balls of your feet.", "Keep your core braced the entire time."],
-    commonMistakes: ["Hips rising up (piking) as speed increases.", "Letting the lower back sag.", "Losing hand placement under the shoulders."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Pistol Squat": {
-    primaryMuscle: "Quadriceps",
-    secondaryMuscles: ["Glutes", "Core", "Hamstrings"],
-    equipment: "Bodyweight",
-    difficulty: "Advanced",
-    movementPattern: "Squat",
-    instructions: ["Stand on one leg, extending the other leg straight out in front of you.", "Lower yourself down on the standing leg, keeping the extended leg off the floor.", "Descend as deep as your mobility and strength allow, ideally to full depth.", "Drive back up through the standing leg to full extension."],
-    formTips: ["Build up with assisted or partial-range versions before attempting full pistols.", "Keep your extended leg elevated and under control throughout.", "Use your arms for counterbalance as needed."],
-    commonMistakes: ["Losing balance and putting the extended foot down early.", "Rounding the back to compensate for limited ankle mobility.", "Attempting full depth before building the requisite strength."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Glute Bridge": {
-    primaryMuscle: "Glutes",
-    secondaryMuscles: ["Hamstrings", "Core"],
-    equipment: "Bodyweight",
-    difficulty: "Beginner",
-    movementPattern: "Hip Extension",
-    instructions: ["Lie on your back with knees bent, feet flat, hip-width apart.", "Brace your core and drive through your heels to lift your hips.", "Extend your hips until your body forms a straight line from shoulders to knees.", "Squeeze your glutes at the top, then lower under control."],
-    formTips: ["Drive through your heels, not your toes.", "Squeeze and pause at the top of every rep.", "Avoid overextending the lower back at the top."],
-    commonMistakes: ["Overextending the lower back instead of stopping at hip extension.", "Pushing through the toes rather than the heels.", "Rushing through reps without a top squeeze."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Dead Bug": {
-    primaryMuscle: "Abdominals",
-    secondaryMuscles: ["Hip Flexors"],
-    equipment: "Bodyweight",
-    difficulty: "Beginner",
-    movementPattern: "Anti-Extension Core",
-    instructions: ["Lie on your back with arms extended toward the ceiling, knees bent at 90\u00b0 over your hips.", "Brace your core to flatten your lower back into the floor.", "Slowly extend one arm overhead and the opposite leg out straight, keeping your back flat.", "Return to the start and repeat on the other side."],
-    formTips: ["Keep your lower back pressed into the floor throughout \u2014 that's the whole point of the drill.", "Move slowly and with control, not for speed.", "Only extend as far as you can while keeping the back flat."],
-    commonMistakes: ["Letting the lower back arch off the floor as the limb extends.", "Moving too fast to maintain control.", "Extending further than your core control allows."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Outdoor Running": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Quadriceps", "Hamstrings", "Calves"],
-    equipment: "Bodyweight",
-    difficulty: "Beginner",
-    movementPattern: "Cardio",
-    instructions: ["Warm up with 5\u201310 minutes of easy walking or light jogging.", "Settle into a sustainable pace with a relaxed upper body and steady breathing.", "Land with your foot roughly under your hips, not far out in front.", "Cool down with a few minutes of walking to bring your heart rate down gradually."],
-    formTips: ["Keep your shoulders relaxed and arms swinging naturally, not tensed up.", "Breathe rhythmically \u2014 find a pattern that matches your effort level.", "Increase weekly mileage gradually to avoid overuse injuries."],
-    commonMistakes: ["Overstriding, landing with the foot far ahead of the hips.", "Ramping up mileage too quickly.", "Ignoring persistent joint pain instead of adjusting the plan."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Cat-Cow Stretch": {
-    primaryMuscle: "Abdominals",
-    secondaryMuscles: ["Lower Back"],
-    equipment: "Bodyweight",
-    difficulty: "Beginner",
-    movementPattern: "Spinal Mobility",
-    instructions: ["Start on hands and knees, wrists under shoulders, knees under hips.", "Inhale as you drop your belly and lift your chest and tailbone (cow).", "Exhale as you round your spine, tucking your chin and tailbone (cat).", "Continue flowing between the two positions with your breath."],
-    formTips: ["Move slowly and let your breath drive the pace.", "Move through your whole spine, not just your lower back.", "Keep the movement pain-free \u2014 this should feel good, not strained."],
-    commonMistakes: ["Rushing through the movement instead of syncing it with breath.", "Only moving the lower back, ignoring the upper spine.", "Forcing range of motion into discomfort."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Bear Crawl": {
-    primaryMuscle: "Abdominals",
-    secondaryMuscles: ["Shoulders", "Quadriceps"],
-    equipment: "Bodyweight",
-    difficulty: "Intermediate",
-    movementPattern: "Full Body",
-    instructions: ["Start on hands and feet, knees hovering an inch off the floor, back flat.", "Move your opposite hand and foot forward together.", "Keep your hips low and core braced throughout.", "Continue crawling forward with controlled, even steps."],
-    formTips: ["Keep your hips at a consistent, low height \u2014 don't let them rise up.", "Move opposite hand and foot together for a stable crawl pattern.", "Keep your core braced to prevent your lower back from sagging."],
-    commonMistakes: ["Hips rising too high, turning it into a downward-dog walk.", "Knees touching the floor between steps.", "Rushing the pace at the expense of control."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Broad Jump": {
-    primaryMuscle: "Glutes",
-    secondaryMuscles: ["Quadriceps", "Hamstrings", "Calves"],
-    equipment: "Bodyweight",
-    difficulty: "Intermediate",
-    movementPattern: "Plyometric",
-    instructions: ["Stand with feet shoulder-width, arms back to load the jump.", "Swing your arms forward and jump as far forward as possible.", "Land softly with bent knees, absorbing the impact.", "Stabilize fully before resetting for the next jump."],
-    formTips: ["Land with soft knees to absorb force \u2014 never land stiff-legged.", "Reset fully between reps if training for max distance.", "Use your arms actively to add momentum to the jump."],
-    commonMistakes: ["Landing stiff-legged, which stresses the knees and lower back.", "Chaining jumps without resetting when max distance is the goal.", "Not using the arm swing to help drive the jump."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Treadmill": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Quadriceps", "Hamstrings", "Calves"],
-    equipment: "Cardio Machine",
-    difficulty: "Beginner",
-    movementPattern: "Cardio",
-    instructions: ["Start the belt at an easy walking pace to warm up.", "Gradually increase speed to your target pace.", "Maintain an upright posture, avoiding holding onto the handrails.", "Cool down by reducing speed gradually over the last few minutes."],
-    formTips: ["Avoid gripping the handrails during running \u2014 it changes your natural gait and reduces the workout.", "Match incline settings to your goal \u2014 flat for speed work, incline for hill-simulation.", "Keep your stride natural rather than overstriding to match the belt."],
-    commonMistakes: ["Holding the handrails throughout the run.", "Starting at too high a speed without warming up.", "Ignoring the belt's momentum and overstriding."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Rowing Machine": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Lats", "Hamstrings", "Quadriceps", "Core"],
-    equipment: "Cardio Machine",
-    difficulty: "Beginner",
-    movementPattern: "Cardio",
-    instructions: ["Strap your feet in and grip the handle with an overhand grip.", "Drive with your legs first, then lean back slightly, then pull the handle to your lower ribs.", "Reverse the sequence: arms out, lean forward, then bend your knees to slide back up.", "Repeat in a smooth, continuous rhythm."],
-    formTips: ["The sequence is legs, then back, then arms on the drive \u2014 and the reverse on the recovery.", "Most of the power should come from your legs, not your arms.", "Keep the recovery phase slightly slower than the drive."],
-    commonMistakes: ["Pulling with the arms before the legs finish driving.", "Rounding the lower back during the pull.", "Rushing the recovery phase, which wastes energy."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Ski Erg": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Lats", "Triceps", "Core"],
-    equipment: "Cardio Machine",
-    difficulty: "Beginner",
-    movementPattern: "Cardio",
-    instructions: ["Stand facing the machine, gripping the handles overhead.", "Hinge at the hips and pull the handles down and back, engaging your lats and core.", "Follow through until your arms are by your hips.", "Return to the starting position under control and repeat."],
-    formTips: ["Drive the pull from your core and hips, not just your arms.", "Keep a slight bend in the knees throughout for a stable base.", "Maintain a consistent rhythm rather than rushing individual pulls."],
-    commonMistakes: ["Pulling with just the arms, ignoring the hip hinge.", "Standing too upright without engaging the core.", "Losing rhythm and rushing under fatigue."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Assault Bike": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Quadriceps", "Shoulders", "Core"],
-    equipment: "Cardio Machine",
-    difficulty: "Beginner",
-    movementPattern: "Cardio",
-    instructions: ["Sit with a slight bend in your knees at full pedal extension.", "Push and pull the handles in sync with your pedaling for full-body effort.", "Maintain a pace appropriate to your interval or steady-state goal.", "Keep your core braced throughout, especially at higher intensities."],
-    formTips: ["Use your arms actively \u2014 pushing and pulling the handles adds real work, not just leg pedaling.", "Set the seat height so your knee has a slight bend at full extension.", "Pace hard efforts deliberately; the fan resistance scales with your own effort."],
-    commonMistakes: ["Only pedaling and letting the arms go along for the ride.", "Starting an interval too hard and fading badly.", "Incorrect seat height causing knee strain."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Stationary Bike": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Quadriceps", "Hamstrings", "Calves"],
-    equipment: "Cardio Machine",
-    difficulty: "Beginner",
-    movementPattern: "Cardio",
-    instructions: ["Adjust the seat height so your knee has a slight bend at the bottom of the pedal stroke.", "Start pedaling at an easy resistance to warm up.", "Increase resistance or cadence to match your target intensity.", "Cool down with a few minutes of easy pedaling."],
-    formTips: ["Correct seat height protects your knees \u2014 too low or too high both cause problems.", "Keep your upper body relaxed rather than gripping the handlebars tensely.", "Match resistance and cadence to your actual training goal (endurance vs. power)."],
-    commonMistakes: ["Seat set too low, causing excess knee flexion and strain.", "Gripping the handlebars with tense shoulders.", "Spinning with no resistance, which under-trains the muscles."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Running": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Quadriceps", "Hamstrings", "Calves"],
-    equipment: "Cardio Outdoor",
-    difficulty: "Beginner",
-    movementPattern: "Cardio",
-    instructions: ["Warm up with a few minutes of easy walking or jogging.", "Settle into your target pace with relaxed shoulders and a steady breathing rhythm.", "Land with your foot roughly under your hips.", "Cool down gradually rather than stopping abruptly."],
-    formTips: ["Keep your cadence relatively quick and light rather than long, heavy strides.", "Breathe rhythmically, matching your pattern to your effort.", "Increase distance/intensity gradually to avoid overuse injuries."],
-    commonMistakes: ["Overstriding, landing with the foot far ahead of the body.", "Increasing mileage too quickly.", "Ignoring form as fatigue sets in late in a run."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Cycling": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Quadriceps", "Hamstrings", "Calves"],
-    equipment: "Cardio Outdoor",
-    difficulty: "Beginner",
-    movementPattern: "Cardio",
-    instructions: ["Adjust your seat height so your knee has a slight bend at the bottom of the pedal stroke.", "Start with an easy warm-up spin.", "Maintain a smooth, circular pedal stroke rather than just stomping down.", "Cool down with easy pedaling before stopping."],
-    formTips: ["A smooth, circular pedal stroke is more efficient than just pushing down hard.", "Keep your upper body relaxed, especially your grip on the handlebars.", "Match gearing to terrain to maintain a consistent, sustainable cadence."],
-    commonMistakes: ["Seat height too low, straining the knees.", "Mashing the pedals instead of a smooth stroke.", "Ignoring gear changes and grinding at too low a cadence."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Swimming": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Lats", "Shoulders", "Core"],
-    equipment: "Cardio Outdoor",
-    difficulty: "Intermediate",
-    movementPattern: "Cardio",
-    instructions: ["Warm up with a few easy, relaxed laps.", "Focus on a long, streamlined body position with minimal drag.", "Coordinate your breathing with your stroke rhythm rather than holding your breath.", "Cool down with easy laps to bring your heart rate down gradually."],
-    formTips: ["A long, straight body position reduces drag more than most people expect.", "Exhale underwater steadily rather than holding your breath and gasping on each breath.", "Technique work pays off more than just swimming harder with poor form."],
-    commonMistakes: ["Holding the breath and gasping instead of steady exhaling underwater.", "Lifting the head too high to breathe, which sinks the hips.", "Neglecting technique work in favor of pure distance."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Walking": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Quadriceps", "Calves", "Glutes"],
-    equipment: "Cardio Outdoor",
-    difficulty: "Beginner",
-    movementPattern: "Cardio",
-    instructions: ["Stand tall with relaxed shoulders.", "Walk at a pace that lets you maintain a conversation, or faster for a brisk-walk goal.", "Let your arms swing naturally at your sides.", "Maintain the pace consistently for your target duration or distance."],
-    formTips: ["A brisk pace with purposeful arm swing meaningfully increases the training effect.", "Keep your posture tall rather than hunching forward.", "Consistency matters more than occasional long walks \u2014 build a regular habit."],
-    commonMistakes: ["Hunching forward, especially when looking at a phone.", "Walking so slowly it provides minimal cardiovascular benefit for a fitness goal.", "Ignoring proper footwear for longer walks."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Jump Rope": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Calves", "Shoulders", "Core"],
-    equipment: "Cardio Outdoor",
-    difficulty: "Beginner",
-    movementPattern: "Cardio",
-    instructions: ["Hold the rope handles at hip height, rope behind your heels.", "Swing the rope over your head using your wrists, not your whole arms.", "Jump just high enough to clear the rope, landing softly on the balls of your feet.", "Maintain a steady rhythm for your target duration."],
-    formTips: ["Turn the rope with your wrists, not big arm circles.", "Keep jumps small and low \u2014 you only need to clear the rope.", "Land softly on the balls of your feet to reduce impact."],
-    commonMistakes: ["Jumping too high, which wastes energy and increases impact.", "Turning the rope with the whole arm instead of the wrists.", "Landing flat-footed instead of on the balls of the feet."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Sled Push": {
-    primaryMuscle: "Quadriceps",
-    secondaryMuscles: ["Glutes", "Calves", "Core"],
-    equipment: "Hyrox Station",
-    difficulty: "Intermediate",
-    movementPattern: "Push",
-    instructions: ["Load the sled to your target weight and get into a low push position, arms extended.", "Drive forward with short, powerful steps, staying low with a flat back.", "Keep your arms locked and push through your legs, not your upper body.", "Maintain the drive for the full distance without standing up early."],
-    formTips: ["Stay low throughout \u2014 standing up early shifts the work away from your legs.", "Take short, punchy steps rather than long strides.", "Keep your core braced to protect your lower back in the leaned-over position."],
-    commonMistakes: ["Standing too upright, turning it into an arm-pushing exercise.", "Overstriding, which reduces power transfer.", "Losing the flat-back position under fatigue."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Sled Pull": {
-    primaryMuscle: "Lats",
-    secondaryMuscles: ["Biceps", "Traps", "Core"],
-    equipment: "Hyrox Station",
-    difficulty: "Intermediate",
-    movementPattern: "Pull",
-    instructions: ["Attach a rope or strap to the sled and face it, feet set for a strong pulling stance.", "Pull hand-over-hand, leaning back slightly to use your body weight.", "Keep your core braced and back flat throughout the pull.", "Continue until the sled reaches the target distance."],
-    formTips: ["Use your legs to help drive the lean-back on each pull, not just your arms.", "Keep a consistent rhythm rather than yanking erratically.", "Brace your core to protect your lower back."],
-    commonMistakes: ["Pulling with the arms alone, ignoring the legs and body weight.", "Rounding the lower back during the pull.", "Losing rhythm and rushing under fatigue."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Sandbag Lunges": {
-    primaryMuscle: "Quadriceps",
-    secondaryMuscles: ["Glutes", "Hamstrings", "Core"],
-    equipment: "Hyrox Station",
-    difficulty: "Intermediate",
-    movementPattern: "Lunge",
-    instructions: ["Load the sandbag across your shoulders or hug it to your chest.", "Step forward into a lunge, lowering until both knees are near 90\u00b0.", "Push off the front foot to bring the back leg through into the next lunge.", "Continue for the target distance, alternating legs."],
-    formTips: ["Keep your torso upright despite the awkward, shifting load of the bag.", "Take a stride length that keeps your front knee roughly over your ankle.", "Brace your core hard \u2014 the sandbag's instability demands it."],
-    commonMistakes: ["Letting the torso lean forward under the awkward load.", "Taking too short a stride, driving the knee past the toes.", "Losing core tension as fatigue sets in."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Wall Balls": {
-    primaryMuscle: "Quadriceps",
-    secondaryMuscles: ["Shoulders", "Core"],
-    equipment: "Hyrox Station",
-    difficulty: "Intermediate",
-    movementPattern: "Squat/Push",
-    instructions: ["Hold the ball at your chest, standing a couple feet from the wall.", "Squat down until your thighs are at least parallel to the floor.", "Drive up explosively, extending through your legs and throwing the ball to the target on the wall.", "Catch the ball as it comes down and immediately descend into the next rep."],
-    formTips: ["Use your legs to generate power for the throw, not just your arms.", "Hit consistent squat depth every rep, not just when it's easy.", "Catch the ball with soft hands, absorbing it into the next squat."],
-    commonMistakes: ["Squatting to a shallow depth as fatigue sets in.", "Throwing mostly with the arms instead of leg drive.", "Standing fully upright between reps instead of staying in rhythm."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Burpee Broad Jumps": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Quadriceps", "Chest", "Shoulders", "Core"],
-    equipment: "Hyrox Station",
-    difficulty: "Intermediate",
-    movementPattern: "Full Body",
-    instructions: ["Perform a burpee: squat down, kick back to a plank, chest to the floor, then feet back to hands.", "Instead of a vertical jump, explode forward into a broad jump.", "Land softly with bent knees, then immediately go into the next burpee.", "Repeat for the target distance."],
-    formTips: ["Land the broad jump with soft knees to absorb the impact before the next rep.", "Keep the burpee's plank/push-up phase controlled, not sloppy.", "Find a sustainable rhythm rather than sprinting the first few and collapsing."],
-    commonMistakes: ["Landing stiff-legged from the broad jump.", "Letting the hips sag during the plank phase.", "Going out too fast and fading badly."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Farmer's Carry (station)": {
-    primaryMuscle: "Forearms",
-    secondaryMuscles: ["Traps", "Core", "Glutes"],
-    equipment: "Hyrox Station",
-    difficulty: "Beginner",
-    movementPattern: "Carry",
-    instructions: ["Pick up a heavy kettlebell or handle in each hand, standing tall.", "Brace your core and keep your shoulders pulled back.", "Walk forward with controlled, even steps at race pace.", "Set the weights down under control at the end of the distance."],
-    formTips: ["Keep your chest up throughout \u2014 don't let your shoulders round forward as grip fatigues.", "Take normal-length, quick steps rather than shuffling.", "Grip hard through the whole carry; regripping mid-carry costs time."],
-    commonMistakes: ["Shoulders rounding forward as grip fatigues.", "Shuffling with overly short steps.", "Setting the weight down and re-starting instead of maintaining pace."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Rowing (station)": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Lats", "Hamstrings", "Quadriceps", "Core"],
-    equipment: "Hyrox Station",
-    difficulty: "Intermediate",
-    movementPattern: "Cardio",
-    instructions: ["Strap your feet in and grip the handle with an overhand grip.", "Drive with your legs first, then lean back slightly, then pull the handle to your lower ribs.", "Reverse the sequence on the recovery: arms out, lean forward, then bend your knees.", "Hold your target pace for the full station distance."],
-    formTips: ["Legs-back-arms on the drive, and the reverse on the recovery \u2014 that sequence is the whole technique.", "Most of the power comes from your legs, not your arms.", "Pace evenly rather than starting too hard and fading."],
-    commonMistakes: ["Pulling with the arms before the legs finish driving.", "Starting too fast and fading badly over the distance.", "Rounding the lower back under fatigue."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "SkiErg": {
-    primaryMuscle: "Lats",
-    secondaryMuscles: ["Triceps", "Core"],
-    equipment: "Hyrox Station",
-    difficulty: "Intermediate",
-    movementPattern: "Cardio",
-    instructions: ["Stand facing the machine, gripping the handles overhead.", "Hinge at the hips and pull the handles down and back, engaging your lats and core.", "Follow through until your arms are by your hips.", "Return to the start under control and repeat at your target pace."],
-    formTips: ["Drive the pull from your hips and core, not just your arms.", "Keep a slight knee bend throughout for a stable base.", "Pace evenly across the full distance rather than starting too hard."],
-    commonMistakes: ["Pulling with the arms alone, ignoring the hip hinge.", "Standing too upright without engaging the core.", "Starting too fast and fading badly."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Hip Flexor Stretch": {
-    primaryMuscle: "Mobility",
-    secondaryMuscles: ["Quadriceps"],
-    equipment: "Mobility / Stretch",
-    difficulty: "Beginner",
-    movementPattern: "Static Stretch",
-    instructions: ["Kneel on one knee with the other foot planted in front, both at roughly 90\u00b0.", "Keep your torso upright and gently push your hips forward.", "Hold the stretch, feeling it through the front of the hip of the kneeling leg.", "Switch sides after holding for your target time."],
-    formTips: ["Keep your torso tall rather than leaning forward, which reduces the stretch.", "Squeeze the glute on the kneeling side for a deeper stretch.", "Move into the stretch gradually rather than forcing it."],
-    commonMistakes: ["Leaning the torso forward instead of driving the hips forward.", "Arching the lower back excessively to fake more range.", "Forcing the stretch into sharp pain rather than a comfortable pull."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Couch Stretch": {
-    primaryMuscle: "Mobility",
-    secondaryMuscles: ["Quadriceps", "Hip Flexors"],
-    equipment: "Mobility / Stretch",
-    difficulty: "Intermediate",
-    movementPattern: "Static Stretch",
-    instructions: ["Kneel in front of a couch or bench, back foot resting up against it, shin vertical.", "Keep your torso upright and front foot planted for balance.", "Gently squeeze the glute of the back leg to deepen the hip flexor stretch.", "Hold, then switch sides."],
-    formTips: ["Keep your torso as upright as possible \u2014 leaning forward reduces the stretch.", "Ease into the position gradually if it's new to you.", "A slight forward pelvic tilt increases the stretch intensity."],
-    commonMistakes: ["Leaning forward instead of staying upright.", "Forcing the back knee into the corner too aggressively for your current mobility.", "Holding your breath instead of breathing through the stretch."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Thoracic Rotation": {
-    primaryMuscle: "Mobility",
-    secondaryMuscles: ["Lower Back"],
-    equipment: "Mobility / Stretch",
-    difficulty: "Beginner",
-    movementPattern: "Rotational Mobility",
-    instructions: ["Start on hands and knees, one hand behind your head.", "Rotate your elbow up toward the ceiling, following it with your eyes.", "Rotate back down, threading your elbow under your torso toward the opposite side.", "Continue the controlled rotation for your target reps, then switch sides."],
-    formTips: ["Keep the rotation coming from your upper back, not your lower back or hips.", "Move slowly and with control rather than swinging.", "Follow the movement with your eyes to encourage full rotation."],
-    commonMistakes: ["Rotating from the lower back/hips instead of the thoracic spine.", "Moving too fast to get any real mobility benefit.", "Limiting the range out of habit rather than actual restriction."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Shoulder Dislocate": {
-    primaryMuscle: "Mobility",
-    secondaryMuscles: ["Chest"],
-    equipment: "Mobility / Stretch",
-    difficulty: "Beginner",
-    movementPattern: "Shoulder Mobility",
-    instructions: ["Hold a light stick, band, or towel with a wide, overhand grip.", "Keeping your arms straight, raise the stick overhead and continue behind your back.", "Reverse the motion back to the front.", "Narrow your grip slightly over time as mobility improves."],
-    formTips: ["Use a wide enough grip that the movement stays pain-free.", "Keep your arms as straight as comfortably possible throughout.", "Progress by narrowing the grip gradually, not by forcing a narrow grip immediately."],
-    commonMistakes: ["Using too narrow a grip, causing shoulder impingement.", "Bending the elbows to fake more range.", "Forcing through pain instead of stopping at a comfortable stretch."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Hamstring Stretch": {
-    primaryMuscle: "Mobility",
-    secondaryMuscles: ["Lower Back"],
-    equipment: "Mobility / Stretch",
-    difficulty: "Beginner",
-    movementPattern: "Static Stretch",
-    instructions: ["Sit or stand with one leg extended in front of you, foot flexed.", "Hinge forward from your hips, keeping your back relatively flat.", "Reach toward your toes until you feel a stretch through the back of your thigh.", "Hold, then switch legs."],
-    formTips: ["Hinge from the hips rather than rounding through the lower back.", "Keep the front leg's knee only slightly bent if needed, not locked.", "Ease into the stretch gradually rather than bouncing."],
-    commonMistakes: ["Rounding the lower back to reach further.", "Bouncing in and out of the stretch instead of holding steady.", "Forcing the stretch into sharp pain."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Calf Stretch": {
-    primaryMuscle: "Mobility",
-    secondaryMuscles: ["Ankles"],
-    equipment: "Mobility / Stretch",
-    difficulty: "Beginner",
-    movementPattern: "Static Stretch",
-    instructions: ["Stand facing a wall, one foot forward and one foot back, both pointing forward.", "Keep your back leg straight and heel planted on the floor.", "Lean into the wall, feeling a stretch through your back calf.", "Hold, then switch legs."],
-    formTips: ["Keep the back heel planted throughout \u2014 that's what creates the stretch.", "Keep the back leg's knee straight for the gastrocnemius; bend it slightly to target the soleus lower down.", "Ease into the stretch rather than forcing it."],
-    commonMistakes: ["Letting the back heel lift off the floor.", "Only ever stretching with a straight leg, missing the soleus.", "Rushing through without holding long enough to get a real benefit."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Deep Squat Hold": {
-    primaryMuscle: "Mobility",
-    secondaryMuscles: ["Quadriceps", "Hip Flexors", "Ankles"],
-    equipment: "Mobility / Stretch",
-    difficulty: "Beginner",
-    movementPattern: "Static Stretch",
-    instructions: ["Stand with feet shoulder-width, toes slightly out.", "Squat down as deep as you comfortably can, aiming for hips below knees.", "Rest your elbows against the inside of your knees, gently pressing them out.", "Hold the position, breathing steadily, working to keep your heels down."],
-    formTips: ["Keep your heels planted \u2014 this is often the limiting factor for most people.", "Use your elbows to gently open your knees rather than forcing your hips down.", "Breathe steadily rather than holding your breath through discomfort."],
-    commonMistakes: ["Letting the heels lift off the floor.", "Forcing depth by rounding the lower back.", "Holding the breath instead of breathing through the position."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Child's Pose": {
-    primaryMuscle: "Lats",
-    secondaryMuscles: ["Lower Back", "Hips"],
-    equipment: "Mobility / Stretch",
-    difficulty: "Beginner",
-    movementPattern: "Static Stretch",
-    instructions: ["Kneel on the floor, big toes touching, knees spread comfortably wide.", "Sit your hips back toward your heels.", "Extend your arms forward on the floor, lowering your chest toward the ground.", "Hold, breathing deeply into your lower back and sides."],
-    formTips: ["Let gravity do the work \u2014 relax into the position rather than actively pushing.", "Adjust knee width to find a comfortable stretch through the hips and back.", "Breathe deeply, especially into your lower back and ribs."],
-    commonMistakes: ["Actively straining instead of relaxing into the stretch.", "Holding the breath instead of breathing deeply.", "Forcing the chest down further than is comfortable."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Kettlebell Swing": {
-    primaryMuscle: "Glutes",
-    secondaryMuscles: ["Hamstrings", "Core", "Shoulders"],
-    equipment: "Kettlebell",
-    difficulty: "Intermediate",
-    movementPattern: "Hip Hinge",
-    instructions: ["Stand with feet shoulder-width, kettlebell on the floor slightly in front of you.", "Hinge at the hips to grip the bell, then hike it back between your legs.", "Explosively extend your hips to swing the bell up to chest height.", "Let the bell swing back down naturally into the next hip hinge."],
-    formTips: ["This is a hip-hinge power movement, not a squat or a shoulder raise.", "The power comes from an explosive hip extension, not the arms lifting the bell.", "Keep your back flat throughout \u2014 a rounded back under the hike is a real injury risk."],
-    commonMistakes: ["Squatting the movement instead of hinging at the hips.", "Using the arms to lift the bell instead of hip drive.", "Rounding the back during the backswing."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Turkish Get-Up": {
-    primaryMuscle: "Cardio",
-    secondaryMuscles: ["Shoulders", "Core", "Glutes"],
-    equipment: "Kettlebell",
-    difficulty: "Advanced",
-    movementPattern: "Full Body",
-    instructions: ["Lie on your back holding a kettlebell overhead in one hand, arm locked out.", "Roll onto your opposite elbow, then push up onto your hand.", "Sweep your leg through and rise to a half-kneeling position, then stand up.", "Reverse the entire sequence with control to return to the floor."],
-    formTips: ["This is a slow, technical movement \u2014 learn it bodyweight or with a light load first.", "Keep your eyes on the kettlebell throughout the entire sequence.", "Move deliberately through each checkpoint rather than rushing."],
-    commonMistakes: ["Rushing through checkpoints instead of controlling each phase.", "Losing sight of the kettlebell during the transitions.", "Using too much weight before the pattern is fully grooved."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Kettlebell Clean": {
-    primaryMuscle: "Glutes",
-    secondaryMuscles: ["Hamstrings", "Traps", "Forearms"],
-    equipment: "Kettlebell",
-    difficulty: "Intermediate",
-    movementPattern: "Olympic",
-    instructions: ["Start with the kettlebell on the floor between your feet, similar to a swing setup.", "Hike the bell back, then explosively extend your hips to drive it upward.", "Guide the bell close to your body as it rises, catching it in the rack position at your shoulder.", "Lower back down under control, guiding the bell rather than letting it crash."],
-    formTips: ["Keep the bell close to your body throughout the pull to avoid it crashing into your forearm.", "The power comes from hip extension, similar to a swing.", "Relax your grip slightly as the bell rotates into the rack to avoid banging your wrist."],
-    commonMistakes: ["Letting the bell swing out away from the body, causing it to crash on the catch.", "Muscling the bell up with the arm instead of hip drive.", "Gripping too tight through the rotation, causing wrist strain."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Kettlebell Snatch": {
-    primaryMuscle: "Glutes",
-    secondaryMuscles: ["Shoulders", "Hamstrings", "Core"],
-    equipment: "Kettlebell",
-    difficulty: "Advanced",
-    movementPattern: "Olympic",
-    instructions: ["Start with the kettlebell between your feet as in a swing setup.", "Hike the bell back, then explosively extend your hips to send it upward.", "Guide the bell overhead in one fluid motion, punching your hand through as it arrives.", "Lower back down under control through the same path."],
-    formTips: ["Build this from a solid swing and clean first \u2014 the snatch adds a further overhead punch.", "Keep the bell close on the way up to avoid it looping out and crashing on your forearm.", "Let your hips do the work; the arm just guides the bell."],
-    commonMistakes: ["Muscling the bell up with the shoulder instead of hip power.", "Letting the bell crash onto the forearm at the top.", "Attempting heavy loads before the technique is consistent."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Battle Rope Alternating Waves": {
-    primaryMuscle: "Shoulders",
-    secondaryMuscles: ["Core", "Forearms"],
-    equipment: "Conditioning",
-    difficulty: "Beginner",
-    movementPattern: "Cardio",
-    instructions: ["Stand with feet shoulder-width, holding one rope end in each hand, slight bend in the knees.", "Brace your core and alternately whip each arm up and down, creating waves through the ropes.", "Maintain a consistent rhythm and wave size for your target duration.", "Keep your knees soft throughout to absorb the movement."],
-    formTips: ["Drive the movement from your shoulders and core, not just your wrists.", "Keep a slight knee bend and stay light on your feet throughout.", "Maintain even wave size on both sides rather than favoring one arm."],
-    commonMistakes: ["Standing too stiff-legged instead of staying athletic.", "Only using the wrists instead of the shoulders/core.", "Letting the wave size fade badly as fatigue sets in."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Medicine Ball Slam": {
-    primaryMuscle: "Lats",
-    secondaryMuscles: ["Shoulders", "Core"],
-    equipment: "Conditioning",
-    difficulty: "Beginner",
-    movementPattern: "Full Body",
-    instructions: ["Stand holding a medicine ball overhead with both hands, feet shoulder-width.", "Brace your core and forcefully slam the ball down to the floor in front of you.", "Let your hips and core drive the motion, following through into a slight squat.", "Pick the ball back up, resetting your stance, and repeat."],
-    formTips: ["Drive the slam with your whole body \u2014 hips, core, and shoulders together.", "Follow through into the slam rather than just dropping the ball.", "Reset your stance fully between reps for consistent power."],
-    commonMistakes: ["Slamming with just the arms, ignoring hip and core drive.", "Rounding the lower back excessively on the pick-up.", "Rushing the reset between reps, losing form."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Tire Flip": {
-    primaryMuscle: "Glutes",
-    secondaryMuscles: ["Hamstrings", "Quadriceps", "Core"],
-    equipment: "Conditioning",
-    difficulty: "Intermediate",
-    movementPattern: "Hip Hinge",
-    instructions: ["Squat down and grip the underside of the tire with both hands.", "Drive through your legs and hips to lift the tire, keeping your back flat.", "Push through and flip the tire away from you once it passes vertical.", "Reset your stance and repeat for the target distance or reps."],
-    formTips: ["Treat the lift-off like a deadlift \u2014 flat back, drive through the legs.", "Use your whole body to push through once the tire is past the balance point.", "Reset your grip and stance fully between flips."],
-    commonMistakes: ["Rounding the back during the initial lift.", "Trying to muscle the tire over with the arms alone.", "Rushing the reset and losing a stable stance."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Box Jump": {
-    primaryMuscle: "Quadriceps",
-    secondaryMuscles: ["Glutes", "Calves"],
-    equipment: "Conditioning",
-    difficulty: "Intermediate",
-    movementPattern: "Plyometric",
-    instructions: ["Stand facing the box with feet shoulder-width.", "Bend your knees and swing your arms back to load the jump.", "Explosively jump onto the box, landing softly with bent knees.", "Stand fully upright on the box before stepping (not jumping) back down."],
-    formTips: ["Land softly with bent knees on top of the box, absorbing the impact.", "Step down rather than jumping down, to protect your joints from repetitive high-impact landings.", "Choose a box height you can clearly clear with good form, not just barely."],
-    commonMistakes: ["Jumping back down off the box instead of stepping down.", "Landing with stiff legs on top of the box.", "Choosing too high a box and compromising landing mechanics."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  },
-  "Medicine Ball Chest Pass": {
-    primaryMuscle: "Chest",
-    secondaryMuscles: ["Triceps", "Shoulders"],
-    equipment: "Conditioning",
-    difficulty: "Beginner",
-    movementPattern: "Horizontal Push",
-    instructions: ["Stand facing a wall or partner, holding the ball at chest height.", "Brace your core and explosively push the ball straight out from your chest.", "Follow through with your arms fully extending.", "Catch the return (or retrieve the ball) and reset for the next rep."],
-    formTips: ["Drive the pass with a full-body push, not just your arms.", "Keep your core braced throughout for a stable base.", "Aim for a consistent target/height on every rep."],
-    commonMistakes: ["Pushing with just the arms, no core/leg involvement.", "Losing balance on the follow-through.", "Inconsistent target height, making the drill less repeatable."],
-    animationWebmUrl: null, animationMp4Url: null, thumbnailUrl: null, animationAvailable: false
-  }
-};
+/* Emptied when the library was rebuilt from the supplied dataset.
+ *
+ * These 337 records were keyed by the old exercise names and described the old exercises. Of
+ * the 458 new names only 95 could have inherited one safely; carrying the rest across would
+ * have meant matching on a name with the equipment stripped, which pairs "Hammer Curl
+ * (Dumbbell)" with "Cable Hammer Curl" and attaches the wrong form cues to a real movement.
+ *
+ * The constant stays rather than being deleted: every consumer indexes into it and already
+ * handles a miss — the exercise screen falls back to the library entry for the muscle, and
+ * the thumbnail falls back to a muscle-coloured icon. The full records are in git history at
+ * the commit before this one if they are ever wanted back.
+ */
+const EXERCISE_DETAILS = {};
+
+/* Written steps for 410 of the 452 library exercises, imported from a supplied CSV and held in
+   js/workout/exercise-instructions.js. They are merged in here rather than inlined because the
+   data is 200 KB of prose and regenerated by an importer, not maintained by hand.
+
+   Only `execution` is filled. The CSV carries steps and nothing else, so setup, breathing,
+   form tips, mistakes and programming stay absent and their sections stay unrendered -- see
+   normalizeExerciseDetail(), which omits every section it has no data for. Inventing the rest
+   to fill the screen is exactly what this file must not do.
+
+   Keys are exact library names. The importer matched on name alone and cross-checked every
+   match against the muscle the library records; nothing was matched by similarity. */
+if (window.IgnytExerciseInstructions) {
+  Object.keys(window.IgnytExerciseInstructions).forEach(function (name) {
+    var steps = window.IgnytExerciseInstructions[name];
+    if (!steps || !steps.length) return;
+    EXERCISE_DETAILS[name] = Object.assign({}, EXERCISE_DETAILS[name], { execution: steps });
+  });
+}
+
 
 // Deterministic avatar colors per muscle bucket — used since no real exercise photos exist
 
@@ -1294,7 +489,8 @@ const MUSCLE_AVATAR_COLOR = {
   Chest:"#FF5A1F", Lats:"#4FA8D8", Traps:"#4FA8D8", Shoulders:"#F2A93B",
   Biceps:"#3ECF8E", Triceps:"#3ECF8E", Forearms:"#3ECF8E",
   Quadriceps:"#E85D75", Hamstrings:"#E85D75", Glutes:"#E85D75", Calves:"#E85D75", Abductors:"#E85D75", Adductors:"#E85D75",
-  Abdominals:"#9B7EDE", Cardio:"#4FA8D8", Mobility:"#8B8B94"
+  Abdominals:"#9B7EDE", Cardio:"#4FA8D8", Mobility:"#8B8B94",
+  "Upper Back":"#4FA8D8", "Lower Back":"#4FA8D8", Neck:"#F2A93B", "Full Body":"#FF5A1F"
 };
 
 const MUSCLE_GROUP_COLOR = {
@@ -1349,11 +545,17 @@ const CALCULATORS = [
   {key:"ideal", label:"Ideal Weight"},
   {key:"bodyfat", label:"Body Fat %"},
   {key:"bodytype", label:"Body Type (Shape)"},
-  {key:"hr", label:"Heart Rate Zones"}
+  {key:"hr", label:"Heart Rate Zones"},
+  {key:"ffmi", label:"FFMI"},
+  {key:"water", label:"Water Intake"},
+  {key:"orm", label:"One Rep Max"},
+  {key:"pace", label:"Running Pace"},
+  {key:"goal", label:"Goal Timeline"}
 ];
 
 const CALC_ICON = { bmi:'target', bmr:'flame', calorie:'flame', protein:'dumbbell', carbs:'nutrition',
-  fat:'droplet', lbm:'body', ideal:'scale', bodyfat:'droplet', bodytype:'body', hr:'heart' };
+  fat:'droplet', lbm:'body', ideal:'scale', bodyfat:'droplet', bodytype:'body', hr:'heart',
+  ffmi:'body', water:'droplet', orm:'dumbbell', pace:'progress', goal:'target' };
 
 const GOAL_OPTIONS = [
   {label:"Maintain weight", delta:0},
@@ -1367,10 +569,64 @@ const GOAL_OPTIONS = [
 
 const ACTIVITY_KCAL_PER_MIN = 8; // rough estimate for mixed strength/conditioning work
 
-const MEALS = ["Breakfast","Morning Snack","Lunch","Evening Snack","Dinner"];
+/* Meal types.
+
+   "Evening Snack" was the original name for the afternoon slot. It is renamed to
+   "Afternoon Snack" by a flag-guarded migration rather than kept alongside it, because two
+   meals meaning the same thing is a worse outcome than one rename — but see
+   mealTypesInUse() below: the UI never relies on the migration having run. Any entry whose
+   meal name is not in this list still gets its own section, so a log entry can never become
+   invisible because of a naming change.
+
+   The list is stored so custom meal names can be added later without touching code. It is
+   read through mealTypes(), never captured in a const, so a change takes effect on the next
+   render. */
+/* Afternoon Snack is the stored name; the brief calls the same slot "Evening Snack" and that
+   is what the label now says. Renaming the KEY would orphan every entry already logged under
+   the old one, so the key stays and only the display changes — see mealLabel(). */
+const DEFAULT_MEALS = ["Breakfast","Morning Snack","Lunch","Afternoon Snack","Dinner"];
+const MEAL_TYPES_KEY = "hx_meal_types";
+
+
+/* Display name for a meal key. The only entry that differs is Afternoon Snack, which the
+   product calls "Evening Snack". Kept as a lookup rather than a rename so food logged under
+   the stored key keeps rendering — mealTypesInUse() surfaces any key it finds, and a key with
+   no label falls through to itself. */
+const MEAL_LABELS = { "Afternoon Snack": "Evening Snack" };
+function mealLabel(meal){ return MEAL_LABELS[meal] || meal; }
+
+function mealTypes(){
+  const stored = LS.get(MEAL_TYPES_KEY, null);
+  if(Array.isArray(stored) && stored.length && stored.every(m=>typeof m === "string" && m.trim())){
+    return stored;
+  }
+  return DEFAULT_MEALS;
+}
+
+/** Every meal that needs a section: the configured types, plus any name found in the day's
+ *  entries that is not among them. Guarantees nothing logged is ever hidden. */
+function mealTypesInUse(entries){
+  const known = mealTypes();
+  const extra = [];
+  (entries||[]).forEach(f=>{
+    const m = (f && f.meal) || "Lunch";
+    if(!known.includes(m) && !extra.includes(m)) extra.push(m);
+  });
+  return known.concat(extra);
+}
 // Default share of daily calories per meal (matches typical 25/12.5/25/12.5/25 split)
 
-const MEAL_SHARE = {"Breakfast":0.25,"Morning Snack":0.125,"Lunch":0.25,"Evening Snack":0.125,"Dinner":0.25};
+/* Share of the daily calorie target apportioned to each meal, used only to colour a meal's
+   total when it runs over. Sums to 1.00 across the defaults. A custom or legacy meal name
+   absent from this table falls back to an even split rather than a budget of zero, which
+   would otherwise paint every entry in it as over-budget. */
+/* Shares total 1.00. Post Workout's 0.03 went to Lunch and Dinner when that meal was removed
+   from the default list -- leaving it out entirely would have made the budgets sum to 97%. */
+/* MEAL_SHARE and mealShare() lived here. Their only caller was the duplicate meal list that
+   this change removed; the live per-meal budget is mealCalorieTarget(), which derives shares
+   from the CURRENT meal list (25% a main, 12.5% a snack, normalised so the parts always sum to
+   the day's budget). Two competing budget schemes for the same number is how they drift apart,
+   so the unused one goes rather than being kept in step by hand. */
 
 const HYROX_EXPERIENCE_OPTIONS = [
   {key:"first-timer", label:"Never raced Hyrox"},
@@ -1433,13 +689,67 @@ const TRAINING_STYLE_OPTIONS = ["Push Pull Legs","Upper Lower","Full Body","Bro 
 const PREFERRED_CARDIO_OPTIONS = ["Walking","Jogging","Running","Cycling","Swimming","Rowing","Elliptical",
   "Stair Climber","HIIT","No Cardio"];
 
-const ONBOARDING_STEP_TITLES = ["Primary Goal","Target Goal","Target Date","Availability","Equipment",
-  "Fitness Assessment","Health Screening","Preferences","Fitness Level Test","Your Plan"];
+/* Health Connect sits at step 2, immediately after the policy and ahead of the personal
+   questions. It was step 10, which meant a user answered ten screens before being offered the
+   one thing that can fill several of them in automatically — and by then most people have
+   already committed to typing. Asking first also means steps/weight/sleep start flowing from
+   the user's first session rather than whenever they later find the toggle. */
+const ONBOARDING_STEP_TITLES = ["Fair Use Policy","About You","Permissions","Your Numbers","Where You Are"];
+
+/* The brief's six goals, mapped onto the calorie deltas this app already applies. The keys
+   ARE the GOAL_TO_CALORIE_DELTA keys, so the mapping lives in one place instead of becoming a
+   second lookup that drifts. */
+const OB_GOAL_OPTIONS = [
+  {key:"Fat Loss",             label:"Lose Fat",             icon:"🔥"},
+  {key:"Build Muscle",         label:"Gain Muscle",          icon:"💪"},
+  {key:"Maintain Weight",      label:"Maintain Weight",      icon:"⚖️"},
+  {key:"Improve Fitness",      label:"Improve Fitness",      icon:"❤️"},
+  {key:"Body Recomposition",   label:"Body Recomposition",   icon:"🔄"},
+  {key:"Athletic Performance", label:"Athletic Performance", icon:"⭐"}
+];
+
+const OB_DIET_OPTIONS = [
+  {key:"non-veg",    label:"Non Vegetarian", icon:"🍗"},
+  {key:"vegetarian", label:"Vegetarian",     icon:"🥦"},
+  {key:"vegan",      label:"Vegan",          icon:"🌱"},
+  {key:"eggetarian", label:"Eggetarian",     icon:"🥚"},
+  {key:"jain",       label:"Jain",           icon:"🙏"},
+  {key:"none",       label:"No Preference",  icon:"🍽️"}
+];
+
+const OB_WORKOUT_OPTIONS = [
+  {key:"gym",        label:"Gym",          icon:"🏋️"},
+  {key:"home",       label:"Home Workout", icon:"🏠"},
+  {key:"running",    label:"Running",      icon:"🏃"},
+  {key:"cycling",    label:"Cycling",      icon:"🚴"},
+  {key:"swimming",   label:"Swimming",     icon:"🏊"},
+  {key:"strength",   label:"Strength",     icon:"💪"},
+  {key:"functional", label:"Functional",   icon:"🤸"},
+  {key:"crossfit",   label:"CrossFit",     icon:"🥊"},
+  {key:"hyrox",      label:"HYROX",        icon:"🏆"},
+  {key:"yoga",       label:"Yoga",         icon:"🧘"}
+];
+
+/* Activity levels carry the multiplier TDEE already uses, so the step writes a real number
+   into the plan rather than a label something else then has to translate. */
+const OB_ACTIVITY_OPTIONS = [
+  {key:"Sedentary",         label:"Sedentary",         desc:"Little or no exercise", mult:1.2,   icon:"🛋️"},
+  {key:"Lightly Active",    label:"Lightly Active",    desc:"1–3 days per week",     mult:1.375, icon:"🚶"},
+  {key:"Moderately Active", label:"Moderately Active", desc:"3–5 days per week",     mult:1.465, icon:"🏃"},
+  {key:"Very Active",       label:"Very Active",       desc:"6–7 days per week",     mult:1.725, icon:"🏋️"},
+  {key:"Extremely Active",  label:"Athlete",           desc:"Very intense daily",    mult:1.9,   icon:"🥇"}
+];
+
+const OB_HEALTH_METRICS = [
+  "Steps & Distance", "Calories Burned", "Heart Rate", "Weight", "Sleep", "Workouts"
+];
 
 const MOBILITY_RATING_OPTIONS = ["Poor","Fair","Good","Excellent"];
 const FITNESS_LEVELS = ["Beginner","Novice","Intermediate","Advanced","Elite"];
 
 const ICONS = {
+  eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/>',
+  'eye-off':'<path d="M9.9 5.8A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3.2 3.9M6.5 7.6A17 17 0 0 0 2.5 12S6 18.5 12 18.5c1.4 0 2.7-.35 3.8-.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.9 9.9a3.2 3.2 0 0 0 4.35 4.35" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3.5 3.5l17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   plan:'<path d="M6.5 6.5h11v11h-11z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 3v4M16 3v4M6.5 10h11" stroke="currentColor" stroke-width="2" fill="none"/>',
   workout:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 8l6 4-6 4z" fill="currentColor"/>',
   library:'<path d="M5 4h9a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 4h1a2 2 0 0 1 2 2v14h-3" fill="none" stroke="currentColor" stroke-width="2"/>',
@@ -1634,6 +944,146 @@ function formatDuration(ms){
 
 function formatTime(s){ const m=Math.floor(s/60); const r=s%60; return `${m}:${r.toString().padStart(2,'0')}`; }
 
+/* Photo for an exercise, or "" when there isn't one.
+ *
+ *  The dataset shipped 313 photos for 458 exercises, so a missing image is the normal case,
+ *  not an error — the caller falls back to the muscle-coloured icon badge the app used for
+ *  everything before. The filename is the exercise name slugged the same way the import
+ *  script slugged it; keeping that rule in one function is what stops the two drifting.
+ *
+ *  Names are checked against a manifest rather than probed, because a bare <img> onerror
+ *  fallback would flash a broken icon on 145 rows every time the Library is opened. */
+/* =========================================================
+   PREMIUM GATING — CURRENTLY OFF. EVERY FEATURE IS FREE.
+
+   The switch is IgnytEntitlements.PREMIUM_FEATURES, which is empty, so every call below
+   returns true and renderUpgradeWall() is never reached. Since the wall is the only route to
+   the paywall sheet, the paywall is unreachable too.
+
+   The seams are left in place rather than deleted. Two functions, six render seams: gating at
+   the seam rather than at every button that can reach a feature is what keeps this honest —
+   there are a dozen routes into the AI Coach and only one place it renders. Rebuilding that
+   discipline later would be more work than the six dead `if`s cost now, and turning gating
+   back on is one map in entitlements.js.
+
+   premiumAllows() is also tolerant of the entitlements module being absent — a billing
+   failure must never blank a screen. If it did not load, everything is allowed.
+========================================================= */
+
+function premiumAllows(feature){
+  if(!window.IgnytEntitlements) return true;
+  try { return IgnytEntitlements.has(feature); }
+  catch(e){ return true; }
+}
+
+/** The upsell shown in place of a gated feature. Never a dead end: it explains what the
+ *  feature does, what it costs, and leaves everything the user has logged reachable. */
+function renderUpgradeWall(feature){
+  const name = (window.IgnytEntitlements && IgnytEntitlements.label(feature)) || "This feature";
+  return `
+    <div class="pw-wall">
+      <div class="pw-wall__badge">${svg('lock', 22)}</div>
+      <div class="pw-wall__title">${escHtml(name)} is part of Premium</div>
+      <div class="pw-wall__body">
+        Your workouts, food log, weight history and the full exercise library stay free —
+        and everything you have already logged is still here.
+      </div>
+      <button class="btn btn-accent pw-wall__cta" data-action="open-paywall">See Premium</button>
+      <button class="btn btn-ghost pw-wall__restore" data-action="restore-purchases">Restore purchase</button>
+    </div>`;
+}
+
+function exerciseImageSlug(name){
+  return String(name || "").toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[()']/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/* The exercise illustrations: an anatomical drawing of the movement with the worked muscles
+   picked out, on white. 437 of the 452 library exercises have one.
+
+   These replaced a set of stock action photos, and they sit ALONGSIDE the written steps rather
+   than instead of them -- the old photos were shown only when there were no instructions,
+   because they were standing in for the missing text. A drawing that highlights the muscle
+   being worked and a numbered list of cues answer different halves of "how do I do this", so
+   the How To tab now shows both.
+
+   The manifest is consulted first so a missing illustration renders the muscle badge instead
+   of firing a request that 404s. */
+/* =========================================================
+   LEGACY EXERCISE NAMES -> the current library
+
+   The library was rebuilt and almost everything was renamed: "Bench Press" became
+   "Bench Press (Barbell)", "DB Row" became "Bent Over Row (Dumbbell)". Renaming the built-in
+   plan fixed the plan. It did nothing for a saved ROUTINE, a session already in progress, or a
+   workout logged before the change — those still carry the old name, and the How To screen
+   opened on one shows "Instructions not available yet" for an exercise the app demonstrably
+   has instructions for.
+
+   Resolving at LOOKUP time rather than migrating the data is the deliberate choice. A session
+   is a historical record of what was lifted; rewriting the names inside it to match a later
+   library edits history. This leaves the record alone and answers "what is this exercise
+   called now" only when something needs artwork or instructions for it.
+
+   FOUR RULES, ALL EXACT — no fuzzy matching. A wrong match here would put the instructions for
+   one movement under the name of another, which is worse than the honest empty state:
+     1. already a library name        -> itself
+     2. the plan's own rename table   -> its target
+     3. "Name" + exactly one "Name (X)" in the library, or an unambiguous (Barbell)
+     4. equipment-first old style     -> "Rest (Equipment)", e.g. "DB Row" -> "Row (Dumbbell)"
+
+   This resolves 55 of the 296 recorded legacy names, 52 of which gain real instructions. The
+   rest are genuinely different movements from the old library ("Air Squat", "Assault Bike")
+   with no current equivalent, and they keep the honest empty state rather than a guess.
+========================================================= */
+const LEGACY_EQUIPMENT_PREFIXES = [
+  ["DB", "Dumbbell"], ["Dumbbell", "Dumbbell"], ["Barbell", "Barbell"],
+  ["Kettlebell", "Kettlebell"], ["Cable", "Cable"], ["Smith Machine", "Smith Machine"],
+  ["Machine", "Machine"], ["Resistance Band", "Band"], ["Band", "Band"],
+  ["Suspension", "Suspension"], ["Trap-Bar", "Trap bar"]
+];
+
+function resolveExerciseName(name){
+  if(!name) return null;
+  const all = allLibraryExercises();
+  const names = all.map(e => e.name);
+  const set = new Set(names);
+  if(set.has(name)) return name;
+
+  const planned = PLAN_EXERCISE_RENAMES[name];
+  if(planned && set.has(planned[0])) return planned[0];
+
+  for(const [prefix, equip] of LEGACY_EQUIPMENT_PREFIXES){
+    if(name.startsWith(prefix + " ")){
+      const rest = name.slice(prefix.length + 1);
+      if(set.has(rest + " (" + equip + ")")) return rest + " (" + equip + ")";
+      if(set.has(rest)) return rest;
+    }
+  }
+
+  const cands = names.filter(n => n.startsWith(name + " ("));
+  if(cands.length === 1) return cands[0];
+  if(cands.length > 1){
+    // The old names came from a barbell-first library, so that is the honest default when
+    // several variants now share the base name. Anything still ambiguous stays unresolved.
+    const barbell = cands.filter(n => /\(Barbell\)$/.test(n));
+    if(barbell.length === 1) return barbell[0];
+  }
+  return null;
+}
+
+function exerciseImageSrc(name){
+  // A pre-rename name has no slug of its own; resolving first is what puts the illustration
+  // back on an old routine's rows and on a session that was already running.
+  const slug = exerciseImageSlug(resolveExerciseName(name) || name);
+  if(!slug) return "";
+  const have = window.IGNYT_EXERCISE_IMAGES;
+  if(have && !have[slug]) return "";      // manifest says there is none
+  return "assets/exercises/" + slug + ".jpg";
+}
+
 function avatarColorFor(muscle){ return MUSCLE_AVATAR_COLOR[muscle] || "#8B8B94"; }
 
 function muscleGroupColor(muscle){
@@ -1735,7 +1185,37 @@ function calcPlates(target, barWeight){
   return { perSide, remainder: rem };
 }
 
-function todayStr(){ return new Date().toISOString().slice(0,10); }
+/* =========================================================
+   THE DAY KEY — one definition, and it is the user's calendar day.
+
+   This used to be `new Date().toISOString().slice(0,10)`, which is the UTC day. For anyone
+   not on UTC that is the wrong day for part of every night: in IST (+5:30) everything logged
+   between 00:00 and 05:30 local was stamped with YESTERDAY's date, so a meal eaten after
+   midnight landed on the previous day's calorie total. The window is the size of the offset —
+   8 hours in Singapore, 11 in Auckland — and runs the other way west of Greenwich.
+
+   The Habit Tracker already corrected for this with habitDateStr(); everything else did not,
+   so the two disagreed nightly. There is now one helper and habitDateStr() delegates to it.
+
+   Subtracting the offset before formatting is what makes toISOString() render the LOCAL
+   calendar date: it shifts the instant so that the UTC fields of the shifted value read as the
+   local fields of the original.
+========================================================= */
+function dayKey(d){
+  const t = (d == null) ? new Date() : (d instanceof Date ? d : new Date(d));
+  if(isNaN(t.getTime())) return "";
+  return new Date(t.getTime() - t.getTimezoneOffset()*60000).toISOString().slice(0,10);
+}
+
+/** The UTC day key — what dayKey() used to return. Kept ONLY so the migration below can
+ *  recognise a record that was stamped by the old helper. Nothing else should call it. */
+function dayKeyUTC(d){
+  const t = (d == null) ? new Date() : (d instanceof Date ? d : new Date(d));
+  if(isNaN(t.getTime())) return "";
+  return t.toISOString().slice(0,10);
+}
+
+function todayStr(){ return dayKey(); }
 
 function svg(name, size=19){ return `<svg width="${size}" height="${size}" viewBox="0 0 24 24">${ICONS[name]}</svg>`; }
 // Icon-size scale (Phase 1 design tokens): svg() takes a raw pixel number, not a CSS custom
@@ -1790,10 +1270,93 @@ const LS = {
     try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
     catch { return fallback; }
   },
+  /**
+   * A stored array of RECORDS, with anything unusable dropped.
+   *
+   * A single null in state.achievements, state.prs, state.workoutLog, state.foodLog or
+   * state.bodylog used to take down EVERY screen, not just the one that owned the data: the
+   * reads that threw sit in shared chrome (the header notification feed, the score engine),
+   * so the whole app fell to the error screen and stayed there until the user reset their data.
+   *
+   * Guarding the five known read sites would have fixed those five. Cleaning at the load
+   * boundary fixes every reader, including the ones nobody has found yet — and, more to the
+   * point, it repairs devices that are ALREADY holding a bad record. No validator can help
+   * those; they have the data on disk.
+   *
+   * Non-objects go too, not just null: a stray string or number in a record array breaks the
+   * same reads in the same way.
+   */
+  records(key) {
+    const raw = LS.get(key, []);
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(r => r != null && typeof r === "object");
+  },
   set(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
-  }
+    try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+    catch (e) {
+      /* Almost always QuotaExceededError. Swallowed silently before, which meant a full
+         localStorage looked exactly like a successful save — the user kept logging and kept
+         losing it. The caller can now tell, and persist() warns once. */
+      try { LS._lastError = e && e.name ? e.name : "StorageError"; } catch (_) {}
+      return false;
+    }
+  },
+  _lastError: null
 };
+
+/* =========================================================
+   MIGRATION: UTC day keys -> local day keys.
+
+   Every logged record used to be stamped with the UTC day. At +5:30 that means anything logged
+   between 00:00 and 05:30 local carries YESTERDAY's date; at -5:00, anything after 19:00 carries
+   TOMORROW's. dayKey() is the local calendar day now, so those records have to move or they read
+   as the wrong day forever.
+
+   IT RUNS HERE, NOT IN runMigrations(). This is the whole reason it is a separate function.
+   `const state = {...}` below loads every array out of storage, and runMigrations() is not called
+   until the bottom of this file — so a migration that rewrote storage from there was overwritten
+   by the first persist(), which wrote the stale in-memory copy straight back on top. It ran, it
+   reported success, and it changed nothing. Caught only by checking stored data after a real
+   reload; the unit test on the rule itself passed the whole time.
+
+   THE RULE, AND WHY IT IS SAFE
+   A record moves only when its stored date equals the UTC day of its own creation instant. That
+   equality is proof the key came from the old machine stamp. Anything else — a weigh-in backdated
+   with the date picker, a meal copied to another day, a CSV import that assigned ids at import
+   time — fails the test and is left exactly as it is. A date a human chose is never second-guessed.
+
+   The instant comes from `at`, else `startedAt`, else `id`: nextId() returns Date.now(), so an id
+   IS a creation timestamp. A record with none of the three is skipped rather than guessed at.
+
+   Runs once, and only where the offset is non-zero — on UTC both keys are the same string.
+========================================================= */
+function migrateDayKeysToLocal(){
+  if(LS.get("hx_local_datekey_v1", false)) return;
+  try{
+    if(new Date().getTimezoneOffset() !== 0){
+      let moved = 0, skipped = 0;
+      RECORD_ARRAY_KEYS.forEach(key=>{
+        const rows = LS.records(key);
+        if(!rows.length) return;
+        let touched = false;
+        rows.forEach(r=>{
+          if(!r || typeof r.date !== "string" || r.date.length !== 10) return;
+          const ts = Number(r.at) || Number(r.startedAt) || Number(r.id);
+          // Ids only became timestamps once nextId() did; anything smaller is a legacy counter
+          // (1, 2, 3...) and says nothing about when the record was made.
+          if(!isFinite(ts) || ts < 946684800000){ skipped++; return; }   // 2000-01-01
+          if(r.date !== dayKeyUTC(ts)){ skipped++; return; }             // human-chosen date
+          const local = dayKey(ts);
+          if(local && local !== r.date){ r.date = local; moved++; touched = true; }
+        });
+        if(touched) LS.set(key, rows);
+      });
+      if(moved > 0) console.info("Ignyt: moved " + moved + " record(s) from UTC to local day keys (" + skipped + " left as-is).");
+    }
+  }catch(e){ /* a migration must never break boot */ }
+  LS.set("hx_local_datekey_v1", true);
+}
+migrateDayKeysToLocal();
 
 /* ---------- Hyrox 8-week plan data ---------- */
 
@@ -1807,9 +1370,15 @@ const state = {
   profile: Object.assign({
     weight:0, height:180, age:25, gender:"male",
     activityMultiplier:1.465, goalDelta:-400,
+    bf:null, minutes:null, liftWeight:null, reps:null,
+    distance:null, hours:null, mins:null, secs:null, targetWeight:null, rate:0.5,
     name:"", hyroxExperience:"first-timer", trainingDays:5,
     equipment:["Barbell","Dumbbell","Machines","Sled","Rower","Ski Erg","Kettlebell"],
-    username:"", phone:"", dob:null, medicalConditions:[], allergies:[], bloodGroup:""
+    username:"", phone:"", dob:null, medicalConditions:[], allergies:[], bloodGroup:"",
+    /* Data URI, downscaled before it is stored. It lives in localStorage with everything
+       else, which is why the size is capped rather than trusted: a modern phone camera
+       produces 4-8 MB files and the whole app shares a ~5 MB quota. */
+    photo:""
   }, LS.get("hx_profile",{})),
   onboardingComplete: LS.get("hx_onboarding_complete", null), // resolved to true/false at boot in resolveOnboardingStatus()
   // GOAL WIZARD — everything the wizard collects that ISN'T already a state.profile field
@@ -1823,6 +1392,12 @@ const state = {
     targetWeight: null, bodyFatPct: null, experienceLevel: null, activityLevel: null,
     strengthLevel: null, cardioLevel: null, mobilityLevel: null, flexibilityLevel: null,
     dailySteps: null, restingHeartRate: null, sleepHours: null, stressLevel: null, occupation: "",
+    // Added for the eleven-step flow. Birthday supersedes profile.age as the stored value —
+    // age is derived from it, so it cannot go stale the way a typed number does.
+    fairUseAccepted: false, birthday: null, dietPreference: null, workoutPreferences: [],
+    healthConnectRequested: false,
+    healthConnectState: null,   // null | "ok" | "denied" | "skipped"
+    healthConnectBusy: false,   // transient
     painAreas: [], previousInjuries: "", medicalConditions: "", movementRestrictions: "",
     exercisesToAvoid: "", dietaryRestrictions: "",
     trainingStyle: null, preferredCardio: [],
@@ -1840,16 +1415,16 @@ const state = {
   nutrition: Object.assign({proteinPct:30,carbPct:45,fatPct:25,fibreTarget:30},
     LS.get("hx_nutrition",{})),
   mealOpen: null,
-  bodylog: LS.get("hx_bodylog",[]),
-  customExercises: LS.get("hx_custom_exercises",[]),
-  workoutLog: LS.get("hx_workout_log",[]),
-  foodLog: LS.get("hx_food_log",[]),
-  routines: LS.get("hx_routines",[]),
+  bodylog: LS.records("hx_bodylog"),
+  customExercises: LS.records("hx_custom_exercises"),
+  workoutLog: LS.records("hx_workout_log"),
+  foodLog: LS.records("hx_food_log"),
+  routines: LS.records("hx_routines"),
   routineBuilder: null,      // { id?, name, description, notes, exercises:[normalized] } when the editor is open
   editingRoutineId: null,    // set => the editor is PATCHING this routine in place; null => creating a new one
   routineExerciseOpen: null, // id of the one exercise expanded for editing (one at a time — small screens)
   replacingRoutineExerciseId: null, // id of the routine exercise awaiting a replacement pick
-  habits: LS.get("hx_habits",[]),
+  habits: LS.records("hx_habits"),
   habitCompletions: LS.get("hx_habit_completions",{}),
   habitBuilderName: "",
   editingHabitId: null,
@@ -1857,6 +1432,12 @@ const state = {
   // bodyPhotos here is just an in-memory metadata cache (no blobs), populated asynchronously
   // after boot (see the IgnytBodyPhotosDB.getAllMeta() call near the bottom of this file).
   bodyPhotos: [],
+  /* Progress Photos view state (transient). Sessions themselves are derived from the photos'
+     dates, so none of this is persisted — it is only what is on screen right now. */
+  bodyPhotoFilter: {},      // { year, month, weightMin, weightMax }
+  bodyOpenSession: null,    // expanded check-in in the timeline
+  bodyCompareA: null,       // earlier session id
+  bodyCompareB: null,       // later session id
   bodyPhotoCategory: "Front Relaxed",
   viewingBodyPhotoId: null,
   bodyView: null, // null = Log Weight page; 'calculators' = dedicated calculator view (transient, not persisted)
@@ -1869,21 +1450,29 @@ const state = {
     sounds:true, vibration:true, defaultRest:0, keepAwake:false,
     plateCalc:true, rpeTracking:true, autoStartRest:true, waterTargetMl:2500,
     workoutReminders:false, hydrationReminders:false, weeklyReports:false,
+    /* On by default, unlike the other reminders: this one only ever fires when a
+       workout really is sitting open, so it cannot become noise for someone who is
+       not using the logger. */
+    workoutLeftReminder:true, workoutLeftAfterMin:15,
     lastWorkoutReminderDate:null, lastHydrationReminderDate:null, lastWeeklyReportAt:null,
     theme:"dark", weightUnit:"kg", exerciseCalorieBudget:true, notificationsSeenAt:0,
     heightUnit:"cm", dateFormat:"DD MMM YYYY", timeFormat:"12h"
   }, LS.get("hx_settings", {})),
   notificationsOpen: false, // transient — not persisted, matches other dropdown/menu UI state
+  authFormMode: null, // transient — null|"signin"|"signup"|"forgot" when the email auth form is open in Settings
+  authSeen: LS.get("hx_auth_seen", false), // the Sign In screen has been passed, by signing in or skipping
+  authPhone: "",      // transient — the number being typed on the Sign In screen
+  authOtpSent: false, // transient — Sign In screen is on the code-entry step
+  authOtpSentAt: 0,   // transient — when the current code was sent, for the resend countdown
+  authOtpResends: 0,  // transient — resends used for this number, capped at OTP_MAX_RESENDS
+  authEmailMode: null,  // transient — null | "signin" | "signup" | "forgot" on the Sign In screen
+  authEmail: "",        // transient — the address being typed (kept across a re-render)
+  authOtpCode: "",    // transient — the 6-digit code being typed (never persisted)
   nativeNotifPermissionGranted: null, // transient — null=unknown yet, refreshed from IgnytNotify at boot
   plateCalcOpen: null, // element id string when plate calc popover open
-  viewingDriveBackups: false, // transient — Settings > Manage Backups list view
-  driveBackupsCache: null, // transient — array once loaded, null = not fetched yet
-  driveBackupsBusy: false, // transient
-  driveRestorePrompt: null, // transient — {fileId, name, createdTime} while the Merge/Replace/Cancel dialog is open
-  passphrasePrompt: null, // transient — {purpose:"set"|"backup"|"restore", error} while the encryption passphrase dialog is open
   restDuration: LS.get("hx_rest_duration",90),
   session: LS.get("hx_active_session", null),
-  prs: LS.get("hx_prs", []),
+  prs: LS.records("hx_prs"),
   lastSessionPRs: null, // transient — set right after finishing a workout, shown as a celebration banner
   viewingSessionId: null, // when set, Workout tab shows the detailed history view for this session
   showAllSessions: false,
@@ -1898,6 +1487,10 @@ const state = {
   showAllCalcHistory: false,
   progressExercise: null,
   viewingExerciseDetail: null,
+  // Delete-account sheet. Transient by design — never persisted, so a crash or a force-quit
+  // mid-flow reopens the app in a normal state rather than back on a destructive confirmation.
+  deleteAccountOpen: false, deleteAccountBusy: false, deleteAccountError: null,
+  backupCryptoOpen: null, backupCryptoBusy: false, backupCryptoError: null, backupCryptoPending: null,
   showExercisePicker: false,
   exercisePickerSearch: "",
   exercisePickerEquipment: "All",
@@ -1910,21 +1503,72 @@ const state = {
   favoriteExercises: LS.get("hx_favorite_exercises", []), // array of exercise NAMES (mirrors hx_favorite_foods)
   viewingHyroxSchedule: false,
   viewingHyroxInfo: false,
-  viewingLegal: null, // "privacy" | "disclaimer" | null -- see renderLegalViewer()
+  viewingLegal: null, // "privacy" | "terms" | "disclaimer" | null -- see renderLegalViewer()
   viewingPrivacyInfo: false,
   csvImportPreview: null,
   exerciseMenuOpen: null,
   replacingExerciseIndex: null,
   exerciseDetailTab: "summary",
+  exerciseSectionsOpen: null, // transient — {sectionKey: bool} for the collapsible guide sections
+  editingWorkout: null,       // transient — edit draft for a saved workout (see buildWorkoutEditDraft)
+  viewingWorkoutAuditId: null, // transient — workout id whose edit history is open
+  // Workout History view filters (transient — a fresh visit starts unfiltered)
+  historySearch: "", historyRange: "all", historyMuscle: "", historySort: "newest",
+  historyPRsOnly: false, historyPage: 1, historyArchived: false, historyBinOpen: false,
+  reportPeriod: "week",
+  reminderScreen: false,   // transient — Settings > All Reminders is open
+  reminderOpen: null,      // transient — which reminder row is expanded
+  supplementUI: { editorOpen: null },   // transient — supplements editor sheet   // Reports view: week | month | year
+  historySelectMode: false, historySelected: [], // transient — bulk multi-select
+  // Food search (transient — a fresh visit starts with an empty search)
+  foodSearchQuery: "", foodSearchSelected: null, foodSearchAmount: null, foodSearchUnit: "g",
+  // Category browser (transient). foodBrowseCategory === null means search mode.
+  foodBrowseCategory: null,
+  // Categories are behind a button now rather than the default view.
+  foodBrowseOpen: false,
+  savedMeals: LS.records("hx_saved_meals"),   // "My Meals" — named combos logged in one tap
+  savedMealsAll: false,       // transient — "View all" expands the My Meals list
+  nutritionScreen: null,      // null | "insights"
+  insightsMeal: "All Meals",  // which meal tab the Insights page is filtered to
+  foodBrowsePage: 1, foodResultPage: 1,
+  // Which day the nutrition dashboard is showing. Transient: a fresh visit opens on today.
+  nutritionDate: null, microExpanded: false, insightsExpanded: false,
+  // Quick Add panel (transient). quickAddMeal is which meal one-tap items land in.
+  quickAddOpen: false, quickAddMeal: null,
+  // Whether the coach / recovery card detail is expanded (transient).
+  // Manual food entry on the search route (transient).
+  manualEntryOpen: false,
+  muscleSheetOpen: false,   // Muscle Distribution sheet in the workout logger
+  // Which variant groups are expanded, keyed by group key (transient).
+  expandedVariants: {},
+  /* The two full-screen food routes. null means the dashboard.
+     { screen:"search"|"detail", meal, foodId, notes } — all transient, so a fresh visit to
+     the tab always lands on the dashboard rather than resuming a half-finished entry. */
+  foodFlow: null,
+  /* Diet Plan Builder — all transient view state. The plans themselves live in
+     IgnytDietPlans/localStorage; nothing here is persisted. */
+  dietUI: { expanded: null, menuFor: null, menuMeal: null, details: false, planMenu: false },
+  dietViewPlanId: null,   // which plan is being LOOKED at, which is not always the active one
+  /* Fasting Tracker — transient view state only. Fasts live in IgnytFasting/localStorage. */
+  fastUI: { pickScheduleId: null, customHours: 16, chartRange: 7, historyAll: false },
+  // Id of the entry just logged, so the dashboard can highlight it once and forget it.
+  justAddedFoodId: null,
   raceActive: LS.get("hx_race_active", null),
-  raceLog: LS.get("hx_race_log", []),
+  raceLog: LS.records("hx_race_log"),
   viewingRaceMode: !!LS.get("hx_race_active", null),
-  achievements: LS.get("hx_achievements", []),
+  achievements: LS.records("hx_achievements"),
   lastUnlockedAchievements: null, // transient celebration, mirrors lastSessionPRs pattern
-  favoriteFoods: LS.get("hx_favorite_foods", []),
-  waterLog: LS.get("hx_water_log", []),
+  prExerciseOpen: null,     // PR screen: which exercise sheet is open
+  prRange: "all",           // PR screen: today | month | 6m | all
+  badgeView: "earned",      // Badges screen: "earned" | "remaining"
+  badgeCategory: "all",     // Badges screen: all | milestone | streak | strength | program
+  favoriteFoods: LS.records("hx_favorite_foods"),
+  waterLog: LS.records("hx_water_log"),
   savedExercises: LS.get("hx_saved_exercises", []),
-  calcHistory: LS.get("hx_calc_history", []),
+  /* Exercise picker multi-select. Transient by design -- an abandoned picker must not leave a
+     half-made selection waiting for the next workout, so it is never persisted. */
+  pickerSelection: [],
+  calcHistory: LS.records("hx_calc_history"),
   timer: null,
   holdTimer: null // {exi,si,targetSec,accumulatedMs,runStartedAt,running,handle,fired} -- see startHoldTimer()
 };
@@ -1960,8 +1604,23 @@ function persist(){
   LS.set("hx_rest_duration", state.restDuration);
   LS.set("hx_active_session", state.session);
   LS.set("hx_prs", state.prs);
-  LS.set("hx_schema_version", SCHEMA_VERSION);
+  const ok = LS.set("hx_schema_version", SCHEMA_VERSION);
+
+  /* A save that silently fails is worse than one that fails loudly: the user goes on logging
+     workouts and meals that are never written, and only finds out when the app restarts. The
+     whole app shares a ~5 MB localStorage quota and a heavy user gets there (measured: ~3.3 MB
+     at 4,000 workouts and 20,000 food entries), so this is a real end state, not a hypothetical.
+
+     Warned once per session. It fires on every write once storage is full, and a toast on
+     every keystroke would be its own bug. */
+  if(!ok && !_storageWarned){
+    _storageWarned = true;
+    try{
+      showToast("Storage is full — recent changes may not have been saved. Export your data from Settings, then remove old entries.", "error", render);
+    }catch(e){ console.error("Ignyt: localStorage write failed and the warning could not be shown.", LS._lastError); }
+  }
 }
+let _storageWarned = false;
 
 /* ---------- Migration: runs once on boot if stored schema is older than current ---------- */
 
@@ -2264,7 +1923,7 @@ function commitFinishedWorkout(session){
   const workoutId = nextId();
   const newPRs = detectPRs(session, workoutId, finishedAt, volume);
   state.workoutLog.unshift({
-    id: workoutId, date: new Date().toISOString().slice(0, 10),
+    id: workoutId, date: dayKey(),
     startedAt: session.startedAt, finishedAt, durationMin, volume,
     exercises: session.exercises, notes: session.notes || "", title: session.title || ""
   });
@@ -2272,6 +1931,16 @@ function commitFinishedWorkout(session){
   if(newPRs.length){ state.prs = newPRs.concat(state.prs); state.lastSessionPRs = newPRs; }
   const newlyUnlocked = checkAchievements();
   if(newlyUnlocked.length) state.lastUnlockedAchievements = newlyUnlocked;
+
+  /* Points and celebrations. Keyed by workout id and PR id, so this is safe if the commit
+     path ever runs twice — award() ignores a key it has already paid out, which is the whole
+     reason it takes one. Celebrations queue, so a session that unlocks a badge AND a level
+     shows them one after the other rather than stacking two overlays on each other. */
+  if(window.IgnytXP){
+    IgnytXP.award("workout", workoutId);
+    newPRs.forEach(pr => IgnytXP.award("personalBest", pr.id || (workoutId + ":" + (pr.exerciseName || "volume"))));
+  }
+  if(window.IgnytCelebrate && newlyUnlocked.length) IgnytCelebrate.forAchievements(newlyUnlocked);
 
   _recentCommit = { key: contentKey, at: now, id: workoutId };
   _pushCommitLedger(_recentCommit); // durable dedupe BEFORE anything can reload
@@ -2368,6 +2037,70 @@ function runMigrations(){
     }catch(e){ /* cleanup must never break boot */ }
     LS.set("hx_workout_dedupe_v1", true);
   }
+  // One-time id backfill for favourite foods. They were originally stored as bare
+  // {name, calories, protein, carbs, fat, fibre} with no identifier, which is exactly why
+  // they were never cloud-synced: the record-sync engine keys every record on its own id.
+  // Assigning stable ids here is what lets favouriteFoods become a synced category without
+  // changing anything the UI reads. Flag-guarded, idempotent, and additive only — no
+  // existing field is touched or removed, so an older build still reads these records fine.
+  if(!LS.get("hx_favfoods_id_migrated_v1", false)){
+    try{
+      const list = Array.isArray(state.favoriteFoods) ? state.favoriteFoods : [];
+      let added = 0;
+      list.forEach(f=>{ if(f && f.id == null){ f.id = nextId(); added++; } });
+      if(added > 0) LS.set("hx_favorite_foods", list);
+    }catch(e){ /* a migration must never break boot */ }
+    LS.set("hx_favfoods_id_migrated_v1", true);
+  }
+
+  // "Evening Snack" -> "Afternoon Snack". A rename, not a data change: only the label moves,
+  // every nutrition value and id stays put. Guarded and idempotent like the rest. Even if
+  // this never runs, mealTypesInUse() still renders a section for the old name, so no entry
+  // can be orphaned by the rename.
+  if(!LS.get("hx_meal_rename_migrated_v1", false)){
+    try{
+      const log = Array.isArray(state.foodLog) ? state.foodLog : [];
+      let moved = 0;
+      log.forEach(f=>{ if(f && f.meal === "Evening Snack"){ f.meal = "Afternoon Snack"; moved++; } });
+      if(moved > 0) LS.set("hx_food_log", log);
+    }catch(e){ /* a migration must never break boot */ }
+    LS.set("hx_meal_rename_migrated_v1", true);
+  }
+
+  /* The built-in plan's exercises were renamed to the library's own names so the plan, the
+     live workout card and the How To screen all resolve to the same exercise. state.completed
+     is keyed "week|day|exerciseName", so without this every tick a user had earned would point
+     at a name the plan no longer contains and the whole 8-week plan would read as untouched.
+
+     Rewrites the key and keeps the timestamp. Runs once. "Sled Push/Pull" became two rows, so
+     its tick is copied to BOTH — the user did the station, and inventing a half-finished day
+     out of a rename is worse than crediting the pull they almost certainly also did. */
+  if(!LS.get("hx_plan_exercise_rename_v1", false)){
+    try{
+      /* state.completed, NOT a fresh LS.get. runMigrations() runs at the bottom of this file,
+         long after `const state` loaded its own copy — so rewriting a re-parsed object here
+         updated storage and left memory stale, and the first persist() wrote the old keys
+         straight back. Mutating the live object means the change survives that write. */
+      const done = state.completed;
+      if(done && typeof done === "object"){
+        let moved = 0;
+        Object.keys(done).forEach(key=>{
+          const parts = key.split("|");
+          if(parts.length !== 3) return;
+          const targets = PLAN_EXERCISE_RENAMES[parts[2]];
+          if(!targets) return;
+          const when = done[key];
+          delete done[key];
+          targets.forEach(t=>{ done[parts[0]+"|"+parts[1]+"|"+t] = when; });
+          moved++;
+        });
+        if(moved > 0) LS.set("hx_completed", done);
+      }
+    }catch(e){ /* a migration must never break boot */ }
+    LS.set("hx_plan_exercise_rename_v1", true);
+  }
+
+
   const stored = LS.get("hx_schema_version", null);
   if(stored===null){
     // Pre-versioning install (or brand new) — just stamp current version, no data shape to migrate
@@ -2400,8 +2133,7 @@ function resolveOnboardingStatus(){
 /* Applies the resolved theme (dark/light) as a data-attribute on <html> so all
    CSS var overrides cascade. "system" resolves live against the OS preference. */
 
-// Shared by the local "Full Backup (JSON)" export button and Drive Backup (drive-backup.js)
-// -- both need the exact same payload shape, so it's built once here.
+// Backing the local "Full Backup (JSON)" export button.
 function buildFullBackupPayload(){
   const data = { app:"ignyt", version:1, schemaVersion:SCHEMA_VERSION, exportedAt:new Date().toISOString(), data:{} };
   ALL_DATA_KEYS.forEach(k=>{ const v = localStorage.getItem(k); if(v!==null) data.data[k]=v; });
@@ -2412,8 +2144,8 @@ function exportAllJSON(){
   downloadFile("ignyt-backup-"+todayStr()+".json", JSON.stringify(buildFullBackupPayload(),null,2), "application/json");
 }
 
-/* Validates a backup payload (same shape buildFullBackupPayload/exportAllJSON/Drive Backup
-   produce) and returns {ok:true, staged:{key:jsonString}} or {ok:false, error}. Never writes
+/* Validates a backup payload (same shape buildFullBackupPayload/exportAllJSON produce) and
+   returns {ok:true, staged:{key:jsonString}} or {ok:false, error}. Never writes
    anything itself -- see applyBackupPayload for that. Shares its validation rules with the
    existing local-file Import (importAllJSON below) so both accept the same files. */
 function validateBackupPayload(parsed){
@@ -2424,8 +2156,26 @@ function validateBackupPayload(parsed){
   const badKeys = [];
   Object.entries(parsed.data).forEach(([k,v])=>{
     if(!ALL_DATA_KEYS.includes(k)) return; // ignore unknown/future keys rather than failing
-    try{ JSON.parse(v); staged[k] = v; }
-    catch(e){ badKeys.push(k); }
+    let value;
+    try{ value = JSON.parse(v); }
+    catch(e){ badKeys.push(k); return; }
+    /* "It parses" is not "it is usable". `[null]` is valid JSON, and one null inside any of
+       these arrays used to throw from the header notification feed and the score engine —
+       shared chrome — which took EVERY screen down to the error screen, not just the one that
+       owned the data. A backup file was enough to do it, which made this an untrusted-input
+       path rather than a corruption edge case.
+
+       Records are cleaned rather than rejected: dropping one bad row from a year of history is
+       a far better outcome than refusing the whole restore. A file with nothing usable left in
+       a key is a different matter and is named as corrupt. */
+    if(RECORD_ARRAY_KEYS.includes(k)){
+      if(!Array.isArray(value)){ badKeys.push(k); return; }
+      const clean = value.filter(r=>r != null && typeof r === "object");
+      if(clean.length === 0 && value.length > 0){ badKeys.push(k); return; }
+      staged[k] = JSON.stringify(clean);
+      return;
+    }
+    staged[k] = v;
   });
   if(badKeys.length) return { ok:false, error:"This backup is corrupted (bad data for: "+badKeys.join(", ")+")." };
   if(Object.keys(staged).length===0) return { ok:false, error:"This backup has no recognizable Ignyt data." };
@@ -2470,6 +2220,19 @@ function applyBackupPayload(staged, mode){
   });
 }
 
+/** Exports a specific set of workouts as JSON. Uses the same envelope shape as the full
+ *  backup (app/version/exportedAt) so the file is self-describing, but carries only the
+ *  selected records -- it is a subset export, deliberately not a restorable full backup. */
+function exportWorkoutsJSON(workouts, filename){
+  const payload = {
+    app: "ignyt", type: "workout-export", version: 1,
+    exportedAt: new Date().toISOString(),
+    count: workouts.length,
+    workouts: workouts
+  };
+  downloadFile(filename || ("ignyt-workouts-"+todayStr()+".json"), JSON.stringify(payload, null, 2), "application/json");
+}
+
 function exportWorkoutsCSV(){
   const rows = [["date","workout_title","exercise","muscle","set_number","weight_kg","reps","rpe","distance_km","duration_seconds","calories","duration_min","session_volume_kg","notes"]];
   state.workoutLog.slice().reverse().forEach(s=>{
@@ -2482,7 +2245,7 @@ function exportWorkoutsCSV(){
   // plan completions as their own rows
   Object.entries(state.completed).forEach(([key,ts])=>{
     const [wk,day,exName] = key.split("|");
-    rows.push([new Date(ts).toISOString().slice(0,10), "Plan "+wk+" "+day, exName, getMuscle(exName), "", "", "", "", "", "", "", "", "", "plan check-off"]);
+    rows.push([dayKey(ts), "Plan "+wk+" "+day, exName, getMuscle(exName), "", "", "", "", "", "", "", "", "", "plan check-off"]);
   });
   const csv = rows.map(r=>r.map(csvEscape).join(",")).join("\n");
   downloadFile("ignyt-workouts-"+todayStr()+".csv", csv, "text/csv");
@@ -2522,6 +2285,28 @@ function importAllJSON(file){
       alert("Could not read that file — it isn't valid JSON.");
       return;
     }
+    /* An encrypted backup is still JSON — an envelope with the ciphertext inside — so it
+       arrives here looking like a file we should reject. Detect it first and divert to the
+       passphrase sheet; without this branch the user gets "this doesn't look like an Ignyt
+       backup" for a file this app produced two minutes earlier. */
+    if(parsed && parsed.format==="ignyt-encrypted-backup"){
+      state.backupCryptoOpen = "import";
+      state.backupCryptoPending = parsed;
+      state.backupCryptoError = null;
+      state.backupCryptoBusy = false;
+      render();
+      return;
+    }
+    commitImportedBackup(parsed);
+  };
+  reader.onerror = ()=> alert("Could not read that file.");
+  reader.readAsText(file);
+}
+
+/* The plain-JSON commit path, shared by the file import above and by the encrypted import
+   once it has decrypted. Same validation either way — a file being encrypted says who wrote
+   it, not that its contents are well-formed, so it earns no shortcut past these checks. */
+function commitImportedBackup(parsed){
     if(!parsed || typeof parsed!=="object" || (parsed.app!=="ignyt" && parsed.app!=="hyrox-prep") || !parsed.data || typeof parsed.data!=="object"){
       alert("This doesn't look like an Ignyt backup file.");
       return;
@@ -2545,10 +2330,8 @@ function importAllJSON(file){
     if(!confirm("Import will REPLACE all current app data with this backup ("+new Date(parsed.exportedAt||Date.now()).toLocaleDateString()+"). Continue?")) return;
     // Everything validated — commit atomically
     Object.entries(staged).forEach(([k,v])=> localStorage.setItem(k, v));
+    if(window.IgnytSecurity) IgnytSecurity.logEvent("backup.restored", { keys:Object.keys(staged).length });
     location.reload();
-  };
-  reader.onerror = ()=> alert("Could not read that file.");
-  reader.readAsText(file);
 }
 
 /* =========================================================
@@ -2748,7 +2531,7 @@ function validateWorkoutCsv(text){
     const volume = computeSessionVolume(exercises);
     const session = {
       id: s.startedAt, // stable id derived from the real timestamp so re-import dedup works
-      date: new Date(s.startedAt).toISOString().slice(0,10),
+      date: dayKey(s.startedAt),
       startedAt: s.startedAt, finishedAt: s.finishedAt, durationMin, volume,
       exercises, notes: s.notes, title: s.title
     };
@@ -2871,8 +2654,13 @@ function ensureElapsedTimerRunning(){
   if(elapsedTimerHandle) return;
   elapsedTimerHandle = setInterval(()=>{
     if(!state.session){ clearInterval(elapsedTimerHandle); elapsedTimerHandle = null; return; }
+    const text = formatDuration(Date.now()-state.session.startedAt);
+    // Two readouts, one clock: the logger's own stat and the capsule on every other tab.
+    // Whichever is on screen gets updated; neither re-renders, so this stays a text write.
     const el = document.getElementById("session-elapsed");
-    if(el) el.textContent = formatDuration(Date.now()-state.session.startedAt);
+    if(el) el.textContent = text;
+    const pill = document.getElementById("lsb-elapsed");
+    if(pill) pill.textContent = text;
   }, 1000);
 }
 
@@ -3041,8 +2829,18 @@ async function applyWakeLock(){
       wakeLockHandle = null;
     }
   }catch{ wakeLockHandle = null; }
+
+  /* Riding this deliberately, not by accident. applyWakeLock() is already the app's de-facto
+     "a session started or ended" hook — it is called at every one of those points and
+     nowhere else that matters — and the left-running reminder needs to re-evaluate at
+     exactly the same moments. syncWorkoutLeftNotification() cancels before it decides, so
+     calling it more often than strictly necessary is free and calling it too rarely is not. */
+  if(typeof syncWorkoutLeftNotification === "function") syncWorkoutLeftNotification();
 }
 document.addEventListener("visibilitychange", ()=>{
+  // Runs in BOTH directions: leaving arms the "still running" reminder, returning cancels it.
+  // syncWorkoutLeftNotification() reads visibilityState itself and decides which.
+  if(typeof syncWorkoutLeftNotification === "function") syncWorkoutLeftNotification();
   if(document.visibilityState!=="visible") return;
   applyWakeLock();
   syncTimerAfterResume(); // rest timer catches up from its endsAt timestamp after background
@@ -3064,16 +2862,16 @@ document.addEventListener("visibilitychange", ()=>{
 function renderBodyDistribution(weekOffset){
   const { start, end } = weekRange(weekOffset);
   const dates = activityDates();
-  const todayStr0 = new Date().toISOString().slice(0,10);
+  const todayStr0 = dayKey();
   const dayLabels = ["M","T","W","T","F","S","S"];
   let strip = "";
   for(let i=0;i<7;i++){
     const d = new Date(start); d.setDate(start.getDate()+i);
-    const dStr = d.toISOString().slice(0,10);
+    const dStr = dayKey(d);
     const active = dates.has(dStr);
     const isToday = dStr===todayStr0;
     strip += `<div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
-      <span style="font-size:10px;color:var(--rh-muted);font-weight:700;">${dayLabels[i]}</span>
+      <span style="font-size:11px;color:var(--rh-muted);font-weight:700;">${dayLabels[i]}</span>
       <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
         font-size:12px;font-weight:800;font-family:'SF Mono',monospace;
         background:${active?'rgba(217,119,6,.15)':'transparent'};
@@ -3219,7 +3017,7 @@ function weeklyBarChart(buckets, metric){
       const bh = Math.max(val>0?4:0, Math.round((val/max)*90));
       const label = (showAllLabels || isLast) ? fmt(val) : "";
       return `<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;overflow:hidden;">
-        <span class="mono" style="font-size:10px;font-weight:700;color:${isLast?'var(--accent)':'var(--steel)'};min-height:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</span>
+        <span class="mono" style="font-size:11px;font-weight:700;color:${isLast?'var(--accent)':'var(--steel)'};min-height:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</span>
         <div style="width:${buckets.length>20?'85%':'65%'};border-radius:var(--radius-2xs) 4px 0 0;background:${isLast?'#FF5A1F':'#4FA8D8'};height:${bh}px;"></div>
       </div>`;
     }).join("")}
@@ -3245,7 +3043,7 @@ function dailyBarChart(buckets, metric, weekOffset){
       const isToday = i===todayIdx;
       const bh = Math.max(val>0?4:0, Math.round((val/max)*90));
       return `<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;">
-        <span class="mono" style="font-size:10px;font-weight:700;color:var(--rh-text);min-height:12px;">${fmt(val)}</span>
+        <span class="mono" style="font-size:11px;font-weight:700;color:var(--rh-text);min-height:12px;">${fmt(val)}</span>
         <div style="width:60%;border-radius:var(--radius-2xs) 4px 0 0;background:${isToday?'#D97706':'var(--rh-blue)'};height:${bh}px;"></div>
       </div>`;
     }).join("")}
@@ -3273,7 +3071,7 @@ function renderCalendarMonth(monthOffset){
   for(let d=1; d<=daysInMonth; d++){
     const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const active = dates.has(dateStr);
-    const isToday = dateStr === new Date().toISOString().slice(0,10);
+    const isToday = dateStr === dayKey();
     const selected = state.calendarSelectedDate === dateStr;
     // Only genuinely-active days are tappable (data-cal-day) — empty days never highlight.
     cells += `<div ${active?`data-cal-day="${dateStr}"`:''} style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-xs-plus);
@@ -3283,11 +3081,30 @@ function renderCalendarMonth(monthOffset){
       ${selected ? 'box-shadow:0 0 0 2px var(--rh-blue);':''}
       ${isToday && !active ? 'box-shadow:inset 0 0 0 1.5px var(--rh-blue);color:var(--rh-blue);':''}">${d}</div>`;
   }
+  // Month summary. "Days elapsed" stops at today for the current month so completion isn't
+  // diluted by days that haven't happened yet.
+  const now = new Date();
+  const isCurrentMonth = (year===now.getFullYear() && month===now.getMonth());
+  const elapsed = isCurrentMonth ? now.getDate() : daysInMonth;
+  let trainedThisMonth = 0;
+  for(let d=1; d<=daysInMonth; d++){
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if(dates.has(ds)) trainedThisMonth++;
+  }
+  const completionPct = elapsed>0 ? Math.round(trainedThisMonth/elapsed*100) : 0;
+  const stat = (label, value) => `<div class="ex-prog__cell"><div class="ex-prog__k">${label}</div><div class="ex-prog__v">${value}</div></div>`;
+
   return `
     <div class="row-between" style="margin-bottom:14px;">
       <button class="rh-btn rh-btn--ghost" style="flex:none;width:44px;height:44px;padding:0;" data-cal-nav="-1">‹</button>
       <span style="font-weight:800;font-size:15px;">${monthName}</span>
       <button class="rh-btn rh-btn--ghost" style="flex:none;width:44px;height:44px;padding:0;" data-cal-nav="1" ${monthOffset>=0?'disabled':''}>›</button>
+    </div>
+    <div class="ex-prog" style="margin-bottom:14px;">
+      ${stat("Current streak", computeStreak()+"d")}
+      ${stat("Longest streak", computeLongestStreak()+"d")}
+      ${stat("Trained", trainedThisMonth+"/"+elapsed)}
+      ${stat("Completion", completionPct+"%")}
     </div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:11px;color:var(--rh-muted);font-weight:700;text-align:center;margin-bottom:8px;">
       <div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div><div>S</div>
@@ -3364,13 +3181,13 @@ function axisAreaChart(points, opts={}){
   const gridlines = Array.from({length:ySteps+1},(_,i)=>{
     const v = yMin + (yMax-yMin)*(i/ySteps), y = padT + (1-i/ySteps) * (h-padT-padB);
     return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="var(--rh-border)" stroke-width="1"/>
-      <text x="2" y="${(y+3).toFixed(1)}" font-size="9" fill="var(--rh-muted)">${v.toFixed(yDecimals)}</text>`;
+      <text x="2" y="${(y+3).toFixed(1)}" font-size="11" fill="var(--rh-muted)">${v.toFixed(yDecimals)}</text>`;
   }).join('');
   const dots = coords.map((c,i)=>`<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.5" fill="${color}"/>`).join('');
   // Show at most 7 x-axis labels so dense ranges (90D/1Y) never overlap.
   const labelStep = Math.max(1, Math.ceil(points.length/7));
   const xLabels = points.map((p,i)=> (i%labelStep===0 || i===points.length-1) ?
-    `<text x="${coords[i].x.toFixed(1)}" y="${h-6}" font-size="9" fill="var(--rh-muted)" text-anchor="middle">${p.label}</text>` : '').join('');
+    `<text x="${coords[i].x.toFixed(1)}" y="${h-6}" font-size="11" fill="var(--rh-muted)" text-anchor="middle">${p.label}</text>` : '').join('');
   const last = coords[coords.length-1], lastVal = points[points.length-1].value;
   return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
     ${gridlines}
@@ -3391,6 +3208,28 @@ function axisAreaChart(points, opts={}){
 ========================================================= */
 
 function phaseFor(w){ if(w<=2)return"base"; if(w<=4)return"build"; if(w<=6)return"load"; if(w===7)return"peak"; return"deload"; }
+
+/* Old plan name -> the library name(s) it became. Consumed by the one-time migration in
+   migrateSchema(), which rewrites state.completed's "week|day|name" keys.
+
+   The values are arrays because "Sled Push/Pull" was one row and is now two.
+
+   The five session instructions the plan also lists -- Warm-up, Intervals, Cool-down,
+   "Row / Ski / Run", "Walk / Mobility / Light Swim" -- are deliberately absent: they were
+   never library exercises, they did not change, and their ticks are already correct. */
+const PLAN_EXERCISE_RENAMES = {
+  "Back Squat":        ["Squat (Barbell)"],
+  "Romanian Deadlift": ["Romanian Deadlift (Barbell)"],
+  "Walking Lunges":    ["Walking Lunge (Dumbbell)"],
+  "Pallof Press":      ["Cable Core Pallof Press"],
+  "Bench Press":       ["Bench Press (Barbell)"],
+  "Bent-Over Row":     ["Bent Over Row (Barbell)"],
+  "Overhead Press":    ["Overhead Press (Barbell)"],
+  "Farmer's Carry":    ["Farmers Walk"],
+  "Sled Push/Pull":    ["Sled Push", "Sled Pull"],
+  "Wall Balls":        ["Wall Ball"],
+  "Weighted Sit-Up":   ["Sit Up (Weighted)"]
+};
 
 function buildWeek(w, level){
   level = level || "intermediate";
@@ -3424,23 +3263,38 @@ function buildWeek(w, level){
   return {
     week:w, phase:p, phaseLabel:PHASE_LABEL[p], level,
     days:[
+      /* THE NAMES HERE ARE LIBRARY NAMES, EXACTLY. See PLAN_EXERCISE_RENAMES below.
+         They used to be the pre-rebuild names ("Back Squat", "Bench Press"), which the library
+         has not carried since it was rebuilt — so every exercise in the plan resolved to
+         nothing: no illustration on the live card, and an empty How To screen. Sixteen of the
+         plan's twenty names were broken this way.
+
+         Anything added here must be an allLibraryExercises() name or the same thing happens
+         again, silently. The five non-exercises below (Warm-up, Intervals, Cool-down, and the
+         two "pick one" session lines) are deliberately not library entries — they are
+         instructions for the session, and there is nothing to sync them to. */
       {day:"Day 1",session:"Lower Body Strength",exercises:[
-        {name:"Back Squat",presc:scale(T.squat)},{name:"Romanian Deadlift",presc:scale(T.rdl)},
-        {name:"Walking Lunges",presc:scale(T.lunge)},{name:"Plank",presc:"3x45s"},
-        {name:"Pallof Press",presc:scale(T.pallof),note:"Core finisher — anti-rotation, resists sled drift"}]},
+        {name:"Squat (Barbell)",presc:scale(T.squat)},{name:"Romanian Deadlift (Barbell)",presc:scale(T.rdl)},
+        {name:"Walking Lunge (Dumbbell)",presc:scale(T.lunge)},{name:"Plank",presc:"3x45s"},
+        {name:"Cable Core Pallof Press",presc:scale(T.pallof),note:"Core finisher — anti-rotation, resists sled drift"}]},
       {day:"Day 2",session:"Run Intervals",exercises:[
         {name:"Warm-up",presc:"10 min easy jog"},{name:"Intervals",presc:scale(T.intervals,"cond")},
         {name:"Cool-down",presc:"10 min easy jog"}]},
       {day:"Day 3",session:"Upper Body + Carries",exercises:[
-        {name:"Bench Press",presc:scale(T.bench)},{name:"Bent-Over Row",presc:scale(T.row)},
-        {name:"Overhead Press",presc:scale(T.ohp)},{name:"Farmer's Carry",presc:scale(T.carry)},
+        {name:"Bench Press (Barbell)",presc:scale(T.bench)},{name:"Bent Over Row (Barbell)",presc:scale(T.row)},
+        {name:"Overhead Press (Barbell)",presc:scale(T.ohp)},{name:"Farmers Walk",presc:scale(T.carry)},
         {name:"Hanging Leg Raise",presc:scale(T.hanging),note:"Core finisher — swap for dead bug if grip is fried"}]},
       {day:"Day 4",session:"Zone 2 Steady State",exercises:[
         {name:"Row / Ski / Run",presc:scale(T.z2),note:"Stay conversational — don't drift into threshold"}]},
+      /* "Sled Push/Pull" was one row for two race stations, so it could never be a library
+         exercise and never carry an illustration. Split, because both exist in the library
+         with instructions and artwork, and a Hyrox plan that names only one of them is wrong
+         about the race anyway. The prescription applies to each. */
       {day:"Day 5",session:"Hyrox Station Circuit",exercises:[
-        {name:"Sled Push/Pull",presc:scale(T.sled,"cond")},{name:"Wall Balls",presc:scale(T.wallball,"cond")},
+        {name:"Sled Push",presc:scale(T.sled,"cond")},{name:"Sled Pull",presc:scale(T.sled,"cond")},
+        {name:"Wall Ball",presc:scale(T.wallball,"cond")},
         {name:"Burpee Broad Jumps",presc:scale(T.burpee,"cond")},{name:"Ski Erg",presc:scale(T.ski,"cond")},
-        {name:"Weighted Sit-Up",presc:scale(T.situp),note:"Core finisher — race-specific, done under fatigue"}]},
+        {name:"Sit Up (Weighted)",presc:scale(T.situp),note:"Core finisher — race-specific, done under fatigue"}]},
       {day:"Day 6",session:"Optional — Easy Movement",exercises:[
         {name:"Walk / Mobility / Light Swim",presc:"20-30 min, low intensity",note:"Skip if fatigue score is high"}]}
     ]
@@ -3500,15 +3354,27 @@ function allLibraryExercises(){
   return list;
 }
 
+/* Muscle for an exercise name the library no longer carries.
+ *
+ *  Rebuilding the library renamed almost everything: "DB Bench Press" became "Bench Press
+ *  (Dumbbell)". A workout logged before that keeps working — sessions store their own
+ *  snapshot of what was lifted — but getMuscle() stopped recognising the name, so every
+ *  past set resolved to "Other" and quietly vanished from the muscle distribution.
+ *
+ *  These are the 290 old names with the muscle they had. Consulted only after the live
+ *  library, so it can never override a current exercise, and it costs nothing to keep. */
+const LEGACY_MUSCLE_MAP = {"2000 m Time Trial Rowing":"Lats","500 m Time Trial Rowing":"Lats","90/90 Hip Switch":"Mobility","Air Squat":"Quadriceps","Alternating Dumbbell Curl":"Biceps","Alternating-Arm SkiErg":"Lats","Ankle Circles":"Mobility","Assault Bike":"Cardio","Assisted Dip":"Triceps","Assisted Pull-up":"Lats","Atlas Stone Load":"Glutes","Back Extension":"Abdominals","Back Squat":"Quadriceps","Backward Sled Pull":"Lats","Band Chest Fly":"Chest","Band Chest Press":"Chest","Band Pull-Apart":"Traps","Banded Barbell Hip Thrust":"Glutes","Barbell Back Extension":"Abdominals","Barbell Bent-Over Row":"Lats","Barbell Close-Grip Bench Press":"Triceps","Barbell Curl":"Biceps","Barbell Floor Press":"Chest","Barbell Inverted Row":"Traps","Barbell Pistol Squat":"Quadriceps","Barbell Pull-Up":"Lats","Barbell Sissy Squat":"Quadriceps","Battle Rope Alternating Waves":"Shoulders","Battle Rope Slams":"Shoulders","Bench Press":"Chest","Bent-Over Row":"Lats","Block Power Clean":"Glutes","Block Pull Conventional Deadlift":"Glutes","Block Pull Sumo Deadlift":"Glutes","Block Snatch":"Cardio","Boat Pose":"Abdominals","Boxer Step Jump Rope":"Cardio","Broad Jump":"Glutes","Bulgarian Split Squat":"Quadriceps","Cable Arnold Press":"Shoulders","Cable Bench Press":"Chest","Cable Crossover":"Chest","Cable Curl":"Biceps","Cable Face Pull":"Traps","Cable Glute Kickback":"Glutes","Cable Hammer Curl":"Biceps","Cable Pull-Through":"Glutes","Cable Push Press":"Shoulders","Cable Stiff-Leg Deadlift":"Hamstrings","Cable Straight-Arm Pulldown":"Lats","Calf Raise Machine":"Calves","Calf Stretch":"Mobility","Cat-Cow":"Mobility","Cat-Cow Stretch":"Abdominals","Chest Fly Machine":"Chest","Chest Press Machine":"Chest","Child's Pose":"Lats","Chin-up":"Biceps","Clap Push-up":"Chest","Close-Grip Push-Up":"Chest","Commando Pull-Up":"Lats","Conventional Deadlift":"Glutes","Cossack Squat":"Adductors","Couch Stretch":"Mobility","Crab Walk":"Triceps","Cross-Over Jump Rope":"Cardio","Cuff Cable Lateral Raise":"Shoulders","DB Bench Press":"Chest","DB Chest Fly":"Chest","DB Curl":"Biceps","DB Floor Press":"Chest","DB Hex Press":"Chest","DB RDL":"Hamstrings","DB Row":"Lats","DB Shoulder Press":"Shoulders","DB Squeeze Press":"Chest","Deadlift":"Hamstrings","Deadlift For Back":"Lower Back","Decline Barbell Bench Press":"Chest","Decline Bench Press Machine":"Chest","Decline DB Bench Press":"Chest","Decline DB Chest Fly":"Chest","Decline Push-up":"Chest","Decline Smith Machine Bench Press":"Chest","Deep Squat Hold":"Mobility","Deficit Conventional Deadlift":"Glutes","Deficit Push-Up":"Chest","Deficit Sumo Deadlift":"Glutes","Depth Jump":"Quadriceps","Dip":"Triceps","Donkey Standing Calf Raise":"Calves","Double-Pole SkiErg":"Lats","Double-Under Jump Rope":"Cardio","Downward-Facing Dog":"Hamstrings","Dumbbell Back Extension":"Abdominals","Dumbbell Close-Grip Bench Press":"Triceps","Dumbbell Concentration Curl":"Biceps","Dumbbell Conventional Deadlift":"Glutes","Dumbbell Cossack Squat":"Adductors","Dumbbell Dead Bug":"Abdominals","Dumbbell Fly":"Chest","Dumbbell Frog Pump":"Glutes","Dumbbell Glute Bridge":"Glutes","Dumbbell Handstand Push-Up":"Shoulders","Dumbbell Hang Clean":"Glutes","Dumbbell Hollow Body Hold":"Abdominals","Dumbbell Power Clean":"Glutes","Dumbbell Push Press":"Shoulders","Dumbbell Rear Delt Fly":"Shoulders","Dumbbell Reverse Pec Deck Fly":"Shoulders","Dumbbell Seated Calf Raise":"Calves","Dumbbell Spanish Squat":"Quadriceps","Dumbbell Standing Calf Raise":"Calves","Dumbbell Sumo Deadlift":"Glutes","Dumbbell Tibialis Raise":"Calves","Elliptical":"Cardio","Farmer's Carry":"Forearms","Farmer's Carry (station)":"Forearms","Fartlek Outdoor Running":"Cardio","Feet-Up Barbell Bench Press":"Chest","Foam Rolling — Back":"Mobility","Foam Rolling — Quads":"Mobility","Front Lever":"Lats","Front-Rack Reverse Lunge":"Quadriceps","Front-Rack Walking Lunge":"Quadriceps","Good Morning":"Hamstrings","Hamstring On Power Squad Machine":"Hamstrings","Hamstring Stretch":"Mobility","Hand-over-Hand Sled Pull":"Lats","Hang Power Clean":"Glutes","Harness Sled Pull":"Lats","Heavy Farmers Carry":"Forearms","Heavy Sled Push":"Quadriceps","High-Box Step-Up":"Quadriceps","High-Handle Sled Push":"Quadriceps","High-Hang Power Clean":"Glutes","High-Hang Snatch":"Cardio","High-Knee Jump Rope":"Cardio","Hill Sprint Outdoor Running":"Cardio","Hip Abductor Machine":"Abductors","Hip Adductor Machine":"Adductors","Hip Dip Side Plank":"Abdominals","Hip Flexor Stretch":"Mobility","Incline Bench Press":"Chest","Incline Chest Press Machine":"Chest","Incline DB Chest Fly":"Chest","Incline Dumbbell Curl":"Biceps","Incline Dumbbell Press":"Chest","Incline Push-up":"Chest","Incline Smith Machine Bench Press":"Chest","Incline Treadmill Running":"Cardio","Interval Outdoor Running":"Cardio","Interval Treadmill Running":"Cardio","Iso-Lateral Chest Press Machine":"Chest","Jacob's Ladder":"Cardio","Jefferson Curl":"Abdominals","Kettlebell Arnold Press":"Shoulders","Kettlebell Back Extension":"Abdominals","Kettlebell Chin-Up":"Lats","Kettlebell Conventional Deadlift":"Glutes","Kettlebell Cossack Squat":"Adductors","Kettlebell Frog Pump":"Glutes","Kettlebell Handstand Push-Up":"Shoulders","Kettlebell Hang Clean":"Glutes","Kettlebell Power Clean":"Glutes","Kettlebell Push Press":"Shoulders","Kettlebell Russian Twist":"Abdominals","Kettlebell Side Plank":"Abdominals","Kettlebell Sissy Squat":"Quadriceps","Kettlebell Sumo Deadlift":"Glutes","Kettlebell Windmill":"Abdominals","Kneeling Push-up":"Chest","Landmine Press":"Shoulders","Lat Pulldown":"Lats","Lateral Raise":"Shoulders","Leg Curl":"Hamstrings","Leg Extension":"Quadriceps","Leg Press":"Quadriceps","Leg Press For Adductor And Abductors":"Adductors","Light Sprint Sled Push":"Quadriceps","Log Press":"Shoulders","Long Run Outdoor Running":"Cardio","Low-Handle Sled Push":"Quadriceps","Meadows Row":"Lats","Medicine Ball Chest Pass":"Chest","Medicine Ball Rotational Throw":"Abdominals","Medicine Ball Slam":"Lats","Mountain Climbers":"Abdominals","Muscle Power Clean":"Glutes","Muscle Snatch":"Cardio","Muscle-Up":"Lats","One-Arm Dumbbell Lateral Raise":"Shoulders","One-Arm Dumbbell Row":"Lats","One-Arm Push-up":"Chest","Outdoor Running":"Cardio","Overhead Cable Triceps Extension":"Triceps","Overhead Farmers Carry":"Forearms","Overhead Press":"Shoulders","Paused Conventional Deadlift":"Glutes","Paused Sumo Deadlift":"Glutes","Pec Deck":"Chest","Pigeon Pose":"Mobility","Pin Barbell Back Squat":"Quadriceps","Plank Push-up":"Chest","Pull-up":"Lats","Push Up - Close Grip":"Chest","Push-up":"Chest","Rack Pull Conventional Deadlift":"Glutes","Recovery Outdoor Running":"Cardio","Recovery Treadmill Running":"Cardio","Renegade Row":"Lats","Resistance Band Broad Jump":"Glutes","Resistance Band Conventional Deadlift":"Glutes","Resistance Band Dead Bug":"Abdominals","Resistance Band Handstand Push-Up":"Shoulders","Resistance Band Push Press":"Shoulders","Resistance Band Romanian Deadlift":"Hamstrings","Resistance Band Seated Calf Raise":"Calves","Resistance Band Skater Jump":"Glutes","Resistance Band Skull Crusher":"Triceps","Resistance Band Standing Calf Raise":"Calves","Resistance Band Straight-Arm Pulldown":"Lats","Resistance Band Sumo Deadlift":"Glutes","Resistance Band Triceps Pushdown":"Triceps","Reverse-Grip Barbell Curl":"Biceps","Reverse-Grip Triceps Pushdown":"Triceps","Ring Dip":"Chest","Ring Push-up":"Chest","Romanian Deadlift":"Hamstrings","Rope Cable Hammer Curl":"Biceps","Rope Sled Pull":"Lats","Rowing":"Lats","Rowing (station)":"Cardio","Sandbag Lunges":"Quadriceps","Sandbag Walking Lunge":"Quadriceps","Seated Cable Chest Fly":"Chest","Seated Cable Row":"Lats","Seated Leg Curl":"Hamstrings","Shoulder Dislocate":"Mobility","Shoulder Press Machine":"Shoulders","Single Leg Standing Calf Raise (Barbell)":"Calves","Single-Arm Cable Crossover":"Chest","Single-Arm Suitcase Farmers Carry":"Forearms","Single-Leg Dumbbell Romanian Deadlift":"Hamstrings","Single-Leg Standing Calf Raise":"Calves","Single-Under Jump Rope":"Cardio","Sit-up":"Abdominals","Skater Jump":"Glutes","SkiErg":"Lats","Smith Machine Bench Press":"Chest","Smith Machine Squat":"Quadriceps","Smith Machine Standing Calf Raise":"Calves","Snatch-Grip Conventional Deadlift":"Glutes","Snatch-Grip Romanian Deadlift":"Hamstrings","Split Snatch":"Cardio","Sprint Interval Rowing":"Lats","Sprint Interval SkiErg":"Lats","Sprint Treadmill Running":"Cardio","Stability Ball Plank":"Abdominals","Stairmaster":"Cardio","Stationary Bike":"Cardio","Stationary Cycling":"Cardio","Straight-Bar Triceps Pushdown":"Triceps","Suspension Chest Fly":"Chest","Svend Press":"Chest","T-Bar Row":"Lats","Tall-Kneeling Pallof Press":"Abdominals","Tempo Front Squat":"Quadriceps","Tempo Outdoor Running":"Cardio","Tempo Rowing":"Lats","Tempo Treadmill Running":"Cardio","Thoracic Rotation":"Mobility","Tibialis Raise":"Calves","Tire Flip":"Glutes","Toes-to-Bar Hanging Leg Raise":"Abdominals","Trap-Bar Deadlift":"Glutes","Trap-Bar Farmers Carry":"Forearms","Treadmill Running":"Cardio","Turkish Get-Up":"Cardio","Walking Lunges":"Quadriceps","Wall Balls":"Quadriceps","Warrior I":"Quadriceps","Warrior II":"Quadriceps","Weighted Chest Dip":"Chest","Weighted Chin-Up":"Lats","Weighted Glute Bridge":"Glutes","Weighted Push-up":"Chest","Wide Grip Barbell Curls":"Biceps","Wide-Grip Barbell Bench Press":"Chest","World's Greatest Stretch":"Mobility","Yoke Walk":"Traps","Zone 2 Outdoor Running":"Cardio","Zone 2 Rowing":"Lats","Zone 2 SkiErg":"Lats","Zone 2 Treadmill Running":"Cardio","Zottman Dumbbell Curl":"Biceps"};
+
 function getMuscle(name){
   for(const items of Object.values(LIBRARY)){
     const hit = items.find(i=>i[0]===name);
     if(hit) return hit[3];
   }
-  const custom = LS.get("hx_custom_exercises", []);
+  const custom = LS.records("hx_custom_exercises");
   const c = custom.find(i=>i.name===name);
   if(c) return c.muscle || "Other";
   if(PLAN_MUSCLE_MAP[name]) return PLAN_MUSCLE_MAP[name];
+  if(LEGACY_MUSCLE_MAP[name]) return LEGACY_MUSCLE_MAP[name];   // history logged under the old library
   return "Other";
 }
 
@@ -3837,7 +3703,7 @@ function exercisePRs(name){
 function activityDates(){
   // Set of "YYYY-MM-DD" strings with any logged activity (plan completions or freestyle sessions)
   const dates = new Set();
-  Object.values(state.completed).forEach(ts=> dates.add(new Date(ts).toISOString().slice(0,10)));
+  Object.values(state.completed).forEach(ts=> dates.add(dayKey(ts)));
   state.workoutLog.forEach(s=> dates.add(s.date));
   return dates;
 }
@@ -3848,8 +3714,8 @@ function computeStreak(){
   let cursor = new Date();
   cursor.setHours(0,0,0,0);
   // if today has no activity yet, start counting from yesterday (still an active streak)
-  if(!dates.has(cursor.toISOString().slice(0,10))) cursor.setDate(cursor.getDate()-1);
-  while(dates.has(cursor.toISOString().slice(0,10))){
+  if(!dates.has(dayKey(cursor))) cursor.setDate(cursor.getDate()-1);
+  while(dates.has(dayKey(cursor))){
     streak++;
     cursor.setDate(cursor.getDate()-1);
   }
@@ -3872,22 +3738,23 @@ function computeNotifications(){
 }
 
 /* =========================================================
-   HABIT TRACKER — genuinely new feature (Progress page). Deliberately does NOT reuse
-   todayStr()/computeStreak()'s date pattern (new Date().toISOString().slice(0,10) on a
-   local-midnight Date): that pattern converts to UTC before formatting, which is off by one
-   day for any user whose local timezone offset is non-zero at midnight (e.g. a fixed +5:30
-   offset always maps local midnight to the previous UTC day). It's a pre-existing quirk in
-   the rest of the app's date handling that's out of scope to change here (it would touch
-   historical data keys across food/body/workout logging), but the master request explicitly
-   asks to avoid exactly this class of bug for the new Habit Tracker, so habitDateStr() below
-   corrects for local timezone offset before formatting.
+   HABIT TRACKER — Progress page.
+
+   This block used to explain that habitDateStr() deliberately did NOT follow the rest of the
+   app, because the rest of the app formatted a local-midnight Date as UTC and so was a day out
+   for any non-zero offset. That was true, and correcting only this feature was the right call
+   at the time — converting everything meant touching historical keys across food, body and
+   workout logging, which needed a migration nobody had written.
+
+   That migration now exists (migrateDayKeysToLocal, near the top of this file), the whole app
+   keys on the local calendar day via dayKey(), and habitDateStr() simply delegates to it.
+   Habits were the only correct clock in the app; now they are the same clock as everything else.
 ========================================================= */
 
-function habitDateStr(d){
-  d = d || new Date();
-  const tzCorrected = new Date(d.getTime() - d.getTimezoneOffset()*60000);
-  return tzCorrected.toISOString().slice(0,10);
-}
+/* Delegates now. It was the only local-corrected key in the app and therefore the only one
+   that disagreed with the rest; dayKey() is that same correction applied everywhere, so this
+   is kept as a name its callers already use rather than as a second implementation. */
+function habitDateStr(d){ return dayKey(d); }
 
 function habitStreak(habitId){
   const done = state.habitCompletions[habitId] || {};
@@ -4066,27 +3933,259 @@ function totalLifetimeVolume(){ return state.workoutLog.reduce((a,s)=>a+(s.volum
 
 function totalWorkingSets(){ return state.workoutLog.reduce((a,s)=>a+s.exercises.reduce((x,e)=>x+e.sets.filter(isCountingSet).length,0),0); }
 
+/* Counters behind the achievement checks. All read logged sets, so an achievement can only be
+   earned by work that is actually in the log -- there is no counter to drift and nothing that
+   can be unlocked by opening a screen. */
+function totalWorkingReps(){
+  return state.workoutLog.reduce((a,s)=>a+s.exercises.reduce((x,e)=>
+    x + e.sets.filter(isCountingSet).reduce((r,st)=>r + (Number(st.reps)||0), 0), 0), 0);
+}
+function totalTrainingMinutes(){ return state.workoutLog.reduce((a,s)=>a+(s.durationMin||0),0); }
+function heaviestLiftKg(){
+  return state.prs.reduce((m,p)=> (p.type==="weight" && p.value>m) ? p.value : m, 0);
+}
+/** Distinct muscles trained across all logged sessions, from the library's own metadata. */
+function distinctMusclesTrained(){
+  const set = new Set();
+  state.workoutLog.forEach(s=>s.exercises.forEach(e=>{
+    if(typeof getMuscle==="function" && e.name){ const m=getMuscle(e.name); if(m && m!=="Other") set.add(m); }
+  }));
+  return set.size;
+}
+/** Distinct exercises that have at least one counting set logged. */
+function distinctExercisesLogged(){
+  const set = new Set();
+  state.workoutLog.forEach(s=>s.exercises.forEach(e=>{
+    if(e.name && (e.sets||[]).some(isCountingSet)) set.add(e.name);
+  }));
+  return set.size;
+}
+/** Sessions whose local start hour satisfies fn -- for the early/late badges. */
+function sessionsAtHour(fn){
+  return state.workoutLog.filter(s=>{
+    const t = s.startedAt ? new Date(s.startedAt) : null;
+    return t && !isNaN(t) && fn(t.getHours());
+  }).length;
+}
+/** Days on which a food entry exists. */
+function daysWithFoodLogged(){ return new Set(state.foodLog.map(f=>f.date)).size; }
+/** Days on which the water goal was met. */
+function daysWaterGoalMet(){
+  const target = (state.settings && state.settings.waterTargetMl) || 2500;
+  const byDay = {};
+  (state.waterLog||[]).forEach(w=>{ byDay[w.date] = (byDay[w.date]||0) + (w.ml||0); });
+  return Object.keys(byDay).filter(d=>byDay[d] >= target).length;
+}
+/** Days recorded in the IGNYT Score history at or above a threshold. */
+function scoreDaysAtLeast(n){
+  try {
+    const h = JSON.parse(localStorage.getItem("hx_score_history") || "{}") || {};
+    return Object.keys(h).filter(k=>h[k] >= n).length;
+  } catch(e){ return 0; }
+}
+/** Weekly challenges completed, read from the XP ledger that pays them. */
+function weeklyChallengesCompleted(){
+  return window.IgnytWeekly ? IgnytWeekly.history().length : 0;
+}
+/** Distinct calendar dates with at least one logged session. */
+function distinctTrainingDays(){
+  return new Set(state.workoutLog.map(s=>new Date(s.startedAt||s.date).toDateString())).size;
+}
+
+/* --- weight-tracking counters, behind the weigh-in badges ------------------------------
+   All of these read state.bodylog, which only ever grows from an actual weigh-in. Weight
+   *change* is measured against the goal's recorded start weight when there is one, and
+   against the earliest logged entry otherwise -- never against a number the user typed
+   into onboarding months ago and has not revisited. */
+
+/** Longest run of consecutive calendar days that each have a weigh-in. */
+function weightLogStreakBest(){
+  const days = Array.from(new Set((state.bodylog||[]).filter(b=>b && b.date).map(b=>b.date))).sort();
+  if(!days.length) return 0;
+  let best = 1, cur = 1;
+  for(let i=1;i<days.length;i++){
+    // Noon anchors both ends so a DST shift cannot turn 24h into 23h and break a real streak.
+    const gap = Math.round((new Date(days[i]+"T12:00:00") - new Date(days[i-1]+"T12:00:00"))/86400000);
+    if(gap===1){ cur++; if(cur>best) best=cur; } else if(gap>1){ cur=1; }
+  }
+  return best;
+}
+/** Kilograms moved in the direction of the user's goal. Zero when moving the other way. */
+function weightMovedTowardGoalKg(){
+  const log = (state.bodylog||[]).filter(b=>b && Number(b.weight)>0);
+  if(log.length<2) return 0;
+  const sorted = log.slice().sort((a,b)=> new Date(a.date+"T12:00:00") - new Date(b.date+"T12:00:00"));
+  let start = Number(sorted[0].weight);
+  const now = Number(sorted[sorted.length-1].weight);
+  let want = "down";
+  try {
+    const g = window.IgnytGoals ? IgnytGoals.activeGoal() : null;
+    if(g && g.startWeight!=null && g.targetWeight!=null){
+      start = Number(g.startWeight) || start;
+      want = g.targetWeight > g.startWeight ? "up" : "down";
+    }
+  } catch(e){}
+  const delta = want==="up" ? (now-start) : (start-now);
+  return delta > 0 ? delta : 0;
+}
+/** True once the logged weight has reached the goal in the goal's own direction. */
+function weightGoalReached(){
+  try { const a = window.IgnytWeight ? IgnytWeight.analyse(state) : null; return !!(a && a.reachedGoal); }
+  catch(e){ return false; }
+}
+/** Consecutive ISO weeks, ending at the most recent one logged, containing a weigh-in. */
+function weightWeeksRunning(){
+  const weeks = new Set();
+  (state.bodylog||[]).forEach(b=>{
+    if(!b || !b.date) return;
+    const d = new Date(b.date+"T12:00:00");
+    if(isNaN(d)) return;
+    // Monday-based week index counted from the epoch -- only differences matter, so any
+    // consistent origin works and this avoids ISO week-number edge cases at year ends.
+    weeks.add(Math.floor((d.getTime()/86400000 + 3) / 7));
+  });
+  const list = Array.from(weeks).sort((a,b)=>a-b);
+  if(!list.length) return 0;
+  let run = 1;
+  for(let i=list.length-1;i>0;i--){
+    if(list[i]-list[i-1]===1) run++; else break;
+  }
+  return run;
+}
+/** Days on which a weigh-in, a meal and a completed session were all logged. */
+function daysWithFullLog(){
+  const weigh = new Set((state.bodylog||[]).map(b=>b && b.date).filter(Boolean));
+  const food  = new Set((state.foodLog||[]).map(f=>f && f.date).filter(Boolean));
+  // Keyed the same way the app stamps every other date. That used to mean UTC; it means the
+  // local calendar day now, via dayKey(). The point is unchanged -- a session and the meal
+  // logged beside it must land on the same day -- only the definition of "day" moved.
+  const train = new Set((state.workoutLog||[]).map(s=>{
+    const t = new Date(s.startedAt||s.date);
+    return isNaN(t) ? null : dayKey(t);
+  }).filter(Boolean));
+  let n = 0;
+  weigh.forEach(d=>{ if(food.has(d) && train.has(d)) n++; });
+  return n;
+}
+
 const ACHIEVEMENT_DEFS = [
-  { id:"first_workout", name:"First Workout", desc:"Complete your first freestyle workout.", check:()=> state.workoutLog.length>=1 },
-  { id:"workouts_5", name:"5 Workouts", desc:"Log 5 freestyle workouts.", check:()=> state.workoutLog.length>=5 },
-  { id:"workouts_10", name:"10 Workouts", desc:"Log 10 freestyle workouts.", check:()=> state.workoutLog.length>=10 },
-  { id:"workouts_25", name:"25 Workouts", desc:"Log 25 freestyle workouts.", check:()=> state.workoutLog.length>=25 },
-  { id:"workouts_50", name:"50 Workouts", desc:"Log 50 freestyle workouts.", check:()=> state.workoutLog.length>=50 },
-  { id:"workouts_100", name:"100 Workouts", desc:"Log 100 freestyle workouts.", check:()=> state.workoutLog.length>=100 },
-  { id:"workouts_250", name:"250 Workouts", desc:"Log 250 freestyle workouts.", check:()=> state.workoutLog.length>=250 },
-  { id:"workouts_500", name:"500 Workouts", desc:"Log 500 freestyle workouts.", check:()=> state.workoutLog.length>=500 },
-  { id:"first_pr", name:"First Personal Record", desc:"Set your first PR.", check:()=> state.prs.length>=1 },
-  { id:"first_100kg", name:"First 100kg Lift", desc:"Hit 100kg or more on any lift.", check:()=> state.prs.some(p=>p.type==="weight" && p.value>=100) },
-  { id:"sets_100", name:"100 Working Sets", desc:"Log 100 working sets total.", check:()=> totalWorkingSets()>=100 },
-  { id:"volume_1m", name:"1,000,000kg Lifetime Volume", desc:"Move a million kg over your lifetime.", check:()=> totalLifetimeVolume()>=1000000 },
-  { id:"hyrox_week1", name:"Complete HYROX Week 1", desc:"Finish every session in Week 1 of the program.", check:()=> weekProgress(WEEKS[0])===100 },
-  { id:"hyrox_full_program", name:"Complete 8-Week HYROX Program", desc:"Finish the entire 8-week structured program.", check:()=> overallPlanProgress()===100 },
-  { id:"streak_3", name:"3-Day Streak", desc:"Train 3 days in a row.", check:()=> computeStreak()>=3 },
-  { id:"streak_7", name:"7-Day Streak", desc:"Train 7 days in a row.", check:()=> computeStreak()>=7 },
-  { id:"streak_14", name:"14-Day Streak", desc:"Train 14 days in a row.", check:()=> computeStreak()>=14 },
-  { id:"streak_30", name:"30-Day Streak", desc:"Train 30 days in a row.", check:()=> computeStreak()>=30 },
-  { id:"streak_60", name:"60-Day Streak", desc:"Train 60 days in a row.", check:()=> computeStreak()>=60 },
-  { id:"streak_100", name:"100-Day Streak", desc:"Train 100 days in a row.", check:()=> computeStreak()>=100 }
+  { id:"first_workout", name:"First Workout", desc:"Complete your first freestyle workout.", check:()=> state.workoutLog.length>=1 , category:"milestone", tier:"bronze", value:"1" },
+  { id:"workouts_5", name:"5 Workouts", desc:"Log 5 freestyle workouts.", check:()=> state.workoutLog.length>=5 , category:"milestone", tier:"bronze", value:"5" },
+  { id:"workouts_10", name:"10 Workouts", desc:"Log 10 freestyle workouts.", check:()=> state.workoutLog.length>=10 , category:"milestone", tier:"bronze", value:"10" },
+  { id:"workouts_25", name:"25 Workouts", desc:"Log 25 freestyle workouts.", check:()=> state.workoutLog.length>=25 , category:"milestone", tier:"silver", value:"25" },
+  { id:"workouts_50", name:"50 Workouts", desc:"Log 50 freestyle workouts.", check:()=> state.workoutLog.length>=50 , category:"milestone", tier:"silver", value:"50" },
+  { id:"workouts_100", name:"100 Workouts", desc:"Log 100 freestyle workouts.", check:()=> state.workoutLog.length>=100 , category:"milestone", tier:"gold", value:"100" },
+  { id:"workouts_250", name:"250 Workouts", desc:"Log 250 freestyle workouts.", check:()=> state.workoutLog.length>=250 , category:"milestone", tier:"gold", value:"250" },
+  { id:"workouts_500", name:"500 Workouts", desc:"Log 500 freestyle workouts.", check:()=> state.workoutLog.length>=500 , category:"milestone", tier:"diamond", value:"500" },
+  { id:"first_pr", name:"First Personal Record", desc:"Set your first PR.", check:()=> state.prs.length>=1 , category:"strength", tier:"bronze", value:"1" },
+  { id:"first_100kg", name:"First 100kg Lift", desc:"Hit 100kg or more on any lift.", check:()=> state.prs.some(p=>p.type==="weight" && p.value>=100) , category:"strength", tier:"silver", value:"100kg" },
+  { id:"sets_100", name:"100 Working Sets", desc:"Log 100 working sets total.", check:()=> totalWorkingSets()>=100 , category:"strength", tier:"bronze", value:"100" },
+  { id:"volume_1m", name:"1,000,000kg Lifetime Volume", desc:"Move a million kg over your lifetime.", check:()=> totalLifetimeVolume()>=1000000 , category:"strength", tier:"diamond", value:"1M kg" },
+  { id:"hyrox_week1", name:"Complete HYROX Week 1", desc:"Finish every session in Week 1 of the program.", check:()=> weekProgress(WEEKS[0])===100 , category:"program", tier:"bronze", value:"W1" },
+  { id:"hyrox_full_program", name:"Complete 8-Week HYROX Program", desc:"Finish the entire 8-week structured program.", check:()=> overallPlanProgress()===100 , category:"program", tier:"gold", value:"8W" },
+  { id:"streak_3", name:"3-Day Streak", desc:"Train 3 days in a row.", check:()=> computeStreak()>=3 , category:"streak", tier:"bronze", value:"3" },
+  { id:"streak_7", name:"7-Day Streak", desc:"Train 7 days in a row.", check:()=> computeStreak()>=7 , category:"streak", tier:"bronze", value:"7" },
+  { id:"streak_14", name:"14-Day Streak", desc:"Train 14 days in a row.", check:()=> computeStreak()>=14 , category:"streak", tier:"silver", value:"14" },
+  { id:"streak_30", name:"30-Day Streak", desc:"Train 30 days in a row.", check:()=> computeStreak()>=30 , category:"streak", tier:"silver", value:"30" },
+  { id:"streak_60", name:"60-Day Streak", desc:"Train 60 days in a row.", check:()=> computeStreak()>=60 , category:"streak", tier:"gold", value:"60" },
+  { id:"streak_100", name:"100-Day Streak", desc:"Train 100 days in a row.", check:()=> computeStreak()>=100 , category:"streak", tier:"diamond", value:"100" },
+
+  /* ---------------------------------------------------------------------------------------
+     Everything below was added to take the set past fifty. Every check reads logged data --
+     sessions, sets, reps, PRs, food entries, water, the score history, the XP ledger. None of
+     them can be unlocked by opening a screen, and none is awarded for anything the app cannot
+     actually see. Tiers reflect how much work each represents, not which category it is in.
+  --------------------------------------------------------------------------------------- */
+
+  /* ---- volume of work ---- */
+  { id:"workouts_750", name:"750 Workouts", desc:"Log 750 freestyle workouts.", check:()=> state.workoutLog.length>=750 , category:"milestone", tier:"diamond", value:"750" },
+  { id:"workouts_1000", name:"1,000 Workouts", desc:"Log 1,000 freestyle workouts.", check:()=> state.workoutLog.length>=1000 , category:"milestone", tier:"platinum", value:"1K" },
+  { id:"training_days_50", name:"50 Training Days", desc:"Train on 50 different days.", check:()=> distinctTrainingDays()>=50 , category:"milestone", tier:"silver", value:"50" },
+  { id:"training_days_200", name:"200 Training Days", desc:"Train on 200 different days.", check:()=> distinctTrainingDays()>=200 , category:"milestone", tier:"gold", value:"200" },
+  { id:"hours_10", name:"10 Hours Trained", desc:"Spend 10 hours in logged sessions.", check:()=> totalTrainingMinutes()>=600 , category:"milestone", tier:"bronze", value:"10h" },
+  { id:"hours_50", name:"50 Hours Trained", desc:"Spend 50 hours in logged sessions.", check:()=> totalTrainingMinutes()>=3000 , category:"milestone", tier:"silver", value:"50h" },
+  { id:"hours_100", name:"100 Hours Trained", desc:"Spend 100 hours in logged sessions.", check:()=> totalTrainingMinutes()>=6000 , category:"milestone", tier:"gold", value:"100h" },
+  { id:"hours_500", name:"500 Hours Trained", desc:"Spend 500 hours in logged sessions.", check:()=> totalTrainingMinutes()>=30000 , category:"milestone", tier:"diamond", value:"500h" },
+
+  /* ---- sets and reps ---- */
+  { id:"sets_500", name:"500 Working Sets", desc:"Log 500 working sets total.", check:()=> totalWorkingSets()>=500 , category:"strength", tier:"silver", value:"500" },
+  { id:"sets_1000", name:"1,000 Working Sets", desc:"Log 1,000 working sets total.", check:()=> totalWorkingSets()>=1000 , category:"strength", tier:"silver", value:"1K" },
+  { id:"sets_5000", name:"5,000 Working Sets", desc:"Log 5,000 working sets total.", check:()=> totalWorkingSets()>=5000 , category:"strength", tier:"diamond", value:"5K" },
+  { id:"reps_1000", name:"1,000 Reps", desc:"Complete 1,000 working reps.", check:()=> totalWorkingReps()>=1000 , category:"strength", tier:"bronze", value:"1K" },
+  { id:"reps_10000", name:"10,000 Reps", desc:"Complete 10,000 working reps.", check:()=> totalWorkingReps()>=10000 , category:"strength", tier:"silver", value:"10K" },
+  { id:"reps_50000", name:"50,000 Reps", desc:"Complete 50,000 working reps.", check:()=> totalWorkingReps()>=50000 , category:"strength", tier:"diamond", value:"50K" },
+
+  /* ---- load ---- */
+  { id:"first_60kg", name:"First 60kg Lift", desc:"Hit 60kg or more on any lift.", check:()=> heaviestLiftKg()>=60 , category:"strength", tier:"bronze", value:"60kg" },
+  { id:"first_140kg", name:"First 140kg Lift", desc:"Hit 140kg or more on any lift.", check:()=> heaviestLiftKg()>=140 , category:"strength", tier:"gold", value:"140kg" },
+  { id:"first_180kg", name:"First 180kg Lift", desc:"Hit 180kg or more on any lift.", check:()=> heaviestLiftKg()>=180 , category:"strength", tier:"diamond", value:"180kg" },
+  { id:"volume_50k", name:"50,000kg Lifted", desc:"Move 50,000kg over your lifetime.", check:()=> totalLifetimeVolume()>=50000 , category:"strength", tier:"bronze", value:"50K kg" },
+  { id:"volume_250k", name:"250,000kg Lifted", desc:"Move 250,000kg over your lifetime.", check:()=> totalLifetimeVolume()>=250000 , category:"strength", tier:"silver", value:"250K kg" },
+  { id:"volume_500k", name:"500,000kg Lifted", desc:"Move half a million kg over your lifetime.", check:()=> totalLifetimeVolume()>=500000 , category:"strength", tier:"gold", value:"500K kg" },
+  { id:"volume_5m", name:"5,000,000kg Lifted", desc:"Move five million kg over your lifetime.", check:()=> totalLifetimeVolume()>=5000000 , category:"strength", tier:"platinum", value:"5M kg" },
+
+  /* ---- records ---- */
+  { id:"prs_10", name:"10 Personal Records", desc:"Set 10 personal records.", check:()=> state.prs.length>=10 , category:"strength", tier:"bronze", value:"10" },
+  { id:"prs_25", name:"25 Personal Records", desc:"Set 25 personal records.", check:()=> state.prs.length>=25 , category:"strength", tier:"silver", value:"25" },
+  { id:"prs_50", name:"50 Personal Records", desc:"Set 50 personal records.", check:()=> state.prs.length>=50 , category:"strength", tier:"gold", value:"50" },
+  { id:"prs_100", name:"100 Personal Records", desc:"Set 100 personal records.", check:()=> state.prs.length>=100 , category:"strength", tier:"diamond", value:"100" },
+
+  /* ---- breadth ---- */
+  { id:"muscles_5", name:"Five Muscle Groups", desc:"Train five different muscle groups.", check:()=> distinctMusclesTrained()>=5 , category:"milestone", tier:"bronze", value:"5" },
+  { id:"muscles_10", name:"Ten Muscle Groups", desc:"Train ten different muscle groups.", check:()=> distinctMusclesTrained()>=10 , category:"milestone", tier:"silver", value:"10" },
+  { id:"exercises_25", name:"25 Exercises", desc:"Log 25 different exercises.", check:()=> distinctExercisesLogged()>=25 , category:"milestone", tier:"bronze", value:"25" },
+  { id:"exercises_50", name:"50 Exercises", desc:"Log 50 different exercises.", check:()=> distinctExercisesLogged()>=50 , category:"milestone", tier:"silver", value:"50" },
+  { id:"exercises_100", name:"100 Exercises", desc:"Log 100 different exercises.", check:()=> distinctExercisesLogged()>=100 , category:"milestone", tier:"gold", value:"100" },
+
+  /* ---- when you train ---- */
+  { id:"early_bird", name:"Early Bird", desc:"Start a workout before 6am.", check:()=> sessionsAtHour(h=>h<6)>=1 , category:"consistency", tier:"bronze", value:"5am" },
+  { id:"early_bird_10", name:"Sunrise Regular", desc:"Start ten workouts before 7am.", check:()=> sessionsAtHour(h=>h<7)>=10 , category:"consistency", tier:"silver", value:"10" },
+  { id:"night_owl", name:"Night Owl", desc:"Start a workout after 10pm.", check:()=> sessionsAtHour(h=>h>=22)>=1 , category:"consistency", tier:"bronze", value:"10pm" },
+
+  /* ---- streaks ---- */
+  { id:"streak_21", name:"21-Day Streak", desc:"Train 21 days in a row.", check:()=> computeStreak()>=21 , category:"streak", tier:"silver", value:"21" },
+  { id:"streak_180", name:"180-Day Streak", desc:"Train 180 days in a row.", check:()=> computeStreak()>=180 , category:"streak", tier:"diamond", value:"180" },
+  { id:"streak_365", name:"One Year Streak", desc:"Train every day for a year.", check:()=> computeStreak()>=365 , category:"streak", tier:"platinum", value:"365" },
+
+  /* ---- the IGNYT Score ---- */
+  { id:"score_70_once", name:"Great Day", desc:"Score 70 or more in a day.", check:()=> scoreDaysAtLeast(70)>=1 , category:"consistency", tier:"bronze", value:"70" },
+  { id:"score_100_once", name:"Excellent Day", desc:"Score 100 or more in a day.", check:()=> scoreDaysAtLeast(100)>=1 , category:"consistency", tier:"silver", value:"100" },
+  { id:"score_130_once", name:"Elite Day", desc:"Score 130 or more in a day.", check:()=> scoreDaysAtLeast(130)>=1 , category:"consistency", tier:"gold", value:"130" },
+  { id:"score_70_x30", name:"Thirty Strong Days", desc:"Score 70 or more on thirty days.", check:()=> scoreDaysAtLeast(70)>=30 , category:"consistency", tier:"gold", value:"30" },
+
+  /* ---- weekly challenges ---- */
+  { id:"weekly_1", name:"First Weekly Challenge", desc:"Complete a weekly challenge.", check:()=> weeklyChallengesCompleted()>=1 , category:"consistency", tier:"bronze", value:"1" },
+  { id:"weekly_5", name:"Five Weekly Challenges", desc:"Complete five weekly challenges.", check:()=> weeklyChallengesCompleted()>=5 , category:"consistency", tier:"silver", value:"5" },
+  { id:"weekly_20", name:"Twenty Weekly Challenges", desc:"Complete twenty weekly challenges.", check:()=> weeklyChallengesCompleted()>=20 , category:"consistency", tier:"gold", value:"20" },
+
+  /* ---- nutrition and hydration ---- */
+  { id:"food_first", name:"First Meal Logged", desc:"Log your first meal.", check:()=> state.foodLog.length>=1 , category:"nutrition", tier:"bronze", value:"1" },
+  { id:"food_days_7", name:"A Week of Food Logs", desc:"Log food on seven different days.", check:()=> daysWithFoodLogged()>=7 , category:"nutrition", tier:"bronze", value:"7" },
+  { id:"food_days_30", name:"A Month of Food Logs", desc:"Log food on thirty different days.", check:()=> daysWithFoodLogged()>=30 , category:"nutrition", tier:"silver", value:"30" },
+  { id:"food_days_100", name:"100 Days Logged", desc:"Log food on a hundred different days.", check:()=> daysWithFoodLogged()>=100 , category:"nutrition", tier:"gold", value:"100" },
+  { id:"food_entries_500", name:"500 Food Entries", desc:"Log 500 individual food entries.", check:()=> state.foodLog.length>=500 , category:"nutrition", tier:"silver", value:"500" },
+  { id:"water_first", name:"Hydrated", desc:"Hit your water goal for a day.", check:()=> daysWaterGoalMet()>=1 , category:"nutrition", tier:"bronze", value:"1" },
+  { id:"water_days_30", name:"Thirty Hydrated Days", desc:"Hit your water goal on thirty days.", check:()=> daysWaterGoalMet()>=30 , category:"nutrition", tier:"silver", value:"30" },
+  { id:"water_days_100", name:"A Hundred Hydrated Days", desc:"Hit your water goal on a hundred days.", check:()=> daysWaterGoalMet()>=100 , category:"nutrition", tier:"gold", value:"100" },
+
+  /* ---- body tracking ---- */
+  { id:"weigh_first", name:"First Weigh-In", desc:"Log your body weight.", check:()=> state.bodylog.length>=1 , category:"consistency", tier:"bronze", value:"1" },
+  { id:"weigh_10", name:"Ten Weigh-Ins", desc:"Log your body weight ten times.", check:()=> state.bodylog.length>=10 , category:"consistency", tier:"bronze", value:"10" },
+  { id:"weigh_50", name:"Fifty Weigh-Ins", desc:"Log your body weight fifty times.", check:()=> state.bodylog.length>=50 , category:"consistency", tier:"silver", value:"50" },
+
+  /* ---- weight tracking ----
+     The kg badges are earned for movement toward the user's OWN goal, so a muscle-gain user
+     earns them for going up. There is deliberately no badge for a number on the scale in
+     absolute terms -- 60kg is an achievement for one person and a warning sign for another,
+     and the app cannot tell which it is looking at. */
+  { id:"weigh_streak_5", name:"5 Consecutive Logs", desc:"Weigh in five days in a row.", check:()=> weightLogStreakBest()>=5 , category:"consistency", tier:"bronze", value:"5" },
+  { id:"weigh_streak_30", name:"30 Consecutive Logs", desc:"Weigh in thirty days in a row.", check:()=> weightLogStreakBest()>=30 , category:"consistency", tier:"gold", value:"30" },
+  { id:"weight_moved_5", name:"5 kg Toward Your Goal", desc:"Move 5 kg in the direction of your goal.", check:()=> weightMovedTowardGoalKg()>=5 , category:"consistency", tier:"bronze", value:"5 kg" },
+  { id:"weight_moved_10", name:"10 kg Toward Your Goal", desc:"Move 10 kg in the direction of your goal.", check:()=> weightMovedTowardGoalKg()>=10 , category:"consistency", tier:"silver", value:"10 kg" },
+  { id:"weight_moved_20", name:"20 kg Toward Your Goal", desc:"Move 20 kg in the direction of your goal.", check:()=> weightMovedTowardGoalKg()>=20 , category:"consistency", tier:"gold", value:"20 kg" },
+  { id:"weight_goal_reached", name:"Goal Achieved", desc:"Reach your target weight.", check:()=> weightGoalReached() , category:"consistency", tier:"diamond", value:"GOAL" },
+  { id:"weigh_champion", name:"Consistency Champion", desc:"Weigh in at least once a week for twelve weeks running.", check:()=> weightWeeksRunning()>=12 , category:"consistency", tier:"gold", value:"12w" },
+  { id:"habit_hero", name:"Healthy Habit Hero", desc:"Log your weight, a meal and a workout on the same day, thirty times.", check:()=> daysWithFullLog()>=30 , category:"consistency", tier:"diamond", value:"30" }
 ];
 
 /* Call after any action that could unlock an achievement (finish workout,
@@ -4143,6 +4242,62 @@ function exercisesWithHistory(){
 
 /* Chronological best-set-per-session series for one exercise: weight + estimated 1RM over time */
 
+/* Per-exercise progress, shown on every exercise while a workout is in progress.
+
+   The set table's PREVIOUS column already answers "what did I do on this set last time". This
+   answers the different question you actually ask before starting: how am I doing on this lift
+   overall, and what am I chasing today.
+
+   Everything is read from logged sets. Best is the heaviest working set ever recorded, last is
+   the heaviest of the most recent session, and the change between them is arithmetic, not a
+   projection. Warm-ups and non-counting sets are excluded, because exerciseProgressTrend()
+   already filters to real working sets.
+
+   Shown only once there is something to say. On the first ever session there is no best, no
+   last and no trend, so it says so in one line instead of printing three dashes. */
+function renderWorkoutExerciseProgress(name){
+  const trend = exerciseProgressTrend(name, 12);
+  if(!trend.length){
+    return `<div class="wk-exprog wk-exprog--new">${svg('star',12)} First time logging this — today sets your baseline.</div>`;
+  }
+  const last = trend[trend.length-1];
+  const best = trend.reduce((a,t)=> t.weight > a.weight ? t : a, trend[0]);
+  // The change is against the session before this one, so it is a real comparison and not a
+  // lift compared with itself on a first session.
+  const prev = trend.length>=2 ? trend[trend.length-2] : null;
+  const delta = prev ? Math.round((last.weight - prev.weight)*10)/10 : null;
+  const sessions = trend.length;
+
+  /* A sparkline of the heaviest set per session. Twelve points at most: enough to read a
+     direction, few enough to stay legible at this size. Drawn only with two or more points --
+     a single dot is not a trend. */
+  const spark = (()=>{
+    if(trend.length < 2) return "";
+    const w = 300, h = 18, pad = 2;   // stretched to the card width by CSS
+    const vals = trend.map(t=>t.weight);
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    const span = (hi - lo) || 1;
+    const pts = vals.map((v,i)=>{
+      const x = pad + (i/(vals.length-1)) * (w - pad*2);
+      const y = h - pad - ((v - lo)/span) * (h - pad*2);
+      return `${Math.round(x*10)/10},${Math.round(y*10)/10}`;
+    }).join(" ");
+    const upward = vals[vals.length-1] >= vals[0];
+    return `<svg class="wk-exprog__spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points="${pts}" fill="none" stroke="${upward ? 'var(--rh-green)' : 'var(--rh-muted)'}" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+  })();
+
+  const cell = (v,l) => `<span class="wk-exprog__cell"><b>${v}</b>${l}</span>`;
+  return `<div class="wk-exprog">
+    ${cell(displayW(best.weight)+" "+wUnit(), "best")}
+    ${cell(displayW(last.weight)+" "+wUnit(), "last")}
+    ${delta !== null ? `<span class="wk-exprog__cell"><b class="${delta>0?'is-up':delta<0?'is-down':''}">${delta>0?'+':''}${displayW(delta)} ${wUnit()}</b>vs prev</span>` : ""}
+    ${cell(sessions, "session"+(sessions!==1?"s":""))}
+    ${spark}
+  </div>`;
+}
+
 function exerciseProgressTrend(name, limit=20){
   const sessions = state.workoutLog.slice().reverse(); // oldest first
   const out = [];
@@ -4195,11 +4350,19 @@ function profileCalorieTarget(){
   return Math.round(profileMaintenance() + state.profile.goalDelta);
 }
 
+/* Reads IgnytBMI so the app has one BMI vocabulary rather than two. The old four labels
+   ("Normal", "Obese") described the person; the shared ones describe where the figure sits.
+   The local fallback exists only for the case where the module has not loaded -- the diet-plan
+   summary that calls this must still render a row. */
 function bmiCategory(bmi){
-  if(bmi<18.5) return "Underweight";
-  if(bmi<25) return "Normal";
-  if(bmi<30) return "Overweight";
-  return "Obese";
+  if(window.IgnytBMI){
+    const band = IgnytBMI.bandFor(bmi);
+    if(band) return band.label;
+  }
+  if(bmi<18.5) return "Below healthy range";
+  if(bmi<25) return "Healthy range";
+  if(bmi<30) return "Above healthy range";
+  return bmi<35 ? "High" : "Very high";
 }
 
 function calcBMR(age, gender, heightCm, weightKg){
@@ -4236,7 +4399,7 @@ function calcBodyFatNavy(gender, heightCm, neckCm, waistCm, hipCm){
 function calcHeartRateZones(age, restingHR){
   const maxHR = 220-age;
   const zones = [
-    {label:"50-60% (Very Light)", lo:0.5, hi:0.6},
+    {label:"50-60% (Very Light)", lo:0.5, hi:0.6, category:"streak", tier:"gold", value:"100" },
     {label:"60-70% (Light)", lo:0.6, hi:0.7},
     {label:"70-80% (Moderate)", lo:0.7, hi:0.8},
     {label:"80-90% (Hard)", lo:0.8, hi:0.9},
@@ -4277,6 +4440,794 @@ function calcBodyType(bust, waist, highHip, hip){
     else shape = "Rectangle / Banana";
   }
   return { shape, whr };
+}
+
+/* ---------- Food search panel (Food module Phase 3) ----------
+   Search over the bundled catalogue + the user's own favourites. Selecting a result opens a
+   small portion row (grams) and logs through the SAME insert path the quick-add chips use,
+   so a logged entry's stored shape is completely unchanged.
+
+   Degrades silently if either food module failed to load -- the manual macro form below it
+   has always been the fallback and still works on its own. */
+/** Resolves the current portion selection to {amount, unit, grams} for a food. Single
+ *  choke point so the panel, the preview and the logged record can never disagree.
+ *  Falls back to the food's own 100g basis when nothing is selected yet, and to grams if
+ *  the chosen unit doesn't apply (e.g. the unit carried over from a previous food). */
+/** Resolves a search-result id back to its food object.
+ *  Favourites live only in the search index (they are built from state.favoriteFoods, not
+ *  the catalogue), so they are looked up by name; everything else comes from the catalogue.
+ *  Falls back to the seed DB when the catalogue has not finished loading. */
+/* Catalogue rows that were merged into another, old id -> surviving id.
+ *
+ *  Three products had been added twice, once under "Branded Biscuits" and once under
+ *  "Branded Biscuits & Cookies", because the two rows spelled the apostrophe differently —
+ *  McVitie’s against McVitie's — so nothing matching on name ever saw them as one food. The
+ *  duplicate carrying the category's placeholder figures was removed and the one with real
+ *  per-product figures kept.
+ *
+ *  A log entry stores the food id it was created from, and lookupFood resolves by id with no
+ *  fallback to the name, so an entry logged against a removed row would stop resolving: the
+ *  logged calories would survive, but reopening it to change the amount would find no food.
+ *  Redirecting the id costs three lines and keeps that history editable. */
+const MERGED_FOOD_IDS = {
+  "ignyt:161": "ignyt:261",   // McVitie's Rich Tea
+  "ignyt:195": "ignyt:289",   // Sunfeast Mom's Magic Butter
+  "ignyt:290": "ignyt:196"    // Sunfeast Mom's Magic Cashew
+};
+
+function lookupFood(id, nameHint){
+  if(String(id).indexOf("fav:") === 0){
+    return IgnytFoodSearch.search(nameHint || "", { limit: 25 }).find(f=>f.id === id) || null;
+  }
+  id = MERGED_FOOD_IDS[id] || id;
+  return (window.IgnytFoodCatalogue && IgnytFoodCatalogue.byId(id)) || IgnytFoodDB.byId(id);
+}
+
+function resolveFoodPortion(food){
+  const conv = window.IgnytServingConverter;
+  let unit = state.foodSearchUnit || "g";
+  if(conv && conv.gramsPerUnit(food, unit) == null) unit = "g";
+  const rawAmount = Number(state.foodSearchAmount);
+  // A blank amount is not an error here — it means "nothing chosen yet", which resolves to
+  // the food's own basis. validateQuantity() is what rejects a genuinely bad entry.
+  const amount = rawAmount > 0 ? rawAmount : (unit === "g" ? (food.per || 100) : 1);
+  const grams = (conv && unit !== "g") ? (conv.toGrams(food, amount, unit) || (food.per || 100)) : amount;
+  return { amount, unit, grams: Math.round(grams*10)/10 };
+}
+
+/** The amount to validate and display, distinguishing "not chosen yet" from "typed 0".
+ *  resolveFoodPortion() silently substitutes the food's basis for any non-positive amount,
+ *  which is right for rendering a default but wrong for validation — it would turn a typed
+ *  "0" into a logged 100 g. This returns the raw text whenever the user has actually typed,
+ *  so validateQuantity() sees what they entered and can reject it. */
+function currentFoodAmount(food){
+  const raw = state.foodSearchAmount;
+  /* An empty string means the user cleared the box; null/undefined means nothing has been
+     entered yet, which is a different thing. Both used to fall through to the food's default
+     portion, so clearing the field left the page showing the default's calories with no
+     error and the Add button live — press it and 100 g was logged despite an empty box.
+     Only the never-set case gets the default now; a cleared box stays cleared and
+     validateQuantity() answers "Enter an amount." the way it always could have. */
+  if(typeof raw === "string" && raw.trim() === "") return "";
+  const typed = raw !== null && raw !== undefined;
+  return typed ? raw : resolveFoodPortion(food).amount;
+}
+
+/** The serving to pre-select when a food is first opened.
+ *  Preference: what the user chose last time for this exact food, then the food's own
+ *  measured default serving, then its 100 g basis. Remembering the last choice is what turns
+ *  a repeat entry into one tap. */
+function defaultFoodPortion(food){
+  const N = window.IgnytNutrition;
+  if(N){
+    const remembered = N.recallServing(food.id);
+    if(remembered){
+      const conv = window.IgnytServingConverter;
+      // A remembered unit may not apply if the food's portion data changed between releases.
+      if(remembered.unit === "g" || !conv || conv.gramsPerUnit(food, remembered.unit) != null){
+        return remembered;
+      }
+    }
+  }
+  const conv = window.IgnytServingConverter;
+  if(food.per != null && food.servingUnit && food.servingUnit !== "g" && food.servingSize > 0){
+    /* How many of that unit the serving is, not a flat 1. The assumption held while
+       servingUnit was always something countable — one piece, one slice — and broke as soon
+       as drinks arrived with servingUnit "ml" and servingSize 100, which opened every soft
+       drink at "1 ml" and 0 kcal. Dividing by the unit's weight gives 1 for a 50 g piece and
+       100 for 100 ml from the same expression. */
+    const per = conv ? conv.gramsPerUnit(food, food.servingUnit) : null;
+    const amount = per > 0 ? Math.round((food.servingSize / per) * 10) / 10 : 1;
+    return { amount: amount > 0 ? amount : 1, unit: food.servingUnit };
+  }
+  /* Grams is the right default for anything weighed, but not everything is. A drink now
+     offers millilitres and not grams, and defaulting it to "100 g of milk" would open the
+     screen on a unit its own list does not contain. Falling back to whatever the food offers
+     first keeps the default inside the offered set by construction. */
+  const offered = conv ? conv.unitsFor(food) : ["g"];
+  if(offered.indexOf("g") < 0 && offered.length){
+    const unit = offered[0];
+    const per = conv.gramsPerUnit(food, unit) || 1;
+    // Aim at the food's own basis so the opening figures match its per-100 g data.
+    const amount = Math.round(((food.per || 100) / per) * 10) / 10;
+    return { amount: amount > 0 ? amount : 1, unit };
+  }
+  return { amount: food.per || 100, unit: "g" };
+}
+
+/* ---- Category browser -------------------------------------------------------------
+   The catalogue is ~8,000 foods. Search answers "I know what I want"; the browser answers
+   "show me what's here", which is the only way to discover a food whose USDA name you would
+   never guess ("Beans, Snap, Green, Canned, Regular Pack, Drained Solids").
+
+   Long lists page rather than virtualise. True virtual scrolling needs a stable scroll
+   container that survives re-render, and this app re-renders wholesale from state on every
+   interaction — a windowed list would fight that on every keystroke. Paging costs one tap
+   and reuses the same incremental pattern already used by workout history. */
+/* 8, not 12. The brief asks for the top 5-10 with a "View More" rather than a wall of every
+   food containing the word — and a shorter first page is only tolerable because the ranking
+   underneath it now puts the right things first. The pager was already here; this is the
+   number it counts to. */
+const FOOD_PAGE_SIZE = 8;
+
+/* A glyph per category. Purely decorative — the name is always shown next to it. */
+const FOOD_CATEGORY_ICONS = {
+  "Vegetables":"🥦", "Fruits":"🍎", "Grains & Cereals":"🌾", "Bread & Bakery":"🍞",
+  "Rice":"🍚", "Pasta":"🍝", "Beans & Legumes":"🫘", "Nuts & Seeds":"🥜",
+  "Dairy":"🥛", "Eggs":"🥚", "Chicken":"🍗", "Turkey":"🦃", "Beef":"🥩", "Pork":"🥓",
+  "Game & Other Meats":"🍖", "Fish":"🐟", "Seafood":"🦐", "Oils & Fats":"🫒",
+  "Spices & Herbs":"🌿", "Sauces & Condiments":"🥫", "Beverages":"🥤", "Desserts":"🍰",
+  "Snacks":"🍿", "Fast Food":"🍔", "Soups":"🍲", "Meals & Entrees":"🍱",
+  "Restaurant Foods":"🍽️", "Protein Supplements":"💪", "Indian Foods":"🍛",
+  "Custom Foods":"✏️"
+};
+/* Reads through the image service when it is loaded, so a category's glyph is defined in one
+   place; falls back to the local table if that module failed to load. */
+function foodCategoryIcon(name){
+  if(window.IgnytFoodImages) return IgnytFoodImages.categoryGlyph(name);
+  return FOOD_CATEGORY_ICONS[name] || "🍴";
+}
+
+/** One search/browse result.
+ *
+ *  A PICKER ROW, NOT A NUTRITION CARD. This used to carry the category, serving basis, the
+ *  three macros and the calorie figure. All of that is real, and all of it is noise while
+ *  someone is typing: at that moment the only question is "which of these is the food I mean",
+ *  and four numbers per row make the names harder to scan rather than easier. Everything
+ *  removed here is on the Food Details page, one tap away, where the user has actually chosen
+ *  something and the numbers answer a question they are asking.
+ *
+ *  The thumbnail and the favourite star have now gone the same way, for the same reason. A
+ *  column of photographs is the single biggest source of visual noise in a list whose job is
+ *  to be read, and the star was a second tap target on a row whose only purpose is to be
+ *  tapped once. Favouriting lives on the Food Details page, beside the numbers it belongs
+ *  with — it is not lost, just moved to where the user has actually chosen a food.
+ *
+ *  What survives is what identifies a food: the name, the matched span, and whether it is
+ *  verified. The chevron says the row goes somewhere. */
+/** @param {string} [labelOverride] the canonical group name, when this card leads a group */
+function renderFoodResultCard(f, labelOverride){
+  return `<div class="food-row" data-food-pick="${escHtml(f.id)}">
+    <div class="food-row__body">
+      <!-- The matched span is marked so the eye lands on WHY this row is here, which matters
+           most on a fuzzy or synonym hit where the connection is not otherwise obvious. -->
+      <div class="food-row__name">
+        <span class="food-row__text">${highlightMatch(labelOverride || (window.IgnytFoodCuration ? IgnytFoodCuration.displayName(f) : f.name), state.foodSearchQuery)}</span>${
+        f.verified ? `<span class="food-row__verified" title="Measured values from a published source" aria-label="Verified">✓</span>` : ""}</div>
+    </div>
+    ${/* The row still opens Food Details — that is where you go to change the serving. The +
+          is the other half: log it at its default portion and stay on the results, because
+          adding three known foods should not be three round trips through a detail screen.
+          It is a real button inside the row, so its click has to stopPropagation() or the
+          row's own handler would navigate anyway. */''}
+    <button class="food-row__add" data-food-quick-add="${escHtml(f.id)}"
+            aria-label="Add ${escHtml(window.IgnytFoodCuration ? IgnytFoodCuration.displayName(f) : f.name)}">+</button>
+    <span class="food-row__go" aria-hidden="true">›</span>
+  </div>`;
+}
+
+/* Variant ordering inside an expanded group. Uses the curation tiers rather than a second
+   ranking system, so "what ranks first" has one definition in the codebase. Favourites and
+   recently-used come first because those are the user's own foods, ahead of anything the
+   database thinks is important. */
+function sortVariants(foods){
+  const C = window.IgnytFoodCuration;
+  if(!C) return foods;
+  const favs = Object.create(null);
+  (state.favoriteFoods||[]).forEach(f=>{ if(f && f.name) favs[String(f.name).toLowerCase()] = 1; });
+  const recent = Object.create(null);
+  (state.foodLog||[]).slice(0,60).forEach(e=>{ if(e && e.name) recent[String(e.name).toLowerCase()] = 1; });
+
+  return foods.slice().sort((a,b)=>{
+    const an = String(a.name).toLowerCase(), bn = String(b.name).toLowerCase();
+    if(!!favs[an] !== !!favs[bn]) return favs[an] ? -1 : 1;
+    if(!!recent[an] !== !!recent[bn]) return recent[an] ? -1 : 1;
+    const ar = C.tierOf(a, {}).rank, br = C.tierOf(b, {}).rank;
+    if(ar !== br) return ar - br;
+    return C.displayName(a).localeCompare(C.displayName(b));
+  });
+}
+
+/** Paged list of GROUPS, each collapsing its near-identical variants.
+ *
+ *  Paging counts groups rather than foods — a page of 12 that turned out to be one food and
+ *  eleven of its variants would be a page showing one thing.
+ *
+ *  Grouping runs once here, before render, so expanding a group is a re-render of markup the
+ *  search already produced rather than a second search. */
+function renderFoodList(foods, page){
+  const C = window.IgnytFoodCuration;
+  if(!C || !C.groupVariants){
+    const shown = foods.slice(0, page * FOOD_PAGE_SIZE);
+    return `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">
+        ${shown.map(renderFoodResultCard).join("")}
+      </div>`;
+  }
+
+  const groups = C.groupVariants(foods);
+  const shown = groups.slice(0, page * FOOD_PAGE_SIZE);
+
+  return `<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">
+      ${shown.map(g=>{
+        /* The primary card carries the GROUP's name — "Apple", not whichever USDA record
+           happened to rank first. Its foodId is still the lead's, so tapping it logs a real
+           record rather than an abstraction.
+
+           A group of one gets it too. It used to fall through to the raw display name, which
+           is why "Apples, Red Delicious, with Skin, Raw" still reached the screen: whether a
+           record has siblings has nothing to do with what it should be called. */
+        const label = g.label || (window.IgnytFoodCuration ? IgnytFoodCuration.groupLabel(g.lead) : null);
+        if(!g.variants.length) return renderFoodResultCard(g.lead, label);
+        const open = !!(state.expandedVariants||{})[g.key];
+        const n = g.variants.length;
+        return `<div class="variant-group${open?' is-open':''}">
+          ${renderFoodResultCard(g.lead, label)}
+          <button class="variant-toggle" data-variant-toggle="${escHtml(g.key)}"
+            aria-expanded="${open?'true':'false'}">
+            <span>${open?'Hide':'View'} ${n} variant${n===1?'':'s'}</span>
+            <span class="variant-toggle__chev" aria-hidden="true">⌄</span>
+          </button>
+          <div class="variant-body${open?' is-open':''}">
+            <div>${open ? sortVariants(g.variants).map(v=>renderFoodResultCard(v, g.labels && g.labels[v.id])).join("") : ""}</div>
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+    ${groups.length > shown.length ? `<button class="btn btn-ghost" data-food-more="1" style="width:100%;padding:7px;font-size:12px;margin-bottom:8px;">
+      Show more (${groups.length - shown.length} remaining)</button>` : ""}`;
+}
+
+function renderFoodCategoryGrid(){
+  const cat = window.IgnytFoodCatalogue;
+  if(!cat) return "";
+  const cats = cat.categories();
+  if(!cats.length) return "";
+  return `
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Browse by category</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;margin-bottom:10px;">
+      ${cats.map(c=>`<button class="cat-chip" data-food-browse="${escHtml(c.name)}"
+        style="margin:0;flex-direction:column;align-items:flex-start;text-align:left;padding:8px;gap:2px;">
+        <span style="font-size:15px;line-height:1;">${foodCategoryIcon(c.name)}</span>
+        <span style="font-size:11px;font-weight:700;line-height:1.2;">${escHtml(c.name)}</span>
+        <span class="mono" style="font-size:11px;color:var(--muted);">${c.count}</span>
+      </button>`).join("")}
+    </div>`;
+}
+
+/* ---- Food detail (Phase 4) ---------------------------------------------------------
+   Everything the app knows about one food, with nutrition recalculated live as the serving
+   changes. Two columns because they answer different questions: "per 100 g" is how you
+   compare two foods, "this serving" is what you are about to log.
+
+   Recalculation is pure in-memory arithmetic over a food object already held by the
+   catalogue — no re-parsing, no lookup — so re-rendering on every keystroke is cheap. */
+
+function renderNutritionRow(row, isServing){
+  const N = window.IgnytNutrition;
+  const dim = !row.present;
+  return `<tr>
+    <td style="padding:4px 0;font-size:12px;color:${row.major?'var(--text)':'var(--muted)'};font-weight:${row.major?'700':'400'};">${escHtml(row.label)}</td>
+    <td class="mono" style="padding:4px 0;text-align:right;font-size:12px;color:${dim?'var(--muted)':(row.key==='calories'?'var(--accent)':'var(--text)')};font-weight:${row.major?'700':'400'};">${N.format(row.key, row.serving)}</td>
+    <td class="mono" style="padding:4px 0 4px 10px;text-align:right;font-size:11px;color:var(--muted);">${N.format(row.key, row.per100)}</td>
+    <td class="mono" style="padding:4px 0 4px 8px;text-align:right;font-size:11px;color:var(--muted);width:38px;">${row.percentDV!=null?row.percentDV+"%":""}</td>
+  </tr>`;
+}
+
+/* ---- Smart serving selector (Phase 7) -----------------------------------------------
+   The one control that decides whether logging feels fast. Typing "how many grams of
+   broccoli is a portion" is a question nobody should have to answer, so the app answers it.
+
+   Presets are built in priority order:
+     1. The food's OWN USDA-measured portions. This is the whole point — a cup of raw
+        broccoli is 76 g and a cup of raw kale is 20.6 g, and no generic table can say that.
+     2. A category shape for foods USDA has no portions for, so bread still offers slices
+        and milk still offers glasses.
+     3. Gram anchors, always last, so an exact figure is never more than one tap away.
+
+   Each preset carries its own calorie figure. That is what removes the arithmetic: you pick
+   the portion you ate, not a number you have to convert. */
+
+/* Fallback serving shapes by category, used only when USDA has no measured portion for a
+   food. Deliberately short — a wrong guess dressed as a measurement is worse than grams. */
+const CATEGORY_SERVING_SHAPES = {
+  "Eggs":            [["egg",1],["egg",2],["egg",3]],
+  "Bread & Bakery":  [["slice",1],["slice",2],["piece",1]],
+  "Dairy":           [["cup",1],["glass",1],["tbsp",1]],
+  "Beverages":       [["glass",1],["cup",1],["bottle",1]],
+  "Rice":            [["cup",0.5],["cup",1],["cup",2]],
+  "Pasta":           [["cup",1],["bowl",1]],
+  "Protein Supplements": [["scoop",0.5],["scoop",1],["scoop",2]],
+  "Oils & Fats":     [["tsp",1],["tbsp",1]],
+  "Sauces & Condiments": [["tsp",1],["tbsp",1],["cup",0.25]],
+  "Nuts & Seeds":    [["tbsp",1],["cup",0.25],["serving",1]],
+  "Indian Foods":    [["roti",1],["roti",2],["cup",1],["bowl",1]],
+  "Soups":           [["cup",1],["bowl",1]],
+  "Fruits":          [["piece",1],["cup",1]],
+  "Vegetables":      [["cup",1],["piece",1]]
+};
+
+/* Gram anchors offered for every food, so an exact amount is always one tap away. Kept to
+   four so the row never wraps on a narrow phone. */
+const GRAM_ANCHORS = [50, 100, 150, 200];
+
+/* The same idea for anything poured. A glass is 250 ml, so these bracket it rather than
+   sitting at round gram values nobody measures a drink in. */
+const VOLUME_ANCHORS = [100, 200, 250, 500];
+
+/**
+ * @returns {Array<{amount:number, unit:string, grams:number, kcal:number, label:string, source:string}>}
+ */
+function servingPresetsFor(food){
+  if(!food || food.per == null) return [];
+  const conv = window.IgnytServingConverter;
+  const N = window.IgnytNutrition;
+  if(!conv || !N) return [];
+
+  const out = [];
+  const seen = Object.create(null);
+  const push = (amount, unit, source)=>{
+    const grams = unit === "g" ? amount : conv.toGrams(food, amount, unit);
+    if(!(grams > 0) || grams > 2000) return;
+    const key = Math.round(grams * 10) / 10;
+    if(seen[key]) return;                       // two presets of the same weight are one preset
+    seen[key] = 1;
+    out.push({
+      amount, unit, grams: key, source,
+      kcal: Math.round((Number(food.calories)||0) * (key / (food.per || 100))),
+      // Anything below 2 takes the singular: "½ cup", not "½ cups". labelFor() pluralises on
+      // amount !== 1, which is right for whole numbers and wrong for fractions.
+      label: unit === "g" ? `${amount} g`
+        : `${N.formatAmount(amount)} ${conv.labelFor(unit, amount >= 2 ? amount : 1)}`
+    });
+  };
+
+  /* 1. What was actually measured for this food. The count comes from the entry rather than
+        being assumed to be one: a USDA row is "1 cup = 240 g", but the seed catalogue writes
+        each food's basis, "100 ml = 100 g". Assuming one turned that into a 1 ml chip sitting
+        at the front of every drink, and a 1 g chip in front of every powder. */
+  (food.portions || []).forEach(p=>{
+    if(!p || !p.unit || !(p.grams > 0)) return;
+    // A "g" portion is the basis restated and every food has one; the gram anchors below
+    // already cover it, and letting it through put a "100 g" chip in the middle of a row of
+    // millilitres for anything poured.
+    if(p.unit === "g") return;
+    const n = p.amount != null ? Number(p.amount) : (p.label ? parseFloat(String(p.label)) : 1);
+    push(isFinite(n) && n > 0 ? n : 1, p.unit, "measured");
+  });
+
+  /* 2. The shapes for this food's form — scoops for a supplement, a glass for a liquid,
+        small/medium/large for produce. Read from the converter rather than from a table
+        here, so the chips can never offer a serving the unit list does not. */
+  if(out.length < 3){
+    const shapes = conv.presetShapesFor ? conv.presetShapesFor(food)
+                                        : (CATEGORY_SERVING_SHAPES[food.category] || []);
+    shapes.forEach(([unit, amount])=>{
+      if(conv.gramsPerUnit(food, unit) != null) push(amount, unit, "category");
+    });
+  }
+
+  /* 3. Anchors in the food's own base unit. Grams for a solid; millilitres for something
+        poured, because anchoring milk at "50 g" asks the user to weigh a liquid. */
+  const pourable = conv.isVolumeUnit && conv.unitsFor(food)[0] === "ml";
+  if(pourable) VOLUME_ANCHORS.forEach(ml=>push(ml, "ml", "grams"));
+  else GRAM_ANCHORS.forEach(g=>push(g, "g", "grams"));
+
+  // Smallest first reads as a scale rather than an arbitrary list.
+  return out.sort((a,b)=>a.grams - b.grams).slice(0, 8);
+}
+
+function renderServingPresets(food, activeGrams){
+  const presets = servingPresetsFor(food);
+  if(!presets.length) return "";
+  const measured = presets.filter(p=>p.source === "measured").length;
+  return `
+    <div class="nut-label" style="margin-bottom:var(--space-2xs);">
+      Serving${measured?` · ${measured} USDA-measured`:""}
+    </div>
+    <div class="srv-grid" style="margin-bottom:var(--space-xs);">
+      ${presets.map(p=>`<button class="srv${Math.abs(p.grams - activeGrams) < 0.5 ? ' is-on' : ''}"
+        data-srv-amount="${p.amount}" data-srv-unit="${escHtml(p.unit)}">
+        <span class="srv__name">${escHtml(p.label)}</span>
+        <span class="srv__grams">${p.grams} g</span>
+        <span class="srv__kcal">${p.kcal} kcal</span>
+      </button>`).join("")}
+    </div>`;
+}
+
+
+
+/* =========================================================
+   SAVED MEALS ("My Meals") + repeat-logging helpers
+
+   A saved meal is a NAMED SET OF FOODS logged as one action — "Breakfast and dinner" being
+   whey, strawberry cream and the rest, added in a single tap. It is stored as a snapshot of
+   its items rather than as a list of foodIds, for the same reason a log entry is: the
+   catalogue can change underneath it, and a combo that silently re-prices itself when a food
+   is re-imported would be worse than one that keeps the numbers you saved.
+========================================================= */
+
+/** Distinct foods ranked by how often they have actually been logged, each carrying the
+ *  serving it was last logged with. Favourites are pinned above the rest — an explicit save
+ *  is a stronger signal than a frequency count. */
+function frequentlyTrackedFoods(limit){
+  const counts = Object.create(null);
+  const last = Object.create(null);
+  for(const e of state.foodLog){
+    const k = String(e.name||"").trim().toLowerCase();
+    if(!k) continue;
+    counts[k] = (counts[k]||0) + 1;
+    if(!last[k]) last[k] = e;            // foodLog is newest-first, so the first win is the latest
+  }
+  const favNames = new Set((state.favoriteFoods||[]).map(f=>String(f.name||"").toLowerCase()));
+  return Object.keys(counts)
+    .map(k=>({ entry:last[k], count:counts[k], fav:favNames.has(k) }))
+    .sort((a,b)=> (b.fav?1:0)-(a.fav?1:0) || b.count-a.count
+                  || String(a.entry.name).localeCompare(String(b.entry.name)))
+    .slice(0, limit || 8);
+}
+
+/** Yesterday's entries, for the one-tap repeat. */
+function yesterdayEntries(){
+  const d = new Date(nutritionDateStr() + "T12:00:00");
+  d.setDate(d.getDate() - 1);
+  const ds = dayKey(d);
+  return state.foodLog.filter(f=>f.date === ds);
+}
+
+/** Copy a set of entries onto the current day, keeping their meal assignment. */
+function copyEntriesToToday(entries, mealOverride){
+  const ds = nutritionDateStr();
+  let n = 0;
+  for(const e of entries){
+    state.foodLog.unshift(Object.assign({}, e, {
+      id: nextId(),
+      date: ds,
+      meal: mealOverride || e.meal,
+      at: Date.now(),
+      copiedFrom: e.id
+    }));
+    n++;
+  }
+  persist();
+  return n;
+}
+
+/** Save the foods currently in one meal as a reusable combo. */
+function saveMealCombo(name, entries){
+  if(!entries || !entries.length) return null;
+  const combo = {
+    id: nextId(),
+    name: String(name||"My meal").trim().slice(0,60),
+    createdAt: Date.now(),
+    // A snapshot, not references — see the note at the top of this block.
+    items: entries.map(e=>({
+      name: e.name, grams: e.grams, servingUnit: e.servingUnit, foodId: e.foodId ?? null,
+      calories: Number(e.calories||0), protein: Number(e.protein||0),
+      carbs: Number(e.carbs||0), fat: Number(e.fat||0), fibre: Number(e.fibre||0)
+    }))
+  };
+  state.savedMeals = [combo].concat(state.savedMeals || []);
+  LS.set("hx_saved_meals", state.savedMeals);
+  return combo;
+}
+
+function savedMealCalories(combo){
+  return Math.round((combo.items||[]).reduce((a,i)=>a+Number(i.calories||0), 0));
+}
+
+/** Log every food in a combo into one meal. */
+function logSavedMeal(combo, meal){
+  const ds = nutritionDateStr();
+  for(const i of (combo.items||[])){
+    state.foodLog.unshift({
+      id: nextId(), date: ds, name: i.name, meal: meal || mealForNow(),
+      grams: i.grams, quantity: i.grams, servingUnit: i.servingUnit || "g",
+      calories: Math.round(i.calories||0), protein: Number(i.protein||0),
+      carbs: Number(i.carbs||0), fat: Number(i.fat||0), fibre: Number(i.fibre||0),
+      foodId: i.foodId ?? null, at: Date.now(), fromMeal: combo.id
+    });
+  }
+  persist();
+  return (combo.items||[]).length;
+}
+
+/* =========================================================
+   SEARCH-FIRST FOOD LOG
+
+   The screen used to open on a grid of 41 category tiles, which meant logging a food you eat
+   every day started with a taxonomy question. It now opens on the two lists that answer that
+   question directly — what you save, and what you just ate — with categories moved behind a
+   button for the genuine browse case.
+
+   Everything here reads the EXISTING search index and food log. Fuzzy matching, synonyms
+   (curd -> yogurt) and the token index were already built; what was missing was showing them
+   to the user before they type.
+========================================================= */
+
+/** Favourites, most-used first. Frequency comes from the real log rather than a stored
+ *  counter, so it cannot drift out of step with what was actually eaten. */
+function favouriteFoodsRanked(limit){
+  const favs = Array.isArray(state.favoriteFoods) ? state.favoriteFoods : [];
+  if(!favs.length) return [];
+  const uses = Object.create(null);
+  for(const e of state.foodLog){
+    const k = String(e.name||"").trim().toLowerCase();
+    uses[k] = (uses[k]||0) + 1;
+  }
+  return favs.slice()
+    .map(f=>({ food:f, n: uses[String(f.name||"").trim().toLowerCase()] || 0 }))
+    .sort((a,b)=> b.n - a.n || String(a.food.name).localeCompare(String(b.food.name)))
+    .slice(0, limit || 8);
+}
+
+/** Distinct recently-logged foods, newest first, carrying the serving and meal they were
+ *  last logged with — that is what makes them one-tap rather than one-tap-then-adjust. */
+function recentLoggedFoods(limit){
+  const seen = new Set();
+  const out = [];
+  for(const e of state.foodLog){
+    const k = String(e.name||"").trim().toLowerCase();
+    if(!k || seen.has(k)) continue;
+    seen.add(k);
+    out.push(e);
+    if(out.length >= (limit||8)) break;
+  }
+  return out;
+}
+
+/* Wraps the matched span in <mark>. Escapes FIRST and matches on the escaped string, so a
+   food name containing a bracket cannot inject markup through the highlighter. */
+function highlightMatch(text, query){
+  const safe = escHtml(String(text||""));
+  const q = String(query||"").trim();
+  if(q.length < 2) return safe;
+  const needle = escHtml(q).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  try{
+    return safe.replace(new RegExp("(" + needle + ")", "ig"), "<mark class=\"fs-mark\">$1</mark>");
+  }catch(e){ return safe; }
+}
+
+/* Autocomplete. Names only, deduplicated, and only when the query is short enough that the
+   user is plausibly still typing — offering completions once someone has typed the whole
+   thing is noise sitting on top of the answer. */
+function searchSuggestions(q, limit){
+  const s = window.IgnytFoodSearch;
+  if(!s || !s.search) return [];
+  const query = String(q||"").trim();
+  if(query.length < 2 || query.length > 14) return [];
+  const seen = new Set([query.toLowerCase()]);
+  const out = [];
+  for(const f of s.search(query, { limit: 24 })){
+    const label = window.IgnytFoodCuration ? IgnytFoodCuration.displayName(f) : f.name;
+    const k = label.toLowerCase();
+    if(seen.has(k)) continue;
+    seen.add(k);
+    out.push(label);
+    if(out.length >= (limit||6)) break;
+  }
+  return out;
+}
+
+/** A compact one-tap row used by both the Favorites and Recent lists. */
+function quickFoodRow(food, sub, action){
+  const img = window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(food, 34) : "";
+  const name = window.IgnytFoodCuration ? IgnytFoodCuration.displayName(food) : food.name;
+  return `<button class="fs-quick" ${action}>
+    ${img}
+    <span class="fs-quick__body">
+      <span class="fs-quick__name">${escHtml(name)}</span>
+      ${sub ? `<span class="fs-quick__sub">${escHtml(sub)}</span>` : ""}
+    </span>
+    <span class="fs-quick__kcal">${Math.round(food.calories||0)}<span class="nut-unit"> kcal</span></span>
+  </button>`;
+}
+
+/**
+ * The query-dependent half of the food search screen: loading skeleton, recent searches,
+ * the idle quick-add lists, the category grid and the results.
+ *
+ * Split out from the screen's own render so typing can refresh THIS ONLY. Before that the
+ * app-wide render() ran on every keystroke, which destroyed and recreated the focused
+ * <input>. On Android that takes the soft keyboard down and brings it back up, and the
+ * viewport resizing twice per keystroke is the "jumping" — plus the caret had to be restored
+ * by hand, and the whole page (8,000-food catalogue and all) was rebuilt to update a list.
+ * See updateFoodSearchResults(), which swaps only this container.
+ *
+ * This mirrors exercisePickerResultsHtml()/updateExercisePickerResults(), which solved the
+ * same problem for the exercise picker.
+ */
+function foodSearchResultsHtml(meal){
+  if(!window.IgnytFoodSearch || !window.IgnytFoodDB) return "";
+  const q = state.foodSearchQuery || "";
+  const sel = state.foodSearchSelected;
+  const cat = window.IgnytFoodCatalogue;
+  const browsing = state.foodBrowseCategory;
+  const loading = cat && cat.status() === "loading";
+  const recentSearches = IgnytFoodSearch.recentSearches ? IgnytFoodSearch.recentSearches() : [];
+  const idle = !q.trim() && !sel && !browsing;
+
+  const results = q.trim()
+    ? IgnytFoodSearch.search(q, { limit: 200, category: browsing || undefined })
+    : (browsing && cat
+        ? cat.byCategory(browsing).slice().sort((a,b)=>a.name.localeCompare(b.name))
+        : []);
+
+  // No inline detail panel any more: picking a food opens the Food Details route instead,
+  // so this container only ever shows ways of FINDING a food.
+  return `
+      ${loading ? `
+        <!-- Skeleton rather than a text notice: the panel keeps its shape while the
+             catalogue lands, so nothing jumps when the real rows replace these. -->
+        <div style="display:flex;flex-direction:column;gap:var(--space-xs);margin-bottom:var(--space-sm);">
+          ${[0,1,2,3].map(()=>`<div style="display:flex;gap:var(--space-xs);align-items:center;padding:9px 0;">
+            <div class="nut-skeleton" style="width:34px;height:34px;border-radius:var(--radius-sm);flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;">
+              <div class="nut-skeleton" style="height:11px;width:62%;"></div>
+              <div class="nut-skeleton" style="height:9px;width:38%;margin-top:6px;"></div>
+            </div>
+            <div class="nut-skeleton" style="height:11px;width:42px;flex-shrink:0;"></div>
+          </div>`).join("")}
+        </div>` : ""}
+
+      ${idle && recentSearches.length ? `
+        <div class="row-between" style="margin-bottom:5px;">
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Recent searches</span>
+          <button class="cat-chip" data-clear-recent-searches="1" style="margin:0;padding:2px 8px;font-size:11px;color:var(--muted);">Clear</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+          ${recentSearches.slice(0,12).map(s=>`<button class="cat-chip" data-recent-search="${escHtml(s)}" style="margin:0;">${escHtml(s)}</button>`).join("")}
+        </div>` : ""}
+
+      ${idle ? (()=>{
+        const freq = frequentlyTrackedFoods(8);
+        const combos = (state.savedMeals || []).slice(0, state.savedMealsAll ? 99 : 2);
+        const yday = yesterdayEntries();
+        return `
+
+          ${yday.length ? `
+            <button class="fs-row fs-row--action" data-copy-yesterday="1">
+              <span class="fs-row__title">Track Yesterday's Meal</span>
+              <span class="fs-row__meta">${yday.length} item${yday.length===1?'':'s'}</span>
+              <span class="fs-plus" aria-hidden="true">+</span>
+            </button>` : ""}
+
+          ${combos.length ? `
+            <div class="fs-sec">
+              <span>My Meals</span>
+              ${(state.savedMeals||[]).length > 2
+                ? `<button class="fs-viewall" data-saved-all="1">${state.savedMealsAll?'Show less':'View all'}</button>` : ""}
+            </div>
+            ${combos.map(c=>`
+              <div class="fs-row" data-saved-meal="${escHtml(String(c.id))}">
+                <span class="fs-row__body">
+                  <span class="fs-row__title">${escHtml(c.name)}</span>
+                  <span class="fs-row__sub">${escHtml((c.items||[]).map(i=>i.name).join(", ")).slice(0,60)}${(c.items||[]).map(i=>i.name).join(", ").length>60?'…':''}</span>
+                </span>
+                <span class="fs-row__cal">${savedMealCalories(c)} Cal</span>
+                <span class="fs-plus" aria-hidden="true">+</span>
+              </div>`).join("")}` : ""}
+
+          ${freq.length ? `
+            <div class="fs-sec"><span>Frequently Tracked Foods</span></div>
+            ${freq.map(f=>`
+              <div class="fs-row" data-quick-recent="${escHtml(String(f.entry.id))}">
+                <span class="fs-row__body">
+                  <span class="fs-row__title">${escHtml(f.entry.name)}${f.fav?' <span class="fs-star">★</span>':''}</span>
+                  <span class="fs-row__sub">${f.entry.grams?`${Math.round(f.entry.grams)} ${escHtml(f.entry.servingUnit||'g')}`:'&mdash;'}${f.count>1?` · ${f.count}×`:''}</span>
+                </span>
+                <span class="fs-row__cal">${Math.round(f.entry.calories||0)} Cal</span>
+                <span class="fs-plus" aria-hidden="true">+</span>
+              </div>`).join("")}` : ""}
+
+          ${!freq.length && !combos.length && !yday.length ? `
+            <div class="fs-empty">
+              <div style="font-size:30px;line-height:1;margin-bottom:8px;">🔍</div>
+              <div style="font-weight:700;font-size:14px;">Search ${(cat?cat.count():0).toLocaleString()} foods</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+                Anything you log shows up here for one-tap repeat logging.
+              </div>
+            </div>` : ""}
+
+          <button class="fs-browse" data-toggle-browse="1">
+            <span>${state.foodBrowseOpen ? "Hide categories" : "Browse categories"}</span>
+            <span style="transform:rotate(${state.foodBrowseOpen?180:0}deg);transition:transform .2s;">⌄</span>
+          </button>
+          ${state.foodBrowseOpen ? renderFoodCategoryGrid() : ""}`;
+      })() : ""}
+
+      ${q.trim() && !browsing ? (()=>{
+        const sugg = searchSuggestions(q, 6);
+        return sugg.length ? `
+          <div class="fs-sugg">
+            ${sugg.map(s=>`<button class="fs-sugg__item" data-suggest="${escHtml(s)}">
+              <span aria-hidden="true" style="color:var(--muted);">⌕</span>${highlightMatch(s, q)}
+            </button>`).join("")}
+          </div>` : "";
+      })() : ""}
+
+      ${(q.trim() || browsing) ? (results.length
+        ? `<div class="fs-sec"><span>${browsing ? escHtml(browsing) : "Search Results"}</span></div>
+           ${renderFoodList(results, browsing ? state.foodBrowsePage : state.foodResultPage)}`
+        : `<div class="fs-noresult">No foods match "${escHtml(q)}"${browsing?` in ${escHtml(browsing)}`:""}.</div>`) : ""}
+`;
+}
+
+/* Swaps only the results container. The input element is untouched, so focus, the soft
+   keyboard, the caret and the scroll position all survive with no re-focus tricks. */
+function updateFoodSearchResults(){
+  const el = document.getElementById("food-search-results");
+  if(!el) return;
+  const html = foodSearchResultsHtml(state.mealOpen || mealForNow());
+
+  /* Nothing changed — leave the DOM alone. Typing past the point where the result set has
+     settled ("chick", "chicke", "chicken" all return the same rows) was still replacing every
+     node in an 800px list on each keystroke. That teardown and rebuild is the blink: the list
+     goes away and comes back a frame later, which is cheap on a desktop and very visible in a
+     WebView on a phone. */
+  if(el.innerHTML === html) return;
+
+  /* Something did change, but usually far less than all of it. Replace only the top-level
+     children that differ, so the suggestion chips and the "load more" button survive a change
+     to the rows below them. */
+  const next = document.createElement("div");
+  next.innerHTML = html;
+  const oldKids = Array.prototype.slice.call(el.children);
+  const newKids = Array.prototype.slice.call(next.children);
+  const sameShape = oldKids.length === newKids.length &&
+    oldKids.every((c, i) => c.tagName === newKids[i].tagName);
+  if(sameShape){
+    oldKids.forEach((c, i) => patchFoodResultSection(c, newKids[i]));
+  }else{
+    el.innerHTML = html;
+  }
+  // Whatever was replaced took its listeners with it, so the fresh nodes need binding.
+  bindFoodResultHandlers();
+}
+
+/* Update one section of the results, keeping as much of the existing DOM as possible.
+ *
+ *  The reason this is worth doing rather than assigning innerHTML: every keystroke moves the
+ *  <mark> that highlights the matched part of a name, so "chick", "chicke" and "chicken" all
+ *  produce different HTML for the same eight foods in the same order. Comparing markup alone
+ *  therefore says "everything changed" on every keystroke, and the whole list gets torn down
+ *  and rebuilt — which is what the blinking was.
+ *
+ *  So when the section holds the same foods in the same order, only each row's contents are
+ *  rewritten. The row elements themselves stay put, which means no reflow of the list and no
+ *  frame where the results are missing. */
+function patchFoodResultSection(oldEl, newEl){
+  if(oldEl.outerHTML === newEl.outerHTML) return;
+
+  const oldRows = Array.prototype.slice.call(oldEl.querySelectorAll("[data-food-pick]"));
+  const newRows = Array.prototype.slice.call(newEl.querySelectorAll("[data-food-pick]"));
+  const sameFoods = oldRows.length > 0 && oldRows.length === newRows.length &&
+    oldRows.every((r, i) => r.dataset.foodPick === newRows[i].dataset.foodPick);
+
+  if(sameFoods){
+    oldRows.forEach((r, i) => { if(r.innerHTML !== newRows[i].innerHTML) r.innerHTML = newRows[i].innerHTML; });
+    return;
+  }
+  oldEl.replaceWith(newEl);
 }
 
 function foodsForDate(dateStr){ return state.foodLog.filter(f=>f.date===dateStr); }
@@ -4326,6 +5277,349 @@ function todayMacros(){
   return t;
 }
 
+/* ---- Logged-entry editing (Phase 5) ------------------------------------------------
+   A logged entry can be re-scaled, moved to another meal, duplicated or deleted.
+
+   Re-scaling needs the food it came from, which is why commitSelectedFood() records
+   foodId/quantity/servingUnit/grams. An entry without them — anything entered by hand, or
+   logged before this existed — can still be moved, duplicated and deleted; only the serving
+   controls are withheld, because re-scaling numbers whose basis is unknown would be
+   guesswork presented as arithmetic.
+
+   Deletion keeps the removed entry in memory so it can be undone. It is deliberately NOT
+   persisted: an undo that survives an app restart implies a recycle bin, and food entries
+   are cheap to re-add. The workout recycle bin exists because a lost session is expensive. */
+
+/** The last deleted food entry, for one-step undo. Transient by design. */
+let lastDeletedFood = null;
+
+/** The meal whose window the current time falls in, so a one-tap add lands sensibly.
+ *  Falls back to the first configured meal if the usual names have been customised away. */
+function mealForNow(){
+  const h = new Date().getHours();
+  const want = h < 11 ? "Breakfast" : h < 12 ? "Morning Snack" : h < 15 ? "Lunch"
+             : h < 18 ? "Afternoon Snack" : "Dinner";
+  const types = mealTypes();
+  return types.includes(want) ? want : types[0];
+}
+
+function foodEntryById(id){
+  return state.foodLog.find(f=>f && String(f.id) === String(id)) || null;
+}
+
+/** True when this entry carries enough provenance to be re-scaled. */
+function foodEntryIsScalable(entry){
+  if(!entry || entry.foodId == null) return false;
+  return !!lookupFood(entry.foodId, entry.name);
+}
+
+/**
+ * Rewrites a logged entry at a new quantity/unit, recomputing every nutrient from the
+ * source food rather than scaling the stored numbers — stored values are rounded, and
+ * re-scaling rounded values compounds the error on every edit.
+ * @returns {{ok:boolean, error:string|null}}
+ */
+function rescaleFoodEntry(entry, amount, unit){
+  const N = window.IgnytNutrition;
+  const food = entry && entry.foodId != null ? lookupFood(entry.foodId, entry.name) : null;
+  if(!N || !food) return { ok:false, error:"This entry can't be re-scaled." };
+
+  const check = N.validateQuantity(food, amount, unit || entry.servingUnit || "g");
+  if(!check.ok) return { ok:false, error:check.error };
+
+  const v = N.logValues(food, check.grams);
+  entry.calories = Number(v.calories)||0;
+  entry.protein = Number(v.protein)||0;
+  entry.carbs = Number(v.carbs)||0;
+  entry.fat = Number(v.fat)||0;
+  entry.fibre = Number(v.fibre)||0;
+  // Re-derive micronutrients too, and drop any that the food no longer reports so a stale
+  // figure can never survive an edit.
+  N.MICRO_LOG_FIELDS.forEach(k=>{ if(v[k] != null) entry[k] = Number(v[k]); else delete entry[k]; });
+  entry.quantity = check.amount;
+  entry.servingUnit = check.unit;
+  entry.grams = check.grams;
+  entry.editedAt = Date.now();
+  return { ok:true, error:null };
+}
+
+
+/* ---- Repeat / most-used (Phase 5) ---------------------------------------------------
+   Re-logging what you already ate is the single most common nutrition action, so it should
+   never require going back through search.
+
+   Copies are made field-by-field from the stored entry rather than recomputed from the
+   catalogue: the point of "repeat" is to reproduce what was actually logged, including a
+   manual entry that has no source food at all. */
+
+/** Fields worth carrying when an entry is repeated. `id`, `date` and `at` are always fresh. */
+function copyFoodEntry(src, date, meal){
+  const N = window.IgnytNutrition;
+  const out = {
+    id: nextId(), date: date, meal: meal || src.meal || mealTypes()[0],
+    name: src.name,
+    calories: Number(src.calories)||0, protein: Number(src.protein)||0,
+    carbs: Number(src.carbs)||0, fat: Number(src.fat)||0, fibre: Number(src.fibre)||0,
+    at: Date.now()
+  };
+  if(N) N.MICRO_LOG_FIELDS.forEach(k=>{ if(src[k] != null) out[k] = Number(src[k]); });
+  ["foodId","category","quantity","servingUnit","grams"].forEach(k=>{ if(src[k] != null) out[k] = src[k]; });
+  return out;
+}
+
+function dayOffsetStr(ds, days){
+  const d = new Date(ds + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return localDateStr(d);
+}
+
+/**
+ * Copies entries from one day to another.
+ * @param {string} fromDate @param {string} toDate @param {string|null} meal only this meal
+ * @returns {number} how many entries were copied
+ */
+function repeatFoodEntries(fromDate, toDate, meal){
+  const src = foodsForDate(fromDate).filter(f=>!meal || (f.meal||"Lunch") === meal);
+  if(!src.length) return 0;
+  // Oldest first, so the copied day preserves the order the original was logged in
+  // (foodLog is newest-first, and unshift would otherwise reverse it).
+  src.slice().reverse().forEach(f=>state.foodLog.unshift(copyFoodEntry(f, toDate, f.meal)));
+  return src.length;
+}
+
+/** Distinct foods by how often they have been logged, most frequent first. */
+function mostUsedFoods(limit=8){
+  const counts = Object.create(null);
+  (state.foodLog||[]).forEach(f=>{
+    if(!f || !f.name) return;
+    const k = String(f.name).trim().toLowerCase();
+    if(!counts[k]) counts[k] = { entry: f, count: 0 };
+    counts[k].count++;
+    // Keep the most recent instance as the template — it reflects the serving the user
+    // settled on, not whatever they tried first.
+    if((f.at||0) > (counts[k].entry.at||0)) counts[k].entry = f;
+  });
+  return Object.values(counts)
+    .filter(x=>x.count > 1)          // "most used" means more than once
+    .sort((a,b)=> b.count - a.count || String(a.entry.name).localeCompare(String(b.entry.name)))
+    .slice(0, limit);
+}
+
+/* ---- Nutrition dashboard helpers -------------------------------------------------- */
+
+/** The day the dashboard is showing. Defaults to today; the date arrows move it. */
+function nutritionDateStr(){ return state.nutritionDate || todayStr(); }
+
+/** "Today, 18 May 2025" / "Yesterday, ..." / "Sat, 17 May 2025" */
+function nutritionDateLabel(ds){
+  const today = todayStr();
+  const d = new Date(ds + "T00:00:00");
+  const pretty = d.toLocaleDateString(undefined, { day:"numeric", month:"long", year:"numeric" });
+  if(ds === today) return "Today, " + pretty;
+  const y = new Date(); y.setDate(y.getDate()-1);
+  if(ds === localDateStr(y)) return "Yesterday, " + pretty;
+  return d.toLocaleDateString(undefined, { weekday:"short" }) + ", " + pretty;
+}
+
+function shiftNutritionDate(days){
+  const d = new Date(nutritionDateStr() + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  const next = localDateStr(d);
+  // Logging into the future is not a thing anyone wants to do by accident.
+  if(next > todayStr()) return;
+  state.nutritionDate = next === todayStr() ? null : next;
+}
+
+/* Colour per nutrient, shared by the ring, the macro cards and the micro strip so the same
+   nutrient is always the same colour wherever it appears. */
+/* Points at the --n-* tokens in css/pages/nutrition.css rather than carrying literal hex.
+   A nutrient's colour is now one fact defined in CSS, so it themes with everything else
+   instead of needing a parallel light-mode table here. */
+const NUTRIENT_COLORS = {
+  protein:"var(--n-protein)", carbs:"var(--n-carbs)", fat:"var(--n-fat)", fibre:"var(--n-fibre)",
+  water:"var(--n-water)", sugar:"var(--n-sugar)", sodium:"var(--n-sodium)",
+  potassium:"var(--n-potassium)", calcium:"var(--n-calcium)", iron:"var(--n-iron)",
+  calories:"var(--n-energy)"
+};
+
+/** Totals for one day, with per-nutrient coverage so partial data can be labelled. */
+function nutritionTotalsFor(ds){
+  const entries = foodsForDate(ds);
+  const N = window.IgnytNutrition;
+  if(N) return N.totalEntries(entries);
+  // Degrade to the five core fields if the engine failed to load.
+  const totals = {calories:0,protein:0,carbs:0,fat:0,fibre:0};
+  entries.forEach(f=>Object.keys(totals).forEach(k=>totals[k]+=Number(f[k]||0)));
+  return { totals, coverage:{}, count: entries.length };
+}
+
+/** Reference intakes for the micronutrient strip (FDA adult daily values). */
+const MICRO_TARGETS = { fibre:30, sugar:null, sodium:2300, potassium:4700, calcium:1300, iron:18 };
+
+/** An SVG donut. `segments` is [{value, color}]; renders a neutral ring when empty. */
+function donutSvg(segments, size, stroke, centerTop, centerSub){
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const total = segments.reduce((a,s)=>a+Math.max(0,s.value),0);
+  let offset = 0;
+  const arcs = total > 0 ? segments.map(s=>{
+    const frac = Math.max(0,s.value) / total;
+    const len = frac * c;
+    const el = `<circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${s.color}"
+      stroke-width="${stroke}" stroke-dasharray="${len} ${c-len}" stroke-dashoffset="${-offset}"
+      transform="rotate(-90 ${size/2} ${size/2})" stroke-linecap="butt"></circle>`;
+    offset += len;
+    return el;
+  }).join("") : `<circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--surface-alt)" stroke-width="${stroke}"></circle>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-hidden="true" style="flex-shrink:0;">
+    ${arcs}
+    ${centerTop!=null?`<text x="${size/2}" y="${size/2-1}" text-anchor="middle" font-size="${Math.round(size*0.19)}" font-weight="900" fill="var(--text)" font-family="'SF Mono',monospace">${escHtml(String(centerTop))}</text>`:""}
+    ${centerSub?`<text x="${size/2}" y="${size/2+Math.round(size*0.15)}" text-anchor="middle" font-size="${Math.round(size*0.11)}" fill="var(--muted)">${escHtml(centerSub)}</text>`:""}
+  </svg>`;
+}
+
+/**
+ * The dashboard calorie ring.
+ *
+ * The arc length is progress against the day's budget, and it is SPLIT BY MACRO — so one
+ * ring answers both "how much of my day have I eaten" and "what was it made of". A ring
+ * normalised to 100% would show composition but lose the progress, and a plain progress ring
+ * would show progress but lose the composition; this shows both without a second chart.
+ *
+ * Segments are sized by ENERGY (protein x4, carbs x4, fat x9), not gram weight, so the ring
+ * agrees with the calorie number printed inside it.
+ *
+ * Over budget, the ring fills completely and turns accent rather than wrapping past itself,
+ * because a second lap reads as a smaller number than the first.
+ */
+function calorieRingSvg(consumed, budget, kcalP, kcalC, kcalF){
+  const size = 108, stroke = 12, r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const over = budget > 0 && consumed > budget;
+  const frac = budget > 0 ? Math.min(1, consumed / budget) : 0;
+  const arc = circ * frac;
+
+  // Split the filled arc in proportion to each macro's contribution to the energy eaten.
+  const macroTotal = kcalP + kcalC + kcalF;
+  const parts = macroTotal > 0
+    ? [[kcalP,"protein"],[kcalC,"carbs"],[kcalF,"fat"]].map(([v,k])=>({ len: (v/macroTotal)*arc, key:k }))
+    : [{ len: arc, key:"energy" }];
+
+  let offset = 0;
+  const segs = parts.map(p=>{
+    const el = `<circle class="fill" cx="${size/2}" cy="${size/2}" r="${r}" fill="none"
+      stroke="${over?'var(--accent)':`var(--n-${p.key})`}" stroke-width="${stroke}"
+      stroke-dasharray="${p.len} ${circ - p.len}" stroke-dashoffset="${-offset}"
+      transform="rotate(-90 ${size/2} ${size/2})"></circle>`;
+    offset += p.len;
+    return el;
+  }).join("");
+
+  return `<svg class="nut-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"
+    role="img" aria-label="${consumed} of ${budget} kcal eaten">
+    <circle class="track" cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke-width="${stroke}"></circle>
+    ${segs}
+    <text x="${size/2}" y="${size/2 - 1}" text-anchor="middle" font-size="21" font-weight="900"
+      fill="var(--text)" font-family="'SF Mono',ui-monospace,monospace">${consumed.toLocaleString()}</text>
+    <text x="${size/2}" y="${size/2 + 15}" text-anchor="middle" font-size="11"
+      fill="var(--muted)">kcal eaten</text>
+  </svg>`;
+}
+
+/** A compact labelled progress bar used by the macro strip. */
+function macroMiniCard(label, value, target, colorKey, unit, decimals){
+  const pct = target > 0 ? Math.round((value/target)*100) : 0;
+  const shown = decimals ? (Math.round(value*10)/10) : Math.round(value);
+  const shownTarget = decimals ? (Math.round(target*10)/10) : Math.round(target);
+  const c = `var(--n-${colorKey})`;
+  return `<div class="nut-stat">
+    <div class="nut-stat__name" style="color:${c};">${escHtml(label)}</div>
+    <div class="nut-value nut-value--md nut-stat__value">${shown}<span class="nut-unit"> / ${shownTarget}${escHtml(unit)}</span></div>
+    <div class="nut-bar nut-bar--${colorKey}" style="margin-top:6px;"><i style="width:${Math.min(100,Math.max(0,pct))}%;"></i></div>
+    <div class="nut-stat__pct" style="color:${c};">${pct}%</div>
+  </div>`;
+}
+
+/* Distinct hues for the calories-by-meal ring. Kept separate from NUTRIENT_COLORS because
+   these identify meals, not nutrients, and reusing the macro palette would imply a link
+   between "Lunch" and "carbs" that does not exist. */
+const MEAL_DONUT_COLORS = ["var(--mint)", "var(--steel)", "#FFB020", "#A98BFF", "#FF7A5C", "#9AD5FF"];
+
+/* Emoji per meal, matching the meal rows in the design. */
+const MEAL_ICONS = {
+  "Breakfast":"🍳", "Morning Snack":"🍌", "Lunch":"🥗", "Evening Snack":"🍎",
+  "Afternoon Snack":"🍪", "Dinner":"🍛",
+  /* legacy keys — entries logged under these still render and still count */
+  "Bedtime Snack":"🌙", "Post Workout":"🥤", "Snacks":"🍿"
+};
+
+/** Short observations derived from the day's totals. Only facts, no advice. */
+function nutritionInsights(totals, coverage, targets, waterMl, waterTarget){
+  const out = [];
+  const pct = (v,t)=> t>0 ? Math.round((v/t)*100) : 0;
+
+  const pPct = pct(totals.protein, targets.protein);
+  if(totals.calories > 0){
+    if(pPct >= 100) out.push({ tone:"good", title:"Protein goal hit", body:`${Math.round(totals.protein)} g of ${Math.round(targets.protein)} g.` });
+    else if(pPct >= 70) out.push({ tone:"warn", title:"Protein close", body:`${Math.round(targets.protein - totals.protein)} g to go.` });
+    else out.push({ tone:"info", title:"Protein low", body:`${Math.round(totals.protein)} g of ${Math.round(targets.protein)} g so far.` });
+  }
+
+  const fPct = pct(totals.fibre, targets.fibre);
+  if(totals.calories > 0 && fPct < 100){
+    out.push({ tone:"warn", title:"Fibre", body:`${Math.round(targets.fibre - totals.fibre)} g below your goal.` });
+  }
+
+  // Sodium is only worth flagging when enough entries actually carried a figure — otherwise
+  // the total is a floor and calling it "over" or "under" would be misleading.
+  if(coverage && coverage.sodium > 0){
+    const partial = coverage.sodium < (coverage.calories || 0);
+    if(totals.sodium > MICRO_TARGETS.sodium){
+      out.push({ tone:"bad", title:"Sodium", body:`${Math.round(totals.sodium)} mg${partial?" from foods with data":""} — above 2,300 mg.` });
+    }else if(!partial){
+      out.push({ tone:"good", title:"Sodium", body:`${Math.round(totals.sodium)} mg, within target.` });
+    }
+  }
+
+  const wPct = pct(waterMl, waterTarget);
+  out.push({ tone: wPct>=100?"good":"info", title:"Water",
+    body: wPct>=100 ? "Daily goal reached." : `${wPct}% of goal — ${((waterTarget-waterMl)/1000).toFixed(1)} L to go.` });
+
+  return out;
+}
+
+/** Per-meal observations: which meal carried the most protein, the most calories, the least.
+ *  Only meaningful once more than one meal has food in it — with a single meal these three
+ *  are all the same row and say nothing. */
+function mealInsights(entries){
+  const byMeal = Object.create(null);
+  (entries||[]).forEach(f=>{
+    const m = (f && f.meal) || "Lunch";
+    if(!byMeal[m]) byMeal[m] = { meal:m, kcal:0, protein:0 };
+    byMeal[m].kcal += Number(f.calories||0);
+    byMeal[m].protein += Number(f.protein||0);
+  });
+  const rows = Object.values(byMeal).filter(r=>r.kcal > 0);
+  if(rows.length < 2) return [];
+
+  const topProtein = rows.slice().sort((a,b)=>b.protein-a.protein)[0];
+  const topKcal = rows.slice().sort((a,b)=>b.kcal-a.kcal)[0];
+  const lowKcal = rows.slice().sort((a,b)=>a.kcal-b.kcal)[0];
+
+  return [
+    { tone:"good", title:"Most protein", body:`${topProtein.meal} — ${Math.round(topProtein.protein)} g.` },
+    { tone:"info", title:"Biggest meal", body:`${topKcal.meal} — ${Math.round(topKcal.kcal)} kcal.` },
+    { tone:"info", title:"Smallest meal", body:`${lowKcal.meal} — ${Math.round(lowKcal.kcal)} kcal.` }
+  ];
+}
+
+const INSIGHT_TONES = {
+  good: { bg:"rgba(62,207,142,.10)",  fg:"var(--mint)" },
+  warn: { bg:"rgba(255,176,32,.10)",  fg:"#FFB020" },
+  bad:  { bg:"rgba(255,90,31,.10)",   fg:"var(--accent)" },
+  info: { bg:"rgba(79,168,216,.10)",  fg:"var(--steel)" }
+};
+
 function macroTargets(){
   const n = state.nutrition;
   const kcal = profileCalorieTarget();
@@ -4342,7 +5636,7 @@ function last7DaysCalories(){
   const out = [];
   for(let i=6;i>=0;i--){
     const d = new Date(); d.setDate(d.getDate()-i);
-    const ds = d.toISOString().slice(0,10);
+    const ds = dayKey(d);
     const kcal = foodsForDate(ds).reduce((a,f)=>a+Number(f.calories||0),0);
     out.push({label: d.toLocaleDateString('default',{weekday:'short'}), date: ds, kcal});
   }
@@ -4362,7 +5656,7 @@ function calorieProteinTrend(days=30){
   const out = [];
   for(let i=days-1;i>=0;i--){
     const d = new Date(); d.setDate(d.getDate()-i);
-    const ds = d.toISOString().slice(0,10);
+    const ds = dayKey(d);
     const foods = foodsForDate(ds);
     out.push({
       date: ds,
@@ -4415,12 +5709,61 @@ function settingToggle(key, label, desc, icon){
    ONBOARDING — shown once, only for genuinely new installs
 ========================================================= */
 
-/** IGNYT Account (Phase 2A): Google Sign-In identity only — logically separate from the
+/** IGNYT Account: phone/email identity only — logically separate from the
  *  fitness profile (hx_profile) and every other hx_* key, none of which it reads or writes.
  *  Renders from IgnytAuth's cached snapshot (instant + offline); auth.js reconciles that
  *  snapshot against the real persisted Firebase session once per launch. */
 /* No "Premium"/subscription badge here -- this app has no payment or subscription system,
    so nothing implying a paid tier is shown (same principle already applied to Profile). */
+
+/* Signing fingerprints, on screen.
+
+   Phone sign-in fails with a message that never mentions certificates when the project is
+   missing this build's SHA-256 — and SHA-256 is not written into google-services.json, so
+   there is no file anyone can check it against. The only other way to read it is keytool on
+   the machine holding the keystore, which is no help to someone testing on a device.
+
+   These are public values: a fingerprint of the certificate shipped inside every copy of the
+   APK. Showing them leaks nothing. Collapsed by default so it stays a diagnostic rather than
+   clutter. */
+function legacyCopy(text, onDone){
+  try{
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly","");
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0;";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    if(onDone) onDone();
+  }catch(e){ console.warn("copy failed:", e); }
+}
+
+function renderSigningDiagnostic(){
+  const auth = window.IgnytAuth;
+  if(!auth || !auth.isNativeAndroid || !auth.isNativeAndroid()) return "";
+  const info = auth.getSigningInfo && auth.getSigningInfo();
+  /* Debug builds only. The native layer already withholds the values from a release build, so
+     this is the second of two gates rather than the only one — a shipped app must not put its
+     package name and certificate hashes on a settings screen, however public those values
+     technically are. */
+  if(!info || !info.debug || !info.sha256) return "";
+  const esc = v => String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return `<details class="auth-diag">
+    <summary>Build fingerprints</summary>
+    <div class="auth-diag__body">
+      <div class="auth-diag__row"><span>Package</span><code>${esc(info.packageName)}</code></div>
+      <div class="auth-diag__row"><span>SHA-1</span><code>${esc(info.sha1)}</code></div>
+      <div class="auth-diag__row"><span>SHA-256</span><code>${esc(info.sha256)}</code></div>
+      <p class="auth-diag__note">Both must be registered under Project settings &#9656; Your apps
+      in the Firebase Console. Phone sign-in uses Play Integrity, which needs the SHA-256 —
+      it is not stored in google-services.json, so it cannot be checked from the app files.</p>
+      <button class="btn btn-ghost btn-block" data-action="copy-fingerprints" style="margin-top:8px;">Copy SHA-256</button>
+    </div>
+  </details>`;
+}
+
 function renderAccountSection(){
   const esc = v => String(v == null ? "" : v)
     .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
@@ -4441,24 +5784,55 @@ function renderAccountSection(){
   const errorHtml = errorMsg ? `<div style="font-size:12px;color:var(--rh-red);margin-top:10px;">${esc(errorMsg)}</div>` : "";
 
   if(!account){
+    const mode = state.authFormMode;
+    const emailForm = mode ? `
+      <div style="margin-top:12px;">
+        ${mode==="forgot" ? `
+          <div style="font-size:12px;color:var(--rh-muted);margin-bottom:8px;">Enter your account email and we'll send a link to reset your password.</div>
+          <input type="email" id="auth-email-input" class="pi-input" placeholder="Email" style="width:100%;box-sizing:border-box;margin-bottom:8px;">
+          ${errorHtml}
+          <button class="rh-btn rh-btn--primary" style="width:100%;padding:11px;margin-top:${errorHtml?'10px':'0'};" data-action="auth-forgot-submit" ${busy?'disabled':''}>${busy?'Sending…':'Send Reset Link'}</button>
+          <button class="btn btn-ghost btn-block" style="margin-top:8px;" data-action="auth-form-mode" data-auth-mode="signin">Back to Sign In</button>
+        ` : `
+          <input type="email" id="auth-email-input" class="pi-input" placeholder="Email" style="width:100%;box-sizing:border-box;margin-bottom:8px;">
+          <input type="password" id="auth-password-input" class="pi-input" placeholder="Password" style="width:100%;box-sizing:border-box;margin-bottom:${mode==='signup'?'8px':'0'};">
+          ${mode==="signup" ? `<input type="password" id="auth-password-confirm-input" class="pi-input" placeholder="Confirm password" style="width:100%;box-sizing:border-box;">` : ''}
+          ${errorHtml}
+          <button class="rh-btn rh-btn--primary" style="width:100%;padding:11px;margin-top:${errorHtml||mode==='signup'?'10px':'10px'};" data-action="${mode==='signup'?'auth-signup-submit':'auth-signin-submit'}" ${busy?'disabled':''}>${busy?(mode==='signup'?'Creating account…':'Signing in…'):(mode==='signup'?'Create Account':'Sign In')}</button>
+          <div style="display:flex;justify-content:space-between;margin-top:10px;">
+            <button class="btn-link" style="font-size:12px;background:none;border:none;color:var(--accent);padding:0;cursor:pointer;" data-action="auth-form-mode" data-auth-mode="${mode==='signup'?'signin':'signup'}">${mode==='signup'?'Have an account? Sign in':'Need an account? Sign up'}</button>
+            ${mode==="signin" ? `<button class="btn-link" style="font-size:12px;background:none;border:none;color:var(--rh-muted);padding:0;cursor:pointer;" data-action="auth-form-mode" data-auth-mode="forgot">Forgot password?</button>` : ''}
+          </div>
+        `}
+      </div>` : "";
+
     return `<div class="pg-card">
-      <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Sign in to securely back up your fitness data and enable future multi-device sync.</div>
-      ${errorHtml}
-      <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:${errorHtml?'10px':'0'};padding:12px;" data-action="account-signin" ${busy?'disabled':''}>${busy?'Signing in…':'Continue with Google'}</button>
+      <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Sign in to securely back up your fitness data and enable multi-device sync.</div>
+      ${!mode ? errorHtml : ""}
+      ${!mode ? `<button class="rh-btn rh-btn--primary" style="width:100%;margin-top:${errorHtml?'10px':'0'};padding:12px;" data-action="auth-form-mode" data-auth-mode="signin">Sign in with Email</button>` : ''}
+      ${emailForm}
+      ${renderSigningDiagnostic()}
     </div>`;
   }
 
   const initial = esc((account.displayName || account.email || "?").trim().charAt(0).toUpperCase() || "?");
+  const providerLabel = account.provider === "password" ? "Signed in with email" : "Signed in";
+  const verifyBanner = (account.provider === "password" && account.emailVerified === false) ? `
+    <div style="font-size:11px;color:var(--rh-amber,#d97706);margin-top:8px;padding:8px;background:rgba(217,119,6,.1);border-radius:8px;">
+      Email not verified.
+      <button class="btn-link" style="background:none;border:none;color:inherit;text-decoration:underline;padding:0;font-size:11px;cursor:pointer;" data-action="auth-resend-verification" ${busy?'disabled':''}>Resend verification email</button>
+    </div>` : "";
 
   return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;">
     <div class="pf-avatar" style="width:52px;height:52px;flex:none;">
-      ${account.photoUrl ? `<img src="${esc(account.photoUrl)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
+      ${(()=>{ const src = profilePhotoSrc(account); return src ? `<img src="${esc(src)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''; })()}
       <span class="pf-avatar__initial" style="font-size:18px;">${initial}</span>
     </div>
     <div style="min-width:0;flex:1;">
-      <div style="font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(account.displayName) || "Google Account"}</div>
+      <div style="font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(account.displayName) || esc(account.email) || "Account"}</div>
       <div style="font-size:12px;color:var(--rh-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(account.email)}</div>
-      <div style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--rh-green);margin-top:6px;">${svg('check',11)} Signed in with Google</div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--rh-green);margin-top:6px;">${svg('check',11)} ${providerLabel}</div>
+      ${verifyBanner}
       ${renderCloudSyncRow()}
       ${errorHtml}
       <button class="btn btn-ghost btn-block" data-action="account-signout" ${busy?'disabled':''}>${busy?'Signing out…':'Sign Out'}</button>
@@ -4542,14 +5916,14 @@ function renderPrivacySecurityInfo(){
 
       <div class="pg-card">
         <div style="font-size:15px;font-weight:800;margin-bottom:6px;">Where your data lives</div>
-        <div style="font-size:13px;color:var(--rh-muted);line-height:1.55;">Every workout, weigh-in, food entry, goal and setting is stored locally on this device by default. ${signedIn?'You\'re signed in with Google, so it also backs up to your account\'s cloud storage.':'Nothing leaves this device unless you sign in with Google (Tools → Settings) to enable cloud backup, or you explicitly export a file.'}</div>
+        <div style="font-size:13px;color:var(--rh-muted);line-height:1.55;">Every workout, weigh-in, food entry, goal and setting is stored locally on this device by default. ${signedIn?'You\'re signed in, so it also backs up to your account\'s cloud storage.':'Nothing leaves this device unless you sign in (Tools → Settings) to enable cloud backup, or you explicitly export a file.'}</div>
       </div>
 
       <div class="pg-card" style="margin-top:12px;">
         <div style="font-size:15px;font-weight:800;margin-bottom:10px;">Real permission status</div>
         <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('bell',16)}</span><div class="pi-row__body"><div class="pi-row__label">Notifications</div><div class="pi-row__value" style="text-transform:capitalize;">${notifPerm}</div></div></div>
         <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('health',16)}</span><div class="pi-row__body"><div class="pi-row__label">Health Connect</div><div class="pi-row__value">${hcConnected?'Connected':'Not connected'}</div></div></div>
-        <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('signout',16)}</span><div class="pi-row__body"><div class="pi-row__label">Google Sign-In</div><div class="pi-row__value">${signedIn?'Signed in':'Not signed in'}</div></div></div>
+        <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('signout',16)}</span><div class="pi-row__body"><div class="pi-row__label">Account</div><div class="pi-row__value">${signedIn?'Signed in':'Not signed in'}</div></div></div>
         <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('cloud',16)}</span><div class="pi-row__body"><div class="pi-row__label">Cloud Sync</div><div class="pi-row__value">${cs?cs.getStatus().status:'Not available'}</div></div></div>
       </div>
 
@@ -4561,195 +5935,99 @@ function renderPrivacySecurityInfo(){
   `;
 }
 
-function driveEsc(v){
-  return String(v == null ? "" : v)
-    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-}
 
-function fmtBackupBytes(n){
-  n = Number(n) || 0;
-  if(n < 1024) return n+" B";
-  if(n < 1024*1024) return (n/1024).toFixed(1)+" KB";
-  return (n/(1024*1024)).toFixed(1)+" MB";
-}
+/* =========================================================
+   REMINDERS — the settings screen
 
-/** Settings > Backup & Restore card. Real states only: not-native, not-configured (no
- *  google-services.json/OAuth client at build time — same honest pattern as renderAccountSection),
- *  not-connected, and connected (account + last backup + actions). */
-function renderDriveBackupSection(){
-  const drive = window.IgnytDriveBackup;
-  if(!drive) return `<div class="info-box" style="padding:14px;"><div style="font-size:13px;color:var(--muted);">Backup module failed to load.</div></div>`;
+   One row per reminder, grouped the way a person thinks about them (Meals, Training, Daily,
+   Fasting, Progress, Custom) rather than by how they are scheduled. Expanding a row reveals
+   its time, its repeat rule and its per-reminder options — collapsed, the list stays scannable
+   at fourteen entries, which a flat list of every control would not be.
+========================================================= */
+const REMINDER_DAY_LABELS = ["S","M","T","W","T","F","S"];
 
-  if(!drive.isNativeAndroid()){
-    return `<div class="info-box" style="padding:14px;"><div style="font-size:13px;color:var(--muted);">Google Drive backup is available in the IGNYT Android app.</div></div>`;
-  }
+function renderRemindersScreen(){
+  const R = window.IgnytReminders;
+  if(!R) return `<div class="pg-light"><div class="rm-none">Reminders are unavailable in this build.</div></div>`;
+  const open = state.reminderOpen;
+  const granted = state.nativeNotifPermissionGranted;
 
-  const st = drive.getStatus();
-  const errorHtml = st.lastError ? `<div style="font-size:12px;color:var(--accent);margin:8px 0;">${driveEsc(st.lastError)}</div>` : "";
+  const groups = R.groups().map(g=>{
+    const rows = R.CATALOGUE.filter(r=>r.group === g).map(def=>{
+      const s = R.settings(def.id);
+      const isOpen = open === def.id;
+      const time = String(s.hour).padStart(2,"0") + ":" + String(s.minute).padStart(2,"0");
+      const days = R.daysFor(s);
+      const repeatLabel = s.repeat === "daily" ? "Every day"
+                        : s.repeat === "weekdays" ? "Weekdays"
+                        : s.repeat === "weekends" ? "Weekends"
+                        : days.length === 7 ? "Every day"
+                        : days.map(d=>REMINDER_DAY_LABELS[d]).join(" ");
 
-  if(!st.connected){
-    return `
-      <div class="info-box" style="padding:14px;">
-        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Back up your workouts, measurements, settings and more to your own Google Drive. Only files IGNYT creates are ever touched — nothing else in your Drive.</div>
-        ${errorHtml}
-        <button class="btn btn-accent btn-block" data-action="drive-connect" ${st.busy?'disabled':''}>${st.busy?'Connecting…':'Connect Google Drive'}</button>
-      </div>`;
-  }
-
-  const acct = st.account || {};
-  const initial = driveEsc((acct.displayName || acct.email || "?").trim().charAt(0).toUpperCase() || "?");
-  const avatar = `
-    <div style="position:relative;width:40px;height:40px;flex-shrink:0;">
-      <div style="width:40px;height:40px;border-radius:50%;background:var(--steel);color:#0c1c24;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;">${initial}</div>
-      ${acct.photoUrl ? `<img src="${driveEsc(acct.photoUrl)}" alt="" referrerpolicy="no-referrer" style="position:absolute;top:0;left:0;width:40px;height:40px;border-radius:50%;" onerror="this.remove()">` : ""}
-    </div>`;
-  const lastBackupLine = st.lastBackupAt
-    ? "Last backup: "+new Date(st.lastBackupAt).toLocaleString([], { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" })+" · "+fmtBackupBytes(st.lastBackupSizeBytes)
-    : "No backups yet";
-
-  return `
-    <div class="info-box" style="padding:14px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        ${avatar}
-        <div style="min-width:0;flex:1;">
-          <div style="font-weight:800;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${driveEsc(acct.displayName) || "Google Drive"}</div>
-          <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${driveEsc(acct.email)}</div>
+      return `<div class="rm-row${isOpen?' is-open':''}${s.enabled?' is-on':''}">
+        <div class="rm-row__head">
+          <button class="rm-row__main" data-rm-open="${escHtml(def.id)}" aria-expanded="${isOpen?'true':'false'}">
+            <span class="rm-row__label">${escHtml(def.label)}</span>
+            <span class="rm-row__meta">${s.enabled ? escHtml(time + " · " + repeatLabel) : "Off"}</span>
+          </button>
+          <button class="rm-switch${s.enabled?' is-on':''}" data-rm-toggle="${escHtml(def.id)}"
+            role="switch" aria-checked="${s.enabled?'true':'false'}" aria-label="${escHtml(def.label)}">
+            <span class="rm-switch__knob"></span>
+          </button>
         </div>
-      </div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">${lastBackupLine}</div>
-      ${errorHtml}
-      <button class="btn btn-accent btn-block" data-action="drive-backup-now" ${st.busy?'disabled':''} style="margin-bottom:8px;">${st.busy?'Backing up…':'Back Up Now'}</button>
-      <button class="btn btn-steel btn-block" data-action="drive-manage-backups" ${st.busy?'disabled':''} style="margin-bottom:8px;">Manage Backups</button>
-      <button class="btn btn-ghost btn-block" data-action="drive-disconnect" ${st.busy?'disabled':''}>Sign Out of Drive Backup</button>
-    </div>
-    ${renderDriveScheduleSection()}`;
-}
 
-/** Manual/Daily/Weekly/Monthly + Wi-Fi-only/charging-only. Real behavior, not a cosmetic
- *  toggle -- see drive-backup.js's header for exactly how scheduling works in a Capacitor app
- *  (a reminder notification + a boot-time check, not a true background alarm-driven upload). */
-function renderDriveScheduleSection(){
-  const drive = window.IgnytDriveBackup;
-  const sched = drive.getScheduleSettings();
-  const freqOptions = [{key:"manual",label:"Manual"},{key:"daily",label:"Daily"},{key:"weekly",label:"Weekly"},{key:"monthly",label:"Monthly"}];
-  return `
-    <div class="info-box" style="padding:14px;margin-top:10px;">
-      <div style="font-weight:800;font-size:13px;margin-bottom:8px;">Automatic Backups</div>
-      <div style="display:flex;gap:6px;margin-bottom:${sched.frequency!=='manual'?'12px':'0'};">
-        ${freqOptions.map(o=>`<button class="cat-chip ${sched.frequency===o.key?'active':''}" data-drive-schedule-freq="${o.key}" style="flex:1;text-align:center;">${o.label}</button>`).join("")}
-      </div>
-      ${sched.frequency!=='manual' ? `
-        <div class="row-between" style="padding:8px 0;">
-          <span style="font-size:13px;">Wi-Fi only</span>
-          <input type="checkbox" data-drive-schedule-wifi ${sched.wifiOnly?'checked':''}>
-        </div>
-        <div class="row-between" style="padding:8px 0;">
-          <span style="font-size:13px;">Charging only</span>
-          <input type="checkbox" data-drive-schedule-charging ${sched.chargingOnly?'checked':''}>
-        </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px;">You'll get a notification to open IGNYT when a backup is due — the backup itself runs right after, in the background.</div>
-      ` : ''}
-    </div>
-    ${renderDriveEncryptionSection()}`;
-}
+        ${isOpen ? `<div class="rm-row__body">
+          <p class="rm-row__desc">${escHtml(s.body)}</p>
 
-/** End-to-end encryption toggle. The passphrase is never persisted -- only cached in memory
- *  for the current session (drive-backup.js's _sessionPassphrase), so this section always
- *  shows whether it still needs to be entered this session, and offers Change/Forget. */
-function renderDriveEncryptionSection(){
-  const drive = window.IgnytDriveBackup;
-  const enc = drive.getEncryptionSettings();
-  const hasPass = drive.hasSessionPassphrase();
-  return `
-    <div class="info-box" style="padding:14px;margin-top:10px;">
-      <div class="row-between">
-        <div>
-          <div style="font-weight:800;font-size:13px;">End-to-End Encryption</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Encrypts backups with your passphrase before upload. IGNYT never stores it — if you forget it, encrypted backups can't be recovered.</div>
-        </div>
-        <input type="checkbox" data-drive-encryption-toggle ${enc.enabled?'checked':''} style="flex:none;margin-left:10px;">
-      </div>
-      ${enc.enabled ? `
-        <div style="font-size:12px;color:${hasPass?'var(--mint)':'var(--accent)'};margin-top:10px;">${hasPass?'Passphrase set for this session.':'Passphrase not entered this session — you\'ll be asked on your next backup or restore.'}</div>
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <button class="btn btn-ghost" style="flex:1;padding:9px;font-size:13px;" data-action="drive-change-passphrase">${hasPass?'Change':'Set'} Passphrase</button>
-          ${hasPass?`<button class="btn btn-ghost" style="flex:1;padding:9px;font-size:13px;" data-action="drive-forget-passphrase">Forget This Session</button>`:''}
-        </div>
-      ` : ''}
-    </div>`;
-}
+          <label class="rm-field"><span>Time</span>
+            <input type="time" value="${escHtml(time)}" data-rm-time="${escHtml(def.id)}"></label>
 
-/** Passphrase entry/creation dialog. purpose "set" requires a matching confirm field and an
- *  explicit acknowledgement that IGNYT can't recover a forgotten passphrase; "backup"/"restore"
- *  just need the existing passphrase once. Its own dialog (not confirmDialog) since it needs
- *  password inputs and inline validation, not just Confirm/Cancel. */
-function renderPassphrasePrompt(){
-  if(!state.passphrasePrompt) return "";
-  const pr = state.passphrasePrompt;
-  const isSet = pr.purpose === "set";
-  return `
-    <div class="dialog-backdrop" data-passphrase-action="cancel"></div>
-    <div class="dialog-box">
-      <div class="dialog-title">${isSet ? "Set Backup Passphrase" : "Enter Backup Passphrase"}</div>
-      <div class="dialog-message">
-        ${isSet ? "This passphrase encrypts your Google Drive backups. IGNYT never stores it — if you forget it, encrypted backups can't be recovered." : "This backup is encrypted with your passphrase."}
-      </div>
-      <input type="password" id="passphrase-input-1" class="pi-input" placeholder="${isSet?'New passphrase (min. 8 characters)':'Passphrase'}" style="width:100%;margin-bottom:${isSet?'8px':'0'};box-sizing:border-box;">
-      ${isSet ? `<input type="password" id="passphrase-input-2" class="pi-input" placeholder="Confirm passphrase" style="width:100%;box-sizing:border-box;">` : ''}
-      ${pr.error ? `<div style="font-size:12px;color:var(--accent);margin-top:8px;">${driveEsc(pr.error)}</div>` : ''}
-      <div class="dialog-actions" style="margin-top:14px;">
-        <button class="btn btn-ghost" data-passphrase-action="cancel">Cancel</button>
-        <button class="btn btn-accent" data-passphrase-action="submit">${isSet?'Set Passphrase':'Continue'}</button>
-      </div>
-    </div>`;
-}
-
-/** Settings > Backup & Restore > Manage Backups. Lists the "IGNYT Backups" Drive folder
- *  (newest first, server already caps it at 10 — see DriveBackupPlugin.pruneOldBackups),
- *  each row offering Restore (opens the Merge/Replace/Cancel prompt below) and Delete. */
-function renderDriveBackupsListView(){
-  const drive = window.IgnytDriveBackup;
-  const list = state.driveBackupsCache;
-  return `
-    <button class="btn btn-ghost" style="margin-bottom:12px;" data-action="drive-backups-back">← Back</button>
-    <div class="eyebrow-label" style="margin-top:0;">Manage Backups</div>
-    ${state.driveBackupsBusy ? skeletonList(3) :
-      !list ? `<div class="info-box" style="padding:14px;"><div style="font-size:13px;color:var(--accent);">Couldn't load backups. ${driveEsc(drive ? drive.getStatus().lastError||"" : "")}</div></div>` :
-      list.length===0 ? emptyState('cloud', 'No backups yet — use Back Up Now in Settings to create your first one.') :
-      list.map(b=>`
-        <div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
-          <div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${driveEsc(b.name)}</div>
-          <div style="font-size:11px;color:var(--muted);margin:2px 0 10px;">${b.createdTime ? new Date(b.createdTime).toLocaleString([], { month:"short", day:"numeric", year:"numeric", hour:"2-digit", minute:"2-digit" }) : ""} · ${fmtBackupBytes(b.sizeBytes)}</div>
-          <div style="display:flex;gap:8px;">
-            <button class="btn btn-accent" style="flex:1;padding:9px;font-size:13px;" data-drive-restore-file="${driveEsc(b.fileId)}" data-drive-restore-name="${driveEsc(b.name)}" data-drive-restore-created="${driveEsc(b.createdTime)}">Restore</button>
-            <button class="btn btn-ghost" style="flex:1;padding:9px;font-size:13px;" data-drive-delete-file="${driveEsc(b.fileId)}">Delete</button>
+          <div class="rm-field"><span>Repeat</span>
+            <div class="rm-repeat">
+              ${[["daily","Daily"],["weekdays","Weekdays"],["weekends","Weekends"],["custom","Custom"]]
+                .map(([k,l])=>`<button class="rm-chip${s.repeat===k?' is-on':''}" data-rm-repeat="${escHtml(def.id)}" data-repeat="${k}">${l}</button>`).join("")}
+            </div>
           </div>
-        </div>`).join("")
-    }
-  `;
-}
 
-/** The Merge / Replace / Cancel choice for a Drive restore. A plain confirmDialog() only
- *  supports two choices, so this is its own small dialog, styled the same way. */
-function renderDriveRestorePrompt(){
-  if(!state.driveRestorePrompt) return "";
-  const p = state.driveRestorePrompt;
-  return `
-    <div class="dialog-backdrop" data-drive-restore-action="cancel"></div>
-    <div class="dialog-box">
-      <div class="dialog-title">Restore Backup</div>
-      <div class="dialog-message">Restore "${driveEsc(p.name)}"?<br><br><b>Merge</b> combines it with what's on this device — your local changes win if the same item changed in both places.<br><br><b>Replace</b> overwrites everything on this device with the backup.</div>
-      <div class="dialog-actions" style="flex-direction:column;gap:8px;">
-        <button class="btn btn-accent btn-block" data-drive-restore-action="merge">Merge</button>
-        <button class="btn btn-steel btn-block" data-drive-restore-action="replace">Replace Everything</button>
-        <button class="btn btn-ghost btn-block" data-drive-restore-action="cancel">Cancel</button>
-      </div>
-    </div>`;
+          ${s.repeat === "custom" ? `<div class="rm-days">
+            ${REMINDER_DAY_LABELS.map((lab,i)=>`<button class="rm-day${days.indexOf(i)!==-1?' is-on':''}"
+              data-rm-day="${escHtml(def.id)}" data-day="${i}" aria-pressed="${days.indexOf(i)!==-1?'true':'false'}">${lab}</button>`).join("")}
+          </div>` : ""}
+
+          <div class="rm-opts">
+            <button class="rm-opt${s.vibrate?' is-on':''}" data-rm-flag="${escHtml(def.id)}" data-flag="vibrate">Vibrate</button>
+            <button class="rm-opt${s.silent?' is-on':''}" data-rm-flag="${escHtml(def.id)}" data-flag="silent">Silent</button>
+            ${def.snooze ? `<span class="rm-opt is-static">Snooze ${def.snooze}m</span>` : ""}
+          </div>
+
+          ${def.conditional ? `<p class="rm-note">Only sent if nothing was logged — IGNYT cancels
+            this one for the day as soon as you do.</p>` : ""}
+          ${def.id.indexOf("fast-") === 0 ? `<p class="rm-note">Timed from your active fast, not
+            from the clock above — the time here is only used if no fast is running.</p>` : ""}
+        </div>` : ""}
+      </div>`;
+    }).join("");
+
+    return `<div class="rm-group"><div class="rm-group__title">${escHtml(g)}</div>${rows}</div>`;
+  }).join("");
+
+  return `<div class="pg-light">
+    <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:6px;" data-rm-back="1">← Back</button>
+    <div style="font-size:22px;font-weight:800;">Reminders</div>
+    <div style="font-size:12px;color:var(--rh-muted);margin-bottom:14px;">Every nudge IGNYT can send, and when.</div>
+
+    ${granted === false ? `<div class="rm-warn">
+      Notifications are turned off for IGNYT, so none of these will arrive.
+      <button data-rm-request="1">Turn on</button>
+    </div>` : ""}
+
+    ${groups}
+  </div>`;
 }
 
 function renderSettingsTab(){
+  if(state.reminderScreen) return renderRemindersScreen();
   if(state.viewingPrivacyInfo) return renderPrivacySecurityInfo();
-  if(state.viewingDriveBackups) return renderDriveBackupsListView();
   const s = state.settings;
   return `
     <div class="pg-light">
@@ -4757,7 +6035,9 @@ function renderSettingsTab(){
       <div style="font-size:22px;font-weight:800;">Settings</div>
       <div style="font-size:12px;color:var(--rh-muted);margin-bottom:14px;">Personalise your experience</div>
 
+      <div class="rh-section-head"><span>${svg('signout',13)} Authentication</span></div>
       ${renderAccountSection()}
+
       <div class="rh-section-head" style="margin-top:16px;"><span>${svg('target',13)} Goal Wizard</span></div>
       <div class="pg-card">
         <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Your goal, availability, equipment, and health screening — retake it anytime as your situation changes.</div>
@@ -4819,11 +6099,16 @@ function renderSettingsTab(){
       </div>
 
       <div class="rh-section-head"><span>${svg('bell',13)} Notifications</span></div>
+      <div class="pg-card" style="margin-bottom:8px;">
+        <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Meals, workouts, hydration, fasting, supplements and progress — each with its own time and days.</div>
+        <button class="btn btn-steel btn-block" data-action="open-reminders">All Reminders</button>
+      </div>
       <div class="pg-card">
         <div style="font-size:11px;color:var(--rh-muted);margin-bottom:10px;line-height:1.4;">${nativeNotify() ? 'Reminders are scheduled on-device and fire even when IGNYT is closed.' : "Reminders only fire while IGNYT is open — mobile browsers don't allow true background notifications without a push server."}</div>
         ${settingToggle("workoutReminders","Workout Reminders","Nudge you in the evening.","calendar")}
         ${settingToggle("hydrationReminders","Hydration Reminders","Nudge you mid-afternoon.","droplet")}
         ${settingToggle("weeklyReports","Weekly Reports","Summary of your training week.","progress")}
+        ${settingToggle("workoutLeftReminder","Workout Left Running",`Remind you ${Math.max(1, Number(state.settings.workoutLeftAfterMin)||15)} min after you leave a workout unfinished.`,"timer")}
         <button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:12px;" data-action="test-notification">Send Test Notification</button>
         ${nativeNotify() ? (state.nativeNotifPermissionGranted===false ? `<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Notifications are blocked — enable them for IGNYT in Android Settings.</div>` : '')
           : (typeof Notification!=='undefined' && Notification.permission==='denied' ? `<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Notifications are blocked for this site in your browser settings.</div>` : '')}
@@ -4836,25 +6121,24 @@ function renderSettingsTab(){
           <div class="tl-card__body"><div class="tl-card__label">Cloud Sync</div><div class="tl-card__desc">${window.IgnytCloudSync?renderCloudSyncStatusText():'Offline — saved on this device'}</div></div>
           ${window.IgnytCloudSync && window.IgnytCloudSync.getStatus().status==='synced' ? badge('Connected','green') : `<span class="tl-card__chev">›</span>`}
         </button>
-        <button class="tl-card" data-action="open-privacy-info">
-          <span class="tl-card__icon">${svg('shield',20)}</span>
-          <div class="tl-card__body"><div class="tl-card__label">Privacy &amp; Security</div><div class="tl-card__desc">Manage your data and permissions</div></div>
-          <span class="tl-card__chev">›</span>
-        </button>
       </div>
-
-      <div class="rh-section-head"><span>${svg('cloud',13)} Backup &amp; Restore (Google Drive)</span></div>
-      ${renderDriveBackupSection()}
 
       <div class="rh-section-head"><span>${svg('download',13)} Export Data</span></div>
-      <div class="pg-card" style="margin-bottom:10px;">
-        <div style="font-size:12px;color:var(--rh-muted);line-height:1.5;">Export your entire workout and measurement history. The JSON backup can be imported back; CSVs are for spreadsheets.</div>
-      </div>
-      <div class="tl-grid" style="grid-template-columns:1fr;">
-        <button class="tl-card" data-action="export-json"><span class="tl-card__icon">${svg('box',20)}</span><div class="tl-card__body"><div class="tl-card__label">Full Backup (JSON)</div><div class="tl-card__desc">Export all app data</div></div><span class="tl-card__chev">›</span></button>
-        <button class="tl-card" data-action="export-workouts-csv"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Export Workouts (CSV)</div><div class="tl-card__desc">Download workout history</div></div><span class="tl-card__chev">›</span></button>
-        <button class="tl-card" data-action="export-measurements-csv"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Export Measurements (CSV)</div><div class="tl-card__desc">Download body metrics</div></div><span class="tl-card__chev">›</span></button>
-        <button class="tl-card" data-action="export-nutrition-csv"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Export Nutrition (CSV)</div><div class="tl-card__desc">Download food log</div></div><span class="tl-card__chev">›</span></button>
+      <div class="pg-card st-export">
+        ${[["export-json","box","Full Backup","JSON · everything, and the only one that imports back"],
+           ["export-json-encrypted","lock","Encrypted Backup","AES-256 · same data, locked with your passphrase"],
+           ["export-workouts-csv","file","Workouts","CSV · every session, set and rep"],
+           ["export-measurements-csv","file","Measurements","CSV · weight and body metrics"],
+           ["export-nutrition-csv","file","Nutrition","CSV · the food log"]
+          ].map(([action,icon,label,desc])=>`
+          <button class="st-export__row" data-action="${action}">
+            <span class="tl-card__icon">${svg(icon,18)}</span>
+            <span class="st-export__body">
+              <span class="st-export__label">${label}</span>
+              <span class="st-export__desc">${desc}</span>
+            </span>
+            <span class="tl-card__chev">›</span>
+          </button>`).join("")}
       </div>
 
       <div class="rh-section-head"><span>${svg('upload',13)} Import Data</span></div>
@@ -4862,7 +6146,7 @@ function renderSettingsTab(){
         <button class="tl-card" data-action="import-json"><span class="tl-card__icon">${svg('upload',20)}</span><div class="tl-card__body"><div class="tl-card__label">Choose Backup File…</div><div class="tl-card__desc">Restore from a JSON backup</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-action="import-csv"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Import CSV</div><div class="tl-card__desc">Import workouts or measurements</div></div><span class="tl-card__chev">›</span></button>
       </div>
-      <input type="file" id="import-file" accept=".json,application/json" style="display:none;">
+      <input type="file" id="import-file" accept=".json,.ignyt,application/json" style="display:none;">
       <input type="file" id="import-csv" accept=".csv,text/csv" style="display:none;">
       ${state.csvImportPreview ? `<div class="pg-card" style="margin-top:8px;">${renderCsvImportPreview()}</div>` : ""}
       <div style="font-size:11px;color:var(--rh-muted);margin-top:8px;line-height:1.5;">Imports only add data — three formats are auto-detected (Exercises, Workout History, Foods) and re-importing the same file skips what's already there.</div>
@@ -4877,14 +6161,133 @@ function renderSettingsTab(){
       <div class="tl-grid" style="grid-template-columns:1fr;">
         <div class="tl-card" style="cursor:default;"><span class="tl-card__icon">${svg('info',20)}</span><div class="tl-card__body"><div class="tl-card__label">App Version</div><div class="tl-card__desc">IGNYT v1.0</div></div></div>
         <button class="tl-card" data-action="open-legal-privacy"><span class="tl-card__icon">${svg('shield',20)}</span><div class="tl-card__body"><div class="tl-card__label">Privacy Policy</div><div class="tl-card__desc">How your data is stored and shared</div></div><span class="tl-card__chev">›</span></button>
+        <button class="tl-card" data-action="open-legal-terms"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Terms and Conditions</div><div class="tl-card__desc">The terms you agreed to on sign-up</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-action="open-legal-disclaimer"><span class="tl-card__icon">${svg('health',20)}</span><div class="tl-card__body"><div class="tl-card__label">Medical &amp; Fitness Disclaimer</div><div class="tl-card__desc">Read before starting a program</div></div><span class="tl-card__chev">›</span></button>
+      </div>
+
+      <!-- Privacy sits last by request. It was second from the top, above Goal Wizard. -->
+      <div class="rh-section-head" style="margin-top:16px;"><span>${svg('lock',13)} Privacy</span></div>
+      <div class="pg-card">
+        <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">What is stored, where it lives, and how to remove it.</div>
+        <button class="btn btn-steel btn-block" data-action="open-privacy-info">Privacy &amp; Security</button>
+        <button class="btn btn-ghost btn-block" style="margin-top:8px;" data-action="open-legal" data-legal="privacy">Privacy Policy</button>
       </div>
 
       ${window.IgnytAuth && window.IgnytAuth.isNativeAndroid() && window.IgnytAuth.getAccount() ? `
       <button class="rh-btn" style="width:100%;margin-top:16px;padding:14px;background:rgba(239,68,68,.1);color:var(--rh-red);" data-action="account-signout">${svg('signout',16)} Sign Out</button>
+      <!-- Play's User Data policy requires an in-app route to delete the account and its
+           server-side data for any app that offers account creation. Sign-out is not that, and
+           "Reset all data" was local only — the Firebase user and everything synced under it
+           survived it. Deliberately plain text rather than a red button: this is not a thing to
+           make tappable by accident, and the flow behind it asks for the password. -->
+      <button class="btn btn-ghost btn-block" style="margin-top:10px;font-size:13px;color:var(--rh-muted);" data-action="account-delete">Delete account</button>
+      <div style="font-size:11px;color:var(--rh-muted);text-align:center;margin-top:6px;line-height:1.5;">
+        Permanently removes your account, your cloud backup and everything on this device. This cannot be undone.
+      </div>
       ` : ''}
     </div>
+    ${renderDeleteAccountSheet()}
+    ${renderBackupCryptoSheet()}
   `;
+}
+
+/* =========================================================
+   DELETE ACCOUNT
+
+   Three things have to go, in this order: the Firestore documents, the Firebase user, then
+   local storage. Reversing any pair leaves a worse state than doing nothing — deleting the
+   user first strands the cloud data behind an account nobody can sign in as, and wiping local
+   first loses the user's copy while the account is still alive.
+
+   The password is required because Firebase refuses delete() on a stale session, and because
+   an unattended phone should not be one tap from destroying an account. The export button is
+   offered in the same sheet: someone deleting an account is exactly who most wants their data
+   out first, and making them hunt for it in another screen is how people lose years of logs.
+========================================================= */
+function renderDeleteAccountSheet(){
+  if(!state.deleteAccountOpen) return "";
+  const busy = !!state.deleteAccountBusy;
+  const err = state.deleteAccountError;
+  return `
+    <div class="sheet-backdrop" data-action="close-delete-account"></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Delete account" style="padding:20px;">
+      <div style="font-size:18px;font-weight:900;margin-bottom:6px;">Delete your account?</div>
+      <div style="font-size:13px;color:var(--rh-muted);line-height:1.6;margin-bottom:14px;">
+        This permanently deletes your IGNYT account, your cloud backup, and every workout, meal
+        and weigh-in stored on this device. It cannot be undone and support cannot restore it.
+      </div>
+      <button class="btn btn-steel btn-block" data-action="delete-account-export" ${busy?'disabled':''}>${svg('download',15)} Export my data first</button>
+      <div style="font-size:12px;color:var(--rh-muted);margin:16px 0 6px;font-weight:700;">Enter your password to confirm</div>
+      ${pwdField("delete-account-password", "current-password", "Password", "pi-input", busy)}
+      ${err ? `<div style="font-size:12px;color:var(--rh-red);margin-top:10px;line-height:1.5;">${escHtml(err)}</div>` : ''}
+      <button class="btn btn-block" style="margin-top:16px;background:var(--rh-red);color:#fff;" data-action="delete-account-confirm" ${busy?'disabled':''}>${busy?'Deleting…':'Delete my account permanently'}</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px;" data-action="close-delete-account" ${busy?'disabled':''}>Cancel</button>
+    </div>`;
+}
+
+/* Passphrase prompt for the encrypted backup, both directions.
+   One sheet rather than two because the shapes are identical and the wording is the only
+   real difference — and because the export side needs its passphrase typed twice, which is
+   a rule the import side must not accidentally inherit. */
+function renderBackupCryptoSheet(){
+  const mode = state.backupCryptoOpen;
+  if(!mode) return "";
+  const busy = !!state.backupCryptoBusy;
+  const err = state.backupCryptoError;
+  const exporting = mode === "export";
+  return `
+    <div class="sheet-backdrop" data-action="close-backup-crypto"></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="${exporting?'Encrypt backup':'Open encrypted backup'}" style="padding:20px;">
+      <div style="font-size:18px;font-weight:900;margin-bottom:6px;">${exporting?'Encrypt this backup':'Open encrypted backup'}</div>
+      <div style="font-size:13px;color:var(--rh-muted);line-height:1.6;margin-bottom:14px;">
+        ${exporting
+          ? `Your backup will be locked with AES-256. <strong>Keep the passphrase somewhere safe — without it the file cannot be opened, not by you and not by us.</strong> There is no reset.`
+          : `Enter the passphrase you set when you made this backup.`}
+      </div>
+      ${pwdField("backup-pass", exporting?'new-password':'current-password', "Passphrase", "pi-input", busy)}
+      ${exporting ? `<div style="margin-top:8px;">${pwdField("backup-pass2", "new-password", "Confirm passphrase", "pi-input", busy)}</div>` : ''}
+      ${err ? `<div style="font-size:12px;color:var(--rh-red);margin-top:10px;line-height:1.5;">${escHtml(err)}</div>` : ''}
+      <button class="btn btn-block" style="margin-top:16px;background:var(--accent);color:#0b0b0f;font-weight:800;" data-action="backup-crypto-confirm" ${busy?'disabled':''}>
+        ${busy ? (exporting?'Encrypting…':'Decrypting…') : (exporting?'Encrypt and download':'Restore backup')}
+      </button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px;" data-action="close-backup-crypto" ${busy?'disabled':''}>Cancel</button>
+    </div>`;
+}
+
+/* Encrypt the same payload the plain export produces, then hand it over as a file.
+   Deliberately NOT the Keystore key — see security.js. A backup only the phone that wrote it
+   can open is not a backup. */
+async function runEncryptedBackupExport(pass, pass2){
+  if(pass !== pass2){ state.backupCryptoError = "The two passphrases don't match."; render(); return; }
+  if(!pass || pass.length < 8){ state.backupCryptoError = "Use a passphrase of at least 8 characters."; render(); return; }
+  state.backupCryptoBusy = true; state.backupCryptoError = null; render();
+  const res = await IgnytSecurity.encryptBackup(JSON.stringify(buildFullBackupPayload()), pass);
+  state.backupCryptoBusy = false;
+  if(!res.ok){ state.backupCryptoError = res.error; render(); return; }
+  state.backupCryptoOpen = null; render();
+  downloadFile("ignyt-backup-"+todayStr()+".ignyt", JSON.stringify(res.envelope,null,2), "application/json");
+  IgnytSecurity.logEvent("backup.encrypted", { ok:true });
+  showToast("Encrypted backup saved", "success", render);
+}
+
+async function runEncryptedBackupImport(pass){
+  const envelope = state.backupCryptoPending;
+  if(!envelope){ state.backupCryptoOpen = null; render(); return; }
+  state.backupCryptoBusy = true; state.backupCryptoError = null; render();
+  const res = await IgnytSecurity.decryptBackup(envelope, pass);
+  state.backupCryptoBusy = false;
+  if(!res.ok){ state.backupCryptoError = res.error; render(); return; }
+  let parsed = null;
+  try{ parsed = JSON.parse(res.json); }
+  catch(e){
+    /* The tag verified, so the bytes are genuinely ours and unmodified — if they still don't
+       parse, the file was damaged before it was ever encrypted. Say that rather than blaming
+       the passphrase, which is the one thing we now know was right. */
+    state.backupCryptoError = "The passphrase was correct but the backup inside is damaged.";
+    render(); return;
+  }
+  state.backupCryptoOpen = null; state.backupCryptoPending = null; render();
+  commitImportedBackup(parsed);   // same validation as any other import
 }
 
 /* =========================================================
@@ -4955,35 +6358,20 @@ function confirmDialog(message, renderFn, opts){
 }
 
 function resolveConfirmDialog(result, renderFn){
+  // A dialog with an input resolves to the typed string (or false when cancelled), so callers
+  // get the value without reaching into the DOM after the element has been torn down.
+  if(result && state.confirmDialog && state.confirmDialog.input){
+    const el = document.getElementById("dialog-input");
+    const typed = el ? el.value.trim() : "";
+    if(!typed){ return; }   // empty name: keep the dialog open rather than saving "Untitled"
+    result = typed;
+  }
   state.confirmDialog = null;
   const r = _resolver;
   _resolver = null;
   if(renderFn) renderFn();
   if(r) r(result);
 }
-
-let _passphraseResolver = null;
-
-/** Resolves to the passphrase string, or null if cancelled. purpose: "set" (validates min
- *  length + matching confirm field before resolving), "backup"/"restore" (single field).
- *  Called from drive-backup.js (window.promptPassphrase) and directly from the encryption
- *  Settings toggle. */
-function promptPassphrase(purpose, renderFn){
-  return new Promise(resolve=>{
-    _passphraseResolver = resolve;
-    state.passphrasePrompt = { purpose, error: null };
-    if(renderFn) renderFn();
-  });
-}
-
-function resolvePassphrasePrompt(value, renderFn){
-  state.passphrasePrompt = null;
-  const r = _passphraseResolver;
-  _passphraseResolver = null;
-  if(renderFn) renderFn();
-  if(r) r(value);
-}
-window.promptPassphrase = (purpose) => promptPassphrase(purpose, render);
 
 // Privacy Policy / Medical Disclaimer: rendered as an in-app overlay (iframe onto the existing
 // static www/legal/*.html, single source of truth) instead of a real <a target="_blank">
@@ -4993,8 +6381,32 @@ window.promptPassphrase = (purpose) => promptPassphrase(purpose, render);
 // overlay in the app is (a state flag + handleHardwareBack(), see below).
 const LEGAL_PAGES = {
   privacy: { title: "Privacy Policy", url: "legal/privacy-policy.html" },
+  terms: { title: "Terms and Conditions", url: "legal/terms-and-conditions.html" },
   disclaimer: { title: "Medical & Fitness Disclaimer", url: "legal/medical-disclaimer.html" }
 };
+/* The legal links on the onboarding consent row and the sign-in screen used to be plain <a href>
+   navigations: they took the WebView off the SPA with no history entry of its own, so Android
+   hardware back had nowhere to return to and exited the app. That is the exact trap the
+   LEGAL_PAGES overlay was built to avoid -- the fix had only ever been applied to Settings.
+
+   This has to be callable from more than one place. The sign-in screen renders through
+   renderSignInScreen()/bindSignInScreen() and returns before the main app's rebind pass ever
+   runs, so a handler bound only there is bound on every screen except the one whose links were
+   broken. */
+function bindLegalLinks(){
+  document.querySelectorAll("[data-legal-open]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      e.preventDefault();
+      e.stopPropagation();   // the onboarding links sit inside a button that toggles the checkbox
+      state.viewingLegal = el.dataset.legalOpen;
+      render();
+    });
+  });
+  // Closing has to be bound wherever the overlay can appear, for the same reason.
+  document.querySelectorAll('[data-action="close-legal-viewer"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.viewingLegal = null; render(); });
+  });
+}
 function renderLegalViewer(){
   const page = LEGAL_PAGES[state.viewingLegal];
   if(!page) return "";
@@ -5019,6 +6431,9 @@ function renderConfirmDialog(){
     <div class="dialog-box">
       ${d.title?`<div class="dialog-title">${d.title}</div>`:''}
       <div class="dialog-message">${d.message}</div>
+      ${d.input ? `<input type="text" id="dialog-input" class="dialog-input"
+          value="${escHtml(d.inputValue||"")}" placeholder="${escHtml(d.inputPlaceholder||"")}"
+          maxlength="60" autocomplete="off">` : ''}
       <div class="dialog-actions">
         <button class="btn btn-ghost" data-dialog-action="cancel">${d.cancelLabel||'Cancel'}</button>
         <button class="btn ${d.danger?'btn-danger':'btn-accent'}" data-dialog-action="confirm">${d.confirmLabel||'Confirm'}</button>
@@ -5061,7 +6476,7 @@ function computeAdaptiveRecommendation(){
 function renderAdaptiveRecommendationBanner(rec){
   if(!rec) return "";
   return `<div class="info-box" style="padding:12px 14px;margin-bottom:12px;border-left:3px solid var(--accent);">
-    <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:4px;">Recommendation</div>
+    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:4px;">Recommendation</div>
     <div style="font-size:13px;color:var(--text);line-height:1.4;">${obEsc(rec.text)}</div>
   </div>`;
 }
@@ -5080,6 +6495,23 @@ function renderHomeTab(){
     state, week, plannedDay, planPct: overallPlanProgress(), streak: computeStreak(), targets: macroTargets(),
     eaten: Math.round(todayEaten()), proteinToday: Math.round(todayMacros().protein), latestWeight: state.bodylog[0],
     burned: todayBurned(), water: Math.round(todayWater()), waterTarget: state.settings.waterTargetMl || 2500,
+    // Computed here rather than in home.js so the date and meal helpers stay in one place —
+    // home.js deriving its own "today" risks disagreeing with the nutrition tab across a
+    // timezone boundary.
+    nutritionToday: (()=>{
+      const entries = foodsForDate(todayStr());
+      const t = nutritionTotalsFor(todayStr()).totals;
+      const meals = new Set(entries.map(f=>(f && f.meal) || "Lunch"));
+      // "Latest" by explicit timestamp where present, else by log position (newest-first).
+      const latest = entries.slice().sort((a,b)=>(b.at||0)-(a.at||0))[0] || entries[0] || null;
+      return {
+        kcal: Math.round(t.calories), protein: Math.round(t.protein),
+        carbs: Math.round(t.carbs), fat: Math.round(t.fat),
+        entryCount: entries.length, mealCount: meals.size,
+        latestName: latest ? latest.name : null, latestKcal: latest ? Math.round(latest.calories||0) : null,
+        latestMeal: latest ? (latest.meal || "Lunch") : null
+      };
+    })(),
     dayDone, dayTotal, weekStats: thisWeekStats(),
     todayMuscles: plannedDay ? Array.from(new Set(plannedDay.exercises.map(ex=>getMuscle(ex.name)))).filter(m=>m && m!=="Other").slice(0,3) : [],
     greeting, displayW, wUnit, svg, habitStreak, habitDateStr, renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed, renderHomeHabits
@@ -5156,7 +6588,6 @@ function renderLegacyHomeTab(){
     <div class="grid2" style="margin-bottom:8px;">
       <button class="btn btn-steel" data-nav="workout" style="display:flex;align-items:center;justify-content:center;gap:8px;">${svg('workout',16)} Start Workout</button>
       <button class="btn btn-steel" data-nav="body" style="display:flex;align-items:center;justify-content:center;gap:8px;">${svg('body',16)} Log Weight</button>
-      <button class="btn btn-steel" data-nav="uploads" style="display:flex;align-items:center;justify-content:center;gap:8px;">${svg('health',16)} Medical Reports</button>
       <button class="btn btn-steel" data-nav="progress" style="display:flex;align-items:center;justify-content:center;gap:8px;">${svg('progress',16)} View Progress</button>
     </div>
 
@@ -5164,13 +6595,17 @@ function renderLegacyHomeTab(){
   `;
 }
 
+/* No trailing punctuation. Both call sites append ", <name>" to whatever this returns, and
+   the two late-hours greetings used to carry their own question mark -- which rendered as
+   "Winding down?, varun" on Home every evening after nine, and "Still up?, varun" before
+   five. The comma belongs to the caller, so the greeting must not bring its own. */
 function greeting(){
   const h = new Date().getHours();
-  if(h<5) return "Still up?";
+  if(h<5) return "Still up";
   if(h<12) return "Good morning";
   if(h<17) return "Good afternoon";
   if(h<21) return "Good evening";
-  return "Winding down?";
+  return "Winding down";
 }
 
 /* Contextual, in-session reminders only -- fires while the app is open, since
@@ -5231,6 +6666,27 @@ const REMINDER_DEFS = {
   weeklyReports: { id:"weekly", hour:18, minute:0, title:"IGNYT Weekly Report", body:"Your training week summary is ready.", intervalDays:7 }
 };
 
+
+/* A notification's deep link, handed over by MainActivity as window.__ignytRoute.
+   Read once and cleared: leaving it set would send the user back to the same screen on the
+   next reload, long after the reminder that asked for it. Unknown routes are ignored rather
+   than navigated to, so a stale build can never land on a screen that no longer exists. */
+function consumeNotificationRoute(){
+  const route = window.__ignytRoute;
+  if(!route) return;
+  delete window.__ignytRoute;
+
+  const TABS = ["home","workout","nutrition","progress","profile","tools","fasting","supplements","health","body","insights","settings"];
+  if(TABS.indexOf(route) !== -1){
+    state.tab = route;
+  }else{
+    return;
+  }
+  state.nutritionScreen = null;
+  state.foodFlow = null;
+  render();
+}
+
 async function refreshNativeNotifPermission(){
   const plugin = nativeNotify();
   if(!plugin) return;
@@ -5243,7 +6699,11 @@ async function refreshNativeNotifPermission(){
 async function syncNativeReminder(key){
   const plugin = nativeNotify();
   if(!plugin) return;
+  /* Not every notification toggle is a fixed daily reminder. workoutLeftReminder is a
+     one-shot armed from the session's own lifecycle, so it has no REMINDER_DEFS entry and
+     owns its own scheduling — without this guard the lookup below dereferences undefined. */
   const def = REMINDER_DEFS[key];
+  if(!def) return;
   try{
     if(state.settings[key]) await plugin.scheduleDaily(def);
     else await plugin.cancel({ id: def.id });
@@ -5273,7 +6733,7 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","calendar"].includes(state.progressView)))
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","workouts","calendar"].includes(state.progressView)))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || state.bodyView==="calculators" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
@@ -5290,7 +6750,8 @@ function renderApp(){
         <button class="page-tools-btn" data-action="toggle-notifications" aria-label="Notifications${unreadCount?` (${unreadCount} new)`:''}">
           ${svg('bell',20)}${unreadCount?'<span class="hdr-badge-dot"></span>':''}
         </button>
-        <button class="page-tools-btn" data-nav="settings" aria-label="Open Settings">${svg('gear',20)}</button>
+        <button class="page-tools-btn${state.tab==='profile'?' is-on':''}" data-nav="profile" aria-label="Open Profile">${svg('profile',20)}</button>
+        <button class="page-tools-btn${state.tab==='settings'?' is-on':''}" data-nav="settings" aria-label="Open Settings">${svg('gear',20)}</button>
         ${state.notificationsOpen ? renderNotificationsPanel(notifications) : ''}
       </div>
     </header>
@@ -5299,15 +6760,16 @@ function renderApp(){
     ${renderHoldTimerOverlay()}
     ${renderToast()}
     ${renderConfirmDialog()}
-    ${renderDriveRestorePrompt()}
-    ${renderPassphrasePrompt()}
     ${renderLegalViewer()}
+    ${renderLiveSessionBar()}
+    ${renderPaywallSheet()}
+    ${renderPrExerciseSheet()}
     <nav class="bottom-nav ${isLightTab?'bottom-nav--home-light':''}">
       ${navBtn("home","Home")}
       ${navBtn("workout","Workout")}
+      ${navBtn("nutrition","Food Log")}
       ${navBtn("progress","Progress")}
       ${navBtn("tools","Tools")}
-      ${navBtn("profile","Profile")}
     </nav>
   `;
   const main = document.getElementById("main");
@@ -5324,6 +6786,8 @@ function renderApp(){
   if(state.tab==="healthhub") main.innerHTML = window.IgnytHealthDashboard ? window.IgnytHealthDashboard.render() : "";
   if(state.tab==="insights") main.innerHTML = renderInsightsTab();
   if(state.tab==="tools") main.innerHTML = renderToolsTab();
+  if(state.tab==="fasting") main.innerHTML = renderFastingScreen();
+  if(state.tab==="supplements") main.innerHTML = renderSupplementsScreen();
   if(state.tab==="profile") main.innerHTML = renderProfileTab();
   if(state.tab==="bloodwork") main.innerHTML = window.IgnytBloodwork ? window.IgnytBloodwork.render() : "";
   if(state.tab==="goals") main.innerHTML = window.IgnytGoals ? window.IgnytGoals.render() : "";
@@ -5367,16 +6831,26 @@ function renderToolsTab(){
       // Health Hub ({id:"healthhub"}) intentionally disconnected for this release (not
       // deleted -- renderApp()'s state.tab==="healthhub" route and www/js/health/* are still
       // in the repo for future work, just unreachable from the UI now).
-      {id:"health", label:"Health Connect", desc:"Sync with apps, track all metrics", icon:"health"},
-      {id:"uploads", label:"Medical Reports", desc:"Blood work & DEXA", icon:"flask"}
+      /* Medical Reports removed from the UI per the brief. The route and
+         www/js/health-uploads.js stay in the repo, unreachable — the same treatment Health Hub
+         got above. Deleting the module would also remove the read path to files a user has
+         already uploaded, and "take it out of the app" need not mean "make their data
+         unrecoverable". */
+      {id:"health", label:"Health Connect", desc:"Sync with apps, track all metrics", icon:"health"}
     ]],
     ["Nutrition", [
-      {id:"nutrition", label:"Food Log", desc:"Meals, macros & calorie budget", icon:"nutrition"},
+      /* Food Log is deliberately not listed. It is a bottom-nav tab, permanently one tap
+         away, and a card duplicating a primary destination lengthens Tools without making
+         anything reachable that was not already. */
+      /* Fasting sits under Nutrition because that is where a user looks for it, but it is its
+         own page and its own store — it never reads or writes the food log. */
+      {id:"fasting", label:"Fasting", desc:"Track intermittent fasts & streaks", icon:"timer"},
+      {id:"supplements", label:"Supplements", desc:"Doses, stock & adherence", icon:"nutrition"},
       {id:"calculators", label:"Calculator", desc:"BMI, BMR, TDEE & macros", icon:"calc"}
     ]],
     ["Insights", [
-      {id:"insights", label:"Insights", desc:"Day, week, month & year trends", icon:"progress"},
-      {id:"settings", label:"Settings", desc:"Backups & preferences", icon:"gear"}
+      {id:"insights", label:"Insights", desc:"Day, week, month & year trends", icon:"progress"}
+      /* Settings is not listed either — it is the gear in the header, on every screen. */
     ]]
   ];
   let hcConnected = false;
@@ -5386,6 +6860,9 @@ function renderToolsTab(){
   return `
     <div class="pg-light">
       <div class="pg-header">
+        <!-- No back arrow. Tools is a bottom-nav destination now rather than a page inside
+             Profile, and a back button on a top-level tab points at a parent the user did not
+             come from — it would send them to Profile out of nowhere. -->
         <div class="pg-header__title">Tools</div>
         <div class="pg-header__sub">Everything you need to train smarter</div>
       </div>
@@ -5458,7 +6935,7 @@ function renderProfileTab(){
     <div class="pg-light">
       <div class="pf-header-row">
         <div class="pf-avatar">
-          ${account?.photoUrl ? `<img src="${account.photoUrl}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
+          ${(()=>{ const src = profilePhotoSrc(account); return src ? `<img src="${src}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''; })()}
           <span class="pf-avatar__initial">${initial}</span>
           <button class="pf-avatar__edit" data-action="open-personal-info" aria-label="Edit personal information">${svg('pencil',13)}</button>
         </div>
@@ -5508,13 +6985,23 @@ function renderProfileTab(){
         <button class="tl-card" data-open-progress-view="achievements"><span class="tl-card__icon">${svg('trophy',20)}</span><div class="tl-card__body"><div class="tl-card__label">Achievements</div><div class="tl-card__desc">Badges, milestones &amp; records</div></div><span class="tl-card__chev">›</span></button>
       </div>
 
+      <div class="rh-section-head"><span>Diet</span></div>
+      <div class="tl-grid" style="grid-template-columns:1fr;">
+        <button class="tl-card" data-open-diet-settings="1"><span class="tl-card__icon" style="color:var(--rh-green);background:rgba(22,163,74,.1);">${svg('nutrition',20)}</span><div class="tl-card__body"><div class="tl-card__label">Diet Settings</div><div class="tl-card__desc">Meals per day, plan &amp; meal times</div></div><span class="tl-card__chev">›</span></button>
+      </div>
+
+      ${/* The Tools section was one card -- "All Tools" -- pointing at a screen that already
+            has its own tab in the bottom nav. A shortcut to something one tap away in every
+            other context is a row that costs a scroll and gains nothing. Removed; Tools is
+            unaffected and still reached from the nav. */''}
+
       <div class="rh-section-head"><span>Data &amp; Settings</span></div>
       <div class="tl-grid" style="grid-template-columns:1fr;">
         <button class="tl-card" data-nav="settings"><span class="tl-card__icon">${svg('cloud',20)}</span><div class="tl-card__body"><div class="tl-card__label">Data &amp; Backups</div><div class="tl-card__desc">Backup and restore your data</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-nav="settings"><span class="tl-card__icon">${svg('lock',20)}</span><div class="tl-card__body"><div class="tl-card__label">Privacy</div><div class="tl-card__desc">Data storage &amp; reset options</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-nav="settings"><span class="tl-card__icon">${svg('moon',20)}</span><div class="tl-card__body"><div class="tl-card__label">Appearance</div><div class="tl-card__desc">${themeLabel}</div></div><span class="tl-card__chev">›</span></button>
         ${account ? `<button class="tl-card" data-action="account-signout"><span class="tl-card__icon" style="color:var(--rh-red);background:rgba(239,68,68,.1);">${svg('signout',20)}</span><div class="tl-card__body"><div class="tl-card__label">Sign Out</div><div class="tl-card__desc">Log out from your account</div></div><span class="tl-card__chev">›</span></button>`
-          : auth && auth.isNativeAndroid() ? `<button class="tl-card" data-action="account-signin"><span class="tl-card__icon" style="color:var(--rh-red);background:rgba(239,68,68,.1);">${svg('signout',20)}</span><div class="tl-card__body"><div class="tl-card__label">Sign In</div><div class="tl-card__desc">Sync and back up with Google</div></div><span class="tl-card__chev">›</span></button>` : ''}
+          : auth && auth.isNativeAndroid() ? `<button class="tl-card" data-action="open-account-signin"><span class="tl-card__icon" style="color:var(--rh-red);background:rgba(239,68,68,.1);">${svg('signout',20)}</span><div class="tl-card__body"><div class="tl-card__label">Sign In</div><div class="tl-card__desc">Back up and sync your data</div></div><span class="tl-card__chev">›</span></button>` : ''}
       </div>
     </div>`;
 }
@@ -5522,6 +7009,7 @@ function renderProfileTab(){
 /* Honest navigation shell: AI assistance is not implemented in this repository, so this
    screen never implies that prompts, plans, or data analysis are being generated. */
 function renderAiCoachTab(){
+  if(!premiumAllows("coach")) return renderUpgradeWall("coach");
   // Rule-based, data-driven coach (offline, no LLM). Falls back to the honest empty state only
   // if the module failed to load.
   if(window.IgnytCoach) return window.IgnytCoach.render();
@@ -5667,34 +7155,90 @@ function hcCard(opts) {
    data-toggle-habit handler, and habitStreak()/habitDateStr() as the full Habit Tracker on
    Progress (single source of truth — no duplicated state). "View all" opens Progress > Habits
    via data-open-progress-view, which already sets tab+progressView. */
+
+
+/** Short confirmation buzz. Guarded because navigator.vibrate is absent on desktop browsers
+ *  and can be disabled by the user or the platform; there is no fallback and none is needed. */
+function hapticTick(){
+  try { if(navigator.vibrate) navigator.vibrate(12); } catch(e){ /* never break a tap over this */ }
+}
+
+/* Adds a habit from the Home suggestion chips. Same store and same id scheme as the Habit
+   Tracker on Progress -- these are ordinary habits from the moment they exist, editable and
+   deletable in the usual place, not a special "suggested" kind. */
+function addHabitNamed(name){
+  const clean = String(name || "").trim();
+  if(!clean) return null;
+  // A habit the user already has must not be silently duplicated by a second tap.
+  const existing = (state.habits || []).find(h => h && String(h.name).toLowerCase() === clean.toLowerCase());
+  if(existing){
+    if(existing.enabled === false){ existing.enabled = true; persist(); return existing; }
+    return null;
+  }
+  const habit = { id: nextId(), name: clean, createdAt: Date.now(), enabled: true };
+  state.habits = (state.habits || []).concat([habit]);
+  persist();
+  return habit;
+}
+
 function renderHomeHabits(){
   const today = habitDateStr();
-  const habits = state.habits || [];
-  const header = `<div class="section-heading"><span class="section-heading__label">Habits Today</span>${habits.length?`<button class="btn btn-ghost" data-open-progress-view="habits" style="padding:5px 8px;font-size:12px;">View all</button>`:''}</div>`;
+  const habits = (state.habits || []).filter(h => h && h.enabled !== false);
+  const allCount = (state.habits || []).length;
+
+  const header = `<div class="rh-section-head"><span>Today's Habits</span>${
+    allCount ? `<a href="#" class="rh-view-all" data-open-progress-view="habits">Manage</a>` : ""}</div>`;
+
+  /* Empty state offers SUGGESTIONS rather than silently creating habits. Seeding someone's
+     tracker with five habits they never asked for is inventing user data — and a habit they
+     did not choose is one they will not keep. One tap each, and nothing exists until tapped. */
   if(!habits.length){
-    return header + `<button class="premium-card home-habits__empty" data-open-progress-view="habits">
-      <div class="home-habits__empty-title">Build a daily habit</div>
-      <div class="home-habits__empty-sub">Track water, steps, sleep and more — tap to add your first habit.</div>
-    </button>`;
+    const suggestions = ["Drink 3L Water", "Morning Workout", "Take Multivitamin",
+                         "Walk 10,000 Steps", "Sleep Before 11 PM"];
+    return header + `<div class="pg-card hb-empty">
+      <div class="hb-empty__title">${allCount ? "All your habits are turned off" : "Start a daily habit"}</div>
+      <div class="hb-empty__sub">${allCount
+        ? "Turn one back on from Manage to see it here."
+        : "Pick one to begin, or add your own. Tick them off each day and the streak builds itself."}</div>
+      ${allCount ? "" : `<div class="hb-sugg">
+        ${suggestions.map(n=>`<button class="hb-sugg__chip" data-add-habit-preset="${escHtml(n)}">+ ${escHtml(n)}</button>`).join("")}
+      </div>`}
+    </div>`;
   }
-  const MAX = 4;
+
+  const done = habits.filter(h => state.habitCompletions[h.id] && state.habitCompletions[h.id][today]).length;
+  const pct = habits.length ? Math.round(done / habits.length * 100) : 0;
+  const MAX = 5;
   const shown = habits.slice(0, MAX);
-  const doneToday = habits.filter(h=> state.habitCompletions[h.id] && state.habitCompletions[h.id][today]).length;
-  return header + `<section class="premium-card home-habits">
-    <div class="home-habits__meta">${doneToday} of ${habits.length} done today</div>
-    ${shown.map(h=>{
-      const done = !!(state.habitCompletions[h.id] && state.habitCompletions[h.id][today]);
-      const streak = habitStreak(h.id);
-      return `<div class="home-habit-row">
-        <button class="set-check ${done?'done':''}" data-toggle-habit="${h.id}" aria-label="Mark ${h.name} complete for today">${done?svg('check',16):''}</button>
-        <div class="home-habit-row__body">
-          <div class="home-habit-row__name ${done?'is-done':''}">${h.name}</div>
-          <div class="home-habit-row__streak">🔥 ${streak} day streak</div>
-        </div>
-      </div>`;
-    }).join("")}
-    ${habits.length>MAX?`<button class="btn btn-secondary btn-block" data-open-progress-view="habits" style="margin-top:10px;">View all ${habits.length} habits</button>`:''}
-  </section>`;
+
+  return header + `<div class="pg-card hb">
+    <div class="hb-top">
+      <div class="hb-top__count"><b>${done}</b> / ${habits.length} completed</div>
+      <div class="hb-top__pct">${pct}%</div>
+    </div>
+    <div class="hb-track"><div class="hb-fill" style="width:${pct}%;"></div></div>
+
+    <div class="hb-list">
+      ${shown.map(h=>{
+        const isDone = !!(state.habitCompletions[h.id] && state.habitCompletions[h.id][today]);
+        const streak = habitStreak(h.id);
+        const meta = habitIconMeta(h.name);
+        return `<button class="hb-row${isDone?" is-done":""}" data-toggle-habit="${h.id}"
+                  aria-pressed="${isDone?"true":"false"}"
+                  aria-label="${isDone?"Mark "+escHtml(h.name)+" as not done":"Mark "+escHtml(h.name)+" as done"}">
+          <span class="hb-box" aria-hidden="true">${isDone?svg('check',14):""}</span>
+          <span class="hb-icon" style="background:${meta.bg};color:${meta.color};" aria-hidden="true">${svg(meta.icon,15)}</span>
+          <span class="hb-body">
+            <span class="hb-name">${escHtml(h.name)}</span>
+            ${streak > 0 ? `<span class="hb-streak">🔥 ${streak} day${streak===1?"":"s"}</span>` : ""}
+          </span>
+        </button>`;
+      }).join("")}
+    </div>
+
+    ${habits.length > MAX
+      ? `<button class="hb-more" data-open-progress-view="habits">View all ${habits.length} habits</button>` : ""}
+  </div>`;
 }
 
 function renderHomeHealthFeed() {
@@ -5837,13 +7381,13 @@ function hcInsightTile(label, value, unit, period, permissionMissing, icon) {
     return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;padding:14px;">
       <span class="tl-card__icon" style="flex:none;background:${icon.bg};color:${icon.color};">${svg(icon.icon,20)}</span>
       <div style="flex:1;min-width:0;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);letter-spacing:.02em;">${label}</div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);letter-spacing:.02em;">${label}</div>
         <div style="font-size:${dim?'14px':'19px'};font-weight:800;margin-top:3px;color:${dim?'var(--rh-muted)':'var(--rh-text)'};">${rhText}</div>
-        <div style="font-size:10px;font-weight:600;color:var(--rh-muted);text-transform:uppercase;margin-top:2px;">${period}</div>
+        <div style="font-size:11px;font-weight:600;color:var(--rh-muted);text-transform:uppercase;margin-top:2px;">${period}</div>
       </div>
     </div>`;
   }
-  return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value" style="font-size:${dim ? '13px' : '20px'};color:${dim ? 'var(--muted)' : 'var(--text)'};">${text}</div><div style="font-size:10px;color:var(--muted);margin-top:2px;font-weight:700;text-transform:uppercase;">${period}</div></div>`;
+  return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value" style="font-size:${dim ? '13px' : '20px'};color:${dim ? 'var(--muted)' : 'var(--text)'};">${text}</div><div style="font-size:11px;color:var(--muted);margin-top:2px;font-weight:700;text-transform:uppercase;">${period}</div></div>`;
 }
 
 const INSIGHT_ICON_META = {
@@ -5910,6 +7454,7 @@ function renderHealthInsightMetrics(d, period, light) {
 }
 
 function renderHealthDashboard() {
+  if(!premiumAllows("health")) return renderUpgradeWall("health");
   const isNative = window.HealthConnect && HealthConnect.isNativeAndroid();
   const integ = window.HealthConnectIntegration;
   const hcState = integ ? integ.loadState() : { connected: false, lastSyncAt: null };
@@ -5983,9 +7528,9 @@ function renderHealthDashboard() {
         return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;padding:14px;">
           <span class="tl-card__icon" style="flex:none;background:${icon.bg};color:${icon.color};">${svg(icon.icon,20)}</span>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);letter-spacing:.02em;">${label}</div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);letter-spacing:.02em;">${label}</div>
             <div style="font-size:${dim?'14px':'19px'};font-weight:800;margin-top:3px;color:${dim?'var(--rh-muted)':'var(--rh-text)'};">${displayValue}</div>
-            <div style="font-size:10px;font-weight:600;color:var(--rh-muted);text-transform:uppercase;margin-top:2px;">${sub}</div>
+            <div style="font-size:11px;font-weight:600;color:var(--rh-muted);text-transform:uppercase;margin-top:2px;">${sub}</div>
           </div>
         </div>`;
       }).join("")}
@@ -6023,6 +7568,7 @@ const INSIGHTS_RANGES = [["day","Day"],["week","Week"],["month","Month"],["year"
 const INSIGHTS_RANGE_LABEL = { day:"Today", week:"Last 7 days", month:"Last 30 days", year:"Last 365 days" };
 
 function renderInsightsTab(){
+  if(!premiumAllows("insights")) return renderUpgradeWall("insights");
   const backBtn = `<button class="rh-btn rh-btn--ghost" data-action="close-insights" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:10px;">← Back</button>`;
   const isNative = window.HealthConnect && HealthConnect.isNativeAndroid();
 
@@ -6172,8 +7718,30 @@ function renderExercisePicker(){
     ` : ""}
 
     <div id="ex-picker-results">${exercisePickerResultsHtml()}</div>
+    ${renderPickerSelectionBar()}
     </div>
   `;
+}
+
+/* The multi-select commit bar. Only for the contexts where adding several at once means
+   something: building a workout or a routine. Replacing an exercise is one-for-one, so that
+   context keeps its original single-tap-and-close behaviour. */
+function pickerIsMultiSelect(){
+  return state.exercisePickerContext !== "replace" && state.exercisePickerContext !== "routine-replace";
+}
+
+function renderPickerSelectionBar(){
+  const n = (state.pickerSelection||[]).length;
+  if(!pickerIsMultiSelect() || !n) return "";
+  /* The spacer is a sibling, not padding on the bar: the bar is fixed, so it takes no space in
+     the flow and the last few exercises would sit underneath it. */
+  return `<div class="ex-picker-bar-spacer" aria-hidden="true"></div>
+  <div class="ex-picker-bar">
+    <button class="ex-picker-bar__clear" data-action="clear-picker-selection">Clear</button>
+    <button class="ex-picker-bar__add" data-action="add-picked-exercises">
+      Add ${n} exercise${n!==1?'s':''}
+    </button>
+  </div>`;
 }
 
 /* Builds ONLY the filtered results list (recent + all matches). Called both by the full
@@ -6218,6 +7786,46 @@ function updateExercisePickerResults(){
   if(el) el.innerHTML = exercisePickerResultsHtml();
 }
 
+/* Swaps the commit bar in and out in place, for the same reason the results list is patched
+   rather than re-rendered: a full render would rebuild the search input and drop focus. */
+function updatePickerSelectionBar(){
+  const results = document.getElementById("ex-picker-results");
+  if(!results) return;
+  /* Both nodes: renderPickerSelectionBar() now emits a spacer alongside the bar, and removing
+     only the bar would leave a spacer behind on every re-render until the picker closed. */
+  results.parentElement.querySelectorAll(".ex-picker-bar, .ex-picker-bar-spacer")
+    .forEach(el => el.remove());
+  const html = renderPickerSelectionBar();
+  if(html) results.insertAdjacentHTML("afterend", html);
+  attachPickerSelectionBar();
+}
+
+function attachPickerSelectionBar(){
+  const addBtn = document.querySelector('[data-action="add-picked-exercises"]');
+  if(addBtn) addBtn.addEventListener("click", ()=>{
+    const names = (state.pickerSelection||[]).slice();
+    if(!names.length) return;
+    if(isRoutinePickerContext()){
+      // applyRoutineExercisePick() only appends to the builder -- it does not close the picker
+      // or render -- so calling it once per name is safe and keeps the order they were tapped.
+      names.forEach(n=>applyRoutineExercisePick(n));
+    } else {
+      names.forEach(n=>state.session.exercises.push({
+        name:n, notes:"", restDuration:state.settings.defaultRest, sets:[newSet(n)]
+      }));
+    }
+    state.pickerSelection = [];
+    state.showExercisePicker = false;
+    render();
+  });
+  const clearBtn = document.querySelector('[data-action="clear-picker-selection"]');
+  if(clearBtn) clearBtn.addEventListener("click", ()=>{
+    state.pickerSelection = [];
+    updateExercisePickerResults();
+    updatePickerSelectionBar();
+  });
+}
+
 /* =========================================================
    WORKOUT TAB — freestyle logger, set-table style
 ========================================================= */
@@ -6240,11 +7848,30 @@ function toggleFavoriteExercise(name){
 function exercisePickerRow(ex){
   const initial = ex.name.trim().charAt(0).toUpperCase();
   const color = avatarColorFor(ex.muscle);
-  const equipSuffix = ex.cat && !["Custom"].includes(ex.cat) ? ` (${ex.cat})` : "";
+  /* The equipment suffix exists for names that do not say what they are performed with:
+     "Landmine Row" reads better as "Landmine Row (Barbell)". Appending it unconditionally
+     produced "Bench Press (Barbell) (Barbell)" on 148 of the 452 rows.
+
+     The test is whether the name already ends in a parenthetical, not whether it contains the
+     category word. ex.cat is a broad bucket -- "Machine" covers Cable, Smith and Pec Deck --
+     so matching on the word still left "Bench Press (Cable) (Machine)", which reads as a bug
+     and tells the user nothing. Any trailing "(...)" is already the qualifier that distinguishes
+     this row from its siblings, so the bucket adds nothing after it. The name is also checked
+     for the bucket word itself, which catches "Dumbbell Row" -- no parenthetical, but appending
+     "(Dumbbell)" to it is the same redundancy in a different shape. */
+  const alreadyQualified = /\([^)]+\)\s*$/.test(ex.name)
+    || (ex.cat && ex.name.toLowerCase().includes(ex.cat.toLowerCase()));
+  const equipSuffix = (ex.cat && ex.cat !== "Custom" && !alreadyQualified) ? ` (${ex.cat})` : "";
   const fav = isFavoriteExercise(ex.name);
   const safeName = escHtml(ex.name); // custom exercise names are user input and reach these attributes
-  return `<div class="ex-picker-row" data-pick-exercise="${safeName}">
-    <div class="ex-picker-avatar" style="background:${color}22;color:${color};">${initial}</div>
+  const img = exerciseImageSrc(ex.name);
+  const picked = (state.pickerSelection||[]).indexOf(ex.name) !== -1;
+  return `<div class="ex-picker-row${picked?' is-picked':''}" data-pick-exercise="${safeName}">
+    ${picked
+      ? `<div class="ex-picker-tick">${svg('check',20)}</div>`
+      : img
+        ? `<div class="ex-picker-photo"><img src="${escHtml(img)}" alt="" loading="lazy"></div>`
+        : `<div class="ex-picker-avatar" style="background:${color}22;color:${color};">${initial}</div>`}
     <div style="flex:1;min-width:0;">
       <div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${safeName}${equipSuffix}</div>
       <div style="font-size:12px;color:var(--rh-muted);margin-top:1px;">${ex.muscle}</div>
@@ -6278,6 +7905,142 @@ function renderRestTimerSheet(){
         <input type="number" inputmode="numeric" id="rest-custom-input" class="pi-input" placeholder="Seconds" value="${isCustom?current:''}" style="flex:1;">
         <button class="rh-btn rh-btn--primary" style="flex:none;padding:10px 16px;" data-action="rest-custom-save">Set</button>
       </div>` : ''}
+    </div>`;
+}
+
+/** Muscle Distribution — what this session has actually worked so far.
+ *
+ *  Reads the live session, so it changes as sets are ticked: it is a readout of the workout
+ *  in progress, not a summary written at the end. Counting and the diagram both live in
+ *  IgnytMuscleMap; this function only decides what the sheet looks like. */
+/* The paywall. A sheet rather than a screen, so it can be raised from any gated feature and
+   dismissed back to where the user was — a paywall that traps you is a paywall you uninstall.
+
+   Every price here comes from Play. The app never formats currency: Play returns a string
+   already localised, tax-inclusive and correct for whatever regional pricing or promotion
+   applies to this user, so what is shown is exactly what Google will charge.
+
+   The saving on the yearly plan is computed from the two prices Play returned rather than
+   stated as a constant. A hardcoded "Save 33%" becomes a lie the moment either price changes,
+   and it would be wrong in every currency but the one it was written for. */
+/** Raises the paywall and fetches the current plans from Play. */
+async function openPaywall(){
+  state.paywallOpen = true;
+  state.paywallError = null;
+  state.paywallPlans = null;
+  render();
+  const res = await IgnytEntitlements.getPlans();
+  if(res && res.success && res.data){
+    state.paywallPlans = res.data;
+    const plans = res.data.plans || [];
+    // Default to yearly where it exists: it is the better deal and the one worth nudging to.
+    const yearly = plans.find(p => /P1Y/.test(p.period || ""));
+    state.paywallChoice = (yearly || plans[0] || {}).basePlanId || null;
+  }else{
+    state.paywallError = (res && res.error) || "Could not load plans.";
+  }
+  render();
+}
+
+function renderPaywallSheet(){
+  if(!state.paywallOpen) return "";
+  const E = window.IgnytEntitlements;
+  const plans = (state.paywallPlans && state.paywallPlans.plans) || [];
+  const err = state.paywallError;
+
+  const monthly = plans.find(p => /P1M/.test(p.period || ""));
+  const yearly  = plans.find(p => /P1Y/.test(p.period || ""));
+
+  let saving = null;
+  if(monthly && yearly && monthly.priceMicros > 0 && yearly.priceMicros > 0){
+    const pct = Math.round((1 - (yearly.priceMicros / (monthly.priceMicros * 12))) * 100);
+    if(pct > 0) saving = pct;
+  }
+
+  const planRow = (plan, isYearly) => {
+    if(!plan) return "";
+    const chosen = state.paywallChoice === plan.basePlanId;
+    return `<button class="pw-plan${chosen ? " is-on" : ""}" data-paywall-plan="${escHtml(plan.basePlanId)}">
+      <div class="pw-plan__left">
+        <div class="pw-plan__name">${isYearly ? "Yearly" : "Monthly"}</div>
+        ${plan.hasFreeTrial ? `<div class="pw-plan__trial">7 days free, then</div>` : ""}
+      </div>
+      <div class="pw-plan__right">
+        <div class="pw-plan__price">${escHtml(plan.price)}</div>
+        ${isYearly && saving ? `<div class="pw-plan__save">Save ${saving}%</div>` : ""}
+      </div>
+    </button>`;
+  };
+
+  const body = err
+    ? `<div class="pw-error">${escHtml(err)}</div>
+       <button class="btn btn-ghost" data-action="reload-paywall">Try again</button>`
+    : (plans.length
+        ? `${planRow(monthly, false)}${planRow(yearly, true)}
+           <button class="btn btn-accent pw-buy" data-action="paywall-buy"${state.paywallBusy ? " disabled" : ""}>
+             ${state.paywallBusy ? "Opening Google Play…" : "Start free trial"}
+           </button>
+           <div class="pw-fine">
+             Billed through Google Play. Cancel any time in Play &rsaquo; Subscriptions —
+             cancel before the trial ends and you are not charged.
+           </div>`
+        : `<div class="pw-loading">Loading plans…</div>`);
+
+  return `<div class="sheet-backdrop" data-action="close-paywall"></div>
+    <div class="sheet pw-sheet">
+      <div class="sheet__handle"></div>
+      <div class="pw-head">
+        <div class="pw-head__title">IGNYT Premium</div>
+        <div class="pw-head__sub">Everything you already log stays free. Premium adds the coaching.</div>
+      </div>
+      <div class="pw-list">
+        ${Object.keys((E && E.FEATURES) || {}).map(k => `<div class="pw-item">${svg('check',15)}<span>${escHtml(E.FEATURES[k])}</span></div>`).join("")}
+      </div>
+      ${body}
+      <button class="btn btn-ghost pw-restore" data-action="restore-purchases">Restore purchase</button>
+    </div>`;
+}
+
+function renderMuscleDistributionSheet(){
+  if(!state.muscleSheetOpen || !state.session) return "";
+  const MM = window.IgnytMuscleMap;
+  if(!MM) return "";
+
+  const counts = MM.countsFor(state.session.exercises);
+  const rows = MM.rowsFor(counts);
+  const max = rows.length ? rows[0].sets : 0;
+  const unplaced = MM.unattributed(counts);
+
+  return `<div class="sheet-backdrop" data-action="close-muscle-sheet"></div>
+    <div class="sheet mm-sheet">
+      <div class="sheet__handle"></div>
+      <div class="sheet__title">Muscle Distribution</div>
+
+      ${MM.bodyHtml(counts)}
+
+      ${rows.length ? `
+        <div class="mm-head">
+          <span>Muscle</span>
+          <span>Completed Sets</span>
+        </div>
+        <div class="mm-rows">
+          ${rows.map(r=>`
+            <div class="mm-row">
+              <span class="mm-row__name">${escHtml(r.muscle)}</span>
+              <span class="mm-row__bar"><i style="width:${max>0?Math.max(6,Math.round((r.sets/max)*100)):0}%"></i></span>
+              <span class="mm-row__val">${MM.fmt(r.sets)}</span>
+            </div>`).join("")}
+        </div>
+        ${unplaced > 0 ? `<p class="mm-note mm-note--warn">${MM.fmt(unplaced)} completed
+          set${unplaced===1?'':'s'} came from an exercise with no muscle data, so
+          ${unplaced===1?'it is':'they are'} not shown above. Custom exercises have none
+          until the library gains an entry for them.</p>` : ""}
+        <p class="mm-note">The exercise's main muscle counts as a full set; each supporting
+          muscle counts as half, which is where the halves come from. Warmups and unticked
+          sets are not counted.</p>`
+      : `<p class="mm-empty">${unplaced > 0
+            ? `${MM.fmt(unplaced)} completed set${unplaced===1?'':'s'}, but none of the exercises have muscle data yet.`
+            : "Tick off a set and the muscles it worked appear here."}</p>`}
     </div>`;
 }
 
@@ -6570,13 +8333,23 @@ function obKey(fieldPath){ return fieldPath.split(".")[1]; }
 function obGet(fieldPath){ return obTargetObj(fieldPath)[obKey(fieldPath)]; }
 function obSet(fieldPath, value){ obTargetObj(fieldPath)[obKey(fieldPath)] = value; }
 
-function obChipSingle(fieldPath, options, colStyle){
+/**
+ * A row of single-choice chips.
+ *
+ * `required` picks the handler. data-ob-select TOGGLES — tapping the current value clears it,
+ * which is right for an optional chip and wrong for a field that must hold an answer. Gender
+ * defaults to "male", so on a toggling chip the first tap on "Male" silently set it to null;
+ * that is the same bug the note above obOptionRow describes, and it came back when the numbers
+ * page was consolidated. Pass required:true and the chip always SETS.
+ */
+function obChipSingle(fieldPath, options, colStyle, required){
   const current = obGet(fieldPath);
+  const attr = required ? "data-ob-pick" : "data-ob-select";
   return `<div style="display:${colStyle||'flex'};flex-wrap:wrap;gap:6px;">
     ${options.map(o=>{
       const val = typeof o==="object" ? o.key : o;
       const label = typeof o==="object" ? o.label : o;
-      return `<button class="cat-chip ${current===val?'active':''}" data-ob-select="${obEsc(fieldPath)}|${obEsc(val)}">${obEsc(label)}</button>`;
+      return `<button class="cat-chip ${current===val?'active':''}" ${attr}="${obEsc(fieldPath)}|${obEsc(val)}">${obEsc(label)}</button>`;
     }).join("")}
   </div>`;
 }
@@ -6593,7 +8366,7 @@ function obChipMulti(fieldPath, options){
 }
 
 function obLabel(text, hint){
-  return `<label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;">${obEsc(text)}</label>${hint?`<div style="font-size:11px;color:var(--muted);margin:-2px 0 8px;">${obEsc(hint)}</div>`:''}`;
+  return `<label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;">${obEsc(text)}</label>${hint?`<div style="font-size:11px;color:var(--muted);margin:-2px 0 8px;">${obEsc(hint)}</div>`:''}`;
 }
 
 function obNumberInput(fieldPath, placeholder, unit){
@@ -6614,7 +8387,7 @@ function obTextarea(fieldPath, placeholder){
   return `<textarea class="note-input" data-ob-field="${obEsc(fieldPath)}" placeholder="${obEsc(placeholder||'')}" style="margin-bottom:14px;min-height:52px;">${obEsc(v||'')}</textarea>`;
 }
 
-const ONBOARDING_TOTAL_STEPS = 10;
+const ONBOARDING_TOTAL_STEPS = 5;   // derived from the renderer list below
 
 function onboardingProgressHeader(step){
   return `
@@ -6923,14 +8696,903 @@ function obStepSummary(){
   `;
 }
 
-const ONBOARDING_STEP_RENDERERS = [obStep1,obStep2,obStep3,obStep4,obStep5,obStep6,obStep7,obStep8,obStep9Tests,obStepSummary];
+/* =========================================================
+   ONBOARDING — the eleven steps
+
+   The previous ten training-focused steps are NOT deleted. obStep1..obStep9Tests and
+   obStepSummary are still defined above and still write the same fields; they are simply no
+   longer in the primary flow. Everything they collected that the coach engines need is either
+   asked for below or left at its default, and classifyFitnessLevel() already returns null when
+   no test was taken, which the finish handler has always guarded for.
+========================================================= */
+
+/* A large tappable option row: icon, label, optional description, tick when chosen. One
+   component for goal, activity, diet and workout so the four steps cannot drift apart. */
+/* Single-select here uses data-ob-pick, NOT the older data-ob-select.
+   data-ob-select toggles: re-tapping the current value clears it. That is right for an
+   optional chip, and wrong for a required answer — gender defaults to male, so the first tap
+   on "Male" was silently DESELECTING it and leaving the field null. A required choice should
+   never be clearable by mistapping the thing you already meant. */
+function obOptionRow(fieldPath, opt, selected, multi){
+  const attr = multi ? "data-ob-toggle" : "data-ob-pick";
+  return `<button class="ob-opt ${selected?'is-on':''}" ${attr}="${obEsc(fieldPath)}|${obEsc(opt.key)}">
+    <span class="ob-opt__icon" aria-hidden="true">${opt.icon||''}</span>
+    <span class="ob-opt__body">
+      <span class="ob-opt__label">${obEsc(opt.label)}</span>
+      ${opt.desc?`<span class="ob-opt__desc">${obEsc(opt.desc)}</span>`:''}
+    </span>
+    <span class="ob-opt__tick" aria-hidden="true">${selected?'✓':''}</span>
+  </button>`;
+}
+
+function obOptionList(fieldPath, options, multi){
+  const cur = obGet(fieldPath);
+  return `<div class="ob-opts">${options.map(o=>
+    obOptionRow(fieldPath, o, multi ? (cur||[]).includes(o.key) : cur===o.key, multi)
+  ).join("")}</div>`;
+}
+
+function obHero(icon, title, sub){
+  return `<div class="ob-hero">
+    <div class="ob-hero__icon" aria-hidden="true">${icon}</div>
+    <h2 class="ob-hero__title">${title}</h2>
+    ${sub?`<p class="ob-hero__sub">${obEsc(sub)}</p>`:''}
+  </div>`;
+}
+
+/* STEP 1 — Fair Use Policy */
+function obFairUse(){
+  const ok = !!state.onboarding.fairUseAccepted;
+  const points = [
+    ["\u{1F464}", "Your account is for personal use only. Do not share it."],
+    ["\u{1F512}", "Keep your health data private and secure."],
+    ["\u{1F916}", "Use AI features responsibly. They inform, they do not diagnose."],
+    ["\u{1F91D}", "Be respectful and follow community guidelines."]
+  ];
+  return `
+    ${obHero("\u{1F4CB}", "Fair Use Policy", "IGNYT is designed to provide fair and secure access to fitness, wellness and health features for all members.")}
+    <div class="ob-policy">
+      ${points.map(([i,t])=>`<div class="ob-policy__row"><span aria-hidden="true">${i}</span><span>${obEsc(t)}</span></div>`).join("")}
+    </div>
+    <button class="ob-check ${ok?'is-on':''}" data-ob-toggle-bool="onboarding.fairUseAccepted">
+      <span class="ob-check__box" aria-hidden="true">${ok?'✓':''}</span>
+      <span>I have read and agree to the <a href="legal/terms-and-conditions.html" data-legal-open="terms">Terms and Conditions</a> and <a href="legal/privacy-policy.html" data-legal-open="privacy">Privacy Policy</a>.</span>
+    </button>`;
+}
+
+/* STEP 2 — Birthday. Stored as a date; profile.age is derived, because age drifts and a
+   birthday does not — the old flow asked for age directly and it silently went stale. */
+function obBirthday(){
+  const b = state.onboarding.birthday || "";
+  const age = obAgeFromBirthday(b);
+  return `
+    ${obHero("\u{1F382}", "When's your <span class='ob-accent'>birthday</span>?", "We use your age to personalise your workout plans and nutrition targets.")}
+    <input type="date" class="ob-date" data-ob-field="onboarding.birthday" value="${obEsc(b)}" max="${dayKey()}">
+    ${age!=null ? `<div class="ob-derived">You are <strong>${age}</strong> years old</div>` : ''}`;
+}
+
+function obAgeFromBirthday(iso){
+  if(!iso) return null;
+  const d = new Date(iso);
+  if(isNaN(d)) return null;
+  const now = new Date();
+  let a = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if(m < 0 || (m === 0 && now.getDate() < d.getDate())) a--;
+  return (a >= 0 && a < 120) ? a : null;
+}
+
+/* STEP 3 — Gender */
+function obGender(){
+  return `
+    ${obHero("\u{26A5}", "What's your <span class='ob-accent'>gender</span>?", "We use this to estimate your metabolic rate. Mifflin-St Jeor needs it.")}
+    ${obOptionList("profile.gender", [
+      {key:"male",   label:"Male",  icon:"\u{2642}\u{FE0F}"},
+      {key:"female", label:"Female",icon:"\u{2640}\u{FE0F}"},
+      {key:"other",  label:"Other", icon:"\u{26A7}\u{FE0F}"}
+    ])}
+    ${state.profile.gender==="other" ? `<div class="ob-note">Metabolic formulas only publish male and female coefficients. We will use the female equation, which is the more conservative of the two.</div>` : ''}`;
+}
+
+/* STEP 4 — Height */
+function obHeight(){
+  const cm = Number(state.profile.height) || 0;
+  const ft = cm ? Math.floor(cm/30.48) : 0;
+  const inch = cm ? Math.round((cm/2.54) - ft*12) : 0;
+  return `
+    ${obHero("\u{1F4CF}", "Your height", "")}
+    <div class="ob-bigvalue" data-ob-readout="profile.height">${cm||'—'}<span class="ob-bigvalue__unit">cm</span></div>
+    ${cm?`<div class="ob-derived">${ft} ft ${inch} in</div>`:''}
+    <input type="range" class="ob-range" min="120" max="220" step="1" value="${cm||170}" data-ob-range="profile.height" aria-label="Height in centimetres">
+    <div class="ob-range__ticks"><span>120</span><span>170</span><span>220</span></div>`;
+}
+
+/* STEP 5 — Weight */
+function obWeight(){
+  const kg = Number(state.profile.weight) || 0;
+  return `
+    ${obHero("\u{2696}\u{FE0F}", "Your weight", "")}
+    <div class="ob-bigvalue" data-ob-readout="profile.weight">${kg?kg.toFixed(1):'—'}<span class="ob-bigvalue__unit">kg</span></div>
+    ${kg?`<div class="ob-derived">${(kg*2.20462).toFixed(1)} lb</div>`:''}
+    <input type="range" class="ob-range" min="30" max="200" step="0.5" value="${kg||70}" data-ob-range="profile.weight" aria-label="Weight in kilograms">
+    <div class="ob-range__ticks"><span>30</span><span>115</span><span>200</span></div>`;
+}
+
+/* STEP 6 — Fitness Goal */
+function obGoal(){
+  return `
+    ${obHero("\u{1F3AF}", "What's your <span class='ob-accent'>goal</span>?", "This is what the whole plan gets built around.")}
+    ${obOptionList("onboarding.primaryGoal", OB_GOAL_OPTIONS)}`;
+}
+
+/* STEP 7 — Activity Level */
+function obActivity(){
+  return `
+    ${obHero("\u{1F3C3}", "How <span class='ob-accent'>active</span> are you?", "This sets your daily calorie needs. Be honest rather than aspirational — the number only works if it matches your real week.")}
+    ${obOptionList("onboarding.activityLevel", OB_ACTIVITY_OPTIONS)}`;
+}
+
+/* STEP 8 — Diet Preference */
+function obDiet(){
+  return `
+    ${obHero("\u{1F957}", "What's your <span class='ob-accent'>diet</span> preference?", "We use this to suggest meals you will actually eat.")}
+    ${obOptionList("onboarding.dietPreference", OB_DIET_OPTIONS)}`;
+}
+
+/* STEP 9 — Workout Preference */
+function obWorkoutPref(){
+  const chosen = state.onboarding.workoutPreferences || [];
+  /* Both actions are offered whenever they would do something, rather than one toggling
+     button. Keyed only on "is everything selected", a user with three picks got a button
+     labelled "Select All" and no way to clear without ten taps. */
+  const some = chosen.length > 0;
+  const all = chosen.length === OB_WORKOUT_OPTIONS.length;
+  return `
+    ${obHero("\u{1F3CB}\u{FE0F}", "What <span class='ob-accent'>workouts</span> do you prefer?", "Select all that you enjoy. You can change these any time.")}
+    <div class="ob-bulk">
+      <span style="display:flex;gap:6px;">
+        ${all ? "" : `<button class="ob-bulk__btn" data-ob-bulk="all">Select All</button>`}
+        ${some ? `<button class="ob-bulk__btn ob-bulk__btn--quiet" data-ob-bulk="clear">Clear All</button>` : ""}
+      </span>
+      <span class="ob-bulk__count">${chosen.length} selected</span>
+    </div>
+    ${obOptionList("onboarding.workoutPreferences", OB_WORKOUT_OPTIONS, true)}`;
+}
+
+/* STEP 2 — Notifications.
+
+   Asked here, immediately after sign-in, because every reminder the app offers is worth
+   nothing if the permission is refused later and nobody goes looking for it. Asked ONCE: a
+   denial moves straight on and says where to change it, because a second prompt for something
+   already declined is how an app teaches people to dismiss its dialogs on sight.
+
+   Android 13+ requires POST_NOTIFICATIONS at runtime; below that it is granted at install and
+   this screen simply confirms what reminders exist. */
+function obNotifications(){
+  const st = state.onboarding.notifState;   // null | "granted" | "denied"
+  const busy = !!state.onboarding.notifBusy;
+  const native = !!nativeNotify();
+
+  const EXAMPLES = [
+    ["\u{1F373}", "Meals", "A nudge at breakfast, lunch and dinner."],
+    ["\u{1F3CB}️", "Workouts", "When you have a session planned."],
+    ["\u{1F4A7}", "Hydration", "So the water target does not end the day at zero."],
+    ["\u{1F4C8}", "Progress", "A weekly summary of what actually happened."]
+  ];
+
+  return `
+    ${obHero("\u{1F514}", "Stay on <span class='ob-accent'>track</span>",
+             "Allow notifications so IGNYT can remind you about workouts, meals, hydration and progress.")}
+    <div class="ob-policy">
+      ${EXAMPLES.map(([i,t,d])=>`<div class="ob-policy__row">
+        <span aria-hidden="true">${i}</span>
+        <span><b>${obEsc(t)}</b><br><span style="color:var(--muted);font-size:12px;">${obEsc(d)}</span></span>
+      </div>`).join("")}
+    </div>
+
+    ${st === "granted" ? `
+      <div class="ob-hc-ok" role="status">
+        <span class="ob-hc-ok__tick" aria-hidden="true">✓</span>
+        <span>Notifications are on. You can fine-tune each reminder in Settings.</span>
+      </div>` : ""}
+    ${st === "denied" ? `
+      <div class="ob-note">No problem — reminders stay off. You can turn them on any time from
+      Settings &rsaquo; Notifications.</div>` : ""}
+
+    ${native && st !== "granted"
+      ? `<button class="btn btn-accent btn-block" data-ob-notif ${busy ? "disabled" : ""}>
+           ${busy ? "Asking…" : "Allow notifications"}
+         </button>`
+      : native ? "" : `<div class="ob-note">Reminders are an Android feature and are not
+         available in this preview. On a device you will be asked here.</div>`}
+
+    <button class="btn btn-ghost btn-block" data-ob-notif-skip style="margin-top:8px;">
+      ${st ? "Continue" : "Not now"}
+    </button>`;
+}
+
+/* STEP 10 — Health Connect. Android only; on anything else the step says so rather than
+   offering a button that cannot work. */
+function obHealthConnect(){
+  /* window.IgnytHealth does not exist and never did — the Health Connect bridge is
+     window.HealthConnect (health-connect.js) with the connect/sync flow on
+     window.HealthConnectIntegration. Gating on the wrong global meant `native` was false on
+     every device, so the Connect button never rendered at all and this step offered no way to
+     connect on the screen whose entire job is connecting. */
+  const native = !!(window.HealthConnect && HealthConnect.isNativeAndroid && HealthConnect.isNativeAndroid());
+  const alreadyConnected = (() => {
+    try { return !!(window.HealthConnectIntegration && HealthConnectIntegration.loadState().connected); }
+    catch (e) { return false; }
+  })();
+  return `
+    ${obHero("\u{1F499}", "Connect <span class='ob-accent'>Health Connect</span>", "Sync your health data for better insights and accurate tracking.")}
+    <div class="ob-policy">
+      ${OB_HEALTH_METRICS.map(m=>`<div class="ob-policy__row"><span aria-hidden="true" style="color:var(--mint);">✓</span><span>${obEsc(m)}</span></div>`).join("")}
+    </div>
+    ${(state.onboarding.healthConnectState === "ok" || alreadyConnected) ? `
+      <div class="ob-hc-ok" role="status">
+        <span class="ob-hc-ok__tick" aria-hidden="true">✓</span>
+        <span>Connected. Your health data will sync automatically.</span>
+      </div>` : ""}
+    ${state.onboarding.healthConnectState === "denied" ? `
+      <div class="ob-note">You can connect Health Connect anytime from Profile.</div>` : ""}
+
+    ${native
+      ? `<button class="btn btn-accent btn-block" data-ob-health ${state.onboarding.healthConnectBusy?'disabled':''}>
+           ${state.onboarding.healthConnectBusy ? 'Connecting…'
+             : (state.onboarding.healthConnectState === "ok" || alreadyConnected)
+               ? 'Sync now' : 'Sync with Health Connect'}
+         </button>`
+      : `<div class="ob-note">Health Connect is an Android feature, so it isn't available in this
+           preview. On a device you'll be able to sync steps, weight, sleep and workouts here —
+           for now the app uses manual entry, and you can connect later from Tools.</div>`}
+
+    <!-- Secondary, and never absent. Health Connect must not be able to block onboarding:
+         a denied permission, an unsupported device or a missing app all still need a way
+         forward, and burying that in the primary button's failure path is how people get
+         stuck on step 10 of 11. -->
+    <button class="btn btn-ghost btn-block" data-ob-health-skip style="margin-top:8px;">Skip for now</button>`;
+}
+
+/* STEP 11 — AI Personalization.
+
+   Every number here is COMPUTED from the ten answers above using the formulas already in this
+   file — calcBMR is Mifflin-St Jeor, TDEE is BMR x the activity multiplier the user just
+   chose, the goal delta is GOAL_TO_CALORIE_DELTA, the split is recommendedSplit(). Nothing is
+   invented and nothing is a placeholder; if an input is missing the row says so instead of
+   showing a number derived from a guess. */
+function obPersonalization(){
+  const plan = obComputePlan();
+  if(!plan.ok){
+    return `
+      ${obHero("\u{1F916}", "AI Personalization", "")}
+      <div class="ob-note">${obEsc(plan.missing)} Go back and fill that in and your full plan appears here.</div>`;
+  }
+  const row = (k,v) => `<div class="ob-plan__row"><span>${obEsc(k)}</span><strong>${v}</strong></div>`;
+  return `
+    ${obHero("\u{1F916}", "AI Personalization", "Here is the plan built from your answers.")}
+    <div class="ob-plan">
+      ${row("BMI", plan.bmi.toFixed(1) + " · " + bmiCategory(plan.bmi))}
+      ${row("BMR", Math.round(plan.bmr) + " kcal")}
+      ${row("TDEE", Math.round(plan.tdee) + " kcal")}
+      ${row("Daily Target", Math.round(plan.calories) + " kcal")}
+      ${row("Protein", plan.protein + " g")}
+      ${row("Carbs", plan.carbs + " g")}
+      ${row("Fat", plan.fat + " g")}
+      ${row("Water", plan.water + " ml")}
+      ${row("Workout Split", plan.split)}
+    </div>
+    <div class="ob-note">Calculated with Mifflin-St Jeor and your activity multiplier — the same formulas the Tools calculators use. You can adjust any of it later.</div>`;
+}
+
+/* Shared by the step and by the finish handler, so what the user is shown and what gets
+   saved cannot disagree. */
+function obComputePlan(){
+  const p = state.profile, o = state.onboarding;
+  const age = obAgeFromBirthday(o.birthday) ?? p.age;
+  const h = Number(p.height), w = Number(p.weight);
+  if(!age)      return { ok:false, missing:"Your birthday is missing." };
+  if(!h || !w)  return { ok:false, missing:"Your height or weight is missing." };
+
+  const act = OB_ACTIVITY_OPTIONS.find(a=>a.key===o.activityLevel);
+  const mult = act ? act.mult : (p.activityMultiplier || 1.465);
+  const bmr = calcBMR(age, p.gender || "female", h, w);
+  const tdee = bmr * mult;
+  const delta = GOAL_TO_CALORIE_DELTA[o.primaryGoal] || 0;
+  const calories = Math.max(1200, tdee + delta);
+
+  /* Protein by goal and bodyweight, then fat at 25% of energy, carbs as the remainder. This
+     is the standard ordering — protein and fat have floors, carbs are what is left. */
+  const gPerKg = o.primaryGoal === "Build Muscle" || o.primaryGoal === "Body Recomposition" ? 2.0
+               : o.primaryGoal === "Fat Loss" ? 1.8 : 1.6;
+  const protein = Math.round(w * gPerKg);
+  const fat = Math.round((calories * 0.25) / 9);
+  const carbs = Math.max(0, Math.round((calories - protein*4 - fat*9) / 4));
+
+  return {
+    ok:true, age, bmr, tdee, calories,
+    bmi: w / Math.pow(h/100, 2),
+    protein, carbs, fat,
+    water: Math.round(w * 35),                 // 35 ml/kg, the usual clinical baseline
+    split: recommendedSplit(p.trainingDays || 4, null),
+    mult
+  };
+}
+
+/* Who you are: the three things the app asks for on its own behalf rather than to compute
+   something. Placed straight after the Fair Use gate so it is the first thing after signing
+   in, which is what makes the account feel like an account.
+
+   Name and mobile number are REQUIRED; the photo is not. They were all optional when this sat
+   inside a thirteen-step flow, where someone who skipped them still answered ten other
+   questions. In the four-page flow this is the only page that asks who the person is, and the
+   app addresses them by name throughout, so Next is gated on both. Both remain editable later
+   in Personal Information. */
+function obYourDetails(){
+  const p = state.profile || {};
+  const photo = p.photo || "";
+  /* state.authEmail is cleared by completeSignIn(), so it is always empty by the time this
+     step renders — the account snapshot is what still knows who signed in. */
+  let acctEmail = "";
+  try{ acctEmail = (window.IgnytAuth && IgnytAuth.getAccount() || {}).email || ""; }catch(e){}
+  const initial = ((p.name || acctEmail || "?").trim()[0] || "?").toUpperCase();
+  return `
+    ${obHero("\u{1F464}", "A bit about <span class='ob-accent'>you</span>", "Your name and mobile number are required. The photo is optional, and all three can be changed later.")}
+
+    <div class="ob-photo">
+      <button class="ob-photo__ring" data-ob-photo-pick="1" aria-label="${photo ? 'Change profile photo' : 'Add a profile photo'}">
+        ${photo ? `<img src="${obEsc(photo)}" alt="">` : `<span class="ob-photo__initial">${obEsc(initial)}</span>`}
+        <span class="ob-photo__badge" aria-hidden="true">${svg('pencil',13)}</span>
+      </button>
+      <input type="file" id="ob-photo-input" accept="image/*" hidden>
+      <div class="ob-photo__actions">
+        <button class="cat-chip" data-ob-photo-pick="1" style="margin:0;">${photo ? 'Change photo' : 'Add photo'}</button>
+        ${photo ? `<button class="cat-chip" data-ob-photo-clear="1" style="margin:0;color:var(--muted);">Remove</button>` : ''}
+      </div>
+    </div>
+
+    ${obLabel("Your name")}
+    ${obTextInput("profile.name", "Required")}
+
+    ${obLabel("Mobile number")}
+    <input type="tel" inputmode="tel" data-ob-field="profile.phone" value="${obEsc(p.phone || '')}"
+      placeholder="Required" style="width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:11px;font-size:14px;color:var(--text);margin-bottom:14px;border:none;">`;
+}
+
+/* Page 3 of the shortened flow: both permissions on one screen. They are asked together
+   because from the user's side they are the same question -- what may the app reach -- and
+   two consecutive permission screens read as nagging. Each keeps its own renderer, so the
+   Connect and Allow buttons and their busy states behave exactly as they did when the two
+   were separate steps. */
+function obPermissions(){
+  return obNotifications() + '<div class="ob-perm-divider"></div>' + obHealthConnect();
+}
+
+/* Page 4: the figures the app actually computes with, on one screen instead of four.
+
+   Gender is here as well, and deliberately so. calcBMR() is Mifflin-St Jeor, which steps 161
+   kcal between the male and female equations, profile.gender defaults to "male", and no other
+   screen in the app can change it -- obStep6, which used to, is dead code reachable from
+   nowhere. Leaving it out would have handed every female user a calorie target several hundred
+   over with no way to correct it. It is one chip on a page that was being built anyway. */
+function obBasics(){
+  const b = state.onboarding.birthday || "";
+  const age = obAgeFromBirthday(b);
+  const cm = Number(state.profile.height) || 0;
+  const kg = Number(state.profile.weight) || 0;
+  return `
+    ${obHero("\u{1F4CA}", "A few <span class='ob-accent'>numbers</span>", "Your calorie and training targets are calculated from these.")}
+
+    ${obLabel("Date of birth")}
+    <input type="date" class="ob-date" data-ob-field="onboarding.birthday" value="${obEsc(b)}" max="${dayKey()}">
+    ${age!=null ? `<div class="ob-derived" style="margin-bottom:14px;">You are <strong>${age}</strong> years old</div>` : '<div style="height:10px;"></div>'}
+
+    <!-- data-ob-readout names which slider each number belongs to. This is the only page with
+         TWO of them, and the live-drag handler used to find its readout with a document-wide
+         querySelector(".ob-bigvalue") \u2014 correct back when height and weight were separate
+         pages with one each, and wrong the moment they were put on one, because it returned
+         the height number to both sliders. Dragging weight moved the height figure. -->
+    ${obLabel("Height")}
+    <div class="ob-bigvalue" data-ob-readout="profile.height" style="font-size:34px;">${cm||'\u2014'}<span class="ob-bigvalue__unit">cm</span></div>
+    <input type="range" class="ob-range" min="120" max="220" step="1" value="${cm||170}" data-ob-range="profile.height" aria-label="Height in centimetres">
+
+    ${obLabel("Weight")}
+    <div class="ob-bigvalue" data-ob-readout="profile.weight" style="font-size:34px;">${kg?kg.toFixed(1):'\u2014'}<span class="ob-bigvalue__unit">kg</span></div>
+    <input type="range" class="ob-range" min="30" max="200" step="0.5" value="${kg||70}" data-ob-range="profile.weight" aria-label="Weight in kilograms">
+
+    ${obLabel("Gender")}
+    ${obChipSingle("profile.gender", [{key:"male",label:"Male"},{key:"female",label:"Female"}], null, true)}
+    <div class="ob-note" style="margin-top:10px;">Used only to pick the right metabolic formula for your calorie target.</div>`;
+}
+
+/* Page 5: what the numbers on page 4 mean, before the app disappears into itself.
+
+   The only page in the flow that ASKS nothing. It exists because page 4 collects height and
+   weight and then, previously, went straight to Home -- the user handed over two figures and
+   got no acknowledgement that anything was done with them.
+
+   BMI, the healthy weight range for that height, and one line of encouragement. The caveat is
+   not optional and not in small print at the bottom of a scroll: BMI cannot see muscle, this
+   app is not a medical device, and the first time a user meets the number is exactly when that
+   needs saying. Nothing here predicts a change or gives a timeframe.
+
+   Renders nothing at all if height or weight is missing -- page 4's sliders default to 170cm
+   and 70kg so that is unlikely, but a page whose whole content is derived must be able to say
+   so rather than print a card full of dashes. */
+function obBmiSummary(){
+  /* The daily line, not a fresh random one. This page re-renders whenever the wizard does --
+     step back and forward and you are here again -- and an encouragement that reshuffles every
+     time reads as decoration rather than as something said to you. */
+  const b = window.IgnytBMI ? IgnytBMI.summary(state) : null;
+
+  if(!b){
+    return `
+      ${obHero("\u{1F4CA}", "You're <span class='ob-accent'>all set</span>", "")}
+      <div class="ob-note">Add your height and weight on the previous page and IGNYT will show your
+        BMI and healthy weight range here. You can also do it later from Log Weight.</div>`;
+  }
+
+  const TONES = { blue:"#3B82F6", green:"#16A34A", amber:"#D97706", red:"#EF4444" };
+  const col = TONES[b.tone] || "var(--muted)";
+  const r = b.healthyRange;
+
+  return `
+    ${obHero("\u{1F4CA}", "Where you're <span class='ob-accent'>starting</span>", "From the height and weight you just entered.")}
+
+    <div class="ob-bigvalue" style="font-size:52px;color:${col};">${b.bmi.toFixed(1)}<span class="ob-bigvalue__unit">BMI</span></div>
+    <div style="text-align:center;font-size:14px;font-weight:800;color:${col};margin-top:-4px;">${escHtml(b.label)}</div>
+
+    ${r ? `
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <div style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:12px;text-align:center;">
+        <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);">Healthy range</div>
+        <div style="font-size:16px;font-weight:900;margin-top:3px;">${r.min}–${r.max}<span style="font-size:11px;color:var(--muted);"> kg</span></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">for ${b.height} cm</div>
+      </div>
+      <div style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:12px;text-align:center;">
+        <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);">${b.inHealthyRange ? "You are" : "To that range"}</div>
+        <div style="font-size:16px;font-weight:900;margin-top:3px;color:${b.inHealthyRange ? TONES.green : "inherit"};">${b.inHealthyRange
+          ? "In range"
+          : `${b.distance.kg}<span style="font-size:11px;color:var(--muted);"> kg ${b.distance.direction === "down" ? "down" : "up"}</span>`}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">from ${b.weight} kg</div>
+      </div>
+    </div>` : ''}
+
+    ${b.message ? `<div style="margin-top:18px;padding:14px 16px;background:var(--surface-alt);border-radius:var(--radius-xs-plus);border-left:3px solid ${col};font-size:14px;line-height:1.55;">${escHtml(b.message)}</div>` : ''}
+
+    <div class="ob-note" style="margin-top:14px;">BMI compares weight with height and nothing else. It cannot
+      see muscle, bone or body composition, and it is a general screening figure rather than a measure of your
+      health. It is not a diagnosis.</div>`;
+}
+
+/* Five pages: terms, who you are, permissions, numbers, and what those numbers mean. The
+   longer flow that also asked for goal, activity level, diet preference, workout preference
+   and the AI personalisation block was cut on request. Those fields still exist on
+   state.onboarding and still default sensibly, so nothing downstream reads an undefined --
+   they are simply no longer collected up front. */
+const ONBOARDING_STEP_RENDERERS = [
+  obFairUse, obYourDetails, obPermissions, obBasics, obBmiSummary
+];
+
+/* Step gates and the Health Connect auto-advance used to compare against literal step numbers
+   (=== 1, === 9, === 10). Moving Health Connect from step 10 to step 2 silently pointed all of
+   them at the wrong screens — the workout gate would have fired on Diet, and the auto-advance
+   on nothing at all. Deriving the index from the array above makes the ORDER the single source
+   of truth, so a future reorder cannot desynchronise them again. */
+function obStepIndexOf(renderer){
+  return ONBOARDING_STEP_RENDERERS.indexOf(renderer) + 1;
+}
+
+/* =========================================================
+   SIGN IN
+
+   Screen one of the flow: brand moment, phone/OTP, three social options. Dark luxury on red,
+   which is a different visual world from the app behind it — see the note at the top of
+   css/pages/auth.css for why that is deliberate and how it is kept from leaking.
+
+   WHERE THE HERO PHOTOGRAPH GOES
+   The brief specifies a photographic fitness flat-lay. There is no such photograph in this
+   repository and I cannot produce one, so the markup renders an <img> that removes itself if
+   the file is absent, over a CSS composition that holds the same tonal shape. Drop a file at
+       www/assets/images/auth/hero-flatlay.jpg
+   and it appears with no code change. Nothing else needs touching.
+
+   The icons are inline SVG because a strict CSP and an offline-first service worker both rule
+   out fetching brand marks from a CDN.
+========================================================= */
+const AUTH_ICONS = {
+  email: `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3.2" stroke="#3B82F6" stroke-width="1.7"/><path d="M3.4 6.8 12 12.9l8.6-6.1" stroke="#3B82F6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  bolt: `<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M13.6 1.5 4.2 13.2c-.4.5-.05 1.25.6 1.25h4.9l-1.5 7.9c-.13.7.76 1.1 1.19.54l9.4-11.7c.4-.5.05-1.25-.6-1.25h-4.9l1.5-7.9c.13-.7-.76-1.1-1.19-.54z" fill="#3B82F6"/></svg>`
+};
+
+/* Grain for the hero, as a data URI so it survives the CSP and works offline. */
+const AUTH_GRAIN = `<svg class="auth-hero__grain" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><filter id="ag"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3"/></filter><rect width="100%" height="100%" filter="url(#ag)"/></svg>`;
+
+
+/* OTP resend policy. A wait stops people hammering the button before the first SMS has had a
+   chance to land, and the cap stops a typo'd number burning the project's SMS quota — Firebase
+   bills per message and throttles the whole project, not just the one user. */
+const OTP_RESEND_WAIT_MS = 45000;
+const OTP_MAX_RESENDS = 3;
+
+/** The single definition of "signed in". Reads the cached account snapshot, which auth.js
+ *  reconciles against the real Firebase session on every launch — instant, offline-safe, and
+ *  cleared automatically when a session is revoked server-side. */
+function isSignedIn(){
+  try { return !!(window.IgnytAuth && window.IgnytAuth.getAccount()); }
+  catch(e){ return false; }
+}
+
+/* =========================================================
+   EMAIL AUTHENTICATION — a step INSIDE the Sign In screen
+
+   Tapping "Continue with Email" used to set authSeen = true and re-render, which dismissed the
+   Sign In screen permanently and dropped the user into whatever was behind it. The account was
+   never created; the screen simply left. This is the screen it should always have opened.
+
+   Three modes on one surface (sign in / create account / reset), because they share the same
+   two fields and moving between them is the most common thing a person does here — a separate
+   route per mode would mean three navigations to recover from one typo.
+========================================================= */
+function renderAuthEmailStep(mode, authErr, busy){
+  const email = escHtml(state.authEmail || "");
+  const title = mode === "signup" ? "Create your account"
+              : mode === "forgot" ? "Reset your password" : "Sign in with email";
+  const sub = mode === "signup" ? "You'll get a verification email to confirm it's you."
+            : mode === "forgot" ? "We'll email you a link to set a new password."
+            : "Welcome back.";
+
+  const cta = busy
+    ? (mode === "signup" ? "Creating account…" : mode === "forgot" ? "Sending…" : "Signing in…")
+    : (mode === "signup" ? "Create Account" : mode === "forgot" ? "Send Reset Link" : "Continue");
+
+  return `
+    <div class="auth-email">
+      <h3 class="auth-email__title">${escHtml(title)}</h3>
+      <p class="auth-email__sub">${escHtml(sub)}</p>
+
+      <label class="auth-email__field">
+        <span>Email address</span>
+        <input type="email" id="auth-email" inputmode="email" autocomplete="email"
+               autocapitalize="none" spellcheck="false" placeholder="you@example.com"
+               value="${email}">
+      </label>
+
+      ${mode === "forgot" ? "" : `
+        <label class="auth-email__field">
+          <span>Password</span>
+          ${pwdField("auth-password", mode === "signup" ? "new-password" : "current-password",
+                     mode === "signup" ? "At least 8 characters" : "Your password")}
+        </label>
+        ${mode === "signup" ? `<div class="auth-email__hint" id="auth-pwd-hint">At least 8 characters, including a letter and a number.</div>` : ""}`}
+
+      ${mode === "signup" ? `
+        <label class="auth-email__field">
+          <span>Confirm password</span>
+          ${pwdField("auth-password2", "new-password", "Repeat it")}
+        </label>` : ""}
+
+      ${authErr}
+      <div class="auth-err" id="auth-email-error" role="alert" style="display:none;"></div>
+
+      <button class="auth-cta" data-auth="email-submit" ${busy ? "disabled" : ""}>${escHtml(cta)}</button>
+
+      <div class="auth-email__links">
+        ${mode === "signin" ? `
+          <button data-auth="email-mode" data-mode="forgot" type="button">Forgot password?</button>
+          <button data-auth="email-mode" data-mode="signup" type="button">Create account</button>` : ""}
+        ${mode === "signup" ? `
+          <button data-auth="email-mode" data-mode="signin" type="button">Already have an account? Sign in</button>` : ""}
+        ${mode === "forgot" ? `
+          <button data-auth="email-mode" data-mode="signin" type="button">Back to sign in</button>` : ""}
+      </div>
+    </div>`;
+}
+
+/* A password input with a reveal toggle.
+   The state lives on the DOM node and nowhere else — deliberately. `state` is serialised to
+   localStorage by persist(), so a `revealed: true` flag there would survive to the next launch
+   and quietly hand the next person to pick up the phone an unmasked password field. It also
+   must not trigger a render: this screen rebuilds from scratch on render and password inputs
+   carry no value attribute, so re-rendering to flip one attribute would wipe what the user had
+   already typed — the same reason showAuthEmailError writes into the DOM directly. */
+function pwdField(id, autocomplete, placeholder, cls, disabled){
+  return `
+    <span class="pwd-wrap">
+      <input type="password" id="${id}" autocomplete="${autocomplete}" placeholder="${escHtml(placeholder)}"${cls?` class="${cls}"`:""}${disabled?" disabled":""}>
+      <!-- Deliberately IN the tab order. Skipping it puts the toggle out of reach of anyone
+           navigating by keyboard, which is the group that most needs to check what they typed;
+           the cost is one extra tab stop per password field. -->
+      <button type="button" class="pwd-eye" data-pwd-toggle="${id}"
+              aria-label="Show password" aria-pressed="false"${disabled?" disabled":""}>${svg('eye',18)}</button>
+    </span>`;
+}
+
+/* Delegated so it survives every re-render of this screen without rebinding. */
+function bindPwdToggles(root){
+  (root || document).querySelectorAll("[data-pwd-toggle]").forEach(btn=>{
+    if(btn.dataset.pwdBound) return;      // idempotent: bindSignInScreen can run twice
+    btn.dataset.pwdBound = "1";
+    btn.addEventListener("click", ()=>{
+      const input = document.getElementById(btn.getAttribute("data-pwd-toggle"));
+      if(!input) return;
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      btn.innerHTML = svg(show ? 'eye-off' : 'eye', 18);
+      btn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+      btn.setAttribute("aria-pressed", show ? "true" : "false");
+      /* Focus goes back to the field at the caret's old place. Without this the tap moves
+         focus to the button, the soft keyboard drops, and revealing your password costs you
+         your place in typing it. */
+      const at = input.value.length;
+      input.focus();
+      try{ input.setSelectionRange(at, at); }catch(e){}   // throws on some input types
+    });
+  });
+}
+
+/* Validation happens here rather than being left to Firebase, so the common mistakes get an
+   instant answer instead of a network round trip and a code like ERROR_INVALID_EMAIL. */
+function validateEmailForm(mode, email, password, confirm){
+  if(!email) return "Enter your email address.";
+  // Deliberately permissive: the only thing worth rejecting locally is a shape that cannot
+  // possibly be an address. Anything stricter rejects real, valid addresses.
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "That doesn't look like an email address.";
+  if(mode === "forgot") return null;
+  if(!password) return "Enter your password.";
+  if(mode === "signup"){
+    /* Firebase's own floor is 6 characters, which is not a password. Length AND a mix is the
+       cheap part; the message states every rule at once rather than revealing them one failed
+       attempt at a time. */
+    if(password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)){
+      return "Use at least 8 characters, with a letter and a number.";
+    }
+    if(password !== confirm) return "Those passwords don't match.";
+  }
+  return null;
+}
+
+
+/** Writes a validation message into the email step's error slot without re-rendering, so the
+ *  fields the user already filled in survive being told about the one they did not. */
+function showAuthEmailError(msg){
+  const slot = document.getElementById("auth-email-error");
+  if(!slot) { if(msg) showToast(msg, "error", render); return; }
+  slot.textContent = msg || "";
+  slot.style.display = msg ? "" : "none";
+}
+
+async function submitAuthEmail(){
+  const auth = window.IgnytAuth;
+  const mode = state.authEmailMode || "signin";
+  const emailEl = document.getElementById("auth-email");
+  const pwEl = document.getElementById("auth-password");
+  const pw2El = document.getElementById("auth-password2");
+  const email = (emailEl ? emailEl.value : "").trim();
+  const password = pwEl ? pwEl.value : "";
+  const confirm = pw2El ? pw2El.value : "";
+
+  state.authEmail = email;   // survive the re-render a SERVER failure causes
+
+  /* Local validation writes into the error slot WITHOUT re-rendering. A render rebuilds the
+     form, and password inputs carry no value attribute, so both fields would empty — meaning a
+     mismatched confirmation made you retype the whole thing. Keeping the passwords in `state`
+     to survive that is not an option: state is serialised to localStorage by persist(), and a
+     password has no business being written to disk. Not re-rendering solves both. */
+  const localError = validateEmailForm(mode, email, password, confirm);
+  if(localError){ showAuthEmailError(localError); return; }
+  showAuthEmailError("");
+
+  if(!auth){ showToast("Sign-in isn't available in this build.", "error", render); return; }
+
+  if(mode === "forgot"){
+    const res = await auth.sendPasswordReset(email);
+    if(res && res.success){
+      // Deliberately the same message whether or not an account exists: confirming which
+      // addresses are registered would let anyone enumerate the user list.
+      showToast("If that address has an account, a reset link is on its way.", "success", render);
+      state.authEmailMode = "signin";
+      render();
+    }else{
+      showToast((res && res.error) || "Could not send the reset email.", "error", render);
+    }
+    return;
+  }
+
+  const res = mode === "signup"
+    ? await auth.signUpWithEmail(email, password)
+    : await auth.signInWithEmail(email, password);
+
+  if(res && res.success && res.data && res.data.user){
+    if(mode === "signup"){
+      showToast("Account created. Check your inbox to verify your email.", "success", render);
+    }
+    completeSignIn(res.data.user);
+  }else{
+    // IgnytAuth already holds the error and the screen renders it inline; the toast is for
+    // eyes that are on the button rather than the field.
+    showToast((res && res.error) || "That didn't work. Please try again.", "error", render);
+  }
+}
+
+
+/* The single place that decides what happens after ANY successful sign-in. Phone and email
+   both land here, so navigation can never work on one path and silently not on another.
+   IgnytAuth has already persisted the session (saveAccount + ignyt:auth-changed). */
+/* Turns a picked image file into a small square data URI.
+ *
+ *  Downscaled and re-encoded rather than stored as picked: a phone camera photo is several
+ *  megabytes, localStorage gives the whole app about five, and a profile picture is rendered
+ *  at 52px. 256px is four times the largest place it appears, which covers a high-DPI screen
+ *  with room to spare.
+ *
+ *  Cropped to a centre square first, so a portrait photo does not arrive squashed. Rejects
+ *  anything that still will not fit rather than throwing a QuotaExceededError somewhere
+ *  unrelated later - a failed avatar must never be able to cost someone their workout log. */
+const PROFILE_PHOTO_PX = 256;
+const PROFILE_PHOTO_MAX_BYTES = 150 * 1024;
+
+function readProfilePhoto(file){
+  return new Promise((resolve, reject) => {
+    if(!file || !/^image\//.test(file.type||"")) return reject(new Error("That file is not an image."));
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try{
+        const side = Math.min(img.naturalWidth, img.naturalHeight);
+        const sx = (img.naturalWidth - side) / 2, sy = (img.naturalHeight - side) / 2;
+        const c = document.createElement("canvas");
+        c.width = c.height = PROFILE_PHOTO_PX;
+        c.getContext("2d").drawImage(img, sx, sy, side, side, 0, 0, PROFILE_PHOTO_PX, PROFILE_PHOTO_PX);
+        // Step the quality down until it fits, rather than guessing one value.
+        let out = "";
+        for(const q of [0.8, 0.65, 0.5, 0.4]){
+          out = c.toDataURL("image/jpeg", q);
+          if(out.length * 0.75 <= PROFILE_PHOTO_MAX_BYTES) break;
+        }
+        if(out.length * 0.75 > PROFILE_PHOTO_MAX_BYTES) return reject(new Error("That image is too large - try a smaller one."));
+        resolve(out);
+      }catch(e){ reject(e); }
+      finally{ URL.revokeObjectURL(url); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("That image could not be read.")); };
+    img.src = url;
+  });
+}
+
+/** The avatar source, in priority order: what the user set, then whatever the account
+ *  carried. Email accounts have no photoUrl, so without the first this is always a letter. */
+function profilePhotoSrc(account){
+  try{ if(state.profile && state.profile.photo) return state.profile.photo; }catch(e){}
+  return (account && account.photoUrl) || "";
+}
+
+function completeSignIn(user){
+  /* hx_auth_seen is no longer a gate — isSignedIn() is — but it is still what tells
+     onboarding this is not a first run, so it stays. */
+  state.authSeen = true;
+  LS.set("hx_auth_seen", true);
+  state.authEmailMode = null;
+  state.authEmail = "";
+  /* Seed the profile name from the account, but never overwrite one the user already set.
+     Wrapped because nothing optional here may block navigation: an exception thrown between
+     "signed in" and render() strands the user on the sign-in screen with a valid session,
+     which is the exact failure this whole change exists to remove. */
+  try {
+    if(user && user.displayName && !state.profile.name){
+      state.profile.name = user.displayName;
+      persist();
+    }
+  } catch(e){ console.warn("[auth] could not seed profile name:", e); }
+  console.log("[auth] session saved, navigating");
+  render();   // render() now falls through to onboarding or the app, per state.onboardingComplete
+  console.log("[auth] navigation complete");
+}
+
+
+
+function renderSignInScreen(){
+  const root = document.getElementById("app");
+  const auth = window.IgnytAuth;
+  const busy = !!(auth && auth.isBusy());
+  const errMsg = auth && auth.getError();
+  const authErr = errMsg ? `<div class="auth-err" role="alert">${escHtml(errMsg)}</div>` : "";
+  const mode = state.authEmailMode || "signin";
+
+  root.innerHTML = `
+    <div class="auth">
+      <div class="auth-hero">
+        <img class="auth-hero__img" src="assets/images/auth/hero-flatlay.jpg" alt="" onerror="this.remove()">
+        ${AUTH_GRAIN}
+        <div class="auth-hero__scrim"></div>
+        <div class="auth-hero__copy">
+          <h1 class="auth-hero__line">Life at its fullest</h1>
+          <p class="auth-hero__line auth-hero__line--2">Mornings full of energy</p>
+        </div>
+      </div>
+      <div class="auth-sheet auth-stagger">
+        <div class="auth-brand">
+          <span class="auth-brand__mark">${AUTH_ICONS.bolt}</span>
+          <h2 class="auth-brand__name">IGNYT</h2>
+        </div>
+        <p class="auth-brand__sub">Your fitness companion for a stronger, healthier life.</p>
+        ${renderAuthEmailStep(mode, authErr, busy)}
+        <p class="auth-legal">
+          By continuing you agree to our<br>
+          <a href="legal/privacy-policy.html" data-legal-open="privacy">Privacy Policy</a>
+          and <a href="legal/terms-and-conditions.html" data-legal-open="terms">Terms and Conditions</a>.
+        </p>
+      </div>
+    </div>
+    ${renderLegalViewer()}`;
+  bindSignInScreen();
+}
+
+function bindSignInScreen(){
+  bindPwdToggles();
+  document.querySelectorAll('[data-auth="email-mode"]').forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      e.preventDefault();
+      state.authEmailMode = el.dataset.mode;
+      const a = window.IgnytAuth;
+      if(a && a.clearError) a.clearError();
+      render();
+    });
+  });
+  const emailField = document.getElementById("auth-email");
+  if(emailField){
+    emailField.addEventListener("input", ()=>{ state.authEmail = emailField.value; });
+    emailField.focus();
+  }
+  ["auth-password","auth-password2"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener("keydown", (e)=>{ if(e.key === "Enter") submitAuthEmail(); });
+  });
+  bindLegalLinks();
+  document.querySelectorAll("[data-auth]").forEach(el=>{
+    const kind = el.dataset.auth;
+    if(kind === "email-mode") return;
+    el.addEventListener("click", (e)=>{
+      e.preventDefault();
+      signInAction(kind);
+    });
+  });
+}
+
+/* Email is the only route in. Google Sign-In and phone/SMS were both removed; the account
+   layer, the session and the navigation are unchanged — only how you prove who you are. */
+function signInAction(kind){
+  const auth = window.IgnytAuth;
+  if(kind === "email-back"){
+    state.authEmailMode = "signin";
+    if(auth && auth.clearError) auth.clearError();
+    render();
+    return;
+  }
+  if(kind === "email-submit"){ submitAuthEmail(); return; }
+}
+
+/* skipSignIn() is deliberately gone. The app used to offer "Continue without signing in",
+   which made every screen reachable with no account. That is incompatible with protecting
+   authenticated screens, and it is what made the Play submission ambiguous — a reviewer could
+   not tell whether an account was required. render() will no longer leave this screen without
+   a session, so there is exactly one answer. */
 
 function renderOnboardingWizard(){
   const root = document.getElementById("app");
   const step = state.onboardingStep;
   const isLast = step===ONBOARDING_TOTAL_STEPS;
   root.innerHTML = `
-    <div style="padding:24px 20px 100px;max-width:480px;margin:0 auto;">
+    <!-- 16px matches the app's <main> gutter. It was 20px, so every card shifted 4px inward
+         the moment onboarding finished and Home appeared — a small jump, but it is the first
+         transition a new user sees and it reads as the layout settling rather than arriving.
+
+         width:100% is load-bearing, not belt-and-braces. #app is a COLUMN FLEX container, and
+         "margin:0 auto" on a flex child overrides align-items:stretch — so this wrapper was
+         collapsing to its content width and centring: 286px of content inside a 412px screen,
+         with 63px of dead space either side on every one of the eleven steps. It read as a
+         narrow column rather than a page. -->
+    <div style="padding:24px 16px 100px;max-width:480px;width:100%;margin:0 auto;">
       ${step===1 && !state.editingOnboarding ? `
         <div style="text-align:center;margin-bottom:20px;">
           <div style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:800;margin-bottom:4px;">Welcome to</div>
@@ -6941,9 +9603,25 @@ function renderOnboardingWizard(){
       ${ONBOARDING_STEP_RENDERERS[step-1]()}
       ${onboardingNav(step, isLast
         ? { nextLabel: state.editingOnboarding ? "Save & Done" : "Get Started", skipHint:false }
-        : {})}
-      ${step===1 ? `<button class="btn btn-ghost btn-block" data-ob-nav="skip-all" style="margin-top:14px;">${state.editingOnboarding?'Cancel':'Skip for now'}</button>` : ''}
+        /* No "Not sure? Skip it" under a page that will not let you skip. Both gated steps
+           reject Continue until they are answered — Fair Use needs the policy accepted, About
+           You needs a name and a mobile number — so the hint was offering something the page
+           refuses, and the toast that follows reads as a bug rather than a rule. The
+           permissions and numbers pages keep it: those genuinely are skippable. */
+        : { skipHint: step !== obStepIndexOf(obFairUse) && step !== obStepIndexOf(obYourDetails) })}
+      ${/* "Skip for now" is gone: it set onboardingComplete and walked past the Fair Use
+            Policy, which is the one thing in this flow the app cannot assume on someone's
+            behalf — the Continue button refuses without it, and a skip beside that button
+            granted the same exit with no acceptance recorded.
+
+            "Cancel" stays. It is the same element but a different job: it appears only when an
+            existing user opened this from Settings to edit, and removing it would leave them
+            with no way out but completing all five pages again. */
+        state.editingOnboarding && step===1
+          ? `<button class="btn btn-ghost btn-block" data-ob-nav="skip-all" style="margin-top:14px;">Cancel</button>`
+          : ''}
     </div>
+    ${renderLegalViewer()}
   `;
   wireOnboardingWizard();
 }
@@ -6966,22 +9644,237 @@ function wireOnboardingWizard(){
       renderOnboardingWizard();
     });
   });
+  /* Profile photo. The <input type=file> is hidden and driven from the ring and the chip, so
+     there is one visual control rather than a bare file input sitting in the flow. */
+  const photoInput = document.getElementById("ob-photo-input");
+  document.querySelectorAll("[data-ob-photo-pick]").forEach(el=>{
+    el.addEventListener("click", ()=>{ if(photoInput) photoInput.click(); });
+  });
+  if(photoInput) photoInput.addEventListener("change", async ()=>{
+    const file = photoInput.files && photoInput.files[0];
+    if(!file) return;
+    try{
+      const previous = state.profile.photo;
+      state.profile.photo = await readProfilePhoto(file);
+      /* Written on its own rather than waiting for the next render's persist(): if the quota
+         is going to reject a photo it must fail here, where the message can name the photo,
+         not later where it would look like the app losing unrelated data.
+
+         Checked by RETURN VALUE, not by catch. This was `try{ persist() }catch{}`, and
+         persist() cannot throw — LS.set swallows the QuotaExceededError and always has — so
+         the rollback below has never once run. A rejected photo stayed in memory looking
+         saved until the next launch dropped it. */
+      if(!LS.set("hx_profile", state.profile)){
+        state.profile.photo = previous;
+        showToast("Not enough storage for that photo. Try a smaller image.", "error", render);
+        return;
+      }
+      render();
+    }catch(e){
+      showToast(e && e.message ? e.message : "That photo could not be used.", "error", render);
+    }finally{ photoInput.value = ""; }
+  });
+  document.querySelectorAll("[data-ob-photo-clear]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.profile.photo = ""; persist(); render(); });
+  });
+
   document.querySelectorAll("[data-ob-field]").forEach(el=>{
     el.addEventListener("change", ()=>{
       const fieldPath = el.dataset.obField;
       const isNumber = el.type==="number" || fieldPath==="profile.trainingDays" || fieldPath==="onboarding.minutesPerSession";
       obSet(fieldPath, isNumber ? (el.value===""?null:Number(el.value)) : el.value);
-      if(fieldPath==="onboarding.targetGoalText" || fieldPath==="onboarding.targetDateCustom") renderOnboardingWizard();
+      if(fieldPath==="onboarding.targetGoalText" || fieldPath==="onboarding.targetDateCustom"
+         || fieldPath==="onboarding.birthday") renderOnboardingWizard();
     });
+  });
+
+  /* Single-select that always SETS. See the note on obOptionRow for why this is not
+     data-ob-select. */
+  document.querySelectorAll("[data-ob-pick]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const [fieldPath, raw] = el.dataset.obPick.split("|");
+      obSet(fieldPath, /^-?\d+(\.\d+)?$/.test(raw) ? Number(raw) : raw);
+      renderOnboardingWizard();
+    });
+  });
+
+  /* Select All / Clear All on the workout step. */
+  document.querySelectorAll("[data-ob-bulk]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.onboarding.workoutPreferences =
+        el.dataset.obBulk === "all" ? OB_WORKOUT_OPTIONS.map(o=>o.key) : [];
+      renderOnboardingWizard();
+    });
+  });
+
+  /* A checkbox that is a boolean rather than a value in a set — the Fair Use agreement. */
+  bindLegalLinks();
+  document.querySelectorAll("[data-ob-toggle-bool]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      if(e.target.closest("a")) return;               // the policy links are real links
+      const path = el.dataset.obToggleBool;
+      obSet(path, !obGet(path));
+      renderOnboardingWizard();
+    });
+  });
+
+  /* Height and weight sliders. `input` updates the readout live WITHOUT a re-render — a
+     re-render mid-drag replaces the slider element and the drag is lost, which is the same
+     class of bug the food search had with the keyboard. The re-render happens once on
+     `change`, when the thumb is released. */
+  document.querySelectorAll("[data-ob-range]").forEach(el=>{
+    const path = el.dataset.obRange;
+    /* Its OWN readout. This was querySelector(".ob-bigvalue"), which returns the first one on
+       the page — fine while height and weight were separate steps with one each, and wrong as
+       soon as obBasics put both on one page: every slider wrote into the height figure, so
+       dragging weight visibly changed the height. Only the display was affected (obSet always
+       had the right path, and the re-render on release restored the true value), but a number
+       that moves when you touch something else is not something a user can be expected to
+       distrust correctly. */
+    const readout = document.querySelector('[data-ob-readout="' + path + '"]');
+    el.addEventListener("input", ()=>{
+      const v = Number(el.value);
+      obSet(path, v);
+      if(readout && readout.firstChild) readout.firstChild.textContent = path==="profile.weight" ? v.toFixed(1) : String(v);
+    });
+    el.addEventListener("change", ()=>{ obSet(path, Number(el.value)); renderOnboardingWizard(); });
+  });
+
+  const notifBtn = document.querySelector("[data-ob-notif]");
+  if(notifBtn) notifBtn.addEventListener("click", async ()=>{
+    const o = state.onboarding;
+    o.notifBusy = true;
+    renderOnboardingWizard();
+    try{
+      const plugin = nativeNotify();
+      const res = plugin && plugin.requestPermission ? await plugin.requestPermission() : null;
+      /* Anything that is not an explicit denial counts as granted. The plugin's shape varies
+         by version and by Android level — below 13 there is no runtime prompt at all and the
+         call resolves with nothing — so demanding one exact shape would report a working
+         permission as a refusal. */
+      const granted = !(res && (res.granted === false || res.success === false));
+      o.notifState = granted ? "granted" : "denied";
+      state.nativeNotifPermissionGranted = granted;
+      if(granted){
+        // Turn on the defaults the screen just promised, rather than granting a permission
+        // that goes on to do nothing.
+        state.settings.workoutReminders = true;
+        state.settings.hydrationReminders = true;
+        await syncAllNativeReminders();
+      }
+    }catch(err){
+      console.warn("[onboarding] notification permission failed:", err);
+      o.notifState = "denied";
+    }
+    o.notifBusy = false;
+    renderOnboardingWizard();
+    /* No auto-advance any more. Notifications and Health Connect now share one page, so
+       moving on the moment notifications were granted would carry the user straight past the
+       Health Connect prompt they had not answered yet. They tap Next when both are dealt
+       with. (The old obStepIndexOf(obNotifications) test would have returned 0 here anyway,
+       since that renderer is no longer in the step list -- a silent no-op rather than a
+       visible bug, which is exactly the kind of thing that survives unnoticed.) */
+  });
+
+  const notifSkip = document.querySelector("[data-ob-notif-skip]");
+  if(notifSkip) notifSkip.addEventListener("click", ()=>{
+    if(!state.onboarding.notifState) state.onboarding.notifState = "denied";
+    state.onboardingStep = Math.min(ONBOARDING_TOTAL_STEPS, state.onboardingStep + 1);
+    renderOnboardingWizard();
+  });
+
+  const hcBtn = document.querySelector("[data-ob-health]");
+  if(hcBtn) hcBtn.addEventListener("click", async ()=>{
+    const o = state.onboarding;
+    o.healthConnectRequested = true;
+    o.healthConnectBusy = true;
+    renderOnboardingWizard();
+    try{
+      const HC = window.HealthConnectIntegration;
+      if(!HC || !HC.connect){
+        o.healthConnectState = "denied";
+      }else{
+        /* The app's real connect flow: checks Health Connect is installed and current, sends
+           the user to install it if not, requests the permissions, and syncs on success. It
+           is the ONLY place permissions are requested, so onboarding reuses it rather than
+           calling the plugin directly — a second permission path would drift from it.
+
+           Success is read back from the stored connection state rather than from a return
+           value: handleConnect() resolves either way and records the outcome itself, so the
+           state is the honest answer to "did this work". The previous version treated
+           "anything not an explicit failure" as success, which reported a connection that had
+           never been requested. */
+        await HC.connect();
+        const connected = (()=>{ try { return !!HC.loadState().connected; } catch(e){ return false; } })();
+        o.healthConnectState = connected ? "ok" : "denied";
+        if(!connected && HC.getError && HC.getError()){
+          showToast(HC.getError(), "error", ()=>{});
+        }
+      }
+    }catch(err){
+      console.warn("[onboarding] Health Connect failed:", err);
+      o.healthConnectState = "denied";
+    }
+    o.healthConnectBusy = false;
+    renderOnboardingWizard();
+    /* No auto-advance, for the same reason as notifications above: this page holds both
+       permissions, so connecting one must not skip the other. */
+  });
+
+  const hcSkip = document.querySelector("[data-ob-health-skip]");
+  if(hcSkip) hcSkip.addEventListener("click", ()=>{
+    /* Records the choice and stays put. It used to advance a step, which was right when
+       Health Connect had a page to itself; now it shares one with notifications, and skipping
+       one permission must not skip the other. */
+    state.onboarding.healthConnectState = "skipped";
+    renderOnboardingWizard();
   });
   const backBtn = document.querySelector('[data-ob-nav="back"]');
   if(backBtn) backBtn.addEventListener("click", ()=>{ state.onboardingStep = Math.max(1, state.onboardingStep-1); renderOnboardingWizard(); });
   const nextBtn = document.querySelector('[data-ob-nav="next"]');
   if(nextBtn) nextBtn.addEventListener("click", ()=>{
+    // The only hard gate in the flow. Everything else is skippable by design; agreeing to the
+    // policy is not something the app can assume on the user's behalf.
+    if(state.onboardingStep === obStepIndexOf(obFairUse) && !state.onboarding.fairUseAccepted){
+      showToast("Please accept the Fair Use Policy to continue.", "error", render);
+      return;
+    }
+    /* Name and phone number are required. They were optional in the long flow, where a user
+       who skipped them still answered ten other questions; in a four-page flow this is the
+       only page that asks who the person is, and the app addresses them by name throughout. */
+    if(state.onboardingStep === obStepIndexOf(obYourDetails)){
+      const nm = String((state.profile.name || "")).trim();
+      const ph = String((state.profile.phone || "")).replace(/[^0-9]/g, "");
+      if(!nm){
+        showToast("Please enter your name to continue.", "error", render);
+        return;
+      }
+      /* Digits only, and at least eight of them: enough to reject a stray tap or a partly
+         typed number without trying to validate an international numbering plan, which this
+         app has no business enforcing. */
+      if(ph.length < 8){
+        showToast("Please enter a valid mobile number to continue.", "error", render);
+        return;
+      }
+    }
     if(state.onboardingStep < ONBOARDING_TOTAL_STEPS){
       state.onboardingStep++;
       renderOnboardingWizard();
       return;
+    }
+
+    /* Finishing. The plan shown on step 11 is written to the profile here, so what the user
+       was shown and what the app then uses are the same numbers rather than two independent
+       calculations that can disagree. */
+    const plan = obComputePlan();
+    if(plan.ok){
+      state.profile.age = plan.age;                       // derived from birthday
+      state.profile.activityMultiplier = plan.mult;
+      state.nutrition = Object.assign({}, state.nutrition, {
+        proteinPct: Math.round(plan.protein*4 / plan.calories * 100),
+        carbPct:    Math.round(plan.carbs*4   / plan.calories * 100),
+        fatPct:     Math.round(plan.fat*9     / plan.calories * 100)
+      });
     }
     // Finishing: apply the recommended calorie delta, and the measured fitness level (if
     // any tests were completed) to the app's real 3-tier training-volume scale.
@@ -7041,6 +9934,152 @@ function renderCalculators(){
     }
   }
 
+
+  if(active==="ffmi"){
+    fields = `<div class="grid2">
+      ${calcInputRow("calc-height","Height",c.height,"cm")}
+      ${calcInputRow("calc-weight","Weight",c.weight,"kg")}
+      ${calcInputRow("calc-bf","Body Fat",c.bf,"%")}
+    </div>`;
+    if(c.result && c.result.type==="ffmi"){
+      const r = c.result;
+      /* 25 is the widely cited natural ceiling for men and ~22 for women; above it is not a
+         verdict, which is why the label hedges rather than accusing anyone of anything. */
+      const ceiling = c.gender==="female" ? 22 : 25;
+      const band = r.normalised >= ceiling ? "Exceptional — above the usual natural range"
+                 : r.normalised >= (ceiling-3) ? "Very muscular"
+                 : r.normalised >= (ceiling-6) ? "Athletic" : "Average";
+      result = `<div class="info-box" style="text-align:center;padding:16px;margin-top:10px;">
+        <div class="stat-label">Fat-Free Mass Index</div>
+        <div class="mono" style="font-weight:900;font-size:28px;color:var(--primary);">${r.normalised.toFixed(1)}</div>
+        <div style="font-size:13px;font-weight:700;margin-top:2px;">${band}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;">
+          Fat-free mass ${r.ffm.toFixed(1)} kg · raw FFMI ${r.ffmi.toFixed(1)}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">
+          FFMI = fat-free mass ÷ height², height-normalised to 1.8 m. It needs a body-fat
+          figure to mean anything, and a guessed body fat gives a guessed FFMI.
+        </div>
+      </div>`;
+    }
+  }
+
+  if(active==="water"){
+    fields = `<div class="grid2">
+      ${calcInputRow("calc-weight","Weight",c.weight,"kg")}
+      ${calcInputRow("calc-minutes","Exercise today",c.minutes,"min")}
+    </div>`;
+    if(c.result && c.result.type==="water"){
+      const r = c.result;
+      result = `<div class="info-box" style="text-align:center;padding:16px;margin-top:10px;">
+        <div class="stat-label">Daily Water Target</div>
+        <div class="mono" style="font-weight:900;font-size:28px;color:var(--steel);">${(r.total/1000).toFixed(1)}<span style="font-size:15px;"> L</span></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;">
+          Baseline ${(r.base/1000).toFixed(1)} L${r.exercise ? ` + ${r.exercise} ml for exercise` : ""}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">
+          35 ml per kg, plus 500 ml per hour of training. Food contributes water too, so treat
+          this as a target for what you drink, not total intake.
+        </div>
+      </div>`;
+    }
+  }
+
+  if(active==="orm"){
+    fields = `<div class="grid2">
+      ${calcInputRow("calc-liftweight","Weight lifted",c.liftWeight,"kg")}
+      ${calcInputRow("calc-reps","Reps completed",c.reps,"")}
+    </div>`;
+    if(c.result && c.result.type==="orm"){
+      const r = c.result;
+      const pcts = [[100,"1"],[95,"2"],[90,"4"],[85,"6"],[80,"8"],[75,"10"],[70,"12"]];
+      result = `<div class="info-box" style="padding:16px;margin-top:10px;">
+        <div style="text-align:center;">
+          <div class="stat-label">Estimated One Rep Max</div>
+          <div class="mono" style="font-weight:900;font-size:28px;color:var(--primary);">${Math.round(r.orm)}<span style="font-size:15px;"> kg</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+            Epley ${Math.round(r.epley)} · Brzycki ${Math.round(r.brzycki)} — the average of both
+          </div>
+        </div>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:5px;">
+          ${pcts.map(([pc,reps])=>`<div class="row-between" style="font-size:12px;">
+            <span style="color:var(--muted);">${pc}% · ~${reps} rep${reps==="1"?"":"s"}</span>
+            <span class="mono" style="font-weight:800;">${Math.round(r.orm*pc/100)} kg</span>
+          </div>`).join("")}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;">
+          Estimates diverge above about 10 reps — a set of 15 says more about endurance than
+          about a single maximal lift.
+        </div>
+      </div>`;
+    }
+  }
+
+  if(active==="pace"){
+    fields = `<div class="grid2">
+      ${calcInputRow("calc-distance","Distance",c.distance,"km")}
+      ${calcInputRow("calc-hours","Hours",c.hours,"h")}
+      ${calcInputRow("calc-mins","Minutes",c.mins,"min")}
+      ${calcInputRow("calc-secs","Seconds",c.secs,"s")}
+    </div>`;
+    if(c.result && c.result.type==="pace"){
+      const r = c.result;
+      const fmt = sec => `${Math.floor(sec/60)}:${String(Math.round(sec%60)).padStart(2,"0")}`;
+      const races = [["5K",5],["10K",10],["Half",21.0975],["Marathon",42.195]];
+      result = `<div class="info-box" style="padding:16px;margin-top:10px;">
+        <div style="text-align:center;">
+          <div class="stat-label">Pace</div>
+          <div class="mono" style="font-weight:900;font-size:28px;color:var(--primary);">${fmt(r.perKm)}<span style="font-size:15px;"> /km</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+            ${fmt(r.perMile)} /mile · ${r.kph.toFixed(1)} km/h
+          </div>
+        </div>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:5px;">
+          <div class="stat-label" style="margin-bottom:2px;">At this pace</div>
+          ${races.map(([name,km])=>{
+            const t = r.perKm*km;
+            const h = Math.floor(t/3600), m = Math.floor((t%3600)/60), sec = Math.round(t%60);
+            return `<div class="row-between" style="font-size:12px;">
+              <span style="color:var(--muted);">${name}</span>
+              <span class="mono" style="font-weight:800;">${h?h+":":""}${String(m).padStart(h?2:1,"0")}:${String(sec).padStart(2,"0")}</span>
+            </div>`;
+          }).join("")}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;">
+          A flat projection. Real race times drift slower over distance as fatigue accumulates.
+        </div>
+      </div>`;
+    }
+  }
+
+  if(active==="goal"){
+    fields = `<div class="grid2">
+      ${calcInputRow("calc-weight","Current weight",c.weight,"kg")}
+      ${calcInputRow("calc-target","Target weight",c.targetWeight,"kg")}
+      ${calcInputRow("calc-rate","Rate",c.rate,"kg/week")}
+    </div>`;
+    if(c.result && c.result.type==="goal"){
+      const r = c.result;
+      const safe = r.ratePerWeek <= 0.75;
+      result = `<div class="info-box" style="padding:16px;margin-top:10px;text-align:center;">
+        <div class="stat-label">${r.direction === "lose" ? "Time to lose" : r.direction === "gain" ? "Time to gain" : "Already there"}</div>
+        ${r.weeks > 0 ? `
+          <div class="mono" style="font-weight:900;font-size:28px;color:var(--primary);">${r.weeks}<span style="font-size:15px;"> week${r.weeks===1?"":"s"}</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+            ${Math.abs(r.delta).toFixed(1)} kg at ${r.ratePerWeek} kg/week · target date ${r.date}
+          </div>
+          <div style="font-size:12px;color:${safe?'var(--mint)':'var(--accent)'};font-weight:700;margin-top:8px;">
+            ${safe ? "A sustainable rate." : "Aggressive — hard to sustain and more likely to cost muscle."}
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px;">
+            Roughly ${Math.round(r.dailyKcal)} kcal/day ${r.direction==="lose"?"below":"above"} maintenance.
+            7,700 kcal ≈ 1 kg of body fat.
+          </div>` : `
+          <div style="font-size:13px;color:var(--mint);font-weight:700;margin-top:6px;">You are at your target weight.</div>`}
+      </div>`;
+    }
+  }
+
   if(active==="bmr"){
     fields = `<div class="grid2">
       ${calcInputRow("calc-age","Age",c.age,"")}
@@ -7080,14 +10119,14 @@ function renderCalculators(){
         <div style="font-size:11px;color:var(--rh-muted);font-weight:700;">${label}</div>
         <div style="font-size:17px;font-weight:800;margin-top:2px;">${Math.round(grams)}<span style="font-size:11px;font-weight:600;color:var(--rh-muted);"> g</span></div>
         <div class="rh-progress-track rh-progress-track--sm" style="margin-top:6px;"><div class="rh-progress-fill" style="width:${pct}%;background:${color};"></div></div>
-        <div style="font-size:10px;color:var(--rh-muted);margin-top:2px;">${pct}%</div>
+        <div style="font-size:11px;color:var(--rh-muted);margin-top:2px;">${pct}%</div>
       </div>`;
       result = `<div class="pg-card" style="margin-top:12px;">
         <div class="row-between">
           <span style="font-size:13px;font-weight:800;text-transform:uppercase;color:var(--rh-muted);">Your Daily Targets</span>
           <span style="display:flex;gap:6px;">
-            <span style="font-size:10px;font-weight:700;background:rgba(37,99,235,.1);color:var(--rh-blue);padding:3px 9px;border-radius:var(--radius-lg);">TDEE</span>
-            <span style="font-size:10px;font-weight:700;background:var(--rh-bg);color:var(--rh-muted);padding:3px 9px;border-radius:var(--radius-lg);">${basis}</span>
+            <span style="font-size:11px;font-weight:700;background:rgba(37,99,235,.1);color:var(--rh-blue);padding:3px 9px;border-radius:var(--radius-lg);">TDEE</span>
+            <span style="font-size:11px;font-weight:700;background:var(--rh-bg);color:var(--rh-muted);padding:3px 9px;border-radius:var(--radius-lg);">${basis}</span>
           </span>
         </div>
         <div style="margin-top:6px;">
@@ -7116,7 +10155,7 @@ function renderCalculators(){
       ${calcInputRow("calc-height","Height",c.height,"cm")}
       ${calcInputRow("calc-weight","Weight",c.weight,"kg")}
     </div>
-    <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
     <select class="select-input" id="calc-activity">
       ${ACTIVITY_MULTIPLIERS.map(a=>`<option value="${a.mult}" ${c.activityMultiplier===a.mult?'selected':''}>${a.label}</option>`).join("")}
     </select>`;
@@ -7137,7 +10176,7 @@ function renderCalculators(){
       ${calcInputRow("calc-height","Height",c.height,"cm")}
       ${calcInputRow("calc-weight","Weight",c.weight,"kg")}
     </div>
-    <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
     <select class="select-input" id="calc-activity">
       ${ACTIVITY_MULTIPLIERS.map(a=>`<option value="${a.mult}" ${c.activityMultiplier===a.mult?'selected':''}>${a.label}</option>`).join("")}
     </select>`;
@@ -7156,7 +10195,7 @@ function renderCalculators(){
       ${calcInputRow("calc-height","Height",c.height,"cm")}
       ${calcInputRow("calc-weight","Weight",c.weight,"kg")}
     </div>
-    <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
     <select class="select-input" id="calc-activity">
       ${ACTIVITY_MULTIPLIERS.map(a=>`<option value="${a.mult}" ${c.activityMultiplier===a.mult?'selected':''}>${a.label}</option>`).join("")}
     </select>`;
@@ -7260,14 +10299,14 @@ function renderCalculators(){
         <div style="display:flex;height:10px;border-radius:var(--radius-xs);overflow:hidden;margin-top:16px;">
           ${c.result.rows.map((z,i)=>`<div style="flex:${z.hi-z.lo};background:${HR_ZONE_META[i].color};"></div>`).join("")}
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--rh-muted);margin-top:4px;"><span>0</span><span>${maxHR} MHR</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--rh-muted);margin-top:4px;"><span>0</span><span>${maxHR} MHR</span></div>
       </div>
 
       <div class="rh-section-head"><span>Your Heart Rate Zones</span></div>
       ${c.result.rows.map((z,i)=>{ const m = HR_ZONE_META[i];
         return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;border-left:4px solid ${m.color};">
         <div style="flex:none;width:46px;height:46px;border-radius:var(--radius-sm);background:${m.color}1a;color:${m.color};display:flex;flex-direction:column;align-items:center;justify-content:center;">
-          <span style="font-size:8px;font-weight:800;letter-spacing:.03em;">ZONE</span><span style="font-size:16px;font-weight:800;">${i+1}</span>
+          <span style="font-size:11px;font-weight:800;letter-spacing:.03em;">ZONE</span><span style="font-size:16px;font-weight:800;">${i+1}</span>
         </div>
         <div style="flex:1;min-width:0;">
           <div style="font-size:14px;font-weight:800;">${m.name}</div>
@@ -7324,7 +10363,158 @@ function renderCalculators(){
    breakdown, and an exercise's chronological history table.
 ========================================================= */
 
+/* Full-screen editor for a saved workout. Driven by state.editingWorkout (a draft), so
+   typing never mutates the stored record -- only Save does. */
+function renderWorkoutEditor(draft, s){
+  const durMin = draft.startTime && draft.endTime
+    ? (() => { const st=combineLocalDateTime(draft.date,draft.startTime), et=combineLocalDateTime(draft.date,draft.endTime);
+        return (st!=null&&et!=null&&et>st) ? Math.round((et-st)/60000) : null; })()
+    : workoutEditDraftDurationMin(draft);
+  const timesLinked = !!(draft.startTime && draft.endTime);
+  const num = (v)=> v===""||v==null ? "" : String(v);
+  const scale = (field, max) => `<select class="pi-input" data-wedit-field="${field}" style="width:100%;">
+      <option value="">–</option>
+      ${Array.from({length:max},(_,i)=>i+1).map(n=>`<option value="${n}" ${String(draft[field])===String(n)?'selected':''}>${n}</option>`).join("")}
+    </select>`;
+
+  return `
+    <div class="row-between" style="margin-bottom:4px;">
+      <button class="btn btn-ghost" data-action="cancel-workout-edit" style="padding:6px 12px;font-size:12px;">← Cancel</button>
+    </div>
+    <div style="margin:12px 0 10px;">
+      <div style="font-size:18px;font-weight:900;">Edit Workout</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">${escHtml(sessionTitle(s))}</div>
+    </div>
+
+    ${draft.error ? `<div class="info-box" style="padding:10px 14px;margin-bottom:10px;border-color:var(--accent);">
+      <div style="font-size:12px;color:var(--accent);font-weight:700;">${escHtml(draft.error)}</div></div>` : ""}
+
+    <div class="eyebrow-label">Title</div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:10px;">
+      <input type="text" class="pi-input" data-wedit-field="title" value="${escHtml(draft.title)}" placeholder="Workout" style="width:100%;box-sizing:border-box;">
+    </div>
+
+    <div class="eyebrow-label">Date &amp; Time</div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Workout date</div>
+      <input type="date" class="pi-input" data-wedit-field="date" value="${escHtml(draft.date)}" style="width:100%;box-sizing:border-box;margin-bottom:10px;">
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Start</div>
+          <input type="time" class="pi-input" data-wedit-field="startTime" value="${escHtml(draft.startTime)}" style="width:100%;box-sizing:border-box;">
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">End</div>
+          <input type="time" class="pi-input" data-wedit-field="endTime" value="${escHtml(draft.endTime)}" style="width:100%;box-sizing:border-box;">
+        </div>
+      </div>
+      ${timesLinked ? `<div style="font-size:11px;color:var(--muted);margin-top:8px;">Duration is calculated from these times${durMin!=null?` — currently <b style="color:var(--text);">${durMin} min</b>`:''}.</div>` : ""}
+    </div>
+
+    <div class="eyebrow-label">Duration</div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:10px;${timesLinked?'opacity:.55;':''}">
+      <div style="display:flex;gap:8px;">
+        ${[["hours","Hours"],["minutes","Minutes"],["seconds","Seconds"]].map(([f,label])=>`
+          <div style="flex:1;">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">${label}</div>
+            <input type="number" min="0" class="pi-input" data-wedit-field="${f}" value="${num(draft[f])}" ${timesLinked?'disabled':''} style="width:100%;box-sizing:border-box;">
+          </div>`).join("")}
+      </div>
+      ${timesLinked ? `<div style="font-size:11px;color:var(--muted);margin-top:8px;">Clear the start/end times to set duration directly.</div>` : `
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">
+        ${[["5","+5 min"],["10","+10 min"],["15","+15 min"],["-5","−5 min"]].map(([v,label])=>`
+          <button class="cat-chip" data-wedit-dur="${v}">${label}</button>`).join("")}
+        <button class="cat-chip" data-wedit-dur="reset">Reset (${draft.originalDurationMin} min)</button>
+      </div>`}
+    </div>
+
+    <div class="eyebrow-label">How It Felt</div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:10px;">
+      <div style="display:flex;gap:10px;margin-bottom:10px;">
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Session rating (1–10)</div>
+          ${scale("rating",10)}
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">RPE (1–10)</div>
+          ${scale("rpe",10)}
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Mood</div>
+          <select class="pi-input" data-wedit-field="mood" style="width:100%;">
+            <option value="">–</option>
+            ${["Great","Good","Okay","Tired","Rough"].map(m=>`<option value="${m}" ${draft.mood===m?'selected':''}>${m}</option>`).join("")}
+          </select>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Energy</div>
+          <select class="pi-input" data-wedit-field="energy" style="width:100%;">
+            <option value="">–</option>
+            ${["High","Moderate","Low"].map(m=>`<option value="${m}" ${draft.energy===m?'selected':''}>${m}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="eyebrow-label">Notes</div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:10px;">
+      <textarea class="pi-input" data-wedit-field="notes" rows="3" placeholder="How did the session go?" style="width:100%;box-sizing:border-box;resize:vertical;">${escHtml(draft.notes)}</textarea>
+    </div>
+
+    <div class="eyebrow-label">Reason for edit (optional)</div>
+    <div class="info-box" style="padding:12px 14px;margin-bottom:14px;">
+      <input type="text" class="pi-input" data-wedit-field="reason" value="${escHtml(draft.reason)}" placeholder="e.g. forgot to stop the timer" style="width:100%;box-sizing:border-box;">
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;">Saved to this workout's edit history along with the original values.</div>
+    </div>
+
+    <button class="btn btn-accent btn-block" data-action="save-workout-edit" style="margin-bottom:8px;">Save Changes</button>
+    <button class="btn btn-ghost btn-block" data-action="cancel-workout-edit" style="margin-bottom:16px;">Cancel</button>
+  `;
+}
+
+/** Read-only view of a workout's edit history, opened from the "Edited" badge. */
+function renderWorkoutAuditLog(s){
+  const hist = Array.isArray(s.editHistory) ? s.editHistory.slice().reverse() : [];
+  const fmtVal = (k,v) => {
+    if(v==null || v==="") return "–";
+    if(k==="startedAt"||k==="finishedAt") return new Date(Number(v)).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    if(k==="durationMin") return v+" min";
+    return String(v);
+  };
+  const LABELS = { date:"Date", startedAt:"Start", finishedAt:"End", durationMin:"Duration",
+    notes:"Notes", title:"Title", mood:"Mood", energy:"Energy", rating:"Rating", rpe:"RPE" };
+  return `
+    <div class="row-between" style="margin-bottom:4px;">
+      <button class="btn btn-ghost" data-action="close-workout-audit" style="padding:6px 12px;font-size:12px;">← Back</button>
+    </div>
+    <div style="margin:12px 0 10px;">
+      <div style="font-size:18px;font-weight:900;">Edit History</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">${escHtml(sessionTitle(s))}</div>
+    </div>
+    ${hist.length===0 ? `<div class="info-box" style="padding:14px;font-size:13px;color:var(--muted);">This workout hasn't been edited.</div>` :
+      hist.map(h=>{
+        const changed = Object.keys(h.after||{}).filter(k => String((h.before||{})[k] ?? "") !== String((h.after||{})[k] ?? ""));
+        return `<div class="info-box" style="padding:12px 14px;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:700;">${new Date(h.at).toLocaleString([], {month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+          ${h.reason?`<div style="font-size:12px;color:var(--muted);font-style:italic;margin-top:3px;">"${escHtml(h.reason)}"</div>`:''}
+          <div style="margin-top:8px;">
+            ${changed.map(k=>`<div class="row-between" style="padding:5px 0;border-top:1px solid var(--border);font-size:12px;">
+              <span style="color:var(--muted);">${LABELS[k]||k}</span>
+              <span style="text-align:right;"><span style="color:var(--muted);text-decoration:line-through;">${escHtml(fmtVal(k,(h.before||{})[k]))}</span>
+                <span style="margin:0 4px;color:var(--muted);">→</span>
+                <b>${escHtml(fmtVal(k,(h.after||{})[k]))}</b></span>
+            </div>`).join("")}
+          </div>
+        </div>`;
+      }).join("")}
+    <div style="height:16px;"></div>
+  `;
+}
+
 function renderSessionDetail(s){
+  if(state.viewingWorkoutAuditId === s.id) return renderWorkoutAuditLog(s);
   const muscles = sessionMuscles(s.exercises);
   const workingSets = s.exercises.reduce((a,e)=>a+e.sets.filter(hasSetValues).length, 0);
   const prs = state.prs.filter(p=>p.workoutId===s.id);
@@ -7333,14 +10523,22 @@ function renderSessionDetail(s){
   return `
     <div class="row-between" style="margin-bottom:4px;">
       <button class="btn btn-ghost" data-action="close-session-detail" style="padding:6px 12px;font-size:12px;">← Back</button>
+      <button class="btn btn-ghost" data-action="edit-workout-details" data-workout-id="${s.id}" style="padding:6px 12px;font-size:12px;">${svg('pencil',13)} Details</button>
     </div>
     <div style="margin:12px 0 4px;">
-      <div style="font-size:18px;font-weight:900;">${sessionTitle(s)}</div>
+      <div style="font-size:18px;font-weight:900;">${escHtml(sessionTitle(s))}</div>
       <div style="font-size:12px;color:var(--muted);margin-top:1px;">${s.exercises.length} exercise${s.exercises.length!==1?'s':''}</div>
       <div class="mono" style="font-size:12px;color:var(--muted);margin-top:2px;">${new Date(s.date).toLocaleDateString('default',{weekday:'long',month:'long',day:'numeric'})}${startTime&&endTime?` · ${startTime}–${endTime}`:''}</div>
+      ${s.edited ? `<button class="cat-chip" data-action="open-workout-audit" data-workout-id="${s.id}" style="margin-top:6px;">${svg('info',11)} Edited — view history</button>` : ""}
     </div>
+    ${(s.rating||s.rpe||s.mood||s.energy) ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px;">
+      ${s.rating?`<span class="muscle-chip">Rating ${escHtml(String(s.rating))}/10</span>`:""}
+      ${s.rpe?`<span class="muscle-chip">RPE ${escHtml(String(s.rpe))}</span>`:""}
+      ${s.mood?`<span class="muscle-chip">${escHtml(s.mood)}</span>`:""}
+      ${s.energy?`<span class="muscle-chip">${escHtml(s.energy)} energy</span>`:""}
+    </div>` : ""}
     ${muscles.length? `<div style="margin:8px 0 4px;">${muscles.map(m=>`<span class="muscle-chip active">${m}</span>`).join("")}</div>`:""}
-    ${s.notes? `<div class="info-box" style="padding:10px 14px;margin:8px 0;font-size:12px;font-style:italic;color:var(--text);">"${s.notes}"</div>`:""}
+    ${s.notes? `<div class="info-box" style="padding:10px 14px;margin:8px 0;font-size:12px;font-style:italic;color:var(--text);">"${escHtml(s.notes)}"</div>`:""}
 
     <div class="grid2" style="margin-top:12px;margin-bottom:8px;">
       <div class="stat-card"><div class="stat-label">Duration</div><div class="stat-value">${s.durationMin||'–'}<span class="stat-unit">min</span></div></div>
@@ -7355,9 +10553,9 @@ function renderSessionDetail(s){
 
     <div class="eyebrow-label">Exercises</div>
     ${s.exercises.map(ex=>`<div class="ex-log-card">
-      <div style="font-weight:800;color:var(--steel);font-size:15px;">${ex.name}</div>
+      <div style="font-weight:800;color:var(--steel);font-size:15px;">${escHtml(ex.name)}</div>
       <span class="muscle-chip">${getMuscle(ex.name)}</span>
-      ${ex.notes?`<div style="font-size:12px;color:var(--muted);margin-top:6px;font-style:italic;">"${ex.notes}"</div>`:""}
+      ${ex.notes?`<div style="font-size:12px;color:var(--muted);margin-top:6px;font-style:italic;">"${escHtml(ex.notes)}"</div>`:""}
       <div style="margin-top:8px;">
         ${ex.sets.map((set,i)=>`<div class="row-between" style="padding:5px 0;border-top:1px solid var(--border);">
           <span class="mono" style="font-size:12px;color:var(--muted);">Set ${i+1}</span>
@@ -7371,6 +10569,10 @@ function renderSessionDetail(s){
       <button class="btn btn-steel" data-action="edit-workout" data-session-id="${s.id}">Edit Workout</button>
     </div>
     <button class="btn btn-ghost btn-block" data-action="save-session-as-routine" data-session-id="${s.id}" style="margin-top:8px;">Save as Routine</button>
+    <div class="grid2" style="margin-top:8px;">
+      <button class="btn btn-ghost" data-action="duplicate-workout" data-workout-id="${s.id}">${svg('copy',14)} Duplicate</button>
+      <button class="btn btn-ghost" data-action="archive-workout" data-workout-id="${s.id}">${svg('box',14)} ${s.archived?'Unarchive':'Archive'}</button>
+    </div>
     <button class="btn btn-ghost btn-block" data-action="delete-session-confirmed" data-session-id="${s.id}" style="margin-top:8px;color:#ff6b6b;">Delete Workout</button>
   `;
 }
@@ -7418,16 +10620,141 @@ function renderExerciseDetailHistory(history, exerciseName){
    is generated at all; there are no chart instances to destroy.
 ========================================================= */
 
+
+/* =========================================================
+   REPORTS — weekly / monthly / yearly
+
+   Every figure is aggregated from the logs the app already keeps, and each is shown against
+   the PREVIOUS period of the same length. A total on its own does not tell you whether things
+   are going well; "18,400 kg, up 12% on the week before" does.
+
+   A period with no data says so. It does not render zeros, because a zero here reads as "you
+   did nothing" when the truth is usually "the app was not being used yet".
+========================================================= */
+function progressReportFor(days, endMs){
+  const end = endMs != null ? endMs : Date.now();
+  const start = end - days*86400000;
+  const inRange = (t) => t > start && t <= end;
+
+  const workouts = state.workoutLog.filter(w=>inRange(new Date(w.date).getTime()));
+  const volume = workouts.reduce((a,w)=>a+Number(w.volume||0), 0);
+  const minutes = workouts.reduce((a,w)=>a+Number(w.durationMin||0), 0);
+  const sets = workouts.reduce((a,w)=>a+(w.exercises||[]).reduce(
+    (b,ex)=>b+(ex.sets||[]).filter(st=>st.done).length, 0), 0);
+
+  const foods = state.foodLog.filter(f=>inRange(new Date(f.date + "T12:00:00").getTime()));
+  const dayKeys = [...new Set(foods.map(f=>f.date))];
+  const kcal = foods.reduce((a,f)=>a+Number(f.calories||0), 0);
+  const protein = foods.reduce((a,f)=>a+Number(f.protein||0), 0);
+
+  const body = state.bodylog.filter(b=>inRange(new Date(b.date).getTime()))
+                            .sort((a,b)=>new Date(a.date)-new Date(b.date));
+
+  return {
+    workouts: workouts.length, volume, minutes, sets,
+    daysLogged: dayKeys.length,
+    // Averaged over DAYS LOGGED, not over the period. Dividing a week's calories by 7 when
+    // only three days were logged reports a deficit nobody actually ate.
+    avgKcal: dayKeys.length ? Math.round(kcal/dayKeys.length) : null,
+    avgProtein: dayKeys.length ? Math.round(protein/dayKeys.length) : null,
+    weightStart: body.length ? body[0].weight : null,
+    weightEnd: body.length ? body[body.length-1].weight : null,
+    hasData: workouts.length > 0 || dayKeys.length > 0 || body.length > 0
+  };
+}
+
+function renderProgressReports(){
+  const PERIODS = { week:{days:7, label:"This week", prev:"the week before"},
+                    month:{days:30, label:"This month", prev:"the month before"},
+                    year:{days:365, label:"This year", prev:"last year"} };
+  const key = state.reportPeriod || "week";
+  const P = PERIODS[key];
+  const now = progressReportFor(P.days);
+  const before = progressReportFor(P.days, Date.now() - P.days*86400000);
+
+  /* Change is only shown when the previous period HAS the same measure. "+100%" against a
+     period with nothing in it is arithmetic, not information. */
+  const delta = (a, b) => {
+    if(a == null || b == null || b === 0) return "";
+    const pc = Math.round(((a-b)/b)*100);
+    if(pc === 0) return `<span class="rp-delta rp-delta--flat">no change</span>`;
+    const up = pc > 0;
+    return `<span class="rp-delta rp-delta--${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(pc)}%</span>`;
+  };
+  const row = (label, value, unit, d) => `
+    <div class="rp-row">
+      <span class="rp-row__label">${escHtml(label)}</span>
+      <span class="rp-row__value">${value}<span class="nut-unit">${unit?" "+unit:""}</span></span>
+      ${d || ""}
+    </div>`;
+
+  const weightChange = (now.weightStart != null && now.weightEnd != null)
+    ? (now.weightEnd - now.weightStart) : null;
+
+  return `
+    <div class="rp-tabs">
+      ${Object.entries(PERIODS).map(([k,v])=>
+        `<button class="rp-tab ${k===key?'is-on':''}" data-report-period="${k}">${
+          k==="week"?"Weekly":k==="month"?"Monthly":"Yearly"}</button>`).join("")}
+    </div>
+
+    ${!now.hasData ? `
+      <div class="pg-card" style="text-align:center;padding:28px 16px;">
+        <div style="font-size:32px;line-height:1;margin-bottom:8px;">🧾</div>
+        <div style="font-weight:800;font-size:15px;">Nothing logged for ${escHtml(P.label.toLowerCase())}</div>
+        <div style="font-size:12.5px;color:var(--rh-muted);margin-top:4px;">
+          Log a workout, a meal or a weight and this report fills in.
+        </div>
+      </div>` : `
+
+      <div class="pg-card">
+        <div class="rp-head">Training <span>vs ${escHtml(P.prev)}</span></div>
+        ${row("Workouts", now.workouts, "", delta(now.workouts, before.workouts))}
+        ${row("Total volume", Math.round(now.volume).toLocaleString(), "kg", delta(now.volume, before.volume))}
+        ${row("Working sets", now.sets, "", delta(now.sets, before.sets))}
+        ${row("Time trained", Math.round(now.minutes), "min", delta(now.minutes, before.minutes))}
+        ${now.workouts ? row("Average session", Math.round(now.minutes/now.workouts), "min", "") : ""}
+      </div>
+
+      <div class="pg-card">
+        <div class="rp-head">Nutrition <span>vs ${escHtml(P.prev)}</span></div>
+        ${row("Days logged", now.daysLogged + " of " + P.days, "", "")}
+        ${now.avgKcal != null
+          ? row("Average calories", now.avgKcal.toLocaleString(), "kcal", delta(now.avgKcal, before.avgKcal))
+          : `<div class="rp-none">No meals logged in this period.</div>`}
+        ${now.avgProtein != null
+          ? row("Average protein", now.avgProtein, "g", delta(now.avgProtein, before.avgProtein)) : ""}
+        ${now.avgKcal != null ? `<div class="rp-note">
+          Averaged over the ${now.daysLogged} day${now.daysLogged===1?"":"s"} you actually logged,
+          not over all ${P.days} — dividing by days you did not track would report a deficit you
+          never ate.</div>` : ""}
+      </div>
+
+      <div class="pg-card">
+        <div class="rp-head">Body</div>
+        ${weightChange != null
+          ? row("Weight change", (weightChange>0?"+":"") + weightChange.toFixed(1), "kg", "") +
+            row("Latest weight", now.weightEnd.toFixed(1), "kg", "")
+          : `<div class="rp-none">No weigh-ins in this period.</div>`}
+      </div>`}
+  `;
+}
+
 const PROGRESS_VIEWS = {
   achievements: { icon:"🎖️", title:"Achievements & Records", sub:"Milestones, streaks and unlocked achievements." },
-  history:      { icon:"📄", title:"Workout History",   sub:"Every personal record you've ever set." },
+  // `history` has always rendered the PR list, despite its old "Workout History" title --
+  // renamed to match what it actually shows. Real workout history is the `workouts` view.
+  history:      { icon:"📄", title:"Personal Records",  sub:"Every personal record you've ever set." },
+  workouts:     { icon:"🗂️", title:"Workout History",   sub:"Search, filter and review every workout you've logged." },
   habits:       { icon:"🔁", title:"Habit Tracker",      sub:"Daily habits, streaks, and completion history." },
   analytics:    { icon:"📊", title:"Workout Analytics",  sub:"Training frequency, volume, duration, and muscle distribution." },
-  exercise:     { icon:"📈", title:"Exercise Progress",  sub:"Weight and estimated 1RM trends for individual exercises." },
-  nutrition:    { icon:"🍎", title:"Nutrition Progress", sub:"Average calories and protein per logged day." },
   body:         { icon:"⚖️", title:"Body Progress",      sub:"Body weight and measurement trends." },
   calendar:     { icon:"📅", title:"Training Calendar",  sub:"See your workout activity by date." },
-  plan:         { icon:"✅", title:"Plan Progress",      sub:"Phase and weekly training-plan completion." }
+  reports:      { icon:"🧾", title:"Reports",            sub:"Weekly, monthly and yearly summaries with period-on-period change." },
+  /* Photos already had a complete screen (renderBodyScanArchive) reachable from Body — it was
+     simply not reachable from Progress, which is where the brief expects it. Routed rather
+     than rebuilt: a second photo UI would mean two places to fix every future bug. */
+  photos:       { icon:"📷", title:"Progress Photos",    sub:"Your body-progress photo archive." }
 };
 
 function fmtMinutes(min){
@@ -7452,11 +10779,12 @@ function renderProgressTab(){
   const view = state.progressView;
   if(view && PROGRESS_VIEWS[view]){
     const detailFns = {
-      achievements: renderProgressAchievements, history: renderProgressPRs, habits: renderProgressHabits,
-      analytics: renderProgressAnalytics, exercise: renderProgressExercise,
-      nutrition: renderProgressNutrition,
+      achievements: renderProgressAchievements, history: renderProgressPRs, workouts: renderProgressWorkouts,
+      habits: renderProgressHabits,
+      analytics: renderProgressAnalytics,
       body: renderProgressBody,
-      calendar: renderProgressCalendar, plan: renderProgressPlan
+      calendar: renderProgressCalendar,
+      reports: renderProgressReports, photos: renderBodyScanArchive
     };
     let body;
     try{ body = detailFns[view](); }
@@ -7466,17 +10794,19 @@ function renderProgressTab(){
       body = `<div class="empty-note">This section hit an error and couldn't load. Your data is untouched — try again or reopen the app.</div>`;
     }
     // Only the views in LIGHT_VIEW_HEADERS are light-redesigned so far (matches the reference
-    // given for each); every other detail view (achievements/analytics/exercise/nutrition/
-    // calendar/plan) keeps its existing dark wrapper, same "only restyle what was actually
+    // given for each); every other detail view (achievements/analytics/calendar) keeps its
+    // existing dark wrapper, same "only restyle what was actually
     // shown" rule already applied throughout this session (Progress dashboard vs. its own
     // detail views).
     const LIGHT_VIEW_HEADERS = {
       body:         { icon:'scale' },
       habits:       { icon:'repeat', bg:'rgba(217,119,6,.1)', color:'#D97706', sub:'Build consistency. Build you.' },
       analytics:    { icon:'progress', sub:'Track your progress. Improve every day.' },
-      achievements: { icon:'trophy', bg:'rgba(217,119,6,.1)', color:'#D97706' },
+      achievements: { icon:'flag', bg:'rgba(217,119,6,.1)', color:'#D97706' },
       history:      { icon:'file', bg:'var(--rh-bg)', color:'var(--rh-muted)',
         sub:"Dates show when each achievement was unlocked in IGNYT. For imported workout history, that's the day of the import — the counts themselves are always genuine." },
+      workouts:     { icon:'calendar', bg:'rgba(37,99,235,.1)', color:'var(--rh-blue)',
+        sub:'Search, filter and review every workout you’ve logged.' },
       calendar:     { icon:'calendar', bg:'rgba(239,68,68,.1)', color:'var(--rh-red)', sub:'Track your training days and stay consistent.' }
     };
     if(LIGHT_VIEW_HEADERS[view]){
@@ -7554,97 +10884,452 @@ function renderLegacyProgressHome(){
 const PR_TYPE_FILTERS = ["All","Weight","1RM","Reps","Volume"];
 const PR_TYPE_KEY = {Weight:"weight","1RM":"1rm",Reps:"reps",Volume:"volume"};
 
+/* The Personal Records screen: a hero telling the user where they stand, then one card per
+   record showing what it took and what would beat it.
+
+   The brief asked each card to carry an "estimated success 78%" for the next attempt. That is
+   not computable here — it would need fatigue, sleep, nutrition and programme context, none of
+   which this app has — and a made-up probability someone then misses is worse than no number.
+   What replaced it is the real gap: the exact next target and how far away it is. */
+/* One exercise, opened by tapping its record card: the progression chart, the numbers behind
+   it, and a coaching line.
+
+   Everything shown is read from logged sets. The brief asked for an "AI Rating ★★★★★" per
+   exercise — that is not built, because a five-star score with no stated basis is decoration
+   pretending to be assessment. What replaced it is consistency, which is a real number:
+   sessions logged against weeks since the first one. */
+function renderPrExerciseSheet(){
+  const name = state.prExerciseOpen;
+  if(!name || !window.IgnytStrength) return "";
+  const ins = IgnytStrength.exerciseInsight(state, name);
+  if(!ins) return "";
+
+  // Heaviest working set per session, oldest first — the shape of the progression.
+  const points = [];
+  state.workoutLog.slice().sort((a,b)=> (a.startedAt||0)-(b.startedAt||0)).forEach(w=>{
+    let best = 0;
+    (w.exercises||[]).forEach(e=>{ if(e.name===name) (e.sets||[]).forEach(st=>{
+      const kg = Number(st.weight)||0; if(kg>best) best = kg; }); });
+    if(best>0) points.push({ date: new Date(w.startedAt||w.date), value: best });
+  });
+
+  const weeks = points.length ? Math.max(1, Math.round((Date.now() - points[0].date.getTime())/(7*86400000))) : 1;
+  const consistency = Math.min(100, Math.round(ins.sessions / weeks * 100));
+
+  /* One line, from what the numbers actually say. Silent rather than generic when there is
+     nothing specific to observe — a coach that always speaks is one nobody listens to. */
+  const coach = (()=>{
+    const daysSince = ins.lastTrainedAt ? Math.floor((Date.now()-ins.lastTrainedAt)/86400000) : null;
+    if(daysSince != null && daysSince >= 21) return `You haven't trained this in ${daysSince} days. Start back a little under your best and build again.`;
+    if(ins.improvementKg != null && ins.improvementKg > 0) return `Up ${ins.improvementKg} kg since you started logging this. Small jumps, kept up, are what did that.`;
+    if(ins.sessions >= 6 && ins.improvementKg === 0) return `Six sessions at the same weight. A small increase, or an extra rep at this one, is the next step.`;
+    if(ins.sessions < 3) return `Only ${ins.sessions} session${ins.sessions!==1?'s':''} logged. A few more and the trend here becomes readable.`;
+    return "";
+  })();
+
+  const stat = (v,l) => `<div class="prx__stat"><b>${v}</b><span>${l}</span></div>`;
+
+  return `<div class="sheet-backdrop" data-action="close-pr-exercise"></div>
+    <div class="sheet prx">
+      <div class="sheet__handle"></div>
+      <div class="prx__head">
+        ${(()=>{ const img = exerciseImageSrc(name);
+          return img ? `<span class="prx__img"><img src="${escHtml(img)}" alt=""></span>` : ""; })()}
+        <div>
+          <div class="prx__name">${escHtml(name)}</div>
+          <div class="prx__muscle">${escHtml(getMuscle(name)||"")}</div>
+        </div>
+      </div>
+
+      <div class="prx__chart">${axisAreaChart(points, {color:"var(--rh-blue)", unit:" kg"})}</div>
+
+      <div class="prx__grid">
+        ${stat(ins.sessions, "sessions")}
+        ${stat(ins.bestKg + " kg", "best")}
+        ${stat((ins.averageKg!=null?ins.averageKg:"—") + " kg", "average")}
+        ${stat(ins.improvementKg!=null ? (ins.improvementKg>0?"+":"") + ins.improvementKg + " kg" : "—", "improvement")}
+        ${stat(ins.prCount, ins.prCount===1 ? "record" : "records")}
+        ${stat(consistency + "%", "consistency")}
+      </div>
+
+      ${coach ? `<div class="prx__coach">${escHtml(coach)}</div>` : ""}
+    </div>`;
+}
+
 function renderProgressPRs(){
-  if(state.prs.length===0) return `<div class="empty-note">No PRs yet — finish a freestyle workout to start tracking heaviest weight, estimated 1RM, rep records, and session volume.</div>`;
+  const S = window.IgnytStrength;
+  if(state.prs.length===0) return `<div class="empty-note">No PRs yet — finish a freestyle workout to start tracking heaviest weight, estimated 1RM and session volume.</div>`;
+
   const q = (state.prSearch||"").trim().toLowerCase();
   const typeFilter = PR_TYPE_FILTERS.includes(state.prTypeFilter) ? state.prTypeFilter : "All";
+  const RANGES = [["today","Today"],["month","30 days"],["6m","6 months"],["all","All time"]];
+  const range = state.prRange || "all";
+  const rangeCutoff = { today: 1, month: 30, "6m": 182, all: null }[range];
+
   let all = state.prs;
   if(q) all = all.filter(pr=> (pr.exerciseName||"Session Volume").toLowerCase().includes(q));
   if(typeFilter!=="All") all = all.filter(pr=> pr.type===PR_TYPE_KEY[typeFilter]);
+  if(rangeCutoff){
+    // "Today" means since midnight, not the last 24 hours — a PR set yesterday evening should
+    // not still be counted as today's when someone opens the app in the morning.
+    const from = range === "today"
+      ? new Date().setHours(0,0,0,0)
+      : Date.now() - rangeCutoff * 86400000;
+    all = all.filter(pr => pr.achievedAt >= from);
+  }
+
+  const prsToday = state.prs.filter(pr => pr.achievedAt >= new Date().setHours(0,0,0,0));
   const showCount = state.prShowCount || 10;
   const shown = all.slice(0, showCount);
   const remaining = all.length - shown.length;
-  // Same muscle-group icon/color convention as the Exercise Library rows (rowIcon there),
-  // reusing the already-real per-exercise muscle field via getMuscle() -- Session Volume PRs
-  // have no exercise name and fall back to the neutral 'body'/gray pairing.
-  const rowIcon = (muscle) => {
-    const g = FINE_TO_BROAD[muscle];
-    return (g==='Chest'||g==='Shoulders'||g==='Arms') ? 'dumbbell' : (g==='Back') ? 'workout' : 'body';
+
+  const sc = S ? S.score(state) : 0;
+  const lvl = S ? S.levelProgress(sc) : null;
+  const thisMonth = S ? S.prsThisMonth(state) : 0;
+  const streak = typeof computeStreak === "function" ? computeStreak() : 0;
+
+  const hero = S ? `
+    <div class="pr-hero">
+      <div class="pr-hero__top">
+        <div>
+          <div class="pr-hero__eyebrow">Lifetime records</div>
+          <div class="pr-hero__score">${sc.toLocaleString()}<span>strength score</span></div>
+        </div>
+        <div class="pr-hero__level" style="--lvl:${lvl.current.color};">${escHtml(lvl.current.name)}</div>
+      </div>
+      ${lvl.next ? `
+      <div class="pr-hero__track"><div class="pr-hero__fill" style="width:${lvl.percent}%;--lvl:${lvl.current.color};"></div></div>
+      <div class="pr-hero__next">${lvl.toNext.toLocaleString()} to ${escHtml(lvl.next.name)}</div>` : `
+      <div class="pr-hero__next">Top level reached.</div>`}
+      <div class="pr-hero__stats">
+        <div><b>${state.prs.length}</b><span>total PRs</span></div>
+        <div><b>${thisMonth}</b><span>this month</span></div>
+        <div><b>${streak}</b><span>day streak</span></div>
+      </div>
+      <div class="pr-hero__formula">${escHtml(S.FORMULA)}</div>
+    </div>` : "";
+
+  const card = (pr) => {
+    const name = pr.exerciseName || "Session Volume";
+    const muscle = pr.exerciseName ? getMuscle(pr.exerciseName) : null;
+    const target = S ? S.nextTarget(pr) : null;
+    const up = pr.improvementPct != null && pr.improvementPct > 0;
+    /* The bar is previous against new, so it shows the size of the jump rather than progress
+       toward an invented ceiling. A first-ever record has no previous and gets a full bar. */
+    const pct = (pr.previousValue > 0) ? Math.max(6, Math.min(100, Math.round(pr.previousValue / pr.value * 100))) : 100;
+    return `<div class="pr-card" data-pr-open="${escHtml(pr.exerciseName||'')}">
+      <div class="pr-card__head">
+        ${(()=>{ const img = pr.exerciseName ? exerciseImageSrc(pr.exerciseName) : "";
+          return img
+            ? `<span class="pr-card__img"><img src="${escHtml(img)}" alt="" loading="lazy"></span>`
+            : `<span class="pr-card__icon" style="background:${muscleGroupColor(muscle)}1a;color:${muscleGroupColor(muscle)};">${svg('trophy',18)}</span>`;
+        })()}
+        <div class="pr-card__title">
+          <div class="pr-card__name">${escHtml(name)}</div>
+          <div class="pr-card__type">${escHtml(prTypeLabel(pr))}${muscle?` · ${escHtml(muscle)}`:''}</div>
+        </div>
+        <div class="pr-card__now">${escHtml(prValueLabel(pr))}</div>
+      </div>
+
+      <div class="pr-card__bar"><div class="pr-card__prev" style="width:${pct}%;"></div></div>
+
+      <div class="pr-card__row">
+        <span class="pr-card__was">${pr.previousValue>0 ? `was ${escHtml(String(pr.previousValue))}` : "first record"}</span>
+        ${up ? `<span class="pr-card__gain">+${escHtml(String(Math.round((pr.value-pr.previousValue)*10)/10))} · +${pr.improvementPct}%</span>` : ""}
+        <span class="pr-card__when">${new Date(pr.achievedAt).toLocaleDateString('default',{day:'2-digit',month:'short'})}</span>
+      </div>
+
+      ${target ? `<div class="pr-card__beat">Beat it with <b>${target.target.toLocaleString()}${target.unit==='kg'?' kg':' reps'}</b> — ${Math.round(target.increment*10)/10}${target.unit==='kg'?' kg':' rep'} more</div>` : ""}
+    </div>`;
   };
+
   return `
-    <div style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--rh-muted);font-weight:600;margin-bottom:10px;">
-      ${svg('file',15)} ${state.prs.length} record${state.prs.length!==1?'s':''} total${(q||typeFilter!=='All')?` · ${all.length} matching`:''}
+    ${prsToday.length ? `
+    <div class="pr-today">
+      <div class="pr-today__icon">🏆</div>
+      <div class="pr-today__body">
+        <div class="pr-today__title">New personal record${prsToday.length>1?'s':''} today</div>
+        <div class="pr-today__sub">${prsToday.map(p=>escHtml(p.exerciseName||'Session Volume')).slice(0,3).join(' · ')}</div>
+      </div>
+      <div class="pr-today__xp">+${prsToday.length*75} XP</div>
+    </div>` : ''}
+    ${hero}
+    <div class="lib-cats" style="margin-top:14px;">
+      ${RANGES.map(([id,label])=>`<button class="cat-chip ${range===id?'active':''}" data-pr-range="${id}">${label}</button>`).join("")}
+    </div>
+    <div style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--rh-muted);font-weight:600;margin:14px 0 10px;">
+      ${svg('file',15)} ${state.prs.length} record${state.prs.length!==1?'s':''} total${(q||typeFilter!=='All')?` · ${all.length} shown`:''}
     </div>
     <div class="lib-search-wrap">
       ${svg('search',17)}
-      <input type="text" id="pr-search" class="pi-input" placeholder="Search by exercise…" value="${(state.prSearch||'').replace(/"/g,'&quot;')}" aria-label="Search personal records">
+      <input type="text" id="pr-search" class="pi-input" placeholder="Search by exercise…" value="${(state.prSearch||'').replace(/"/g,'&quot;')}">
     </div>
     <div class="lib-cats" style="margin-top:10px;">
       ${PR_TYPE_FILTERS.map(t=>`<button class="cat-chip ${typeFilter===t?'active':''}" data-pr-type-filter="${t}">${t}</button>`).join("")}
     </div>
     ${all.length===0 ? `<div class="empty-note">No records match.</div>` : `
-    ${shown.map(pr=>{
-      const muscle = pr.exerciseName ? getMuscle(pr.exerciseName) : null;
-      const color = muscle ? muscleTagColor(muscle) : '#64748B';
-      return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:12px 14px;">
-        <span class="tl-card__icon" style="width:38px;height:38px;flex:none;background:${color}1a;color:${color};">${svg(rowIcon(muscle),18)}</span>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:15px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pr.exerciseName||'Session Volume'}</div>
-          <div style="font-size:12px;color:var(--rh-muted);margin-top:1px;">${prTypeLabel(pr)} · ${new Date(pr.achievedAt).toLocaleDateString('default',{month:'short',day:'numeric',year:'numeric'})}</div>
-        </div>
-        <span style="font-size:15px;color:var(--rh-blue);font-weight:800;flex:none;">${prValueLabel(pr)}</span>
-      </div>`;
-    }).join("")}
-    ${remaining>0?`<button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:4px;" data-action="pr-show-more">Show ${Math.min(10,remaining)} More (${remaining} remaining)</button>`:""}`}
+      <div class="pr-list">${shown.map(card).join("")}</div>
+      ${remaining>0 ? `<button class="btn btn-ghost" data-action="pr-show-more" style="width:100%;margin-top:6px;">Show ${Math.min(10,remaining)} more</button>` : ""}
+    `}
   `;
 }
 
 /* ---------- Achievements ---------- */
 
-// Cycled by each achievement's fixed position in ACHIEVEMENT_DEFS (not by unlock order, so a
-// given achievement always gets the same color) -- purely a display palette, doesn't encode
-// any real category since ACHIEVEMENT_DEFS has no tier/category field of its own.
-const ACHIEVEMENT_COLORS = ['var(--rh-blue)','var(--rh-purple)','var(--rh-green)','#D97706','var(--rh-red)'];
+// ACHIEVEMENT_COLORS was a five-colour cycle keyed to a badge's position in ACHIEVEMENT_DEFS.
+// Nothing referenced it, and its own comment said the defs had no tier or category to colour
+// by -- which stopped being true some time ago. Badges now take their colour from tier and
+// their shape from category, both in achievementBadgeSvg().
+
+/* The weekly and monthly reviews. Rendered above the badge grid on Progress > Achievements,
+   because "what did I do" and "what did that earn me" are the same question.
+
+   Returns nothing at all when there is no data for the period. A row of zeroes shown to
+   someone who took a week off is a reproach, not a summary. */
+function renderReviewCards(){
+  if(!window.IgnytReview) return "";
+  const w = IgnytReview.week(state);
+  const m = IgnytReview.month(state);
+  if(!w && !m) return "";
+
+  const kg = v => v == null ? "—" : (v > 0 ? "+" : "") + v + " kg";
+  const stat = (value, label) => `<div class="rvw__stat"><div class="rvw__v">${value}</div><div class="rvw__l">${label}</div></div>`;
+
+  return `
+    ${w ? `
+    <div class="pg-card rvw">
+      <div class="rvw__head"><span>Last 7 days</span></div>
+      <div class="rvw__grid">
+        ${stat(w.workouts, "workouts")}
+        ${stat(w.minutes, "minutes")}
+        ${stat(w.activeDays + "/7", "active days")}
+        ${stat(w.volumeKg.toLocaleString(), "kg lifted")}
+        ${stat(w.mealsLogged, "meals logged")}
+        ${stat(kg(w.weightChangeKg), "weight")}
+      </div>
+    </div>` : ""}
+
+    ${m ? `
+    <div class="pg-card rvw">
+      <div class="rvw__head"><span>Last 30 days</span></div>
+      <div class="rvw__grid">
+        ${stat(m.workouts, "workouts")}
+        ${stat(m.consistencyPct + "%", "consistency")}
+        ${stat(m.volumeKg.toLocaleString(), "kg lifted")}
+        ${stat(m.prs, "new PRs")}
+        ${stat(m.badges, "badges earned")}
+        ${stat(kg(m.weightChangeKg), "weight")}
+      </div>
+      ${window.IgnytReport && IgnytReport.data(state) ? `
+      <div class="rvw__export">
+        <button class="rvw__btn" data-action="report-share">${svg("upload",16)}<span>Share report</span></button>
+        <button class="rvw__btn" data-action="report-save">${svg("download",16)}<span>Save image</span></button>
+      </div>` : ""}
+    </div>` : ""}
+  `;
+}
+
+/* =========================================================
+   ACHIEVEMENT BADGES — flat vector labels, not metal medallions.
+
+   Drawn as SVG rather than styled with CSS because the shape is the point: a heavy outline,
+   a thin inner rule tracking it, and a band straight across the middle carrying the number.
+   A border-radius and a gradient cannot make a hexagon or a shield.
+
+   THE SHAPE CARRIES INFORMATION.
+   One shape per category, held for every badge in it, so the grid is scannable before a word
+   is read — all the streak badges are the same pointed hexagon, all the strength ones the same
+   octagon. Six categories, six shapes. Assigning them at random would look identical and mean
+   nothing.
+
+   COLOUR IS TIER, AND ONLY TIER.
+   Bronze, silver, gold — significance, not rarity. Sixty badges in sixty colours is noise, and
+   the reference this follows gets its variety from a collection of different labels rather
+   than from one grid. The interior is var(--rh-card) and the locked state var(--rh-muted), so
+   both themes are handled by the tokens instead of a second palette.
+
+   The band ink is per tier for one honest reason: white reversed out of the gold is not
+   readable, so gold takes near-black text the way the yellow labels in the reference do.
+========================================================= */
+
+const BADGE_SHAPES = {
+  /* Points on a 100x100 viewBox. Each is inset ~4 units so the 6px stroke does not clip at
+     the edges of the box. */
+  milestone:   "22,5 78,5 97,50 78,95 22,95 3,50",                    // hexagon, flat top
+  streak:      "50,3 95,26 95,74 50,97 5,74 5,26",                    // hexagon, pointed top
+  strength:    "31,4 69,4 96,31 96,69 69,96 31,96 4,69 4,31",         // octagon
+  program:     "18,4 82,4 96,18 96,55 50,96 4,55 4,18",               // shield, chamfered shoulders
+  consistency: "50,3 96,37 78,94 22,94 4,37",                         // pentagon
+  nutrition:   null                                                    // circle, see below
+};
+
+/* Five tiers, and the STAR COUNT is what says which: bronze one star through platinum five.
+   That is the whole reason there is no decorative star anywhere else on the badge — a pair
+   flanking the number looked good and made a bronze badge appear to carry three, which is
+   exactly the kind of detail that quietly stops meaning anything.
+
+   Colour runs copper -> steel -> gold -> ice -> violet. Platinum is violet rather than a
+   literal platinum grey for one practical reason: a pale grey badge is indistinguishable from
+   the silver one at 84px, and the top tier being mistakable for the second is worse than the
+   name being loose. Gold and diamond take near-black band ink because white reversed out of
+   either is not readable. */
+const BADGE_TIER_ORDER = ["bronze", "silver", "gold", "diamond", "platinum"];
+const BADGE_TIERS = {
+  bronze:   { hue: "#A85A29", ink: "#FFFFFF" },
+  silver:   { hue: "#5A6B7D", ink: "#FFFFFF" },
+  gold:     { hue: "#E0A800", ink: "#1A1205" },
+  diamond:  { hue: "#3FBBE0", ink: "#052A3A" },
+  platinum: { hue: "#7C5CD6", ink: "#FFFFFF" }
+};
+
+/* The trophy is gone. A trophy is a prize for beating someone and none of these are that --
+   they mark work done. Every icon here is now equipment or the thing being counted, which is
+   also what the flat gym-label look this follows uses. Milestone counts workouts, so it takes
+   the dumbbell; strength (PRs, heaviest lift, lifetime volume) takes the bolt. All six read at
+   26px, which a trophy outline barely did. */
+const BADGE_ICONS = { milestone:"dumbbell", streak:"flame", strength:"bolt",
+                      program:"calendar", consistency:"repeat", nutrition:"nutrition" };
+
+/**
+ * One badge, as inline SVG.
+ * @param {object} d      an ACHIEVEMENT_DEFS entry
+ * @param {boolean} earned locked badges keep their shape and their target — a blanked-out
+ *                         mystery gives nobody a reason to come back, "100 workouts" does.
+ */
+function achievementBadgeSvg(d, earned){
+  const tier = BADGE_TIERS[d.tier] || BADGE_TIERS.bronze;
+  // Star count is the tier. An unknown tier string falls back to one star rather than none,
+  // so a badge added later without a tier still draws something sensible.
+  const stars = Math.max(1, BADGE_TIER_ORDER.indexOf(d.tier) + 1);
+  const hue = earned ? tier.hue : "var(--rh-muted)";
+  const ink = earned ? tier.ink : "var(--rh-card)";
+  const pts = BADGE_SHAPES[d.category];
+  const id = "bdgclip-" + String(d.id).replace(/[^a-z0-9_-]/gi, "");
+
+  // The outline, drawn twice: heavy on the edge, hairline inset. Circle is its own element
+  // rather than a 40-point polygon.
+  const shape = (scale, w) => pts
+    ? `<polygon points="${pts}" transform="translate(${50 - 50 * scale},${50 - 50 * scale}) scale(${scale})"
+         fill="${scale === 1 ? "var(--rh-card)" : "none"}" stroke="${hue}" stroke-width="${w / scale}" stroke-linejoin="round"/>`
+    : `<circle cx="50" cy="50" r="${47 * scale}" fill="${scale === 1 ? "var(--rh-card)" : "none"}" stroke="${hue}" stroke-width="${w}"/>`;
+
+  const v = String(d.value || "").toUpperCase();
+  // Long values step down rather than overflow the band. "1M KG" and "100KG" are the widest
+  // in the set at five characters.
+  const fs = v.length <= 2 ? 27 : v.length === 3 ? 21 : v.length <= 5 ? 15 : 12;
+  const icon = ICONS[BADGE_ICONS[d.category]] || ICONS.dumbbell;
+
+  return `<svg viewBox="0 0 100 100" class="bdg__svg" role="img" aria-label="${escHtml(d.name)}">
+    <defs><clipPath id="${id}">${pts
+      ? `<polygon points="${pts}"/>`
+      : `<circle cx="50" cy="50" r="47"/>`}</clipPath></defs>
+    ${shape(1, 6)}
+    ${shape(0.82, 2)}
+    <g style="color:${hue};" transform="translate(37,11) scale(1.06)">${icon}</g>
+    <g clip-path="url(#${id})"><rect x="0" y="41" width="100" height="20" fill="${hue}"/></g>
+    ${v ? `<text x="50" y="51" text-anchor="middle" fill="${ink}"
+      font-size="${fs}" font-weight="900" letter-spacing="0.4"
+      style="font-family:inherit;dominant-baseline:middle;">${escHtml(v)}</text>` : ""}
+    ${badgeStars(stars, hue)}
+  </svg>`;
+}
+
+/**
+ * The tier row: one star per tier level, centred under the band.
+ *
+ * The geometry is set by the narrowest shape at this height, which is the shield — five stars
+ * at this spacing clear its inner rule by about two units. Widening the row or dropping it any
+ * lower puts the outer pair through the outline on that one shape.
+ */
+function badgeStars(n, fill){
+  const gap = 9.2, y = 69, r = 4;
+  const startX = 50 - (n - 1) * gap / 2;
+  let out = "";
+  for(let i = 0; i < n; i++) out += badgeStar(startX + i * gap, y, r, fill);
+  return out;
+}
+
+/**
+ * A five-pointed star, point up. Used for the pair flanking the value on the band and the
+ * three beneath it — the same device the flat gym labels this follows use to fill the space
+ * a shape leaves below its centre line.
+ * @param {number} r outer radius; the inner radius is the usual 0.45 of it.
+ */
+function badgeStar(cx, cy, r, fill){
+  let dPath = "";
+  for(let i = 0; i < 10; i++){
+    const rad = (i % 2 ? r * 0.45 : r);
+    const a = (-90 + i * 36) * Math.PI / 180;
+    dPath += (i ? "L" : "M") + (cx + rad * Math.cos(a)).toFixed(2) + "," + (cy + rad * Math.sin(a)).toFixed(2);
+  }
+  // The class is not styling — nothing targets it in CSS. It marks these paths as the tier
+  // row so counting them is exact: several of the category icons are themselves paths whose
+  // data starts the same way, and a check that could not tell them apart was counting the
+  // dumbbell's bar as a star.
+  return `<path class="bdg__star" d="${dPath}Z" fill="${fill}"/>`;
+}
 
 function renderProgressAchievements(){
   const unlockedIds = new Set(state.achievements.map(a=>a.id));
-  const unlocked = state.achievements.slice().sort((a,b)=>b.achievedAt-a.achievedAt);
-  const locked = ACHIEVEMENT_DEFS.filter(d=>!unlockedIds.has(d.id));
-  const pct = Math.round(unlocked.length/ACHIEVEMENT_DEFS.length*100);
-  const colorFor = (id) => ACHIEVEMENT_COLORS[Math.max(0,ACHIEVEMENT_DEFS.findIndex(d=>d.id===id)) % ACHIEVEMENT_COLORS.length];
+  const earnedAt = {};
+  state.achievements.forEach(a => { earnedAt[a.id] = a.achievedAt; });
+
+  const showEarned = state.badgeView !== "remaining";
+  const cat = state.badgeCategory || "all";
+
+  const CATEGORIES = [
+    ["all","All"], ["milestone","Milestones"], ["streak","Streaks"],
+    ["strength","Strength"], ["consistency","Consistency"], ["nutrition","Nutrition"],
+    ["program","Program"]
+  ];
+  const inCategory = d => cat === "all" || d.category === cat;
+  const pool = ACHIEVEMENT_DEFS.filter(inCategory)
+    .filter(d => unlockedIds.has(d.id) === showEarned);
+
+  // Earned newest first — the one just unlocked should be at the top, not buried in
+  // definition order. Remaining stays in definition order, which is roughly easiest first.
+  if(showEarned) pool.sort((a,b) => (earnedAt[b.id]||0) - (earnedAt[a.id]||0));
+
+  const totalEarned = state.achievements.length;
+  const pct = Math.round(totalEarned / ACHIEVEMENT_DEFS.length * 100);
+
+  const tile = (d) => {
+    const earned = unlockedIds.has(d.id);
+    return `<div class="bdg${earned ? "" : " bdg--locked"}" title="${escHtml(d.desc)}">
+      ${achievementBadgeSvg(d, earned)}
+      <div class="bdg__name">${escHtml(d.name)}</div>
+      <div class="bdg__meta">${earned
+        ? new Date(earnedAt[d.id]||Date.now()).toLocaleDateString('default',{month:'short',day:'2-digit'})
+        : escHtml(d.desc)}</div>
+    </div>`;
+  };
+
   return `
+    ${renderReviewCards()}
+
     <div class="pg-card">
       <div class="row-between">
-        <span style="font-size:13px;font-weight:700;">${unlocked.length} of ${ACHIEVEMENT_DEFS.length} unlocked</span>
+        <span style="font-size:13px;font-weight:700;">${totalEarned} of ${ACHIEVEMENT_DEFS.length} earned</span>
         <span style="font-size:13px;font-weight:800;color:var(--rh-blue);">${pct}%</span>
       </div>
       <div class="rh-progress-track"><div class="rh-progress-fill" style="width:${pct}%;"></div></div>
     </div>
-    ${unlocked.length===0 ? `<div class="empty-note" style="margin:14px 0;">No achievements unlocked yet — your first workout is the first one.</div>` : `
-    <div style="margin-top:14px;">
-      ${unlocked.map(a=>{ const c=colorFor(a.id); return `<div class="pg-card" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:12px 14px;">
-        <span class="tl-card__icon" style="width:40px;height:40px;flex:none;background:${c}1a;color:${c};">${svg('trophy',20)}</span>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:15px;font-weight:800;">${a.name}</div>
-          <div style="font-size:12px;color:var(--rh-muted);margin-top:1px;">${a.desc}</div>
-        </div>
-        <span style="font-size:11px;color:var(--rh-muted);font-weight:600;flex:none;">${new Date(a.achievedAt).toLocaleDateString('default',{month:'short',day:'2-digit',year:'numeric'})}</span>
-      </div>`; }).join("")}
-    </div>`}
-    ${locked.length ? `
-    <div class="rh-section-head"><span>Locked</span></div>
-    ${locked.map(d=>`<div class="pg-card" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:12px 14px;opacity:.65;">
-      <span class="tl-card__icon" style="width:40px;height:40px;flex:none;background:var(--rh-bg);color:var(--rh-muted);">${svg('lock',18)}</span>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:15px;font-weight:800;">${d.name}</div>
-        <div style="font-size:12px;color:var(--rh-muted);margin-top:1px;">${d.desc}</div>
-      </div>
-      <span style="font-size:13px;color:var(--rh-muted);flex:none;">—</span>
-    </div>`).join("")}` : ""}
-    <div class="pg-card" style="margin-top:14px;background:rgba(37,99,235,.06);display:flex;align-items:center;gap:10px;">
-      <span style="flex:1;font-size:12px;color:var(--rh-text);line-height:1.4;">Keep training, stay consistent and unlock all achievements!</span>
-      <span style="flex:none;font-size:26px;">🏆</span>
+
+    <div class="bdg-toggle">
+      <button class="bdg-toggle__btn${showEarned?" is-on":""}" data-badge-view="earned">Earned</button>
+      <button class="bdg-toggle__btn${!showEarned?" is-on":""}" data-badge-view="remaining">Remaining</button>
     </div>
+
+    <div class="bdg-cats">
+      ${CATEGORIES.map(([id,label])=>`
+        <button class="bdg-cat${cat===id?" is-on":""}" data-badge-cat="${id}">${label}</button>`).join("")}
+    </div>
+
+    ${pool.length === 0
+      ? `<div class="empty-note" style="margin:18px 0;">${showEarned
+          ? "Nothing here yet — your first workout unlocks the first one."
+          : "Every badge in this category is earned. "}</div>`
+      : `<div class="bdg-grid">${pool.map(tile).join("")}</div>`}
   `;
 }
 
@@ -7672,7 +11357,7 @@ function renderProgressHabits(){
       </div>
     </div>
     ${state.habits.length===0 ? `<div class="empty-note">No habits yet — add one above to start tracking daily streaks.</div>` :
-      state.habits.map(h=>{
+      state.habits.map((h, idx)=>{
         const done = !!(state.habitCompletions[h.id] && state.habitCompletions[h.id][today]);
         const streak = habitStreak(h.id);
         const best = habitBestStreak(h.id);
@@ -7680,23 +11365,29 @@ function renderProgressHabits(){
         const month = habitMonthCompletion(h.id);
         const isEditing = state.editingHabitId === h.id;
         const meta = habitIconMeta(h.name);
-        return `<div class="pg-card" style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;">
+        return `<div class="pg-card" style="display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;margin-bottom:10px;">
           <span class="tl-card__icon" style="flex:none;background:${meta.bg};color:${meta.color};">${svg(meta.icon,20)}</span>
           <div class="row-between" style="align-items:flex-start;flex:1;min-width:0;">
             ${isEditing ? `
-              <input type="text" id="habit-rename-${h.id}" class="pi-input" value="${h.name}" style="flex:1;min-width:0;font-weight:700;margin-right:8px;">
+              <input type="text" id="habit-rename-${h.id}" class="pi-input" value="${escHtml(h.name)}" style="flex:1;min-width:0;font-weight:700;margin-right:8px;">
             ` : `
               <div style="min-width:0;flex:1;cursor:pointer;" data-rename-habit="${h.id}">
-                <div style="font-weight:800;font-size:16px;">${h.name}</div>
+                <div style="font-weight:800;font-size:16px;">${escHtml(h.name)}</div>
                 <div style="font-size:12px;color:var(--rh-muted);margin-top:3px;">🔥 ${streak} day streak</div>
                 <div style="font-size:11px;color:var(--rh-muted);margin-top:2px;"><b style="color:var(--rh-text);">Best:</b> ${best} · ${week}/7 this week · ${month} this month</div>
               </div>
             `}
             <div style="display:flex;gap:8px;flex-shrink:0;align-items:center;">
               ${isEditing ? `<button class="rh-btn rh-btn--ghost" data-action="save-habit-name" data-habit-id="${h.id}" style="flex:none;padding:8px 12px;font-size:12px;">Save</button>`
-                : `<button class="set-check ${done?'done':''}" data-toggle-habit="${h.id}" aria-label="Mark ${h.name} complete for today">${done?svg('check',16):''}</button>
+                : `<button class="set-check ${done?'done':''}" data-toggle-habit="${h.id}" aria-label="Mark ${escHtml(h.name)} complete for today">${done?svg('check',16):''}</button>
                    <button style="background:none;border:none;padding:4px;cursor:pointer;color:var(--rh-muted);flex:none;" data-del-habit="${h.id}" aria-label="Delete habit">${svg('x',15)}</button>`}
             </div>
+          </div>
+          <div class="hbm-tools">
+            <button data-move-habit="${h.id}" data-move-habit-dir="up" ${idx===0?'disabled':''} aria-label="Move ${escHtml(h.name)} up">↑</button>
+            <button data-move-habit="${h.id}" data-move-habit-dir="down" ${idx===state.habits.length-1?'disabled':''} aria-label="Move ${escHtml(h.name)} down">↓</button>
+            <button class="hbm-toggle${h.enabled===false?'':' is-on'}" data-habit-enabled="${h.id}"
+              aria-pressed="${h.enabled===false?'false':'true'}">${h.enabled===false?'Hidden from Home':'Showing on Home'}</button>
           </div>
         </div>`;
       }).join("")}
@@ -7815,64 +11506,6 @@ function renderProgressAnalytics(){
 
 /* ---------- Exercise Progress ---------- */
 
-function renderProgressExercise(){
-  const names = exercisesWithHistory();
-  if(names.length===0) return `<div class="empty-note">Log the same exercise across a few workouts to see its strength trend here.</div>`;
-  const q = (state.exProgressSearch||"").trim().toLowerCase();
-  const filtered = q ? names.filter(n=>n.toLowerCase().includes(q)) : names;
-  const exName = (state.progressExercise && names.includes(state.progressExercise)) ? state.progressExercise : (filtered[0] || names[0]);
-  const trend = exerciseProgressTrend(exName, 20);
-  const weightPoints = trend.map(t=>({date:t.date, value:displayW(t.weight)}));
-  const ormPoints = trend.map(t=>({date:t.date, value:displayW(t.oneRM)}));
-
-  // Bests from the FULL genuine history (not just the charted window).
-  let bestW=0, best1RM=0, bestReps=0;
-  state.workoutLog.forEach(s=>{
-    const ex = s.exercises.find(e=>e.name===exName);
-    if(!ex) return;
-    ex.sets.forEach(st=>{
-      const w = parseFloat(st.weight), r = parseFloat(st.reps);
-      if(!isNaN(w) && w>bestW) bestW = w;
-      if(!isNaN(w) && !isNaN(r) && r>0){ const orm = w*(1+r/30); if(orm>best1RM) best1RM = orm; }
-      if(!isNaN(r) && r>bestReps) bestReps = r;
-    });
-  });
-  const recent = state.workoutLog.filter(s=>s.exercises.some(e=>e.name===exName)).slice(0,5);
-
-  return `
-    <div class="search-bar"><input type="text" id="ex-progress-search" placeholder="Search exercises…" value="${(state.exProgressSearch||'').replace(/"/g,'&quot;')}" aria-label="Search exercises"></div>
-    ${filtered.length===0 ? `<div class="empty-note">No tracked exercise matches your search.</div>` : `
-    <select class="select-input" id="progress-exercise-select" style="margin-bottom:12px;">
-      ${filtered.map(n=>`<option value="${n}" ${exName===n?'selected':''}>${n}</option>`).join("")}
-    </select>
-    <div class="grid2" style="margin-bottom:14px;">
-      <div class="stat-card"><div class="stat-label">Best Weight</div><div class="stat-value" style="font-size:20px;">${bestW>0?`${displayW(bestW)}<span class="stat-unit">${wUnit()}</span>`:'—'}</div></div>
-      <div class="stat-card"><div class="stat-label">Best Est. 1RM</div><div class="stat-value" style="font-size:20px;">${best1RM>0?`${displayW(best1RM,1)}<span class="stat-unit">${wUnit()}</span>`:'—'}</div></div>
-      <div class="stat-card"><div class="stat-label">Best Reps</div><div class="stat-value">${bestReps>0?bestReps:'—'}</div></div>
-      <div class="stat-card"><div class="stat-label">Sessions</div><div class="stat-value">${recent.length===5?'5+':recent.length}</div></div>
-    </div>
-    <div class="info-box" style="padding:14px;margin-bottom:14px;">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Top Set Weight</div>
-      ${sparklineChart(weightPoints, {color:"var(--accent)", unit:wUnit()})}
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;">Estimated 1RM</div>
-      ${sparklineChart(ormPoints, {color:"var(--mint)", unit:wUnit()})}
-    </div>
-    <div class="eyebrow-label">Recent History</div>
-    <div class="info-box" style="padding:4px 14px;">
-      ${recent.map(s=>{
-        const ex = s.exercises.find(e=>e.name===exName);
-        const top = ex.sets.reduce((best,st)=>{
-          const w = parseFloat(st.weight);
-          return (!isNaN(w) && w>(best.w||0)) ? {w, r:st.reps} : best;
-        }, {});
-        return `<div class="row-between" style="padding:11px 0;border-bottom:1px solid var(--border);">
-          <span style="font-size:14px;color:var(--muted);" class="mono">${s.date}</span>
-          <span class="mono" style="font-size:15px;font-weight:800;">${top.w?`${displayW(top.w)}${wUnit()} × ${top.r||'–'}`:'—'}</span>
-        </div>`;
-      }).join("")}
-    </div>`}
-  `;
-}
 
 /* ---------- Body Progress ---------- */
 
@@ -7943,28 +11576,266 @@ function renderProgressBody(){
 
 /* ---------- Nutrition Progress ---------- */
 
-function renderProgressNutrition(){
-  const days = [30,60,90].includes(state.nutritionRange) ? state.nutritionRange : 30;
-  const ct = calorieProteinTrend(days).filter(d=>d.kcal>0 || d.protein>0);
-  const chips = `<div style="display:flex;gap:6px;margin-bottom:12px;">
-    ${[30,60,90].map(d=>`<button class="cat-chip ${days===d?'active':''}" data-nutrition-range="${d}">${d}d</button>`).join("")}
-  </div>`;
-  if(ct.length<2) return `${chips}<div class="empty-note">Log food for a few more days to see calorie and protein trends.</div>`;
-  const avgK = Math.round(ct.reduce((a,d)=>a+d.kcal,0)/ct.length);
-  const avgP = Math.round(ct.reduce((a,d)=>a+d.protein,0)/ct.length);
+
+/* ---------- Workout History ----------
+   Browsable, searchable list of every logged workout. Filtering and sorting run over
+   state.workoutLog directly (the same array every other statistic derives from), so the
+   list is always consistent with the rest of the app and needs no separate index to
+   invalidate. Rendering is paginated -- HISTORY_PAGE_SIZE rows at a time behind a
+   "Load more" button -- so a multi-year log doesn't build thousands of DOM nodes at once. */
+
+const HISTORY_PAGE_SIZE = 20;
+
+/* ---------- Recycle bin, archive and workout actions ----------
+   Deleting a workout moves it to a recycle bin (hx_deleted_workouts) instead of destroying
+   it. Entries carry deletedAt and are purged automatically after RECYCLE_BIN_DAYS, so the
+   bin can't grow without bound. Restoring puts the record back into state.workoutLog with
+   its original id, which means cloud sync sees it as the same record returning rather than
+   a new one -- and because the id is preserved, its PRs still resolve.
+
+   Archiving is separate and non-destructive: an archived workout stays in workoutLog with
+   archived:true and is simply filtered out of the default history view. */
+
+const RECYCLE_BIN_KEY = "hx_deleted_workouts";
+const RECYCLE_BIN_DAYS = 30;
+
+function loadRecycleBin(){
+  const raw = LS.get(RECYCLE_BIN_KEY, []);
+  const list = Array.isArray(raw) ? raw : [];
+  // Purge on read so expiry happens without needing a scheduled job.
+  const cutoff = Date.now() - RECYCLE_BIN_DAYS*86400000;
+  const kept = list.filter(e => e && e.workout && Number(e.deletedAt||0) >= cutoff);
+  if(kept.length !== list.length) LS.set(RECYCLE_BIN_KEY, kept);
+  return kept;
+}
+function saveRecycleBin(list){ LS.set(RECYCLE_BIN_KEY, list); }
+
+/** Moves a workout to the recycle bin. Returns the removed record, or null if not found. */
+function softDeleteWorkout(id){
+  const w = state.workoutLog.find(s=>s.id===id);
+  if(!w) return null;
+  state.workoutLog = state.workoutLog.filter(s=>s.id!==id);
+  const bin = loadRecycleBin();
+  bin.unshift({ deletedAt: Date.now(), workout: w });
+  saveRecycleBin(bin);
+  persist();
+  return w;
+}
+
+/** Puts a workout back from the bin, keeping its original id. */
+function restoreWorkout(id){
+  const bin = loadRecycleBin();
+  const entry = bin.find(e=>e.workout && e.workout.id===id);
+  if(!entry) return false;
+  saveRecycleBin(bin.filter(e=>e!==entry));
+  // Guard against a record that somehow still exists (double-restore, or an import that
+  // re-added it while it sat in the bin).
+  if(!state.workoutLog.some(s=>s.id===id)){
+    state.workoutLog.unshift(entry.workout);
+    state.workoutLog = enforceWorkoutLogIntegrity(state.workoutLog);
+  }
+  persist();
+  return true;
+}
+
+function purgeWorkoutFromBin(id){
+  saveRecycleBin(loadRecycleBin().filter(e=>!(e.workout && e.workout.id===id)));
+}
+
+/** Deep-copies a workout onto a new id/date. Sets keep their logged values but are marked
+ *  incomplete when `asTemplate`, so "repeat today" starts an empty session to fill in. */
+function duplicateWorkoutRecord(src, opts){
+  const o = opts || {};
+  const when = o.date ? new Date(o.date+"T12:00:00") : new Date();
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id = nextId();
+  copy.date = localDateStr(when.getTime());
+  copy.startedAt = when.getTime();
+  copy.finishedAt = when.getTime() + (Number(src.durationMin)||0)*60000;
+  copy.title = o.title || src.title || "";
+  delete copy.edited; delete copy.editHistory; // a copy has its own edit history
+  return copy;
+}
+
+const HISTORY_RANGES = {
+  all:  { label:"All time", days:null },
+  "30": { label:"30 days",  days:30 },
+  "90": { label:"90 days",  days:90 },
+  "365":{ label:"1 year",   days:365 }
+};
+
+const HISTORY_SORTS = {
+  newest:   { label:"Newest",   cmp:(a,b)=> historySortKeyDate(b) - historySortKeyDate(a) },
+  oldest:   { label:"Oldest",   cmp:(a,b)=> historySortKeyDate(a) - historySortKeyDate(b) },
+  duration: { label:"Longest",  cmp:(a,b)=> (b.durationMin||0) - (a.durationMin||0) },
+  volume:   { label:"Volume",   cmp:(a,b)=> (b.volume||0) - (a.volume||0) }
+};
+
+/** Sort key that tolerates legacy records with no startedAt (falls back to the date). */
+function historySortKeyDate(s){
+  if(s.startedAt != null) return Number(s.startedAt);
+  const t = new Date((s.date||"") + "T12:00:00").getTime();
+  return isFinite(t) ? t : 0;
+}
+
+/** Applies the current search/filter/sort state and returns the matching workouts. */
+function filteredWorkoutHistory(){
+  const q = (state.historySearch || "").trim().toLowerCase();
+  const range = HISTORY_RANGES[state.historyRange] ? state.historyRange : "all";
+  const muscle = state.historyMuscle || "";
+  const prsOnly = !!state.historyPRsOnly;
+  const days = HISTORY_RANGES[range].days;
+  const cutoff = days ? Date.now() - days*86400000 : null;
+  const prWorkoutIds = prsOnly ? new Set(state.prs.map(p=>p.workoutId)) : null;
+
+  let list = state.workoutLog.filter(s=>{
+    if(!s || !Array.isArray(s.exercises)) return false; // malformed/legacy record — never crash the list
+    // Archived workouts are hidden unless the archive filter is explicitly on.
+    if(!!s.archived !== !!state.historyArchived) return false;
+    if(cutoff != null && historySortKeyDate(s) < cutoff) return false;
+    if(prWorkoutIds && !prWorkoutIds.has(s.id)) return false;
+    if(muscle && !sessionMuscles(s.exercises).includes(muscle)) return false;
+    if(q){
+      const hay = [sessionTitle(s), s.notes || "", ...s.exercises.map(e=>e.name||"")].join(" ").toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  const sort = HISTORY_SORTS[state.historySort] ? state.historySort : "newest";
+  return list.slice().sort(HISTORY_SORTS[sort].cmp);
+}
+
+/* Recycle bin: restore or permanently remove soft-deleted workouts. */
+function renderRecycleBin(){
+  const bin = loadRecycleBin();
   return `
-    ${chips}
-    <div class="grid2" style="margin-bottom:14px;">
-      <div class="stat-card"><div class="stat-label">Avg Calories / logged day</div><div class="stat-value" style="font-size:20px;">${avgK.toLocaleString()}<span class="stat-unit">kcal</span></div></div>
-      <div class="stat-card"><div class="stat-label">Avg Protein / logged day</div><div class="stat-value" style="font-size:20px;">${avgP}<span class="stat-unit">g</span></div></div>
+    <button class="btn btn-ghost" data-history-bin-back="1" style="padding:6px 12px;font-size:12px;margin-bottom:10px;">← Back to history</button>
+    <div class="pg-card" style="margin-bottom:12px;background:rgba(37,99,235,.06);display:flex;gap:8px;align-items:flex-start;">
+      <span style="flex:none;color:var(--rh-blue);">${svg('info',14)}</span>
+      <span style="font-size:12px;line-height:1.4;">Deleted workouts stay here for ${RECYCLE_BIN_DAYS} days, then are removed automatically. Restoring keeps the original workout and its records intact.</span>
     </div>
-    <div class="info-box" style="padding:14px;">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Calories</div>
-      ${sparklineChart(ct.map(d=>({date:d.date,value:Math.round(d.kcal)})), {color:"var(--accent)", unit:"kcal"})}
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;">Protein</div>
-      ${sparklineChart(ct.map(d=>({date:d.date,value:Math.round(d.protein)})), {color:"var(--steel)", unit:"g"})}
+    ${bin.length===0 ? `<div class="empty-note">Recycle bin is empty.</div>` : bin.map(e=>{
+      const w = e.workout;
+      const daysLeft = Math.max(0, RECYCLE_BIN_DAYS - Math.floor((Date.now()-Number(e.deletedAt||0))/86400000));
+      return `<div class="pg-card" style="margin-bottom:10px;">
+        <div style="font-size:15px;font-weight:800;">${escHtml(sessionTitle(w))}</div>
+        <div style="font-size:12px;color:var(--rh-muted);margin-top:2px;">${escHtml(w.date||"")} · ${workoutDurationLabel(w)} · ${displayW(w.volume||0,0).toLocaleString()} ${wUnit()}</div>
+        <div style="font-size:11px;color:var(--rh-muted);margin-top:4px;">Deleted ${new Date(Number(e.deletedAt||0)).toLocaleDateString()} · ${daysLeft} day${daysLeft!==1?'s':''} left</div>
+        <div class="grid2" style="margin-top:10px;">
+          <button class="btn btn-steel" data-bin-restore="${w.id}">Restore</button>
+          <button class="btn btn-ghost" data-bin-purge="${w.id}" style="color:#ff6b6b;">Delete forever</button>
+        </div>
+      </div>`;
+    }).join("")}
+    <div style="height:16px;"></div>`;
+}
+
+function renderProgressWorkouts(){
+  if(state.historyBinOpen) return renderRecycleBin();
+  const all = state.workoutLog.filter(s=>s && Array.isArray(s.exercises));
+  const archivedCount = all.filter(s=>s.archived).length;
+  const binCount = loadRecycleBin().length;
+  if(all.length === 0 && binCount === 0){
+    return `<div class="pg-card" style="text-align:center;padding:28px 18px;">
+      <span class="tl-card__icon" style="width:44px;height:44px;margin:0 auto 12px;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('workout',22)}</span>
+      <div style="font-size:15px;font-weight:800;">No workouts logged yet</div>
+      <div style="font-size:12px;color:var(--rh-muted);margin-top:4px;">Finish a workout and it'll show up here.</div>
+    </div>`;
+  }
+
+  const matches = filteredWorkoutHistory();
+  const page = Math.max(1, state.historyPage || 1);
+  const shown = matches.slice(0, page*HISTORY_PAGE_SIZE);
+  // Muscle options come from what's actually in the log, so the filter never offers a
+  // muscle group with zero results.
+  const muscleOpts = Array.from(new Set(all.flatMap(s=>sessionMuscles(s.exercises)))).filter(Boolean).sort();
+  const range = HISTORY_RANGES[state.historyRange] ? state.historyRange : "all";
+  const sort = HISTORY_SORTS[state.historySort] ? state.historySort : "newest";
+  const filtersActive = !!((state.historySearch||"").trim()) || range!=="all" || !!state.historyMuscle || !!state.historyPRsOnly || !!state.historyArchived;
+  const selectMode = !!state.historySelectMode;
+  if(!Array.isArray(state.historySelected)) state.historySelected = [];
+  // Selection is scoped to what's currently matched, so a filter change can't leave
+  // invisible rows selected and acted on by mistake.
+  const matchIds = matches.map(s=>s.id);
+  state.historySelected = state.historySelected.filter(id=>matchIds.includes(id));
+  const selectedCount = state.historySelected.length;
+  const allVisibleSelected = matches.length>0 && selectedCount===matches.length;
+
+  const totalVolume = matches.reduce((a,s)=>a+(s.volume||0),0);
+  const totalMin = matches.reduce((a,s)=>a+(s.durationMin||0),0);
+
+  return `
+    <div class="lib-search-wrap" style="margin-bottom:10px;">
+      ${svg('search',17)}
+      <input type="text" id="history-search" class="pi-input" placeholder="Search workouts, exercises or notes…" value="${escHtml(state.historySearch||"")}">
     </div>
-    <div style="font-size:12px;color:var(--muted);margin-top:8px;">Averages cover only days with logged food (${ct.length} of the last ${days}).</div>
+
+    <div class="lib-cats" style="margin-bottom:8px;">
+      ${Object.entries(HISTORY_RANGES).map(([k,v])=>`
+        <button class="cat-chip ${range===k?'active':''}" data-history-range="${k}">${v.label}</button>`).join("")}
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <select id="history-muscle" class="pi-input" style="flex:1;">
+        <option value="">All muscles</option>
+        ${muscleOpts.map(m=>`<option value="${escHtml(m)}" ${state.historyMuscle===m?'selected':''}>${escHtml(m)}</option>`).join("")}
+      </select>
+      <select id="history-sort" class="pi-input" style="flex:1;">
+        ${Object.entries(HISTORY_SORTS).map(([k,v])=>`<option value="${k}" ${sort===k?'selected':''}>${v.label}</option>`).join("")}
+      </select>
+    </div>
+
+    <div class="lib-cats" style="margin-bottom:10px;">
+      <button class="cat-chip ${state.historyPRsOnly?'active':''}" data-history-prs="1">${svg('trophy',12)} With PRs</button>
+      <button class="cat-chip ${state.historyArchived?'active':''}" data-history-archived="1">${svg('box',12)} Archived${archivedCount?` (${archivedCount})`:''}</button>
+      ${binCount?`<button class="cat-chip" data-history-bin="1">${svg('trash',12)} Recycle bin (${binCount})</button>`:''}
+      ${filtersActive?`<button class="cat-chip" data-history-clear="1">Clear filters</button>`:''}
+    </div>
+
+    <div class="lib-count-row">
+      <span><b>${matches.length}</b> workout${matches.length!==1?'s':''}${filtersActive?` of ${all.length}`:''}</span>
+      <span style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:12px;color:var(--rh-muted);">${fmtMinutes(totalMin)} · ${displayW(totalVolume,0).toLocaleString()} ${wUnit()}</span>
+        ${matches.length?`<button class="lib-add-link" data-history-select-mode="1">${selectMode?'Done':'Select'}</button>`:''}
+      </span>
+    </div>
+
+    ${selectMode ? `<div class="pg-card" style="margin-bottom:10px;padding:12px 14px;">
+      <div class="row-between" style="margin-bottom:${selectedCount?'10px':'0'};">
+        <span style="font-size:13px;font-weight:800;">${selectedCount} selected</span>
+        <span style="display:flex;gap:8px;">
+          <button class="lib-add-link" data-history-select-all="1">${allVisibleSelected?'Clear all':'Select all'}</button>
+        </span>
+      </div>
+      ${selectedCount?`<div style="display:flex;flex-wrap:wrap;gap:6px;">
+        <button class="cat-chip" data-bulk-action="export">${svg('download',12)} Export</button>
+        <button class="cat-chip" data-bulk-action="archive">${svg('box',12)} ${state.historyArchived?'Unarchive':'Archive'}</button>
+        <button class="cat-chip" data-bulk-action="duplicate">${svg('copy',12)} Duplicate</button>
+        <button class="cat-chip" data-bulk-action="delete" style="color:#ff6b6b;">${svg('trash',12)} Delete</button>
+      </div>`:''}
+    </div>` : ""}
+
+    ${matches.length===0 ? `<div class="empty-note">No workouts match these filters.</div>` : shown.map(s=>{
+      const prCount = state.prs.filter(p=>p.workoutId===s.id).length;
+      const doneSets = computeCompletedSets(s.exercises);
+      const muscles = sessionMuscles(s.exercises).slice(0,3);
+      const picked = selectMode && state.historySelected.includes(s.id);
+      return `<div class="pg-card" style="margin-bottom:10px;cursor:pointer;position:relative;${picked?'border-color:var(--rh-blue);':''}" ${selectMode?`data-history-pick="${s.id}"`:`data-view-session="${s.id}"`}>
+        <div class="row-between" style="align-items:flex-start;gap:8px;">
+          ${selectMode?`<span style="flex:none;color:${picked?'var(--rh-blue)':'var(--rh-border)'};">${svg(picked?'check':'plus',18)}</span>`:''}
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:15px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(sessionTitle(s))}</div>
+            <div style="font-size:12px;color:var(--rh-muted);margin-top:2px;">${new Date((s.date||"")+"T12:00:00").toLocaleDateString('default',{weekday:'short',month:'short',day:'numeric',year:'numeric'})}</div>
+          </div>
+          ${prCount?`<span class="lib-tag" style="background:rgba(217,119,6,.12);color:#D97706;flex:none;">${svg('trophy',10)} ${prCount}</span>`:''}
+          ${s.edited?`<span class="lib-tag" style="background:var(--rh-bg);color:var(--rh-muted);flex:none;">Edited</span>`:''}
+        </div>
+        <div style="font-size:12px;color:var(--rh-muted);margin-top:6px;">${workoutDurationLabel(s)} · ${displayW(s.volume||0,0).toLocaleString()} ${wUnit()} · ${s.exercises.length} exercise${s.exercises.length!==1?'s':''} · ${doneSets} set${doneSets!==1?'s':''}</div>
+        ${muscles.length?`<div style="margin-top:6px;">${muscles.map(m=>`<span class="lib-tag" style="background:${muscleTagColor(m)}1a;color:${muscleTagColor(m)};margin-right:4px;">${escHtml(m)}</span>`).join("")}</div>`:''}
+      </div>`;
+    }).join("")}
+
+    ${shown.length < matches.length ? `<button class="btn btn-ghost btn-block" data-history-more="1" style="margin-bottom:16px;">Load ${Math.min(HISTORY_PAGE_SIZE, matches.length-shown.length)} more (${shown.length} of ${matches.length})</button>` : `<div style="height:16px;"></div>`}
   `;
 }
 
@@ -7975,7 +11846,7 @@ function renderProgressCalendar(){
   let selHtml = "";
   if(sel){
     const sessions = state.workoutLog.filter(s=>s.date===sel);
-    const planCount = Object.values(state.completed).filter(ts=> new Date(ts).toISOString().slice(0,10)===sel).length;
+    const planCount = Object.values(state.completed).filter(ts=> dayKey(ts)===sel).length;
     const dayLabel = new Date(sel+"T12:00:00").toLocaleDateString('default',{weekday:'long', month:'long', day:'numeric'});
     selHtml = `
       <div class="rh-section-head"><span>${dayLabel}</span></div>
@@ -8004,35 +11875,6 @@ function renderProgressCalendar(){
 
 /* ---------- Plan Progress ---------- */
 
-function renderProgressPlan(){
-  let total=0, done=0;
-  const perWeek = WEEKS.map(w=>{
-    let wt=0, wd=0;
-    w.days.forEach(d=>d.exercises.forEach(ex=>{ wt++; total++; if(state.completed[`${w.week}|${d.day}|${ex.name}`]){wd++; done++;} }));
-    return {week:w.week, pct: wt?Math.round(wd/wt*100):0, phase:w.phase};
-  });
-  const overall = total? Math.round(done/total*100):0;
-  const phaseColor = {base:'var(--steel)',build:'var(--steel)',load:'var(--accent)',peak:'var(--accent)',deload:'var(--mint)'};
-  const w = thisWeekStats();
-  return `
-    <div class="info-box" style="text-align:center;padding:20px;margin-bottom:14px;">
-      <div class="mono" style="font-weight:900;font-size:38px;color:var(--accent);">${overall}%</div>
-      <div style="font-size:13px;color:var(--muted);margin-top:4px;">${done} of ${total} plan exercises checked off</div>
-    </div>
-    <div class="info-box" style="padding:12px 14px;margin-bottom:14px;">
-      <div class="row-between">
-        <span style="font-size:14px;font-weight:700;">HYROX sessions this week</span>
-        <span class="mono" style="font-size:15px;font-weight:800;">${w.hyroxSessions}</span>
-      </div>
-    </div>
-    <div class="eyebrow-label">By Week</div>
-    ${perWeek.map(pw=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">
-      <div class="mono" style="width:52px;font-size:12px;font-weight:700;color:var(--muted);">WK ${pw.week}</div>
-      <div class="progress-track"><div class="progress-fill" style="width:${pw.pct}%;background:${phaseColor[pw.phase]};"></div></div>
-      <div class="mono" style="width:40px;text-align:right;font-size:12px;">${pw.pct}%</div>
-    </div>`).join("")}
-  `;
-}
 
 /* =========================================================
    BODY-PROGRESS PHOTOS — metadata lives in state.bodyPhotos (in-memory only, loaded from
@@ -8108,38 +11950,38 @@ function renderProfileForm(){
   const target = profileCalorieTarget();
   return `
     <div class="info-box" style="padding:14px;">
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Name</label>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Name</label>
       <input type="text" id="p-name" value="${p.name||''}" placeholder="Optional" style="display:block;width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:10px;margin:4px 0 12px;font-size:16px;color:var(--text);">
       <div class="grid2">
-        <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Weight (${wUnit()})</label>
-          <div style="padding:8px;margin-top:4px;font-size:13px;color:var(--accent);font-weight:700;">${displayW(p.weight)} <span style="font-size:10px;color:var(--muted);font-weight:400;">(from log)</span></div></div>
-        <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Height (cm)</label>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Weight (${wUnit()})</label>
+          <div style="padding:8px;margin-top:4px;font-size:13px;color:var(--accent);font-weight:700;">${displayW(p.weight)} <span style="font-size:11px;color:var(--muted);font-weight:400;">(from log)</span></div></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Height (cm)</label>
           <input type="number" id="p-height" value="${p.height}" style="display:block;width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:10px;margin-top:4px;font-size:16px;color:var(--text);"></div>
-        <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Age</label>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Age</label>
           <input type="number" id="p-age" value="${p.age}" style="display:block;width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:10px;margin-top:4px;font-size:16px;color:var(--text);"></div>
-        <div><label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Gender</label>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Gender</label>
           <div style="display:flex;gap:6px;margin-top:4px;">
             <button class="cat-chip ${p.gender==='male'?'active':''}" data-profile-gender="male" style="flex:1;text-align:center;">Male</button>
             <button class="cat-chip ${p.gender==='female'?'active':''}" data-profile-gender="female" style="flex:1;text-align:center;">Female</button>
           </div></div>
       </div>
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Activity Level</label>
       <select class="select-input" id="p-activity">
         ${ACTIVITY_MULTIPLIERS.map(a=>`<option value="${a.mult}" ${p.activityMultiplier===a.mult?'selected':''}>${a.label}</option>`).join("")}
       </select>
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:6px 0 4px;">Goal</label>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:6px 0 4px;">Goal</label>
       <select class="select-input" id="p-goal">
         ${GOAL_OPTIONS.map(g=>`<option value="${g.delta}" ${p.goalDelta===g.delta?'selected':''}>${g.label}</option>`).join("")}
       </select>
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:6px 0 4px;">Hyrox Experience</label>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:6px 0 4px;">Hyrox Experience</label>
       <select class="select-input" id="p-hyrox-exp">
         ${HYROX_EXPERIENCE_OPTIONS.map(o=>`<option value="${o.key}" ${p.hyroxExperience===o.key?'selected':''}>${o.label}</option>`).join("")}
       </select>
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:6px 0 4px;">Training Days / Week</label>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:6px 0 4px;">Training Days / Week</label>
       <select class="select-input" id="p-training-days" style="margin-bottom:0;">
         ${[2,3,4,5,6,7].map(n=>`<option value="${n}" ${p.trainingDays===n?'selected':''}>${n} days/week</option>`).join("")}
       </select>
-      <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Available Equipment</label>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin:10px 0 4px;">Available Equipment</label>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">
         ${EQUIPMENT_OPTIONS.map(eq=>`<button class="cat-chip ${p.equipment.includes(eq)?'active':''}" data-profile-equipment="${eq}">${eq}</button>`).join("")}
       </div>
@@ -8184,11 +12026,23 @@ function renderPersonalInfoTab(){
 
       <div class="pg-card" style="margin-top:14px;">
         <div style="font-size:15px;font-weight:800;margin-bottom:12px;">Profile</div>
+        ${/* The avatar is a real picker now. It carried a pencil badge with pointer-events:none
+              and the tooltip "Photo comes from your account" — it looked like the thing you tap
+              to change your photo and did nothing, on the one screen called Personal
+              Information. Onboarding has had a working picker since it was built; this reuses
+              the same readProfilePhoto(), which downscales and caps the file, so there is one
+              implementation rather than a second that could accept a photo the first would
+              reject. */''}
         <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;">
-          <div class="pf-avatar" style="width:64px;height:64px;">
-            ${account?.photoUrl ? `<img src="${account.photoUrl}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
-            <span class="pf-avatar__initial" style="font-size:22px;">${initial}</span>
-            <span class="pf-avatar__edit" title="Photo comes from your Google account" style="pointer-events:none;">${svg('pencil',11)}</span>
+          <div style="flex:none;">
+            <button class="pf-avatar" style="width:64px;height:64px;border:none;padding:0;cursor:pointer;"
+                    data-pi-photo-pick="1" aria-label="${state.profile.photo ? 'Change profile photo' : 'Add a profile photo'}">
+              ${(()=>{ const src = profilePhotoSrc(account); return src ? `<img src="${src}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''; })()}
+              <span class="pf-avatar__initial" style="font-size:22px;">${initial}</span>
+              <span class="pf-avatar__edit">${svg('pencil',11)}</span>
+            </button>
+            <input type="file" id="pi-photo-input" accept="image/*" hidden>
+            ${state.profile.photo ? `<button class="pi-photo-remove" data-pi-photo-clear="1">Remove</button>` : ''}
           </div>
           <div style="flex:1;min-width:0;">
             <label class="pi-label">Full Name</label>
@@ -8198,7 +12052,7 @@ function renderPersonalInfoTab(){
         <label class="pi-label">Username</label>
         <input type="text" id="p-username" class="pi-input" value="${(p.username||'').replace(/"/g,'&quot;')}" placeholder="@username" style="margin-bottom:12px;">
         <div class="pi-grid2">
-          ${row('mail', 'Email Address', `<div class="pi-row__value">${account ? account.email : 'Sign in with Google to add an email'}</div>`)}
+          ${row('mail', 'Email Address', `<div class="pi-row__value">${account ? account.email : 'Sign in to add an email'}</div>`)}
           ${row('phone', 'Phone Number', `<input type="tel" id="p-phone" class="pi-input" style="margin:2px 0 0;padding:6px 0;background:none;border:none;" value="${(p.phone||'').replace(/"/g,'&quot;')}" placeholder="Add phone number">`)}
         </div>
       </div>
@@ -8329,96 +12183,332 @@ function renderBodyPhotoViewer(id, photoList){
    preview on the main Body tab (that stays a lightweight "recent 9 + Open Archive" widget);
    this is where the category filter, month/year grouping, milestones, and before/after
    comparison actually live, so the everyday Body tab isn't cluttered by them. */
+/* =========================================================
+   PROGRESS PHOTOS — a dated journal, not a pile of images
+
+   Photos are grouped into SESSIONS by the date they were taken (see js/body/photo-sessions.js
+   for why that grouping is derived rather than stored). Each session is one check-in: several
+   angles, one weight, one set of measurements, one note. That is how the photos were taken and
+   it is what makes two dates comparable.
+
+   Three views, all over sessions rather than loose photos:
+     Timeline  reverse-chronological check-ins, newest first
+     Compare   two sessions side by side with the change between them
+     Grid      every photo, for when you just want to find one image
+
+   The per-photo viewer, its rotate/delete/milestone actions and the underlying IndexedDB store
+   are untouched — this rearranges how photos are presented, and deliberately changes nothing
+   about how they are kept.
+========================================================= */
 function renderBodyScanArchive(){
-  const view = state.bodyScanView || "grid";
-  const catFilter = state.bodyScanCategoryFilter || "All";
-  const photos = state.bodyPhotos.filter(ph=> catFilter==="All" || ph.category===catFilter);
+  const S = window.IgnytPhotoSessions;
+  const view = state.bodyScanView || "timeline";
+  const all = S ? S.sessions(state.bodyPhotos) : [];
+  const f = state.bodyPhotoFilter || {};
+  const shown = S ? S.filter(all, f) : all;
+  const periods = S ? S.periods(all) : { years: [], months: [] };
 
-  const tabBtn = (id,label) => `<button class="cat-chip ${view===id?'active':''}" data-body-scan-view="${id}" style="flex:1;text-align:center;">${label}</button>`;
-  const catChips = `<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-bottom:10px;">
-    <button class="cat-chip ${catFilter==='All'?'active':''}" data-body-scan-category="All" style="flex:none;">All</button>
-    ${BODY_SCAN_CATEGORIES.map(c=>`<button class="cat-chip ${catFilter===c?'active':''}" data-body-scan-category="${c}" style="flex:none;white-space:nowrap;">${c}</button>`).join("")}
-  </div>`;
+  const dateLong = (d) => {
+    const dt = new Date(d + "T12:00:00");
+    if(isNaN(dt)) return d;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diff = Math.round((today - dt) / 86400000);
+    if(diff === 0) return "Today";
+    if(diff === 1) return "Yesterday";
+    return dt.toLocaleDateString(undefined, { day:"numeric", month:"long", year:"numeric" });
+  };
+  const timeShort = (ms) => ms ? new Date(ms).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}) : "";
+  const kg = (v) => v == null ? null : `${displayW(v)} ${wUnit()}`;
 
-  function gridView(){
-    if(!photos.length) return emptyState('body', 'No photos in this category yet — add one from the Body tab.');
-    return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-      ${photos.map(ph=>{
-        const url = photoThumbUrl(ph.id);
-        return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
-          ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : skeletonImage()}
-          <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:var(--radius-2xs);padding:2px 4px;text-align:center;">${ph.date}</span>
-          ${ph.milestone?`<span style="position:absolute;top:4px;right:4px;">${svg('star',14)}</span>`:''}
-        </button>`;
+  function thumb(ph, size){
+    const url = photoThumbUrl(ph.id);
+    return `<button class="bp-thumb" data-view-body-photo="${ph.id}" style="${size?`width:${size}px;`:""}"
+      aria-label="${escHtml(ph.category||"Photo")} on ${escHtml(ph.date)}">
+      ${url ? `<img src="${url}" alt="" loading="lazy" style="transform:rotate(${ph.rotation||0}deg);">` : skeletonImage()}
+      <span class="bp-thumb__cat">${escHtml(ph.category||"")}</span>
+    </button>`;
+  }
+
+  /* ---- filters ---- */
+  function filterBar(){
+    if(!all.length) return "";
+    const chip = (label, active, attrs) =>
+      `<button class="cat-chip ${active?'active':''}" ${attrs} style="flex:none;white-space:nowrap;">${escHtml(label)}</button>`;
+    const anyFilter = f.year || f.month || f.weightMin != null || f.weightMax != null;
+    return `<div class="bp-filters">
+      <div class="bp-filters__row">
+        ${chip("All", !f.year && !f.month, 'data-bp-period="all"')}
+        ${periods.years.map(y=>chip(y, f.year===y && !f.month, `data-bp-period="year" data-bp-value="${y}"`)).join("")}
+        ${periods.months.slice(0,6).map(m=>{
+          const lbl = new Date(m+"-01T12:00:00").toLocaleDateString(undefined,{month:"short",year:"2-digit"});
+          return chip(lbl, f.month===m, `data-bp-period="month" data-bp-value="${m}"`);
+        }).join("")}
+      </div>
+      <div class="bp-filters__row">
+        <label class="bp-range"><span>Weight</span>
+          <input type="number" inputmode="decimal" id="bp-wmin" placeholder="min" value="${f.weightMin ?? ""}">
+          <em>to</em>
+          <input type="number" inputmode="decimal" id="bp-wmax" placeholder="max" value="${f.weightMax ?? ""}">
+          <button data-bp-apply-weight="1">Apply</button>
+        </label>
+        ${anyFilter ? `<button class="bp-clear" data-bp-clear="1">Clear filters</button>` : ""}
+      </div>
+    </div>`;
+  }
+
+  /* ---- timeline ---- */
+  function timelineView(){
+    if(!all.length) return emptyState('body', 'No progress photos yet — add one from the Body tab to start your journal.');
+    if(!shown.length) return `<div class="bp-none">No check-ins match these filters.</div>`;
+
+    return `<div class="bp-timeline">
+      ${shown.map(sess=>{
+        const open = state.bodyOpenSession === sess.id;
+        const stats = [
+          kg(sess.weight) ? ["Weight", kg(sess.weight)] : null,
+          sess.bodyfat != null ? ["Body fat", sess.bodyfat + "%"] : null,
+          sess.waist != null ? ["Waist", sess.waist + " cm"] : null,
+          sess.chest != null ? ["Chest", sess.chest + " cm"] : null
+        ].filter(Boolean);
+
+        return `<div class="bp-sess${open?' is-open':''}">
+          <button class="bp-sess__head" data-bp-session="${escHtml(sess.id)}" aria-expanded="${open?'true':'false'}">
+            <span class="bp-sess__dot" aria-hidden="true"></span>
+            <span class="bp-sess__title">
+              <span class="bp-sess__date">${escHtml(dateLong(sess.date))}${sess.milestone?' <span class="bp-star">★</span>':''}</span>
+              <span class="bp-sess__meta">${sess.count} photo${sess.count===1?'':'s'}${
+                kg(sess.weight) ? ` · ${escHtml(kg(sess.weight))}` : ""}${
+                sess.takenAt ? ` · ${escHtml(timeShort(sess.takenAt))}` : ""}</span>
+              <span class="bp-sess__views">${sess.views.map(v=>escHtml(v)).join(" • ")}</span>
+            </span>
+            <span class="bp-sess__chev" aria-hidden="true">${open?'⌃':'⌄'}</span>
+          </button>
+
+          <div class="bp-sess__strip">${sess.photos.map(ph=>thumb(ph)).join("")}</div>
+
+          ${open ? `<div class="bp-sess__detail">
+            ${stats.length ? `<div class="bp-stats">${stats.map(([l,v])=>
+              `<div><span>${escHtml(l)}</span><b>${escHtml(v)}</b></div>`).join("")}</div>`
+              : `<div class="bp-none" style="padding:6px 0;">No measurements recorded for this check-in.</div>`}
+            ${sess.note ? `<div class="bp-note">${escHtml(sess.note)}</div>` : ""}
+            <div class="bp-sess__actions">
+              <button data-bp-edit="${escHtml(sess.id)}">Edit details</button>
+              <button data-bp-compare-with="${escHtml(sess.id)}">Compare</button>
+              <button class="is-danger" data-bp-delete-session="${escHtml(sess.id)}">Delete check-in</button>
+            </div>
+          </div>` : ""}
+        </div>`;
       }).join("")}
     </div>`;
   }
 
-  function timelineView(){
-    if(!photos.length) return emptyState('body', 'No photos in this category yet — add one from the Body tab.');
-    // Group by "Month Year" -- covers both "Monthly Gallery" and (via the section list itself)
-    // a de-facto yearly view, without a full interactive calendar grid.
-    const groups = {};
-    photos.forEach(ph=>{
-      const d = new Date(ph.date+"T12:00:00");
-      const key = isNaN(d.getTime()) ? "Undated" : d.toLocaleDateString('default',{month:'long',year:'numeric'});
-      (groups[key] = groups[key] || []).push(ph);
-    });
-    return Object.keys(groups).map(key=>`
-      <div class="rh-section-head" style="margin-top:14px;"><span>${escHtml(key)}</span></div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
-        ${groups[key].map(ph=>{
-          const url = photoThumbUrl(ph.id);
-          return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:var(--radius-xs-plus);overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
-            ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : ''}
-            ${ph.milestone?`<span style="position:absolute;top:2px;right:2px;">${svg('star',11)}</span>`:''}
-          </button>`;
-        }).join("")}
-      </div>`).join("");
+  /* ---- compare ---- */
+  function compareView(){
+    if(all.length < 2) return `<div class="bp-none">Two check-ins on different dates are needed to compare.</div>`;
+    const aId = state.bodyCompareA || (all[all.length-1] && all[all.length-1].id);
+    const bId = state.bodyCompareB || all[0].id;
+    const A = S.byId(state.bodyPhotos, aId), B = S.byId(state.bodyPhotos, bId);
+    const presets = S.comparePresets(all);
+
+    const picker = (side, selId) => `<select data-bp-compare="${side}" aria-label="${side==='a'?'Earlier':'Later'} check-in">
+      ${all.map(x=>`<option value="${escHtml(x.id)}" ${x.id===selId?'selected':''}>${escHtml(dateLong(x.date))}${
+        kg(x.weight)?` — ${escHtml(kg(x.weight))}`:""}</option>`).join("")}
+    </select>`;
+
+    const d = S.delta(A, B);
+    const chip = (label, val, unit, goodDown) => {
+      if(val == null) return "";
+      const cls = val === 0 ? "" : (goodDown ? (val < 0 ? "is-good" : "is-up") : (val > 0 ? "is-good" : "is-up"));
+      return `<span class="bp-delta ${cls}">${label} ${val>0?"+":""}${val}${unit}</span>`;
+    };
+
+    /* Side by side, not a swipe slider. The brief asks to see both with their weights, and two
+       photos of the same person from the same angle are easier to read side by side than
+       revealed through a wipe — the wipe is a party trick that hides half of each image. */
+    const column = (sess, tag) => {
+      if(!sess) return `<div class="bp-col"><div class="bp-none">No check-in</div></div>`;
+      const lead = sess.photos[0];
+      return `<div class="bp-col">
+        <div class="bp-col__tag">${tag}</div>
+        ${lead ? thumb(lead) : `<div class="bp-none">No photo</div>`}
+        <div class="bp-col__date">${escHtml(dateLong(sess.date))}</div>
+        <div class="bp-col__w">${kg(sess.weight) ? escHtml(kg(sess.weight)) : "—"}</div>
+      </div>`;
+    };
+
+    return `
+      ${presets.length ? `<div class="bp-presets">
+        ${presets.map(p=>`<button class="cat-chip" data-bp-preset="${escHtml(p.other.id)}" data-bp-preset-b="${escHtml(p.latest.id)}">${escHtml(p.label)}</button>`).join("")}
+      </div>` : ""}
+      <div class="bp-pickers">${picker("a", aId)}<span>vs</span>${picker("b", bId)}</div>
+      <div class="bp-compare">${column(A,"Before")}${column(B,"After")}</div>
+      ${d.days != null ? `<div class="bp-deltas">
+        <span class="bp-delta">${Math.abs(d.days)} days apart</span>
+        ${chip("Weight", d.weight, " " + wUnit(), true)}
+        ${chip("Body fat", d.bodyfat, "%", true)}
+        ${chip("Waist", d.waist, " cm", true)}
+        ${chip("Chest", d.chest, " cm", false)}
+      </div>` : ""}`;
   }
 
-  function compareView(){
-    if(photos.length<2) return `<div class="wk-empty">Need at least 2 photos in this category to compare.</div>`;
-    const a = photos.find(p2=>p2.id===state.bodyCompareA) || photos[photos.length-1];
-    const b = photos.find(p2=>p2.id===state.bodyCompareB) || photos[0];
-    const urlA = photoFullUrl(a.id), urlB = photoFullUrl(b.id);
-    const mode = state.bodyCompareMode || "slider";
-    const pct = state.bodyCompareSliderPct!=null ? state.bodyCompareSliderPct : 50;
-    const picker = (label, sel, val) => `<div style="flex:1;"><label class="pi-label">${label}</label>
-      <select class="pi-input" data-body-compare-select="${sel}">
-        ${photos.map(ph=>`<option value="${ph.id}" ${ph.id===val?'selected':''}>${ph.date}</option>`).join("")}
-      </select></div>`;
-    return `
-      <div style="display:flex;gap:8px;margin-bottom:10px;">${picker("Before","A",a.id)}${picker("After","B",b.id)}</div>
-      <div style="display:flex;gap:6px;margin-bottom:10px;">
-        <button class="cat-chip ${mode==='slider'?'active':''}" data-body-compare-mode="slider" style="flex:1;text-align:center;">Photo Slider</button>
-        <button class="cat-chip ${mode==='sideBySide'?'active':''}" data-body-compare-mode="sideBySide" style="flex:1;text-align:center;">Side by Side</button>
-      </div>
-      ${mode==="sideBySide" ? `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div style="aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;background:#000;">${urlA?`<img src="${urlA}" style="width:100%;height:100%;object-fit:cover;transform:rotate(${a.rotation||0}deg);">`:''}</div>
-          <div style="aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;background:#000;">${urlB?`<img src="${urlB}" style="width:100%;height:100%;object-fit:cover;transform:rotate(${b.rotation||0}deg);">`:''}</div>
-        </div>` : `
-        <div id="body-compare-slider" style="position:relative;width:100%;aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;background:#000;user-select:none;">
-          ${urlB?`<img src="${urlB}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:rotate(${b.rotation||0}deg);">`:''}
-          <div style="position:absolute;inset:0;width:${pct}%;overflow:hidden;">
-            ${urlA?`<img src="${urlA}" style="width:${pct>0?(100/(pct/100)):100}%;max-width:none;height:100%;object-fit:cover;transform:rotate(${a.rotation||0}deg);">`:''}
-          </div>
-          <div style="position:absolute;top:0;bottom:0;left:${pct}%;width:2px;background:#fff;"></div>
-          <input type="range" min="0" max="100" value="${pct}" data-body-compare-slider style="position:absolute;left:0;right:0;bottom:8px;width:92%;margin:0 4%;">
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--rh-muted);margin-top:4px;"><span>Before · ${a.date}</span><span>After · ${b.date}</span></div>`}
-    `;
+  /* ---- grid ---- */
+  function gridView(){
+    const flat = shown.reduce((a,x)=>a.concat(x.photos), []);
+    if(!flat.length) return `<div class="bp-none">No photos match these filters.</div>`;
+    return `<div class="bp-grid">${flat.map(ph=>thumb(ph)).join("")}</div>`;
   }
+
+  const tabBtn = (id,label) => `<button class="cat-chip ${view===id?'active':''}" data-body-scan-view="${id}" style="flex:1;text-align:center;">${label}</button>`;
 
   return `<div class="pg-light">
     <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:6px;" data-action="close-body-scan-archive">← Back</button>
-    <div style="font-size:22px;font-weight:800;">Body Scan Archive</div>
-    <div style="font-size:12px;color:var(--rh-muted);margin-bottom:14px;">${state.bodyPhotos.length} photo${state.bodyPhotos.length!==1?'s':''} stored on this device.</div>
-    <div style="display:flex;gap:4px;margin-bottom:12px;">${tabBtn('grid','Grid')}${tabBtn('timeline','Timeline')}${tabBtn('compare','Compare')}</div>
-    ${view!=="compare" ? catChips : ''}
-    <div class="pg-card">${view==="grid"?gridView():view==="timeline"?timelineView():compareView()}</div>
+    <div style="font-size:22px;font-weight:800;">Progress Photos</div>
+    <div style="font-size:12px;color:var(--rh-muted);margin-bottom:14px;">${all.length} check-in${all.length!==1?'s':''} · ${state.bodyPhotos.length} photo${state.bodyPhotos.length!==1?'s':''} on this device.</div>
+    <div style="display:flex;gap:4px;margin-bottom:12px;">${tabBtn('timeline','Timeline')}${tabBtn('compare','Compare')}${tabBtn('grid','Grid')}</div>
+    ${view!=="compare" ? filterBar() : ""}
+    <div class="pg-card">${view==="timeline"?timelineView():view==="compare"?compareView():gridView()}</div>
     ${state.viewingBodyPhotoId!=null ? renderBodyPhotoViewer(state.viewingBodyPhotoId, state.bodyPhotos) : ""}
+  </div>`;
+}
+
+/* =========================================================
+   THE WEIGH-IN CARD
+
+   Shown above the chart on the Log Weight screen. Its job is to make the number mean
+   something: what it is against the last log, against the 7- and 30-day averages, and against
+   the goal — plus one line of copy chosen by which of those comparisons actually applies.
+
+   The comparisons are the point. A single reading swings with water, salt, sleep and
+   glycogen, so the average columns are what a user should be reading, and putting them beside
+   the raw delta is how the card teaches that without a paragraph of explanation.
+
+   Every figure here is derived, never stored: IgnytWeight reads state.bodylog on demand, so
+   there is no second copy of the weight history to fall out of step with the first.
+========================================================= */
+function renderWeighInCard(){
+  if(!window.IgnytWeight) return "";
+  let s = null;
+  try { s = IgnytWeight.summary(state); } catch(e){ return ""; }
+  if(!s || !s.analysis) return "";
+  const a = s.analysis;
+  const line = (s.message && s.message.line) || "";
+  const ctx = (s.message && s.message.context) || "";
+
+  // Colour follows the user's own direction of travel, not "down is good". A muscle-gain user
+  // seeing red for a gain would be told the opposite of the truth.
+  const good = ctx === "weightProgress" || ctx === "weightMilestone" || ctx === "weightGoalReached";
+  const tone = ctx === "weightSteady" ? "var(--rh-muted)" : good ? "var(--rh-green)" : "var(--rh-blue)";
+  const icon = ctx === "weightGoalReached" ? "🎯" : ctx === "weightMilestone" ? "🏆"
+             : ctx === "weightSteady" ? "➖" : good ? "📈" : "〰️";
+
+  const delta = (v, invert) => {
+    if(v == null) return `<span style="color:var(--rh-muted);">—</span>`;
+    const sign = v > 0 ? "+" : v < 0 ? "−" : "";
+    const col = Math.abs(v) < 0.05 ? "var(--rh-muted)"
+      : ((a.direction === "up") === (v > 0)) ? "var(--rh-green)" : "var(--rh-blue)";
+    return `<span style="color:${a.direction ? col : "var(--rh-text)"};">${sign}${displayW(Math.abs(v),1)}</span>`;
+  };
+
+  const cell = (label, body, sub) => `<div style="flex:1;min-width:0;text-align:center;">
+    <div class="mono" style="font-size:15px;font-weight:800;">${body}</div>
+    <div style="font-size:10px;color:var(--rh-muted);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-top:2px;">${label}</div>
+    ${sub ? `<div style="font-size:10px;color:var(--rh-muted);margin-top:1px;">${sub}</div>` : ""}
+  </div>`;
+
+  // Only comparisons with data behind them get a column. A "vs 30-day average" that is really
+  // "vs the two entries you have" is worse than no column at all.
+  const cells = [];
+  if(a.moved != null) cells.push(cell("vs last", delta(a.moved), a.daysSincePrevious ? a.daysSincePrevious + "d ago" : ""));
+  if(a.avg7 != null && a.entries >= 3) cells.push(cell("vs 7-day avg", delta(a.vsAvg7), displayW(a.avg7,1) + " " + wUnit()));
+  if(a.avg30 != null && a.entries >= 5) cells.push(cell("vs 30-day avg", delta(a.vsAvg30), displayW(a.avg30,1) + " " + wUnit()));
+  if(a.toGoal != null && !a.reachedGoal) cells.push(cell("to goal", displayW(a.toGoal,1), displayW(a.goalWeight,1) + " " + wUnit()));
+
+  return `<div class="pg-card" style="margin-top:12px;border-left:3px solid ${tone};">
+    <div style="display:flex;gap:10px;align-items:flex-start;">
+      <span style="font-size:20px;line-height:1.2;flex:none;">${icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:700;line-height:1.45;">${escHtml(line)}</div>
+        ${a.loggingStreak >= 3 ? `<div style="font-size:11px;color:var(--rh-muted);margin-top:4px;">${a.loggingStreak}-day logging streak.</div>` : ""}
+      </div>
+    </div>
+    ${cells.length ? `<div style="display:flex;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--rh-border);">${cells.join("")}</div>` : ""}
+    <div style="font-size:10px;color:var(--rh-muted);margin-top:10px;">Daily weight moves with water, food and sleep. The averages are the honest signal.</div>
+  </div>`;
+}
+
+/* =========================================================
+   THE BMI CARD
+
+   BMI is weight over height squared and nothing else. It cannot see muscle, and it was built
+   to describe populations rather than people — so this card shows the figure, the band it
+   falls in, the weight range that would sit inside the healthy band for this height, and one
+   line of encouragement, and then says plainly what the number does not know.
+
+   The band labels are the app's own wording, not the clinical terms. The cut-offs are the
+   standard ones (changing those would make the figure incomparable with anything else the
+   user reads); the framing is the part that is allowed to be kind.
+
+   Log Weight only. It was on Home too and was taken off — a screening ratio that cannot see
+   muscle does not belong on the screen someone opens every morning. It stays where they have
+   gone looking for the number.
+========================================================= */
+function renderBmiCard(){
+  if(!window.IgnytBMI) return "";
+  let b = null;
+  try { b = IgnytBMI.summary(state); } catch(e){ return ""; }
+  if(!b) return "";                      // no height or no weight: show nothing, explain nothing
+
+  const TONES = { blue:"var(--rh-blue)", green:"var(--rh-green)", amber:"#D97706", red:"var(--rh-red)" };
+  const col = TONES[b.tone] || "var(--rh-muted)";
+
+  // A scale from 15 to 40 covers every band boundary with room at both ends; the marker is
+  // clamped so an extreme figure sits at the edge instead of outside the bar.
+  const pos = Math.max(0, Math.min(100, (b.bmi - 15) / 25 * 100));
+  const bar = `<div style="position:relative;height:8px;border-radius:4px;margin:14px 0 6px;
+      background:linear-gradient(to right,
+        #2563EB 0%, #2563EB 14%,
+        var(--rh-green) 14%, var(--rh-green) 40%,
+        #D97706 40%, #D97706 60%,
+        #DC2626 60%, #DC2626 100%);">
+      <div style="position:absolute;top:-4px;left:${pos.toFixed(1)}%;width:4px;height:16px;border-radius:2px;
+        background:var(--rh-text);border:2px solid var(--rh-card);transform:translateX(-50%);"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--rh-muted);font-weight:700;">
+      <span>15</span><span>18.5</span><span>25</span><span>30</span><span>40</span>
+    </div>`;
+
+  const range = b.healthyRange
+    ? `${displayW(b.healthyRange.min,1)}–${displayW(b.healthyRange.max,1)} ${wUnit()}` : null;
+
+  return `<div class="pg-card" style="margin-top:12px;">
+    <div class="pg-card__head" style="margin-bottom:0;">
+      <span class="pg-card__title">Body Mass Index</span>
+      <span style="font-size:11px;font-weight:800;color:${col};">${escHtml(b.label)}</span>
+    </div>
+    <div style="display:flex;align-items:baseline;gap:8px;margin-top:6px;">
+      <span class="mono" style="font-size:34px;font-weight:900;color:${col};line-height:1;">${b.bmi.toFixed(1)}</span>
+      <span style="font-size:11px;color:var(--rh-muted);">from ${displayW(b.weight,1)} ${wUnit()} at ${b.height} cm</span>
+    </div>
+    ${bar}
+    ${range ? `<div style="display:flex;gap:8px;margin-top:12px;">
+      <div style="flex:1;background:var(--rh-bg);border-radius:10px;padding:9px 10px;">
+        <div style="font-size:10px;color:var(--rh-muted);font-weight:700;text-transform:uppercase;">Healthy range for ${b.height} cm</div>
+        <div class="mono" style="font-size:14px;font-weight:800;margin-top:2px;">${range}</div>
+      </div>
+      ${b.distance && b.distance.direction !== "none" ? `<div style="flex:1;background:var(--rh-bg);border-radius:10px;padding:9px 10px;">
+        <div style="font-size:10px;color:var(--rh-muted);font-weight:700;text-transform:uppercase;">To that range</div>
+        <div class="mono" style="font-size:14px;font-weight:800;margin-top:2px;">${displayW(b.distance.kg,1)} ${wUnit()} ${b.distance.direction === "down" ? "down" : "up"}</div>
+      </div>` : `<div style="flex:1;background:var(--rh-bg);border-radius:10px;padding:9px 10px;">
+        <div style="font-size:10px;color:var(--rh-muted);font-weight:700;text-transform:uppercase;">Status</div>
+        <div style="font-size:13px;font-weight:800;margin-top:2px;color:var(--rh-green);">Inside the range</div>
+      </div>`}
+    </div>` : ""}
+    ${b.message ? `<div style="font-size:13px;line-height:1.5;margin-top:12px;padding-top:12px;border-top:1px solid var(--rh-border);">${escHtml(b.message)}</div>` : ""}
+    <!-- The caveat travels with the number, always. A BMI figure shown without a qualifier
+         beside it is the thing this card exists to avoid. -->
+    <div style="font-size:10px;color:var(--rh-muted);margin-top:10px;line-height:1.5;">BMI compares weight with
+      height. It cannot see muscle, bone or body composition, and it is a general screening figure rather than a
+      measure of your health. It is not a diagnosis.</div>
   </div>`;
 }
 
@@ -8468,12 +12558,12 @@ function renderBodyTab(){
   const yearlyChangeKg = (latestW && yearAgo && yearAgo!==latestW) ? Number(latestW.weight)-Number(yearAgo.weight) : null;
   const trendLabel = weeklyChangeKg==null ? "—" : weeklyChangeKg<0 ? "Down" : weeklyChangeKg>0 ? "Up" : "Flat";
 
-  // BMI/BMR/TDEE -- always computed live from weight+profile (never stored, never stale).
-  // BMR/TDEE reuse the exact same Mifflin-St Jeor + activity-multiplier formulas the Profile
-  // tab's calorie target already uses (calcBMR/profileMaintenance), so the number here always
+  // BMR/TDEE -- always computed live from weight+profile (never stored, never stale). They
+  // reuse the exact same Mifflin-St Jeor + activity-multiplier formulas the Profile tab's
+  // calorie target already uses (calcBMR/profileMaintenance), so the number here always
   // matches Nutrition's maintenance figure instead of drifting via a second formula.
+  // BMI is not computed here any more -- IgnytBMI owns it, and renderBmiCard() reads state.
   const curWeightKg = latestW ? Number(latestW.weight) : p.weight;
-  const bmiValue = p.height ? curWeightKg/((p.height/100)**2) : null;
   const bmrValue = Math.round(calcBMR(p.age, p.gender, p.height, curWeightKg));
   const tdeeValue = Math.round(bmrValue * p.activityMultiplier);
 
@@ -8522,7 +12612,7 @@ function renderBodyTab(){
               <div style="font-size:11px;color:var(--rh-muted);margin-top:4px;">${goalRemaining!=null?goalRemaining+' '+wUnit()+' remaining':''}${goalCompute&&goalCompute.completion?' · Est. completion: '+new Date(goalCompute.completion).toLocaleDateString('default',{month:'short',year:'numeric'}):''}</div>`
               : `<div style="font-size:11px;color:var(--rh-muted);margin-top:10px;">No active goal — set one in Fitness Goals.</div>`}
           </div>
-          ${goal ? `<div style="flex:none;">${(()=>{ const pct=goalPct||0; return `<div class="pg-ring" style="--pct:${pct};--ring-color:var(--rh-blue);width:76px;height:76px;"><div class="pg-ring__inner" style="width:60px;height:60px;flex-direction:column;"><div style="font-size:16px;font-weight:800;">${pct}%</div><div style="font-size:8px;color:var(--rh-muted);font-weight:700;">Goal</div></div></div>`; })()}</div>` : ''}
+          ${goal ? `<div style="flex:none;">${(()=>{ const pct=goalPct||0; return `<div class="pg-ring" style="--pct:${pct};--ring-color:var(--rh-blue);width:76px;height:76px;"><div class="pg-ring__inner" style="width:60px;height:60px;flex-direction:column;"><div style="font-size:16px;font-weight:800;">${pct}%</div><div style="font-size:11px;color:var(--rh-muted);font-weight:700;">Goal</div></div></div>`; })()}</div>` : ''}
         </div>
         <div class="pg-card" style="display:flex;flex-direction:column;gap:10px;">
           <button class="rh-btn rh-btn--primary" style="padding:10px;font-size:13px;" data-action="add-weight-focus">${svg('plus',14)} Add Weight</button>
@@ -8531,6 +12621,10 @@ function renderBodyTab(){
           <div class="pi-row" style="background:none;border:none;padding:0;"><span class="pi-row__icon">${svg('target',14)}</span><div class="pi-row__body"><div class="pi-row__label">Unit</div><div class="pi-row__value">${wUnit()==='kg'?'Kilograms (kg)':'Pounds (lb)'}</div></div></div>
         </div>
       </div>
+
+      ${renderWeighInCard()}
+
+      ${renderBmiCard()}
 
       <div class="pg-card" style="margin-top:12px;">
         <div class="pg-card__head">
@@ -8545,10 +12639,12 @@ function renderBodyTab(){
         ${chartPoints.length ? axisAreaChart(chartPoints, {color:"var(--rh-blue)", unit:' '+chartMetric.unit()}) : `<div class="wk-empty">No ${escHtml(chartMetric.label.toLowerCase())} data in this range yet.</div>`}
       </div>
 
-      <div class="pg-stat-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-top:12px;">
-        <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('body',16)}</span>
-          <div class="pg-stat-card__value">${bmiValue!=null?bmiValue.toFixed(1):'—'}</div>
-          <div class="pg-stat-card__label">BMI</div><div class="pg-stat-card__sub">${bmiValue!=null?bmiCategory(bmiValue):''}</div></div>
+      <!-- BMI moved out of this grid and into renderBmiCard() above, which shows the same
+           figure against the six standard bands, the healthy weight range for this height,
+           and a line of encouragement. Two BMI readouts on one screen was one too many, and
+           the small card's four-band label called 18.5-25 "Normal" -- a word the new card
+           deliberately does not use about a person. -->
+      <div class="pg-stat-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-top:12px;">
         <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(217,119,6,.12);color:#D97706;">${svg('flame',16)}</span>
           <div class="pg-stat-card__value">${bmrValue}<span class="pg-stat-card__unit">kcal</span></div>
           <div class="pg-stat-card__label">BMR</div><div class="pg-stat-card__sub">at rest</div></div>
@@ -8595,7 +12691,7 @@ function renderBodyTab(){
               <span style="font-size:17px;font-weight:800;">${displayW(e.weight)} ${wUnit()}</span>
               ${d!=null?`<span style="color:${d<=0?'var(--rh-green)':'var(--rh-red)'};font-size:13px;">${d>0?'▲':d<0?'▼':''}</span>`:''}
             </div>
-            <div style="font-size:10px;color:var(--rh-muted);margin-top:4px;">${time}</div>
+            <div style="font-size:11px;color:var(--rh-muted);margin-top:4px;">${time}</div>
           </div>`;
         }).join('')}
       </div>`}
@@ -8617,7 +12713,7 @@ function renderBodyTab(){
       <div class="rh-section-head"><span>Log Entry</span></div>
       <div class="pg-card" id="body-log-entry">
         <div class="pi-grid2">
-          <div><label class="pi-label">Date</label><input type="date" id="b-date" value="${new Date().toISOString().slice(0,10)}" class="pi-input"></div>
+          <div><label class="pi-label">Date</label><input type="date" id="b-date" value="${dayKey()}" class="pi-input"></div>
           ${fieldSm("b-weight",`Weight (${wUnit()})`,wUnit()==='lb'?'220':'101.0',"var(--rh-blue)")}
         </div>
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">Body</div>
@@ -8661,7 +12757,7 @@ function renderBodyTab(){
           const url = photoThumbUrl(ph.id);
           return `<button data-view-body-photo="${ph.id}" style="position:relative;aspect-ratio:3/4;border-radius:var(--radius-sm);overflow:hidden;border:none;padding:0;background:var(--rh-border);cursor:pointer;">
             ${url ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;transform:rotate(${ph.rotation||0}deg);">` : skeletonImage()}
-            <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:var(--radius-2xs);padding:2px 4px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(ph.category)}</span>
+            <span style="position:absolute;left:4px;bottom:4px;right:4px;font-size:11px;font-weight:800;color:#fff;background:rgba(0,0,0,.55);border-radius:var(--radius-2xs);padding:2px 4px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(ph.category)}</span>
             ${ph.milestone?`<span style="position:absolute;top:4px;right:4px;">${svg('star',14)}</span>`:''}
           </button>`;
         }).join("")}
@@ -8676,128 +12772,1351 @@ function renderBodyTab(){
    NUTRITION TAB — meals, macro budgets, insights
 ========================================================= */
 
-function renderNutritionTab(){
-  const n = state.nutrition;
-  const targets = macroTargets();
-  const weeklyLoss = (Math.abs(state.profile.goalDelta)*7)/7700;
+/* ---- Food logging flow (full-screen routes) ------------------------------------------
+   Dashboard → tap a meal's + → Food Search → tap a food → Food Details → Add → back to the
+   dashboard with that meal expanded and the new entry highlighted.
 
-  const eaten = todayEaten();
+   These are routes rather than panels because the old inline accordion put a search box, a
+   result list, a detail panel and a nutrition table inside a card inside a scrolling page.
+   Each step now owns the screen, which is what makes the flow legible — and it means the
+   search input is the only focusable thing on its screen, so the keyboard has nowhere to
+   push anything to.
+
+   State is transient by design: leaving and returning to the tab lands on the dashboard
+   rather than resuming a half-finished entry someone forgot about. */
+
+/* Voice search.
+
+   Uses the Web Speech API where the WebView exposes it, and says so plainly where it does
+   not, rather than shipping a button that silently does nothing. No Capacitor plugin and no
+   new permission in the manifest — Android prompts for the microphone itself on first use,
+   and if the user declines, the error path below explains what happened.
+
+   Availability genuinely varies: Chrome-backed WebViews usually have it, and it needs a
+   network round-trip on most Android builds. Both failure modes are reported. */
+function startFoodVoiceSearch(){
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!Rec){
+    showToast("Voice search isn't available on this device — type the food name instead.", "error", render);
+    return;
+  }
+  try{
+    const rec = new Rec();
+    rec.lang = navigator.language || "en-US";
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    showToast("Listening…", "success", render);
+    rec.onresult = (e)=>{
+      const said = e.results && e.results[0] && e.results[0][0] && e.results[0][0].transcript;
+      if(!said) return;
+      state.foodSearchQuery = String(said).trim();
+      state.foodResultPage = 1;
+      state.foodSearchSelected = null;
+      render();
+    };
+    rec.onerror = (e)=>{
+      const why = e && e.error === "not-allowed" ? "Microphone access was denied."
+                : e && e.error === "network" ? "Voice search needs a network connection."
+                : "Voice search didn't catch that.";
+      showToast(why, "error", render);
+    };
+    rec.start();
+  }catch(err){
+    showToast("Voice search couldn't start on this device.", "error", render);
+  }
+}
+
+/* ---- Scroll preservation across the food routes ------------------------------------
+   render() replaces the contents of #app wholesale, so the browser has nothing to restore
+   and the page lands at the top. Anyone logging three foods into Dinner would scroll back
+   down three times.
+
+   The offset is captured on the way OUT (opening a route) and restored on the way BACK, in
+   closeFoodFlow() — which every exit runs through.
+
+   THE PAGE SCROLLS ON THE WINDOW. An earlier version of this read main.scrollTop; there is
+   no <main> in this app and #app has overflow:visible, so every call was a silent no-op
+   against a null element. Verified in the browser: window.scrollTo(0,500) moves
+   documentElement.scrollTop to 500 while #app.scrollTop stays 0.
+
+   Restored in requestAnimationFrame rather than immediately: the new DOM exists as soon as
+   render() returns but has not been laid out, so the document has no height yet and any
+   assignment clamps to 0. One frame later the height is real. No smooth behaviour — this is
+   a restoration, and animating it would draw attention to a movement the reader should never
+   notice. */
+let _nutritionScroll = 0;
+
+function nutritionScroller(){
+  // A scrolling container if the layout ever grows one; the document otherwise.
+  return document.querySelector("main") || document.scrollingElement || document.documentElement;
+}
+
+function captureNutritionScroll(){
+  const el = nutritionScroller();
+  if(el) _nutritionScroll = el.scrollTop;
+}
+
+function restoreNutritionScroll(){
+  if(!_nutritionScroll) return;
+  const target = _nutritionScroll;
+  const apply = ()=>{
+    const el = nutritionScroller();
+    if(!el) return;
+    // Clamp: the list may be shorter now (a deletion), and asking for an offset past the end
+    // would silently land at the bottom instead of where the content actually is.
+    el.scrollTop = Math.min(target, Math.max(0, el.scrollHeight - el.clientHeight));
+  };
+  /* Two attempts, deliberately. rAF is the right moment — one frame after render(), when the
+     new DOM has been laid out and the document finally has a height. But rAF does not fire at
+     all while the page is not compositing frames, which is observable: with the preview pane
+     hidden, a requestAnimationFrame queued here never ran and the restore silently did not
+     happen. That is precisely the failure this function exists to prevent, so the timeout is
+     the floor under it. Applying the same clamped offset twice is a no-op. */
+  requestAnimationFrame(apply);
+  setTimeout(apply, 50);
+}
+
+/** render() that keeps the reader where they were. For anything that changes the food log
+ *  without changing screen. */
+function renderKeepingScroll(){
+  captureNutritionScroll();
+  render();
+  restoreNutritionScroll();
+}
+
+function openFoodSearch(meal, target){
+  // Captured here so returning from anywhere in the flow lands back on this exact offset.
+  captureNutritionScroll();
+  /* `target` routes where the chosen food ends up. Undefined means the food log, which is
+     what every pre-existing caller passes, so the default path is untouched. The Diet Plan
+     Builder passes {kind:"plan", planId, meal} and reuses this entire search/detail flow
+     rather than growing a second food picker that would drift from this one. */
+  state.foodFlow = { screen:"search", meal: meal || mealForNow(), foodId:null, notes:"",
+                     target: target || null };
+  state.foodSearchQuery = "";
+  state.foodSearchSelected = null;
+  state.foodBrowseCategory = null;
+  state.foodResultPage = 1;
+  state.foodBrowsePage = 1;
+}
+
+function openFoodDetail(foodId){
+  if(!state.foodFlow) return;
+  const food = lookupFood(foodId, state.foodSearchQuery);
+  if(!food) return;
+  // Carry the search that found it, so Back returns to a populated list rather than a blank
+  // screen the user has to retype.
+  if(state.foodSearchQuery && IgnytFoodSearch.rememberSearch) IgnytFoodSearch.rememberSearch(state.foodSearchQuery);
+  state.foodFlow.screen = "detail";
+  state.foodFlow.foodId = foodId;
+  state.foodSearchSelected = { id: food.id, name: food.name };
+  const d = defaultFoodPortion(food);
+  state.foodSearchAmount = d.amount;
+  state.foodSearchUnit = d.unit;
+}
+
+/* Opens Food Details for an entry ALREADY in the log.
+   Same screen as adding, in "edit" mode: the serving controls start from what was logged,
+   and the primary action saves instead of adding. Every edit action that used to sit in the
+   inline panel — move, duplicate, delete — lives here now. */
+function openLoggedFoodDetail(entryId){
+  const entry = foodEntryById(entryId);
+  if(!entry) return;
+  // Same capture as openFoodSearch: editing a logged row is a round trip off the tab, and the
+  // reader expects to come back to the row they tapped, not to the top.
+  captureNutritionScroll();
+  const food = entry.foodId != null ? lookupFood(entry.foodId, entry.name) : null;
+
+  state.foodFlow = {
+    screen: "detail",
+    mode: "edit",
+    meal: entry.meal || mealTypes()[0],
+    foodId: entry.foodId != null ? entry.foodId : null,
+    entryId: entry.id,
+    notes: entry.note || ""
+  };
+  state.foodSearchSelected = food ? { id: food.id, name: food.name } : null;
+  // Start the controls from what was actually logged, not from a default.
+  state.foodSearchAmount = entry.quantity != null ? entry.quantity : (entry.grams || null);
+  state.foodSearchUnit = entry.servingUnit || "g";
+}
+
+
+/* Opens Food Details for an item already in a DIET PLAN, in edit mode. Deliberately reuses
+   the whole search/detail/serving screen rather than growing a plan-specific serving editor:
+   scaling a food is the same problem in both places, and two implementations of it would
+   disagree the first time either changed. */
+function openPlanItemDetail(planId, mealId, itemId){
+  const D = window.IgnytDietPlans;
+  if(!D) return;
+  const item = D.findItem(planId, mealId, itemId);
+  if(!item) return;
+  const food = item.foodId != null ? lookupFood(item.foodId, item.name) : null;
+
+  state.foodFlow = {
+    screen: "detail",
+    mode: "edit",
+    meal: item.name,
+    foodId: item.foodId != null ? item.foodId : null,
+    entryId: null,
+    notes: item.note || "",
+    target: { kind: "plan-edit", planId: planId, mealId: mealId, itemId: itemId }
+  };
+  state.foodSearchSelected = food ? { id: food.id, name: food.name } : null;
+  // Start from what is actually in the plan, not from a default serving.
+  state.foodSearchAmount = item.quantity != null ? item.quantity : (item.grams || null);
+  state.foodSearchUnit = item.servingUnit || "g";
+  state.nutritionScreen = null;
+}
+
+/* Every exit from the food routes runs through here — cancel, save, add, duplicate, delete,
+   and the two guards that bail out when an entry has vanished underneath the screen. So the
+   scroll restore lives here rather than at eight call sites, where the eighth would be the
+   one somebody forgot.
+
+   It is scheduled, not applied: each caller renders immediately after this returns, and the
+   restore is a requestAnimationFrame that lands once that render has been laid out. */
+function closeFoodFlow(){
+  state.foodFlow = null;
+  state.foodSearchSelected = null;
+  state.foodSearchQuery = "";
+  state.foodBrowseCategory = null;
+  restoreNutritionScroll();
+}
+
+/** Header shared by both routes: back arrow, title, optional trailing control. */
+function foodPageHeader(title, subtitle, trailing){
+  return `<div class="food-page__head">
+    <button class="food-page__back" data-food-flow-back="1" aria-label="Back">←</button>
+    <div style="flex:1;min-width:0;text-align:center;">
+      <div class="food-page__title">${escHtml(title)}</div>
+      ${subtitle?`<div class="food-page__sub">${escHtml(subtitle)}</div>`:""}
+    </div>
+    ${trailing || `<span style="width:36px;flex-shrink:0;"></span>`}
+  </div>`;
+}
+
+/* =========================================================
+   AI FOOD SCAN — the Food Log surface
+
+   Four ways in, per the brief: AI Scan, Camera, Gallery, Manual Entry — plus the barcode
+   button that already lived in the header. AI Scan and Camera differ only in whether the
+   picker opens the camera directly, so they share one path.
+
+   WHAT IS SHOWN DEPENDS ON WHAT IS TRUE. The row asks the backend once for scan-status and
+   then renders the honest thing: the allowance when scanning is available, and nothing at all
+   when the server has no key configured. An always-visible button that fails on tap is worse
+   than no button. (There was a third case here for an unentitled account; premium gating is
+   off, so it cannot occur.)
+========================================================= */
+
+
+/* The overlay: one element covering loading, error and review. Kept as a single render so
+   there is no chance of two of these being on screen at once. */
+/* ---- AI scan: actions ------------------------------------------------------------- */
+
+/** Fetch scan-status once per open. Failure is silent and non-blocking: the row simply does
+ *  not offer AI, and the rest of the food screen is unaffected. */
+/** Commit the reviewed foods to the log. */
+function renderFoodSearchPage(){
+  const flow = state.foodFlow;
+  const meal = flow.meal;
+  const cat = window.IgnytFoodCatalogue;
+  if(cat && cat.status() === "idle") cat.onReady(()=>render());
+
+  const dayEntries = foodsForDate(nutritionDateStr());
+  const mealKcal = Math.round(dayEntries.filter(f=>(f.meal||"Lunch")===meal)
+    .reduce((a,f)=>a+Number(f.calories||0),0));
+  const total = cat ? cat.count() : IgnytFoodDB.count();
+
+  return `<div class="food-page">
+    ${foodPageHeader(meal, `${mealKcal} kcal logged`,
+      `<button class="food-page__icon" data-food-scan="1" aria-label="Scan barcode">▤</button>`)}
+
+    <div class="food-search-bar">
+      <span class="food-search-bar__icon" aria-hidden="true">⌕</span>
+      <input type="text" id="food-search-input" autocomplete="off"
+        placeholder="Search by Food Name/Dish" value="${escHtml(state.foodSearchQuery||"")}">
+      ${state.foodSearchQuery?`<button class="food-search-bar__clear" data-food-clear="1" aria-label="Clear search">✕</button>`:""}
+      <button class="food-search-bar__voice" data-food-voice="1" aria-label="Voice search">🎙</button>
+    </div>
+
+    <div id="food-search-results">${foodSearchResultsHtml(meal)}</div>
+
+    <!-- Manual entry. It used to live inside the meal card, gated behind the accordion that
+         Part 1 removed; it is not superseded by anything, so it moves here rather than being
+         deleted — without it there is no way to log a food the database does not have.
+         Collapsed by default so the search screen does not open with a form in your face. -->
+    <div class="food-missing__wrap">
+      <button class="food-missing" data-action="toggle-manual-entry"
+        aria-expanded="${state.manualEntryOpen?'true':'false'}">
+        <span>Can&rsquo;t find your food?</span>
+        <span class="food-missing__go" aria-hidden="true">${state.manualEntryOpen?'−':'→'}</span>
+      </button>
+
+      ${state.manualEntryOpen ? `
+        <div style="margin-top:var(--space-sm);">
+          <input type="text" id="food-name" class="food-input" placeholder="Food name" style="margin-bottom:var(--space-xs);">
+          <div style="display:flex;gap:var(--space-2xs);margin-bottom:var(--space-xs);">
+            <input type="number" id="food-cal" class="food-input" placeholder="kcal*" style="text-align:center;color:var(--accent);padding:11px 4px;">
+            <input type="number" id="food-protein" class="food-input" placeholder="P" style="text-align:center;padding:11px 4px;">
+            <input type="number" id="food-carbs" class="food-input" placeholder="C" style="text-align:center;padding:11px 4px;">
+            <input type="number" id="food-fat" class="food-input" placeholder="F" style="text-align:center;padding:11px 4px;">
+            <input type="number" id="food-fibre" class="food-input" placeholder="Fb" style="text-align:center;padding:11px 4px;">
+          </div>
+          <div style="display:flex;gap:var(--space-2xs);">
+            <button class="btn btn-accent" style="flex:1;" data-log-meal-food="${escHtml(meal)}">Add to ${escHtml(meal)}</button>
+            <button class="btn btn-ghost" style="width:48px;flex-shrink:0;" data-action="save-as-favorite" title="Save as favourite">★</button>
+          </div>
+        </div>` : ""}
+    </div>
+  </div>`;
+}
+
+/* The macro cells, as their own function so the full render and the live amount update draw
+   them from one definition rather than two that can drift. */
+function foodDetailMacrosHtml(calc){
+  const N = window.IgnytNutrition;
+  // null means the amount is invalid: dashes, so the macros agree with the calorie figure
+  // above rather than quietly showing the default portion's grams.
+  const row = k => calc ? calc.rows.find(r=>r.key===k) : null;
+  return [["calories","kcal","energy"],["protein","Protein","protein"],["carbs","Carbs","carbs"],
+          ["fat","Fat","fat"],["fibre","Fibre","fibre"]].map(([k,label,key])=>`
+    <div class="macro-row__cell">
+      <div class="nut-value nut-value--md">${calc?N.format(k, row(k).serving).replace(/ (kcal|g|mg)$/,""):"—"}<span class="nut-unit">${(calc && k!=="calories")?"g":""}</span></div>
+      <div class="macro-row__label" style="color:var(--n-${key});">${label}</div>
+    </div>`).join("");
+}
+
+/* Recomputes the figures the quantity drives and writes them straight into the DOM.
+ *
+ *  Typing used to call the app-wide render() on a 200ms debounce. That rebuilt the entire
+ *  page — including the <input> being typed into, which is what the "blinking" was — and on
+ *  a number input the caret cannot be restored afterwards, because selectionStart throws on
+ *  type="number" and withFocusPreserved has to skip it. So editing the middle of a weight
+ *  jumped the cursor to the end.
+ *
+ *  This is the same fix updateFoodSearchResults() applied to the search box: swap only what
+ *  changed, never the field the user is in. */
+function updateFoodDetailNumbers(){
+  const flow = state.foodFlow;
+  if(!flow || flow.screen !== "detail") return;
+  const N = window.IgnytNutrition;
+  if(!N) return;
+  /* Resolved exactly as the page does: the flow carries a foodId, not the food. Reading
+     flow.food instead returned undefined and this bailed out silently, which looked like the
+     figures simply not reacting. */
+  const food = flow.foodId != null
+    ? lookupFood(flow.foodId, state.foodSearchSelected && state.foodSearchSelected.name)
+    : null;
+  if(!food) return;
+
+  /* Recomputed exactly as renderFoodDetailPage() does, from the same helpers, so the live
+     figures and a full repaint can never disagree. */
+  const scalable = food.per != null;
+  const conv = window.IgnytServingConverter;
+  const portion = resolveFoodPortion(food);
+  const shownAmount = currentFoodAmount(food);
+  const check = scalable ? N.validateQuantity(food, shownAmount, portion.unit)
+                         : { ok:true, grams:1, amount:1, unit:"g", error:null };
+  const grams = check.ok ? check.grams : 0;
+  const calc = scalable ? N.compute(food, grams) : N.compute({ ...food, per:1 }, 1);
+
+  /* An invalid amount shows a dash, not a number. compute() treats zero grams as "no amount
+     given" and hands back the food's default portion, so the old code answered a rejected
+     10015 g with the calories for 100 g — a real figure sitting next to an error saying the
+     amount was refused, and next to a serving line reading 0 g. Three elements, three
+     different stories. A dash is the only honest answer while there is nothing valid to
+     scale from. */
+  const kcalText = check.ok ? N.format("calories", calc.rows.find(r=>r.key==="calories").serving).replace(" kcal","") : "—";
+
+  const kcal = document.getElementById("fd-kcal");
+  if(kcal) kcal.textContent = kcalText;
+
+  const serving = document.getElementById("fd-serving");
+  if(serving) serving.textContent = scalable ? (check.ok ? N.describeServing(food, check.amount, check.unit) : "—") : "per portion";
+
+  const macros = document.getElementById("fd-macros");
+  if(macros) macros.innerHTML = foodDetailMacrosHtml(check.ok ? calc : null);
+
+  const err = document.getElementById("fd-error");
+  if(err) err.innerHTML = check.ok ? "" : `<div style="font-size:11px;color:var(--accent);margin-top:6px;">${escHtml(check.error)}</div>`;
+
+  /* The sticky Add/Save button carries the calorie figure AND its own disabled state, both
+     driven by the amount. Updating everything except this was the gap: the button kept
+     showing the previous serving's calories, and — the part that actually mattered — stayed
+     enabled on an invalid amount, so a zero-gram entry could still be logged. */
+  document.querySelectorAll(".food-sticky__btn").forEach(btn=>{
+    btn.disabled = !check.ok;
+    const kcal = btn.querySelector(".food-sticky__kcal");
+    if(kcal) kcal.textContent = check.ok ? N.format("calories", calc.rows.find(r=>r.key==="calories").serving) : "—";
+  });
+
+  /* Which serving chip is highlighted, and the unit labels, both depend on the amount too.
+     Updating them here is what lets picking a preset or switching unit stop calling render():
+     a full render on this screen rebuilds the entire page around the control being tapped,
+     which is the most visible flicker in the whole add-food flow. */
+  const presets = document.getElementById("fd-presets");
+  if(presets){
+    const html = renderServingPresets(food, grams);
+    if(presets.innerHTML !== html){ presets.innerHTML = html; bindServingPresets(); }
+  }
+  const unitSel = document.getElementById("food-search-unit");
+  if(unitSel && scalable && conv){
+    if(unitSel.value !== portion.unit) unitSel.value = portion.unit;
+    Array.prototype.forEach.call(unitSel.options, opt=>{
+      const label = conv.labelFor(opt.value, shownAmount);
+      if(opt.textContent !== label) opt.textContent = label;
+    });
+  }
+}
+
+/* Serving preset chips. Split out of bindFoodResultHandlers() because the chips are the one
+ * thing in the detail screen that gets replaced on its own — updateFoodDetailNumbers() rewrites
+ * them when the amount changes. Re-running the whole bind pass instead would stack a second
+ * listener on the amount input, the unit select and the +/- buttons, none of which are ever
+ * replaced. */
+function bindServingPresets(){
+  document.querySelectorAll("[data-srv-amount]").forEach(el=>{
+    if(el.__srvBound) return;
+    el.__srvBound = true;
+    el.addEventListener("click", ()=>{
+      state.foodSearchAmount = Number(el.dataset.srvAmount);
+      state.foodSearchUnit = el.dataset.srvUnit;
+      const box = document.getElementById("food-search-amount");
+      if(box) box.value = String(state.foodSearchAmount);
+      if(state.foodFlow && state.foodFlow.screen === "detail"){
+        updateFoodDetailNumbers();
+        persist();
+      }else{
+        updateFoodSearchResults();
+      }
+    });
+  });
+}
+
+function renderFoodDetailPage(){
+  const flow = state.foodFlow;
+  const editing = flow.mode === "edit";
+  /* An edit target is normally a food-log entry. It can also be a DIET PLAN item, which has
+     the same snapshot shape but lives in a different store — so the lookup branches while
+     everything downstream (serving controls, scaling, macro rows) stays identical. */
+  const planEdit = editing && flow.target && flow.target.kind === "plan-edit";
+  const entry = editing
+    ? (planEdit
+        ? (window.IgnytDietPlans && IgnytDietPlans.findItem(flow.target.planId, flow.target.mealId, flow.target.itemId))
+        : foodEntryById(flow.entryId))
+    : null;
+  if(editing && !entry){
+    if(planEdit){ closeFoodFlow(); state.nutritionScreen = "dietplan"; return renderDietPlanScreen(); }
+    closeFoodFlow(); return renderNutritionTab();
+  }
+
+  const food = flow.foodId != null
+    ? lookupFood(flow.foodId, state.foodSearchSelected && state.foodSearchSelected.name)
+    : null;
+
+  // A manually entered food has no catalogue record to re-scale from, so the screen shows
+  // the numbers as logged and offers move/duplicate/delete/notes instead of serving
+  // controls. It says nothing about why — the absent controls are the whole message.
+  if(!food && !editing){ closeFoodFlow(); return renderNutritionTab(); }
+  if(!food) return renderLoggedEntryDetailPage(entry, flow);
+
+  const N = window.IgnytNutrition;
+  const conv = window.IgnytServingConverter;
+  const scalable = food.per != null;
+  const p = resolveFoodPortion(food);
+  const shownAmount = currentFoodAmount(food);
+  const check = scalable ? N.validateQuantity(food, shownAmount, p.unit)
+                         : { ok:true, grams:1, amount:1, unit:"g", error:null };
+  const grams = check.ok ? check.grams : 0;
+  const calc = scalable ? N.compute(food, grams) : N.compute({ ...food, per:1 }, 1);
+  const isFav = (state.favoriteFoods||[]).some(x=>x && String(x.name).toLowerCase()===String(food.name).toLowerCase());
+  const units = (scalable && conv) ? conv.unitsFor(food) : ["g"];
+  /* An entry logged before the unit lists were narrowed may carry a unit its food no longer
+     offers — milk saved in grams, whey saved as a "bowl". Keeping it in the list means
+     opening that entry to edit shows what was actually logged instead of silently switching
+     it to the first option and rewriting the amount. It disappears once changed. */
+  if(p.unit && units.indexOf(p.unit) < 0) units.unshift(p.unit);
+  const row = k => calc.rows.find(r=>r.key===k);
+
+  return `<div class="food-page">
+    ${foodPageHeader("Food details", null,
+      `<button class="food-page__icon${isFav?' is-on':''}" data-food-fav="${escHtml(food.id)}"
+        aria-label="${isFav?'Remove from favourites':'Save to favourites'}">${isFav?'★':'☆'}</button>`)}
+
+    <div class="food-hero">
+      ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(food, 92) : ""}
+      <div style="flex:1;min-width:0;">
+        <div class="food-hero__name">${escHtml(food.name)}</div>
+        <div class="food-hero__cat">${escHtml(food.category||"")}</div>
+        ${food.source==="usda"?`<div class="food-hero__verified">✓ USDA measured</div>`:""}
+      </div>
+      <div class="food-hero__kcal">
+        <div class="nut-value nut-value--lg" id="fd-kcal" style="color:var(--accent);">${check.ok?N.format("calories", row("calories").serving).replace(" kcal",""):"—"}</div>
+        <div class="nut-label">kcal</div>
+        <div class="nut-note" id="fd-serving">${scalable?(check.ok?escHtml(N.describeServing(food, check.amount, check.unit)):"—"):"per portion"}</div>
+      </div>
+    </div>
+
+    ${scalable ? `
+    <div class="nut-card nut-card--tight">
+      <div id="fd-presets">${renderServingPresets(food, grams)}</div>
+      <div class="row-between" style="margin-top:var(--space-xs);">
+        <span class="nut-label">Quantity</span>
+        <div class="qty-stepper">
+          <button data-food-step="-1" aria-label="Decrease">−</button>
+          <!-- Deliberately type="text" with a decimal inputmode, not type="number". Android
+               still shows the numeric keypad, but a number input reports selectionStart as
+               null and throws InvalidStateError on setSelectionRange, so its text cannot be
+               selected or its caret placed. That is what made this field unusable: it opens
+               pre-filled with the default portion, tapping it put the caret at the end
+               instead of selecting the value, and typing 150 gave 100150. -->
+          <input type="text" id="food-search-amount" value="${escHtml(String(shownAmount))}"
+            inputmode="decimal" autocomplete="off" enterkeyhint="done">
+          <button data-food-step="1" aria-label="Increase">+</button>
+        </div>
+      </div>
+      <div class="row-between" style="margin-top:var(--space-xs);">
+        <span class="nut-label">Unit</span>
+        <select id="food-search-unit" class="food-select" style="max-width:60%;">
+          ${units.map(u=>`<option value="${u}" ${p.unit===u?'selected':''}>${escHtml(conv?conv.labelFor(u,shownAmount):u)}</option>`).join("")}
+        </select>
+      </div>
+      <div id="fd-error">${check.ok?"":`<div style="font-size:11px;color:var(--accent);margin-top:6px;">${escHtml(check.error)}</div>`}</div>
+    </div>` : `<div class="nut-card nut-card--tight"><div class="nut-note">Saved favourite — logged as one portion.</div></div>`}
+
+    <div class="macro-row" id="fd-macros">
+      ${foodDetailMacrosHtml(check.ok ? calc : null)}
+    </div>
+
+    <div class="nut-card nut-card--tight">
+      <button class="row-between" data-action="toggle-micros" style="width:100%;background:none;border:0;padding:0;cursor:pointer;color:inherit;">
+        <span style="font-size:13px;font-weight:800;">Micronutrients</span>
+        <span style="font-size:11px;color:var(--steel);">% Daily Value ${state.microExpanded?"⌃":"⌄"}</span>
+      </button>
+      ${state.microExpanded?(()=>{
+        // Grouped by kind rather than listed flat: 24 rows in one column is a wall, and
+        // "is my iron low" is a different question from "am I short on B12".
+        const section = (title, group) => {
+          const rows = calc.rows.filter(r=>r.group===group && r.key!=="calories" &&
+            !["protein","carbs","fat"].includes(r.key));
+          if(!rows.length) return "";
+          const measured = rows.filter(r=>r.present).length;
+          /* A section where NOTHING was measured is a block of em dashes. It tells the reader
+             only that we have no data, which the absence of the section says just as well and
+             more quietly. This matters most for Fat Breakdown: the current catalogue carries
+             saturated fat for 2 foods of 3,207, so rendering it unconditionally would put a
+             seven-row wall of dashes under almost every food in the app. */
+          if(!measured) return "";
+          return `
+            <div class="nut-label" style="margin:var(--space-sm) 0 var(--space-2xs);">
+              ${title} <span style="color:var(--muted);font-weight:600;">· ${measured}/${rows.length} measured</span>
+            </div>
+            <div class="micro-grid">
+              ${rows.map(r=>`<div class="micro-row">
+                <span>${escHtml(r.label)}</span>
+                <span>
+                  <span class="micro-row__value${r.present?"":" is-absent"}">${N.format(r.key, r.serving)}</span>
+                  ${r.percentDV!=null?`<span style="color:var(--steel);font-size:11px;margin-left:6px;">${r.percentDV}%</span>`:""}
+                </span>
+              </div>`).join("")}
+            </div>`;
+        };
+        return `
+          <div class="divide" style="margin:var(--space-sm) 0 0;"></div>
+          ${section("Macronutrients","macro")}
+          ${section("Fat Breakdown","fat")}
+          ${section("Minerals","mineral")}
+          ${section("Vitamins","vitamin")}
+          <div class="nut-note" style="margin-top:var(--space-sm);">
+            An em dash means the value was never measured for this food, not that it is zero.
+            Vitamin A is µg RAE and folate is µg DFE, which is the basis the daily values are set on.
+            Trans fat shows no percentage because health authorities set no reference intake for it —
+            the guidance is to keep it as low as possible.
+            ${food.fatSource === "usda" ? `<br><br><strong>Fat breakdown from a matched USDA record.</strong>
+              This food's own source did not report saturated, unsaturated or cholesterol figures, so
+              they were taken from the closest USDA FoodData Central match on energy, fat and protein.
+              Treat them as representative of the food type rather than measured from this exact product.` : ""}
+          </div>`;
+      })() : ""}
+    </div>
+
+    <div class="nut-card nut-card--tight">
+      <div class="nut-label" style="margin-bottom:var(--space-2xs);">Meal</div>
+      <select id="food-flow-meal" class="food-select">
+        ${mealTypes().map(m=>`<option value="${escHtml(m)}" ${m===flow.meal?'selected':''}>${MEAL_ICONS[m]||"🍽️"} ${escHtml(m)}</option>`).join("")}
+      </select>
+      <div class="nut-label" style="margin:var(--space-sm) 0 var(--space-2xs);">Note (optional)</div>
+      <input type="text" id="food-flow-notes" class="food-input" placeholder="Add a note…" value="${escHtml(flow.notes||"")}">
+    </div>
+
+    ${editing ? renderEntryActionsCard(entry) : ""}
+
+    <div class="food-page__spacer"></div>
+
+    <div class="food-sticky">
+      ${editing ? `
+        <div style="display:flex;gap:var(--space-xs);">
+          <button class="btn btn-ghost" style="flex:1;min-height:52px;" data-food-flow-cancel="1">Cancel</button>
+          <button class="btn btn-accent food-sticky__btn" style="flex:1.6;" data-food-flow-save="1" ${check.ok?"":"disabled"}>
+            <span>Save</span>
+            <span class="food-sticky__kcal">${N.format("calories", row("calories").serving)}</span>
+          </button>
+        </div>`
+      : `<button class="btn btn-accent food-sticky__btn" data-food-flow-add="1" ${check.ok?"":"disabled"}>
+          <span>Add to ${escHtml(flow.meal)}</span>
+          <span class="food-sticky__kcal">${check.ok?N.format("calories", row("calories").serving):"—"}</span>
+        </button>`}
+    </div>
+  </div>`;
+}
+
+/** Duplicate / delete for an entry being edited. Move is handled by the meal selector above,
+ *  so it is not repeated here as a second way to do the same thing. */
+function renderEntryActionsCard(entry){
+  return `<div class="nut-card nut-card--tight">
+    <div class="nut-label" style="margin-bottom:var(--space-xs);">Manage entry</div>
+    <div style="display:flex;gap:var(--space-xs);">
+      <button class="btn btn-ghost" style="flex:1;padding:10px;font-size:13px;" data-entry-duplicate="${entry.id}">Duplicate</button>
+      <button class="btn btn-ghost" style="flex:1;padding:10px;font-size:13px;color:var(--accent);" data-entry-delete="${entry.id}">Delete</button>
+    </div>
+  </div>`;
+}
+
+/** Food Details for a hand-entered log row: no source food, so no serving maths. It can
+ *  still be moved to another meal, annotated, duplicated or deleted. */
+function renderLoggedEntryDetailPage(entry, flow){
+  const N = window.IgnytNutrition;
+  const macro = (label, value, key, unit) => `
+    <div class="macro-row__cell">
+      <div class="nut-value nut-value--md">${value == null ? "—" : value}<span class="nut-unit">${unit||""}</span></div>
+      <div class="macro-row__label" style="color:var(--n-${key});">${label}</div>
+    </div>`;
+
+  return `<div class="food-page">
+    ${foodPageHeader("Food details", null, `<span style="width:36px;flex-shrink:0;"></span>`)}
+
+    <div class="food-hero">
+      ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(entry, 92) : ""}
+      <div style="flex:1;min-width:0;">
+        <div class="food-hero__name">${escHtml(entry.name)}</div>
+        <div class="food-hero__cat">${escHtml(entry.category || entry.meal || "")}</div>
+      </div>
+      <div class="food-hero__kcal">
+        <div class="nut-value nut-value--lg" style="color:var(--accent);">${Math.round(entry.calories||0)}</div>
+        <div class="nut-label">kcal</div>
+      </div>
+    </div>
+
+    <div class="macro-row">
+      ${macro("kcal", Math.round(entry.calories||0), "energy", "")}
+      ${macro("Protein", entry.protein ?? 0, "protein", "g")}
+      ${macro("Carbs", entry.carbs ?? 0, "carbs", "g")}
+      ${macro("Fat", entry.fat ?? 0, "fat", "g")}
+      ${macro("Fibre", entry.fibre ?? 0, "fibre", "g")}
+    </div>
+
+    ${(function(){
+      const micro = (N ? N.MICRO_LOG_FIELDS : []).filter(k=>entry[k] != null);
+      if(!micro.length) return "";
+      return `<div class="nut-card nut-card--tight">
+        <div class="nut-label" style="margin-bottom:var(--space-xs);">Micronutrients</div>
+        <div class="micro-grid">
+          ${micro.map(k=>`<div class="micro-row">
+            <span>${escHtml(k.charAt(0).toUpperCase()+k.slice(1))}</span>
+            <span class="micro-row__value">${N.format(k, entry[k])}</span>
+          </div>`).join("")}
+        </div>
+      </div>`;
+    })()}
+
+    <div class="nut-card nut-card--tight">
+      <div class="nut-label" style="margin-bottom:var(--space-2xs);">Meal</div>
+      <select id="food-flow-meal" class="food-select">
+        ${mealTypes().map(m=>`<option value="${escHtml(m)}" ${m===flow.meal?'selected':''}>${MEAL_ICONS[m]||"🍽️"} ${escHtml(m)}</option>`).join("")}
+      </select>
+      <div class="nut-label" style="margin:var(--space-sm) 0 var(--space-2xs);">Note (optional)</div>
+      <input type="text" id="food-flow-notes" class="food-input" placeholder="Add a note…" value="${escHtml(flow.notes||"")}">
+    </div>
+
+    ${renderEntryActionsCard(entry)}
+
+    <div class="food-page__spacer"></div>
+
+    <div class="food-sticky">
+      <div style="display:flex;gap:var(--space-xs);">
+        <button class="btn btn-ghost" style="flex:1;min-height:52px;" data-food-flow-cancel="1">Cancel</button>
+        <button class="btn btn-accent food-sticky__btn" style="flex:1.6;" data-food-flow-save="1">
+          <span>Save</span>
+          <span class="food-sticky__kcal">${Math.round(entry.calories||0)} kcal</span>
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* =========================================================
+   NUTRITION SCORE
+
+   A single 0-100 figure has to be defensible or it is decoration. This one is the weighted
+   average of five things the app already measures, each capped so a big overshoot on one
+   cannot buy a poor score elsewhere:
+
+     protein 30   the macro people under-eat, and the one that matters most for the goals
+                  this app serves
+     energy  25   scored on CLOSENESS to the budget, not on how much was eaten — 2,600 against
+                  a 2,000 target is as far off as 1,400, and a score that rewarded eating more
+                  would be actively harmful
+     fibre   20   consistently the most under-consumed nutrient in real logs
+     carbs+fat 15 combined, because they trade against each other; hitting either is fine
+     water   10
+
+   Anything with no target returns null and drops out of the weighting rather than counting as
+   zero, so someone who has not set a water goal is not permanently capped at 90.
+========================================================= */
+function nutritionScore(T, targets, waterMl, waterTarget){
+  const part = (value, target) => {
+    if(!target || target <= 0) return null;
+    const ratio = (Number(value)||0) / target;
+    /* Overshoot is penalised symmetrically past 110%. Being 40% over a fat target is not
+       extra credit — it is the same distance from the plan as being 40% under. */
+    return Math.max(0, Math.min(100, Math.round(100 * (ratio > 1.1 ? Math.max(0, 2.1 - ratio) : ratio))));
+  };
+  const parts = [
+    { w: 30, s: part(T.protein, targets.protein) },
+    { w: 25, s: part(T.calories, targets.kcal) },
+    { w: 20, s: part(T.fibre, targets.fibre) },
+    { w: 15, s: part((T.carbs||0)+(T.fat||0), (targets.carbs||0)+(targets.fat||0)) },
+    { w: 10, s: part(waterMl, waterTarget) }
+  ].filter(p => p.s !== null);
+
+  if(!parts.length) return { score: 0, band: "No data", tone: "muted" };
+  const weight = parts.reduce((a,p)=>a+p.w, 0);
+  const score = Math.round(parts.reduce((a,p)=>a + p.s*p.w, 0) / weight);
+  const band = score >= 90 ? "Excellent" : score >= 70 ? "Good" : score >= 50 ? "Fair" : "Needs work";
+  const tone = score >= 90 ? "great" : score >= 70 ? "ok" : score >= 50 ? "warn" : "bad";
+  return { score, band, tone };
+}
+
+/** Coach lines. Every one comes from a real gap and names the number. */
+/** The day's biggest foods, each captioned by whatever it contributes most of. */
+function topContributors(entries, limit){
+  const KEYS = [
+    { key:"protein", label:"Protein", unit:"g" },
+    { key:"carbs",   label:"Carbs",   unit:"g" },
+    { key:"fat",     label:"Fat",     unit:"g" },
+    { key:"fibre",   label:"Fibre",   unit:"g" }
+  ];
+  return entries.slice()
+    .sort((a,b)=>Number(b.calories||0)-Number(a.calories||0))
+    .slice(0, limit||5)
+    .map(e=>{
+      /* Captioned by the nutrient it supplies most of. "48 g Protein" tells the reader
+         something; repeating the calories already shown on the row does not. */
+      let best = KEYS[0], bestVal = -1;
+      for(const n of KEYS){
+        const v = Number(e[n.key]||0);
+        if(v > bestVal){ bestVal = v; best = n; }
+      }
+      return { entry: e, label: best.label, value: Math.round(bestVal), unit: best.unit };
+    });
+}
+
+/* =========================================================
+   MEAL CALORIE BUDGETS
+
+   The reference splits a 2,000 kcal day as 500 / 250 / 500 / 250 / 500 — main meals take a
+   quarter each, snacks an eighth. That is a real convention, not a number picked to match a
+   screenshot, and it sums to the day's budget whatever the budget is.
+
+   Anything the user has renamed or added beyond the five gets an even share of what is left,
+   so a custom meal is never budgeted at zero.
+========================================================= */
+function mealCalorieTarget(meal, dayBudget){
+  const types = mealTypes();
+  const isSnack = /snack/i.test(meal);
+  const mains = types.filter(t=>!/snack/i.test(t)).length || 1;
+  const snacks = types.filter(t=>/snack/i.test(t)).length;
+  /* Mains take 25% each and snacks 12.5% each only while that adds up to at most the whole
+     day. With unusual meal counts the shares are normalised instead, so the parts always sum
+     to the budget rather than over-promising. */
+  const raw = isSnack ? 0.125 : 0.25;
+  const total = mains*0.25 + snacks*0.125;
+  const share = total > 0 ? raw/total : 0;
+  return Math.round(dayBudget * share);
+}
+
+
+function mealEmptyCopy(meal){
+  const m = String(meal||"").toLowerCase();
+  if(m.includes("morning")) return "Keep your energy steady!";
+  if(m.includes("evening") || m.includes("afternoon")) return "A smart snack keeps you active!";
+  if(m.includes("breakfast")) return "Start the day with something solid.";
+  if(m.includes("lunch")) return "Fuel the rest of your day.";
+  if(m.includes("dinner")) return "Round the day off.";
+  return "Add something to this meal.";
+}
+
+/* =========================================================
+   NUTRITION INSIGHTS
+
+   Everything on this page is computed from the day's real log. Nothing is illustrative: where
+   a figure has no data behind it the card says so rather than showing a plausible number.
+
+   The meal tabs filter the WHOLE page, not just one card — asking "how was lunch" and getting
+   a day-level score under a tab labelled Lunch would be worse than not offering the tab.
+========================================================= */
+
+/* =========================================================
+   DIET PLAN BUILDER — app-side wiring
+
+   The screen itself is www/js/pages/diet-plan.js. This is the adapter: it hands the module
+   the user's real macro targets and today's date key, and owns every action the module's
+   markup declares. Same split as home.js / progress.js.
+========================================================= */
+
+/* Builds the same nutrition snapshot commitSelectedFood() writes to the food log, and stores
+   it on a diet plan instead. Kept separate rather than parameterising commitSelectedFood
+   because that function's job is to LOG something — adding to a plan must never put a row in
+   the user's food diary, and a shared function with a "don't actually log it" flag is exactly
+   how that bug gets introduced later. */
+function commitSelectedFoodToPlan(planId, mealId, note){
+  const D = window.IgnytDietPlans;
+  const sel = state.foodSearchSelected;
+  if(!D || !sel || !planId) return false;
+  const food = lookupFood(sel.id, sel.name);
+  if(!food) return false;
+
+  const N = window.IgnytNutrition;
+  const scalable = food.per != null;
+  let v;
+  if(scalable && N){
+    const p = resolveFoodPortion(food);
+    const check = N.validateQuantity(food, currentFoodAmount(food), p.unit);
+    if(!check.ok){ showToast(check.error, "error", render); return false; }
+    v = N.logValues(food, check.grams);
+    N.rememberServing(food.id, check.amount, check.unit);
+  }else{
+    v = scalable ? IgnytFoodDB.scaleFood(food, resolveFoodPortion(food).grams) : food;
+  }
+
+  const item = {
+    name: v.name,
+    calories: Number(v.calories)||0, protein: Number(v.protein)||0,
+    carbs: Number(v.carbs)||0, fat: Number(v.fat)||0, fibre: Number(v.fibre)||0
+  };
+  // Same rule as the log: a micronutrient is written only where the food reports one, so an
+  // absent key means "unknown" rather than counting as zero in the plan's totals.
+  if(N) N.MICRO_LOG_FIELDS.forEach(k=>{ if(v[k] != null) item[k] = Number(v[k]); });
+  if(scalable){
+    const p2 = resolveFoodPortion(food);
+    item.foodId = food.id;
+    item.category = food.category || null;
+    item.quantity = Number(currentFoodAmount(food));
+    item.servingUnit = p2.unit;
+    item.grams = Number(v.grams) || null;
+  }
+  if(note) item.note = note;
+
+  if(!D.addItem(planId, mealId, item)){
+    showToast("Could not save to the plan.", "error", render);
+    return false;
+  }
+  state.foodSearchSelected = null; state.foodSearchQuery = "";
+  state.foodSearchAmount = null; state.foodSearchUnit = "g";
+  return true;
+}
+
+
+/* =========================================================
+   FASTING TRACKER — app-side wiring
+
+   The screen is www/js/pages/fasting.js. This owns routing, the 1-second tick, and the
+   device notifications, none of which belong in a render function.
+========================================================= */
+
+/** Duration for confirm-dialog copy. The page module has its own formatter for display; this
+ *  is the one-liner app.js needs and is not worth exporting across the module boundary. */
+function dur_ft(ms){
+  const neg = ms < 0; ms = Math.abs(ms);
+  const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
+  return (neg?"-":"") + (h > 0 ? `${h}h ${m}m` : `${m}m`);
+}
+
+
+/* Supplements — app-side wiring. Screen lives in www/js/pages/supplements.js. */
+function renderSupplementsScreen(){
+  if(!premiumAllows("supplements")) return renderUpgradeWall("supplements");
+  if(!window.IgnytPages || typeof window.IgnytPages.renderSupplements !== "function"){
+    return `<div class="sp"><div class="sp-none">The supplements module failed to load.</div></div>`;
+  }
+  return window.IgnytPages.renderSupplements({ ui: state.supplementUI || {} });
+}
+
+function renderFastingScreen(){
+  if(!premiumAllows("fasting")) return renderUpgradeWall("fasting");
+  if(!window.IgnytPages || typeof window.IgnytPages.renderFasting !== "function"){
+    return `<div class="ft"><div class="ft-empty-note">The fasting module failed to load.</div></div>`;
+  }
+  return window.IgnytPages.renderFasting({ ui: state.fastUI || {} });
+}
+
+/* The countdown updates by writing into existing nodes once a second. A full render() per tick
+   would rebuild the history list and fight the scroll position sixty times a minute, and any
+   open input would lose focus. The interval stops itself the moment the nodes are gone, so
+   navigating away cannot leave it running. */
+let fastTimerHandle = null;
+function ensureFastTimerRunning(){
+  if(fastTimerHandle) return;
+  fastTimerHandle = setInterval(()=>{
+    const F = window.IgnytFasting;
+    const fast = F && F.active();
+    const elapsedEl = document.getElementById("ft-elapsed");
+    const homeEl = document.getElementById("ft-home-elapsed");
+    const nutCheck = document.getElementById("ft-nut-elapsed");
+    if(!fast || (!elapsedEl && !homeEl && !nutCheck)){ stopFastTimer(); return; }
+
+    const p = F.progress(fast);
+    const fmt = (ms)=>{
+      const neg = ms < 0; ms = Math.abs(ms);
+      const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000), sec = Math.floor((ms%60000)/1000);
+      const out = h > 0 ? `${h}h ${String(m).padStart(2,"0")}m`
+                : m > 0 ? `${m}m ${String(sec).padStart(2,"0")}s` : `${sec}s`;
+      return (neg?"-":"") + out;
+    };
+    const over = p.remainingMs < 0;
+    const remainText = over ? fmt(-p.remainingMs) + " past goal" : fmt(p.remainingMs) + " to go";
+
+    if(elapsedEl) elapsedEl.textContent = fmt(p.elapsedMs);
+    const remEl = document.getElementById("ft-remaining");
+    if(remEl) remEl.textContent = remainText;
+    const pctEl = document.getElementById("ft-pct");
+    if(pctEl) pctEl.textContent = p.pct + "%";
+    const ring = document.getElementById("ft-ring");
+    if(ring) ring.style.setProperty("--pct", p.pct);
+    const stageEl = document.getElementById("ft-stage");
+    if(stageEl){
+      const nameEl = stageEl.querySelector(".ft-stage__name");
+      if(nameEl && nameEl.textContent !== p.stage.label){
+        // The stage changed under the user. Re-render once so the note changes with it —
+        // this is rare (six times in 48 hours), so it does not reintroduce the per-tick cost.
+        render();
+        return;
+      }
+    }
+    if(homeEl) homeEl.textContent = fmt(p.elapsedMs) + " elapsed";
+    const homeRem = document.getElementById("ft-home-remaining");
+    if(homeRem) homeRem.textContent = remainText;
+    // ...and the strip on the Food Log dashboard, same nodes-not-render rule.
+    const nutEl = document.getElementById("ft-nut-elapsed");
+    if(nutEl) nutEl.textContent = fmt(p.elapsedMs) + " elapsed";
+    const nutRem = document.getElementById("ft-nut-remaining");
+    if(nutRem) nutRem.textContent = remainText;
+  }, 1000);
+}
+function stopFastTimer(){
+  if(fastTimerHandle){ clearInterval(fastTimerHandle); fastTimerHandle = null; }
+}
+
+function openFasting(){
+  state.tab = "fasting";
+  state.fastUI = Object.assign({ pickScheduleId:null, customHours:16, chartRange:7, historyAll:false },
+                               state.fastUI || {});
+}
+
+/* Device reminders for the running fast. One-shot alarms at absolute times, cancelled whenever
+   the fast ends — a "time to break your fast" notification arriving after the user already ate
+   is worse than no notification. Silently does nothing off-native, where there is no such thing
+   as a background alarm. */
+/* ---- "you left a workout running" ----
+   A workout stays open until it is finished; it survives backgrounding, app death and a
+   reboot, because state.session is persisted. That is the right behaviour and it is also
+   how a session gets left running overnight and saved with a nine-hour duration.
+
+   Scheduled when the app goes to the background with a session open, cancelled the moment
+   the user comes back or finishes. The delay matters: firing the instant the app is
+   backgrounded would fire during every workout, since people switch to music, take a call
+   or lock the phone between sets. This is meant to catch a FORGOTTEN workout, so it waits
+   — fifteen minutes by default — and re-arms each time the app is left again.
+
+   The one-shot goes through AlarmManager, so it still arrives if Android kills the app in
+   the meantime. That is precisely the case worth catching. */
+const WORKOUT_LEFT_ID = "workout-left";
+
+async function syncWorkoutLeftNotification(){
+  const plugin = nativeNotify();
+  if(!plugin) return;
+  try{
+    // Any state change cancels first, so there is never more than one of these armed and a
+    // stale one cannot outlive the session it was about.
+    await plugin.cancel({ id: WORKOUT_LEFT_ID });
+
+    if(!state.session) return;
+    if(!state.settings.workoutLeftReminder) return;
+    if(document.visibilityState === "visible") return;   // they are looking at it
+
+    const mins = Math.max(1, Number(state.settings.workoutLeftAfterMin) || 15);
+    const title = (state.session.title || "").trim();
+    await plugin.scheduleAt({
+      id: WORKOUT_LEFT_ID,
+      at: Date.now() + mins * 60000,
+      title: "Workout still running",
+      body: title
+        ? `"${title}" is still in progress. Finish it so the duration stays accurate.`
+        : "You have a workout in progress. Finish it so the duration stays accurate.",
+      route: "workout"
+    });
+  }catch(e){ console.warn("[workout] could not schedule the left-running reminder:", e); }
+}
+
+async function syncFastNotifications(fast){
+  const plugin = nativeNotify();
+  if(!plugin) return;
+  const ids = ["fast-half", "fast-end"];
+  try{
+    for(const id of ids) await plugin.cancel({ id });
+    if(!fast) return;
+    const F = window.IgnytFasting;
+    const prefs = F.prefs();
+    const p = F.progress(fast);
+    if(prefs.notifyHalf){
+      await plugin.scheduleAt({
+        id: "fast-half", at: fast.startAt + p.targetMs / 2,
+        title: "IGNYT", body: `Halfway through your ${fast.label} fast.`
+      });
+    }
+    if(prefs.notifyEnd){
+      await plugin.scheduleAt({
+        id: "fast-end", at: p.endsAt,
+        title: "IGNYT", body: `Your ${fast.label} fast is complete — time to break it.`
+      });
+    }
+  }catch(e){ console.warn("[fast] could not schedule reminders:", e); }
+}
+
+function renderDietPlanScreen(){
+  if(!premiumAllows("diet")) return renderUpgradeWall("diet");
+  /* The catalogue loads lazily on the first food UI. The Diet Plan is one — it re-scales plan
+     items against catalogue foods when a serving is edited — but it can be opened from Profile
+     or the Food Log shortcut without search ever running. Without this, editing a serving hit
+     the "no catalogue record" fallback instead of the serving controls. Same kick-off the
+     search page uses. */
+  const cat = window.IgnytFoodCatalogue;
+  if(cat && cat.status() === "idle") cat.onReady(()=>render());
+
+  if(!window.IgnytPages || typeof window.IgnytPages.renderDietPlan !== "function"){
+    return `<div class="food-page">${foodPageHeader("Diet Plan")}
+      <div class="nut-note" style="padding:16px;">The diet plan module failed to load.</div></div>`;
+  }
+  const plan = currentDietPlan();
+  return window.IgnytPages.renderDietPlan({
+    targets: macroTargets(),
+    dateStr: todayStr(),
+    planId: plan ? plan.id : null,
+    ui: state.dietUI || {}
+  });
+}
+
+function openDietPlan(){
+  captureNutritionScroll();
+  /* The plan renders inside renderNutritionTab(), so the tab has to move too. Without this the
+     call worked from the Food Log (already on that tab) and silently did nothing from Profile,
+     which is exactly where the brief puts Diet Settings. */
+  state.tab = "nutrition";
+  state.nutritionScreen = "dietplan";
+  state.dietUI = { expanded: null, menuFor: null, menuMeal: null, details: false, planMenu: false };
+}
+
+function closeDietPlan(){
+  state.nutritionScreen = null;
+  state.dietUI = { expanded: null, menuFor: null, menuMeal: null, details: false, planMenu: false };
+  restoreNutritionScroll();
+}
+
+/** The plan currently on screen. Not always the active one — the selector lets you look at
+ *  a plan without adopting it, which is what makes "Set active" a meaningful separate action. */
+function currentDietPlan(){
+  const D = window.IgnytDietPlans;
+  if(!D) return null;
+  return (state.dietViewPlanId && D.get(state.dietViewPlanId)) || D.active() || D.all()[0] || null;
+}
+
+function renderNutritionInsightsPage(){
+  const ds = nutritionDateStr();
+  const isToday = ds === todayStr();
+  const tab = state.insightsMeal || "All Meals";
+  const allEntries = foodsForDate(ds);
+  const entries = tab === "All Meals" ? allEntries : allEntries.filter(f=>(f.meal||"Lunch") === tab);
+
+  const N = window.IgnytNutrition;
+  const agg = N ? N.totalEntries(entries) : { totals:{}, coverage:{}, count:entries.length };
+  const T = agg.totals;
+  const dayTargets = macroTargets();
+
+  /* A meal tab scales the targets to that meal's share of the day, so "82% of carbs" under
+     Lunch means 82% of lunch's carbs — not 82% of the whole day eaten at one sitting. */
+  const budget = dayTargets.kcal;
+  const scale = tab === "All Meals" ? 1
+    : (budget > 0 ? mealCalorieTarget(tab, budget) / budget : 1);
+  const targets = {
+    kcal: Math.round(dayTargets.kcal * scale),
+    protein: Math.round(dayTargets.protein * scale),
+    carbs: Math.round(dayTargets.carbs * scale),
+    fat: Math.round(dayTargets.fat * scale),
+    fibre: Math.round(dayTargets.fibre * scale)
+  };
+
+  const waterMl = waterForDate(ds);
+  const waterTarget = state.settings.waterTargetMl || 2500;
+  const eaten = Math.round(T.calories || 0);
+  const remaining = targets.kcal - eaten;
+  const pctGoal = targets.kcal > 0 ? Math.round((eaten / targets.kcal) * 100) : 0;
+  const sc = nutritionScore(T, targets, tab === "All Meals" ? waterMl : null,
+                                        tab === "All Meals" ? waterTarget : null);
+
+  /* Computed here because the water tracker, the insight cards, the energy-balance card and
+     the macro-budget form moved onto this page from the Food Log dashboard. They were below
+     the meal list there, on a page that had grown to four screens; everything on this page
+     is the same kind of thing — the day read back to you — so this is where they belong.
+     Day-level, so they are shown under "All Meals" only, like hydration already is. */
+  const dayEntries = allEntries;
+  const cov = agg.coverage || {};
+  const insights = (typeof nutritionInsights === "function"
+    ? nutritionInsights(T, cov, targets, waterMl, waterTarget) : [])
+    .concat(typeof mealInsights === "function" ? mealInsights(dayEntries) : []);
+
+  const burned = todayBurned();
+  const eatenToday = todayEaten();
+  const netDeficit = burned - eatenToday;
+  const activityKcal = Math.round(todayActivityKcal());
+  const useExerciseBudget = !!state.settings.exerciseCalorieBudget;
+  let hcConnected = false;
+  try { hcConnected = !!JSON.parse(localStorage.getItem("hx_hc_state") || "{}").connected; } catch (e) {}
   const hcData = window.HealthConnectIntegration ? window.HealthConnectIntegration.getSyncData() : null;
   let cachedHcData = null;
   try { cachedHcData = JSON.parse(localStorage.getItem("hx_hc_dashboard_cache") || "null"); } catch (e) {}
   const activeCalories = (hcData || cachedHcData)?.activeCalories?.kcal;
-  let hcConnected = false;
-  try { hcConnected = !!JSON.parse(localStorage.getItem("hx_hc_state") || "{}").connected; } catch (e) {}
-  const useExerciseBudget = !!state.settings.exerciseCalorieBudget;
-  const calorieBudget = targets.kcal + (useExerciseBudget && activeCalories != null ? Math.round(activeCalories) : 0);
-  const remainingCalories = calorieBudget - Math.round(eaten);
-  const burned = todayBurned();
-  const netDeficit = burned - eaten;
-  const activityKcal = Math.round(todayActivityKcal());
-  const macros = todayMacros();
+
+  const n = state.nutrition;
   const macroPctTotal = (n.proteinPct||0)+(n.carbPct||0)+(n.fatPct||0);
-  const todaysFood = foodsForDate(todayStr());
+  const weeklyLoss = (Math.abs(state.profile.goalDelta)*7)/7700;
+
+  const bar = (v, t, tone) => {
+    const p = t > 0 ? Math.min(100, Math.round((v/t)*100)) : 0;
+    return `<div class="ni-bar ni-bar--${tone}"><i style="width:${p}%"></i></div>`;
+  };
+  const pctTone = p => p >= 90 ? "great" : p >= 70 ? "ok" : "warn";
+  const pctOf = (v, t) => t > 0 ? Math.round((v/t)*100) : 0;
+
+  const MACROS = [
+    ["💪", "Protein", T.protein, targets.protein, "g"],
+    ["🌾", "Carbs",   T.carbs,   targets.carbs,   "g"],
+    ["🧈", "Fat",     T.fat,     targets.fat,     "g"],
+    ["🌿", "Fibre",   T.fibre,   targets.fibre,   "g"]
+  ];
+  const MICROS = [
+    ["🛡️", "Calcium",   "calcium",   1300, "mg"],
+    ["🩸", "Iron",      "iron",        18, "mg"],
+    ["🔮", "Magnesium", "magnesium",  420, "mg"],
+    ["🍌", "Potassium", "potassium", 4700, "mg"],
+    ["🍊", "Vitamin C", "vitaminC",    90, "mg"],
+    ["☀️", "Vitamin D", "vitaminD",    20, "µg"]
+  ];
+  const microRows = MICROS.filter(([,,key]) => T[key] != null);
+
+  // Calories by meal, for the donut. Only meals with food appear — an empty slice is a lie.
+  const mealColours = ["#F5BB45", "#3B82F6", "#A855F7", "#45D294", "#FF8A5C", "#55D8FF"];
+  const byMeal = mealTypes()
+    .map((m,i)=>({ meal:m, kcal: Math.round(allEntries.filter(f=>(f.meal||"Lunch")===m)
+                                    .reduce((a,f)=>a+Number(f.calories||0),0)),
+                   color: mealColours[i % mealColours.length] }))
+    .filter(m=>m.kcal > 0);
+  const mealTotal = byMeal.reduce((a,m)=>a+m.kcal, 0);
+
   const week = last7DaysCalories();
-  const weekTotal = week.reduce((a,d)=>a+d.kcal,0);
-  const weekAvg = Math.round(weekTotal/7);
-  const maxKcal = Math.max(targets.kcal, ...week.map(d=>d.kcal), 1);
+  const weekVals = week.map(d=>d.kcal);
+  const wkAvg = weekVals.length ? Math.round(weekVals.reduce((a,b)=>a+b,0)/weekVals.length) : 0;
+  const wkHigh = weekVals.length ? Math.max(...weekVals) : 0;
+  const wkLow = weekVals.length ? Math.min(...weekVals) : 0;
+  const wkTotal = weekVals.reduce((a,b)=>a+b, 0);
+  /* Compared against the daily target, because "1,340 kcal/day" says nothing on its own. This
+     is what the Food Log's dashed target line used to convey; it moves here with the rest of
+     the weekly block. Suppressed on an empty week, where "100% below target" is noise. */
+  const wkTargetNote = (() => {
+    // dayTargets, not `targets` -- the latter is scaled to the selected meal tab, and a
+    // weekly average must be judged against the whole-day figure.
+    const t = dayTargets.kcal;
+    if(!t || !wkTotal) return "";
+    const diff = wkAvg - t;
+    const pct = Math.abs(Math.round(diff / t * 100));
+    if(pct < 3) return `<div class="ni-week__note">Averaging within 3% of your ${t.toLocaleString()} kcal daily target.</div>`;
+    return `<div class="ni-week__note">Averaging ${pct}% ${diff > 0 ? "above" : "below"} your ${t.toLocaleString()} kcal daily target.</div>`;
+  })();
+
+  const contributors = topContributors(entries, 5);
+
+  const streak = (typeof loggingStreak === "function") ? loggingStreak() : null;
+  const mealsLogged = mealTypes().filter(m=>allEntries.some(f=>(f.meal||"Lunch")===m)).length;
 
   return `
-    <div class="eyebrow-label" style="margin-top:4px;">Today</div>
-    <div class="grid2" style="margin-bottom:8px;">
-      <div class="stat-card"><div class="stat-label">Eaten</div><div class="stat-value" style="color:var(--text);">${Math.round(eaten)}<span class="stat-unit">/ ${calorieBudget} kcal</span></div></div>
-      <div class="stat-card"><div class="stat-label">Burned (est.)</div><div class="stat-value" style="color:var(--steel);">${burned}<span class="stat-unit">kcal</span></div></div>
-    </div>
-    <div class="info-box" style="padding:12px 14px;margin-bottom:16px;">
-      <div class="row-between"><span style="font-size:13px;font-weight:700;">Calories Remaining</span><span class="mono" style="font-weight:900;color:${remainingCalories >= 0 ? 'var(--mint)' : 'var(--accent)'};">${remainingCalories} kcal</span></div>
-      ${useExerciseBudget ? `<div style="font-size:11px;color:var(--muted);margin-top:5px;">${activeCalories == null ? `Health Connect active calories: ${hcConnected ? 'No data' : 'Permission required'}` : `Includes ${Math.round(activeCalories)} kcal from Health Connect today.`}</div>` : ''}
-    </div>
-    <div class="info-box" style="text-align:center;padding:14px;margin-bottom:16px;background:${netDeficit>=0?'rgba(62,207,142,.08)':'rgba(255,90,31,.08)'};">
-      <div class="stat-label">${netDeficit>=0?'Deficit Created':'Surplus (over target)'}</div>
-      <div class="mono" style="font-weight:900;font-size:26px;color:${netDeficit>=0?'var(--mint)':'var(--accent)'};margin-top:2px;">${netDeficit>=0?'':'+'}${Math.abs(netDeficit)}<span style="font-size:13px;font-weight:700;color:var(--muted);margin-left:4px;">kcal</span></div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Burned = ${profileMaintenance()} maintenance + ~${activityKcal} workout est.</div>
-    </div>
-
-    <div class="eyebrow-label">Macronutrients Today</div>
-    <div class="info-box" style="padding:14px;margin-bottom:16px;">
-      ${macroBar("Protein", macros.protein, targets.protein, "var(--accent)", "g")}
-      ${macroBar("Carbs", macros.carbs, targets.carbs, "var(--steel)", "g")}
-      ${macroBar("Fat", macros.fat, targets.fat, "#FFB020", "g")}
-      ${macroBar("Fibre", macros.fibre, targets.fibre, "var(--mint)", "g")}
-    </div>
-
-    <div class="eyebrow-label">Water</div>
-    <div class="info-box" style="padding:14px;margin-bottom:16px;">
-      ${(()=>{
-        const waterMl = todayWater();
-        const waterTarget = state.settings.waterTargetMl || 2500;
-        return macroBar("Water", waterMl, waterTarget, "var(--steel)", "ml");
-      })()}
-      <div style="display:flex;gap:6px;margin-top:4px;">
-        ${[250,500,750].map(ml=>`<button class="cat-chip" data-add-water="${ml}" style="flex:1;text-align:center;">+${ml}ml</button>`).join("")}
-        <button class="cat-chip" data-action="undo-water" style="flex:1;text-align:center;color:var(--muted);">Undo</button>
+    <div class="ni">
+      <div class="ni-top">
+        <button class="food-page__back" data-insights-back="1" aria-label="Back">←</button>
+        <h2 class="ni-title">${tab === "All Meals" ? "Today's Insights" : escHtml(tab)}</h2>
+        <span class="ni-today">📅 ${escHtml(isToday ? "Today" : nutritionDateLabel(ds))}</span>
       </div>
-    </div>
 
-    <div class="eyebrow-label">Meals</div>
-    ${MEALS.map(meal=>{
-      const mealFoods = todaysFood.filter(f=>(f.meal||"Lunch")===meal);
-      const mealKcal = mealFoods.reduce((a,f)=>a+Number(f.calories||0),0);
-      const budget = Math.round(targets.kcal * MEAL_SHARE[meal]);
-      const isOpen = state.mealOpen===meal;
-      return `<div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
-        <div class="row-between" data-meal-toggle="${meal}" style="cursor:pointer;">
-          <span style="font-weight:800;font-size:15px;">${meal}</span>
-          <span class="mono" style="font-size:12px;color:${mealKcal>budget?'var(--accent)':'var(--muted)'};">${mealKcal} of ${budget} Cal <span style="color:var(--accent);font-weight:900;margin-left:6px;">${isOpen?'−':'+'}</span></span>
+      <div class="ni-tabs">
+        ${["All Meals"].concat(mealTypes()).map(m=>
+          `<button class="ni-tab ${tab===m?'is-on':''}" data-insights-meal="${escHtml(m)}">${escHtml(m)}</button>`
+        ).join("")}
+      </div>
+
+      ${!entries.length ? `
+        <div class="ni-card ni-empty">
+          <div style="font-size:34px;line-height:1;margin-bottom:8px;">🍽️</div>
+          <div style="font-weight:800;font-size:15px;">Nothing logged${tab==="All Meals"?"":" for "+escHtml(tab)}</div>
+          <div style="font-size:12.5px;color:var(--muted);margin-top:4px;">
+            Log a food and this page fills in with your real numbers.
+          </div>
+        </div>` : `
+
+      <!-- NUTRITION SCORE -->
+      <div class="ni-card">
+        <div class="ni-card__title">Nutrition Score</div>
+        <div class="ni-score">
+          <div class="ni-score__ring">
+            ${scoreRingSvg(sc.score, sc.tone)}
+          </div>
+          <div class="ni-score__msg">
+            ${sc.score>=90 ? "Great job! Your nutrition is on point. Keep going strong!"
+              : sc.score>=70 ? "Solid day. A couple of gaps left to close."
+              : sc.score>=50 ? "Some way off target — the coach notes below say where."
+              : "Well short today. Start with protein and fibre."}
+          </div>
         </div>
-        ${mealFoods.map(f=>`<div class="history-row" style="margin-top:8px;">
-          <div style="min-width:0;flex:1;margin-right:8px;"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.name}</div>
-          ${(f.protein||f.carbs||f.fat)?`<div class="mono" style="font-size:10px;color:var(--muted);">P${f.protein||0} C${f.carbs||0} F${f.fat||0}</div>`:""}</div>
-          <span class="mono" style="font-size:12px;color:var(--accent);flex-shrink:0;">${f.calories} kcal</span>
-          <button class="del" data-del-food="${f.id}" aria-label="Delete food entry">${svg('x',12)}</button>
-        </div>`).join("")}
-        ${isOpen?`<div style="margin-top:10px;">
-          ${recentFoodEntries(6).length ? `
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Recent</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
-              ${recentFoodEntries(6).map(f=>`<button class="cat-chip" data-quick-add-food="${meal}" data-food-name="${f.name.replace(/"/g,'&quot;')}" data-food-cal="${f.calories||0}" data-food-protein="${f.protein||0}" data-food-carbs="${f.carbs||0}" data-food-fat="${f.fat||0}" data-food-fibre="${f.fibre||0}">${f.name} · ${f.calories||0}kcal</button>`).join("")}
-            </div>` : ""}
-          ${state.favoriteFoods.length ? `
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">★ Favorites</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
-              ${state.favoriteFoods.map(f=>`<button class="cat-chip active" data-quick-add-food="${meal}" data-food-name="${f.name.replace(/"/g,'&quot;')}" data-food-cal="${f.calories||0}" data-food-protein="${f.protein||0}" data-food-carbs="${f.carbs||0}" data-food-fat="${f.fat||0}" data-food-fibre="${f.fibre||0}">${f.name} · ${f.calories||0}kcal</button>`).join("")}
-            </div>` : ""}
-          <input type="text" id="food-name" placeholder="Food name" style="width:100%;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:13px;color:var(--text);margin-bottom:6px;">
-          <div style="display:flex;gap:6px;margin-bottom:6px;">
-            <input type="number" id="food-cal" placeholder="kcal*" style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:12px;color:var(--accent);text-align:center;">
-            <input type="number" id="food-protein" placeholder="P g" style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:12px;color:var(--text);text-align:center;">
-            <input type="number" id="food-carbs" placeholder="C g" style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:12px;color:var(--text);text-align:center;">
-            <input type="number" id="food-fat" placeholder="F g" style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:12px;color:var(--text);text-align:center;">
-            <input type="number" id="food-fibre" placeholder="Fb g" style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:9px;font-size:12px;color:var(--text);text-align:center;">
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-accent" style="flex:1;" data-log-meal-food="${meal}">Add to ${meal}</button>
-            <button class="btn btn-ghost" style="width:44px;flex-shrink:0;" data-action="save-as-favorite" title="Save as favorite">★</button>
-          </div>
-        </div>`:""}
-      </div>`;
-    }).join("")}
+        <div class="ni-score__stats">
+          <div><span class="ni-stat__icon">🔥</span><strong>${eaten.toLocaleString()}</strong><span>Consumed</span></div>
+          <div><span class="ni-stat__icon">🎯</span><strong>${targets.kcal.toLocaleString()}</strong><span>Goal</span></div>
+          <div><span class="ni-stat__icon">⚡</span><strong>${Math.abs(remaining).toLocaleString()}</strong><span>${remaining>=0?'Remaining':'Over'}</span></div>
+        </div>
+        ${bar(eaten, targets.kcal, pctTone(pctGoal))}
+        <div class="ni-score__pct">${pctGoal}% of daily goal</div>
+      </div>
 
-    <div class="eyebrow-label">Last 7 Days</div>
-    <div class="info-box" style="padding:14px;margin-bottom:16px;">
-      <div class="grid2" style="margin-bottom:12px;">
-        <div><div class="stat-label">Weekly Total</div><div class="mono" style="font-weight:900;font-size:18px;">${weekTotal.toLocaleString()} <span style="font-size:11px;color:var(--muted);">Cal</span></div></div>
-        <div><div class="stat-label">Average / Day</div><div class="mono" style="font-weight:900;font-size:18px;">${weekAvg.toLocaleString()} <span style="font-size:11px;color:var(--muted);">Cal</span></div></div>
+      <!-- MACROS -->
+      <div class="ni-card">
+        <div class="ni-card__title">Macronutrient Breakdown</div>
+        ${MACROS.map(([icon,label,v,t,unit])=>{
+          const p = pctOf(v||0, t);
+          return `<div class="ni-row">
+            <span class="ni-row__icon" aria-hidden="true">${icon}</span>
+            <span class="ni-row__label">${label}</span>
+            <span class="ni-row__val"><strong>${Math.round(v||0)}</strong> / ${t} ${unit}</span>
+            <span class="ni-row__pct ni-row__pct--${pctTone(p)}">${p}%</span>
+            ${bar(v||0, t, pctTone(p))}
+          </div>`;
+        }).join("")}
       </div>
-      <div style="position:relative;height:110px;display:flex;align-items:flex-end;gap:6px;">
-        <div style="position:absolute;left:0;right:0;top:${100-Math.min(100,targets.kcal/maxKcal*100)}%;border-top:1.5px dashed var(--accent);opacity:.6;"></div>
-        ${week.map(d=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end;">
-          ${d.kcal>0?`<span class="mono" style="font-size:9px;color:var(--muted);">${d.kcal}</span>`:""}
-          <div style="width:70%;border-radius:var(--radius-2xs) 4px 0 0;background:${d.kcal>targets.kcal?'var(--accent)':'#FFB020'};height:${Math.max(2,Math.round(d.kcal/maxKcal*80))}px;"></div>
-          <span style="font-size:9px;color:var(--muted);font-weight:700;">${d.label}</span>
+
+      <!-- MICROS -->
+      <div class="ni-card">
+        <div class="ni-card__title">Micronutrient Analysis</div>
+        ${microRows.length ? microRows.map(([icon,label,key,t,unit])=>{
+          const v = T[key] || 0, p = pctOf(v, t);
+          return `<div class="ni-row">
+            <span class="ni-row__icon" aria-hidden="true">${icon}</span>
+            <span class="ni-row__label">${label}</span>
+            <span class="ni-row__val"><strong>${Math.round(v)}</strong> / ${t} ${unit}</span>
+            <span class="ni-row__pct ni-row__pct--${pctTone(p)}">${p}%</span>
+            ${bar(v, t, pctTone(p))}
+          </div>`;
+        }).join("") : `<div class="ni-none">None of today's foods carry micronutrient data.</div>`}
+      </div>
+
+      <!-- HYDRATION. Day-level, so it is hidden under a meal tab where it would be meaningless. -->
+      ${tab === "All Meals" ? `
+      <div class="ni-card">
+        <div class="ni-card__title">Hydration</div>
+        <div class="ni-hydro">
+          <div>
+            <div class="ni-hydro__val"><strong>${(waterMl/1000).toFixed(1)}</strong> / ${(waterTarget/1000).toFixed(1)} L</div>
+            <div class="ni-hydro__pct">${pctOf(waterMl, waterTarget)}% of daily goal</div>
+          </div>
+          <div class="ni-bottle" aria-hidden="true">
+            <i style="height:${Math.min(100, pctOf(waterMl, waterTarget))}%"></i>
+          </div>
+        </div>
+        <div class="ni-hydro__btns">
+          ${[250,500,750].map(ml=>`<button class="ni-wbtn" data-add-water="${ml}">+${ml}ml</button>`).join("")}
+          <button class="ni-wbtn" data-add-water="-250">Undo</button>
+        </div>
+      </div>` : ""}
+
+      <!-- CALORIES BY MEAL -->
+      ${tab === "All Meals" && byMeal.length ? `
+      <div class="ni-card">
+        <div class="ni-card__title">Calories by Meal</div>
+        <div class="ni-bymeal">
+          ${donutSvg(byMeal.map(m=>({value:m.kcal, color:m.color})), 132, 20,
+                     mealTotal.toLocaleString(), "kcal")}
+          <div class="ni-legend">
+            ${byMeal.map(m=>`<div class="ni-legend__row">
+              <span class="ni-legend__dot" style="background:${m.color}"></span>
+              <span class="ni-legend__name">${escHtml(m.meal)}</span>
+              <span class="ni-legend__val">${m.kcal} kcal (${Math.round(m.kcal/mealTotal*100)}%)</span>
+            </div>`).join("")}
+          </div>
+        </div>
+      </div>` : ""}
+
+
+      <!-- CONTRIBUTORS -->
+      ${contributors.length ? `
+      <div class="ni-card">
+        <div class="ni-card__title">Top Food Contributors</div>
+        <div class="ni-contrib">
+          ${contributors.map(c=>`<div class="ni-contrib__item">
+            ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(c.entry, 54) : ""}
+            <div class="ni-contrib__name">${escHtml(c.entry.name)}</div>
+            <div class="ni-contrib__val">${c.value}${c.unit}</div>
+            <div class="ni-contrib__lab">${c.label}</div>
+          </div>`).join("")}
+        </div>
+      </div>` : ""}
+
+      <!-- WEEKLY -->
+      <div class="ni-card">
+        <div class="ni-card__title">Weekly Trends <span class="ni-card__sub">Last 7 days</span></div>
+        ${sparklineSvg(weekVals, week.map(d=>d.label))}
+        <div class="ni-week">
+          <div><span>Total</span><strong>${wkTotal.toLocaleString()} kcal</strong></div>
+          <div><span>Average</span><strong>${wkAvg.toLocaleString()} kcal</strong></div>
+          <div><span>Highest</span><strong class="ni-good">${wkHigh.toLocaleString()} kcal</strong></div>
+          <div><span>Lowest</span><strong class="ni-low">${wkLow.toLocaleString()} kcal</strong></div>
+        </div>
+        ${wkTargetNote}
+      </div>
+
+    <!-- Insights -->
+    ${insights.length ? `
+    <div class="info-box" style="padding:12px 14px;margin-bottom:8px;">
+      <div style="font-size:13px;font-weight:800;margin-bottom:8px;">Nutrition Insights</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:6px;">
+        ${insights.map(i=>`<div style="background:${INSIGHT_TONES[i.tone].bg};border-radius:var(--radius-xs-plus);padding:8px 10px;">
+          <div style="font-size:11px;font-weight:800;color:${INSIGHT_TONES[i.tone].fg};">${escHtml(i.title)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35;">${escHtml(i.body)}</div>
         </div>`).join("")}
       </div>
-      <div style="font-size:10px;color:var(--muted);margin-top:6px;">Dashed line = your ${targets.kcal} kcal daily target.</div>
+    </div>` : ""}
+
+    <!-- Energy balance (kept from the previous dashboard) -->
+    <div class="info-box" style="text-align:center;padding:12px;margin-bottom:8px;background:${netDeficit>=0?'rgba(62,207,142,.08)':'rgba(255,90,31,.08)'};">
+      <div class="stat-label">${netDeficit>=0?'Deficit Created':'Surplus (over target)'}</div>
+      <div class="mono" style="font-weight:900;font-size:22px;color:${netDeficit>=0?'var(--mint)':'var(--accent)'};margin-top:2px;">${netDeficit>=0?'':'+'}${Math.abs(netDeficit)}<span style="font-size:12px;font-weight:700;color:var(--muted);margin-left:4px;">kcal</span></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Burned = ${profileMaintenance()} maintenance + ~${activityKcal} workout est.${!isToday?" (today's figures)":""}</div>
+      ${useExerciseBudget ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">${activeCalories == null ? `Health Connect active calories: ${hcConnected ? 'No data' : 'Permission required'}` : `Budget includes ${Math.round(activeCalories)} kcal from Health Connect.`}</div>` : ''}
     </div>
 
     <div class="eyebrow-label">Calorie & Macro Budget</div>
@@ -8823,6 +14142,306 @@ function renderNutritionTab(){
       <div class="stat-card"><div class="stat-label">Fibre Target</div><div class="stat-value" style="color:var(--mint);">${targets.fibre}<span class="stat-unit">g</span></div></div>
     </div>
     <div class="info-box" style="margin-top:14px;">Recalculate maintenance every 2–3 weeks against your actual weight trend. Don't drop below ~1800–2000 kcal given training volume — recovery beats speed here.</div>
+
+      <!-- SUMMARY -->
+      <div class="ni-card">
+        <div class="ni-card__title">Insights Summary</div>
+        <div class="ni-sum"><span>📈 Goal Progress</span><strong>${pctGoal}%</strong></div>
+        <div class="ni-sum"><span>🎯 Nutrition Score</span><strong>${sc.score}/100</strong></div>
+        <div class="ni-sum"><span>🗓️ Meals Logged</span><strong>${mealsLogged}/${mealTypes().length}</strong></div>
+        <div class="ni-sum"><span>💧 Hydration</span><strong>${pctOf(waterMl, waterTarget)}%</strong></div>
+        ${streak != null ? `<div class="ni-sum"><span>🔥 Streak</span><strong>${streak} day${streak===1?'':'s'}</strong></div>` : ""}
+      </div>
+
+      <div class="ni-banner">
+        <span aria-hidden="true">🛡️</span>
+        <span>${sc.score>=70 ? "Keep going! You're consistent and making great progress towards your goals."
+                             : "Small changes add up — the coach notes above are the quickest wins."}</span>
+      </div>`}
+    </div>`;
+}
+
+/** The score ring. Its own renderer rather than calorieRingSvg: that one plots macro segments
+ *  around an energy budget, which is a different thing from a single 0-100 figure. */
+function scoreRingSvg(score, tone){
+  const size = 128, stroke = 12, r = (size-stroke)/2, c = 2*Math.PI*r;
+  const pct = Math.max(0, Math.min(100, score));
+  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" role="img"
+      aria-label="Nutrition score ${score} out of 100">
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--surface-alt)" stroke-width="${stroke}"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none"
+      stroke="var(--ni-${tone})" stroke-width="${stroke}" stroke-linecap="round"
+      stroke-dasharray="${c}" stroke-dashoffset="${c*(1-pct/100)}"
+      transform="rotate(-90 ${size/2} ${size/2})"/>
+    <text x="50%" y="46%" text-anchor="middle" fill="var(--text)"
+      style="font-size:30px;font-weight:900;">${score}</text>
+    <text x="50%" y="62%" text-anchor="middle" fill="var(--muted)" style="font-size:11px;">/ 100</text>
+  </svg>`;
+}
+
+/** A 7-point line chart. Plain SVG — no library, no dependency, and it scales to the card. */
+function sparklineSvg(values, labels){
+  if(!values || !values.length) return `<div class="ni-none">No history yet.</div>`;
+  const w = 300, h = 96, pad = 6;
+  const max = Math.max(...values, 1);
+  const step = values.length > 1 ? (w - pad*2) / (values.length - 1) : 0;
+  const pt = (v, i) => [pad + i*step, h - pad - (v/max) * (h - pad*2)];
+  const pts = values.map(pt);
+  const line = pts.map((p,i)=>`${i?'L':'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  const area = `${line} L${pts[pts.length-1][0].toFixed(1)},${h-pad} L${pts[0][0].toFixed(1)},${h-pad} Z`;
+  return `<div class="ni-chart">
+    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Calories over the last 7 days">
+      <path d="${area}" fill="var(--primary-soft)"/>
+      <path d="${line}" fill="none" stroke="var(--primary)" stroke-width="2"
+        stroke-linejoin="round" stroke-linecap="round"/>
+      ${pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="var(--primary)"/>`).join("")}
+    </svg>
+    <div class="ni-chart__x">${(labels||[]).map(l=>`<span>${escHtml(String(l).slice(0,3))}</span>`).join("")}</div>
+  </div>`;
+}
+
+
+
+/* Fasting, on the Food Log.
+   The two features answer the same question from opposite sides — "may I eat right now" and
+   "what have I eaten" — so a running fast belongs on this dashboard rather than only on its
+   own page. It appears ONLY while a fast is running: a permanent widget for a feature most
+   people are not using is clutter, and the Tools entry covers starting one.
+   Read-only here. Ending a fast stays on the Fasting screen, because ending it from the food
+   dashboard would sit one mistap away from logging a meal. */
+function renderNutritionFastingStrip(){
+  const F = window.IgnytFasting;
+  if(!F) return "";
+  const fast = F.active();
+  if(!fast) return "";
+  const p = F.progress(fast);
+  const over = p.remainingMs < 0;
+  const fmt = (ms)=>{
+    ms = Math.abs(ms);
+    const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
+    return h > 0 ? `${h}h ${String(m).padStart(2,"0")}m` : `${m}m`;
+  };
+  return `
+    <button class="nd-fast" data-open-fasting="1">
+      <span class="nd-fast__ring" style="--pct:${p.pct};"><span>${p.pct}%</span></span>
+      <span class="nd-fast__body">
+        <span class="nd-fast__title">${escHtml(fast.label)} fast · ${escHtml(p.stage.label)}</span>
+        <span class="nd-fast__time" id="ft-nut-elapsed">${fmt(p.elapsedMs)} elapsed</span>
+        <span class="nd-fast__sub" id="ft-nut-remaining">${over ? fmt(p.remainingMs)+" past goal" : fmt(p.remainingMs)+" to go"}</span>
+      </span>
+      <span class="nd-fast__chev">›</span>
+    </button>`;
+}
+
+function renderNutritionTab(){
+  if(state.foodFlow && state.foodFlow.screen === "search") return renderFoodSearchPage();
+  if(state.foodFlow && state.foodFlow.screen === "detail") return renderFoodDetailPage();
+  if(state.nutritionScreen === "insights") return renderNutritionInsightsPage();
+  if(state.nutritionScreen === "dietplan") return renderDietPlanScreen();
+
+  const n = state.nutrition;
+  const targets = macroTargets();
+
+  const hcData = window.HealthConnectIntegration ? window.HealthConnectIntegration.getSyncData() : null;
+  let cachedHcData = null;
+  try { cachedHcData = JSON.parse(localStorage.getItem("hx_hc_dashboard_cache") || "null"); } catch (e) {}
+  const activeCalories = (hcData || cachedHcData)?.activeCalories?.kcal;
+  let hcConnected = false;
+  try { hcConnected = !!JSON.parse(localStorage.getItem("hx_hc_state") || "{}").connected; } catch (e) {}
+  const useExerciseBudget = !!state.settings.exerciseCalorieBudget;
+  const calorieBudget = targets.kcal + (useExerciseBudget && activeCalories != null ? Math.round(activeCalories) : 0);
+
+  /* ---- Dashboard data, all derived from the selected day ---- */
+  const ds = nutritionDateStr();
+  const isToday = ds === todayStr();
+  const dayEntries = foodsForDate(ds);
+  const agg = nutritionTotalsFor(ds);
+  const T = agg.totals;
+  const cov = agg.coverage;
+  const waterMl = waterForDate(ds);
+  const waterTarget = state.settings.waterTargetMl || 2500;
+  const dayKcal = Math.round(T.calories);
+  const dayRemaining = calorieBudget - dayKcal;
+  const kcalPct = calorieBudget > 0 ? Math.round((dayKcal/calorieBudget)*100) : 0;
+
+  // Ring segments are the ENERGY each macro contributed, not its gram weight — 1 g of fat
+  // carries more than twice the calories of 1 g of protein, so plotting grams would draw a
+  // chart that disagrees with the calorie total sitting next to it.
+  const kcalFromProtein = T.protein*4, kcalFromCarbs = T.carbs*4, kcalFromFat = T.fat*9;
+
+
+  const insights = nutritionInsights(T, cov, targets, waterMl, waterTarget)
+    .concat(mealInsights(dayEntries));
+
+
+  const pct = Math.min(100, Math.max(0, kcalPct));
+
+  return `
+    <!-- Date pill. Replaces the ‹ date › row: one control that reads as the current day and
+         steps either way, instead of three things competing for the same line. -->
+    <div class="nd-datebar">
+      <button class="nd-date" data-nutrition-date="-1" aria-label="Previous day">‹</button>
+      <div class="nd-date__pill">
+        <span aria-hidden="true">📅</span>
+        <span class="nd-date__label">${escHtml(nutritionDateLabel(ds))}</span>
+      </div>
+      <button class="nd-date" data-nutrition-date="1" ${isToday?'disabled':''} aria-label="Next day">›</button>
+    </div>
+    ${!isToday?`<button class="cat-chip" data-nutrition-date="today" style="margin:0 auto 10px;display:block;padding:2px 10px;font-size:11px;">Jump to today</button>`:""}
+
+    <!-- CALORIE HERO
+         Ring on the left with the figure it represents inside it, the budget and its progress
+         in the middle, and Remaining on the right where the eye lands last — it is the number
+         that decides what happens next, so it gets its own column rather than a line of body
+         text. Tapping it opens Insights. -->
+    <div class="nd-hero" data-nav-insights="1" role="button" tabindex="0">
+      <div class="nd-hero__ring">
+        ${calorieRingSvg(dayKcal, calorieBudget, kcalFromProtein, kcalFromCarbs, kcalFromFat)}
+      </div>
+      <div class="nd-hero__mid">
+        <div class="nd-hero__eat">Eat up to <strong>${calorieBudget.toLocaleString()}</strong> Cal</div>
+        <div class="nd-hero__bar"><i style="width:${pct}%;"></i></div>
+        <div class="nd-hero__pct">${pct}% of daily goal</div>
+      </div>
+      <div class="nd-hero__rem">
+        <div class="nd-hero__remlabel">${dayRemaining>=0?'Remaining':'Over'}</div>
+        <div class="nd-hero__remval">${Math.abs(dayRemaining).toLocaleString()}</div>
+        <div class="nd-hero__remunit">kcal</div>
+      </div>
+      <span class="nd-hero__chev" aria-hidden="true">›</span>
+    </div>
+
+    ${renderNutritionFastingStrip()}
+
+    <!-- Three shortcuts. Each goes somewhere that already exists rather than being a tile
+         that will be wired up later. -->
+    <div class="nd-shortcuts">
+      <button class="nd-short" data-open-diet-plan="1">
+        <span class="nd-short__icon nd-short__icon--blue">📋</span>
+        <span class="nd-short__body"><span class="nd-short__title">Diet Plan</span><span class="nd-short__sub">Build your meal plan</span></span>
+        <span class="nd-short__chev">›</span>
+      </button>
+      <button class="nd-short" data-nav-insights="1">
+        <span class="nd-short__icon nd-short__icon--purple">📊</span>
+        <span class="nd-short__body"><span class="nd-short__title">Insights</span><span class="nd-short__sub">See your progress</span></span>
+        <span class="nd-short__chev">›</span>
+      </button>
+      <button class="nd-short" data-nav="recipes">
+        <span class="nd-short__icon nd-short__icon--orange">🍲</span>
+        <span class="nd-short__body"><span class="nd-short__title">Recipes</span><span class="nd-short__sub">Healthy recipes</span></span>
+        <span class="nd-short__chev">›</span>
+      </button>
+    </div>
+
+    <!-- MEALS
+         mealTypesInUse, not mealTypes: the defaults are the meals you PLAN to eat, but the
+         list has to include any meal that actually holds food today. Rendering only the
+         defaults meant an entry logged under a meal since removed from them (Bedtime Snack,
+         Post Workout) still counted toward the day's total while having no visible row — so
+         it could not be seen, edited or deleted. Food must never become unreachable because
+         a default changed. -->
+    ${lastDeletedFood ? `<div class="row-between" style="align-items:center;margin-bottom:6px;">
+      <div class="eyebrow-label" style="margin:0;">Meals</div>
+      <button class="cat-chip" data-action="undo-food-delete" style="margin:0;padding:2px 10px;font-size:11px;">Undo delete</button>
+    </div>` : ""}
+    ${mealTypesInUse(dayEntries).map(meal=>{
+      const foods = dayEntries.filter(f=>(f.meal||"Lunch")===meal);
+      const kcal = Math.round(foods.reduce((a,f)=>a+Number(f.calories||0),0));
+      const target = mealCalorieTarget(meal, calorieBudget);
+      /* The heading sits on the page, not inside a card. A card that wraps both the title and
+         the contents makes five meals read as five boxes; lifting the title out leaves one
+         surface per meal — the food itself — and the page gets its rhythm from the gaps.
+         The meal emoji went with it: the name is the label, and a glyph beside every heading
+         is decoration competing with the one thing on the row that is actually read. */
+      return `<div class="nd-meal">
+        <div class="nd-meal__head">
+          <span class="nd-meal__name">${escHtml(mealLabel(meal))}</span>
+          <span class="nd-meal__kcal"><strong>${kcal}</strong> of ${target} Cal</span>
+          <button class="nd-meal__add" data-meal-add="${escHtml(meal)}" aria-label="Add food to ${escHtml(meal)}">+</button>
+        </div>
+        <div class="nd-meal__body">
+        ${foods.length ? foods.map(f=>`
+          <div class="nd-food" data-entry-open="${escHtml(String(f.id))}">
+            ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(f, 44) : ""}
+            <div class="nd-food__body">
+              <div class="nd-food__name">${escHtml(f.name)}</div>
+              <div class="nd-food__serving">${f.grams?`${Math.round(f.grams)} ${escHtml(f.servingUnit||'g')}`:'&mdash;'}</div>
+              <div class="nd-food__macros">
+                <span><b class="m-p">P</b> ${Math.round(f.protein||0)}g</span>
+                <span><b class="m-c">C</b> ${Math.round(f.carbs||0)}g</span>
+                <span><b class="m-f">F</b> ${Math.round(f.fat||0)}g</span>
+              </div>
+            </div>
+            <span class="nd-food__kcal">${Math.round(f.calories||0)}<span class="nut-unit"> kcal</span></span>
+          </div>`).join("")
+        : `<button class="nd-meal__empty" data-meal-add="${escHtml(meal)}">
+             ${escHtml(mealEmptyCopy(meal))}
+           </button>`}
+        </div>
+      </div>`;
+    }).join("")}
+
+
+    <!-- Add actions -->
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <button class="btn btn-ghost" style="flex:1;padding:11px;font-size:11px;" data-action="scan-barcode">Scan Barcode</button>
+      <button class="btn btn-accent" style="flex:1.3;padding:11px;font-size:13px;" data-action="add-food">+ Add Food</button>
+      <button class="btn btn-ghost" style="flex:1;padding:11px;font-size:11px;${state.quickAddOpen?'color:var(--accent);':''}" data-action="quick-add-recent">Quick Add</button>
+    </div>
+
+    ${state.quickAddOpen ? (()=>{
+      const yesterday = dayOffsetStr(ds, -1);
+      const yEntries = foodsForDate(yesterday);
+      const yMeals = mealTypesInUse(yEntries).filter(m=>yEntries.some(f=>(f.meal||"Lunch")===m));
+      const used = mostUsedFoods(8);
+      const favs = state.favoriteFoods || [];
+      const recents = recentFoodEntries(8);
+      const nothing = !yEntries.length && !used.length && !favs.length && !recents.length;
+
+      return `<div class="info-box" style="padding:12px 14px;margin-bottom:12px;">
+        <div class="row-between" style="margin-bottom:8px;">
+          <span style="font-size:13px;font-weight:800;">Quick Add</span>
+          <button class="cat-chip" data-action="quick-add-recent" style="margin:0;padding:2px 9px;font-size:11px;">Close</button>
+        </div>
+
+        ${nothing ? `<div style="font-size:11px;color:var(--muted);line-height:1.4;">
+          Nothing to repeat yet. Once you have logged a few foods they will show up here for
+          one-tap re-logging.
+        </div>` : ""}
+
+        ${yEntries.length ? `
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Repeat yesterday</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
+            <button class="cat-chip" data-repeat-day="${escHtml(yesterday)}" style="margin:0;">Entire day · ${yEntries.length} item${yEntries.length===1?"":"s"}</button>
+            ${yMeals.map(m=>{
+              const n = yEntries.filter(f=>(f.meal||"Lunch")===m).length;
+              return `<button class="cat-chip" data-repeat-meal="${escHtml(m)}" data-repeat-from="${escHtml(yesterday)}" style="margin:0;">${escHtml(m)} · ${n}</button>`;
+            }).join("")}
+          </div>` : ""}
+
+        ${used.length ? `
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Most logged</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
+            ${used.map(u=>`<button class="cat-chip" data-repeat-entry="${u.entry.id}" style="margin:0;">${escHtml(u.entry.name)} · ${u.entry.calories||0}kcal <span style="color:var(--muted);">×${u.count}</span></button>`).join("")}
+          </div>` : ""}
+
+        ${recents.length ? `
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">Recent</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
+            ${recents.map(f=>`<button class="cat-chip" data-repeat-entry="${f.id}" style="margin:0;">${escHtml(f.name)} · ${f.calories||0}kcal</button>`).join("")}
+          </div>` : ""}
+
+        ${favs.length ? `
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">★ Favourites</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+            ${favs.map(f=>`<button class="cat-chip active" data-quick-add-food="${escHtml(state.mealOpen||mealTypes()[0])}" data-food-name="${escHtml(f.name)}" data-food-cal="${f.calories||0}" data-food-protein="${f.protein||0}" data-food-carbs="${f.carbs||0}" data-food-fat="${f.fat||0}" data-food-fibre="${f.fibre||0}" style="margin:0;">${escHtml(f.name)} · ${f.calories||0}kcal</button>`).join("")}
+          </div>` : ""}
+
+        ${!nothing ? `<div style="font-size:11px;color:var(--muted);margin-top:8px;">Items are added to ${escHtml(state.quickAddMeal || mealTypes()[0])}. Repeated meals keep their original meal.</div>` : ""}
+      </div>`;
+    })() : ""}
+
+
   `;
 }
 
@@ -8852,25 +14471,127 @@ function macroBar(label, val, target, color, unit){
    renderErrorScreen() directly from here.
 ========================================================= */
 
+/* =========================================================
+   FOCUS PRESERVATION ACROSS render()
+
+   THE KEYBOARD-JUMP BUG, AND WHY IT WAS EVERYWHERE
+
+   render() replaces the contents of #app, which destroys whatever input the user is typing
+   into. Five search boxes worked around that individually with the same shape:
+
+       render();
+       setTimeout(() => { input.focus(); input.setSelectionRange(len, len); }, 0);
+
+   On Android that is the jump. Losing focus closes the soft keyboard, the layout viewport
+   grows, the timeout re-focuses a frame later, the keyboard reopens and the viewport shrinks
+   again — the page visibly bounces on EVERY keystroke. It also snapped the caret to the end
+   of the line, so editing anywhere but the end was impossible.
+
+   Preserving focus HERE fixes all of them at once, and any input added later gets it for
+   free. Three things matter:
+
+     synchronously   restored in the same task as the innerHTML swap, before the browser has
+                     laid out or told the IME anything. No frame passes with nothing focused,
+                     so the keyboard never closes and there is nothing to bounce.
+     caret intact    selectionStart/End are carried over rather than jumping to the end.
+     scroll intact   preventScroll, because re-focusing an offscreen field would otherwise
+                     yank the page to it.
+========================================================= */
+/* Tags the freshly-rendered <main> so css/gloss.css animates it in — but ONLY when the tab
+   actually changed.
+
+   render() rebuilds #app for every state change, which on this app means every tap: completing
+   a set, opening a sheet, typing in a field. An animation attached to `main` in CSS alone would
+   therefore replay on all of them and the screen would flash constantly. Gating on a tab change
+   is what makes it read as navigation.
+
+   No cleanup is needed and that is deliberate rather than an oversight: `main` is a brand new
+   element after every render, so the next one arrives without the class and simply does not
+   animate. A timer or an animationend listener to strip the class would be a second thing to
+   get wrong, and would race with the next render. */
+let _lastRenderedTab = null;
+function markPageEnterIfTabChanged(){
+  const tab = state.tab;
+  if(tab === _lastRenderedTab) return;
+  // Captured BEFORE the assignment. Testing _lastRenderedTab for null after writing to it
+  // would test the value just written, so the guard below could never fire.
+  const isFirstPaint = _lastRenderedTab === null;
+  _lastRenderedTab = tab;
+  // The first paint of the session is not a navigation — the app arriving IS the transition,
+  // and animating it here would fight the boot splash's own fade.
+  if(isFirstPaint) return;
+  const main = document.querySelector("#app > main");
+  if(main) main.classList.add("page-enter");
+}
+
+function withFocusPreserved(fn){
+  const active = document.activeElement;
+  const id = active && active.id;
+  const isText = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
+  let start = null, end = null;
+  if(isText){
+    // selectionStart throws on input types that do not support it (number, date, email).
+    try{ start = active.selectionStart; end = active.selectionEnd; }catch(e){}
+  }
+
+  fn();
+
+  if(!id || !isText) return;
+  const next = document.getElementById(id);
+  if(!next || next === document.activeElement) return;
+  try{
+    next.focus({ preventScroll: true });
+    if(start != null) next.setSelectionRange(start, end);
+  }catch(e){ /* a field that cannot take a caret is not worth failing a render over */ }
+}
+
 function render(){
   try{
     applyTheme();
     if(!state.onboardingComplete || state.editingOnboarding){
-      renderOnboardingWizard();
+      /* Sign In is screen one of the flow, ahead of the questionnaire. Only for a genuinely
+         new install: someone re-editing their answers is already in, and anyone who has
+         signed in or chosen to skip has hx_auth_seen set and never sees it again. */
+      if(!isSignedIn() && !state.editingOnboarding){
+        renderSignInScreen();
+        return;
+      }
+      withFocusPreserved(renderOnboardingWizard);
       return;
     }
-    renderApp();
+    /* THE GATE. Everything past this point assumes a signed-in user, so it is checked once
+       here rather than per screen — a per-screen check is a list somebody eventually forgets
+       to add to. hx_auth_seen is no longer consulted: "has seen the screen" and "has an
+       account" were the same flag only while skipping existed. */
+    if(!isSignedIn()){
+      renderSignInScreen();
+      return;
+    }
+    withFocusPreserved(renderApp);
+    markPageEnterIfTabChanged();
+    // A running fast ticks wherever it is visible — the Fasting page or the Home card.
+    if(window.IgnytFasting && IgnytFasting.active()) ensureFastTimerRunning();
+    else stopFastTimer();
     if(state.session) ensureElapsedTimerRunning();
     else stopElapsedTimer();
     if(state.raceActive) ensureRaceTimerRunning();
     else stopRaceTimer();
+    _renderCrashed = false;   // a full render got through, so the app is healthy again
   }catch(err){
     console.error("Ignyt render error:", err);
+    _renderCrashed = true;
     renderErrorScreen(err);
   }
 }
 
+/* Set while the error screen is on show. Hardware back consults it before anything else:
+   without that, back ran the normal overlay list, called render(), hit the same broken
+   screen and landed straight back on the error page — the user could not get out by the one
+   gesture they would try first. */
+let _renderCrashed = false;
+
 function renderErrorScreen(err){
+  _renderCrashed = true;
   const root = document.getElementById("app");
   let msg = "Something went wrong displaying this screen.";
   try{ msg = (err && err.message) ? err.message : msg; }catch{}
@@ -8934,9 +14655,9 @@ function renderPlanTab(){
           ${Object.entries(LEVELS).map(([key,lv])=>`<button class="cat-chip ${state.activeLevel===key?'active':''}" data-level="${key}" style="flex:1;text-align:center;">${lv.label}</button>`).join("")}
         </div>
         <div class="pi-grid2" style="grid-template-columns:repeat(3,minmax(0,1fr));padding-top:12px;border-top:1px solid var(--rh-border);">
-          <div style="text-align:center;"><span style="color:var(--rh-blue);">${svg('calendar',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">Week ${state.activeWeek} of 8</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Current Week</div></div>
-          <div style="text-align:center;"><span style="color:var(--rh-blue);">${svg('dumbbell',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">${sessionsThisWeek} Sessions</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">This Week</div></div>
-          <div style="text-align:center;"><span style="color:var(--rh-blue);">${svg('timer',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">60 min/day</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Est. Time</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-blue);">${svg('calendar',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">Week ${state.activeWeek} of 8</div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Current Week</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-blue);">${svg('dumbbell',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">${sessionsThisWeek} Sessions</div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">This Week</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-blue);">${svg('timer',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">60 min/day</div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Est. Time</div></div>
         </div>
         <div style="margin-top:14px;">
           <span style="font-size:12px;color:var(--rh-muted);font-weight:600;">Progress</span>
@@ -8959,10 +14680,10 @@ function renderPlanTab(){
           </div>
         </div>
         <div class="pi-grid2" style="grid-template-columns:repeat(4,minmax(0,1fr));padding-top:12px;margin-top:12px;border-top:1px solid var(--rh-border);">
-          <div style="text-align:center;"><span style="color:var(--rh-green);">${svg('run',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">8</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Runs</div></div>
-          <div style="text-align:center;"><span style="color:var(--rh-green);">${svg('target',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">8</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Stations</div></div>
-          <div style="text-align:center;"><span style="color:var(--rh-green);">${svg('timer',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">90 min</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Est. Time</div></div>
-          <div style="text-align:center;"><span style="color:var(--rh-red);">${svg('health',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">High</div><div style="font-size:10px;color:var(--rh-muted);font-weight:600;">Intensity</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-green);">${svg('run',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">8</div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Runs</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-green);">${svg('target',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">8</div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Stations</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-green);">${svg('timer',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">90 min</div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Est. Time</div></div>
+          <div style="text-align:center;"><span style="color:var(--rh-red);">${svg('health',16)}</span><div style="font-size:15px;font-weight:800;margin-top:4px;">High</div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Intensity</div></div>
         </div>
         ${best!=null ? `<div style="font-size:12px;color:var(--rh-muted);margin-top:12px;">Personal best: <span style="color:var(--rh-green);font-weight:800;">${formatDuration(best)}</span></div>` : ''}
         <button class="rh-btn" style="width:100%;margin-top:14px;padding:14px;font-size:15px;background:rgba(22,163,74,.15);color:var(--rh-green);" data-action="open-race-mode">${svg('workout',16)} Open Race Mode</button>
@@ -9083,7 +14804,7 @@ function renderRaceStart(){
         ${recentRaces.map(race=>`<div class="row-between" style="padding:8px 0;border-bottom:1px solid var(--border);">
           <div>
             <div style="font-size:13px;font-weight:700;">${new Date(race.date).toLocaleDateString('default',{month:'short',day:'numeric',year:'numeric'})}</div>
-            ${race.totalMs===best?`<div style="font-size:10px;color:var(--mint);font-weight:700;">PERSONAL BEST</div>`:''}
+            ${race.totalMs===best?`<div style="font-size:11px;color:var(--mint);font-weight:700;">PERSONAL BEST</div>`:''}
           </div>
           <span class="mono" style="font-size:14px;font-weight:800;color:var(--accent);">${formatDuration(race.totalMs)}</span>
         </div>`).join("")}
@@ -9183,9 +14904,15 @@ function renderAchievementCelebration(){
    just-saved workoutLog entry: no synthetic stats, ever.
 ========================================================= */
 
+/* One theme. Dark and Ember were removed on request, and the picker row went with them --
+   a chooser with a single option is not a choice, it is a chip that is always on.
+
+   Every default below now names `steel` rather than `dark`. That matters more than it looks:
+   an existing user has "dark" or "ember" persisted in state.shareCardTheme, and the lookups
+   fell back to a literal "dark" that would no longer resolve. The guard is `SHARE_THEMES[key]
+   ? key : "steel"`, so a stored key that no longer exists lands on the one that does instead
+   of on undefined and a blank card. */
 const SHARE_THEMES = {
-  dark:  { label:"Dark",  bg0:"#121216", bg1:"#121216", text:"#F2F1ED", muted:"#8B8B94", accent:"#FF5A1F" },
-  ember: { label:"Ember", bg0:"#31150a", bg1:"#121216", text:"#F2F1ED", muted:"#B79F92", accent:"#FF5A1F" },
   steel: { label:"Steel", bg0:"#0E1B26", bg1:"#121216", text:"#F2F1ED", muted:"#8FA7B5", accent:"#4FA8D8" }
 };
 
@@ -9236,12 +14963,96 @@ function buildWorkoutSummaryText(s){
   return lines.join("\n");
 }
 
+/* =========================================================
+   "YOU LIFTED A GIRAFFE" — total volume, in something a person can picture.
+
+   Volume is the one number on this screen nobody has intuition for. 12,400 kg is meaningless;
+   two horses is not. This turns the figure into a comparison and does nothing else.
+
+   THE WEIGHTS ARE REAL, AND THE COPY SAYS "ABOUT".
+   These are approximate adult averages — a real giraffe is anywhere from 800 to 1,900 kg — so
+   the card says "about the weight of" rather than stating an equivalence it cannot support.
+   Rounding a session to the nearest animal is a bit of fun; quoting a false figure to do it
+   is not, and the numbers below are the ones a reference would give.
+
+   ON THE GRAPHIC: these are emoji, not drawn silhouettes. A hand-authored SVG animal has to be
+   LOOKED at to know whether it reads as a rhino or as a grey blob, and this environment cannot
+   render a screenshot to check. An emoji is unambiguous on every Android, needs no asset, and
+   survives the CSP and offline. If you want real illustrations, that is a design pass with a
+   pair of eyes on it, not something to guess at.
+========================================================= */
+/* Ordered lightest to heaviest. Every kg is a real approximate adult average — the point of
+   the card is a comparison someone can picture, and a made-up weight would break the only
+   thing it is for.
+
+   `plural` is stated, not derived. Stripping the article and adding "s" produced "persons"
+   and "bisons"; English takes no rule here, so the data carries it.
+
+   The bison is gone, and that is an emoji-vintage decision rather than a zoological one:
+   U+1F9AC is Emoji 13.0 (2020, Android 11), and this app's minSdk is 26 — Android 8, which
+   ships Emoji 5.0. It would have rendered as an empty box on an older phone. The kangaroo and
+   hippo are Emoji 11.0 (Android 9); everything else here is Emoji 5.0 or earlier and safe all
+   the way down. Anything added later should be checked the same way. */
+const VOLUME_ANIMALS = [
+  { kg: 4.5,     emoji: "\u{1F408}", name: "a cat",                 plural: "cats" },
+  { kg: 30,      emoji: "\u{1F415}", name: "a labrador",            plural: "labradors" },
+  { kg: 45,      emoji: "\u{1F43A}", name: "a wolf",                plural: "wolves" },
+  { kg: 60,      emoji: "\u{1F406}", name: "a leopard",             plural: "leopards" },
+  { kg: 62,      emoji: "\u{1F9D1}", name: "an adult person",       plural: "people" },
+  { kg: 65,      emoji: "\u{1F998}", name: "a kangaroo",            plural: "kangaroos" },
+  { kg: 100,     emoji: "\u{1F43C}", name: "a giant panda",         plural: "giant pandas" },
+  { kg: 120,     emoji: "\u{1F98C}", name: "a reindeer",            plural: "reindeer" },
+  { kg: 160,     emoji: "\u{1F98D}", name: "a gorilla",             plural: "gorillas" },
+  { kg: 190,     emoji: "\u{1F981}", name: "a lion",                plural: "lions" },
+  { kg: 220,     emoji: "\u{1F405}", name: "a tiger",               plural: "tigers" },
+  { kg: 270,     emoji: "\u{1F43B}", name: "a grizzly bear",        plural: "grizzly bears" },
+  { kg: 500,     emoji: "\u{1F40E}", name: "a horse",               plural: "horses" },
+  { kg: 600,     emoji: "\u{1F42B}", name: "a camel",               plural: "camels" },
+  { kg: 750,     emoji: "\u{1F404}", name: "a cow",                 plural: "cows" },
+  { kg: 1000,    emoji: "\u{1F40A}", name: "a saltwater crocodile", plural: "saltwater crocodiles" },
+  { kg: 1200,    emoji: "\u{1F992}", name: "a giraffe",             plural: "giraffes" },
+  { kg: 1500,    emoji: "\u{1F99B}", name: "a hippo",               plural: "hippos" },
+  { kg: 2300,    emoji: "\u{1F98F}", name: "a rhino",               plural: "rhinos" },
+  { kg: 6000,    emoji: "\u{1F418}", name: "an elephant",           plural: "elephants" },
+  { kg: 19000,   emoji: "\u{1F988}", name: "a whale shark",         plural: "whale sharks" },
+  { kg: 150000,  emoji: "\u{1F40B}", name: "a blue whale",          plural: "blue whales" }
+];
+
+/** The heaviest animal this volume covers, and how many of it. Null under the lightest one —
+ *  a session that has not moved a cat has nothing to compare. Always in KILOGRAMS: the animals
+ *  are metric facts, so converting them to pounds for a lb user would make the comparison
+ *  wrong rather than localised. */
+function volumeAsAnimal(volumeKg){
+  const v = Number(volumeKg) || 0;
+  if(v < VOLUME_ANIMALS[0].kg) return null;
+  let pick = VOLUME_ANIMALS[0];
+  for(const a of VOLUME_ANIMALS) if(v >= a.kg) pick = a;
+  return { animal: pick, count: Math.max(1, Math.round(v / pick.kg)) };
+}
+
+function renderVolumeAnimalCard(volumeKg){
+  const m = volumeAsAnimal(volumeKg);
+  if(!m) return "";
+  const { animal, count } = m;
+  return `
+    <div class="pg-card wk-animal">
+      <div class="wk-animal__art" aria-hidden="true">
+        <span class="wk-animal__emoji">${animal.emoji}</span>
+        ${count > 1 ? `<span class="wk-animal__count">×${count}</span>` : ""}
+      </div>
+      <div class="wk-animal__text">
+        <div class="wk-animal__lead">You lifted ${count > 1 ? `${count} × ${escHtml(animal.name)}` : escHtml(animal.name)}</div>
+        <div class="wk-animal__sub">${Math.round(volumeKg).toLocaleString()} kg moved · about the weight of ${count > 1 ? escHtml(animal.plural) : escHtml(animal.name)}</div>
+      </div>
+    </div>`;
+}
+
 function renderWorkoutComplete(s){
   const completedSets = computeCompletedSets(s.exercises);
   const breakdown = workoutBreakdown(s);
   const muscles = workoutMusclesTrained(s);
   const prs = state.prs.filter(p=>p.workoutId===s.id);
-  const theme = SHARE_THEMES[state.shareCardTheme] ? state.shareCardTheme : "dark";
+  const theme = SHARE_THEMES[state.shareCardTheme] ? state.shareCardTheme : "steel";
   const name = workoutShareName();
   const timeLabel = s.startedAt ? new Date(s.startedAt).toLocaleString([], {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"}) : s.date;
 
@@ -9271,7 +15082,7 @@ function renderWorkoutComplete(s){
     <div class="share-card-title">${sessionTitle(s)}</div>
     <div class="share-mini-stats">${workoutDurationLabel(s)} · ${displayW(s.volume||0,0).toLocaleString()}${wUnit()} · ${completedSets} sets</div>
     <div class="share-ex-list">
-      ${breakdown.slice(0,8).map(b=>`<div><b>${b.sets}×</b> ${b.name}</div>`).join("")}
+      ${breakdown.slice(0,8).map(b=>`<div><b>${b.sets}×</b> ${escHtml(b.name)}</div>`).join("")}
       ${breakdown.length>8?`<div style="color:inherit;opacity:.6;">+ ${breakdown.length-8} more</div>`:""}
     </div>`);
 
@@ -9282,13 +15093,13 @@ function renderWorkoutComplete(s){
       ? `<div class="share-muscle-chips">${muscles.map(m=>`<span>${m}</span>`).join("")}</div>`
       : `<div class="share-mini-stats" style="margin-top:14px;">No muscle data for these exercises</div>`}
     <div class="share-ex-list" style="margin-top:12px;">
-      ${breakdown.filter(b=>b.sets>0).slice(0,6).map(b=>`<div>${b.name}</div>`).join("")}
+      ${breakdown.filter(b=>b.sets>0).slice(0,6).map(b=>`<div>${escHtml(b.name)}</div>`).join("")}
     </div>`);
 
-  // No real exercise photos exist anywhere in this app (every EXERCISE_DETAILS.thumbnailUrl
-  // is null) -- an icon badge per row, not a fabricated photo, matches the honest-assets
-  // approach used everywhere else this session (Tools/Profile/Plan all use icon badges
-  // where the reference showed photography this app has no real asset for).
+  // Most exercises still have no real photo (EXERCISE_DETAILS.thumbnailUrl null) -- an icon
+  // badge per row for those, not a fabricated photo, matches the honest-assets approach used
+  // everywhere else this session (Tools/Profile/Plan all use icon badges where the reference
+  // showed photography this app has no real asset for).
   const exIcon = (name) => {
     const m = getMuscle(name);
     return ["Chest","Shoulders","Triceps"].includes(m) ? "dumbbell" : ["Back","Biceps","Lats"].includes(m) ? "workout" : "body";
@@ -9298,8 +15109,28 @@ function renderWorkoutComplete(s){
     <div class="pg-light">
       <div style="text-align:center;margin:8px 0 4px;">
         <div style="font-size:24px;font-weight:800;">Workout Complete 🎉</div>
-        <div style="font-size:13px;color:var(--rh-muted);margin-top:4px;">${timeLabel}</div>
       </div>
+
+      <!-- When the workout happened, editable here rather than only from history.
+           Finishing saves with the session's own start and end times, which is right almost
+           always and wrong exactly when it matters: a session left running overnight, or one
+           logged from paper the next morning. Correcting it used to mean finding the workout
+           in history and opening the editor from there — this is that same editor, reached
+           from the screen you are already on.
+
+           It opens renderWorkoutEditor rather than a second date picker on purpose. That
+           editor already validates the range, keeps duration and start/end in step, and
+           writes an audit entry; a private picker here would be a second definition of
+           "when did this happen" that could disagree with it. renderWorkoutTab checks
+           editingWorkout before workoutCompleteId, so closing it lands back here. -->
+      <button class="pg-card wc-when" data-action="edit-complete-datetime" data-workout-id="${escHtml(String(s.id))}">
+        <span class="wc-when__icon">${svg('calendar',18)}</span>
+        <span class="wc-when__body">
+          <span class="wc-when__label">Date &amp; Time</span>
+          <span class="wc-when__value">${escHtml(timeLabel)}</span>
+        </span>
+        <span class="wc-when__go" aria-hidden="true">›</span>
+      </button>
 
       ${prs.length ? `<div class="pg-card" style="margin:12px 0;background:rgba(217,119,6,.06);border-color:rgba(217,119,6,.25);">
         <div style="display:flex;align-items:center;gap:6px;font-weight:800;font-size:15px;color:#D97706;margin-bottom:8px;">${svg('trophy',18)} ${prs.length} Personal Record${prs.length>1?'s':''}</div>
@@ -9317,12 +15148,17 @@ function renderWorkoutComplete(s){
           <div class="pg-stat-card__value">${s.exercises.length}</div><div class="pg-stat-card__label">Exercises</div></div>
       </div>
 
+      ${/* Directly under the stat grid, because it is the Volume tile restated in something a
+            person can picture. Anywhere further down and it reads as a separate fact rather
+            than as the answer to "is 12,400 kg a lot?". */''}
+      ${renderVolumeAnimalCard(s.volume || 0)}
+
       <div class="rh-section-head" style="margin-top:0;"><span>Exercise Breakdown</span></div>
       <div class="pg-card" style="padding:6px 14px;">
         ${breakdown.length ? breakdown.map(b=>`<div class="row-between" style="padding:9px 0;border-top:1px solid var(--rh-border);">
           <div style="display:flex;align-items:center;gap:10px;min-width:0;">
             <span class="tl-card__icon" style="width:32px;height:32px;flex:none;">${svg(exIcon(b.name),16)}</span>
-            <span style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${b.name}</span>
+            <span style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(b.name)}</span>
           </div>
           <span style="font-size:13px;font-weight:700;color:${b.sets>0?'var(--rh-blue)':'var(--rh-muted)'};flex-shrink:0;">${b.sets} set${b.sets!==1?'s':''}</span>
         </div>`).join("") : `<div class="wk-empty">No exercises</div>`}
@@ -9338,9 +15174,6 @@ function renderWorkoutComplete(s){
       <div class="share-dots" id="share-dots">
         ${[0,1,2].map(i=>`<span class="share-dot ${i===(state.shareCardIndex||0)?'active':''}"></span>`).join("")}
       </div>
-      <div style="display:flex;gap:6px;margin:8px 0 12px;justify-content:center;">
-        ${Object.entries(SHARE_THEMES).map(([key,t])=>`<button class="cat-chip ${theme===key?'active':''}" data-share-theme="${key}">${t.label}</button>`).join("")}
-      </div>
       <div class="pg-card-row" style="margin-top:0;">
         <button class="rh-btn" style="padding:13px;background:rgba(37,99,235,.1);color:var(--rh-blue);" data-action="share-workout-image" aria-label="Share workout card image">${svg('upload',15)} Share Image</button>
         <button class="rh-btn" style="padding:13px;background:rgba(22,163,74,.1);color:var(--rh-green);" data-action="save-workout-image" aria-label="Save workout card image">${svg('download',15)} Save Image</button>
@@ -9354,7 +15187,7 @@ function renderWorkoutComplete(s){
 /* Draws one share card onto a 1080×1350 canvas — same real data as the DOM cards.
    All text/shapes are drawn by hand (no external assets, nothing fabricated). */
 function drawShareCard(canvas, s, cardIndex, themeKey){
-  const t = SHARE_THEMES[themeKey] || SHARE_THEMES.dark;
+  const t = SHARE_THEMES[themeKey] || SHARE_THEMES.steel;
   const W = canvas.width = 1080, H = canvas.height = 1350;
   const ctx = canvas.getContext("2d");
   const grad = ctx.createLinearGradient(0,0,0,H);
@@ -9437,7 +15270,7 @@ function roundRect(ctx,x,y,w,h,r){
    a blank screen, and never touches the saved workout itself. */
 async function generateShareImageBase64(s){
   const canvas = document.createElement("canvas");
-  drawShareCard(canvas, s, state.shareCardIndex||0, state.shareCardTheme||"dark");
+  drawShareCard(canvas, s, state.shareCardIndex||0, state.shareCardTheme||"steel");
   return canvas.toDataURL("image/png").split(",")[1];
 }
 
@@ -9564,10 +15397,240 @@ function attachSwipeToDelete(){
   });
 }
 
+/* =========================================================
+   POST-WORKOUT EDITING
+
+   A finished workout is a plain record in state.workoutLog, and every statistic in the app
+   (weekly totals, streaks, calendar, muscle distribution, calorie estimates, progress
+   charts) is derived from that array at render time rather than cached. So correcting a
+   record and calling persist() + render() updates every downstream surface automatically --
+   there is no separate analytics store to invalidate.
+
+   Cloud sync needs no special handling either: cloud-sync.js diffs each record by content
+   hash against the last-synced value, keyed on the record's own id. An edited workout keeps
+   its id, so it re-uploads as an update rather than a new row, and offline edits queue and
+   flush through the existing mechanism.
+
+   Every edit writes an audit entry (before/after + timestamp + optional reason) to
+   editHistory, so the original recorded values are never destroyed.
+========================================================= */
+
+const WORKOUT_EDIT_MIN_MIN = 1;
+const WORKOUT_EDIT_MAX_MIN = 12 * 60;
+
+/** Local-time "YYYY-MM-DD" for a Date/ms value. Deliberately NOT toISOString(), which
+ *  converts to UTC and can shift the date across midnight for non-UTC users. */
+function localDateStr(ms){
+  const d = new Date(ms);
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+/** Local-time "HH:MM" for a Date/ms value. */
+function localTimeStr(ms){
+  const d = new Date(ms);
+  return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+}
+/** Combines a "YYYY-MM-DD" + "HH:MM" into a local-time epoch, or null if either is missing
+ *  or malformed. Built from explicit components so it can't be reinterpreted as UTC. */
+function combineLocalDateTime(dateStr, timeStr){
+  if(!dateStr || !timeStr) return null;
+  const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  const tm = /^(\d{1,2}):(\d{2})$/.exec(timeStr);
+  if(!dm || !tm) return null;
+  const ms = new Date(Number(dm[1]), Number(dm[2])-1, Number(dm[3]), Number(tm[1]), Number(tm[2]), 0, 0).getTime();
+  return isFinite(ms) ? ms : null;
+}
+
+/** Seeds the edit form from a saved workout. Falls back sensibly for legacy records that
+ *  predate startedAt/finishedAt (older entries only carry date + durationMin). */
+function buildWorkoutEditDraft(s){
+  const dur = Number(s.durationMin) || 0;
+  const started = s.startedAt != null ? s.startedAt : null;
+  const finished = s.finishedAt != null ? s.finishedAt
+    : (started != null && dur ? started + dur*60000 : null);
+  const totalSec = dur * 60;
+  return {
+    id: s.id,
+    date: s.date || (started != null ? localDateStr(started) : localDateStr(Date.now())),
+    startTime: started != null ? localTimeStr(started) : "",
+    endTime: finished != null ? localTimeStr(finished) : "",
+    hours: Math.floor(totalSec/3600),
+    minutes: Math.floor((totalSec%3600)/60),
+    seconds: totalSec%60,
+    notes: s.notes || "",
+    title: s.title || "",
+    mood: s.mood || "",
+    energy: s.energy || "",
+    rating: s.rating || "",
+    rpe: s.rpe || "",
+    reason: "",
+    // Kept so "Reset to recorded duration" restores the value actually recorded, even after
+    // several unsaved tweaks in the form.
+    originalDurationMin: dur,
+    error: null
+  };
+}
+
+function workoutEditDraftDurationMin(d){
+  return Math.round(((Number(d.hours)||0)*3600 + (Number(d.minutes)||0)*60 + (Number(d.seconds)||0)) / 60);
+}
+
+/** Returns an error string, or null when the draft is valid and safe to save. */
+function validateWorkoutEdit(draft){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(draft.date || "")) return "Enter a valid workout date.";
+  const dayStart = combineLocalDateTime(draft.date, "00:00");
+  if(dayStart == null) return "Enter a valid workout date.";
+  // Compare against end-of-today so a workout logged earlier today is never rejected.
+  const endOfToday = new Date(); endOfToday.setHours(23,59,59,999);
+  if(dayStart > endOfToday.getTime()) return "Workout date can't be in the future.";
+
+  const hasStart = !!draft.startTime, hasEnd = !!draft.endTime;
+  if(hasStart !== hasEnd) return "Enter both a start and an end time, or leave both blank.";
+
+  let durationMin;
+  if(hasStart && hasEnd){
+    const st = combineLocalDateTime(draft.date, draft.startTime);
+    const et = combineLocalDateTime(draft.date, draft.endTime);
+    if(st == null || et == null) return "Enter valid start and end times.";
+    if(et <= st) return "End time must be after start time.";
+    durationMin = Math.round((et - st)/60000);
+  } else {
+    // Validate the raw seconds, not the rounded minutes: 30s would otherwise round UP to
+    // 1 and slip past the minimum-duration check.
+    const h = Number(draft.hours)||0, m = Number(draft.minutes)||0, sec = Number(draft.seconds)||0;
+    if(h < 0 || m < 0 || sec < 0) return "Duration can't be negative.";
+    const totalSec = h*3600 + m*60 + sec;
+    if(totalSec < WORKOUT_EDIT_MIN_MIN*60) return "Duration must be at least 1 minute.";
+    durationMin = Math.round(totalSec/60);
+  }
+  if(!isFinite(durationMin) || durationMin < WORKOUT_EDIT_MIN_MIN) return "Duration must be at least 1 minute.";
+  if(durationMin > WORKOUT_EDIT_MAX_MIN) return "Duration can't be longer than 12 hours.";
+
+  const r = draft.rating === "" ? null : Number(draft.rating);
+  if(r != null && (!isFinite(r) || r < 1 || r > 10)) return "Session rating must be between 1 and 10.";
+  const rpe = draft.rpe === "" ? null : Number(draft.rpe);
+  if(rpe != null && (!isFinite(rpe) || rpe < 1 || rpe > 10)) return "RPE must be between 1 and 10.";
+  return null;
+}
+
+/** Applies a validated draft to the stored workout, writing an audit entry. Returns
+ *  {ok:true} or {ok:false, error}. Never mutates the record on a validation failure. */
+function saveWorkoutEdit(draft){
+  const err = validateWorkoutEdit(draft);
+  if(err) return { ok:false, error: err };
+  const idx = state.workoutLog.findIndex(w => w.id === draft.id);
+  if(idx === -1) return { ok:false, error:"That workout no longer exists." };
+  const s = state.workoutLog[idx];
+
+  const hasTimes = !!(draft.startTime && draft.endTime);
+  let startedAt = s.startedAt, finishedAt = s.finishedAt, durationMin;
+  if(hasTimes){
+    startedAt = combineLocalDateTime(draft.date, draft.startTime);
+    finishedAt = combineLocalDateTime(draft.date, draft.endTime);
+    durationMin = Math.round((finishedAt - startedAt)/60000);
+  } else {
+    durationMin = workoutEditDraftDurationMin(draft);
+    // Keep the timeline coherent when only the duration was corrected.
+    if(startedAt != null) finishedAt = startedAt + durationMin*60000;
+  }
+
+  const before = { date:s.date, startedAt:s.startedAt ?? null, finishedAt:s.finishedAt ?? null,
+    durationMin:s.durationMin ?? null, notes:s.notes || "", title:s.title || "",
+    mood:s.mood || "", energy:s.energy || "", rating:s.rating || "", rpe:s.rpe || "" };
+  const after = { date:draft.date, startedAt:startedAt ?? null, finishedAt:finishedAt ?? null,
+    durationMin, notes:draft.notes || "", title:draft.title || "",
+    mood:draft.mood || "", energy:draft.energy || "", rating:draft.rating || "", rpe:draft.rpe || "" };
+
+  // No-op guard: don't record an audit entry (or dirty the record for cloud sync) when
+  // nothing actually changed.
+  if(stableCompare(before, after)) return { ok:true, unchanged:true };
+
+  Object.assign(s, {
+    date: after.date, startedAt: after.startedAt, finishedAt: after.finishedAt,
+    durationMin: after.durationMin, notes: after.notes, title: after.title,
+    mood: after.mood, energy: after.energy, rating: after.rating, rpe: after.rpe,
+    edited: true,
+    editHistory: (Array.isArray(s.editHistory) ? s.editHistory : []).concat([{
+      at: Date.now(), reason: (draft.reason || "").trim(), before, after
+    }])
+  });
+
+  // Re-assert the write-time uniqueness invariant: an edit could in principle move a record
+  // onto the same start instant + signature as another one.
+  state.workoutLog = enforceWorkoutLogIntegrity(state.workoutLog);
+  persist(); // instant local save -- works offline; cloud sync picks it up on its next pass
+  return { ok:true };
+}
+
+/** Shallow value-compare for the flat audit objects above. */
+function stableCompare(a, b){
+  const ks = Object.keys(a);
+  if(ks.length !== Object.keys(b).length) return false;
+  return ks.every(k => String(a[k] ?? "") === String(b[k] ?? ""));
+}
+
+/* Bridges the app's data shapes into the coach engine.
+
+   LIBRARY is keyed BY EQUIPMENT, so the equipment for an exercise comes from the key rather
+   than from its detail entry — which is why this flattens rather than passing LIBRARY
+   straight through, and why detailsFor() folds the key back in.
+
+   Wrapped in try/catch and cached: a recommendation is a nice-to-have on this screen, and an
+   engine fault must never take the workout tab down with it. */
+let _coachLibCache = null;
+
+/** Turns a coach session into a live workout the existing logger understands. */
+/* ---- live session capsule ----
+   A workout that is running is the only thing in this app that keeps changing while the user
+   is looking at something else, and until now leaving the Workout tab hid it completely: the
+   clock kept counting with nothing on screen to say so. That is how a session gets left open
+   for hours — the app knew, and never mentioned it.
+
+   Pinned above the bottom nav on every tab EXCEPT Workout, where the full logger is already
+   on screen and a second copy of the same clock would just be noise.
+
+   The exercise shown is the first one with an unfinished set, which is where the user left
+   off, falling back to the last one added. */
+function liveSessionExerciseLabel(session){
+  const list = (session.exercises || []).filter(e => e && e.name);
+  if(!list.length) return "No exercises yet";
+  const pending = list.find(e => (e.sets || []).some(x => x && !x.done));
+  return (pending || list[list.length - 1]).name;
+}
+
+function renderLiveSessionBar(){
+  const s = state.session;
+  if(!s) return "";
+  if(state.tab === "workout") return "";      // the logger itself is on screen
+  if(state.showExercisePicker) return "";     // full-screen picker, launched from the logger
+
+  return `
+    <div class="lsb" role="status" aria-label="Workout in progress">
+      <button class="lsb__btn lsb__btn--open" data-action="resume-session" aria-label="Return to workout">
+        <span aria-hidden="true">^</span>
+      </button>
+      <button class="lsb__body" data-action="resume-session">
+        <span class="lsb__top">
+          <span class="lsb__dot" aria-hidden="true"></span>
+          <span class="lsb__label">Workout</span>
+          <span class="lsb__time mono" id="lsb-elapsed">${formatDuration(Date.now() - s.startedAt)}</span>
+        </span>
+        <span class="lsb__ex">${escHtml(liveSessionExerciseLabel(s))}</span>
+      </button>
+      <button class="lsb__btn lsb__btn--discard" data-action="discard-session" aria-label="Discard workout">
+        ${svg('trash', 18)}
+      </button>
+    </div>`;
+}
+
 function renderWorkoutTab(){
   if(state.session && state.showExercisePicker) return renderExercisePicker();
   if(state.routineBuilder && state.showExercisePicker && isRoutinePickerContext()) return renderExercisePicker();
   if(!state.session){
+    if(state.editingWorkout){
+      const target = state.workoutLog.find(x=>x.id===state.editingWorkout.id);
+      if(target) return renderWorkoutEditor(state.editingWorkout, target);
+      state.editingWorkout = null; // stale (deleted elsewhere) — fall through
+    }
     if(state.workoutCompleteId){
       const done = state.workoutLog.find(x=>x.id===state.workoutCompleteId);
       if(done) return renderWorkoutComplete(done);
@@ -9589,7 +15652,7 @@ function renderWorkoutTab(){
       workoutDurationLabel, displayW, wUnit, week, plannedDay, weekStats, prsThisWeek,
       volumeTrend: comparisonLabel(weekStats.weeklyVolume, prevWeekVolume),
       todayMuscles: plannedDay ? Array.from(new Set(plannedDay.exercises.map(ex=>getMuscle(ex.name)))).filter(m=>m && m!=="Other").slice(0,3) : [],
-      getMuscle, ROUTINE_CATEGORIES, routineEstimatedMinutes, escHtml
+      getMuscle, ROUTINE_CATEGORIES, routineEstimatedMinutes, escHtml,
     });
   }
   const s = state.session;
@@ -9625,7 +15688,19 @@ function renderWorkoutTab(){
       </div>
     </div>`}
     <input type="text" id="session-title" class="wk-session__title-input" placeholder="Workout title (e.g. Push Day)" value="${(s.title||'').replace(/"/g,'&quot;')}">
-    ${muscles.length? `<div style="margin:2px 0 4px;">${muscles.map(m=>`<span class="muscle-chip active">${m}</span>`).join("")}</div>`:""}
+    <!-- The worked-muscle chips were a read-only row. They are the natural way in to the
+         distribution sheet — same subject, already in the right place — so the row becomes
+         the control rather than adding a second one competing with it. Shown even before
+         the first set is ticked, because "nothing yet" is a legitimate thing to look at. -->
+    <button class="wk-muscles" data-action="open-muscle-sheet"
+      aria-label="Show muscle distribution for this workout">
+      <span class="wk-muscles__chips">
+        ${muscles.length
+          ? muscles.map(m=>`<span class="muscle-chip active">${escHtml(m)}</span>`).join("")
+          : `<span class="wk-muscles__none">Muscle distribution</span>`}
+      </span>
+      <span class="wk-muscles__go" aria-hidden="true">›</span>
+    </button>
     <div class="wk-session__notes-wrap">${svg('book',16)}<textarea id="session-notes" placeholder="Workout notes (how it felt, conditions, anything worth remembering)…">${s.notes||''}</textarea></div>
 
     <div class="rh-section-head" style="margin-top:18px;"><span>Add Exercise</span></div>
@@ -9649,16 +15724,33 @@ function renderWorkoutTab(){
         const notesOpen = (state.notesOpenExercises||[]).includes(exi) || !!ex.notes;
         return `
         <div class="ex-log-card wk-ex-card" data-ex-card="${exi}">
-          ${ex.supersetWithNext ? `<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:var(--rh-blue);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">${svg('link',12)} Superset with next exercise</div>` : ''}
+          ${ex.supersetWithNext ? `<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:var(--rh-blue);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">${svg('link',12)} Superset with next exercise</div>` : ''}
           <div class="wk-ex-card__pin">
           <div class="row-between" style="margin-bottom:4px;position:relative;">
-            <button class="wk-ex-card__collapse-toggle" data-toggle-ex-collapse="${exi}" style="min-width:0;flex:1;text-align:left;background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;">
-              <span style="transform:rotate(${collapsed?'-90deg':'0deg'});transition:transform .15s ease;flex:none;color:var(--rh-muted);">${svg('chevronDown',14)}</span>
-              <span style="min-width:0;">
-                <span class="wk-ex-card__name" style="display:block;">${ex.name}</span>
-                <span class="muscle-chip">${muscle}</span>
-              </span>
-            </button>
+            <!-- The chevron collapses; the picture and the name OPEN THE EXERCISE. Tapping an
+                 exercise mid-session used to do nothing but fold the row away, so the only
+                 route to the instructions was the ⋮ menu, three taps in and easy to miss —
+                 which is why they read as "not available" during a live workout. The library
+                 opens a detail when you tap an exercise, and this now does the same thing, to
+                 the same screen. -->
+            <span style="min-width:0;flex:1;display:flex;align-items:center;gap:6px;">
+              <button class="wk-ex-card__collapse-toggle" data-toggle-ex-collapse="${exi}" aria-label="${collapsed?'Expand':'Collapse'} exercise" aria-expanded="${!collapsed}" style="flex:none;background:none;border:none;cursor:pointer;padding:2px;display:flex;align-items:center;">
+                <span style="transform:rotate(${collapsed?'-90deg':'0deg'});transition:transform .15s ease;color:var(--rh-muted);">${svg('chevronDown',14)}</span>
+              </button>
+              <button data-view-instructions="${encodeURIComponent(ex.name)}" style="min-width:0;flex:1;text-align:left;background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;">
+                ${(()=>{ const img = exerciseImageSrc(ex.name);
+                  /* The illustration leads the row, same as it does in the Library. Mid-set you
+                     are scanning for "which exercise is this" and the picture answers that
+                     faster than the name does. Falls back to nothing rather than to an icon
+                     badge: the chevron and name already identify the row, and an empty 34px box
+                     on the 15 exercises without artwork would misalign the whole header. */
+                  return img ? `<span class="wk-ex-card__photo"><img src="${escHtml(img)}" alt="" loading="lazy"></span>` : ""; })()}
+                <span style="min-width:0;">
+                  <span class="wk-ex-card__name" style="display:block;">${escHtml(ex.name)}</span>
+                  <span class="muscle-chip">${muscle}</span>
+                </span>
+              </button>
+            </span>
             <button class="del" data-toggle-ex-menu="${exi}" aria-label="Exercise options">${svg('moreVert',17)}</button>
             ${menuOpen ? `
               <div class="ex-menu-backdrop" data-close-ex-menu></div>
@@ -9695,6 +15787,7 @@ function renderWorkoutTab(){
           </div>`}
           </div>
           ${collapsed ? '' : `
+          ${renderWorkoutExerciseProgress(ex.name)}
           ${ex.sets.map((set,si)=>{
             const prev = getPreviousSet(ex.name, si);
             const prevLabel = previousSetLabel(logType, prev);
@@ -9750,6 +15843,7 @@ function renderWorkoutTab(){
       `;}).join("")}
     </div>
     <button class="wk-finish-fab" data-action="finish-session" aria-label="${isEditing?'Save workout':'Finish workout'}">${svg('check',22)}</button>
+    ${renderMuscleDistributionSheet()}
     ${renderRestTimerSheet()}
     ${renderRpeSheet()}
     ${renderPlatesSheet()}
@@ -9781,12 +15875,102 @@ function renderExerciseAnimation(detail){
 /* Every session that contains this exercise, newest first, with that session's
    PR status for this exercise (if any) attached for a quick indicator. */
 
+/* =========================================================
+   EXERCISE DETAIL SCHEMA (expanded)
+
+   EXERCISE_DETAILS entries were originally written with a small field set
+   (primaryMuscle / secondaryMuscles / equipment / difficulty / movementPattern /
+   instructions / formTips / commonMistakes). The expanded schema adds description,
+   setup, execution, breathing, safety, the three progression tiers, and the
+   programming block (sets/reps/rest/tempo) plus notes.
+
+   normalizeExerciseDetail() is the single compatibility layer between the two: every
+   consumer reads through it, so an entry written in EITHER shape renders correctly and
+   a partially-filled entry simply omits the sections it has no data for. Nothing here
+   invents content -- a missing field stays missing and its section is not rendered.
+
+   Field aliases accepted (old -> new):
+     primaryMuscle   -> primaryMuscles (string or array; always normalized to an array)
+     movementPattern -> movementType
+     instructions    -> execution
+========================================================= */
+function asList(v){
+  if(Array.isArray(v)) return v.filter(x=>x!=null && String(x).trim()!=="");
+  if(typeof v === "string" && v.trim()) return [v.trim()];
+  return [];
+}
+
+function normalizeExerciseDetail(detail, libEntry){
+  if(!detail) return null;
+  const d = detail;
+  return {
+    description: (typeof d.description === "string" && d.description.trim()) ? d.description.trim() : "",
+    primaryMuscles: asList(d.primaryMuscles != null ? d.primaryMuscles : d.primaryMuscle),
+    secondaryMuscles: asList(d.secondaryMuscles),
+    equipment: d.equipment || (libEntry ? libEntry.cat : ""),
+    difficulty: d.difficulty || "",
+    movementType: d.movementType || d.movementPattern || "",
+    exerciseType: d.exerciseType || "",
+    setup: asList(d.setup),
+    execution: asList(d.execution != null ? d.execution : d.instructions),
+    breathing: (typeof d.breathing === "string" && d.breathing.trim()) ? d.breathing.trim() : "",
+    formTips: asList(d.formTips),
+    commonMistakes: asList(d.commonMistakes),
+    safety: asList(d.safety),
+    beginnerModifications: asList(d.beginnerModifications),
+    intermediateProgressions: asList(d.intermediateProgressions),
+    advancedProgressions: asList(d.advancedProgressions),
+    recommendedSets: d.recommendedSets || "",
+    recommendedReps: d.recommendedReps || "",
+    recommendedRest: d.recommendedRest || "",
+    recommendedTempo: d.recommendedTempo || "",
+    notes: (typeof d.notes === "string" && d.notes.trim()) ? d.notes.trim() : "",
+    // media fields pass through untouched
+    animationWebmUrl: d.animationWebmUrl || null,
+    animationMp4Url: d.animationMp4Url || null,
+    thumbnailUrl: d.thumbnailUrl || null,
+    animationAvailable: !!d.animationAvailable
+  };
+}
+
+/* Collapsible section card used by the exercise detail screen. `open` drives both the
+   aria-expanded state and the max-height transition, so expand/collapse animates rather
+   than snapping. Sections with no content are never emitted by the caller. */
+function exDetailSection(key, title, icon, bodyHtml, open){
+  return `<div class="ex-sec ${open?'is-open':''}">
+    <button class="ex-sec__head" data-ex-section="${key}" aria-expanded="${open?'true':'false'}">
+      <span class="ex-sec__icon">${svg(icon,15)}</span>
+      <span class="ex-sec__title">${title}</span>
+      <span class="ex-sec__chev">${svg('chevronDown',16)}</span>
+    </button>
+    <div class="ex-sec__body"><div class="ex-sec__inner">${bodyHtml}</div></div>
+  </div>`;
+}
+
+function exDetailBadge(label, value, color){
+  if(!value) return "";
+  return `<span class="ex-badge" style="background:${color}1a;color:${color};">
+    <span class="ex-badge__k">${escHtml(label)}</span>${escHtml(value)}</span>`;
+}
+
+/* Bulleted list block with a leading glyph (✓ tips, ✕ mistakes, ! safety). */
+function exDetailList(items, glyph, color){
+  return items.map(t=>`<div class="ex-li"><span class="ex-li__g" style="color:${color};">${glyph}</span><span>${escHtml(t)}</span></div>`).join("");
+}
+
 function renderExerciseDetail(name){
-  const detail = EXERCISE_DETAILS[name];
+  /* Look everything up under the CURRENT library name, but keep showing the user the name
+     their session/routine actually holds. Opening "Bench Press" from a live workout was
+     finding no EXERCISE_DETAILS entry and no library row, so How To said "not available yet"
+     for an exercise with seven steps written for it under "Bench Press (Barbell)". */
+  const resolved = resolveExerciseName(name) || name;
+  const detail = EXERCISE_DETAILS[resolved];
   const all = allLibraryExercises();
-  const libEntry = all.find(e=>e.name===name);
-  const muscle = detail ? detail.primaryMuscle : (libEntry ? libEntry.muscle : getMuscle(name));
-  const tab = state.exerciseDetailTab || "summary";
+  const libEntry = all.find(e=>e.name===resolved);
+  /* detail.primaryMuscle is absent on an instructions-only record, which would have left the
+     hero with no muscle and no colour. The library's own muscle is the reliable answer. */
+  const muscle = (detail && detail.primaryMuscle) || (libEntry ? libEntry.muscle : getMuscle(name));
+  const tab = state.exerciseDetailTab || "howto";
   const history = exerciseHistoryEntries(name);
   const prs = exercisePRs(name);
   // Same muscle-group icon/color convention used by the Library rows and PR list rows --
@@ -9794,27 +15978,44 @@ function renderExerciseDetail(name){
   const rowIcon = (() => { const g = FINE_TO_BROAD[muscle]; return (g==='Chest'||g==='Shoulders'||g==='Arms') ? 'dumbbell' : (g==='Back') ? 'workout' : 'body'; })();
   const muscleColor = muscleTagColor(muscle);
 
+  const nd = normalizeExerciseDetail(detail, libEntry);
+  // Badge row: only badges with real data are emitted, so a sparse entry doesn't render
+  // a row of empty chips.
+  const badges = nd ? [
+    exDetailBadge("", nd.difficulty, "var(--rh-amber, #d97706)"),
+    exDetailBadge("", nd.equipment, "var(--rh-blue)"),
+    exDetailBadge("", nd.movementType, "var(--rh-green)"),
+    exDetailBadge("", nd.exerciseType, "var(--rh-muted)")
+  ].filter(Boolean).join("") : "";
+
   return `<div class="pg-light">
-    <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:12px;" data-action="close-exercise-detail">← Back</button>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
-      <span class="tl-card__icon" style="width:52px;height:52px;flex:none;background:${muscleColor}1a;color:${muscleColor};">${svg(rowIcon,26)}</span>
-      <div>
-        <div style="font-size:20px;font-weight:800;">${name}</div>
-        <span class="lib-tag" style="background:${muscleColor}1a;color:${muscleColor};margin-top:4px;">${muscle}</span>
+    <div class="ex-hero">
+      <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:12px;" data-action="close-exercise-detail">← Back</button>
+      <div style="display:flex;align-items:center;gap:12px;">
+        ${(()=>{ const img = exerciseImageSrc(name);
+          return img
+            ? `<span class="ex-hero__photo"><img src="${escHtml(img)}" alt=""></span>`
+            : `<span class="tl-card__icon" style="width:52px;height:52px;flex:none;background:${muscleColor}1a;color:${muscleColor};">${svg(rowIcon,26)}</span>`;
+        })()}
+        <div style="min-width:0;flex:1;">
+          <div class="ex-hero__name">${escHtml(name)}</div>
+          <span class="lib-tag" style="background:${muscleColor}1a;color:${muscleColor};margin-top:4px;">${escHtml(muscle)}</span>
+        </div>
       </div>
+      ${badges ? `<div class="ex-badges">${badges}</div>` : ""}
     </div>
 
     <div class="lib-cats" style="margin:14px 0;">
-      ${[["summary","Summary"],["history","History"],["howto","How To"]].map(([key,label])=>`
+      ${[["howto","How To"],["summary","Summary"],["history","History"]].map(([key,label])=>`
         <button class="cat-chip ${tab===key?'active':''}" data-ex-detail-tab="${key}" style="flex:1;text-align:center;">${label}</button>
       `).join("")}
     </div>
 
     ${tab==="summary" ? renderExerciseDetailSummary(name, detail, libEntry, prs) : ""}
     ${tab==="history" ? renderExerciseDetailHistory(history, name) : ""}
-    ${tab==="howto" ? renderExerciseDetailHowTo(name, detail, libEntry) : ""}
+    ${tab==="howto" ? renderExerciseDetailHowTo(name, nd, libEntry) : ""}
 
-    <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:8px;" data-action="add-detail-to-workout" data-exercise-name="${name}">${svg('plus',16)} Add to Workout</button>
+    <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:8px;" data-action="add-detail-to-workout" data-exercise-name="${escHtml(name)}">${svg('plus',16)} Add to Workout</button>
   </div>`;
 }
 
@@ -9826,12 +16027,27 @@ function renderExerciseDetailSummary(name, detail, libEntry, prs){
     <div style="font-size:15px;font-weight:800;">${title}</div>
     <div style="font-size:12px;color:var(--rh-muted);margin-top:4px;line-height:1.4;">${sub}</div>
   </div>`;
+  /* Read through normalizeExerciseDetail(), like every other consumer of a detail record.
+     This one took the raw object and assumed that if it existed at all it carried every field.
+     That held only while EXERCISE_DETAILS was empty and `detail` was therefore always
+     undefined; the imported instructions fill it with records that carry `execution` and
+     nothing else, so detail.secondaryMuscles.join() threw and the whole screen failed to
+     render. The normalizer guarantees the shape -- arrays are arrays, strings are strings --
+     which is exactly what it exists for. */
+  const nd = normalizeExerciseDetail(detail, libEntry);
+  /* And each card is emitted only if it has a value, rather than the block being all-or-
+     nothing. A record with steps but no equipment metadata should show its steps and simply
+     not show an "Equipment: undefined" tile. */
+  const facts = nd ? [
+    ["Equipment", nd.equipment],
+    ["Difficulty", nd.difficulty],
+    ["Movement Pattern", nd.movementType],
+    ["Secondary Muscles", nd.secondaryMuscles.join(", ")]
+  ].filter(f => f[1]) : [];
+
   return `
-    ${detail ? `<div class="pg-stat-grid" style="margin-top:2px;margin-bottom:14px;">
-      <div class="pg-stat-card"><div class="pg-stat-card__label">Equipment</div><div class="pg-stat-card__value" style="font-size:15px;">${detail.equipment}</div></div>
-      <div class="pg-stat-card"><div class="pg-stat-card__label">Difficulty</div><div class="pg-stat-card__value" style="font-size:15px;">${detail.difficulty}</div></div>
-      <div class="pg-stat-card"><div class="pg-stat-card__label">Movement Pattern</div><div class="pg-stat-card__value" style="font-size:15px;">${detail.movementPattern}</div></div>
-      <div class="pg-stat-card"><div class="pg-stat-card__label">Secondary Muscles</div><div class="pg-stat-card__value" style="font-size:12px;line-height:1.4;">${detail.secondaryMuscles.join(", ")||'–'}</div></div>
+    ${facts.length ? `<div class="pg-stat-grid" style="margin-top:2px;margin-bottom:14px;">
+      ${facts.map(([k,v])=>`<div class="pg-stat-card"><div class="pg-stat-card__label">${escHtml(k)}</div><div class="pg-stat-card__value" style="font-size:${k==="Secondary Muscles"?"12px;line-height:1.4":"15px"};">${escHtml(v)}</div></div>`).join("")}
     </div>` : ""}
 
     <div class="rh-section-head" style="margin-top:0;"><span>Performance</span></div>
@@ -9862,35 +16078,101 @@ function renderExerciseDetailSummary(name, detail, libEntry, prs){
   `;
 }
 
-function renderExerciseDetailHowTo(name, detail, libEntry){
-  if(!detail){
-    return `<div class="pg-card" style="text-align:center;padding:28px 18px;">
-      <span class="tl-card__icon" style="width:44px;height:44px;margin:0 auto 12px;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('info',22)}</span>
-      <div style="font-size:15px;font-weight:800;">Instructions not available yet</div>
-      ${libEntry?`<div style="font-size:12px;color:var(--rh-muted);margin-top:4px;">Suggested: <span style="color:var(--rh-text);font-weight:700;">${libEntry.presc}</span></div>`:''}
-    </div>`;
+/* The coaching guide, as five collapsible sections. `nd` is an already-normalized detail
+   (see normalizeExerciseDetail) so both the original and expanded schemas render here.
+   Every section is omitted entirely when it has no data -- there are no empty shells. */
+function renderExerciseDetailHowTo(name, nd, libEntry){
+  /* The illustration heads this tab whether or not there are written steps. The old photos
+     appeared ONLY when instructions were missing, because they were a substitute for them.
+     These are anatomical drawings with the worked muscle picked out, which is a different kind
+     of answer from a numbered list — seeing which muscle should be doing the work and reading
+     the cues for it belong together. */
+  const heroImg = exerciseImageSrc(name);
+  const illustration = heroImg
+    ? `<div class="ex-howto__photo"><img src="${escHtml(heroImg)}" alt="${escHtml(name)}"></div>`
+    : "";
+  if(!nd){
+    /* No written steps for this one. 409 of the 452 library exercises now have them; the
+       remainder are mostly cardio and machine variants the source dataset did not cover.
+
+       This used to fall back to a photo or an instruction poster. Those are gone — they were
+       standing in for missing text, and now that the text exists for almost everything, a
+       stock action shot is not worth 8 MB. What is left says plainly that there is nothing
+       yet, which is honest, and still gives the suggested prescription, which is useful. */
+    return `
+      ${illustration}
+      <div class="pg-card" style="text-align:center;padding:${heroImg ? '18px' : '28px'} 18px;">
+        ${heroImg ? "" : `<span class="tl-card__icon" style="width:44px;height:44px;margin:0 auto 12px;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('info',22)}</span>`}
+        <div style="font-size:15px;font-weight:800;">Instructions not available yet</div>
+        ${libEntry?`<div style="font-size:12px;color:var(--rh-muted);margin-top:4px;">Suggested: <span style="color:var(--rh-text);font-weight:700;">${escHtml(libEntry.presc)}</span></div>`:''}
+      </div>`;
   }
-  return `
-    ${renderExerciseAnimation(detail)}
+  const open = state.exerciseSectionsOpen || {};
+  const isOpen = (k, dflt) => (open[k] === undefined ? dflt : open[k]);
+  const sub = (label) => `<div class="ex-sub">${label}</div>`;
+  const out = [];
 
-    <div class="rh-section-head" style="margin-top:16px;"><span>Step-by-Step</span></div>
-    <div class="pg-card">
-      ${detail.instructions.map((s,i)=>`<div style="display:flex;gap:10px;padding:6px 0;${i>0?'border-top:1px solid var(--rh-border);':''}">
-        <span style="color:var(--rh-blue);font-weight:900;font-size:13px;flex-shrink:0;">${i+1}</span>
-        <span style="font-size:13px;line-height:1.5;">${s}</span>
-      </div>`).join("")}
-    </div>
+  /* ---- Overview: description, muscles, equipment, difficulty ---- */
+  const overview = [];
+  if(nd.description) overview.push(`<p class="ex-desc">${escHtml(nd.description)}</p>`);
+  if(nd.primaryMuscles.length){
+    overview.push(sub("Primary Muscles") + `<div class="ex-chips">${nd.primaryMuscles.map(m=>`<span class="ex-chip ex-chip--primary">${escHtml(m)}</span>`).join("")}</div>`);
+  }
+  if(nd.secondaryMuscles.length){
+    overview.push(sub("Secondary Muscles") + `<div class="ex-chips">${nd.secondaryMuscles.map(m=>`<span class="ex-chip">${escHtml(m)}</span>`).join("")}</div>`);
+  }
+  const facts = [["Equipment", nd.equipment], ["Difficulty", nd.difficulty], ["Movement", nd.movementType], ["Type", nd.exerciseType]].filter(f=>f[1]);
+  if(facts.length){
+    overview.push(`<div class="ex-facts">${facts.map(([k,v])=>`<div class="ex-fact"><span class="ex-fact__k">${k}</span><span class="ex-fact__v">${escHtml(v)}</span></div>`).join("")}</div>`);
+  }
+  if(overview.length) out.push(exDetailSection("overview","Overview","info", overview.join(""), isOpen("overview", true)));
 
-    <div class="rh-section-head"><span>Form Tips</span></div>
-    <div class="pg-card">
-      ${detail.formTips.map(t=>`<div style="display:flex;gap:8px;padding:4px 0;font-size:13px;"><span style="color:var(--rh-green);">✓</span> ${t}</div>`).join("")}
-    </div>
+  /* ---- How To: setup, execution, breathing ---- */
+  const howto = [];
+  if(nd.setup.length) howto.push(sub("Setup") + exDetailList(nd.setup, "•", "var(--rh-blue)"));
+  if(nd.execution.length){
+    howto.push(sub("Execution") + nd.execution.map((s,i)=>`<div class="ex-step">
+      <span class="ex-step__n">${i+1}</span><span class="ex-step__t">${escHtml(s)}</span></div>`).join(""));
+  }
+  if(nd.breathing) howto.push(sub("Breathing") + `<div class="ex-li"><span class="ex-li__g" style="color:var(--rh-blue);">${svg('lungs',13)}</span><span>${escHtml(nd.breathing)}</span></div>`);
+  if(howto.length) out.push(exDetailSection("howto","How To","workout", howto.join(""), isOpen("howto", true)));
 
-    <div class="rh-section-head"><span>Common Mistakes</span></div>
-    <div class="pg-card" style="margin-bottom:16px;">
-      ${detail.commonMistakes.map(t=>`<div style="display:flex;gap:8px;padding:4px 0;font-size:13px;"><span style="color:var(--rh-red);">✕</span> ${t}</div>`).join("")}
-    </div>
-  `;
+  /* ---- Technique: form tips, mistakes, safety ---- */
+  const tech = [];
+  if(nd.formTips.length) tech.push(sub("Form Tips") + exDetailList(nd.formTips, "✓", "var(--rh-green)"));
+  if(nd.commonMistakes.length) tech.push(sub("Common Mistakes") + exDetailList(nd.commonMistakes, "✕", "var(--rh-red)"));
+  if(nd.safety.length) tech.push(sub("Safety") + exDetailList(nd.safety, "!", "var(--rh-amber, #d97706)"));
+  if(tech.length) out.push(exDetailSection("technique","Technique","shield", tech.join(""), isOpen("technique", false)));
+
+  /* ---- Progressions: beginner / intermediate / advanced ---- */
+  const prog = [];
+  if(nd.beginnerModifications.length) prog.push(sub("Beginner Modifications") + exDetailList(nd.beginnerModifications, "•", "var(--rh-green)"));
+  if(nd.intermediateProgressions.length) prog.push(sub("Intermediate Progressions") + exDetailList(nd.intermediateProgressions, "•", "var(--rh-blue)"));
+  if(nd.advancedProgressions.length) prog.push(sub("Advanced Progressions") + exDetailList(nd.advancedProgressions, "•", "var(--rh-amber, #d97706)"));
+  if(prog.length) out.push(exDetailSection("progressions","Progressions","progress", prog.join(""), isOpen("progressions", false)));
+
+  /* ---- Programming: sets / reps / rest / tempo ---- */
+  const program = [["Sets", nd.recommendedSets], ["Reps", nd.recommendedReps], ["Rest", nd.recommendedRest], ["Tempo", nd.recommendedTempo]].filter(p=>p[1]);
+  if(program.length || nd.notes){
+    let body = "";
+    if(program.length){
+      body += `<div class="ex-prog">${program.map(([k,v])=>`<div class="ex-prog__cell">
+        <div class="ex-prog__k">${k}</div><div class="ex-prog__v">${escHtml(v)}</div></div>`).join("")}</div>`;
+    }
+    if(nd.notes) body += sub("Notes") + `<p class="ex-desc">${escHtml(nd.notes)}</p>`;
+    out.push(exDetailSection("programming","Programming","timer", body, isOpen("programming", false)));
+  }
+
+  // A library entry always carries a suggested prescription; show it when the entry itself
+  // has no programming block so the user still gets a starting point.
+  const fallbackPresc = (!program.length && libEntry)
+    ? `<div class="pg-card" style="margin-top:10px;font-size:12px;color:var(--rh-muted);">Suggested: <span style="color:var(--rh-text);font-weight:700;">${escHtml(libEntry.presc)}</span></div>` : "";
+
+  return `${illustration}
+    ${renderExerciseAnimation(nd)}
+    <div class="ex-sections">${out.join("")}</div>
+    ${fallbackPresc}
+    <div style="height:16px;"></div>`;
 }
 
 // Broad-group color coding for the muscle tag on each row -- reuses the real FINE_TO_BROAD
@@ -9922,8 +16204,8 @@ function renderLibraryTab(){
   const customCount = state.customExercises.length;
   const totalCount = allLibraryExercises().length;
 
-  // No real exercise photos exist anywhere in this app (every EXERCISE_DETAILS.thumbnailUrl
-  // is null) -- an icon badge per row, colored by muscle group, not a fabricated photo.
+  // Most exercises still have no real photo (EXERCISE_DETAILS.thumbnailUrl null) -- those
+  // rows fall back to an icon badge, colored by muscle group, rather than a fabricated photo.
   const rowIcon = (muscle) => {
     const g = FINE_TO_BROAD[muscle];
     return (g==='Chest'||g==='Shoulders'||g==='Arms') ? 'dumbbell' : (g==='Back') ? 'workout' : 'body';
@@ -9958,21 +16240,25 @@ function renderLibraryTab(){
       ${items.map(ex=>{
         const saved = state.savedExercises.includes(ex.name);
         const equip = equipMeta(ex.cat);
-        return `<div class="pg-card lib-ex-row" data-view-exercise="${ex.name}">
-          <span class="tl-card__icon" style="flex:none;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg(rowIcon(ex.muscle),20)}</span>
+        return `<div class="pg-card lib-ex-row" data-view-exercise="${escHtml(ex.name)}">
+          ${(()=>{ const img = exerciseImageSrc(ex.name);
+            return img
+              ? `<span class="lib-ex-row__photo"><img src="${escHtml(img)}" alt="" loading="lazy"></span>`
+              : `<span class="tl-card__icon" style="flex:none;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg(rowIcon(ex.muscle),20)}</span>`;
+          })()}
           <div class="lib-ex-row__body">
-            <div class="lib-ex-row__name">${ex.name}${ex.custom?' <span style="color:var(--rh-blue);font-size:10px;font-weight:800;">CUSTOM</span>':''}</div>
+            <div class="lib-ex-row__name">${escHtml(ex.name)}${ex.custom?' <span style="color:var(--rh-blue);font-size:11px;font-weight:800;">CUSTOM</span>':''}</div>
             <div class="lib-tags">
               <span class="lib-tag" style="background:${muscleTagColor(ex.muscle)}1a;color:${muscleTagColor(ex.muscle)};">${ex.muscle}</span>
               <span class="lib-tag" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg(equip.icon,11)} ${ex.cat}</span>
             </div>
-            <div class="lib-ex-row__meta">${ex.cat} · ${ex.presc}${ex.custom?` · <span style="color:var(--rh-red);cursor:pointer;" data-del-custom-exercise="${ex.name}">Remove</span>`:''}</div>
+            <div class="lib-ex-row__meta">${ex.cat} · ${ex.presc}${ex.custom?` · <span style="color:var(--rh-red);cursor:pointer;" data-del-custom-exercise="${escHtml(ex.name)}">Remove</span>`:''}</div>
           </div>
           <div class="lib-ex-row__actions">
             <button class="lib-guide-btn">${svg('workout',13)} Guide</button>
             <span class="lib-chev">›</span>
           </div>
-          <button class="lib-bookmark ${saved?'is-saved':''}" data-toggle-saved-exercise="${ex.name}" title="${saved?'Remove from saved':'Save exercise'}" aria-label="${saved?'Remove from saved':'Save exercise'}">${svg(saved?'starFilled':'star',16)}</button>
+          <button class="lib-bookmark ${saved?'is-saved':''}" data-toggle-saved-exercise="${escHtml(ex.name)}" title="${saved?'Remove from saved':'Save exercise'}" aria-label="${saved?'Remove from saved':'Save exercise'}">${svg(saved?'starFilled':'star',16)}</button>
         </div>`;
       }).join("")}
       ${items.length===0?`<div class="empty-note">No exercises match.</div>`:""}
@@ -10298,7 +16584,8 @@ function attachHandlers(){
       const key = el.dataset.settingToggle;
       state.settings[key] = !state.settings[key];
       if(key==="keepAwake") applyWakeLock();
-      const NOTIFICATION_KEYS = ["workoutReminders","hydrationReminders","weeklyReports"];
+      if(key==="workoutLeftReminder") syncWorkoutLeftNotification();
+      const NOTIFICATION_KEYS = ["workoutReminders","hydrationReminders","weeklyReports","workoutLeftReminder"];
       if(NOTIFICATION_KEYS.includes(key)){
         const plugin = nativeNotify();
         if(plugin){
@@ -10337,10 +16624,135 @@ function attachHandlers(){
     });
   });
   // IGNYT Account: IgnytAuth handles busy/error state and re-renders Settings itself.
-  const accountSigninBtn = document.querySelector('[data-action="account-signin"]');
-  if(accountSigninBtn) accountSigninBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signIn(); });
+  const openSignin = document.querySelector('[data-action="open-account-signin"]');
+  if(openSignin) openSignin.addEventListener("click", ()=>{
+    state.tab = "settings";
+    state.authFormMode = "signin";   // land on the form itself, not on a card that hides it
+    render();
+  });
+
+  const copyFp = document.querySelector('[data-action="copy-fingerprints"]');
+  if(copyFp) copyFp.addEventListener("click", ()=>{
+    const info = window.IgnytAuth && window.IgnytAuth.getSigningInfo && window.IgnytAuth.getSigningInfo();
+    if(!info || !info.sha256) return;
+    // navigator.clipboard is unavailable in some WebView configurations; the textarea fallback
+    // is what makes this work on a device rather than only in the browser pane.
+    const done = ()=> showToast("SHA-256 copied.", "success", render);
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(info.sha256).then(done).catch(()=>legacyCopy(info.sha256, done));
+    } else legacyCopy(info.sha256, done);
+  });
+
   const accountSignoutBtn = document.querySelector('[data-action="account-signout"]');
   if(accountSignoutBtn) accountSignoutBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signOut(); });
+
+  bindPwdToggles();   // sheets (delete account, encrypted backup) rebuild on every render
+
+  /* ---- encrypted backup ---- */
+  const encExport = document.querySelector('[data-action="export-json-encrypted"]');
+  if(encExport) encExport.addEventListener("click", ()=>{
+    state.backupCryptoOpen = "export"; state.backupCryptoPending = null;
+    state.backupCryptoError = null; state.backupCryptoBusy = false; render();
+  });
+  document.querySelectorAll('[data-action="close-backup-crypto"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(state.backupCryptoBusy) return;   // don't dismiss mid-crypt
+      state.backupCryptoOpen = null; state.backupCryptoPending = null; state.backupCryptoError = null; render();
+    });
+  });
+  const encGo = document.querySelector('[data-action="backup-crypto-confirm"]');
+  if(encGo) encGo.addEventListener("click", ()=>{
+    const p1 = (document.getElementById("backup-pass")||{}).value || "";
+    const p2 = (document.getElementById("backup-pass2")||{}).value || "";
+    if(state.backupCryptoOpen === "export") runEncryptedBackupExport(p1, p2);
+    else runEncryptedBackupImport(p1);
+  });
+
+  /* ---- account deletion (Play User Data policy) ---- */
+  const delOpen = document.querySelector('[data-action="account-delete"]');
+  if(delOpen) delOpen.addEventListener("click", ()=>{
+    state.deleteAccountOpen = true; state.deleteAccountError = null; state.deleteAccountBusy = false; render();
+  });
+  document.querySelectorAll('[data-action="close-delete-account"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(state.deleteAccountBusy) return;   // never dismiss mid-delete
+      state.deleteAccountOpen = false; state.deleteAccountError = null; render();
+    });
+  });
+  const delExport = document.querySelector('[data-action="delete-account-export"]');
+  if(delExport) delExport.addEventListener("click", ()=>{ try{ exportAllJSON(); }catch(e){ console.error(e); } });
+  const delGo = document.querySelector('[data-action="delete-account-confirm"]');
+  if(delGo) delGo.addEventListener("click", async ()=>{
+    const pw = (document.getElementById("delete-account-password") || {}).value || "";
+    if(!pw){ state.deleteAccountError = "Enter your password to confirm."; render(); return; }
+    state.deleteAccountBusy = true; state.deleteAccountError = null; render();
+    let res;
+    try{ res = await IgnytAuth.deleteAccount(pw); }
+    catch(e){ res = { success:false, error: e && e.message ? e.message : "Something went wrong." }; }
+    if(!res || !res.success){
+      /* Nothing has been destroyed at this point — deleteAccount() stops at the first failure
+         and leaves the account usable. Say so, because "delete failed" otherwise reads as
+         "your data is in an unknown state". */
+      state.deleteAccountBusy = false;
+      state.deleteAccountError = (res && res.error) || "Could not delete your account. Nothing was deleted — please try again.";
+      render();
+      return;
+    }
+    // The account is gone. Only now is it safe to drop the local copy.
+    try{ ALL_DATA_KEYS.forEach(k=>localStorage.removeItem(k)); localStorage.removeItem("hx_auth_account"); localStorage.removeItem("hx_auth_seen"); }
+    catch(e){ /* the account is already deleted; a failed local wipe must not block the reload */ }
+    location.reload();
+  });
+  document.querySelectorAll('[data-action="auth-form-mode"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(window.IgnytAuth) IgnytAuth.clearError();
+      state.authFormMode = el.dataset.authMode;
+      render();
+    });
+  });
+  const authSigninBtn = document.querySelector('[data-action="auth-signin-submit"]');
+  if(authSigninBtn) authSigninBtn.addEventListener("click", async ()=>{
+    const email = (document.getElementById("auth-email-input")||{}).value || "";
+    const password = (document.getElementById("auth-password-input")||{}).value || "";
+    if(!window.IgnytAuth) return;
+    const res = await IgnytAuth.signInWithEmail(email, password);
+    if(res && res.success) state.authFormMode = null;
+    render();
+  });
+  const authSignupBtn = document.querySelector('[data-action="auth-signup-submit"]');
+  if(authSignupBtn) authSignupBtn.addEventListener("click", async ()=>{
+    const email = (document.getElementById("auth-email-input")||{}).value || "";
+    const password = (document.getElementById("auth-password-input")||{}).value || "";
+    const confirm = (document.getElementById("auth-password-confirm-input")||{}).value || "";
+    if(!window.IgnytAuth) return;
+    if(password !== confirm){
+      showToast("Passwords don't match.", "error", render);
+      return;
+    }
+    const res = await IgnytAuth.signUpWithEmail(email, password);
+    if(res && res.success){
+      state.authFormMode = null;
+      showToast("Account created — check your email to verify it.", "success", render);
+    }
+    render();
+  });
+  const authForgotBtn = document.querySelector('[data-action="auth-forgot-submit"]');
+  if(authForgotBtn) authForgotBtn.addEventListener("click", async ()=>{
+    const email = (document.getElementById("auth-email-input")||{}).value || "";
+    if(!window.IgnytAuth) return;
+    const res = await IgnytAuth.sendPasswordReset(email);
+    if(res && res.success){
+      state.authFormMode = "signin";
+      showToast("Password reset email sent.", "success", render);
+    }
+    render();
+  });
+  const authResendBtn = document.querySelector('[data-action="auth-resend-verification"]');
+  if(authResendBtn) authResendBtn.addEventListener("click", async ()=>{
+    if(!window.IgnytAuth) return;
+    const res = await IgnytAuth.resendVerificationEmail();
+    showToast(res && res.success ? "Verification email sent." : "Couldn't send verification email: "+(res&&res.error||"unknown error"), res&&res.success?"success":"error", render);
+  });
   const cloudSyncNowBtn = document.querySelector('[data-action="cloud-sync-now"]');
   if(cloudSyncNowBtn) cloudSyncNowBtn.addEventListener("click", ()=>{ if(window.IgnytCloudSync) IgnytCloudSync.syncNow(); });
   const closeSettingsBtn = document.querySelector('[data-action="close-settings"]');
@@ -10351,11 +16763,11 @@ function attachHandlers(){
   if(closePrivacyBtn) closePrivacyBtn.addEventListener("click", ()=>{ state.viewingPrivacyInfo = false; render(); });
   const openLegalPrivacyBtn = document.querySelector('[data-action="open-legal-privacy"]');
   if(openLegalPrivacyBtn) openLegalPrivacyBtn.addEventListener("click", ()=>{ state.viewingLegal = "privacy"; render(); });
+  const openLegalTermsBtn = document.querySelector('[data-action="open-legal-terms"]');
+  if(openLegalTermsBtn) openLegalTermsBtn.addEventListener("click", ()=>{ state.viewingLegal = "terms"; render(); });
   const openLegalDisclaimerBtn = document.querySelector('[data-action="open-legal-disclaimer"]');
   if(openLegalDisclaimerBtn) openLegalDisclaimerBtn.addEventListener("click", ()=>{ state.viewingLegal = "disclaimer"; render(); });
-  document.querySelectorAll('[data-action="close-legal-viewer"]').forEach(el=>{
-    el.addEventListener("click", ()=>{ state.viewingLegal = null; render(); });
-  });
+  bindLegalLinks();
   const testNotifBtn = document.querySelector('[data-action="test-notification"]');
   if(testNotifBtn) testNotifBtn.addEventListener("click", ()=>{
     const plugin = nativeNotify();
@@ -10438,7 +16850,9 @@ function attachHandlers(){
     }
     if(!r.validRows || !r.validRows.length) return;
     if(r.kind==="foods"){
-      state.favoriteFoods = state.favoriteFoods.concat(r.validRows);
+      // Imported rows come from a CSV and carry no id — assign one each so they sync like
+      // any other favourite.
+      state.favoriteFoods = state.favoriteFoods.concat(r.validRows.map(row=> Object.assign({ id: nextId() }, row)));
       const foodCount = r.validCount;
       state.csvImportPreview = null;
       persist();
@@ -10537,7 +16951,7 @@ function attachHandlers(){
     if(r.currentIndex >= RACE_SEGMENTS.length-1){
       // Race complete -- auto-save to history, same "commit on finish" pattern as regular workouts
       const totalMs = now - r.startedAt;
-      state.raceLog.unshift({ id: now, date: new Date().toISOString().slice(0,10), totalMs, segments: r.segments });
+      state.raceLog.unshift({ id: now, date: dayKey(), totalMs, segments: r.segments });
       state.raceActive = null;
       state.viewingRaceMode = false; // return to Plan home rather than parking on the race sub-screen
       stopRaceTimer();
@@ -10684,7 +17098,7 @@ function attachHandlers(){
       const id = el.dataset.delRoutine;
       const r = state.routines.find(x=>String(x.id) === String(id));
       if(!r) return;
-      if(!(await confirmDialog(`Delete “${r.name}”? This can't be undone.`, render,
+      if(!(await confirmDialog(`Delete “${escHtml(r.name)}”? This can't be undone.`, render,
         { title:"Delete routine", confirmLabel:"Delete", danger:true }))) return;
       state.routines = state.routines.filter(x=>String(x.id) !== String(id)); // only this record
       if(String(state.editingRoutineId) === String(id)) closeRoutineEditor(); // never leave the editor on a deleted routine
@@ -10798,14 +17212,56 @@ function attachHandlers(){
     state.habitBuilderName = "";
     render();
   });
+  document.querySelectorAll("[data-add-habit-preset]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const added = addHabitNamed(el.dataset.addHabitPreset);
+      if(!added){ showToast("You already have that habit.", "info", render); return; }
+      showToast("Habit added.", "success", render);
+      render();
+    });
+  });
+
+  /* Reorder and enable/disable, per the brief. Both live with the rest of habit management on
+     Progress rather than on Home: Home is for ticking today off, and burying configuration in
+     a dashboard card is how a one-tap surface turns into a settings screen. */
+  document.querySelectorAll("[data-move-habit]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = Number(el.dataset.moveHabit), dir = el.dataset.moveHabitDir === "up" ? -1 : 1;
+      const list = state.habits || [];
+      const i = list.findIndex(h => h && Number(h.id) === id);
+      const j = i + dir;
+      if(i === -1 || j < 0 || j >= list.length) return;
+      const tmp = list[i]; list[i] = list[j]; list[j] = tmp;
+      persist();
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-habit-enabled]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const h = (state.habits || []).find(x => x && Number(x.id) === Number(el.dataset.habitEnabled));
+      if(!h) return;
+      // Disabled habits keep their history and their streak; they simply stop appearing on
+      // Home. Deleting is the destructive option and stays a separate, explicit action.
+      h.enabled = h.enabled === false;
+      persist();
+      showToast(h.enabled === false ? "Hidden from Home." : "Showing on Home.", "info", render);
+      render();
+    });
+  });
+
   document.querySelectorAll("[data-toggle-habit]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const id = Number(el.dataset.toggleHabit);
       const today = habitDateStr();
       if(!state.habitCompletions[id]) state.habitCompletions[id] = {};
-      if(state.habitCompletions[id][today]) delete state.habitCompletions[id][today];
+      const wasDone = !!state.habitCompletions[id][today];
+      if(wasDone) delete state.habitCompletions[id][today];
       else state.habitCompletions[id][today] = Date.now();
-      render();
+      // A short tick on completion only. Buzzing on un-check too would make correcting a
+      // mistap feel like an achievement, and vibrate() is a no-op where it is unsupported.
+      if(!wasDone) hapticTick();
+      render();   // renderApp() ends in persist(), so the completion is saved with the repaint
     });
   });
   document.querySelectorAll("[data-del-habit]").forEach(el=>{
@@ -10837,6 +17293,41 @@ function attachHandlers(){
   // Two buttons can render "Finish Workout" (the header one, and the new sticky bottom bar's) --
   // both share this exact one handler/one guard, so "single save coordinator" still holds no
   // matter which one was tapped.
+  /* Capsule: tapping anywhere but the bin returns to the logger. */
+  document.querySelectorAll('[data-action="resume-session"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.tab = "workout";
+      state.viewingSessionId = null;
+      state.workoutCompleteId = null;
+      render();
+    });
+  });
+
+  /* Discarding throws away real logged sets, so it confirms first and says how many.
+     This is the only route to discarding a session that HAS work in it — finish-session
+     only offers discard when nothing is ticked — so the wording has to be unambiguous.
+     render() ends in persist(), so clearing the session here also clears it from storage. */
+  const discardBtn = document.querySelector('[data-action="discard-session"]');
+  if(discardBtn) discardBtn.addEventListener("click", async ()=>{
+    if(!state.session) return;
+    const done = computeCompletedSets(state.session.exercises);
+    const ok = await confirmDialog(
+      done > 0
+        ? `Discard this workout? ${done} completed set${done===1?'':'s'} will be lost and nothing will be saved.`
+        : "Discard this workout? Nothing will be saved.",
+      render,
+      { title:"Discard Workout", confirmLabel:"Discard", cancelLabel:"Keep Going", danger:true }
+    );
+    if(!ok || !state.session) return;
+    state.session = null;
+    if(window.IgnytActiveWorkout) IgnytActiveWorkout.clear();
+    state.editingSessionId = null;
+    state.workoutCompleteId = null;
+    applyWakeLock();   // releases the lock and cancels the left-running reminder
+    showToast("Workout discarded.", "info", render);
+    render();
+  });
+
   const finishBtns = document.querySelectorAll('[data-action="finish-session"]');
   finishBtns.forEach(finishBtn=> finishBtn.addEventListener("click", async ()=>{
     if(_finishingSession) return; // double-tap guard: one workout, one save
@@ -10856,6 +17347,7 @@ function attachHandlers(){
       if(!discard) return; // "Continue Workout" — keep the live session open, save nothing.
       // "Discard Workout" — clear the live session with no save side-effects.
       state.session = null;
+      if(window.IgnytActiveWorkout) IgnytActiveWorkout.clear();
       state.editingSessionId = null;
       state.workoutCompleteId = null;
       applyWakeLock();
@@ -10906,6 +17398,7 @@ function attachHandlers(){
         }
       }
       state.session = null;
+      if(window.IgnytActiveWorkout) IgnytActiveWorkout.clear();
       // Dedicated Workout Complete screen (summary + share cards) for real finishes with content;
       // edits and empty sessions go back to the list as before.
       state.workoutCompleteId = completedId;
@@ -10919,6 +17412,7 @@ function attachHandlers(){
   const cancelEditBtn = document.querySelector('[data-action="cancel-edit-session"]');
   if(cancelEditBtn) cancelEditBtn.addEventListener("click", ()=>{
     state.session = null;
+    if(window.IgnytActiveWorkout) IgnytActiveWorkout.clear();
     state.editingSessionId = null;
     applyWakeLock();
     render();
@@ -10935,9 +17429,6 @@ function attachHandlers(){
     if(saveBtn) saveBtn.addEventListener("click", ()=> saveWorkoutImage(completeWorkout));
     const copyBtn = document.querySelector('[data-action="copy-workout-summary"]');
     if(copyBtn) copyBtn.addEventListener("click", ()=> copyWorkoutSummary(completeWorkout));
-    document.querySelectorAll("[data-share-theme]").forEach(el=>{
-      el.addEventListener("click", ()=>{ state.shareCardTheme = el.dataset.shareTheme; render(); });
-    });
     const carousel = document.getElementById("share-carousel");
     if(carousel){
       // Dot indicator follows the scroll-snap position; direct DOM update, no re-render.
@@ -10954,6 +17445,27 @@ function attachHandlers(){
 
   attachSwipeToDelete();
   attachRoutineDragReorder();
+
+  /* Monthly report export. Both paths are async and both surface their own toast, so a
+     failure never leaves the button looking like it did nothing. */
+  document.querySelectorAll('[data-action="report-share"],[data-action="report-save"]').forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      if(!window.IgnytReport) return;
+      const kind = "report";
+      if(btn.dataset.action === "report-share") IgnytReport.share(kind, state, state.shareCardTheme||"steel");
+      else IgnytReport.save(kind, state, state.shareCardTheme||"steel");
+    });
+  });
+
+  /* Count the numbers up. Last, so every [data-count] on the freshly rendered screen is in
+     the DOM; the module itself decides which of them are actually new to the user. */
+  if(window.IgnytCounters) IgnytCounters.attach();
+
+  /* Reconcile the live workout notification with the current session. Cheap and idempotent, so
+     it goes on the render path rather than being toggled at each of the four places a session
+     can end -- a toggle that misses one leaves a notification insisting a finished workout is
+     still running. */
+  if(window.IgnytActiveWorkout) IgnytActiveWorkout.sync();
   const editWorkoutBtn = document.querySelector('[data-action="edit-workout"]');
   if(editWorkoutBtn) editWorkoutBtn.addEventListener("click", ()=>{
     const s = state.workoutLog.find(x=>x.id===Number(editWorkoutBtn.dataset.sessionId));
@@ -11033,17 +17545,20 @@ function attachHandlers(){
   });
   const delConfirmedBtn = document.querySelector('[data-action="delete-session-confirmed"]');
   if(delConfirmedBtn) delConfirmedBtn.addEventListener("click", async ()=>{
-    if(!(await confirmDialog("Delete this workout permanently? This can't be undone.", render))) return;
+    if(!(await confirmDialog(`Delete this workout? It moves to the recycle bin and can be restored for ${RECYCLE_BIN_DAYS} days.`, render))) return;
     const id = Number(delConfirmedBtn.dataset.sessionId);
-    state.workoutLog = state.workoutLog.filter(s=>s.id !== id);
+    if(!softDeleteWorkout(id)) return;
     state.viewingSessionId = null;
     render();
+    showToast("Workout deleted.", "info", render, { label:"Undo", onClick: ()=>{ restoreWorkout(id); render(); } });
   });
   document.querySelectorAll("[data-del-session]").forEach(el=>{
     el.addEventListener("click", async (e)=>{
       e.stopPropagation(); // don't also trigger the row's data-view-session click
-      if(!(await confirmDialog("Delete this workout permanently? This can't be undone.", render))) return;
-      state.workoutLog = state.workoutLog.filter(s=>s.id !== Number(el.dataset.delSession));
+      if(!(await confirmDialog(`Delete this workout? It moves to the recycle bin and can be restored for ${RECYCLE_BIN_DAYS} days.`, render))) return;
+      const delId = Number(el.dataset.delSession);
+      softDeleteWorkout(delId);
+      setTimeout(()=> showToast("Workout deleted.", "info", render, { label:"Undo", onClick: ()=>{ restoreWorkout(delId); render(); } }), 0);
       render();
     });
   });
@@ -11402,16 +17917,116 @@ function attachHandlers(){
     state.libSearch = e.target.value;
     debounce("lib-search", ()=>{
       render();
-      setTimeout(()=>{ const s=document.getElementById("lib-search"); if(s){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
     }, 150);
   });
   document.querySelectorAll("[data-cat]").forEach(el=>{
     el.addEventListener("click", ()=>{ state.libCategory = el.dataset.cat; render(); });
   });
+
+  /* ---- Workout History filters ---- */
+  const histSearch = document.getElementById("history-search");
+  if(histSearch) histSearch.addEventListener("input", (e)=>{
+    state.historySearch = e.target.value;
+    state.historyPage = 1; // a new query always starts from the first page
+    debounce("history-search", ()=>{
+      render();
+    }, 150);
+  });
+  document.querySelectorAll("[data-history-range]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.historyRange = el.dataset.historyRange; state.historyPage = 1; render(); });
+  });
+  const histMuscle = document.getElementById("history-muscle");
+  if(histMuscle) histMuscle.addEventListener("change", ()=>{ state.historyMuscle = histMuscle.value; state.historyPage = 1; render(); });
+  const histSort = document.getElementById("history-sort");
+  if(histSort) histSort.addEventListener("change", ()=>{ state.historySort = histSort.value; state.historyPage = 1; render(); });
+  const histPRs = document.querySelector("[data-history-prs]");
+  if(histPRs) histPRs.addEventListener("click", ()=>{ state.historyPRsOnly = !state.historyPRsOnly; state.historyPage = 1; render(); });
+  const histClear = document.querySelector("[data-history-clear]");
+  if(histClear) histClear.addEventListener("click", ()=>{
+    state.historySearch = ""; state.historyRange = "all"; state.historyMuscle = "";
+    state.historyPRsOnly = false; state.historyArchived = false; state.historyPage = 1; render();
+  });
+  /* ---- Bulk selection ---- */
+  const histSelectMode = document.querySelector("[data-history-select-mode]");
+  if(histSelectMode) histSelectMode.addEventListener("click", ()=>{
+    state.historySelectMode = !state.historySelectMode;
+    if(!state.historySelectMode) state.historySelected = [];
+    render();
+  });
+  const histSelectAll = document.querySelector("[data-history-select-all]");
+  if(histSelectAll) histSelectAll.addEventListener("click", ()=>{
+    const ids = filteredWorkoutHistory().map(s=>s.id);
+    state.historySelected = (state.historySelected||[]).length===ids.length ? [] : ids;
+    render();
+  });
+  document.querySelectorAll("[data-history-pick]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = Number(el.dataset.historyPick);
+      const sel = state.historySelected || [];
+      state.historySelected = sel.includes(id) ? sel.filter(x=>x!==id) : sel.concat([id]);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-bulk-action]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const ids = (state.historySelected||[]).slice();
+      if(!ids.length) return;
+      const action = el.dataset.bulkAction;
+      const picked = () => state.workoutLog.filter(s=>ids.includes(s.id));
+
+      if(action === "export"){
+        exportWorkoutsJSON(picked(), `ignyt-workouts-${ids.length}-${todayStr()}.json`);
+        return;
+      }
+      if(action === "archive"){
+        const target = !state.historyArchived; // in the archived view this un-archives
+        picked().forEach(s=>{ s.archived = target; });
+        persist(); state.historySelected = []; render();
+        showToast(`${ids.length} workout${ids.length!==1?'s':''} ${target?'archived':'unarchived'}.`, "info", render);
+        return;
+      }
+      if(action === "duplicate"){
+        picked().forEach(s=>{ state.workoutLog.unshift(duplicateWorkoutRecord(s)); });
+        state.workoutLog = enforceWorkoutLogIntegrity(state.workoutLog);
+        persist(); state.historySelected = []; render();
+        showToast(`${ids.length} workout${ids.length!==1?'s':''} duplicated to today.`, "success", render);
+        return;
+      }
+      if(action === "delete"){
+        if(!(await confirmDialog(`Delete ${ids.length} workout${ids.length!==1?'s':''}? They move to the recycle bin and can be restored for ${RECYCLE_BIN_DAYS} days.`, render, { danger:true, confirmLabel:"Delete" }))) return;
+        ids.forEach(id=> softDeleteWorkout(id));
+        state.historySelected = []; render();
+        showToast(`${ids.length} workout${ids.length!==1?'s':''} deleted.`, "info", render,
+          { label:"Undo", onClick: ()=>{ ids.forEach(id=> restoreWorkout(id)); render(); } });
+      }
+    });
+  });
+
+  const histArchived = document.querySelector("[data-history-archived]");
+  if(histArchived) histArchived.addEventListener("click", ()=>{ state.historyArchived = !state.historyArchived; state.historyPage = 1; render(); });
+  const histBin = document.querySelector("[data-history-bin]");
+  if(histBin) histBin.addEventListener("click", ()=>{ state.historyBinOpen = true; render(); });
+  const histBinBack = document.querySelector("[data-history-bin-back]");
+  if(histBinBack) histBinBack.addEventListener("click", ()=>{ state.historyBinOpen = false; render(); });
+  document.querySelectorAll("[data-bin-restore]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = Number(el.dataset.binRestore);
+      if(restoreWorkout(id)){ render(); showToast("Workout restored.", "success", render); }
+    });
+  });
+  document.querySelectorAll("[data-bin-purge]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      if(!(await confirmDialog("Permanently delete this workout? This can't be undone.", render, { danger:true, confirmLabel:"Delete forever" }))) return;
+      purgeWorkoutFromBin(Number(el.dataset.binPurge));
+      render();
+    });
+  });
+  const histMore = document.querySelector("[data-history-more]");
+  if(histMore) histMore.addEventListener("click", ()=>{ state.historyPage = (state.historyPage||1) + 1; render(); });
   document.querySelectorAll("[data-view-exercise]").forEach(el=>{
     el.addEventListener("click", ()=>{
       state.viewingExerciseDetail = el.dataset.viewExercise;
-      state.exerciseDetailTab = "summary";
+      state.exerciseDetailTab = "howto";
       render();
     });
   });
@@ -11421,6 +18036,111 @@ function attachHandlers(){
       render();
     });
   });
+  // Collapsible guide sections. Toggled in-place (class swap, no re-render) so the CSS
+  // max-height transition actually animates -- a full render() would replace the node and
+  // the browser would snap straight to the end state with no transition.
+  document.querySelectorAll("[data-ex-section]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const key = el.dataset.exSection;
+      const card = el.closest(".ex-sec");
+      if(!card) return;
+      const nowOpen = !card.classList.contains("is-open");
+      card.classList.toggle("is-open", nowOpen);
+      el.setAttribute("aria-expanded", nowOpen ? "true" : "false");
+      if(!state.exerciseSectionsOpen) state.exerciseSectionsOpen = {};
+      state.exerciseSectionsOpen[key] = nowOpen; // survives tab switches / re-renders
+    });
+  });
+  /* ---- Post-workout editing ---- */
+  const editWhen = document.querySelector('[data-action="edit-complete-datetime"]');
+  if(editWhen) editWhen.addEventListener("click", ()=>{
+    const w = state.workoutLog.find(x=>String(x.id) === editWhen.dataset.workoutId);
+    if(!w) return;
+    state.editingWorkout = buildWorkoutEditDraft(w);
+    render();
+  });
+  document.querySelectorAll('[data-action="edit-workout-details"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const w = state.workoutLog.find(x=>x.id===Number(el.dataset.workoutId));
+      if(!w) return;
+      state.editingWorkout = buildWorkoutEditDraft(w);
+      render();
+    });
+  });
+  document.querySelectorAll('[data-action="duplicate-workout"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const src = state.workoutLog.find(x=>x.id===Number(el.dataset.workoutId));
+      if(!src) return;
+      const copy = duplicateWorkoutRecord(src);
+      state.workoutLog.unshift(copy);
+      state.workoutLog = enforceWorkoutLogIntegrity(state.workoutLog);
+      persist();
+      state.viewingSessionId = copy.id;
+      render();
+      showToast("Workout duplicated to today.", "success", render);
+    });
+  });
+  document.querySelectorAll('[data-action="archive-workout"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const w = state.workoutLog.find(x=>x.id===Number(el.dataset.workoutId));
+      if(!w) return;
+      w.archived = !w.archived;
+      persist(); render();
+      showToast(w.archived ? "Workout archived." : "Workout unarchived.", "info", render);
+    });
+  });
+  document.querySelectorAll('[data-action="open-workout-audit"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.viewingWorkoutAuditId = Number(el.dataset.workoutId); render(); });
+  });
+  const closeAuditBtn = document.querySelector('[data-action="close-workout-audit"]');
+  if(closeAuditBtn) closeAuditBtn.addEventListener("click", ()=>{ state.viewingWorkoutAuditId = null; render(); });
+  document.querySelectorAll('[data-action="cancel-workout-edit"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.editingWorkout = null; render(); });
+  });
+  // Field edits are captured on input/change WITHOUT a re-render, so the keyboard never
+  // closes mid-typing; the draft is the single source of truth read back on save.
+  document.querySelectorAll("[data-wedit-field]").forEach(el=>{
+    const commit = ()=>{
+      if(!state.editingWorkout) return;
+      state.editingWorkout[el.dataset.weditField] = el.value;
+    };
+    el.addEventListener("input", commit);
+    el.addEventListener("change", ()=>{
+      commit();
+      // Start/end times drive duration, so re-render to reflect the linked/unlinked state.
+      if(el.dataset.weditField==="startTime" || el.dataset.weditField==="endTime" || el.dataset.weditField==="date") render();
+    });
+  });
+  document.querySelectorAll("[data-wedit-dur]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const d = state.editingWorkout;
+      if(!d) return;
+      const v = el.dataset.weditDur;
+      if(v === "reset"){
+        const t = d.originalDurationMin*60;
+        d.hours = Math.floor(t/3600); d.minutes = Math.floor((t%3600)/60); d.seconds = t%60;
+      } else {
+        const totalSec = Math.max(0, workoutEditDraftDurationMin(d)*60 + Number(v)*60);
+        d.hours = Math.floor(totalSec/3600); d.minutes = Math.floor((totalSec%3600)/60); d.seconds = totalSec%60;
+      }
+      d.error = null;
+      render();
+    });
+  });
+  const saveEditBtn = document.querySelector('[data-action="save-workout-edit"]');
+  if(saveEditBtn) saveEditBtn.addEventListener("click", ()=>{
+    const d = state.editingWorkout;
+    if(!d) return;
+    const res = saveWorkoutEdit(d);
+    if(!res.ok){ d.error = res.error; render(); return; }
+    state.editingWorkout = null;
+    render(); // every derived statistic recomputes from state.workoutLog on this pass
+    showToast(res.unchanged ? "No changes to save." : "Workout updated.", res.unchanged ? "info" : "success", render);
+    // Push the correction to Firestore right away when signed in; offline it stays queued
+    // locally and the existing sync triggers pick it up on reconnect.
+    if(window.IgnytCloudSync && IgnytCloudSync.isNativeAndroid()) IgnytCloudSync.syncNow();
+  });
+
   const closeExDetailBtn = document.querySelector('[data-action="close-exercise-detail"]');
   if(closeExDetailBtn) closeExDetailBtn.addEventListener("click", ()=>{
     state.viewingExerciseDetail = null;
@@ -11520,6 +18240,7 @@ function attachHandlers(){
     if(state.exercisePickerShowCreate){ state.exercisePickerShowCreate = false; render(); return; }
     state.showExercisePicker = false;
     state.replacingExerciseIndex = null;
+    state.pickerSelection = [];   // cancelling means cancelling; nothing waits for next time
     render();
   });
   const pickerSearchEl = document.getElementById("ex-picker-search");
@@ -11558,7 +18279,7 @@ function attachHandlers(){
       if(viewBtn){
         e.stopPropagation();
         state.viewingExerciseDetail = viewBtn.dataset.viewExerciseFromPicker;
-        state.exerciseDetailTab = "summary";
+        state.exerciseDetailTab = "howto";
         state.showExercisePicker = false;
         state.tab = "library";
         render();
@@ -11577,6 +18298,20 @@ function attachHandlers(){
       const row = e.target.closest("[data-pick-exercise]");
       if(!row) return;
       const name = row.dataset.pickExercise;
+
+      /* Multi-select: a tap toggles rather than commits, and the bar at the bottom adds the
+         lot. Replacing stays single-tap — swapping one exercise for three is not a thing. */
+      if(pickerIsMultiSelect()){
+        const sel = state.pickerSelection || (state.pickerSelection = []);
+        const i = sel.indexOf(name);
+        if(i >= 0) sel.splice(i, 1); else sel.push(name);
+        /* Only the results list is rebuilt, so the search box keeps focus and the list keeps
+           its scroll position — picking six exercises should not mean six jumps to the top. */
+        updateExercisePickerResults();
+        updatePickerSelectionBar();
+        return;
+      }
+
       if(isRoutinePickerContext()){
         applyRoutineExercisePick(name);
       } else if(state.exercisePickerContext==="replace"){
@@ -11596,6 +18331,7 @@ function attachHandlers(){
       render();
     });
   }
+  attachPickerSelectionBar();
   const showCreateBtn = document.querySelector('[data-action="show-create-in-picker"]');
   if(showCreateBtn) showCreateBtn.addEventListener("click", ()=>{
     state.exercisePickerShowCreate = true;
@@ -11646,6 +18382,40 @@ function attachHandlers(){
   openPiBtns.forEach(el=>el.addEventListener("click", ()=>{ state.tab = "body"; state.bodyView = "personal-info"; render(); }));
   const closePiBtns = document.querySelectorAll('[data-action="close-personal-info"]');
   closePiBtns.forEach(el=>el.addEventListener("click", ()=>{ state.tab = "profile"; state.bodyView = null; render(); }));
+
+  /* Profile photo. Same readProfilePhoto() and the same failure handling as onboarding's
+     picker — one implementation, so a photo this screen accepts is one that screen would too.
+     The write is its own persist() rather than waiting for render()'s: if the storage quota
+     is going to reject a photo it has to fail HERE, where the message can name the photo,
+     instead of later where it would look like the app losing unrelated data. */
+  const piPhotoInput = document.getElementById("pi-photo-input");
+  document.querySelectorAll("[data-pi-photo-pick]").forEach(el=>{
+    el.addEventListener("click", ()=>{ if(piPhotoInput) piPhotoInput.click(); });
+  });
+  if(piPhotoInput) piPhotoInput.addEventListener("change", async ()=>{
+    const file = piPhotoInput.files && piPhotoInput.files[0];
+    if(!file) return;
+    const previous = state.profile.photo;
+    try{
+      state.profile.photo = await readProfilePhoto(file);
+      /* LS.set on the profile specifically, not persist(). persist() returns nothing and
+         writes twenty keys; this needs to know whether THE ONE carrying the photo landed, so
+         a rejected photo can be rolled back instead of sitting in memory until the next
+         reload silently drops it. */
+      if(!LS.set("hx_profile", state.profile)){
+        state.profile.photo = previous;
+        showToast("Not enough storage for that photo. Try a smaller image.", "error", render);
+        return;
+      }
+      render();
+    }catch(e){
+      state.profile.photo = previous;
+      showToast(e && e.message ? e.message : "That photo could not be used.", "error", render);
+    }finally{ piPhotoInput.value = ""; }
+  });
+  document.querySelectorAll("[data-pi-photo-clear]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.profile.photo = ""; persist(); render(); });
+  });
   const pUsername = document.getElementById("p-username");
   if(pUsername) pUsername.addEventListener("change", ()=>{ state.profile.username = pUsername.value; render(); });
   const pPhone = document.getElementById("p-phone");
@@ -11734,6 +18504,23 @@ function attachHandlers(){
     state.bodylog.unshift(entry);
     // Weight logged here becomes the single source of truth -> recalcs calories/macros everywhere
     state.profile.weight = Number(weight) || state.profile.weight;
+
+    /* The weigh-in response: XP, any milestone celebration, the weight badges, and the line
+       shown on the card. Everything is derived from the log that was just written, and every
+       award is keyed so a re-render cannot pay twice. Wrapped because a motivation module
+       failing must never lose the weigh-in itself -- the entry is already in state above. */
+    try {
+      if(window.IgnytWeight){
+        const analysis = IgnytWeight.analyse(state);
+        IgnytWeight.reward(state, analysis);
+        state.lastWeighIn = analysis ? { analysis, message: IgnytWeight.message(analysis) } : null;
+      }
+    } catch(e){ console.warn("weight motivation failed", e); }
+    const weighUnlocked = checkAchievements();
+    if(weighUnlocked.length){
+      state.lastUnlockedAchievements = weighUnlocked;
+      if(window.IgnytCelebrate) IgnytCelebrate.forAchievements(weighUnlocked);
+    }
     render();
   });
   document.querySelectorAll("[data-del-body]").forEach(el=>{
@@ -11877,6 +18664,131 @@ function attachHandlers(){
   if(openArchiveBtn) openArchiveBtn.addEventListener("click", ()=>{ state.bodyView = "photos"; render(); });
   const closeArchiveBtn = document.querySelector('[data-action="close-body-scan-archive"]');
   if(closeArchiveBtn) closeArchiveBtn.addEventListener("click", ()=>{ state.bodyView = null; render(); });
+  /* ---- Progress Photos: sessions, filters, compare ------------------------------- */
+  const bpUI = patch => { state.bodyPhotoFilter = Object.assign({}, state.bodyPhotoFilter, patch); };
+
+  document.querySelectorAll("[data-bp-period]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const kind = el.dataset.bpPeriod, val = el.dataset.bpValue;
+      // Year and month are mutually exclusive: picking a month implies its year, and holding
+      // both would let the two disagree.
+      if(kind === "all") bpUI({ year:null, month:null });
+      else if(kind === "year") bpUI({ year: state.bodyPhotoFilter.year === val ? null : val, month:null });
+      else if(kind === "month") bpUI({ month: state.bodyPhotoFilter.month === val ? null : val, year:null });
+      render();
+    });
+  });
+
+  const bpApplyW = document.querySelector("[data-bp-apply-weight]");
+  if(bpApplyW) bpApplyW.addEventListener("click", ()=>{
+    const min = document.getElementById("bp-wmin"), max = document.getElementById("bp-wmax");
+    const num = el => { const v = el && el.value.trim(); return v === "" || v == null ? null : Number(v); };
+    const lo = num(min), hi = num(max);
+    if(lo != null && hi != null && lo > hi){
+      showToast("The minimum weight is above the maximum.", "error", render);
+      return;
+    }
+    bpUI({ weightMin: lo, weightMax: hi });
+    render();
+  });
+
+  const bpClear = document.querySelector("[data-bp-clear]");
+  if(bpClear) bpClear.addEventListener("click", ()=>{ state.bodyPhotoFilter = {}; render(); });
+
+  document.querySelectorAll("[data-bp-session]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.bpSession;
+      state.bodyOpenSession = state.bodyOpenSession === id ? null : id;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-bp-compare]").forEach(el=>{
+    el.addEventListener("change", ()=>{
+      if(el.dataset.bpCompare === "a") state.bodyCompareA = el.value;
+      else state.bodyCompareB = el.value;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-bp-preset]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.bodyCompareA = el.dataset.bpPreset;
+      state.bodyCompareB = el.dataset.bpPresetB;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-bp-compare-with]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      // Compare this check-in against the most recent one, which is the comparison people
+      // actually want from a row in the timeline.
+      const S = window.IgnytPhotoSessions;
+      const list = S ? S.sessions(state.bodyPhotos) : [];
+      const me = el.dataset.bpCompareWith;
+      const latest = list[0] && list[0].id;
+      state.bodyCompareA = me;
+      state.bodyCompareB = (latest && latest !== me) ? latest : me;
+      state.bodyScanView = "compare";
+      render();
+    });
+  });
+
+  /* Editing a check-in writes the measurement to EVERY photo in it. The fields live per photo
+     in the existing schema, but they describe the person on that day, not one camera angle —
+     so the session behaves as one record and a later read cannot pick up a stale value from
+     whichever photo happened to be first. */
+  document.querySelectorAll("[data-bp-edit]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const S = window.IgnytPhotoSessions;
+      const sess = S && S.byId(state.bodyPhotos, el.dataset.bpEdit);
+      if(!sess || !window.IgnytBodyPhotosDB) return;
+      const current = [sess.weight, sess.bodyfat, sess.waist, sess.chest]
+        .map(v=>v == null ? "" : v).join(", ");
+      const val = await confirmDialog(
+        "Weight, body fat %, waist cm, chest cm — comma separated. Leave any blank to clear it.",
+        render,
+        { title:"Edit check-in", confirmLabel:"Save", input:true, inputValue: current,
+          inputPlaceholder:"92, 18, 84, 104" });
+      if(!val){ render(); return; }
+      const parts = String(val).split(",").map(x=>x.trim());
+      const numOrNull = x => x === "" || x == null || isNaN(Number(x)) ? null : Number(x);
+      const patch = { weight:numOrNull(parts[0]), bodyfat:numOrNull(parts[1]),
+                      waist:numOrNull(parts[2]), chest:numOrNull(parts[3]) };
+      try{
+        await Promise.all(sess.photos.map(ph=>IgnytBodyPhotosDB.updatePhoto(ph.id, patch)));
+        state.bodyPhotos = await IgnytBodyPhotosDB.getAllMeta();
+        showToast("Check-in updated.", "success", render);
+      }catch(e){
+        console.warn("[photos] could not update session:", e);
+        showToast("Could not save the changes.", "error", render);
+      }
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-bp-delete-session]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const S = window.IgnytPhotoSessions;
+      const sess = S && S.byId(state.bodyPhotos, el.dataset.bpDeleteSession);
+      if(!sess || !window.IgnytBodyPhotosDB) return;
+      const ok = await confirmDialog(
+        `Delete this check-in and its ${sess.count} photo${sess.count===1?'':'s'}? This cannot be undone.`,
+        render, { title:"Delete check-in", confirmLabel:"Delete", danger:true });
+      if(!ok){ render(); return; }
+      try{
+        await Promise.all(sess.photos.map(ph=>IgnytBodyPhotosDB.deletePhoto(ph.id)));
+        state.bodyPhotos = await IgnytBodyPhotosDB.getAllMeta();
+        state.bodyOpenSession = null;
+        showToast("Check-in deleted.", "success", render);
+      }catch(e){
+        console.warn("[photos] could not delete session:", e);
+        showToast("Could not delete the check-in.", "error", render);
+      }
+      render();
+    });
+  });
+
   document.querySelectorAll("[data-body-scan-view]").forEach(el=>{
     el.addEventListener("click", ()=>{ state.bodyScanView = el.dataset.bodyScanView; render(); });
   });
@@ -11979,6 +18891,16 @@ function attachHandlers(){
     c.waist = readNum("calc-waist", c.waist);
     c.hip = readNum("calc-hip", c.hip);
     c.restingHR = readNum("calc-resting", 0);
+    c.bf = readNum("calc-bf", c.bf);
+    c.minutes = readNum("calc-minutes", c.minutes);
+    c.liftWeight = readNum("calc-liftweight", c.liftWeight);
+    c.reps = readNum("calc-reps", c.reps);
+    c.distance = readNum("calc-distance", c.distance);
+    c.hours = readNum("calc-hours", c.hours);
+    c.mins = readNum("calc-mins", c.mins);
+    c.secs = readNum("calc-secs", c.secs);
+    c.targetWeight = readNum("calc-target", c.targetWeight);
+    c.rate = readNum("calc-rate", c.rate);
     c.bust = readNum("calc-bust", c.bust);
     c.bwaist = readNum("calc-bwaist", c.bwaist);
     c.highHip = readNum("calc-highhip", c.highHip);
@@ -11991,6 +18913,38 @@ function attachHandlers(){
     if(c.activeCalc==="bmi"){
       const h = Number(c.height)/100;
       c.result = { type:"bmi", bmi: (h>0 ? Number(c.weight)/(h*h) : 0) };
+    } else if(c.activeCalc==="ffmi"){
+      const h = Number(c.height)/100, w = Number(c.weight), bf = Number(c.bf);
+      const ffm = w * (1 - bf/100);
+      const ffmi = h > 0 ? ffm/(h*h) : 0;
+      // Height-normalised to 1.8 m, which is what makes FFMI comparable between people.
+      c.result = { type:"ffmi", ffm, ffmi, normalised: ffmi + 6.1*(1.8 - h) };
+    } else if(c.activeCalc==="water"){
+      const base = Number(c.weight) * 35;
+      const exercise = Math.round((Number(c.minutes)||0) / 60 * 500);
+      c.result = { type:"water", base, exercise, total: base + exercise };
+    } else if(c.activeCalc==="orm"){
+      const w = Number(c.liftWeight), reps = Math.max(1, Number(c.reps)||1);
+      // Two formulas averaged: Epley reads high at low reps, Brzycki low at high reps, and
+      // neither is authoritative. Showing both and their mean is more honest than picking one.
+      const epley = w * (1 + reps/30);
+      const brzycki = reps < 37 ? w * 36/(37-reps) : w;
+      c.result = { type:"orm", epley, brzycki, orm: (epley+brzycki)/2 };
+    } else if(c.activeCalc==="pace"){
+      const km = Number(c.distance)||0;
+      const secs = (Number(c.hours)||0)*3600 + (Number(c.mins)||0)*60 + (Number(c.secs)||0);
+      const perKm = km > 0 ? secs/km : 0;
+      c.result = { type:"pace", perKm, perMile: perKm*1.60934, kph: perKm>0 ? 3600/perKm : 0 };
+    } else if(c.activeCalc==="goal"){
+      const cur = Number(c.weight)||0, tgt = Number(c.targetWeight)||0;
+      const rate = Math.max(0.05, Number(c.rate)||0.5);
+      const delta = tgt - cur;
+      const weeks = Math.ceil(Math.abs(delta)/rate);
+      const d = new Date(); d.setDate(d.getDate() + weeks*7);
+      c.result = { type:"goal", delta, ratePerWeek: rate, weeks,
+                   direction: delta < 0 ? "lose" : delta > 0 ? "gain" : "same",
+                   date: d.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}),
+                   dailyKcal: rate*7700/7 };
     } else if(c.activeCalc==="bmr"){
       const bmr = calcBMR(c.age, c.gender, c.height, c.weight);
       c.result = { type:"bmr", bmr };
@@ -12075,13 +19029,15 @@ function attachHandlers(){
       const kind = el.dataset.progressRange;
       if(kind==="volume") state.pgVolumeRange = el.value;
       else if(kind==="weight") state.pgWeightRange = Number(el.value);
-      else if(kind==="heatmap") state.pgHeatmapRange = el.value;
       render();
     });
   });
 
   // Progress home <-> detail navigation. Bound per-render like every other handler here
   // (the DOM is rebuilt each render, so listeners never accumulate).
+  document.querySelectorAll("[data-report-period]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.reportPeriod = el.dataset.reportPeriod; render(); });
+  });
   document.querySelectorAll("[data-progress-view]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const main = document.getElementById("main");
@@ -12111,7 +19067,6 @@ function attachHandlers(){
     state.prShowCount = 10;
     debounce("pr-search", ()=>{
       render();
-      setTimeout(()=>{ const s=document.getElementById("pr-search"); if(s){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
     }, 250);
   });
   const exProgSearchInput = document.getElementById("ex-progress-search");
@@ -12119,7 +19074,6 @@ function attachHandlers(){
     state.exProgressSearch = e.target.value;
     debounce("ex-progress-search", ()=>{
       render();
-      setTimeout(()=>{ const s=document.getElementById("ex-progress-search"); if(s){ s.focus(); s.setSelectionRange(s.value.length,s.value.length); } },0);
     }, 250);
   });
   document.querySelectorAll("[data-analytics-range]").forEach(el=>{
@@ -12156,13 +19110,85 @@ function attachHandlers(){
     });
   });
 
-  // Nutrition tab — meals & food log
-  document.querySelectorAll("[data-meal-toggle]").forEach(el=>{
+  // Nutrition dashboard — date navigation and card controls
+  document.querySelectorAll("[data-nutrition-date]").forEach(el=>{
     el.addEventListener("click", ()=>{
-      const meal = el.dataset.mealToggle;
-      state.mealOpen = state.mealOpen===meal ? null : meal;
+      const v = el.dataset.nutritionDate;
+      if(v === "today") state.nutritionDate = null;
+      else shiftNutritionDate(Number(v));
+      // Changing day invalidates whatever was open for the previous one.
+      state.mealOpen = null; state.foodSearchSelected = null; state.foodSearchQuery = "";
       render();
     });
+  });
+  const microToggle = document.querySelector('[data-action="toggle-micros"]');
+  if(microToggle) microToggle.addEventListener("click", ()=>{ state.microExpanded = !state.microExpanded; render(); });
+
+  const addFoodBtn = document.querySelector('[data-action="add-food"]');
+  if(addFoodBtn) addFoodBtn.addEventListener("click", ()=>{
+    // Opens the meal whose window the current time falls in, so the common case is one tap.
+    state.mealOpen = mealForNow();
+    state.quickAddOpen = false;
+    render();
+    setTimeout(()=>{
+      const input = document.getElementById("food-search-input");
+      if(input){ input.scrollIntoView({behavior:"smooth", block:"center"}); input.focus(); }
+    }, 60);
+  });
+
+  document.querySelectorAll('[data-action="quick-add-recent"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.quickAddOpen = !state.quickAddOpen;
+      // Default the destination to the meal for the current time, so a one-tap item lands
+      // somewhere sensible without asking.
+      if(state.quickAddOpen && !state.quickAddMeal) state.quickAddMeal = mealForNow();
+      render();
+    });
+  });
+  document.querySelectorAll("[data-repeat-day]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const n = repeatFoodEntries(el.dataset.repeatDay, nutritionDateStr(), null);
+      if(!n){ showToast("Nothing logged that day.", "error", render); return; }
+      state.quickAddOpen = false;
+      showToast("Copied " + n + " item" + (n===1?"":"s") + ".", "success", render);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-repeat-meal]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const n = repeatFoodEntries(el.dataset.repeatFrom, nutritionDateStr(), el.dataset.repeatMeal);
+      if(!n){ showToast("Nothing logged for that meal.", "error", render); return; }
+      state.quickAddOpen = false;
+      showToast("Copied " + n + " item" + (n===1?"":"s") + " to " + el.dataset.repeatMeal + ".", "success", render);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-repeat-entry]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const src = foodEntryById(el.dataset.repeatEntry);
+      if(!src) return;
+      const meal = state.quickAddMeal || mealForNow();
+      state.foodLog.unshift(copyFoodEntry(src, nutritionDateStr(), meal));
+      showToast(src.name + " added to " + meal + ".", "success", render);
+      render();
+    });
+  });
+
+  const scanBtn = document.querySelector('[data-action="scan-barcode"]');
+  if(scanBtn) scanBtn.addEventListener("click", ()=>{
+    // Deliberately honest: no camera or barcode lookup exists yet, so this says so instead
+    // of opening something that cannot work.
+    showToast("Barcode scanning isn't built yet — search or add the food manually.", "error", render);
+  });
+
+  // Nutrition tab — meals & food log
+  /* The meal accordion is gone — meals are always expanded, so there is nothing to toggle.
+     state.mealOpen survives as "which meal is the user working in", which the search route
+     and quick-add still read; it just no longer controls visibility. */
+  const manualToggle = document.querySelector('[data-action="toggle-manual-entry"]');
+  if(manualToggle) manualToggle.addEventListener("click", ()=>{
+    state.manualEntryOpen = !state.manualEntryOpen;
+    render();
   });
   document.querySelectorAll("[data-log-meal-food]").forEach(el=>{
     el.addEventListener("click", ()=>{
@@ -12174,7 +19200,7 @@ function attachHandlers(){
       const calStr = document.getElementById("food-cal").value.trim();
       const cal = Number(calStr);
       if(!name || calStr === "" || isNaN(cal) || cal < 0) return;
-      state.foodLog.unshift({ id: nextId(), date: todayStr(), name, calories: cal, meal,
+      state.foodLog.unshift({ id: nextId(), date: nutritionDateStr(), name, calories: cal, meal,
         protein: Number(document.getElementById("food-protein").value)||0,
         carbs: Number(document.getElementById("food-carbs").value)||0,
         fat: Number(document.getElementById("food-fat").value)||0,
@@ -12183,11 +19209,780 @@ function attachHandlers(){
       render();
     });
   });
+  /* ---- Food search (Phase 3) ---- */
+  const foodSearchInput = document.getElementById("food-search-input");
+  if(foodSearchInput) foodSearchInput.addEventListener("input", (e)=>{
+    state.foodSearchQuery = e.target.value;
+    state.foodSearchSelected = null; // a new query invalidates the current selection
+    state.foodResultPage = 1;        // and its paging
+    state.foodBrowsePage = 1;
+    // Refresh ONLY the results container. The input element is never recreated, so the soft
+    // keyboard stays up, the caret stays put and the page does not move — the previous
+    // render()-per-keystroke was what made the view jump on every character.
+    debounce("food-search", updateFoodSearchResults, 150);
+  });
+
+  // Everything inside #food-search-results is bound through this, so it can be re-bound after
+  // updateFoodSearchResults() replaces that container. The nodes are new every time, so
+  // re-running cannot double-bind. The search <input> above is deliberately NOT in there — it
+  // survives the swap, and rebinding it would make every keystroke fire twice.
+  bindFoodResultHandlers();
+
+  /* ---- Nutrition dashboard <-> Insights ---- */
+  document.querySelectorAll("[data-nav-insights]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      captureNutritionScroll();          // so Back lands where they left, not at the top
+      state.nutritionScreen = "insights";
+      render();
+    });
+  });
+
+  /* ---- Supplements ----------------------------------------------------------------- */
+  const SUP = window.IgnytSupplements;
+  const supUI = patch => { state.supplementUI = Object.assign({}, state.supplementUI, patch); };
+
+  const supBack = document.querySelector("[data-sup-back]");
+  if(supBack) supBack.addEventListener("click", ()=>{ state.tab = "tools"; render(); });
+
+  document.querySelectorAll("[data-sup-add]").forEach(el=>{
+    el.addEventListener("click", ()=>{ supUI({ editorOpen: "new" }); render(); });
+  });
+  document.querySelectorAll("[data-sup-edit]").forEach(el=>{
+    el.addEventListener("click", ()=>{ supUI({ editorOpen: el.dataset.supEdit }); render(); });
+  });
+  document.querySelectorAll("[data-sup-close]").forEach(el=>{
+    el.addEventListener("click", ()=>{ supUI({ editorOpen: null }); render(); });
+  });
+
+  document.querySelectorAll("[data-sup-take]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(!SUP) return;
+      const nowTaken = SUP.toggle(el.dataset.supTake);
+      // Short tick on completion only, same rule as the habit tracker: buzzing on un-tick
+      // would make correcting a mistap feel like an achievement.
+      if(nowTaken && typeof hapticTick === "function") hapticTick();
+      render();
+    });
+  });
+
+  const supSave = document.querySelector("[data-sup-save]");
+  if(supSave) supSave.addEventListener("click", ()=>{
+    if(!SUP) return;
+    const val = id => { const e = document.getElementById(id); return e ? e.value.trim() : ""; };
+    const num = id => { const v = val(id); return v === "" ? null : Number(v); };
+    const name = val("sup-name");
+    if(!name){ showToast("Give the supplement a name.", "error", render); return; }
+
+    const fields = {
+      name: name, brand: val("sup-brand"), category: val("sup-category") || "other",
+      dosage: num("sup-dosage"), unit: val("sup-unit") || "capsule",
+      quantity: num("sup-quantity") != null ? num("sup-quantity") : 1,
+      timing: val("sup-timing") || "anytime", time: val("sup-time"),
+      frequency: val("sup-frequency") || "daily",
+      inventory: num("sup-inventory"), notes: val("sup-notes")
+    };
+    // "Custom days" has no day picker in this editor yet, so it would silently mean "no days"
+    // and the supplement would never be due. Fall back to every day and say so.
+    if(fields.frequency === "custom"){
+      fields.frequency = "daily";
+      showToast("Custom days aren't editable yet — set to every day.", "info", render);
+    }
+
+    const existing = supSave.dataset.supSave;
+    const ok = existing ? SUP.update(existing, fields) : !!SUP.add(fields);
+    if(!ok){ showToast("Could not save.", "error", render); return; }
+    supUI({ editorOpen: null });
+    showToast(existing ? "Saved." : "Supplement added.", "success", render);
+    render();
+  });
+
+  const supDelete = document.querySelector("[data-sup-delete]");
+  if(supDelete) supDelete.addEventListener("click", async ()=>{
+    if(!SUP) return;
+    const id = supDelete.dataset.supDelete;
+    const sup = SUP.get(id);
+    const ok = await confirmDialog(
+      `Remove ${escHtml(sup ? sup.name : "this supplement")} from your stack? Your dose history is kept.`,
+      render, { title:"Remove supplement", confirmLabel:"Remove", danger:true });
+    if(!ok){ render(); return; }
+    SUP.remove(id);
+    supUI({ editorOpen: null });
+    showToast("Removed.", "success", render);
+    render();
+  });
+
+  /* ---- Reminders ------------------------------------------------------------------ */
+  const RM = window.IgnytReminders;
+
+  const rmOpenBtn = document.querySelector('[data-action="open-reminders"]');
+  if(rmOpenBtn) rmOpenBtn.addEventListener("click", async ()=>{
+    state.reminderScreen = true;
+    state.reminderOpen = null;
+    await refreshNativeNotifPermission();   // the answer may have changed in system settings
+    render();
+  });
+
+  const rmBack = document.querySelector("[data-rm-back]");
+  if(rmBack) rmBack.addEventListener("click", ()=>{
+    state.reminderScreen = false; state.reminderOpen = null; render();
+  });
+
+  document.querySelectorAll("[data-rm-open]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.rmOpen;
+      state.reminderOpen = state.reminderOpen === id ? null : id;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-rm-toggle]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      if(!RM) return;
+      const id = el.dataset.rmToggle;
+      const now = !RM.settings(id).enabled;
+      /* Turning one on with the permission refused would schedule an alarm that can never
+         show anything. Ask first; if it is still refused, say so rather than leaving a switch
+         that looks on and does nothing. */
+      if(now && state.nativeNotifPermissionGranted === false){
+        const plugin = nativeNotify();
+        if(plugin && plugin.requestPermission){
+          try{
+            const res = await plugin.requestPermission();
+            state.nativeNotifPermissionGranted = !(res && res.granted === false);
+          }catch(e){ /* leave as-is */ }
+        }
+        if(state.nativeNotifPermissionGranted === false){
+          showToast("Notifications are off for IGNYT in Android settings.", "error", render);
+          render();
+          return;
+        }
+      }
+      RM.update(id, { enabled: now });
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-rm-time]").forEach(el=>{
+    el.addEventListener("change", ()=>{
+      if(!RM) return;
+      const m = /^(\d{1,2}):(\d{2})$/.exec(el.value || "");
+      if(!m) return;
+      RM.update(el.dataset.rmTime, { hour: Number(m[1]), minute: Number(m[2]) });
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-rm-repeat]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(!RM) return;
+      const id = el.dataset.rmRepeat, mode = el.dataset.repeat;
+      // Switching to custom seeds the current effective days, so the switch never lands on an
+      // empty selection that silently means "never".
+      const patch = { repeat: mode };
+      if(mode === "custom") patch.days = RM.daysFor(RM.settings(id)).slice();
+      RM.update(id, patch);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-rm-day]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(!RM) return;
+      const id = el.dataset.rmDay, day = Number(el.dataset.day);
+      const days = RM.daysFor(RM.settings(id)).slice();
+      const i = days.indexOf(day);
+      if(i === -1) days.push(day); else days.splice(i, 1);
+      if(!days.length){ showToast("Pick at least one day, or turn the reminder off.", "info", render); return; }
+      RM.update(id, { repeat: "custom", days: days.sort() });
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-rm-flag]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(!RM) return;
+      const id = el.dataset.rmFlag, flag = el.dataset.flag;
+      const s = RM.settings(id);
+      const patch = {};
+      patch[flag] = !s[flag];
+      // Silent implies no vibration; leaving both on would promise a buzz the channel cannot give.
+      if(flag === "silent" && patch.silent) patch.vibrate = false;
+      RM.update(id, patch);
+      render();
+    });
+  });
+
+  const rmRequest = document.querySelector("[data-rm-request]");
+  if(rmRequest) rmRequest.addEventListener("click", async ()=>{
+    const plugin = nativeNotify();
+    if(!plugin || !plugin.requestPermission) return;
+    try{
+      const res = await plugin.requestPermission();
+      state.nativeNotifPermissionGranted = !(res && res.granted === false);
+      if(state.nativeNotifPermissionGranted && RM) await RM.syncAll();
+    }catch(e){ /* nothing more to do */ }
+    render();
+  });
+
+  /* ---- Fasting Tracker ------------------------------------------------------------- */
+  const FT = window.IgnytFasting;
+  const ftUI = patch => { state.fastUI = Object.assign({}, state.fastUI, patch); };
+
+  document.querySelectorAll("[data-open-fasting]").forEach(el=>{
+    el.addEventListener("click", ()=>{ openFasting(); render(); });
+  });
+
+  const ftBack = document.querySelector("[data-ft-back]");
+  if(ftBack) ftBack.addEventListener("click", ()=>{ state.tab = "home"; render(); });
+
+  document.querySelectorAll("[data-ft-pick]").forEach(el=>{
+    el.addEventListener("click", ()=>{ ftUI({ pickScheduleId: el.dataset.ftPick }); render(); });
+  });
+
+  const ftStart = document.querySelector("[data-ft-start]");
+  if(ftStart) ftStart.addEventListener("click", async ()=>{
+    if(!FT) return;
+    const id = (state.fastUI||{}).pickScheduleId;
+    const hoursEl = document.getElementById("ft-custom-hours");
+    const startEl = document.getElementById("ft-start-at");
+    // datetime-local yields local wall time with no zone; Date parses it as local, which is
+    // what the user meant when they typed it.
+    const startAt = startEl && startEl.value ? new Date(startEl.value).getTime() : Date.now();
+    const res = FT.start({
+      scheduleId: id,
+      hours: id === "custom" ? Number(hoursEl && hoursEl.value) : undefined,
+      startAt: startAt
+    });
+    if(!res.ok){ showToast(res.error, "error", render); return; }
+    ftUI({ pickScheduleId: null });
+    await syncFastNotifications(res.fast);
+    if(FT.prefs().notifyStart) showToast("Fast started. Good luck.", "success", render);
+    render();
+  });
+
+  const ftEnd = document.querySelector("[data-ft-end]");
+  if(ftEnd) ftEnd.addEventListener("click", async ()=>{
+    if(!FT) return;
+    const fast = FT.active();
+    if(!fast) return;
+    const p = FT.progress(fast);
+    if(!p.complete){
+      const ok = await confirmDialog(
+        `You're ${dur_ft(p.elapsedMs)} into a ${escHtml(fast.label)} fast, with ` +
+        `${dur_ft(p.remainingMs)} to go. End it now?`,
+        render, { title:"End fast early", confirmLabel:"End fast", danger:true });
+      if(!ok){ render(); return; }
+    }
+    const res = FT.end();
+    await syncFastNotifications(null);
+    if(res.ok){
+      // Ending a fast records the fast. It deliberately does NOT log food — the app has no
+      // idea what the user ate, and inventing an entry would corrupt their diary.
+      showToast(res.record.completed
+        ? `Fast complete — ${Math.round(res.record.durationMs/3600000)}h. Nice work.`
+        : "Fast ended and saved to your history.", "success", render);
+    }
+    render();
+  });
+
+  const ftEditStart = document.querySelector("[data-ft-edit-start]");
+  if(ftEditStart) ftEditStart.addEventListener("click", async ()=>{
+    if(!FT) return;
+    const fast = FT.active();
+    if(!fast) return;
+    const val = await confirmDialog(
+      "When did this fast actually start? Use 24-hour time, e.g. 20:30.", render,
+      { title:"Edit start time", confirmLabel:"Save", input:true,
+        inputValue: new Date(fast.startAt).toTimeString().slice(0,5), inputPlaceholder:"HH:MM" });
+    if(!val){ render(); return; }
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(val).trim());
+    if(!m){ showToast("Use HH:MM, e.g. 20:30.", "error", render); return; }
+    const d = new Date();
+    d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+    // A time later than now must mean yesterday evening, not the future.
+    if(d.getTime() > Date.now()) d.setDate(d.getDate() - 1);
+    const res = FT.adjustStart(d.getTime());
+    if(!res.ok){ showToast(res.error, "error", render); return; }
+    await syncFastNotifications(res.fast);
+    showToast("Start time updated.", "success", render);
+    render();
+  });
+
+  document.querySelectorAll("[data-ft-range]").forEach(el=>{
+    el.addEventListener("click", ()=>{ ftUI({ chartRange: Number(el.dataset.ftRange) }); render(); });
+  });
+
+  const ftHistAll = document.querySelector("[data-ft-history-all]");
+  if(ftHistAll) ftHistAll.addEventListener("click", ()=>{
+    ftUI({ historyAll: !(state.fastUI||{}).historyAll }); render();
+  });
+
+  document.querySelectorAll("[data-ft-del]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      if(!FT) return;
+      const ok = await confirmDialog("Delete this fast from your history?", render,
+        { title:"Delete fast", confirmLabel:"Delete", danger:true });
+      if(!ok){ render(); return; }
+      FT.removeFromHistory(el.dataset.ftDel);
+      showToast("Deleted.", "success", render);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-ft-pref]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      if(!FT) return;
+      const key = el.dataset.ftPref;
+      const now = !FT.prefs()[key];
+      FT.setPref(key, now);
+      // Turning a reminder on mid-fast should arm it immediately, not at the next fast.
+      if(FT.active()) await syncFastNotifications(FT.active());
+      render();
+    });
+  });
+
+  /* ---- Diet Plan Builder ---------------------------------------------------------- */
+  const D = window.IgnytDietPlans;
+
+  /* Background scroll lock while a sheet is open. Set from the rendered DOM rather than from
+     state, so it can never disagree with what is actually on screen — every path that closes a
+     sheet re-renders, and this reads the result. */
+  try {
+    document.body.classList.toggle("dp-modal-open", !!document.querySelector(".dp-sheet"));
+  } catch(e) { /* never let a class toggle break the handler pass */ }
+  const dpUI = patch => { state.dietUI = Object.assign({}, state.dietUI, patch); };
+  const dpCloseSheets = () => dpUI({ planMenu:false, sheet:null, sheetMeal:null });
+
+  const dpBack = document.querySelector("[data-dp-back]");
+  if(dpBack) dpBack.addEventListener("click", ()=>{ closeDietPlan(); render(); });
+
+  document.querySelectorAll("[data-dp-create]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      if(!D) return;
+      const name = await confirmDialog(
+        "Give the plan a name you'll recognise — Weight Loss, Muscle Gain, Keto, whatever fits.",
+        render,
+        { title:"Create diet plan", confirmLabel:"Create", input:true,
+          inputPlaceholder:"e.g. Muscle Gain", inputValue:"" });
+      if(!name) return;
+      const plan = D.create(name);
+      if(!plan){ showToast("Could not create the plan.", "error", render); return; }
+      state.dietViewPlanId = plan.id;
+      dpUI({ expanded:null });
+      showToast("Plan created.", "success", render);
+      render();
+    });
+  });
+
+  const dpSelect = document.getElementById("dp-plan-select");
+  if(dpSelect) dpSelect.addEventListener("change", ()=>{
+    // Viewing a plan is not adopting it -- "Set active" stays a deliberate, separate action.
+    state.dietViewPlanId = dpSelect.value;
+    dpUI({ expanded:null });
+    render();
+  });
+
+  document.querySelectorAll("[data-dp-set-active]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(!D) return;
+      D.setActive(el.dataset.dpSetActive);
+      showToast("Set as your active plan.", "success", render);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-dp-meal-toggle]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.dpMealToggle;
+      dpUI({ expanded: (state.dietUI||{}).expanded === id ? "__none__" : id });
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-dp-add-food]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const plan = currentDietPlan();
+      if(!plan || !D){ showToast("Create a plan first.", "info", render); return; }
+      const meal = D.mealById(plan, el.dataset.dpAddFood) || plan.meals[0];
+      if(!meal){ showToast("Add a meal to this plan first.", "info", render); return; }
+      // Reuses the whole existing search -> detail -> serving flow; only the destination differs.
+      openFoodSearch(meal.name, { kind:"plan", planId: plan.id, mealId: meal.id, mealName: meal.name });
+      state.nutritionScreen = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-dp-meal-done]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const plan = currentDietPlan();
+      if(!plan || !D) return;
+      D.toggleMealDone(plan.id, todayStr(), el.dataset.dpMealDone);
+      render();
+    });
+  });
+
+  /* Tapping the row edits the serving; the trailing menu removes it. Same split the food log
+     uses, so the gesture means the same thing in both places. */
+  document.querySelectorAll("[data-dp-item-edit]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const plan = currentDietPlan();
+      if(!plan) return;
+      openPlanItemDetail(plan.id, el.dataset.dpItemMeal, el.dataset.dpItemEdit);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-dp-item-menu]").forEach(el=>{
+    el.addEventListener("click", async (ev)=>{
+      ev.stopPropagation();   // the menu sits inside the row; removing must not also open it
+      const plan = currentDietPlan();
+      if(!plan || !D) return;
+      const itemId = el.dataset.dpItemMenu, mealId = el.dataset.dpMenuMeal;
+      const item = D.findItem(plan.id, mealId, itemId);
+      if(!item) return;
+      const meal = D.mealById(plan, mealId);
+      const ok = await confirmDialog(
+        "Remove " + escHtml(item.name) + " from " + escHtml(meal ? meal.name : "this meal") + "?",
+        render, { title:"Remove food", confirmLabel:"Remove", danger:true });
+      if(!ok){ render(); return; }
+      D.removeItem(plan.id, mealId, itemId);
+      dpUI({ expanded: mealId });
+      showToast("Removed.", "success", render);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-dp-plan-menu]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      dpUI({ planMenu: !(state.dietUI||{}).planMenu, sheet:null });
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-dp-close-sheet]").forEach(el=>{
+    el.addEventListener("click", ()=>{ dpCloseSheets(); render(); });
+  });
+
+  document.querySelectorAll("[data-dp-plan-action]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const plan = currentDietPlan();
+      if(!plan || !D) return;
+      const act = el.dataset.dpPlanAction;
+      dpUI({ planMenu:false });
+
+      if(act === "meals"){ dpUI({ sheet:"meals" }); render(); return; }
+
+      if(act === "rename"){
+        const name = await confirmDialog("Rename this plan.", render,
+          { title:"Rename plan", confirmLabel:"Save", input:true, inputValue: plan.name });
+        if(!name){ render(); return; }
+        D.rename(plan.id, name);
+        showToast("Renamed.", "success", render);
+      } else if(act === "duplicate"){
+        const copy = D.duplicate(plan.id);
+        if(copy){ state.dietViewPlanId = copy.id; dpUI({ expanded:null });
+                  showToast("Plan duplicated.", "success", render); }
+      } else if(act === "active"){
+        D.setActive(plan.id);
+        showToast("Set as your active plan.", "success", render);
+      } else if(act === "delete"){
+        const ok = await confirmDialog(
+          "Delete \"" + escHtml(plan.name) + "\"? This cannot be undone.", render,
+          { title:"Delete plan", confirmLabel:"Delete", danger:true });
+        if(!ok){ render(); return; }
+        D.remove(plan.id);
+        state.dietViewPlanId = null;
+        showToast("Plan deleted.", "success", render);
+      }
+      render();
+    });
+  });
+
+  /* Meals per day. Shrinking relocates food rather than deleting it, and says how much moved --
+     a silent move is as alarming as a silent delete when the user next opens the plan. */
+  document.querySelectorAll("[data-dp-set-meals]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const plan = currentDietPlan();
+      if(!plan || !D) return;
+      const n = parseInt(el.dataset.dpSetMeals, 10);
+      const res = D.setMealCount(plan.id, n);
+      dpCloseSheets();
+      dpUI({ expanded:null });
+      const label = n + (n === 1 ? " meal" : " meals") + " a day.";
+      if(res.moved > 0){
+        showToast("Now " + label + " " + res.moved + " item" + (res.moved===1?"":"s") +
+                  " moved into your last meal.", "info", render);
+      }else if(res.ok){
+        showToast("Now " + label, "success", render);
+      }
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-dp-meal-config]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      dpUI({ sheet:"meal", sheetMeal: el.dataset.dpMealConfig, planMenu:false });
+      render();
+    });
+  });
+
+  const dpSaveMeal = document.querySelector("[data-dp-save-meal]");
+  if(dpSaveMeal) dpSaveMeal.addEventListener("click", ()=>{
+    const plan = currentDietPlan();
+    const mealId = (state.dietUI||{}).sheetMeal;
+    if(!plan || !D || !mealId) return;
+    const nameEl = document.getElementById("dp-meal-name");
+    const timeEl = document.getElementById("dp-meal-time");
+    if(nameEl && nameEl.value.trim()) D.renameMeal(plan.id, mealId, nameEl.value);
+    if(timeEl) D.setMealTime(plan.id, mealId, timeEl.value);
+    dpCloseSheets();
+    showToast("Meal updated.", "success", render);
+    render();
+  });
+
+  document.querySelectorAll("[data-dp-move-meal]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const plan = currentDietPlan();
+      const mealId = (state.dietUI||{}).sheetMeal;
+      if(!plan || !D || !mealId) return;
+      D.moveMeal(plan.id, mealId, el.dataset.dpMoveMeal === "up" ? -1 : 1);
+      render();
+    });
+  });
+
+  const dpDeleteMeal = document.querySelector("[data-dp-delete-meal]");
+  if(dpDeleteMeal) dpDeleteMeal.addEventListener("click", async ()=>{
+    const plan = currentDietPlan();
+    const mealId = (state.dietUI||{}).sheetMeal;
+    if(!plan || !D || !mealId) return;
+    const meal = D.mealById(plan, mealId);
+    const has = meal ? meal.items.length : 0;
+    const msg = has
+      ? "Delete " + escHtml(meal.name) + "? Its " + has + " item" + (has===1?"":"s") +
+        " will move to the meal before it."
+      : "Delete " + escHtml(meal ? meal.name : "this meal") + "?";
+    const ok = await confirmDialog(msg, render,
+      { title:"Delete meal", confirmLabel:"Delete", danger:true });
+    if(!ok){ render(); return; }
+    D.deleteMeal(plan.id, mealId);
+    dpCloseSheets();
+    dpUI({ expanded:null });
+    showToast("Meal deleted.", "success", render);
+    render();
+  });
+
+  const dpAddMeal = document.querySelector("[data-dp-add-meal]");
+  if(dpAddMeal) dpAddMeal.addEventListener("click", ()=>{
+    const plan = currentDietPlan();
+    if(!plan || !D) return;
+    const added = D.addMeal(plan.id);
+    if(!added){ showToast("A plan can have at most " + D.MAX_MEALS + " meals.", "info", render); return; }
+    dpUI({ expanded: added.id });
+    render();
+  });
+
+  const dpDetails = document.querySelector("[data-dp-details]");
+  if(dpDetails) dpDetails.addEventListener("click", ()=>{
+    dpUI({ details: !(state.dietUI||{}).details });
+    render();
+  });
+
+  document.querySelectorAll("[data-open-diet-plan]").forEach(el=>{
+    el.addEventListener("click", ()=>{ openDietPlan(); render(); });
+  });
+
+  document.querySelectorAll("[data-open-diet-settings]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      openDietPlan();
+      // Land directly on "How many meals do you eat in a day?" when a plan exists; with none,
+      // the plan screen's own empty state is the right first step.
+      if(currentDietPlan()) state.dietUI = Object.assign({}, state.dietUI, { sheet:"meals" });
+      render();
+    });
+  });
+
+  const insightsBack = document.querySelector("[data-insights-back]");
+  if(insightsBack) insightsBack.addEventListener("click", ()=>{
+    state.nutritionScreen = null;
+    restoreNutritionScroll();
+    render();
+  });
+  document.querySelectorAll("[data-insights-meal]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.insightsMeal = el.dataset.insightsMeal;
+      render();
+    });
+  });
+
+  /* ---- Food logging flow routes ---- */
+  document.querySelectorAll("[data-meal-add]").forEach(el=>{
+    el.addEventListener("click", (ev)=>{
+      ev.stopPropagation();          // the whole header toggles; the + must not do both
+      openFoodSearch(el.dataset.mealAdd);
+      render();
+      setTimeout(()=>{ const s=document.getElementById("food-search-input"); if(s) s.focus(); }, 60);
+    });
+  });
+  document.querySelectorAll("[data-entry-open]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      openLoggedFoodDetail(el.dataset.entryOpen);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-food-flow-cancel]").forEach(el=>{
+    el.addEventListener("click", ()=>{ closeFoodFlow(); render(); });
+  });
+  const flowSave = document.querySelector("[data-food-flow-save]");
+  if(flowSave) flowSave.addEventListener("click", ()=>{
+    const flow = state.foodFlow;
+
+    /* Saving an edited DIET PLAN item: re-scale from the catalogue food at the new serving and
+       write the whole snapshot back, so the plan stores the same shape it would have got from
+       adding the food fresh. */
+    if(flow && flow.target && flow.target.kind === "plan-edit"){
+      const D = window.IgnytDietPlans;
+      const t = flow.target;
+      const item = D && D.findItem(t.planId, t.mealId, t.itemId);
+      if(!item){ closeFoodFlow(); state.nutritionScreen = "dietplan"; render(); return; }
+      const food = flow.foodId != null ? lookupFood(flow.foodId, item.name) : null;
+      if(!food){ showToast("This food is no longer in the catalogue, so it can't be re-scaled.", "error", render); return; }
+
+      const N = window.IgnytNutrition;
+      const pf = resolveFoodPortion(food);
+      const check = N.validateQuantity(food, currentFoodAmount(food), pf.unit);
+      if(!check.ok){ showToast(check.error, "error", render); return; }
+      const v = N.logValues(food, check.grams);
+      N.rememberServing(food.id, check.amount, check.unit);
+
+      const next = {
+        name: v.name,
+        calories: Number(v.calories)||0, protein: Number(v.protein)||0,
+        carbs: Number(v.carbs)||0, fat: Number(v.fat)||0, fibre: Number(v.fibre)||0,
+        foodId: food.id, category: food.category || null,
+        quantity: Number(currentFoodAmount(food)), servingUnit: pf.unit,
+        grams: Number(v.grams) || null
+      };
+      N.MICRO_LOG_FIELDS.forEach(k=>{ if(v[k] != null) next[k] = Number(v[k]); });
+      const note = (flow.notes||"").trim();
+      if(note) next.note = note;
+
+      if(!D.replaceItem(t.planId, t.mealId, t.itemId, next)){
+        showToast("Could not save the change.", "error", render);
+        return;
+      }
+      closeFoodFlow();
+      state.nutritionScreen = "dietplan";
+      state.dietUI = Object.assign({}, state.dietUI, { expanded: t.mealId });
+      showToast("Serving updated.", "success", render);
+      render();
+      return;
+    }
+
+    const entry = flow && foodEntryById(flow.entryId);
+    if(!entry) return;
+
+    // Re-scale only when there is a source food to re-scale from; a hand-entered row keeps
+    // its numbers and just picks up the meal and note.
+    if(flow.foodId != null && lookupFood(flow.foodId, entry.name)){
+      const food = lookupFood(flow.foodId, entry.name);
+      const res = rescaleFoodEntry(entry, currentFoodAmount(food), state.foodSearchUnit);
+      if(!res.ok){ showToast(res.error, "error", render); return; }
+    }
+    entry.meal = flow.meal;
+    const note = (flow.notes||"").trim();
+    if(note) entry.note = note; else delete entry.note;
+    entry.editedAt = Date.now();
+
+    const meal = entry.meal;
+    closeFoodFlow();
+    state.mealOpen = meal;
+    state.justAddedFoodId = entry.id;      // reuse the highlight to show what changed
+    showToast("Saved.", "success", render);
+    render();
+    setTimeout(()=>{ state.justAddedFoodId = null; }, 400);
+  });
+
+  const flowBack = document.querySelector("[data-food-flow-back]");
+  if(flowBack) flowBack.addEventListener("click", ()=>{
+    // Detail steps back to the search it came from; search steps back to the dashboard.
+    if(state.foodFlow && state.foodFlow.screen === "detail"){
+      state.foodFlow.screen = "search";
+      state.foodFlow.foodId = null;
+      state.foodSearchSelected = null;
+    }else{
+      closeFoodFlow();
+    }
+    render();
+  });
+  const flowClear = document.querySelector("[data-food-clear]");
+  if(flowClear) flowClear.addEventListener("click", ()=>{
+    state.foodSearchQuery = ""; state.foodResultPage = 1; render();
+    setTimeout(()=>{ const s=document.getElementById("food-search-input"); if(s) s.focus(); }, 40);
+  });
+  const flowMeal = document.getElementById("food-flow-meal");
+  if(flowMeal) flowMeal.addEventListener("change", ()=>{
+    if(state.foodFlow) state.foodFlow.meal = flowMeal.value;
+    render();
+  });
+  const flowNotes = document.getElementById("food-flow-notes");
+  // Captured on input WITHOUT a re-render, so the keyboard and caret stay put while typing.
+  if(flowNotes) flowNotes.addEventListener("input", ()=>{
+    if(state.foodFlow) state.foodFlow.notes = flowNotes.value;
+  });
+  const flowAdd = document.querySelector("[data-food-flow-add]");
+  if(flowAdd) flowAdd.addEventListener("click", ()=>{
+    const flow = state.foodFlow;
+    if(!flow) return;
+    const meal = flow.meal;
+    const note = (flow.notes||"").trim();
+
+    // Diet plan target: build the same snapshot the log would store, but hand it to the plan
+    // and return to the plan screen instead of the dashboard.
+    if(flow.target && flow.target.kind === "plan"){
+      if(!commitSelectedFoodToPlan(flow.target.planId, flow.target.mealId, note)) return;
+      closeFoodFlow();
+      state.nutritionScreen = "dietplan";
+      state.dietUI = Object.assign({}, state.dietUI, { expanded: flow.target.mealId });
+      showToast("Added to " + (flow.target.mealName || "your plan") + ".", "success", render);
+      render();
+      return;
+    }
+
+    if(!commitSelectedFood(meal)) return;      // shows its own error and keeps the screen
+    // commitSelectedFood unshifts the new record, so it is at index 0.
+    const added = state.foodLog[0];
+    if(added && note) added.note = note;
+    closeFoodFlow();
+    // Land back on the dashboard with that meal open and the new row highlighted once.
+    state.mealOpen = meal;
+    state.justAddedFoodId = added ? added.id : null;
+    render();
+    setTimeout(()=>{
+      const el = document.querySelector("[data-entry-toggle='" + (added && added.id) + "']");
+      if(el) el.scrollIntoView({behavior:"smooth", block:"center"});
+      // The highlight is a one-shot: clear it so a later render does not replay it.
+      state.justAddedFoodId = null;
+    }, 400);
+  });
+  const voiceBtn = document.querySelector("[data-food-voice]");
+  if(voiceBtn) voiceBtn.addEventListener("click", ()=>startFoodVoiceSearch());
+  const scanBtn2 = document.querySelector("[data-food-scan]");
+  if(scanBtn2) scanBtn2.addEventListener("click", ()=>{
+    showToast("Barcode scanning needs a camera plugin, which isn't in this build. Search instead.", "error", render);
+  });
+
+  // Lives in the panel header, outside the swapped container, so it is bound once per full
+  // render rather than once per keystroke.
+  const browseBack = document.querySelector("[data-food-browse-back]");
+  if(browseBack) browseBack.addEventListener("click", ()=>{
+    state.foodBrowseCategory = null; state.foodBrowsePage = 1; state.foodSearchQuery = ""; render();
+  });
+
   document.querySelectorAll("[data-quick-add-food]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const meal = el.dataset.quickAddFood;
       state.foodLog.unshift({
-        id: nextId(), date: todayStr(), meal,
+        id: nextId(), date: nutritionDateStr(), meal,
         name: el.dataset.foodName,
         calories: Number(el.dataset.foodCal)||0,
         protein: Number(el.dataset.foodProtein)||0,
@@ -12205,6 +20000,7 @@ function attachHandlers(){
     const cal = Number(calStr);
     if(!name || calStr === "" || isNaN(cal) || cal < 0) return;
     const fav = {
+      id: nextId(), // stable id -- required for the record-based cloud sync
       name, calories: cal,
       protein: Number(document.getElementById("food-protein").value)||0,
       carbs: Number(document.getElementById("food-carbs").value)||0,
@@ -12216,9 +20012,79 @@ function attachHandlers(){
     }
     render();
   });
+  const openMuscleSheet = document.querySelector('[data-action="open-muscle-sheet"]');
+  if(openMuscleSheet) openMuscleSheet.addEventListener("click", ()=>{ state.muscleSheetOpen = true; render(); });
+  document.querySelectorAll('[data-action="close-muscle-sheet"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.muscleSheetOpen = false; render(); });
+  });
+
+  document.querySelectorAll("[data-pr-open]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const name = el.dataset.prOpen;
+      if(!name) return;                       // Session Volume has no per-exercise history
+      state.prExerciseOpen = name; render();
+    });
+  });
+  document.querySelectorAll('[data-action="close-pr-exercise"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.prExerciseOpen = null; render(); });
+  });
+  document.querySelectorAll("[data-pr-range]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.prRange = el.dataset.prRange; state.prShowCount = 10; render(); });
+  });
+
+  document.querySelectorAll("[data-badge-view]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.badgeView = el.dataset.badgeView; render(); });
+  });
+  document.querySelectorAll("[data-badge-cat]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.badgeCategory = el.dataset.badgeCat; render(); });
+  });
+
+  /* ---- Paywall ----
+     openPaywall reloads the plans from Play each time rather than caching them: prices,
+     promotions and trial eligibility are Google's to decide and can differ between one
+     opening and the next. */
+  document.querySelectorAll('[data-action="open-paywall"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ openPaywall(); });
+  });
+  document.querySelectorAll('[data-action="close-paywall"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.paywallOpen = false; state.paywallError = null; render(); });
+  });
+  document.querySelectorAll('[data-action="reload-paywall"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ openPaywall(); });
+  });
+  document.querySelectorAll("[data-paywall-plan]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.paywallChoice = el.dataset.paywallPlan; render(); });
+  });
+  document.querySelectorAll('[data-action="paywall-buy"]').forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const plans = (state.paywallPlans && state.paywallPlans.plans) || [];
+      const plan = plans.find(p => p.basePlanId === state.paywallChoice) || plans[0];
+      if(!plan){ state.paywallError = "No plan selected."; render(); return; }
+      state.paywallBusy = true; render();
+      /* The offer token is passed through so the user is charged the offer they were shown.
+         Buying by base-plan id alone can select a different offer and skip the free trial. */
+      const res = await IgnytEntitlements.purchase(plan.basePlanId, plan.offerToken);
+      state.paywallBusy = false;
+      if(res && res.success){
+        state.paywallOpen = false;
+        state.paywallError = null;
+        if(res.data && res.data.entitled) showToast("Welcome to Premium.", "success", render);
+      }else{
+        state.paywallError = (res && res.error) || "Purchase failed.";
+      }
+      render();
+    });
+  });
+  document.querySelectorAll('[data-action="restore-purchases"]').forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const premium = await IgnytEntitlements.refresh();
+      showToast(premium ? "Premium restored." : "No active subscription found.", premium ? "success" : "info", render);
+      render();
+    });
+  });
   document.querySelectorAll("[data-add-water]").forEach(el=>{
     el.addEventListener("click", ()=>{
-      state.waterLog.unshift({ id: nextId(), date: todayStr(), ml: Number(el.dataset.addWater) });
+      state.waterLog.unshift({ id: nextId(), date: nutritionDateStr(), ml: Number(el.dataset.addWater) });
       render();
     });
   });
@@ -12233,6 +20099,54 @@ function attachHandlers(){
       state.foodLog = state.foodLog.filter(f=>f.id !== Number(el.dataset.delFood));
       render();
     });
+  });
+
+  /* ---- Logged-entry editing (Phase 5) ---- */
+  /* Duplicate and delete now live on the Food Details route rather than an inline panel, so
+     both close the route on the way out. The behaviour is otherwise unchanged. */
+  document.querySelectorAll("[data-entry-duplicate]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const entry = foodEntryById(el.dataset.entryDuplicate);
+      if(!entry) return;
+      // A fresh id and timestamp; everything else copied. Cloning the id would make the two
+      // entries indistinguishable to cloud sync, which keys records on their own id.
+      const copy = Object.assign({}, entry, { id: nextId(), at: Date.now() });
+      delete copy.editedAt;
+      state.foodLog.unshift(copy);
+      const meal = copy.meal;
+      closeFoodFlow();
+      state.mealOpen = meal;
+      state.justAddedFoodId = copy.id;
+      showToast("Duplicated.", "success", render);
+      render();
+      setTimeout(()=>{ state.justAddedFoodId = null; }, 400);
+    });
+  });
+  document.querySelectorAll("[data-entry-delete]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.entryDelete;
+      const entry = foodEntryById(id);
+      if(!entry) return;
+      // Keep it in memory (not storage) so the undo chip can put it back. See the note on
+      // lastDeletedFood for why this is deliberately not a persisted recycle bin.
+      lastDeletedFood = { entry: entry, index: state.foodLog.indexOf(entry) };
+      state.foodLog = state.foodLog.filter(f=>String(f.id) !== String(id));
+      const meal = entry.meal;
+      closeFoodFlow();
+      state.mealOpen = meal;
+      render();
+    });
+  });
+  const undoFoodBtn = document.querySelector("[data-action='undo-food-delete']");
+  if(undoFoodBtn) undoFoodBtn.addEventListener("click", ()=>{
+    if(!lastDeletedFood) return;
+    // Restore at its original position so the day's ordering is unchanged.
+    const at = Math.min(Math.max(0, lastDeletedFood.index), state.foodLog.length);
+    state.foodLog.splice(at, 0, lastDeletedFood.entry);
+    lastDeletedFood = null;
+    // Undo does not leave the tab, so there is no capture to pair with — this one holds the
+    // reader in place across a re-render that changes the list under them.
+    renderKeepingScroll();
   });
 
   // Nutrition tab
@@ -12291,155 +20205,6 @@ function attachHandlers(){
   const insightsRefreshBtn = document.querySelector('[data-action="insights-refresh"]');
   if(insightsRefreshBtn) insightsRefreshBtn.addEventListener("click", ()=>{
     if(window.HealthConnectIntegration) window.HealthConnectIntegration.refreshInsights(state.insightsRange || "day").then(render);
-  });
-
-  // Google Drive Backup & Restore
-  const driveConnectBtn = document.querySelector('[data-action="drive-connect"]');
-  if(driveConnectBtn) driveConnectBtn.addEventListener("click", async ()=>{
-    render();
-    const res = await window.IgnytDriveBackup.connect();
-    render();
-    if(res.success) showToast("Connected to Google Drive.", "success", render);
-  });
-  const driveBackupNowBtn = document.querySelector('[data-action="drive-backup-now"]');
-  if(driveBackupNowBtn) driveBackupNowBtn.addEventListener("click", async ()=>{
-    render();
-    let res = await window.IgnytDriveBackup.backupNow();
-    if(res.needsPassphrase){
-      const pass = await promptPassphrase("backup", render);
-      if(!pass) return;
-      window.IgnytDriveBackup.setSessionPassphrase(pass);
-      render();
-      res = await window.IgnytDriveBackup.backupNow();
-    }
-    render();
-    showToast(res.success ? "Backed up to Google Drive." : ("Backup failed: "+res.error), res.success?"success":"error", render);
-  });
-  const driveManageBtn = document.querySelector('[data-action="drive-manage-backups"]');
-  if(driveManageBtn) driveManageBtn.addEventListener("click", async ()=>{
-    state.viewingDriveBackups = true;
-    state.driveBackupsBusy = true;
-    state.driveBackupsCache = null;
-    render();
-    const res = await window.IgnytDriveBackup.listBackups();
-    state.driveBackupsBusy = false;
-    state.driveBackupsCache = res.success ? res.backups : null;
-    render();
-  });
-  const driveBackBtn = document.querySelector('[data-action="drive-backups-back"]');
-  if(driveBackBtn) driveBackBtn.addEventListener("click", ()=>{
-    state.viewingDriveBackups = false;
-    render();
-  });
-  const driveDisconnectBtn = document.querySelector('[data-action="drive-disconnect"]');
-  if(driveDisconnectBtn) driveDisconnectBtn.addEventListener("click", async ()=>{
-    if(!(await confirmDialog("Sign out of Google Drive backup? Your backups stay in your Drive — this only disconnects this device.", render))) return;
-    await window.IgnytDriveBackup.disconnect();
-    render();
-  });
-  document.querySelectorAll("[data-drive-schedule-freq]").forEach(el=>{
-    el.addEventListener("click", async ()=>{
-      const sched = window.IgnytDriveBackup.getScheduleSettings();
-      const res = await window.IgnytDriveBackup.scheduleBackups(Object.assign({}, sched, { frequency: el.dataset.driveScheduleFreq }));
-      render();
-      if(!res.success) showToast("Couldn't update backup schedule: "+res.error, "error", render);
-    });
-  });
-  const driveWifiCb = document.querySelector('[data-drive-schedule-wifi]');
-  if(driveWifiCb) driveWifiCb.addEventListener("change", async ()=>{
-    const sched = window.IgnytDriveBackup.getScheduleSettings();
-    await window.IgnytDriveBackup.scheduleBackups(Object.assign({}, sched, { wifiOnly: driveWifiCb.checked }));
-  });
-  const driveChargingCb = document.querySelector('[data-drive-schedule-charging]');
-  if(driveChargingCb) driveChargingCb.addEventListener("change", async ()=>{
-    const sched = window.IgnytDriveBackup.getScheduleSettings();
-    await window.IgnytDriveBackup.scheduleBackups(Object.assign({}, sched, { chargingOnly: driveChargingCb.checked }));
-  });
-  document.querySelectorAll("[data-drive-restore-file]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      state.driveRestorePrompt = { fileId: el.dataset.driveRestoreFile, name: el.dataset.driveRestoreName, createdTime: el.dataset.driveRestoreCreated };
-      render();
-    });
-  });
-  document.querySelectorAll("[data-drive-delete-file]").forEach(el=>{
-    el.addEventListener("click", async ()=>{
-      if(!(await confirmDialog("Delete this backup from Google Drive? This can't be undone.", render, { danger:true, confirmLabel:"Delete" }))) return;
-      const fileId = el.dataset.driveDeleteFile;
-      state.driveBackupsBusy = true;
-      render();
-      const res = await window.IgnytDriveBackup.deleteBackup(fileId);
-      if(res.success && state.driveBackupsCache) state.driveBackupsCache = state.driveBackupsCache.filter(b=>b.fileId!==fileId);
-      state.driveBackupsBusy = false;
-      render();
-      if(!res.success) showToast("Delete failed: "+res.error, "error", render);
-    });
-  });
-  document.querySelectorAll("[data-drive-restore-action]").forEach(el=>{
-    el.addEventListener("click", async ()=>{
-      const mode = el.dataset.driveRestoreAction;
-      const prompt = state.driveRestorePrompt;
-      state.driveRestorePrompt = null;
-      if(mode==="cancel" || !prompt){ render(); return; }
-      render();
-      let res = await window.IgnytDriveBackup.restoreBackup(prompt.fileId, mode);
-      while(res.needsPassphrase || res.wrongPassphrase){
-        const pass = await promptPassphrase("restore", render);
-        if(!pass) { render(); return; }
-        render();
-        res = await window.IgnytDriveBackup.restoreBackup(prompt.fileId, mode, pass);
-      }
-      if(res.success){
-        showToast("Restored — reloading…", "success", render);
-        setTimeout(()=> location.reload(), 900);
-      } else {
-        render();
-        showToast("Restore failed: "+res.error, "error", render);
-      }
-    });
-  });
-  const driveEncToggle = document.querySelector('[data-drive-encryption-toggle]');
-  if(driveEncToggle) driveEncToggle.addEventListener("change", async ()=>{
-    const drive = window.IgnytDriveBackup;
-    if(driveEncToggle.checked){
-      const pass = await promptPassphrase("set", render);
-      if(!pass){ render(); return; }
-      drive.setSessionPassphrase(pass);
-      drive.setEncryptionEnabled(true);
-    } else {
-      drive.setEncryptionEnabled(false);
-    }
-    render();
-  });
-  const driveChangePassBtn = document.querySelector('[data-action="drive-change-passphrase"]');
-  if(driveChangePassBtn) driveChangePassBtn.addEventListener("click", async ()=>{
-    const pass = await promptPassphrase("set", render);
-    if(!pass) return;
-    window.IgnytDriveBackup.setSessionPassphrase(pass);
-    render();
-    showToast("Passphrase set for this session.", "success", render);
-  });
-  const driveForgetPassBtn = document.querySelector('[data-action="drive-forget-passphrase"]');
-  if(driveForgetPassBtn) driveForgetPassBtn.addEventListener("click", ()=>{
-    window.IgnytDriveBackup.forgetSessionPassphrase();
-    render();
-  });
-  document.querySelectorAll("[data-passphrase-action]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      const action = el.dataset.passphraseAction;
-      if(action==="cancel"){ resolvePassphrasePrompt(null, render); return; }
-      const pr = state.passphrasePrompt;
-      const v1 = document.getElementById("passphrase-input-1");
-      const val1 = v1 ? v1.value : "";
-      if(pr.purpose==="set"){
-        const v2 = document.getElementById("passphrase-input-2");
-        const val2 = v2 ? v2.value : "";
-        if(val1.length<8){ state.passphrasePrompt = Object.assign({}, pr, {error:"Passphrase must be at least 8 characters."}); render(); return; }
-        if(val1!==val2){ state.passphrasePrompt = Object.assign({}, pr, {error:"Passphrases don't match."}); render(); return; }
-      } else if(!val1){
-        state.passphrasePrompt = Object.assign({}, pr, {error:"Enter your passphrase."}); render(); return;
-      }
-      resolvePassphrasePrompt(val1, render);
-    });
   });
 
   // Toast / confirm dialog
@@ -12509,12 +20274,12 @@ window.addEventListener("beforeunload", (e)=>{
 window.addEventListener("storage", (e)=>{
   if(!e.key || _finishingSession) return;
   const reload = {
-    hx_workout_log: ()=>{ state.workoutLog = enforceWorkoutLogIntegrity(LS.get("hx_workout_log", [])); },
-    hx_prs:         ()=>{ state.prs = LS.get("hx_prs", []); },
-    hx_achievements:()=>{ state.achievements = LS.get("hx_achievements", []); },
-    hx_routines:    ()=>{ state.routines = LS.get("hx_routines", []); },
+    hx_workout_log: ()=>{ state.workoutLog = enforceWorkoutLogIntegrity(LS.records("hx_workout_log")); },
+    hx_prs:         ()=>{ state.prs = LS.records("hx_prs"); },
+    hx_achievements:()=>{ state.achievements = LS.records("hx_achievements"); },
+    hx_routines:    ()=>{ state.routines = LS.records("hx_routines"); },
     hx_favorite_exercises: ()=>{ state.favoriteExercises = LS.get("hx_favorite_exercises", []); },
-    hx_bodylog:     ()=>{ state.bodylog = LS.get("hx_bodylog", []); }
+    hx_bodylog:     ()=>{ state.bodylog = LS.records("hx_bodylog"); }
   };
   if(reload[e.key]){
     // Re-rendering mid-edit would discard the editor's uncontrolled inputs, so the open routine
@@ -12527,6 +20292,47 @@ window.addEventListener("storage", (e)=>{
 try{
   render();
   if(window.__hideBootSplash) window.__hideBootSplash();
+  /* Ask Play what this user is entitled to, once per launch. Deliberately after the first
+     paint and not awaited: the cached entitlement already drove that paint, so a slow or
+     unreachable Play service delays nothing the user sees. If Play's answer differs from the
+     cache, the re-render corrects it a moment later. */
+  /* Milestones, evaluated once per launch from the real numbers. Every one is claimed by a
+     key that includes the day where it is a daily thing, so this is safe to call repeatedly —
+     the engine fires each threshold once and ignores it forever after. Wrapped because a
+     celebration is a nicety and must never take the boot path down. */
+  try{
+    if(window.IgnytMilestones){
+      const ds = todayStr();
+      const nut = nutritionTotalsFor(ds);
+      const totals = (nut && nut.totals) || {};
+      const weights = (state.bodylog||[]).filter(b=>b && b.weight>0)
+                        .sort((a,b)=> new Date(a.date) - new Date(b.date));
+      const goalDelta = Number(state.profile && state.profile.goalDelta) || 0;
+      IgnytMilestones.checkAll({
+        // Direction comes from the user's own calorie goal. No goal, no weight milestone —
+        // congratulating someone for losing weight they are trying to gain is worse than silence.
+        weight: weights.length >= 2 && goalDelta !== 0 ? {
+          startKg: weights[0].weight,
+          nowKg: weights[weights.length-1].weight,
+          direction: goalDelta < 0 ? "lose" : "gain"
+        } : null,
+        water: { ml: todayWater(), targetMl: state.settings && state.settings.waterTargetMl },
+        protein: totals.protein != null && state.profile ? {
+          grams: totals.protein, targetG: Math.round((state.profile.weight||0) * 1.6)
+        } : null,
+        calories: totals.calories != null ? {
+          kcal: totals.calories, targetKcal: profileCalorieTarget()
+        } : null
+      });
+    }
+  }catch(e){ /* never let a milestone break boot */ }
+
+  if(window.IgnytEntitlements){
+    const wasPremium = IgnytEntitlements.isPremium();
+    IgnytEntitlements.refresh().then(nowPremium=>{
+      if(nowPremium !== wasPremium && typeof render === "function") render();
+    }).catch(()=>{ /* billing is never allowed to break boot */ });
+  }
 }catch(err){
   console.error("Ignyt failed to boot:", err);
   renderErrorScreen(err);
@@ -12576,11 +20382,24 @@ if("serviceWorker" in navigator){
    its own back-button handling.
 ========================================================= */
 function handleHardwareBack(){
+  /* First, before any overlay check. The error screen has replaced the whole app, so every
+     branch below would be reasoning about state that is not on screen — and each of them
+     ends in render(), which is exactly what just failed. Go somewhere known-good instead,
+     and if even that throws, reload rather than leave the user pressing back forever. */
+  if(_renderCrashed){
+    try{
+      // Only the tab changes. Recovery must not touch the session, the food log or anything
+      // else the user has — a crash is a display failure, not a reason to lose work.
+      state.tab = "home";
+      _renderCrashed = false;
+      render();
+    }catch(e){ location.reload(); }
+    return true;
+  }
   if(state.confirmDialog){ resolveConfirmDialog(false, render); return true; }
-  if(state.passphrasePrompt){ resolvePassphrasePrompt(null, render); return true; }
-  if(state.driveRestorePrompt){ state.driveRestorePrompt = null; render(); return true; }
   if(state.viewingLegal){ state.viewingLegal = null; render(); return true; }
   if(state.viewingBodyPhotoId!=null){ state.viewingBodyPhotoId = null; render(); return true; }
+  if(state.muscleSheetOpen){ state.muscleSheetOpen = false; render(); return true; }
   if(state.rpeSheetTarget){ state.rpeSheetTarget = null; render(); return true; }
   if(state.restTimerSheetExi!=null){ state.restTimerSheetExi = null; state.restCustomOpen = false; render(); return true; }
   if(state.plateCalcOpen!=null){ state.plateCalcOpen = null; render(); return true; }
@@ -12588,11 +20407,25 @@ function handleHardwareBack(){
   if(state.exerciseMenuOpen!=null){ state.exerciseMenuOpen = null; render(); return true; }
   if(state.notificationsOpen){ state.notificationsOpen = false; render(); return true; }
   if(state.viewingPrivacyInfo){ state.viewingPrivacyInfo = false; render(); return true; }
+  if(state.editingWorkout){ state.editingWorkout = null; render(); return true; }
+  if(state.viewingWorkoutAuditId!=null){ state.viewingWorkoutAuditId = null; render(); return true; }
   if(state.viewingSessionId!=null){ state.viewingSessionId = null; render(); return true; }
   if(state.viewingHyroxSchedule){ state.viewingHyroxSchedule = false; render(); return true; }
   if(state.viewingHyroxInfo){ state.viewingHyroxInfo = false; render(); return true; }
   if(state.timer){ if(state.timer.handle) clearInterval(state.timer.handle); state.timer = null; render(); return true; }
   return false;
+}
+
+// Live workout notification: watches app foreground/background and mirrors the open session.
+if(window.IgnytActiveWorkout) IgnytActiveWorkout.start();
+
+/* Device integrity, once per cold start. Records signals to the local security log and
+   NOTHING ELSE — it does not block, warn, or gate a single feature. A root check runs inside
+   the process it is judging, so acting on it would only punish the honest users who happen to
+   trip a signal (an unlocked developer phone, a custom ROM) while anyone actually hiding from
+   it walks past. Its value is the audit trail, so that is all it is used for. */
+if(window.IgnytSecurity){
+  Promise.resolve().then(()=> IgnytSecurity.checkIntegrity()).catch(()=>{});
 }
 
 (function(){
@@ -12609,18 +20442,29 @@ function handleHardwareBack(){
 // fresh install where toggles were already on, and is a cheap no-op otherwise since
 // AlarmManager's set*Repeating() calls are idempotent for an unchanged schedule).
 if(nativeNotify()){
-  refreshNativeNotifPermission().then(()=> state.nativeNotifPermissionGranted && syncAllNativeReminders()).then(render).catch(()=>{});
-}
+  refreshNativeNotifPermission()
+    .then(()=> state.nativeNotifPermissionGranted && syncAllNativeReminders())
+    .then(()=>{
+      /* Reconcile the reminder registry with the system on every launch. Settings and armed
+         alarms drift apart for reasons the app never sees — a reboot, a reinstall, a restored
+         backup — and a reminder that says "on" while nothing is armed is the worst of both. */
+      if(window.IgnytReminders && state.nativeNotifPermissionGranted){
+        return IgnytReminders.syncAll().then(()=>{
+          // Conditional reminders need today's facts, which only this layer has.
+          const today = todayStr();
+          return IgnytReminders.syncConditional({
+            workoutToday: (state.workoutLog||[]).some(w=> String(w.date||"").slice(0,10) === today),
+            activeRecently: (state.foodLog||[]).concat(state.workoutLog||[]).some(x=>{
+              const t = new Date(x.date || x.startedAt || 0).getTime();
+              return Date.now() - t < 3*86400000;
+            })
+          });
+        });
+      }
+    })
+    .then(render).catch(()=>{});
 
-// Scheduled Google Drive backup: checked once per cold start. Real work (if due, if
-// constraints pass) happens silently in the background; see drive-backup.js's header for why
-// this runs at boot rather than from a true background alarm.
-if(window.IgnytDriveBackup && window.IgnytDriveBackup.isNativeAndroid()){
-  window.IgnytDriveBackup.maybeRunScheduledBackup().then(res=>{
-    if(res && res.ran){
-      showToast(res.success ? "Scheduled backup completed." : "Scheduled backup failed: "+res.error, res.success?"success":"error", render);
-    }
-  }).catch(()=>{});
+  consumeNotificationRoute();
 }
 
 // Workout set inputs: tapping one selects its existing value (Bug Fix #7 -- replacing a
@@ -12744,3 +20588,375 @@ document.addEventListener("focusin", (e)=>{
   document.addEventListener("focusin", onViewportChange);
   document.addEventListener("focusout", ()=> setTimeout(()=>{ if(!activeSetControl()) setPin(null); }, 0));
 })();
+
+/* Handlers for everything inside #food-search-results.
+   Kept separate from the main wiring pass because updateFoodSearchResults() replaces that
+   container's HTML on every keystroke, which discards these nodes and their listeners.
+   Re-running this against the fresh nodes re-binds them; it can never double-bind, because
+   the elements it binds to did not exist a moment ago. */
+
+/* Commits the selected food to a meal. Shared by the main Add button and the quick-add
+   meal chips so both paths validate and record identically. Returns false if the entry was
+   rejected, so the caller knows not to close the panel. */
+function commitSelectedFood(meal){
+  const sel = state.foodSearchSelected;
+  if(!sel) return false;
+  const food = lookupFood(sel.id, sel.name);
+  if(!food) return false;
+
+  const N = window.IgnytNutrition;
+  const scalable = food.per != null;
+  let v;
+
+  if(scalable && N){
+    const p = resolveFoodPortion(food);
+    const check = N.validateQuantity(food, currentFoodAmount(food), p.unit);
+    // Refuse rather than log something the user did not ask for. The panel already shows
+    // the reason and disables the button; this is the guard for every other route in.
+    if(!check.ok){ showToast(check.error, "error", render); return false; }
+    v = N.logValues(food, check.grams);
+    N.rememberServing(food.id, check.amount, check.unit);
+  }else{
+    // A favourite is already one absolute portion, and the seed path is unchanged.
+    v = scalable ? IgnytFoodDB.scaleFood(food, resolveFoodPortion(food).grams) : food;
+  }
+
+  // Identical record shape to the quick-add chips — nothing downstream can tell the
+  // difference between a searched food and a manually entered one.
+  const record = {
+    id: nextId(), date: state.nutritionDate || todayStr(), meal: meal,
+    name: v.name,
+    calories: Number(v.calories)||0, protein: Number(v.protein)||0,
+    carbs: Number(v.carbs)||0, fat: Number(v.fat)||0, fibre: Number(v.fibre)||0
+  };
+  // Micronutrients are written only where the food actually has them. An absent key means
+  // "unknown for this food", which the dashboard reports as incomplete coverage rather
+  // than counting as zero.
+  if(N) N.MICRO_LOG_FIELDS.forEach(k=>{ if(v[k] != null) record[k] = Number(v[k]); });
+
+  // Provenance. Recording which catalogue food and which serving produced these numbers is
+  // what makes an entry EDITABLE later: without it, changing "150 g" to "200 g" would mean
+  // guessing what the original 150 g referred to. Purely additive — an entry without these
+  // still renders and totals exactly as before, it just cannot be re-scaled.
+  if(scalable){
+    const p2 = resolveFoodPortion(food);
+    record.foodId = food.id;
+    record.category = food.category || null;
+    record.quantity = Number(currentFoodAmount(food));
+    record.servingUnit = p2.unit;
+    record.grams = Number(v.grams) || null;
+  }
+  record.at = Date.now();
+
+  state.foodLog.unshift(record);
+  state.foodSearchSelected = null; state.foodSearchQuery = "";
+  state.foodSearchAmount = null; state.foodSearchUnit = "g";
+  return true;
+}
+
+/* The + on a search result: log it at its default serving and stay put.
+ *
+ * Routed through commitSelectedFood(), the same function the Food Details "Add" button uses,
+ * rather than unshifting a record here. That function owns the quantity validation, the
+ * per-100g scaling and rememberServing(); a second insert path would be a second place for the
+ * record shape to drift, and the whole point of this button is that it is the SAME log entry
+ * you would have got by going through the detail screen and pressing Add.
+ *
+ * It sets foodSearchSelected/Amount/Unit first because that is commitSelectedFood's input —
+ * so "the food gets selected" is literally what happens, it just does not navigate afterwards.
+ */
+function quickAddFoodFromResult(foodId){
+  const food = lookupFood(foodId, state.foodSearchQuery);
+  if(!food){ showToast("That food is no longer in the database.", "error", render); return; }
+
+  const meal = (state.foodFlow && state.foodFlow.meal) || state.mealOpen || mealForNow();
+  const previous = {
+    sel: state.foodSearchSelected, amount: state.foodSearchAmount, unit: state.foodSearchUnit
+  };
+  state.foodSearchSelected = { id: food.id, name: food.name };
+  const d = defaultFoodPortion(food);
+  state.foodSearchAmount = d.amount;
+  state.foodSearchUnit = d.unit;
+
+  const ok = commitSelectedFood(meal);   // shows its own error if the portion is not loggable
+  /* Put the search back exactly as it was either way. Leaving a selection behind would mean
+     the next Add button on the detail screen operated on a food the user had only glanced at. */
+  state.foodSearchSelected = previous.sel;
+  state.foodSearchAmount = previous.amount;
+  state.foodSearchUnit = previous.unit;
+  if(!ok) return;
+
+  // Picking a result is the signal the query was useful, same as tapping the row.
+  if(state.foodSearchQuery && window.IgnytFoodSearch && IgnytFoodSearch.rememberSearch){
+    IgnytFoodSearch.rememberSearch(state.foodSearchQuery);
+  }
+  const added = state.foodLog[0];
+  persist();
+  showToast((added ? added.name : food.name) + " added to " + meal + ".", "success", render);
+}
+
+function bindFoodResultHandlers(){
+    document.querySelectorAll("[data-food-quick-add]").forEach(el=>{
+      if(el.__foodQuickAddBound) return;   // same re-bind guard the row handler uses
+      el.__foodQuickAddBound = true;
+      el.addEventListener("click", (e)=>{
+        e.stopPropagation();               // the row behind this opens Food Details
+        e.preventDefault();
+        quickAddFoodFromResult(el.dataset.foodQuickAdd);
+      });
+    });
+    /* One-tap logging from Favourites and Recent. These go straight to Food Details with the
+       food resolved, so the "one or two taps" target holds: tap the row, tap Add. */
+    document.querySelectorAll("[data-quick-fav]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const name = el.dataset.quickFav;
+        const hit = IgnytFoodSearch.search(name, { limit: 1 })[0];
+        if(hit){ openFoodDetail(hit.id); render(); }
+        else showToast("That favourite is no longer in the database.", "error", render);
+      });
+    });
+    document.querySelectorAll("[data-quick-recent]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const entry = state.foodLog.find(e=>String(e.id) === el.dataset.quickRecent);
+        if(!entry) return;
+        /* Prefer the food it was logged FROM, so the serving controls work. An entry with no
+           resolvable food still opens by name, which is what a hand-typed row can offer. */
+        const hit = (entry.foodId != null && lookupFood(entry.foodId, entry.name))
+          || IgnytFoodSearch.search(entry.name, { limit: 1 })[0];
+        if(!hit){ showToast("That food is no longer in the database.", "error", render); return; }
+        openFoodDetail(hit.id);
+        // Re-offer the serving they used last time rather than the generic default.
+        if(entry.grams){ state.foodSearchAmount = entry.grams; state.foodSearchUnit = entry.servingUnit || "g"; }
+        render();
+      });
+    });
+
+    /* Autocomplete. Fills the input and re-runs the search without a full render, so the
+       keyboard stays up and the caret survives. */
+    document.querySelectorAll("[data-suggest]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const v = el.dataset.suggest;
+        state.foodSearchQuery = v;
+        const input = document.getElementById("food-search-input");
+        if(input) input.value = v;
+        state.foodResultPage = 1;
+        if(IgnytFoodSearch.rememberSearch) IgnytFoodSearch.rememberSearch(v);
+        updateFoodSearchResults();
+      });
+    });
+
+    /* Copy yesterday forward. Confirmed rather than instant: it can add a dozen entries and
+       an accidental tap would be tedious to unpick one row at a time. */
+    const copyY = document.querySelector("[data-copy-yesterday]");
+    if(copyY) copyY.addEventListener("click", async ()=>{
+      const entries = yesterdayEntries();
+      if(!entries.length) return;
+      const ok = await confirmDialog(
+        `Log yesterday's ${entries.length} item${entries.length===1?'':'s'} again?`, render);
+      if(!ok) return;
+      const n = copyEntriesToToday(entries);
+      closeFoodFlow();
+      showToast(n + " item" + (n===1?"":"s") + " added.", "success", render);
+      render();
+    });
+
+    document.querySelectorAll("[data-saved-meal]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const combo = (state.savedMeals||[]).find(c=>String(c.id) === el.dataset.savedMeal);
+        if(!combo) return;
+        const meal = (state.foodFlow && state.foodFlow.meal) || mealForNow();
+        const n = logSavedMeal(combo, meal);
+        closeFoodFlow();
+        showToast(`${combo.name} — ${n} item${n===1?'':'s'} added to ${meal}.`, "success", render);
+        render();
+      });
+    });
+
+    const savedAll = document.querySelector("[data-saved-all]");
+    if(savedAll) savedAll.addEventListener("click", ()=>{
+      state.savedMealsAll = !state.savedMealsAll;
+      updateFoodSearchResults();
+    });
+
+    const browseToggle = document.querySelector("[data-toggle-browse]");
+    if(browseToggle) browseToggle.addEventListener("click", ()=>{
+      state.foodBrowseOpen = !state.foodBrowseOpen;
+      updateFoodSearchResults();
+    });
+
+    /* Variant expansion. Swaps only the results container, so the search input keeps focus
+       and the keyboard stays up — the same reason typing does not call render(). */
+    document.querySelectorAll("[data-variant-toggle]").forEach(el=>{
+      el.addEventListener("click", (ev)=>{
+        ev.stopPropagation();          // the group contains pickable rows
+        const k = el.dataset.variantToggle;
+        if(!state.expandedVariants) state.expandedVariants = {};
+        if(state.expandedVariants[k]) delete state.expandedVariants[k];
+        else state.expandedVariants[k] = true;
+        updateFoodSearchResults();
+      });
+    });
+    document.querySelectorAll("[data-food-pick]").forEach(el=>{
+      /* A row can now survive a results update — patchFoodResultSection() rewrites its
+         contents and leaves the element in place, which is what stops the list flickering.
+         A surviving row keeps the listener it already has, so binding it again would stack a
+         second one and picking a food would fire twice. Flagged as a property rather than a
+         data attribute so it never appears in outerHTML, which the patch compares. */
+      if(el.__foodPickBound) return;
+      el.__foodPickBound = true;
+      el.addEventListener("click", ()=>{
+        const id = el.dataset.foodPick;
+        // Inside the flow this advances to the Food Details route rather than expanding an
+        // inline panel. openFoodDetail() records the search and picks the default serving.
+        if(state.foodFlow){ openFoodDetail(id); render(); return; }
+
+        const food = lookupFood(id, state.foodSearchQuery);
+        if(!food) return;
+        // Picking a result is the signal that the query was useful, so it is worth remembering.
+        if(state.foodSearchQuery && IgnytFoodSearch.rememberSearch) IgnytFoodSearch.rememberSearch(state.foodSearchQuery);
+        state.foodSearchSelected = { id: food.id, name: food.name };
+        // Reset the portion for the new food; a unit carried over from a previous food may not
+        // even apply to this one. defaultFoodPortion() prefers what the user chose last time.
+        const d = defaultFoodPortion(food);
+        state.foodSearchAmount = d.amount;
+        state.foodSearchUnit = d.unit;
+        render();
+      });
+    });
+    const amountInput = document.getElementById("food-search-amount");
+    /* The box opens pre-filled with the default portion, so the common case is replacing that
+       number rather than editing it. Selecting it on focus makes the first keystroke do the
+       replacing. This is only possible now the field is type="text": a number input reports
+       selectionStart as null and throws on setSelectionRange, so it could not be done before
+       and typing simply appended to the default. */
+    if(amountInput) amountInput.addEventListener("focus", ()=>{
+      // Deferred a tick because Android moves the caret itself after the focus event.
+      setTimeout(()=>{ try{ amountInput.select(); }catch(e){} }, 0);
+    });
+    if(amountInput) amountInput.addEventListener("input", ()=>{
+      /* type="text" accepts anything, so the field filters itself: digits and a single
+         decimal point. Rejected characters are dropped rather than left to fail validation,
+         because the keypad offers a comma on some locales and "1,5" is a typo, not a choice.
+         Only rewrites value when something was actually removed — assigning to value resets
+         the caret to the end, which would undo mid-number editing. */
+      const clean = amountInput.value.replace(/[^0-9.]/g, "").replace(/^(\d*\.\d*).*$/, "$1");
+      if(clean !== amountInput.value){
+        const at = amountInput.selectionStart;
+        amountInput.value = clean;
+        try{ amountInput.setSelectionRange(Math.max(0, at - 1), Math.max(0, at - 1)); }catch(e){}
+      }
+      state.foodSearchAmount = amountInput.value;
+      /* Updates the figures in place instead of calling render(). A full render rebuilt the
+         page around the field being typed into — that was the flicker — and replaced the
+         <input>, which on a number input loses the caret for good, because selectionStart
+         throws on type="number" and cannot be restored. No debounce is needed now: this
+         writes four values, where the old path rebuilt the whole screen. */
+      updateFoodDetailNumbers();
+    });
+    /* The value still has to reach storage. Deferred to blur rather than every keystroke,
+       so a half-typed "1" on the way to "150" is never what gets persisted. */
+    if(amountInput) amountInput.addEventListener("change", ()=>{ persist(); });
+    const unitSelect = document.getElementById("food-search-unit");
+    if(unitSelect) unitSelect.addEventListener("change", ()=>{
+      const prev = state.foodSearchUnit;
+      state.foodSearchUnit = unitSelect.value;
+      // Switching between grams and a countable unit makes the old number meaningless
+      // (150 grams -> 150 chapatis), so reset to a sensible default for the new unit.
+      if((prev === "g") !== (unitSelect.value === "g")) state.foodSearchAmount = null;
+      /* In place on the detail screen. A full render here rebuilt the page around the select
+         that was just used, closing the dropdown with a visible flash; updateFoodDetailNumbers
+         refreshes the figures, the chips and the unit labels, which is everything the unit
+         affects. The search screen has no such controls to preserve. */
+      if(state.foodFlow && state.foodFlow.screen === "detail"){
+        const box = document.getElementById("food-search-amount");
+        const food = state.foodFlow.foodId != null
+          ? lookupFood(state.foodFlow.foodId, state.foodSearchSelected && state.foodSearchSelected.name)
+          : null;
+        if(box && food) box.value = String(currentFoodAmount(food));
+        updateFoodDetailNumbers();
+        persist();
+      }else{
+        render();
+      }
+    });
+    /* ---- Category browser + recent searches (Phase 3) ---- */
+    document.querySelectorAll("[data-food-browse]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        state.foodBrowseCategory = el.dataset.foodBrowse;
+        state.foodBrowsePage = 1;
+        state.foodSearchQuery = "";
+        state.foodSearchSelected = null;
+        render();
+      });
+    });
+    /* NOTE: [data-food-browse-back] is deliberately NOT bound here. It sits in the panel
+       header, OUTSIDE #food-search-results, so the container swap never destroys it — and
+       binding it on every swap stacked a listener per keystroke. It is bound once per full
+       render in the main wiring pass instead. */
+    const foodMore = document.querySelector("[data-food-more]");
+    if(foodMore) foodMore.addEventListener("click", ()=>{
+      if(state.foodBrowseCategory) state.foodBrowsePage++; else state.foodResultPage++;
+      render();
+    });
+    document.querySelectorAll("[data-recent-search]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        state.foodSearchQuery = el.dataset.recentSearch;
+        state.foodResultPage = 1;
+        render();
+      });
+    });
+    const clearRecent = document.querySelector("[data-clear-recent-searches]");
+    if(clearRecent) clearRecent.addEventListener("click", ()=>{
+      if(IgnytFoodSearch.clearRecentSearches) IgnytFoodSearch.clearRecentSearches();
+      render();
+    });
+    document.querySelectorAll("[data-food-fav]").forEach(el=>{
+      el.addEventListener("click", (ev)=>{
+        ev.stopPropagation();   // the whole card is a pick target; the star is not
+        const food = lookupFood(el.dataset.foodFav, state.foodSearchQuery);
+        if(!food) return;
+        const key = String(food.name).toLowerCase();
+        const existing = (state.favoriteFoods||[]).findIndex(x=>x && String(x.name).toLowerCase()===key);
+        if(existing >= 0){
+          state.favoriteFoods.splice(existing, 1);
+        }else{
+          // Favourites store one absolute portion, so a per-100g catalogue food is saved at
+          // its default serving rather than at an unstated basis.
+          const grams = food.per ? (food.servingSize || food.per) : null;
+          const v = (grams != null && window.IgnytFoodCatalogue)
+            ? IgnytFoodCatalogue.scale(food, grams) : food;
+          state.favoriteFoods.push({
+            id: nextId(), name: food.name,
+            calories: Number(v.calories)||0, protein: Number(v.protein)||0,
+            carbs: Number(v.carbs)||0, fat: Number(v.fat)||0, fibre: Number(v.fibre)||0
+          });
+        }
+        LS.set("hx_favorite_foods", state.favoriteFoods);
+        render();
+      });
+    });
+
+    /* Serving controls. Stepping is unit-aware: grams move in 5s, countables in halves. */
+    document.querySelectorAll("[data-food-step]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const sel = state.foodSearchSelected;
+        if(!sel) return;
+        const food = lookupFood(sel.id, sel.name);
+        if(!food) return;
+        const p = resolveFoodPortion(food);
+        const step = p.unit === "g" ? 5 : 0.5;
+        const next = Math.round((Number(p.amount) + step * Number(el.dataset.foodStep)) * 100) / 100;
+        if(next <= 0) return;                       // never step into an invalid amount
+        state.foodSearchAmount = next;
+        /* In place, like typing. A full render here replaced the input mid-tap, which on a
+           repeated press of + made the field flicker under the finger. */
+        const box = document.getElementById("food-search-amount");
+        if(box) box.value = String(next);
+        updateFoodDetailNumbers();
+        persist();
+      });
+    });
+    // Serving presets (Phase 7). Sets amount and unit together — picking "1 cup" must not
+    // leave a gram amount behind, which is what made the old two-control version confusing.
+    bindServingPresets();
+}

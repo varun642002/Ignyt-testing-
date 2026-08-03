@@ -301,7 +301,7 @@
       h += '<div class="bw-review">' +
         '<label class="bw-check"><input type="checkbox" data-bw-inc="' + i + '"' + (r.include ? " checked" : "") + '></label>' +
         '<div style="min-width:0;flex:1;">' +
-        '<div style="font-weight:700;">' + esc(r.name) + (r.key ? '' : ' <span style="color:var(--accent);font-size:10px;">UNMATCHED</span>') + '</div>' +
+        '<div style="font-weight:700;">' + esc(r.name) + (r.key ? '' : ' <span style="color:var(--accent);font-size:11px;">UNMATCHED</span>') + '</div>' +
         '<div style="display:flex;gap:6px;margin-top:4px;align-items:center;">' +
         '<input class="bw-input bw-mini" data-bw-val="' + i + '" value="' + esc(r.value) + '" inputmode="decimal">' +
         '<input class="bw-input bw-mini" data-bw-unit="' + i + '" value="' + esc(r.unit || "") + '" placeholder="unit" style="width:70px;">' +

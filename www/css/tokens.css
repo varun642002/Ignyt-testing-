@@ -35,7 +35,17 @@
      progress step, a 26px-tall toggle switch) rather than scale outliers -- those migrate
      to --radius-pill, not a new fixed token. */
   --radius-2xs: 4px; --radius-xs: 6px; --radius-xs-plus: 8px; --radius-sm: 10px; --radius-md: 14px;
-  --radius-card: 18px; --radius-lg: 20px; --radius-pill: 999px;
+  /* The brief sets cards to 22px and buttons to 18px. Both land on existing tokens rather
+     than new ones, so every surface already reading --radius-card picks the new shape up with
+     no component edits — which is the whole reason the token layer exists. --radius-lg is
+     raised in step with --radius-card so large surfaces stay rounder than cards, not flatter. */
+  /* --radius-tile is for SMALL surfaces — the 96-104px gauges, quick-action tiles and stat
+     chips. Radius has to scale with the element: 22px on a 96px tile reads as a pill, not a
+     card, so one radius for everything is not consistency, it is a flattened hierarchy.
+     Audit before this existed: 12 distinct hard-coded radius values across the page
+     stylesheets and not one of them referencing a token. */
+  --radius-tile: 16px;
+  --radius-card: 22px; --radius-btn: 18px; --radius-lg: 26px; --radius-pill: 999px;
   /* Elevation scale -- --shadow-card kept as-is (widely referenced already) and now aliases
      the mid level so existing callers are unaffected. */
   --shadow-sm: 0 1px 4px rgba(0,0,0,.12);
@@ -52,7 +62,45 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --nav-height: 72px;
-  --font-size-xs: 11px; --font-size-sm: 13px; --font-size-md: 15px;
+  /* =========================================================
+   TYPE SCALE
+
+   AUDIT, 2026-07-28: the app carried 26 distinct pixel font sizes across 1,095
+   declarations, of which 613 were inline styles in app.js. The five tokens below already
+   existed and were almost never used. 130 declarations sat below 11px — 101 at 10px, 26 at
+   9px, 3 at 8px — which is under the floor for comfortable reading on a phone.
+
+   Three weights were doing one job: 600 (96 uses), 700 (234) and 800 (232) are visually
+   near-identical at these sizes, so "semibold or bold?" was decided 562 times with no rule.
+
+   The scale below names a role for every step so the question has an answer. --font-size-*
+   are kept and extended rather than replaced, because a parallel set is exactly the fracture
+   that already happened with colour on this project.
+
+   FLOOR IS 11px. Nothing in the app should render smaller. 10px was being used for
+   metadata that people genuinely need to read — serving sizes, macro splits, timestamps.
+========================================================= */
+--text-caption: 11px;    /* metadata, units, timestamps — the floor */
+--text-label:   12px;    /* uppercase labels, chips, secondary rows */
+--text-body-sm: 13px;    /* dense body text, list rows */
+--text-body:    15px;    /* default reading size */
+--text-title:   17px;    /* card titles */
+--text-heading: 20px;    /* section headings */
+--text-display: 24px;    /* page titles */
+--text-hero:    30px;    /* the one number a screen is about */
+
+/* Two weights, not three. Regular for body, bold for anything that leads. 900 stays for the
+   large numerics where it reads as a different thing rather than a heavier version. */
+--weight-body: 400;
+--weight-bold: 700;
+--weight-numeric: 900;
+
+/* Line height by density, not by guesswork — 12 different values were in use. */
+--leading-tight: 1.25;   /* headings and large numbers */
+--leading-snug:  1.4;    /* card text */
+--leading-body:  1.55;   /* paragraphs */
+
+--font-size-xs: 11px; --font-size-sm: 13px; --font-size-md: 15px;
   --font-size-lg: 18px; --font-size-xl: 24px; --font-size-2xl: 30px;
   /* Borders -- audited: app.js only ever used 1px and 1.5px, so this is already consistent;
      tokenized for new code so a third ad-hoc value doesn't creep in. */
@@ -63,15 +111,25 @@
   --opacity-disabled: .5; --opacity-muted: .65; --opacity-overlay: .92;
   /* Chart series palette -- reuses the app's real accent colors (not new hex values) so a
      multi-series chart stays on-brand instead of each chart picking its own colors. */
+  /* chart-1 tracks --color-interactive again. It was moved off while the accent was red, so
+     the first data series would not be the same colour as every button. With blue restored
+     that concern is gone: blue is this app's data-and-action colour and the chart palette was
+     built around it. */
   --chart-1: var(--color-interactive); --chart-2: var(--color-primary);
   --chart-3: var(--color-success); --chart-4: var(--color-accent-blue); --chart-5: var(--color-warning);
 }
 /* Light theme: primary reference target -- cool blue-gray background, white elevated
    cards, dark navy text, bright blue interactive accent. */
 [data-theme="light"] {
-  --color-bg:#f4f6fa; --color-surface:#ffffff; --color-surface-elevated:#ffffff;
-  --color-surface-pressed:#eef1f7; --color-text-primary:#12172b;
-  --color-text-secondary:#5b6478; --color-border:#e3e7ef; --shadow-card:0 8px 24px rgba(20,30,60,.06);
+  /* Aligned with the [data-theme="light"] block in index.html so the two palettes cannot
+     drift apart — they style the same screens and a mismatch shows up as one card being a
+     slightly different white from its neighbour. */
+  --color-bg:#F3F5F7; --color-surface:#FFFFFF; --color-surface-elevated:#FFFFFF;
+  --color-surface-pressed:#EDF1F6; --color-text-primary:#1F2937;
+  --color-text-body:#4B5563;
+  --color-text-secondary:#6B7280; --color-text-placeholder:#9CA3AF;
+  --color-border:#E7EBF0; --color-divider:#E8ECF2;
+  --shadow-card:0 6px 24px rgba(31,41,55,.07);
   --color-interactive: #2f6fed; --color-interactive-strong: #1f5adf; --color-interactive-soft: rgba(47,111,237,.12);
 }
 /* AMOLED theme -- Phase 1 ask ("future AMOLED theme"): true-black background/surfaces for
@@ -114,12 +172,20 @@
    (dark values live unscoped/default; [data-theme="light"] is the override), instead of
    trying to out-specificity a "[data-theme=dark]" selector. Dark-mode.css's old --rh-*
    block is now dead code and has been removed. */
-.home-light, .wk-light, .pg-light {
+/* .dp (Diet Plan) and .ft (Fasting) are newer screens built on the same --rh-* palette. They
+   MUST be listed here: the tokens are scoped, not global, so a screen that uses var(--rh-card)
+   without one of these classes gets an invalid value and paints nothing at all. That is how
+   the diet plan's bottom sheet ended up transparent with the meal list showing through it —
+   not a z-index problem, an undefined background. */
+.home-light, .wk-light, .pg-light, .dp, .ft, .sp {
   --rh-bg: var(--color-bg); --rh-card: var(--color-surface-elevated); --rh-blue: var(--color-interactive);
   --rh-text: var(--color-text-primary); --rh-muted: var(--color-text-secondary); --rh-border: var(--color-border);
   --rh-purple: #A78BFA; --rh-green: var(--color-success); --rh-red: var(--color-error);
 }
-[data-theme="light"] .home-light, [data-theme="light"] .wk-light, [data-theme="light"] .pg-light {
-  --rh-bg:#F7F9FC; --rh-card:#FFFFFF; --rh-blue:#2563EB; --rh-text:#0F172A; --rh-muted:#64748B;
-  --rh-border:#E9EDF3; --rh-purple:#7C3AED; --rh-green:#16A34A; --rh-red:#EF4444;
+[data-theme="light"] .home-light, [data-theme="light"] .wk-light, [data-theme="light"] .pg-light,
+[data-theme="light"] .dp, [data-theme="light"] .ft, [data-theme="light"] .sp {
+  /* Same ground and text scale as the other two light palettes. Blue is left exactly as it
+     was — it is the interactive colour on these screens and the brief asked not to touch it. */
+  --rh-bg:#F8FAFC; --rh-card:#FFFFFF; --rh-blue:#2563EB; --rh-text:#111827; --rh-muted:#6B7280;
+  --rh-border:#E7EBF0; --rh-purple:#7C3AED; --rh-green:#16A34A; --rh-red:#EF4444;
 }

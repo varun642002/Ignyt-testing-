@@ -5,7 +5,7 @@
    home.css/progress.css (same shared design system, not a second copy).
 ========================================================= */
 
-.tl-stats-bar { display:flex; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px;
+.tl-stats-bar { display:flex; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-tile);
   padding:16px; margin-top:14px; box-shadow:0 2px 10px rgba(15,23,42,.06); }
 .tl-stat { flex:1; text-align:center; display:flex; flex-direction:column; align-items:center; }
 .tl-stat + .tl-stat { border-left:1px solid var(--rh-border); }
@@ -15,15 +15,15 @@
 
 .tl-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
 .tl-card { position:relative; display:flex; align-items:flex-start; gap:10px; text-align:left; cursor:pointer;
-  background:var(--rh-card); border:1.5px solid var(--rh-border); border-radius:16px; padding:14px; }
+  background:var(--rh-card); border:1.5px solid var(--rh-border); border-radius:var(--radius-card); padding:14px; }
 .tl-card.is-connected { border-color:var(--rh-blue); }
-.tl-card__icon { flex:none; width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center;
+.tl-card__icon { flex:none; width:38px; height:38px; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center;
   background:rgba(37,99,235,.1); color:var(--rh-blue); }
 .tl-card__body { flex:1; min-width:0; }
 .tl-card__label { font-size:14px; font-weight:800; color:var(--rh-text); line-height:1.25; }
 .tl-card__desc { font-size:11px; color:var(--rh-muted); margin-top:2px; line-height:1.35; }
 .tl-card__badge { display:inline-flex; align-items:center; gap:3px; margin-top:8px; background:rgba(37,99,235,.1); color:var(--rh-blue);
-  font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; }
+  font-size:11px; font-weight:700; padding:3px 8px; border-radius:var(--radius-card); }
 .tl-card__chev { position:absolute; top:14px; right:12px; color:var(--rh-muted); font-size:16px; }
 
 /* =========================================================
@@ -46,12 +46,213 @@
 .lib-ex-row__body { flex:1; min-width:0; }
 .lib-ex-row__name { font-size:15px; font-weight:800; padding-right:24px; }
 .lib-tags { display:flex; gap:6px; margin:6px 0; flex-wrap:wrap; }
-.lib-tag { display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap; }
+.lib-tag { display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:700; padding:3px 8px; border-radius:var(--radius-card); white-space:nowrap; }
 .lib-ex-row__meta { font-size:12px; color:var(--rh-muted); font-weight:600; }
 
 .lib-ex-row__actions { flex:none; display:flex; flex-direction:column; align-items:center; gap:6px; }
 .lib-guide-btn { display:inline-flex; align-items:center; gap:4px; background:rgba(37,99,235,.1); color:var(--rh-blue);
-  font-size:11.5px; font-weight:700; border:none; border-radius:20px; padding:6px 10px; cursor:pointer; white-space:nowrap; }
+  font-size:11.5px; font-weight:700; border:none; border-radius:var(--radius-card); padding:6px 10px; cursor:pointer; white-space:nowrap; }
 .lib-chev { color:var(--rh-muted); font-size:18px; line-height:1; }
 .lib-bookmark { position:absolute; top:14px; right:14px; background:none; border:none; padding:2px; cursor:pointer; color:var(--rh-border); }
 .lib-bookmark.is-saved { color:var(--rh-blue); }
+
+/* ===== Exercise detail: sticky hero, badges, collapsible guide sections =====
+   Colors all resolve from the shared --rh-* tokens, so light/dark mode are handled by the
+   existing theme variables rather than a second set of overrides here. */
+.ex-hero { position:sticky; top:0; z-index:5; background:var(--rh-bg); padding-top:4px; padding-bottom:10px; }
+.ex-hero__name { font-size:20px; font-weight:800; line-height:1.25; word-break:break-word; }
+.ex-badges { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.ex-badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700;
+  border-radius:var(--radius-card); padding:4px 10px; white-space:nowrap; }
+.ex-badge__k { opacity:.65; font-weight:600; }
+
+.ex-sections { display:flex; flex-direction:column; gap:10px; }
+.ex-sec { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-tile); overflow:hidden; }
+.ex-sec__head { display:flex; align-items:center; gap:10px; width:100%; background:none; border:none;
+  padding:14px 16px; cursor:pointer; color:var(--rh-text); text-align:left; }
+.ex-sec__icon { display:inline-flex; color:var(--rh-blue); flex:none; }
+.ex-sec__title { flex:1; font-size:14px; font-weight:800; }
+.ex-sec__chev { color:var(--rh-muted); display:inline-flex; transition:transform .25s ease; }
+.ex-sec.is-open .ex-sec__chev { transform:rotate(180deg); }
+/* grid-template-rows 0fr -> 1fr animates to the content's natural height without needing a
+   hard-coded max-height that would clip longer sections. */
+.ex-sec__body { display:grid; grid-template-rows:0fr; transition:grid-template-rows .28s ease; }
+.ex-sec.is-open .ex-sec__body { grid-template-rows:1fr; }
+.ex-sec__inner { overflow:hidden; min-height:0; }
+.ex-sec.is-open .ex-sec__inner { padding:0 16px 14px; }
+
+.ex-sub { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--rh-muted); margin:12px 0 6px; }
+.ex-sec__inner > .ex-sub:first-child { margin-top:0; }
+.ex-desc { font-size:13px; line-height:1.55; color:var(--rh-text); margin:0 0 2px; }
+.ex-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.ex-chip { font-size:11.5px; font-weight:700; border-radius:var(--radius-card); padding:4px 10px;
+  background:var(--rh-border); color:var(--rh-text); }
+.ex-chip--primary { background:rgba(37,99,235,.12); color:var(--rh-blue); }
+
+.ex-facts { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:12px; }
+.ex-fact { background:var(--rh-bg); border:1px solid var(--rh-border); border-radius:var(--radius-sm); padding:8px 10px; }
+.ex-fact__k { display:block; font-size:11px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.05em; color:var(--rh-muted); }
+.ex-fact__v { display:block; font-size:13px; font-weight:700; margin-top:2px; word-break:break-word; }
+
+.ex-step { display:flex; gap:10px; padding:6px 0; }
+.ex-step__n { color:var(--rh-blue); font-weight:900; font-size:13px; flex:none; min-width:14px; }
+.ex-step__t { font-size:13px; line-height:1.55; }
+.ex-li { display:flex; gap:8px; padding:4px 0; font-size:13px; line-height:1.5; }
+.ex-li__g { flex:none; font-weight:800; display:inline-flex; align-items:flex-start; }
+
+.ex-prog { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+.ex-prog__cell { background:var(--rh-bg); border:1px solid var(--rh-border); border-radius:var(--radius-sm);
+  padding:10px; text-align:center; }
+.ex-prog__k { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--rh-muted); }
+.ex-prog__v { font-size:15px; font-weight:800; margin-top:3px; }
+
+@media (min-width:600px){
+  .ex-facts, .ex-prog { grid-template-columns:repeat(4,1fr); }
+}
+@media (prefers-reduced-motion:reduce){
+  .ex-sec__body, .ex-sec__chev { transition:none; }
+}
+
+/* Exercise photo in a Library row. Same footprint as the icon badge it replaces, so a list
+   of mixed photo/no-photo rows still lines up. */
+
+/* Exercise photo on the detail screen. Same 52px footprint as the badge it replaces, so the
+   header does not reflow between an exercise that has a photo and one that does not. */
+
+/* Full-width exercise photo on the How To tab. 4:3 to match the supplied crops, so nothing
+   is letterboxed and the card below never jumps as images load. */
+
+/* Instruction poster on the How To tab. No fixed aspect and no cover: the box is sized from
+   the poster's own dimensions (set inline, per poster) because these run from 3:2 to 2:3 and
+   a poster is only useful whole — cropping one loses the step text or the muscle diagram it
+   exists for. contain rather than cover so a rounding difference letterboxes by a pixel
+   instead of shaving an edge off. */
+
+/* =========================================================
+   PAYWALL + PREMIUM GATE
+   The wall replaces a gated feature's content; the sheet is the offer itself, raised over
+   whatever screen the user was on so dismissing it returns them there rather than to Home.
+========================================================= */
+
+.pw-wall{
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 10px; padding: 40px 24px;
+}
+.pw-wall__badge{
+  width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center;
+  background: rgba(37,99,235,.12); color: var(--rh-blue, #2563eb);
+}
+.pw-wall__title{ font-size: 17px; font-weight: 800; }
+.pw-wall__body{
+  font-size: 13px; line-height: 1.55; color: var(--rh-muted, #8b8b94); max-width: 34ch;
+}
+.pw-wall__cta{ margin-top: 6px; min-width: 190px; }
+.pw-wall__restore{ font-size: 12px; padding: 6px 12px; }
+
+.pw-sheet{ padding-bottom: 20px; }
+.pw-head{ text-align: center; padding: 4px 20px 14px; }
+.pw-head__title{ font-size: 20px; font-weight: 900; letter-spacing: -.2px; }
+.pw-head__sub{
+  font-size: 12.5px; color: var(--rh-muted, #8b8b94); margin-top: 4px; line-height: 1.5;
+}
+
+.pw-list{
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px;
+  padding: 0 20px 16px;
+}
+.pw-item{
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--rh-text, #f7f4ef);
+}
+.pw-item svg{ flex: none; color: var(--rh-blue, #2563eb); }
+
+/* One row per plan. The whole row is the control, not a small radio — this is the primary
+   decision on the sheet and it is being made with a thumb. */
+.pw-plan{
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: calc(100% - 40px); margin: 0 20px 8px; padding: 14px 16px;
+  border-radius: 14px; border: 1.5px solid var(--rh-border, #2a2a33);
+  background: transparent; color: inherit; text-align: left; cursor: pointer;
+}
+.pw-plan.is-on{
+  border-color: var(--rh-blue, #2563eb);
+  background: rgba(37,99,235,.08);
+}
+.pw-plan__name{ font-size: 14px; font-weight: 800; }
+.pw-plan__trial{ font-size: 11.5px; color: var(--rh-muted, #8b8b94); margin-top: 2px; }
+.pw-plan__right{ text-align: right; }
+.pw-plan__price{ font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.pw-plan__save{
+  font-size: 11px; font-weight: 800; margin-top: 2px;
+  color: var(--rh-green, #22c55e);
+}
+
+.pw-buy{ width: calc(100% - 40px); margin: 8px 20px 0; }
+.pw-fine{
+  font-size: 11px; line-height: 1.5; color: var(--rh-muted, #8b8b94);
+  padding: 10px 20px 0; text-align: center;
+}
+.pw-error{
+  margin: 0 20px 10px; padding: 12px 14px; border-radius: 12px;
+  background: rgba(239,68,68,.1); color: #ef4444; font-size: 12.5px; line-height: 1.5;
+}
+.pw-loading{
+  padding: 24px 20px; text-align: center;
+  font-size: 13px; color: var(--rh-muted, #8b8b94);
+}
+.pw-restore{
+  display: block; margin: 10px auto 0; font-size: 12px; padding: 6px 12px;
+}
+
+
+/* =========================================================
+   EXERCISE ILLUSTRATIONS
+
+   Anatomical drawings on a white ground, so they are given a white tile rather than a
+   transparent one: on the dark theme an unbacked illustration would sit in a black box with a
+   white rectangle floating inside it. object-fit: contain, not cover -- these are diagrams, and
+   cropping one cuts off the limb doing the work.
+========================================================= */
+.lib-ex-row__photo{
+  width: 38px; height: 38px; flex: none; border-radius: 9px; overflow: hidden;
+  background: #fff; display: block;
+}
+.lib-ex-row__photo img{ width: 100%; height: 100%; object-fit: contain; display: block; }
+
+.ex-hero__photo{
+  width: 52px; height: 52px; flex: none; border-radius: 12px; overflow: hidden;
+  background: #fff; display: block;
+}
+.ex-hero__photo img{ width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* Full width at the head of the How To tab, above the written steps. 3:2 matches the source
+   illustrations, so nothing is letterboxed. */
+.ex-howto__photo{
+  width: 100%; aspect-ratio: 3 / 2; border-radius: var(--radius-tile, 14px);
+  overflow: hidden; background: #fff; margin-bottom: 12px;
+  border: 1px solid var(--rh-border);
+}
+.ex-howto__photo img{ width: 100%; height: 100%; object-fit: contain; display: block; }
+
+
+/* =========================================================
+   EXPORT DATA — one card, four rows
+
+   These were four full-width tl-cards, which is four card shadows and four gaps for what is
+   really one decision with four answers. Grouped into a single card with hairline-separated
+   rows: same targets, same tap area, a third of the vertical space.
+========================================================= */
+.st-export{ padding: 0; overflow: hidden; }
+.st-export__row{
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 13px 14px; background: none; border: none; cursor: pointer;
+  font-family: inherit; text-align: left; color: var(--rh-text);
+}
+.st-export__row + .st-export__row{ border-top: 1px solid var(--rh-border); }
+.st-export__row:active{ background: var(--rh-bg); }
+.st-export__body{ flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.st-export__label{ font-size: 14px; font-weight: 700; }
+.st-export__desc{ font-size: 11.5px; color: var(--rh-muted); }
+.st-export .tl-card__icon{ flex: none; }

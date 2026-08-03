@@ -1,2 +1,1393 @@
+/* =========================================================
+   NUTRITION — component layer
+
+   The food module was built with inline styles inside template literals, which made every
+   card a one-off and every spacing value a guess. This gives it the same treatment the
+   workout and progress pages already have: named classes built on the EXISTING token scale
+   in css/tokens.css. No new spacing or radius system is introduced — --space-*, --radius-*
+   and --shadow-* already exist and are used as they are.
+
+   What is new is a set of NUTRIENT colour tokens. Those were hardcoded in app.js
+   (NUTRIENT_COLORS), which meant the colour of "protein" lived in JavaScript while every
+   other colour in the app lived in CSS. Moving them here makes a nutrient's colour one
+   fact, themable like everything else.
+
+   Semantic nutrient colour is deliberately separate from --accent. Accent is IGNYT's brand
+   orange and marks the primary action; a nutrient colour says which nutrient a number
+   refers to. Fat is amber and sits close to accent, so fat never colours a control.
+========================================================= */
+
 .meal-card, .food-log-card { border-radius:var(--radius-card); }
 .macro-ring, .nutrition-summary { min-width:0; }
+
+:root{
+  /* Nutrient identity — one colour per nutrient, used wherever that nutrient appears. */
+  --n-protein:   var(--mint);
+  --n-carbs:     var(--steel);
+  --n-fat:       #FFB020;
+  --n-fibre:     #A98BFF;
+  --n-water:     #4FC3F7;
+  --n-sugar:     #FF8FA3;
+  --n-sodium:    #FFB020;
+  --n-potassium: #7BD389;
+  --n-calcium:   #9AD5FF;
+  --n-iron:      #FF7A5C;
+  --n-energy:    var(--accent);
+
+  /* Track behind any progress bar or ring. */
+  --n-track: var(--surface-alt);
+}
+
+[data-theme="light"]{
+  /* The dark-theme hues are tuned for a dark ground and go muddy on white; these are the
+     same identities re-mixed for contrast against a light surface. */
+  --n-fat:       #B87400;
+  --n-fibre:     #6B4FD8;
+  --n-water:     #0B7FA8;
+  --n-sugar:     #C2185B;
+  --n-sodium:    #B87400;
+  --n-potassium: #2E7D32;
+  --n-calcium:   #1565C0;
+  --n-iron:      #C0392B;
+}
+
+/* ---------------------------------------------------------
+   Motion primitives
+
+   Two curves, used everywhere, so the whole module moves with one personality:
+     --ease-out    things arriving — decelerate into place
+     --ease-spring a gentle overshoot for things the user pressed
+   Durations stay in the 180-300 ms band. Below that motion reads as a glitch; above it the
+   interface feels like it is making you wait.
+--------------------------------------------------------- */
+:root{
+  --ease-out: cubic-bezier(.22,.61,.36,1);
+  --ease-spring: cubic-bezier(.34,1.4,.64,1);
+  --dur-fast: .18s;
+  --dur-base: .24s;
+  --dur-slow: .3s;
+
+  /* Depth. Three steps only — more than that and "elevation" stops meaning anything.
+     Tuned for a dark ground: a black shadow does almost nothing on #121216, so lift comes
+     from a hairline top highlight as much as from the shadow below. */
+  --lift-1: 0 1px 2px rgba(0,0,0,.28);
+  --lift-2: 0 2px 10px rgba(0,0,0,.32), 0 1px 2px rgba(0,0,0,.24);
+  --lift-3: 0 10px 30px rgba(0,0,0,.42), 0 2px 6px rgba(0,0,0,.28);
+  --sheen: rgba(255,255,255,.055);
+}
+[data-theme="light"]{
+  /* Soft and wide, not dark and tight — 6-8% opacity, 24-32 px blur, 6-10 px drop. A tight
+     dark shadow on a light ground reads as dirt under the card rather than lift. The tint is
+     the heading colour rather than pure black, which keeps the shadow from going grey-green
+     against the cool ground. */
+  --lift-1: 0 1px 3px rgba(31,41,55,.05);
+  --lift-2: 0 6px 24px rgba(31,41,55,.07);
+  --lift-3: 0 10px 32px rgba(31,41,55,.08);
+  /* A white card on a white-ish ground needs no top highlight; it would only make the card
+     look milky. On light, the shadow and the ground do all the separating. */
+  --sheen: transparent;
+}
+
+/* ---------------------------------------------------------
+   Cards
+
+   A card reads as a floating surface through three cues layered together: a shadow beneath,
+   a one-pixel light edge along the top, and a barely-there vertical gradient. Each is almost
+   invisible alone; together they give depth without a border.
+
+   No backdrop-filter. Real glass blur on a scrolling list of 8,000 foods costs more frame
+   time than it is worth on a mid-range phone, and the brief asked for premium, not frosted.
+--------------------------------------------------------- */
+.nut-card{
+  position: relative;
+  background:
+    linear-gradient(180deg, var(--sheen) 0%, transparent 42%),
+    var(--surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  margin-bottom: var(--space-sm);
+  box-shadow: var(--lift-2);
+  /* The hairline that sells the edge. inset keeps it inside the radius on every corner. */
+  outline: 1px solid rgba(255,255,255,.03);
+  outline-offset: -1px;
+}
+/* On light, the border is the specified #E7EBF0 and it is genuinely subtle — it exists to
+   define the card's edge where a shadow alone is too soft to read, not to draw a box. */
+[data-theme="light"] .nut-card{ outline-color: var(--border); }
+.nut-card--tight{ padding: var(--space-sm) var(--space-md); }
+
+/* Sections get room to breathe. The dashboard is a stack of cards, and the gap between them
+   is what separates "calories" from "meals" as ideas, not just as boxes. */
+.nut-card + .eyebrow-label,
+.nut-strip + .nut-card{ margin-top: var(--space-md); }
+
+/* A row of small equal cards that scrolls sideways rather than wrapping, because a wrapped
+   half-row reads as broken rather than as more content. */
+.nut-strip{
+  display: flex;
+  gap: var(--space-xs);
+  overflow-x: auto;
+  padding-bottom: 2px;
+  margin-bottom: var(--space-xs);
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.nut-strip::-webkit-scrollbar{ display: none; }
+.nut-strip > *{ flex: 1 0 auto; min-width: 104px; }
+
+/* ---------------------------------------------------------
+   Type
+--------------------------------------------------------- */
+.nut-label{
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.nut-value{
+  font-family: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 900;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;   /* stops digits shifting as totals change */
+}
+.nut-value--hero{ font-size: 28px; line-height: 1.1; }
+.nut-value--lg{ font-size: 22px; }
+.nut-value--md{ font-size: 15px; }
+.nut-value--sm{ font-size: 12px; }
+.nut-unit{ font-size: 11px; font-weight: 700; color: var(--muted); }
+.nut-note{ font-size: 11px; color: var(--muted); line-height: 1.45; }
+
+/* ---------------------------------------------------------
+   Progress bar
+--------------------------------------------------------- */
+.nut-bar{
+  height: 4px;
+  border-radius:2px;
+  background: var(--n-track);
+  overflow: hidden;
+}
+.nut-bar > i{
+  display: block;
+  height: 100%;
+  border-radius:2px;
+  background: var(--muted);
+  transition: width .45s cubic-bezier(.4,0,.2,1);
+}
+/* Colour comes from a modifier so a bar never needs an inline style. */
+.nut-bar--protein > i{ background: var(--n-protein); }
+.nut-bar--carbs   > i{ background: var(--n-carbs); }
+.nut-bar--fat     > i{ background: var(--n-fat); }
+.nut-bar--fibre   > i{ background: var(--n-fibre); }
+.nut-bar--water   > i{ background: var(--n-water); }
+.nut-bar--energy  > i{ background: var(--n-energy); }
+.nut-bar--over    > i{ background: var(--accent); }
+
+/* ---------------------------------------------------------
+   Calorie ring
+--------------------------------------------------------- */
+.nut-ring{ flex-shrink: 0; }
+.nut-ring circle.track{ stroke: var(--n-track); }
+.nut-ring circle.fill{ transition: stroke-dasharray .6s cubic-bezier(.4,0,.2,1); }
+
+/* ---------------------------------------------------------
+   Stat block — a labelled number with an optional bar
+--------------------------------------------------------- */
+.nut-stat{
+  background: var(--surface-alt);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) 10px;
+}
+.nut-stat__name{ font-size: 11px; font-weight: 700; }
+.nut-stat__value{ margin-top: 2px; }
+.nut-stat__pct{
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 11px;
+  margin-top: var(--space-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------
+   Meal row
+--------------------------------------------------------- */
+.meal-head{
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  cursor: pointer;
+  min-height: 44px;          /* comfortably past the minimum target once padding counts */
+}
+.meal-icon{
+  width: 34px; height: 34px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-alt);
+  display: grid; place-items: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+.meal-name{ font-size: 14px; font-weight: 800; line-height: 1.25; }
+.meal-count{ font-size: 11px; color: var(--muted); }
+.meal-kcal{ text-align: right; flex-shrink: 0; }
+.meal-macros{
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 11px;
+  display: flex; gap: 5px; justify-content: flex-end;
+}
+.meal-macros .p{ color: var(--n-protein); }
+.meal-macros .c{ color: var(--n-carbs); }
+.meal-macros .f{ color: var(--n-fat); }
+.meal-toggle{
+  color: var(--primary);
+  font-weight: 900;
+  font-size: 15px;
+  flex-shrink: 0;
+  width: 22px;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------
+   Food row — shared by search results, category lists and logged entries
+--------------------------------------------------------- */
+.food-row{
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 13px 2px;
+  min-height: 48px;   /* one line of content now, but the row stays a comfortable tap target */
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  -webkit-tap-highlight-color: transparent;
+}
+/* No rule between rows. A divider under each of thirty results drew thirty lines across a
+   screen whose only job is to be read down; the gap and the bold name group them already. */
+.food-row:active{ background: var(--surface-alt); }
+/* There IS a second control now: the + logs the food at its default serving without leaving
+   the results. The chevron stays because the row still goes to Food Details — the two are
+   different jobs, "log this" and "tell me more about this", and the row was only offering the
+   second. 44px so it clears the touch target guidance on its own, and a tint so it reads as a
+   button rather than as punctuation next to the chevron. */
+.food-row__add{
+  flex: 0 0 auto; width: 44px; height: 44px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 50%; cursor: pointer;
+  background: var(--primary-soft); color: var(--primary);
+  font-size: 22px; font-weight: 700; line-height: 1;
+}
+.food-row__add:active{ background: var(--primary); color: var(--on-primary); }
+
+/* Chevron. The row goes to Food Details — the thumbnail and the favourite star that used to
+   sit here are explained in renderFoodResultCard(). */
+.food-row__go{
+  flex: 0 0 auto; color: var(--muted); font-size: 20px; line-height: 1;
+  opacity: .55; padding-left: 4px;
+}
+.food-row__body{ min-width: 0; flex: 1; }
+/* Flex, so the verified badge sits beside the name instead of pushing it to a second line.
+   The ellipsis moves to the inner span: a flex container cannot truncate its own text. */
+.food-row__name{
+  display: flex; align-items: center; gap: 6px; min-width: 0;
+  font-size: 13.5px; font-weight: 700; line-height: 1.3;
+}
+.food-row__text{ min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* .food-row__meta and .food-row__kcal are gone: a result row is a picker, not a nutrition
+   card, and the macros/calories it used to carry now live on the Food Details page. The rules
+   are removed rather than left orphaned so nothing re-introduces them by accident. */
+
+.food-row__verified{
+  flex: none; width: 15px; height: 15px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--mint, #16A34A); color: #fff;
+  font-size: 9px; font-weight: 900; line-height: 1;
+}
+
+/* The star is the only control on the row, so it gets a real target rather than the 4px
+   padding it inherited from .cat-chip. The row itself stays the tap target for picking. */
+/* .food-row__fav removed with the star it styled. Favouriting is on the Food Details
+   page; see renderFoodResultCard(). .food-thumb stays -- still used by the food hero
+   and by IgnytFoodImages. */
+.food-thumb{
+  width: 34px; height: 34px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  display: grid; place-items: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------
+   Serving presets
+
+   The most important control in the module: tapping a real measured portion instead of
+   typing grams. The selected state carries a border AND a check, not colour alone, so it
+   survives a colour-blind reading.
+--------------------------------------------------------- */
+.srv-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: var(--space-2xs);
+}
+.srv{
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  padding: 8px 6px;
+  text-align: center;
+  min-height: 52px;
+  cursor: pointer;
+  transition: border-color .18s ease, background-color .18s ease;
+}
+.srv:hover{ border-color: var(--muted); }
+.srv__name{ font-size: 11px; font-weight: 800; line-height: 1.2; }
+.srv__grams{ font-size: 11px; color: var(--muted); }
+.srv__kcal{
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 11px; font-weight: 700; color: var(--muted); margin-top: 2px;
+}
+.srv.is-on{
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-alt));
+}
+.srv.is-on .srv__kcal{ color: var(--primary); }
+.srv.is-on .srv__name::after{ content: " ✓"; color: var(--primary); }
+
+/* ---------------------------------------------------------
+   Micronutrient grid
+--------------------------------------------------------- */
+.micro-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 6px var(--space-md);
+}
+.micro-row{
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-xs);
+  font-size: 11px;
+  padding: 3px 0;
+}
+.micro-row__value{
+  font-family: 'SF Mono', ui-monospace, monospace;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+/* An unmeasured nutrient is dimmed, never rendered as a zero. */
+.micro-row__value.is-absent{ opacity: .55; }
+
+/* ---------------------------------------------------------
+   Motion (Phase 10)
+
+   Short, functional and fully removable. Every animation here is a response to something the
+   user just did — nothing animates on its own, nothing loops, nothing draws attention to
+   itself. The brief asked for "smooth, professional, minimal, subtle", and the fastest thing
+   an interface can do is not animate at all, so the durations stay under a quarter second
+   except the bars, where the sweep is the point.
+--------------------------------------------------------- */
+
+/* Newly rendered result rows fade up rather than snapping in. Capped at eight children:
+   past that the stagger becomes a queue the user is waiting on rather than a flourish. */
+@keyframes nut-rise{
+  from{ opacity: 0; transform: translateY(4px); }
+  to{ opacity: 1; transform: none; }
+}
+#food-search-results .food-row{
+  animation: nut-rise .18s cubic-bezier(.4,0,.2,1) both;
+}
+#food-search-results .food-row:nth-child(1){ animation-delay: 0ms; }
+#food-search-results .food-row:nth-child(2){ animation-delay: 15ms; }
+#food-search-results .food-row:nth-child(3){ animation-delay: 30ms; }
+#food-search-results .food-row:nth-child(4){ animation-delay: 45ms; }
+#food-search-results .food-row:nth-child(5){ animation-delay: 60ms; }
+#food-search-results .food-row:nth-child(6){ animation-delay: 75ms; }
+#food-search-results .food-row:nth-child(7){ animation-delay: 90ms; }
+#food-search-results .food-row:nth-child(n+8){ animation-delay: 105ms; }
+
+/* Meal expansion. Uses grid-template-rows 0fr -> 1fr rather than max-height, which needs a
+   guessed ceiling and clips whenever the guess is too small. */
+.meal-body{
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .22s cubic-bezier(.4,0,.2,1);
+}
+.meal-body > *{ overflow: hidden; min-height: 0; }
+.meal-body.is-open{ grid-template-rows: 1fr; }
+
+/* Press feedback on the controls that log something, so a tap reads as received on a slow
+   device before the re-render lands. */
+.srv:active,
+.meal-head:active,
+.food-row:active{
+  transform: scale(.985);
+  transition: transform .06s ease;
+}
+
+/* The ring sweeps to its value on first paint. One second, once, on a number the user came
+   to the screen to read. */
+@keyframes nut-ring-in{ from{ opacity: 0; } to{ opacity: 1; } }
+.nut-ring circle.fill{ animation: nut-ring-in .3s ease both; }
+
+/* The row that was just logged pulses its background once, then settles. It is how the
+   dashboard answers "did that work" after the flow returns — the number changing is easy to
+   miss in a list. One-shot: the state that drives the class is cleared after 400 ms. */
+@keyframes nut-just-added{
+  0%   { background: color-mix(in srgb, var(--accent) 26%, transparent); }
+  100% { background: transparent; }
+}
+.history-row.is-just-added{
+  animation: nut-just-added 1.4s ease-out both;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce){
+  .nut-bar > i,
+  .nut-ring circle.fill,
+  .srv,
+  .meal-body,
+  .meal-head,
+  .food-row,
+  .history-row.is-just-added,
+  .food-page{
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* =========================================================
+   FOOD LOGGING ROUTES (search + details)
+
+   Full screens rather than panels. Each step owns the viewport, which is what makes the
+   flow legible — and on the search route the input is the only focusable thing on screen,
+   so the soft keyboard has nothing to push around.
+========================================================= */
+.food-page{
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  animation: food-page-in .2s cubic-bezier(.4,0,.2,1) both;
+}
+@keyframes food-page-in{
+  from{ opacity: 0; transform: translateX(10px); }
+  to{ opacity: 1; transform: none; }
+}
+
+.food-page__head{
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-2xs) 0 var(--space-xs);
+}
+.food-page__back,
+.food-page__icon{
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  border: 0;
+  color: var(--text);
+  font-size: 16px;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.food-page__icon.is-on{ color: var(--primary); }
+.food-page__title{ font-size: 16px; font-weight: 800; letter-spacing: -.01em; }
+.food-page__sub{ font-size: 11px; color: var(--muted); }
+/* Keeps the sticky footer from covering the last card. */
+.food-page__spacer{ height: 72px; }
+
+/* --- search bar --- */
+.food-search-bar{
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: var(--surface);
+  /* Outlined rather than a filled panel. This is the first control on the screen and the
+     one every visit starts with, so it should read as a field to type in. */
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius-pill);
+  padding: 4px 6px 4px 14px;
+  margin-bottom: var(--space-sm);
+}
+.food-search-bar__icon{ color: var(--muted); font-size: 15px; }
+.food-search-bar input{
+  flex: 1; min-width: 0;
+  background: none; border: 0; outline: none;
+  color: var(--text);
+  font-size: 15px;              /* 16px-ish keeps iOS from zooming the viewport on focus */
+  padding: 11px 0;
+}
+.food-search-bar__clear,
+.food-search-bar__voice{
+  width: 36px; height: 36px;
+  border: 0; border-radius: var(--radius-pill);
+  background: none; color: var(--muted);
+  font-size: 14px; cursor: pointer;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.food-search-bar__voice{ background: var(--surface-alt); color: var(--primary); }
+
+/* --- detail hero --- */
+.food-hero{
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  padding: var(--space-md);
+  margin-bottom: var(--space-xs);
+}
+.food-hero__name{ font-size: 17px; font-weight: 800; line-height: 1.25; letter-spacing: -.01em; }
+.food-hero__cat{ font-size: 12px; color: var(--muted); margin-top: 2px; }
+.food-hero__verified{ font-size: 11px; color: var(--mint); margin-top: 4px; font-weight: 700; }
+.food-hero__kcal{ text-align: right; flex-shrink: 0; }
+
+/* --- macro row --- */
+.macro-row{
+  display: flex;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  padding: var(--space-sm) var(--space-2xs);
+  margin-bottom: var(--space-xs);
+}
+.macro-row__cell{
+  flex: 1; text-align: center; min-width: 0;
+  padding: 0 2px;
+}
+.macro-row__cell + .macro-row__cell{ border-left: 1px solid var(--surface-alt); }
+.macro-row__label{ font-size: 11px; font-weight: 700; margin-top: 2px; }
+
+/* --- form controls --- */
+.food-select,
+.food-input{
+  width: 100%;
+  background: var(--surface-alt);
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 11px 12px;
+  font-size: 14px;
+  color: var(--text);
+  min-height: 44px;
+}
+.qty-stepper{ display: flex; align-items: center; gap: var(--space-xs); }
+.qty-stepper button{
+  width: 36px; height: 36px;
+  border: 0; border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-size: 18px; font-weight: 800;
+  cursor: pointer;
+}
+.qty-stepper input{
+  width: 66px; min-height: 40px;
+  background: var(--surface-alt);
+  border: 0; border-radius: var(--radius-sm);
+  text-align: center;
+  font-size: 15px; font-weight: 700;
+  color: var(--text);
+  font-family: 'SF Mono', ui-monospace, monospace;
+}
+
+/* --- sticky action --- */
+.food-sticky{
+  position: fixed;
+  left: 0; right: 0;
+  /* Sits above the safe area and above the keyboard inset the app already tracks. */
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--kb-inset, 0px));
+  padding: var(--space-sm) var(--space-md) var(--space-md);
+  background: linear-gradient(to top, var(--bg) 62%, transparent);
+  z-index: 40;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.food-sticky__btn{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-height: 52px;
+  font-size: 15px;
+}
+.food-sticky__kcal{
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-weight: 800;
+  opacity: .8;
+  padding-left: var(--space-sm);
+  border-left: 1px solid rgba(0,0,0,.22);
+}
+
+/* --- a logged food inside a meal card ---
+   A link to its own detail screen, nothing more. The chevron is the affordance; there is no
+   inline editor behind it any more, so the row can be quiet. --- */
+.log-row{
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 10px var(--space-2xs);
+  margin-top: var(--space-2xs);
+  min-height: 48px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+.log-row + .log-row{ border-top: 1px solid var(--surface-alt); }
+.log-row:active{ background: var(--surface-alt); }
+.log-row__body{ min-width: 0; flex: 1; }
+.log-row__name{
+  font-size: 14px; font-weight: 600; line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.log-row__meta{
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 11px; color: var(--muted); margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.log-row__kcal{
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 14px; font-weight: 800; color: var(--accent);
+  flex-shrink: 0; font-variant-numeric: tabular-nums;
+}
+.log-row__chev{ color: var(--muted); font-size: 15px; flex-shrink: 0; width: 12px; text-align: center; }
+
+/* The just-added pulse applies to whichever row shape is on screen. */
+.log-row.is-just-added{
+  animation: nut-just-added 1.4s ease-out both;
+}
+
+/* =========================================================
+   POLISH PASS
+
+   Layout is unchanged. What changes is how things move, how deep they sit, and how the
+   type is set. Every animation below is transform or opacity only — both composited on the
+   GPU, neither triggering layout — so none of this costs frame time on a scrolling list.
+========================================================= */
+
+/* --- press feedback -------------------------------------------------------------------
+   The tap target scales down and loses a little lift on press, then springs back. Kept to
+   0.98: below about 0.96 a press reads as the element breaking rather than responding. --- */
+.log-row,
+.food-row,
+.srv,
+.meal-head,
+.nut-stat,
+[data-food-browse],
+.meal-add,
+.qty-stepper button{
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+  will-change: transform;
+}
+.log-row:active,
+.food-row:active,
+.meal-head:active{ transform: scale(.985); }
+.srv:active,
+[data-food-browse]:active,
+.nut-stat:active{ transform: scale(.96); }
+.meal-add:active,
+.qty-stepper button:active{ transform: scale(.9); }
+
+/* Release overshoots very slightly, which is what makes a press feel answered. */
+.srv,
+.meal-add,
+.qty-stepper button{ transition-timing-function: var(--ease-spring); }
+
+/* --- buttons --- */
+.btn{
+  transition:
+    transform var(--dur-fast) var(--ease-spring),
+    box-shadow var(--dur-fast) var(--ease-out),
+    filter var(--dur-fast) var(--ease-out);
+}
+.btn-accent{
+  /* A gradient of the accent against itself: enough to catch light across the face without
+     turning into a second colour. */
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--primary) 88%, white) 0%,
+    var(--primary) 55%,
+    var(--primary-strong) 100%);
+  box-shadow: var(--lift-2);
+}
+.btn-accent:active{ transform: scale(.975); box-shadow: var(--lift-1); filter: brightness(.96); }
+.btn-ghost{ box-shadow: var(--lift-1); }
+.btn-ghost:active{ transform: scale(.975); box-shadow: none; }
+.btn:disabled{ box-shadow: none; transform: none; }
+
+/* --- meal card: arrow rotation, synchronised with the expansion --- */
+.meal-toggle{
+  display: inline-block;
+  transition: transform var(--dur-base) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+/* --- expanding a meal ---
+   Rows arrive on a short stagger so the list unfolds rather than appearing all at once.
+   Capped at six: past that the last row would land after the animation has stopped being
+   interesting. --- */
+@keyframes log-row-in{
+  from{ opacity: 0; transform: translateY(-5px); }
+  to{ opacity: 1; transform: none; }
+}
+.log-row{ animation: log-row-in var(--dur-base) var(--ease-out) both; }
+.log-row:nth-child(2){ animation-delay: 20ms; }
+.log-row:nth-child(3){ animation-delay: 40ms; }
+.log-row:nth-child(4){ animation-delay: 60ms; }
+.log-row:nth-child(5){ animation-delay: 80ms; }
+.log-row:nth-child(n+6){ animation-delay: 100ms; }
+
+/* --- food details: sections stagger in ---
+   Each card enters slightly after the one above it, so the eye is led down the screen
+   instead of being handed the whole page at once. --- */
+.food-page > *{ animation: nut-rise var(--dur-base) var(--ease-out) both; }
+.food-page > *:nth-child(1){ animation-delay: 0ms; }
+.food-page > *:nth-child(2){ animation-delay: 30ms; }
+.food-page > *:nth-child(3){ animation-delay: 60ms; }
+.food-page > *:nth-child(4){ animation-delay: 90ms; }
+.food-page > *:nth-child(5){ animation-delay: 110ms; }
+.food-page > *:nth-child(n+6){ animation-delay: 130ms; }
+/* The sticky footer is fixed; animating it would detach it from the bottom edge. */
+.food-page > .food-sticky{ animation: none; }
+
+.food-hero,
+.macro-row,
+.food-search-bar{
+  /* Same edge treatment as .nut-card so every floating surface reads as one family. */
+  outline: 1px solid transparent;
+  outline-offset: -1px;
+}
+[data-theme="light"] .food-hero,
+[data-theme="light"] .macro-row,
+[data-theme="light"] .food-search-bar,
+[data-theme="light"] .nut-stat,
+[data-theme="light"] [data-food-browse],
+[data-theme="light"] .log-row.is-just-added{ outline-color: var(--border); }
+
+/* Dividers are lighter than borders: a border separates a card from the page, a divider
+   separates two rows that belong to each other. */
+[data-theme="light"] .divide,
+[data-theme="light"] .log-row + .log-row,
+[data-theme="light"] .food-row + .food-row,
+[data-theme="light"] .macro-row__cell + .macro-row__cell{ border-color: var(--divider); }
+
+.food-hero{
+  background: linear-gradient(180deg, var(--sheen) 0%, transparent 42%), var(--surface);
+  box-shadow: var(--lift-2);
+  border-radius: var(--radius-lg);
+}
+.food-hero .food-thumb{
+  box-shadow: var(--lift-2);
+  animation: nut-rise var(--dur-slow) var(--ease-spring) both;
+}
+.macro-row{
+  background: linear-gradient(180deg, var(--sheen) 0%, transparent 42%), var(--surface);
+  box-shadow: var(--lift-2);
+  border-radius: var(--radius-lg);
+}
+
+/* --- search bar: the focus ring grows rather than snapping on --- */
+.food-search-bar{
+  box-shadow: var(--lift-2);
+  transition: box-shadow var(--dur-base) var(--ease-out);
+}
+.food-search-bar:focus-within{
+  box-shadow: var(--lift-2), 0 0 0 2px color-mix(in srgb, var(--primary) 45%, transparent);
+}
+
+/* --- category tiles --- */
+[data-food-browse]{ box-shadow: var(--lift-1); }
+
+/* --- serving presets: the selected one lifts slightly off the grid --- */
+.srv.is-on{ box-shadow: var(--lift-2); }
+
+/* --- sticky footer --- */
+.food-sticky__btn{ box-shadow: var(--lift-3); }
+
+/* --- scrolling ---
+   Momentum scrolling on iOS/WebKit, and a contain hint so a long list does not invalidate
+   layout for the whole page as it scrolls. --- */
+main{ -webkit-overflow-scrolling: touch; }
+.nut-strip{ scroll-behavior: smooth; overscroll-behavior-x: contain; }
+
+/* --- typography ---
+   Tightened tracking on the large numbers (large type needs less letter-spacing than small
+   type to read as evenly set) and opened it slightly on the small uppercase labels, which
+   need the opposite. --- */
+/* Body copy sits one step lighter than headings. Previously both used --text, so a food
+   name and the paragraph explaining it carried identical weight and nothing led. The token
+   falls back to --text on dark, where the four-step scale is not defined. */
+.log-row__name,
+.food-row__name,
+.micro-row > span:first-child{ color: var(--text-body, var(--text)); }
+
+.nut-value--hero{ letter-spacing: -.03em; }
+.nut-value--lg{ letter-spacing: -.025em; }
+.nut-label{ letter-spacing: .09em; }
+.food-page__title{ letter-spacing: -.015em; }
+.food-hero__name{ letter-spacing: -.015em; text-wrap: balance; }
+
+/* --- loading ---
+   A skeleton shimmer for the moment before the catalogue lands, so the panel does not flash
+   from empty to full. --- */
+@keyframes nut-shimmer{
+  from{ background-position: -160px 0; }
+  to{ background-position: 160px 0; }
+}
+.nut-skeleton{
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg,
+    var(--surface-alt) 0%,
+    color-mix(in srgb, var(--surface-alt) 70%, var(--text) 6%) 50%,
+    var(--surface-alt) 100%);
+  background-size: 320px 100%;
+  animation: nut-shimmer 1.1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .log-row,
+  .food-page > *,
+  .food-hero .food-thumb,
+  .nut-skeleton,
+  .btn,
+  .meal-toggle,
+  .nut-stat,
+  [data-food-browse]{
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* --- the + on a meal card --- */
+.meal-add{
+  width: 32px; height: 32px;
+  border: 0; border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  color: var(--primary);
+  font-size: 18px; font-weight: 800;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: grid; place-items: center;
+}
+.meal-add:active{ transform: scale(.92); }
+
+
+/* =========================================================
+   VARIANT GROUPS
+
+   One primary result with its near-identical siblings folded behind a toggle. The group is a
+   single surface rather than separate cards, so an expanded variant reads as part of its
+   parent rather than as another search result.
+========================================================= */
+.variant-group{
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.variant-group .food-row{ padding-left: var(--space-xs); padding-right: var(--space-xs); }
+
+.variant-toggle{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  min-height: 36px;
+  padding: 8px;
+  border: 0;
+  border-top: 1px solid var(--surface-alt);
+  background: transparent;
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.variant-toggle:active{ background: var(--primary-soft); }
+.variant-toggle__chev{
+  display: inline-block;
+  font-size: 12px;
+  transition: transform .22s cubic-bezier(.34,1.4,.64,1);
+}
+.variant-group.is-open .variant-toggle__chev{ transform: rotate(180deg); }
+
+/* grid-template-rows 0fr -> 1fr rather than max-height: no guessed ceiling, so a group with
+   two variants and one with twenty both animate correctly and neither clips. */
+.variant-body{
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows .22s cubic-bezier(.34,1.4,.64,1),
+    opacity .18s ease;
+}
+.variant-body > *{ overflow: hidden; min-height: 0; }
+.variant-body.is-open{ grid-template-rows: 1fr; opacity: 1; }
+
+/* Variants are visually subordinate to the food they belong to. */
+.variant-body .food-row{
+  background: var(--surface-alt);
+  padding-left: var(--space-md);
+}
+.variant-body .food-row__name{ font-size: 12px; }
+
+@media (prefers-reduced-motion: reduce){
+  .variant-body, .variant-toggle__chev{ transition: none !important; }
+}
+
+/* =========================================================
+   SEARCH-FIRST FOOD LOG
+
+   Favourites and Recent are the front door; categories moved behind a button. These rows are
+   deliberately denser than a search result — they are a shortlist you recognise, not a list
+   you read.
+========================================================= */
+.fs-head{
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:11.5px; font-weight:800; letter-spacing:.02em;
+  color:var(--muted); margin:var(--space-sm) 0 6px;
+}
+.fs-list{ display:flex; flex-direction:column; gap:4px; margin-bottom:var(--space-xs); }
+
+.fs-quick{
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:8px 10px; border-radius:var(--radius-btn);
+  border:1px solid transparent; background:var(--surface);
+  color:var(--text); font:inherit; text-align:left; cursor:pointer;
+  transition:background .14s ease, border-color .14s ease, transform .12s cubic-bezier(.34,1.4,.64,1);
+}
+.fs-quick:active{ transform:scale(.985); background:var(--surface-alt); border-color:var(--primary); }
+.fs-quick__body{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+.fs-quick__name{
+  font-size:13.5px; font-weight:700;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.fs-quick__sub{ font-size:11px; color:var(--muted); }
+.fs-quick__kcal{
+  flex-shrink:0; font-size:13px; font-weight:800;
+  font-variant-numeric:tabular-nums; color:var(--text);
+}
+
+/* Autocomplete, between the input and the results. */
+.fs-sugg{
+  display:flex; flex-direction:column;
+  border:1px solid var(--border); border-radius:var(--radius-btn);
+  background:var(--surface); overflow:hidden; margin-bottom:var(--space-xs);
+}
+.fs-sugg__item{
+  display:flex; align-items:center; gap:9px;
+  padding:10px 12px; border:0; border-bottom:1px solid var(--divider, var(--border));
+  background:none; color:var(--text); font:inherit; font-size:13px;
+  text-align:left; cursor:pointer;
+}
+.fs-sugg__item:last-child{ border-bottom:0; }
+.fs-sugg__item:active{ background:var(--surface-alt); }
+
+/* The matched span. A tint rather than a highlighter block — on a dense list, a solid
+   background on every row turns the page into stripes. */
+.fs-mark{
+  background:var(--primary-soft); color:var(--primary);
+  border-radius:var(--radius-2xs); padding:0 1px; font-weight:800;
+}
+
+.fs-browse{
+  display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+  min-height:44px; margin-top:var(--space-sm);
+  border:1px dashed var(--border); border-radius:var(--radius-btn);
+  background:none; color:var(--muted); font:inherit; font-size:12.5px; font-weight:700;
+  cursor:pointer;
+}
+.fs-browse:active{ background:var(--surface-alt); }
+
+.fs-empty{ text-align:center; padding:26px 16px; }
+
+@media (prefers-reduced-motion: reduce){ .fs-quick{ transition:none; } }
+
+/* =========================================================
+   NUTRITION DASHBOARD — reference layout
+========================================================= */
+.nd-datebar{ display:flex; align-items:center; gap:8px; margin:4px 0 12px; }
+.nd-date{
+  width:36px; height:36px; flex:0 0 36px; border-radius:var(--radius-md);
+  border:1px solid var(--border); background:var(--surface);
+  color:var(--text); font-size:17px; cursor:pointer;
+}
+.nd-date[disabled]{ opacity:.3; pointer-events:none; }
+.nd-date__pill{
+  flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+  min-height:40px; padding:0 14px; border-radius:var(--radius-pill);
+  border:1px solid var(--border); background:var(--surface);
+  font-size:13.5px; font-weight:700;
+}
+.nd-date__label{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* Hero. Gradient rather than a flat fill so the ring reads as sitting ON something. */
+.nd-hero{
+  display:flex; align-items:center; gap:14px; width:100%;
+  padding:16px; margin-bottom:12px;
+  border:0; border-radius:var(--radius-card); cursor:pointer;
+  background:linear-gradient(135deg, var(--primary-soft), transparent 65%), var(--surface);
+  box-shadow:var(--shadow-card); color:var(--text); text-align:left;
+  position:relative;
+}
+.nd-hero__ring{ flex:0 0 auto; }
+.nd-hero__mid{ flex:1; min-width:0; }
+.nd-hero__eat{ font-size:14px; font-weight:600; color:var(--muted); }
+.nd-hero__eat strong{ color:var(--primary); font-size:17px; font-weight:900; }
+.nd-hero__bar{
+  height:7px; border-radius:var(--radius-pill); background:var(--surface-alt);
+  margin:9px 0 6px; overflow:hidden;
+}
+.nd-hero__bar > i{
+  display:block; height:100%; border-radius:var(--radius-pill); background:var(--primary);
+  transition:width .5s var(--ease-standard, cubic-bezier(.2,.8,.2,1));
+}
+.nd-hero__pct{ font-size:11.5px; color:var(--muted); }
+.nd-hero__rem{ flex:0 0 auto; text-align:right; padding-right:12px; }
+.nd-hero__remlabel{ font-size:11.5px; color:var(--muted); }
+.nd-hero__remval{ font-size:26px; font-weight:900; line-height:1.1; font-variant-numeric:tabular-nums; }
+.nd-hero__remunit{ font-size:11px; color:var(--muted); }
+.nd-hero__chev{ position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:18px; }
+
+.nd-shortcuts{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+.nd-short{
+  display:flex; flex-direction:column; align-items:flex-start; gap:8px;
+  padding:12px 10px; border-radius:var(--radius-card);
+  border:1px solid var(--border); background:var(--surface);
+  color:var(--text); font:inherit; text-align:left; cursor:pointer; position:relative;
+  transition:transform .14s cubic-bezier(.34,1.4,.64,1);
+}
+.nd-short:active{ transform:scale(.97); }
+.nd-short__icon{
+  width:36px; height:36px; border-radius:var(--radius-sm); display:grid; place-items:center; font-size:17px;
+}
+.nd-short__icon--blue{ background:rgba(59,130,246,.16); }
+.nd-short__icon--purple{ background:rgba(168,85,247,.16); }
+.nd-short__icon--orange{ background:rgba(245,158,11,.16); }
+.nd-short__title{ display:block; font-size:13px; font-weight:800; }
+.nd-short__sub{ display:block; font-size:10.5px; color:var(--muted); margin-top:1px; }
+.nd-short__chev{ position:absolute; right:9px; top:14px; color:var(--muted); font-size:15px; }
+
+/* Meal cards */
+/* ---- meal list ----
+   The wrapper carries no surface of its own. It used to be a bordered card holding both the
+   heading and the contents, which made a five-meal day read as five boxes stacked down the
+   screen. The heading now sits on the page and only the contents are a card, so there is one
+   surface per meal and the rhythm comes from the gap between them. */
+.nd-meal{ margin-bottom:22px; }
+.nd-meal__head{
+  display:flex; align-items:center; gap:12px; padding:0 2px 10px;
+}
+.nd-meal__name{
+  flex:1; font-size:19px; font-weight:800; letter-spacing:-.01em; line-height:1.2;
+}
+.nd-meal__kcal{ font-size:14px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.nd-meal__kcal strong{ color:var(--muted); font-weight:400; }
+/* Filled, not outlined. It is the primary action on every one of these rows and the only
+   control in the heading, so it should not have to compete with the calorie figure to be
+   found. */
+.nd-meal__add{
+  width:32px; height:32px; flex:0 0 32px; border-radius:50%;
+  /* --accent, not --primary. This adds food, and calories are already the accent's job
+     everywhere else on this screen; --primary is the app's generic interactive blue. The
+     two + buttons in the food area (here and in the search list) now agree. */
+  border:0; background:var(--accent);
+  color:#fff; font-size:20px; font-weight:600; line-height:1; cursor:pointer;
+  display:grid; place-items:center;
+  -webkit-tap-highlight-color:transparent;
+}
+.nd-meal__add:active{ transform:scale(.92); }
+
+/* The one surface per meal. */
+.nd-meal__body{
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-card); overflow:hidden;
+}
+
+.nd-food{
+  display:flex; align-items:center; gap:11px;
+  padding:10px 14px; border-top:1px solid var(--divider, var(--border)); cursor:pointer;
+}
+.nd-food:active{ background:var(--surface-alt); }
+.nd-food__body{ flex:1; min-width:0; }
+.nd-food__name{ font-size:13.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.nd-food__serving{ font-size:11.5px; color:var(--muted); margin-top:1px; }
+.nd-food__macros{ display:flex; gap:14px; margin-top:5px; font-size:11.5px; color:var(--muted); }
+.nd-food__macros b{ font-weight:900; margin-right:3px; }
+.m-p{ color:var(--mint); } .m-c{ color:var(--primary); } .m-f{ color:#F59E0B; }
+.nd-food__kcal{ flex-shrink:0; font-size:13.5px; font-weight:800; font-variant-numeric:tabular-nums; }
+
+/* Empty meal: the invitation only. It was a dashed button carrying a plus, a title ("Add a
+   breakfast") and the line below it — three pieces of furniture to say one thing, on a screen
+   that shows up to five of them at once. The whole card is still the tap target; the heading
+   already has a + and the copy already says what to do. */
+.nd-meal__empty{
+  display:block; width:100%; padding:26px 18px;
+  border:0; background:none; cursor:pointer;
+  color:var(--muted); font:inherit; font-size:14px; line-height:1.5; text-align:center;
+  -webkit-tap-highlight-color:transparent;
+}
+.nd-meal__empty:active{ background:var(--surface-alt); }
+
+/* Snap FAB. Sits above the bottom nav, and hides with the keyboard like the nav does. */
+body.kb-open 
+@media (prefers-reduced-motion: reduce){
+  .nd-short, }
+
+/* =========================================================
+   NUTRITION INSIGHTS
+========================================================= */
+.ni{ --ni-great:var(--mint); --ni-ok:var(--primary); --ni-warn:#F59E0B; --ni-bad:var(--rh-red,#EF4444); --ni-muted:var(--muted); }
+.ni-top{ display:flex; align-items:center; gap:10px; margin:2px 0 12px; }
+.ni-title{ flex:1; margin:0; font-size:19px; font-weight:900; letter-spacing:-.02em; }
+.ni-today{ font-size:12.5px; font-weight:700; color:var(--primary); }
+
+.ni-tabs{
+  display:flex; gap:4px; overflow-x:auto; margin-bottom:12px;
+  scrollbar-width:none; -ms-overflow-style:none;
+  border-bottom:1px solid var(--border);
+}
+.ni-tabs::-webkit-scrollbar{ display:none; }
+.ni-tab{
+  flex-shrink:0; padding:9px 12px; border:0; background:none;
+  color:var(--muted); font:inherit; font-size:12.5px; font-weight:700; cursor:pointer;
+  border-bottom:2px solid transparent; margin-bottom:-1px;
+}
+.ni-tab.is-on{ color:var(--primary); border-bottom-color:var(--primary); }
+
+.ni-card{
+  border:1px solid var(--border); border-radius:var(--radius-card);
+  background:var(--surface); padding:14px; margin-bottom:10px;
+}
+.ni-card__title{ font-size:14px; font-weight:800; margin-bottom:12px; }
+.ni-card__sub{ float:right; font-size:11.5px; font-weight:600; color:var(--muted); }
+.ni-none{ font-size:12px; color:var(--muted); }
+.ni-empty{ text-align:center; padding:30px 16px; }
+
+/* score */
+.ni-score{ display:flex; align-items:center; gap:14px; }
+.ni-score__ring{ flex:0 0 auto; }
+.ni-score__msg{ flex:1; min-width:0; font-size:13px; line-height:1.5; color:var(--muted); }
+.ni-score__stats{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+  margin:14px 0 10px; text-align:center;
+}
+.ni-score__stats > div{ display:flex; flex-direction:column; gap:2px; }
+.ni-score__stats strong{ font-size:17px; font-weight:900; font-variant-numeric:tabular-nums; }
+.ni-score__stats span:last-child{ font-size:11px; color:var(--muted); }
+.ni-stat__icon{ font-size:15px; }
+.ni-score__pct{ text-align:center; font-size:12px; color:var(--primary); font-weight:700; margin-top:7px; }
+
+/* rows shared by macro + micro */
+.ni-row{
+  display:grid; grid-template-columns:24px 1fr auto auto; align-items:center;
+  gap:8px 9px; padding:9px 0; border-bottom:1px solid var(--divider, var(--border));
+}
+.ni-row:last-child{ border-bottom:0; }
+.ni-row__icon{ font-size:16px; }
+.ni-row__label{ font-size:13px; font-weight:700; }
+.ni-row__val{ font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.ni-row__val strong{ color:var(--text); font-size:13.5px; font-weight:800; }
+.ni-row__pct{ font-size:12.5px; font-weight:800; font-variant-numeric:tabular-nums; }
+.ni-row__pct--great{ color:var(--mint); }
+.ni-row__pct--ok{ color:var(--primary); }
+.ni-row__pct--warn{ color:#F59E0B; }
+.ni-bar{ grid-column:1 / -1; height:6px; border-radius:var(--radius-pill); background:var(--surface-alt); overflow:hidden; }
+.ni-bar > i{ display:block; height:100%; border-radius:var(--radius-pill); transition:width .5s cubic-bezier(.2,.8,.2,1); }
+.ni-bar--great > i{ background:var(--mint); }
+.ni-bar--ok > i{ background:var(--primary); }
+.ni-bar--warn > i{ background:#F59E0B; }
+
+/* hydration */
+.ni-hydro{ display:flex; align-items:center; justify-content:space-between; gap:14px; }
+.ni-hydro__val{ font-size:14px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.ni-hydro__val strong{ font-size:30px; font-weight:900; color:var(--text); }
+.ni-hydro__pct{ font-size:12px; color:var(--primary); font-weight:700; margin-top:4px; }
+.ni-bottle{
+  position:relative; width:46px; height:76px; flex:0 0 46px;
+  border:2px solid var(--primary); border-radius:var(--radius-xs-plus) 8px 12px 12px;
+  overflow:hidden; background:var(--surface-alt);
+}
+.ni-bottle > i{
+  position:absolute; left:0; right:0; bottom:0; display:block;
+  background:var(--primary); opacity:.85; transition:height .6s cubic-bezier(.2,.8,.2,1);
+}
+.ni-hydro__btns{ display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-top:14px; }
+.ni-wbtn{
+  padding:9px 4px; border-radius:var(--radius-md); border:1px solid var(--border);
+  background:var(--surface-alt); color:var(--primary);
+  font:inherit; font-size:11.5px; font-weight:700; cursor:pointer;
+}
+.ni-wbtn:active{ background:var(--primary-soft); }
+
+/* calories by meal */
+.ni-bymeal{ display:flex; align-items:center; gap:14px; }
+.ni-legend{ flex:1; min-width:0; display:flex; flex-direction:column; gap:7px; }
+.ni-legend__row{ display:flex; align-items:center; gap:8px; font-size:12px; }
+.ni-legend__dot{ width:9px; height:9px; border-radius:50%; flex:0 0 9px; }
+.ni-legend__name{ flex:1; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ni-legend__val{ color:var(--muted); font-variant-numeric:tabular-nums; }
+
+/* coach */
+.ni-coach{ display:flex; align-items:flex-start; gap:10px; padding:7px 0; font-size:12.5px; line-height:1.45; }
+.ni-coach__dot{
+  flex:0 0 20px; width:20px; height:20px; border-radius:50%;
+  display:grid; place-items:center; font-size:11px; font-weight:900; color:#fff; margin-top:1px;
+}
+.ni-coach__dot--great{ background:var(--mint); }
+.ni-coach__dot--ok{ background:var(--primary); }
+.ni-coach__dot--warn{ background:#F59E0B; }
+.ni-coach__dot--bad{ background:var(--rh-red,#EF4444); }
+
+/* contributors */
+.ni-contrib{ display:flex; gap:9px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
+.ni-contrib::-webkit-scrollbar{ display:none; }
+.ni-contrib__item{
+  flex:0 0 92px; text-align:center; padding:10px 6px;
+  border:1px solid var(--border); border-radius:var(--radius-btn); background:var(--surface-alt);
+}
+.ni-contrib__name{ font-size:11.5px; font-weight:700; margin-top:6px; line-height:1.25;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ni-contrib__val{ font-size:13px; font-weight:900; margin-top:3px; }
+.ni-contrib__lab{ font-size:10.5px; color:var(--primary); font-weight:700; }
+
+/* weekly */
+.ni-chart{ margin:4px 0 10px; }
+.ni-chart svg{ width:100%; height:96px; display:block; }
+.ni-chart__x{ display:flex; justify-content:space-between; font-size:10.5px; color:var(--muted); margin-top:4px; }
+/* Four figures now (Total joined Average/Highest/Lowest when the Food Log's weekly block was
+   folded in here). auto-fit rather than a fixed 4 so they wrap to 2x2 on a narrow handset
+   instead of squeezing "3,240 kcal" into 80px. */
+.ni-week{ display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:10px; }
+.ni-week__note{ margin-top:10px; font-size:11.5px; line-height:1.45; color:var(--muted); }
+.ni-week > div{ display:flex; flex-direction:column; gap:2px; }
+.ni-week span{ font-size:11px; color:var(--muted); }
+.ni-week strong{ font-size:13.5px; font-weight:800; font-variant-numeric:tabular-nums; }
+.ni-good{ color:var(--mint); }
+.ni-low{ color:#F59E0B; }
+
+/* summary + banner */
+.ni-sum{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:9px 0; font-size:12.5px; border-bottom:1px solid var(--divider, var(--border));
+}
+.ni-sum:last-child{ border-bottom:0; }
+.ni-sum strong{ font-weight:800; font-variant-numeric:tabular-nums; }
+.ni-banner{
+  display:flex; align-items:center; gap:10px;
+  padding:13px 14px; margin-bottom:10px;
+  border-radius:var(--radius-card); border:1px solid var(--primary);
+  background:var(--primary-soft); font-size:12.5px; line-height:1.45;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .ni-bar > i, .ni-bottle > i{ transition:none; }
+}
+
+/* =========================================================
+   SEARCH PAGE — reference layout
+========================================================= */
+
+.fs-noresult{ font-size: 13.5px; color: var(--muted); padding: 18px 2px; }
+
+/* Pinned below the results. Placed after the last row it would be unreachable exactly when
+   it is wanted — the list is long and paged, and "it is not here" is a conclusion reached
+   while still scrolling. Same control and same form as before; only the presentation is new. */
+.food-missing__wrap{ position: sticky; bottom: 0; z-index: 2; margin-top: var(--space-sm); }
+.food-missing{
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; padding: 14px 16px;
+  border: 0; border-radius: 12px;
+  background: var(--surface-alt); color: var(--primary);
+  font: inherit; font-size: 14.5px; font-weight: 700; text-align: left; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.food-missing__go{
+  flex: none; width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--primary); color: #fff; font-size: 15px; line-height: 1; font-weight: 700;
+}
+
+/* ---- food search: sections and rows ----
+   These were .sp-* and collided with the supplements page, which also owns an .sp-*
+   family and loads AFTER this file. .sp-row, .sp-head and .sp-row__body were defined
+   in both, so the food search silently rendered with supplement spacing: no row
+   dividers, a header that could not right-align "View all", and the wrong padding.
+   Renamed to fs-*, matching the fs-empty / fs-browse / fs-sugg family this panel
+   already used.
+
+   Separation is whitespace, not rules. A divider under every row turned a nine-item
+   list into nine boxes; the eye groups these by the gap and the bold name alone. */
+.fs-sec{
+  display:flex; align-items:center; justify-content:space-between;
+  margin:24px 0 4px; font-size:13.5px; font-weight:600; color:var(--muted);
+  letter-spacing:.01em;
+}
+.fs-sec:first-child{ margin-top:8px; }
+.fs-viewall{
+  border:0; background:none; color:var(--primary);
+  font:inherit; font-size:13px; font-weight:700; cursor:pointer;
+  padding:4px 0; -webkit-tap-highlight-color:transparent;
+}
+
+.fs-row{
+  display:flex; align-items:center; gap:12px; width:100%;
+  padding:13px 2px; border:0; background:none; color:var(--text);
+  font:inherit; text-align:left; cursor:pointer;
+  border-radius:var(--radius-sm);
+  -webkit-tap-highlight-color:transparent;
+  transition:background-color .15s ease;
+}
+.fs-row:active{ background:var(--surface-alt); }
+.fs-row--action{ padding:15px 2px; }
+.fs-row__body{ flex:1; min-width:0; }
+.fs-row__title{
+  display:block; font-size:16px; font-weight:700; line-height:1.25;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.fs-row__sub{
+  display:block; font-size:13.5px; color:var(--muted); margin-top:3px; line-height:1.35;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.fs-row__meta{ font-size:13.5px; color:var(--muted); }
+.fs-row__cal{
+  flex-shrink:0; font-size:14px; color:var(--muted); font-variant-numeric:tabular-nums;
+}
+.fs-star{ color:var(--primary); font-size:12px; }
+.fs-plus{
+  width:34px; height:34px; flex:0 0 34px; border-radius:10px;
+  display:grid; place-items:center;
+  border:1.5px solid var(--accent); color:var(--accent);
+  font-size:19px; font-weight:600; line-height:1;
+}
+
+@media (prefers-reduced-motion: reduce){  }
+
+/* ---- fasting strip on the Food Log dashboard ----
+   Shown only while a fast is running. Read-only: it reports and links, it does not end the
+   fast, because an "end fast" control one mistap from "log a meal" is the wrong neighbour. */
+.nd-fast {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 12px 14px; margin-bottom: 10px;
+  border: 1px solid var(--border); border-radius: 16px;
+  background: var(--surface); color: var(--text);
+  text-align: left; cursor: pointer;
+}
+.nd-fast__ring {
+  width: 46px; height: 46px; flex: none; border-radius: 50%;
+  display: grid; place-items: center;
+  background: conic-gradient(var(--steel, #2563EB) calc(var(--pct,0) * 1%), var(--surface-alt) 0);
+}
+.nd-fast__ring > span {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--surface);
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.nd-fast__body { flex: 1; min-width: 0; }
+.nd-fast__title {
+  display: block; font-size: 11.5px; font-weight: 700; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.nd-fast__time { display: block; font-size: 17px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.nd-fast__sub { display: block; font-size: 11.5px; color: var(--muted); }
+.nd-fast__chev { flex: none; color: var(--muted); font-size: 19px; }

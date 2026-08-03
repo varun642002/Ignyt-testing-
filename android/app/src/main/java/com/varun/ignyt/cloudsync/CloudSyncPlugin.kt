@@ -135,11 +135,68 @@ class CloudSyncPlugin : com.getcapacitor.Plugin() {
         }
     }
 
+    /**
+     * Erases everything this account owns in Firestore: every allowed subcollection, then the
+     * users/{uid} document itself.
+     *
+     * Half of Play's account-deletion requirement — deleting the Auth user without this would
+     * orphan the data rather than remove it, and orphaned data under a uid nobody can sign in
+     * as is worse than either outcome. Must run BEFORE AuthPlugin.deleteAccount(), because once
+     * the user is gone the client cannot authenticate to reach any of it.
+     *
+     * Batched in 400s (Firestore's limit is 500 writes) and paged, so an account with years of
+     * history completes rather than failing on size. Reports how many documents went, so the JS
+     * layer can say something true rather than a bare "done".
+     *
+     * No timeout-means-queued shortcut here, unlike setUserDoc: a deletion sitting in an offline
+     * queue that may never flush must not be reported as complete.
+     */
+    @PluginMethod
+    fun deleteAllUserData(call: PluginCall) {
+        val uid = currentUidOrNull()
+        val db = firestoreOrNull()
+        if (uid == null || db == null) {
+            resolveError(call, if (db == null) "Cloud sync isn't configured in this build." else "Not signed in.")
+            return
+        }
+        pluginScope.launch {
+            try {
+                var deleted = 0
+                val userDoc = db.collection("users").document(uid)
+                for (name in allowedCollections) {
+                    while (true) {
+                        val page = withTimeout(30_000L) {
+                            userDoc.collection(name).limit(400).get().await()
+                        }
+                        if (page.isEmpty) break
+                        val batch = db.batch()
+                        for (doc in page.documents) batch.delete(doc.reference)
+                        withTimeout(30_000L) { batch.commit().await() }
+                        deleted += page.size()
+                        if (page.size() < 400) break
+                    }
+                }
+                withTimeout(30_000L) { userDoc.delete().await() }
+                deleted += 1
+                resolveSuccess(call, JSObject().apply { put("deleted", true); put("documents", deleted) })
+            } catch (e: TimeoutCancellationException) {
+                resolveError(call, "Deleting your cloud data timed out. Check your connection and try again — nothing was left half-done, you can safely retry.")
+            } catch (e: FirebaseFirestoreException) {
+                resolveError(call, firestoreErrorMessage(e))
+            } catch (e: Exception) {
+                resolveError(call, "Could not delete your cloud data: ${e.message ?: "unknown error"}")
+            }
+        }
+    }
+
     // ---- Phase 2C: per-record collections under users/{uid}/{collection}/{docId}. ----
 
     /** Only these subcollections exist in the IGNYT schema; anything else is refused even
      *  if a compromised/buggy JS layer asks for it. */
-    private val allowedCollections = setOf("workouts", "routines", "prs", "bodylog", "races", "customExercises")
+    private val allowedCollections = setOf(
+        "workouts", "routines", "prs", "bodylog", "races", "customExercises",
+        "foodLog", "waterLog", "goals", "achievements", "favoriteFoods"
+    )
 
     /** Incremental pull: every record in users/{uid}/{collection} whose updatedAt is greater
      *  than sinceMs (JS passes lastPulledAt minus an overlap window to tolerate clock skew

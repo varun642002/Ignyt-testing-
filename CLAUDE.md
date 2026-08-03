@@ -32,6 +32,25 @@ Android package:
 
 com.varun.ignyt
 
+Marketing website:
+
+The website is NOT in this repository. It lives in its own repo and deploys
+from there:
+
+  repo:   github.com/varun642002/IGNYTfit.in   (branch: main)
+  host:   Vercel, connected to that repo
+  live:   https://ignytfit.in
+
+A copy used to sit at IGNYTfit/ in this repo. It was deleted because it was not
+the deployed source — pushing to it changed nothing, and keeping two copies in
+step by hand was a standing source of confusion. Clone the repo above to work on
+the site.
+
+Do not re-add a website directory here.
+
+(Note: github.com/varun642002/IGNYTfit — no ".in" — is a different, empty repo.
+It is not the website.)
+
 
 
 Current confirmed configuration:

@@ -20,12 +20,15 @@
 .app-header--home-light .eyebrow-dash { background:#2563EB; }
 .app-header--home-light .title { color:#0F172A; }
 .app-header--home-light .page-tools-btn { background:#FFFFFF; border-color:#E9EDF3; color:#2563EB; box-shadow:0 1px 3px rgba(15,23,42,.08); }
-nav.bottom-nav--home-light { background:#FFFFFF !important; border-top:1px solid #E9EDF3; }
+nav.bottom-nav--home-light {
+  background:rgba(255,255,255,.94) !important; border:1px solid rgba(15,23,42,.08);
+  box-shadow:0 8px 28px rgba(15,23,42,.12), 0 2px 6px rgba(15,23,42,.06);
+}
 nav.bottom-nav--home-light .nav-btn { color:#94A3B8; }
-nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
+nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; background:rgba(37,99,235,.10); }
 
 /* ---------- Hero card ---------- */
-.rh-hero { background:var(--rh-card); border-radius:20px; padding:20px; margin-top:4px; box-shadow:0 2px 10px rgba(15,23,42,.06); overflow:hidden; }
+.rh-hero { background:var(--rh-card); border-radius:var(--radius-card); padding:20px; margin-top:4px; box-shadow:0 2px 10px rgba(15,23,42,.06); overflow:hidden; }
 .rh-hero__row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; min-width:0; }
 .rh-hero__text { min-width:0; flex:1; }
 .rh-hero__greeting { font-size:15px; color:var(--rh-muted); font-weight:500; }
@@ -38,9 +41,9 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 .rh-hero__workout-sub { font-size:12px; color:var(--rh-muted); margin-top:2px; }
 .rh-hero__recovery { flex:none; display:flex; flex-direction:column; align-items:center; }
 .rh-hero__recovery-value { font-size:14px; font-weight:800; margin-top:6px; }
-.rh-hero__recovery-label { font-size:10px; color:var(--rh-blue); font-weight:700; margin-top:1px; white-space:nowrap; }
+.rh-hero__recovery-label { font-size:11px; color:var(--rh-blue); font-weight:700; margin-top:1px; white-space:nowrap; }
 .rh-hero__actions { display:flex; gap:10px; margin-top:16px; }
-.rh-btn { border:none; border-radius:12px; font-weight:700; font-size:14px; padding:13px 16px; cursor:pointer; flex:1; text-align:center; }
+.rh-btn { border:none; border-radius:var(--radius-md); font-weight:700; font-size:14px; padding:13px 16px; cursor:pointer; flex:1; text-align:center; }
 .rh-btn--primary { background:var(--rh-blue); color:#fff; }
 .rh-btn--ghost { background:var(--rh-card); color:var(--rh-text); border:1px solid var(--rh-border); }
 .rh-hero__image-wrap { flex:none; width:130px; align-self:flex-end; margin:-20px -20px -20px 0; position:relative; }
@@ -54,27 +57,27 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 
 /* ---------- Quick actions ---------- */
 .rh-quick-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:16px; }
-.rh-quick-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px 6px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; color:var(--rh-blue); box-shadow:0 1px 4px rgba(15,23,42,.05); }
+.rh-quick-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-tile); padding:14px 6px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; color:var(--rh-blue); box-shadow:0 1px 4px rgba(15,23,42,.05); }
 .rh-quick-card span { font-size:11px; font-weight:700; color:var(--rh-text); text-align:center; line-height:1.2; }
 
 /* ---------- Today's Overview (horizontal scroll) ---------- */
 .rh-overview-scroll { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; }
 .rh-overview-scroll::-webkit-scrollbar { display:none; }
-.ov-tile { scroll-snap-align:start; flex:none; width:104px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px 12px; }
-.ov-tile__icon { display:inline-flex; width:36px; height:36px; border-radius:10px; align-items:center; justify-content:center; background:rgba(37,99,235,.1); color:var(--rh-blue); }
+.ov-tile { scroll-snap-align:start; flex:none; width:104px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-tile); padding:14px 12px; }
+.ov-tile__icon { display:inline-flex; width:36px; height:36px; border-radius:var(--radius-sm); align-items:center; justify-content:center; background:rgba(37,99,235,.1); color:var(--rh-blue); }
 .ov-tile__value { font-size:19px; font-weight:800; margin-top:10px; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ov-tile__unit { font-size:11px; font-weight:600; color:var(--rh-muted); margin-left:2px; }
 .ov-tile__label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:2px; }
-.ov-tile__goal { font-size:10px; color:#B6BEC9; font-weight:600; margin-top:1px; }
-.ov-tile__trend { font-size:10px; font-weight:700; margin-top:6px; }
+.ov-tile__goal { font-size:11px; color:#B6BEC9; font-weight:600; margin-top:1px; }
+.ov-tile__trend { font-size:11px; font-weight:700; margin-top:6px; }
 .ov-tile__trend.is-up { color:var(--rh-green); }
 .ov-tile__trend.is-down { color:var(--rh-red); }
 
 /* ---------- Shared card + progress bar ---------- */
-.rh-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:16px; }
-.rh-progress-track { height:8px; border-radius:4px; background:#EEF1F6; overflow:hidden; margin-top:12px; }
+.rh-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-card); padding:16px; }
+.rh-progress-track { height:8px; border-radius:var(--radius-2xs); background:#EEF1F6; overflow:hidden; margin-top:12px; }
 .rh-progress-track--sm { height:5px; margin-top:8px; }
-.rh-progress-fill { height:100%; border-radius:4px; background:var(--rh-blue); }
+.rh-progress-fill { height:100%; border-radius:var(--radius-2xs); background:var(--rh-blue); }
 
 /* ---------- Weekly goal ---------- */
 .rh-weekly-goal__row { display:flex; align-items:flex-start; justify-content:space-between; }
@@ -82,17 +85,17 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 .rh-weekly-goal__count { font-size:30px; font-weight:800; margin-top:4px; }
 .rh-weekly-goal__count span { font-size:16px; color:var(--rh-muted); font-weight:700; }
 .rh-weekly-goal__sub { font-size:12px; color:var(--rh-muted); margin-top:2px; }
-.rh-weekly-goal__badge { width:44px; height:44px; border-radius:12px; background:rgba(37,99,235,.1); color:var(--rh-blue); display:flex; align-items:center; justify-content:center; flex:none; }
+.rh-weekly-goal__badge { width:44px; height:44px; border-radius:var(--radius-md); background:rgba(37,99,235,.1); color:var(--rh-blue); display:flex; align-items:center; justify-content:center; flex:none; }
 .rh-weekly-goal__pct { font-size:13px; font-weight:800; color:var(--rh-blue); margin-top:6px; }
 
 /* ---------- Habits ---------- */
 .rh-habit-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
-.rh-habit-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:12px 10px; text-align:left; cursor:pointer; }
+.rh-habit-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-tile); padding:12px 10px; text-align:left; cursor:pointer; }
 .rh-habit-card__icon { display:flex; width:30px; height:30px; border-radius:50%; align-items:center; justify-content:center; background:#EEF1F6; color:var(--rh-muted); }
 .rh-habit-card__icon.is-done { background:rgba(22,163,74,.12); color:var(--rh-green); }
 .rh-habit-card__name { font-size:13px; font-weight:700; margin-top:8px; overflow-wrap:anywhere; }
-.rh-habit-card__streak { font-size:10px; color:var(--rh-muted); margin-top:2px; }
-.rh-habit-card__state { font-size:10px; font-weight:700; color:var(--rh-muted); margin-top:6px; }
+.rh-habit-card__streak { font-size:11px; color:var(--rh-muted); margin-top:2px; }
+.rh-habit-card__state { font-size:11px; font-weight:700; color:var(--rh-muted); margin-top:6px; }
 .rh-habits-empty { display:block; width:100%; text-align:left; border:1px solid var(--rh-border); cursor:pointer; }
 .rh-habits-empty__title { font-size:14px; font-weight:800; }
 .rh-habits-empty__sub { font-size:12px; color:var(--rh-muted); margin-top:3px; line-height:1.4; }
@@ -100,10 +103,10 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 /* ---------- Recovery & Health gauges ---------- */
 .rh-recovery-scroll { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
 .rh-recovery-scroll::-webkit-scrollbar { display:none; }
-.rh-gauge-card { scroll-snap-align:start; flex:none; width:96px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px 10px; display:flex; flex-direction:column; align-items:center; text-align:center; }
+.rh-gauge-card { scroll-snap-align:start; flex:none; width:96px; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-tile); padding:14px 10px; display:flex; flex-direction:column; align-items:center; text-align:center; }
 .rh-gauge-card__value { font-size:14px; font-weight:800; margin-top:8px; }
 .rh-gauge-card__label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:1px; }
-.rh-gauge-card__sub { font-size:10px; font-weight:700; margin-top:2px; }
+.rh-gauge-card__sub { font-size:11px; font-weight:700; margin-top:2px; }
 
 /* Ring gauge: conic-gradient donut, --pct (0-100) and --gauge-color set inline per instance. */
 .rh-gauge { width:44px; height:44px; border-radius:50%; flex:none; display:grid; place-items:center;
@@ -112,3 +115,321 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
 
 .rh-health-summary { margin-top:20px; }
 .rh-health-summary summary { cursor:pointer; color:var(--rh-muted); font-size:13px; font-weight:700; }
+
+/* =========================================================
+   HOME — greeting, consistency, Today's Plan
+========================================================= */
+.hm-greet{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:4px; }
+.hm-greet__left{ min-width:0; flex:1; }
+.hm-greet__hello{ font-size:20px; font-weight:800; letter-spacing:-.01em; }
+.hm-greet__quote{ font-size:13px; color:var(--rh-muted); margin-top:3px; line-height:1.4; }
+.hm-greet__chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.hm-greet__right{ flex:none; }
+.hm-greet__ringlabel{ font-size:11px; color:var(--rh-muted); font-weight:700; text-align:center; margin-top:4px; }
+
+.hm-chip{
+  display:inline-flex; align-items:center; gap:4px;
+  padding:4px 9px; border-radius:var(--radius-pill);
+  font-size:11px; font-weight:800; white-space:nowrap;
+}
+.hm-chip--streak{ background:rgba(217,119,6,.12); color:#D97706; }
+.hm-chip--gold{ background:rgba(202,138,4,.14); color:#CA8A04; }
+.hm-chip--good{ background:rgba(22,163,74,.12); color:var(--rh-green,#16A34A); }
+.hm-chip--ok{   background:rgba(37,99,235,.12); color:var(--rh-blue); }
+.hm-chip--new{  background:rgba(100,116,139,.14); color:var(--rh-muted); }
+
+/* Goal card additions */
+.hm-goal__bmi{
+  display:flex; align-items:center; gap:8px;
+  margin-top:10px; font-size:12px; color:var(--rh-muted);
+}
+.hm-goal__bmi b{ color:var(--rh-text); font-size:13.5px; font-variant-numeric:tabular-nums; }
+.hm-goal__bmicat{
+  padding:2px 8px; border-radius:var(--radius-pill);
+  background:rgba(37,99,235,.1); color:var(--rh-blue); font-size:11px; font-weight:700;
+}
+.hm-goal__pct{ font-size:11.5px; color:var(--rh-blue); font-weight:700; margin-top:6px; }
+
+/* Today's Plan */
+.hm-plan__count{ font-size:12px; font-weight:700; color:var(--rh-muted); }
+.hm-plan__pct{ font-size:11.5px; color:var(--rh-blue); font-weight:700; margin-top:7px; }
+.hm-plan__list{ display:flex; flex-direction:column; gap:2px; margin-top:10px; }
+.hm-plan__row{
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:9px 4px; border:0; border-radius:var(--radius-sm);
+  background:none; color:var(--rh-text); font:inherit; text-align:left; cursor:pointer;
+}
+.hm-plan__row:active{ background:var(--rh-border); }
+.hm-plan__tick{
+  width:20px; height:20px; flex:0 0 20px; border-radius:50%;
+  border:1.5px solid var(--rh-border); display:grid; place-items:center;
+  font-size:11px; font-weight:900; color:#fff;
+}
+.hm-plan__row.is-done .hm-plan__tick{ background:var(--rh-green,#16A34A); border-color:var(--rh-green,#16A34A); }
+.hm-plan__icon{ font-size:15px; line-height:1; }
+.hm-plan__label{ flex:1; font-size:13.5px; font-weight:600; }
+/* Struck through as well as faded: opacity alone is a weak signal, and on a small screen a
+   completed row and a dim one look the same. */
+.hm-plan__row.is-done .hm-plan__label{ color:var(--rh-muted); text-decoration:line-through; }
+
+/* =========================================================
+   HABIT TRACKER — the Home card
+
+   Sits directly below the summary tiles, where Today's Plan used to be. One tap per habit is
+   the whole interaction, so the row IS the button: no separate checkbox to hit, and a 48px
+   row rather than a 20px tickbox.
+========================================================= */
+.hb { padding: 14px; }
+.hb-top {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  font-size: 13px; color: var(--rh-muted);
+}
+.hb-top__count b { color: var(--rh-text); font-size: 15px; font-weight: 800; }
+.hb-top__pct { font-size: 15px; font-weight: 800; color: var(--rh-blue); font-variant-numeric: tabular-nums; }
+.hb-track {
+  height: 6px; border-radius: 3px; background: var(--rh-border);
+  overflow: hidden; margin-top: 8px;
+}
+.hb-fill {
+  height: 100%; border-radius: 3px; background: var(--rh-blue);
+  transition: width .3s cubic-bezier(.4,0,.2,1);
+}
+
+.hb-list { display: flex; flex-direction: column; margin-top: 6px; }
+.hb-row {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 10px 0; border: 0; background: none;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hb-row + .hb-row { border-top: 1px solid var(--rh-border); }
+
+.hb-box {
+  width: 22px; height: 22px; flex: none;
+  display: grid; place-items: center;
+  border: 2px solid var(--rh-border); border-radius: 7px;
+  color: #fff;
+  transition: background-color .18s ease, border-color .18s ease, transform .18s cubic-bezier(.34,1.5,.64,1);
+}
+.hb-row.is-done .hb-box { background: var(--rh-blue); border-color: var(--rh-blue); }
+.hb-row:active .hb-box { transform: scale(.86); }
+
+.hb-icon {
+  width: 30px; height: 30px; flex: none;
+  display: grid; place-items: center; border-radius: 9px;
+}
+.hb-body { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.hb-name {
+  font-size: 14px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transition: color .18s ease;
+}
+/* Struck through AND dimmed: on a busy card, colour alone is not a reliable signal, and it is
+   the only cue for anyone who cannot distinguish the two greys. */
+.hb-row.is-done .hb-name { color: var(--rh-muted); text-decoration: line-through; }
+.hb-streak { font-size: 11.5px; color: var(--rh-muted); font-weight: 700; white-space: nowrap; }
+
+.hb-more {
+  width: 100%; margin-top: 10px; padding: 9px;
+  border: 1px solid var(--rh-border); border-radius: 10px; background: transparent;
+  color: var(--rh-text); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
+
+/* ---- empty state, with one-tap suggestions ---- */
+.hb-empty { padding: 16px; }
+.hb-empty__title { font-size: 14.5px; font-weight: 800; }
+.hb-empty__sub { font-size: 12.5px; line-height: 1.5; color: var(--rh-muted); margin-top: 4px; }
+.hb-sugg { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.hb-sugg__chip {
+  padding: 7px 11px; border-radius: 999px;
+  border: 1px solid var(--rh-border); background: transparent;
+  color: var(--rh-text); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.hb-sugg__chip:active { background: rgba(37,99,235,.08); border-color: var(--rh-blue); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-fill, .hb-box, .hb-name { transition: none; }
+}
+
+/* Level and XP on the Home greeting card. Small on purpose — it should reward a glance,
+   not compete with the day's actual numbers. */
+.hm-xp{ margin-top: 10px; }
+.hm-xp__row{ display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.hm-xp__level{ font-size: 11.5px; font-weight: 800; color: var(--rh-blue, #2563eb); }
+.hm-xp__next{ font-size: 10.5px; font-weight: 600; color: var(--rh-muted); font-variant-numeric: tabular-nums; }
+.hm-xp__track{
+  height: 5px; border-radius: 999px; margin-top: 5px; overflow: hidden;
+  background: var(--rh-border, #e9edf3);
+}
+.hm-xp__fill{
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--rh-blue, #2563eb), var(--rh-purple, #7c3aed));
+  transition: width .4s ease;
+}
+
+/* Today's challenges. Three a day, fixed by date — a list that reshuffles on every render
+   is not a challenge, and completing one only to watch it be replaced is worse than none. */
+.chal{
+  border: 1px solid var(--rh-border); border-radius: var(--radius-tile, 14px);
+  background: var(--rh-card); overflow: hidden; margin-bottom: 14px;
+}
+.chal__row{
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; font-size: 13px; font-weight: 700;
+}
+.chal__row + .chal__row{ border-top: 1px solid var(--rh-border); }
+.chal__icon{ flex: none; font-size: 16px; line-height: 1; }
+.chal__label{ flex: 1; min-width: 0; }
+.chal__xp{
+  flex: none; font-size: 11.5px; font-weight: 800; color: var(--rh-muted);
+  font-variant-numeric: tabular-nums;
+}
+/* Done reads as struck-through and green rather than hidden — seeing what you finished is
+   most of the reward. */
+.chal__row.is-done .chal__label{ text-decoration: line-through; color: var(--rh-muted); }
+.chal__row.is-done .chal__xp{ color: var(--rh-green, #22c55e); font-size: 14px; }
+
+
+/* =========================================================
+   IGNYT SCORE — the ring at the top of Home.
+
+   The arc is drawn with stroke-dashoffset rather than a conic-gradient so the transition
+   animates: a conic-gradient angle is not an interpolatable property, and the score moving
+   from 40 to 55 while you watch is most of the point.
+
+   --ign is set inline from the level's colour, so the ring, the level name and the numbers
+   all shift together as the day's band changes.
+========================================================= */
+.ign{
+  display: flex; align-items: center; gap: 16px;
+  border: 1px solid var(--rh-border); border-radius: var(--radius-tile, 14px);
+  background: var(--rh-card); padding: 16px; margin-bottom: 12px;
+}
+.ign__ring{ position: relative; flex: none; width: 104px; height: 104px; }
+.ign__ring svg{ width: 100%; height: 100%; transform: rotate(-90deg); }
+.ign__track{ fill: none; stroke: var(--rh-border); stroke-width: 8; }
+.ign__arc{
+  fill: none; stroke: var(--ign, #2563eb); stroke-width: 8; stroke-linecap: round;
+  transition: stroke-dashoffset .9s cubic-bezier(.22,1,.36,1), stroke .4s ease;
+}
+.ign__center{
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.ign__num{
+  font-size: 30px; font-weight: 800; line-height: 1;
+  color: var(--ign, var(--rh-text)); font-variant-numeric: tabular-nums;
+}
+.ign__cap{
+  font-size: 8.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--rh-muted); margin-top: 3px;
+}
+.ign__side{ flex: 1; min-width: 0; }
+.ign__level{ font-size: 15px; font-weight: 800; color: var(--ign, var(--rh-text)); }
+.ign__line{ font-size: 12px; font-weight: 600; color: var(--rh-muted); margin-top: 3px; line-height: 1.4; }
+/* Four small figures rather than one: today's number means little without yesterday's. */
+.ign__mini{
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin-top: 10px;
+}
+.ign__mini span{
+  font-size: 10.5px; font-weight: 600; color: var(--rh-muted);
+  display: flex; align-items: baseline; gap: 4px; min-width: 0;
+}
+.ign__mini b{
+  font-size: 12.5px; font-weight: 800; color: var(--rh-text);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .ign__arc{ transition: none; }
+}
+
+
+/* =========================================================
+   WEEKLY CHALLENGE — one goal a week, target set from the user's own history.
+   Wider and quieter than the daily challenge rows on purpose: it is one thing, not a list,
+   and it has to hold a bar, a count and an explanation of where the target came from.
+========================================================= */
+.wch{
+  border: 1px solid var(--rh-border); border-radius: var(--radius-tile, 14px);
+  background: var(--rh-card); padding: 14px; margin-bottom: 14px;
+}
+.wch.is-done{ border-color: var(--rh-green, #16a34a); }
+.wch__top{ display: flex; align-items: center; gap: 8px; }
+.wch__icon{ flex: none; font-size: 17px; line-height: 1; }
+.wch__name{ flex: 1; min-width: 0; font-size: 13.5px; font-weight: 800; }
+.wch__xp{
+  flex: none; font-size: 11px; font-weight: 800; color: var(--rh-muted);
+  font-variant-numeric: tabular-nums;
+}
+.wch.is-done .wch__xp{ color: var(--rh-green, #16a34a); }
+.wch__label{ font-size: 12px; font-weight: 600; color: var(--rh-muted); margin-top: 4px; }
+.wch__track{
+  height: 8px; border-radius: 999px; margin-top: 10px; overflow: hidden;
+  background: var(--rh-border, #e9edf3);
+}
+.wch__fill{
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--rh-blue, #2563eb), var(--rh-purple, #7c3aed));
+  transition: width .5s cubic-bezier(.22,1,.36,1);
+}
+.wch.is-done .wch__fill{ background: var(--rh-green, #16a34a); }
+/* The count on the left, where the target came from on the right. Someone told their target
+   is "personalised" deserves to know what it was personalised from. */
+.wch__foot{
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  margin-top: 8px; font-size: 10.5px; font-weight: 600; color: var(--rh-muted);
+}
+.wch__foot b{ font-size: 13px; font-weight: 800; color: var(--rh-text); font-variant-numeric: tabular-nums; }
+.wch__foot span:last-child{ text-align: right; min-width: 0; }
+@media (prefers-reduced-motion: reduce){
+  .wch__fill{ transition: none; }
+}
+
+
+/* "Welcome back" banner. Above the greeting card and visually lighter than it: it is a
+   one-line hello that appears once per app open, not a section. Tinted rather than carded so
+   it reads as a passing note instead of another block competing with the score ring. */
+.hm-welcome{
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; margin-bottom: 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--rh-blue) 10%, transparent);
+  color: var(--rh-blue);
+  font-size: 13px; font-weight: 700;
+}
+.hm-welcome svg{ flex: none; fill: currentColor; }
+
+/* =========================================================
+   HOME — the summary gauge
+
+   Three nested half arcs beside a three-row legend, in place of the IGNYT Score block and the
+   four-tile Today's Summary that used to sit here. Both of those said the same thing at
+   different sizes: the score block carried a ring, a level, a coach line and four mini stats,
+   and the tiles under it repeated steps and training again.
+
+   The wrapper is deliberately not square. The SVG viewBox is 120x72, so a square box would
+   leave a band of dead space beneath the arcs and push the card taller than its own content.
+========================================================= */
+
+/* The legend sets the card's height (three rows), and the arc block is much shorter, so the
+   semicircle was sitting with 46px of dead space above and below it -- centred, but stranded.
+   A wider arc column and a tighter row gap bring the two sides to a comparable height. */
+.hm-gauge { display: flex; align-items: center; gap: 14px; }
+.hm-gauge__arcs { flex: none; width: 152px; }
+.hm-gauge__arcs svg { width: 100%; height: auto; display: block; overflow: visible; }
+
+.hm-gauge__legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
+.hm-gauge__row { min-width: 0; }
+.hm-gauge__name { display: block; font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+.hm-gauge__val {
+  display: block; font-size: 13px; font-weight: 700; color: var(--rh-text);
+  font-variant-numeric: tabular-nums; margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hm-gauge__val em { font-style: normal; font-weight: 500; color: var(--rh-muted); }
+
+@media (max-width: 340px) {
+  .hm-gauge { gap: 10px; }
+  .hm-gauge__arcs { width: 124px; }
+}

@@ -3,11 +3,15 @@ package com.varun.ignyt.notify
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.varun.ignyt.MainActivity
 import com.getcapacitor.JSObject
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
@@ -33,15 +37,53 @@ class NotifyPlugin : com.getcapacitor.Plugin() {
 
     companion object {
         const val CHANNEL_ID = "ignyt_reminders"
+        /* Sound and vibration are fixed on a channel at creation and cannot be overridden per
+           notification from API 26 on, so "silent" and "no vibration" have to be separate
+           channels rather than flags. Three channels, one per combination the settings offer. */
+        const val CHANNEL_NO_VIBRATE = "ignyt_reminders_quiet"
+        const val CHANNEL_SILENT = "ignyt_reminders_silent"
+        /* The live workout notification. Its own channel, at IMPORTANCE_LOW, because it is a
+           status and not an alert: it is on screen for the whole session, so a sound or a
+           vibration would fire every time it was updated. A user who wants it gone can turn
+           off this channel alone without losing their reminders. */
+        const val CHANNEL_WORKOUT = "ignyt_active_workout"
+        const val WORKOUT_NOTIFICATION_ID = 4711
         const val PREFS = "ignyt_reminders_prefs"
     }
 
     override fun load() {
-        val channel = NotificationChannel(
-            CHANNEL_ID, "IGNYT Reminders", NotificationManager.IMPORTANCE_DEFAULT
-        ).apply { description = "Workout, hydration, and weekly report reminders" }
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.createNotificationChannel(channel)
+
+        nm.createNotificationChannel(NotificationChannel(
+            CHANNEL_ID, "Reminders", NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Meal, workout, hydration and progress reminders"
+            enableVibration(true)
+        })
+
+        nm.createNotificationChannel(NotificationChannel(
+            CHANNEL_NO_VIBRATE, "Reminders (no vibration)", NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "The same reminders, with vibration off"
+            enableVibration(false)
+        })
+
+        nm.createNotificationChannel(NotificationChannel(
+            CHANNEL_SILENT, "Reminders (silent)", NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Reminders that appear without sound or vibration"
+            enableVibration(false)
+            setSound(null, null)
+        })
+
+        nm.createNotificationChannel(NotificationChannel(
+            CHANNEL_WORKOUT, "Active workout", NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Shows while a workout is in progress, with the elapsed time"
+            enableVibration(false)
+            setSound(null, null)
+            setShowBadge(false)
+        })
     }
 
     private fun hasPermission(): Boolean {
@@ -86,6 +128,76 @@ class NotifyPlugin : com.getcapacitor.Plugin() {
         call.resolve(JSObject().apply { put("scheduled", true) })
     }
 
+    /**
+     * One-shot notification at an absolute epoch time. Used by the Fasting Tracker for the
+     * halfway nudge and the break-fast alert, both of which happen once per fast and are
+     * cancelled when the fast is stopped early.
+     *
+     * Deliberately NOT persisted the way scheduleDaily is: a daily reminder must survive a
+     * reboot, but a one-shot tied to a specific fast should not be resurrected by BootReceiver
+     * hours later when that fast may already be over. The JS layer re-arms from the active
+     * fast on launch, which is the only place that knows whether the fast still exists.
+     */
+    @PluginMethod
+    fun scheduleAt(call: PluginCall) {
+        val id = call.getString("id")
+        if (id.isNullOrEmpty()) { call.reject("id is required"); return }
+        // getLong is unavailable on PluginCall; epoch millis exceeds Int, so it crosses the
+        // bridge as a double and is narrowed here.
+        val at = call.getDouble("at")
+        if (at == null || at <= 0) { call.reject("at (epoch millis) is required"); return }
+        val title = call.getString("title") ?: "IGNYT"
+        val body = call.getString("body") ?: ""
+        // armOnce has always accepted a route; this simply stopped dropping it. Without it a
+        // one-shot opens the app wherever it was last, which for "your workout is still
+        // running" is the one place the tap should never land.
+        val route = call.getString("route") ?: ""
+        ReminderScheduler.armOnce(context, id, at.toLong(), title, body, route)
+        call.resolve(JSObject().apply { put("scheduled", true) })
+    }
+
+    /**
+     * Schedules a reminder on specific weekdays. "Daily", "weekdays", "weekends" and "custom
+     * days" are all the same call with a different day list -- the JS layer owns that
+     * vocabulary and this only ever sees the resulting days, so a new repeat option needs no
+     * native change.
+     *
+     * days: 0=Sunday..6=Saturday (JavaScript's Date.getDay()). An empty list cancels.
+     */
+    @PluginMethod
+    fun scheduleWeekly(call: PluginCall) {
+        val id = call.getString("id")
+        if (id.isNullOrEmpty()) { call.reject("id is required"); return }
+        val daysArr = call.getArray("days")
+        val days = mutableListOf<Int>()
+        if (daysArr != null) {
+            for (i in 0 until daysArr.length()) {
+                (daysArr.opt(i) as? Number)?.let { days.add(it.toInt()) }
+            }
+        }
+        val hour = call.getInt("hour") ?: 9
+        val minute = call.getInt("minute") ?: 0
+        val title = call.getString("title") ?: "IGNYT"
+        val body = call.getString("body") ?: ""
+        val route = call.getString("route") ?: ""
+        val snooze = call.getInt("snoozeMinutes") ?: 0
+        val vibrate = call.getBoolean("vibrate", true) ?: true
+        val silent = call.getBoolean("silent", false) ?: false
+
+        persistWeekly(id, days, hour, minute, title, body, route, snooze, vibrate, silent)
+        ReminderScheduler.armWeekly(context, id, days, hour, minute, title, body, route, snooze, vibrate, silent)
+        call.resolve(JSObject().apply { put("scheduled", days.isNotEmpty()); put("days", days.size) })
+    }
+
+    /** Every scheduled reminder, so the JS layer can reconcile after a reinstall or a restore
+     *  rather than assuming its own settings and the system agree. */
+    @PluginMethod
+    fun listScheduled(call: PluginCall) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val ids = prefs.all.keys.filter { it.startsWith("reminder_") }.map { it.removePrefix("reminder_") }
+        call.resolve(JSObject().apply { put("ids", com.getcapacitor.JSArray(ids.toTypedArray())) })
+    }
+
     @PluginMethod
     fun cancel(call: PluginCall) {
         val id = call.getString("id")
@@ -103,7 +215,99 @@ class NotifyPlugin : com.getcapacitor.Plugin() {
         call.resolve(JSObject().apply { put("sent", true) })
     }
 
+    /**
+     * The live workout notification: shown while a session is in progress and the app is not in
+     * front, cleared when the session ends.
+     *
+     * NOT a foreground service, deliberately. A foreground service is the right tool when work
+     * must keep running with the app in the background; nothing here does. A session's duration
+     * is derived from its startedAt timestamp, so the elapsed time is correct on return even if
+     * Android killed the process meanwhile. A service would buy nothing and cost a
+     * FOREGROUND_SERVICE_HEALTH declaration plus one of the sensor permissions that type
+     * requires under this target SDK -- a real permission ask, and a Play data-safety entry, for
+     * a notification.
+     *
+     * A posted notification already survives process death, which is the property that actually
+     * matters here: minimise the app, get killed for memory, and the notification is still there
+     * to bring you back.
+     *
+     * @param startedAt epoch millis the session began. Drives a live-counting chronometer, so
+     *                  the notification ticks on its own without the app waking to update it.
+     */
+    @PluginMethod
+    fun showActiveWorkout(call: PluginCall) {
+        if (!hasPermission()) {
+            call.resolve(JSObject().apply { put("shown", false); put("reason", "no-permission") })
+            return
+        }
+        val title = call.getString("title") ?: "Workout in progress"
+        val body = call.getString("body") ?: "Tap to finish your workout."
+        val startedAt = call.getLong("startedAt") ?: 0L
+
+        val openIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("ignyt_route", "workout")
+        }
+        val pi = PendingIntent.getActivity(
+            context, WORKOUT_NOTIFICATION_ID, openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_WORKOUT)
+            .setSmallIcon(context.applicationInfo.icon)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setContentIntent(pi)
+            .setOngoing(true)              // not swipeable while the session is genuinely open
+            .setAutoCancel(false)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(true)
+            .setCategory(NotificationCompat.CATEGORY_WORKOUT)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+
+        /* A chronometer rather than a rendered duration string: Android counts it up itself, so
+           the notification stays accurate with the app asleep and nothing has to wake to redraw
+           it every minute. */
+        if (startedAt > 0L) {
+            builder.setWhen(startedAt).setUsesChronometer(true)
+        }
+
+        try {
+            NotificationManagerCompat.from(context).notify(WORKOUT_NOTIFICATION_ID, builder.build())
+            call.resolve(JSObject().apply { put("shown", true) })
+        } catch (e: SecurityException) {
+            // Permission revoked between the check above and the post.
+            call.resolve(JSObject().apply { put("shown", false); put("reason", "denied") })
+        }
+    }
+
+    /** Clears it. Safe to call when nothing is showing. */
+    @PluginMethod
+    fun hideActiveWorkout(call: PluginCall) {
+        NotificationManagerCompat.from(context).cancel(WORKOUT_NOTIFICATION_ID)
+        call.resolve(JSObject().apply { put("hidden", true) })
+    }
+
     private fun keyFor(id: String) = "reminder_$id"
+
+    /* Weekly reminders are persisted in the same store as daily ones so BootReceiver can
+       re-arm them: AlarmManager alarms do not survive a reboot, and a reminder that silently
+       stops after a restart is worse than one that was never set. */
+    private fun persistWeekly(
+        id: String, days: List<Int>, hour: Int, minute: Int, title: String, body: String,
+        route: String, snooze: Int, vibrate: Boolean, silent: Boolean
+    ) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (days.isEmpty()) { prefs.edit().remove(keyFor(id)).apply(); return }
+        val json = org.json.JSONObject().apply {
+            put("kind", "weekly")
+            put("days", org.json.JSONArray(days))
+            put("hour", hour); put("minute", minute)
+            put("title", title); put("body", body); put("route", route)
+            put("snoozeMinutes", snooze); put("vibrate", vibrate); put("silent", silent)
+        }
+        prefs.edit().putString(keyFor(id), json.toString()).apply()
+    }
 
     private fun persist(id: String, hour: Int, minute: Int, title: String, body: String, intervalDays: Int) {
         val json = org.json.JSONObject().apply {

@@ -1,0 +1,186 @@
+{
+  "source": "Copy of IGNYT_Master_Nutrition-2.xlsx",
+  "rowsRead": 3570,
+  "proteinRecoveredFromTypoColumn": 507,
+  "duplicatesMerged": 363,
+  "droppedNoName": 0,
+  "droppedNoEnergy": 0,
+  "atwaterOutliers": [
+    {
+      "name": "Lemon",
+      "stated": 29,
+      "atwater": 44
+    },
+    {
+      "name": "Lime",
+      "stated": 30,
+      "atwater": 47
+    },
+    {
+      "name": "Karonda",
+      "stated": 42,
+      "atwater": 67
+    },
+    {
+      "name": "Oat Bran",
+      "stated": 246,
+      "atwater": 397
+    },
+    {
+      "name": "Black Coffee",
+      "stated": 2,
+      "atwater": 0
+    },
+    {
+      "name": "Green Tea",
+      "stated": 1,
+      "atwater": 0
+    },
+    {
+      "name": "Black Coffee",
+      "stated": 2,
+      "atwater": 0
+    },
+    {
+      "name": "Green Tea",
+      "stated": 1,
+      "atwater": 0
+    },
+    {
+      "name": "Diet Soft Drink",
+      "stated": 0.4,
+      "atwater": 0
+    },
+    {
+      "name": "Cottage Cheese (Paneer)",
+      "stated": 274,
+      "atwater": 406
+    },
+    {
+      "name": "Protein Custard",
+      "stated": 325,
+      "atwater": 143
+    },
+    {
+      "name": "Vegan Protein Blend",
+      "stated": 363.64,
+      "atwater": 101
+    },
+    {
+      "name": "Pump Formula",
+      "stated": 24.86,
+      "atwater": 13
+    },
+    {
+      "name": "L-Citrulline",
+      "stated": 370,
+      "atwater": 0
+    },
+    {
+      "name": "Everest Coriander Powder",
+      "stated": 298,
+      "atwater": 430
+    },
+    {
+      "name": "MDH Coriander Powder",
+      "stated": 298,
+      "atwater": 430
+    },
+    {
+      "name": "Catch Coriander Powder",
+      "stated": 298,
+      "atwater": 430
+    },
+    {
+      "name": "Catch Italian Seasoning",
+      "stated": 259,
+      "atwater": 363
+    },
+    {
+      "name": "Catch Mixed Herbs",
+      "stated": 259,
+      "atwater": 363
+    },
+    {
+      "name": "Catch Pizza Seasoning",
+      "stated": 259,
+      "atwater": 363
+    },
+    {
+      "name": "Badshah Coriander Powder",
+      "stated": 298,
+      "atwater": 430
+    },
+    {
+      "name": "Eastern Coriander Powder",
+      "stated": 298,
+      "atwater": 430
+    },
+    {
+      "name": "Aachi Coriander Powder",
+      "stated": 298,
+      "atwater": 430
+    },
+    {
+      "name": "Keya Italian Seasoning",
+      "stated": 259,
+      "atwater": 363
+    },
+    {
+      "name": "Keya Mixed Herbs",
+      "stated": 259,
+      "atwater": 363
+    }
+  ],
+  "categories": {
+    "Baking Ingredients & Flours": 80,
+    "Beverages": 36,
+    "Branded Biscuits": 85,
+    "Branded Biscuits & Cookies": 99,
+    "Branded Breakfast Cereals": 78,
+    "Branded Chocolates & Candy": 100,
+    "Branded Coffee, Tea & Hot Drinks": 70,
+    "Branded Ice Cream": 100,
+    "Branded Noodles & Instant Pasta": 70,
+    "Branded soft drink": 50,
+    "Branded Whey Protein & Sports Protein Products": 150,
+    "Breakfast Brands": 100,
+    "Cakes & Cake Varieties": 68,
+    "Chicken": 20,
+    "Coffee, Tea & Hot Beverages": 80,
+    "Curries & Gravies": 132,
+    "Dairy Products": 50,
+    "Dal & Legumes": 76,
+    "Desserts": 76,
+    "Dry Fruits": 74,
+    "Fast food": 137,
+    "Fish (by Species)": 100,
+    "Frozen & Ready-to-Eat Foods": 75,
+    "Fruits": 78,
+    "Gym Supplements": 59,
+    "Mutton/Lamb": 22,
+    "Nuts & Seeds": 60,
+    "Oats, Cereals & Healthy Breakfast Foods": 66,
+    "Oil Types": 29,
+    "Pasta, Noodles & International Staples": 76,
+    "Processed Meat": 100,
+    "Protein-Related Products": 61,
+    "Rice & Bread items": 80,
+    "Salt, Sugar & Sweeteners": 99,
+    "Sauces, Spreads & Condiments": 100,
+    "Seafood": 31,
+    "Snacks & Street Foods": 93,
+    "South Indian dishes": 75,
+    "Spices & Seasonings": 100,
+    "Spreads & Condiments": 72,
+    "Vegetables": 100
+  },
+  "units": {
+    "g": 3320,
+    "ml": 250
+  },
+  "foodsWritten": 3207,
+  "withBrand": 469,
+  "withBarcode": 482,
+  "atwaterOutlierCount": 55
+}

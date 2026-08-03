@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+<!-- No maximum-scale. It was maximum-scale=1, which disables pinch-zoom on every screen — a
+     WCAG 1.4.4 failure that leaves a low-vision user with no way to magnify anything. That
+     attribute is normally added to stop iOS zooming when an input takes focus; the actual cure
+     for that is a >=16px font-size on inputs, which this app already uses throughout. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
 <meta name="theme-color" content="#121216" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -22,13 +26,55 @@
     --bg:#121216; --surface:#1C1C22; --surface-alt:#26262E;
     --accent:#FF5A1F; --steel:#4FA8D8; --text:#F2F1ED; --muted:#8B8B94; --mint:#3ECF8E;
     --border:#33333d; --kb-inset:0px; --pin-height:0px;
+
+    /* Clearance above the floating bottom nav: its own bottom offset (10px + safe area) plus
+       its height, plus a gap. Anything that pins itself above the nav uses this rather than
+       guessing, so one nav change moves them all. */
+    --nav-float-clear: calc(86px + env(safe-area-inset-bottom,0px));
+
+    /* PRIMARY vs ACCENT — the split the reference screens actually use.
+       Look closely at them: the calorie ring is ORANGE while the buttons, links and active
+       nav item are BLUE. They are not one colour used twice, they are two colours doing two
+       jobs — accent marks DATA (energy, the ring, calorie figures), primary marks ACTION
+       (the thing you tap).
+       That is why this is not a palette swap. IGNYT's orange keeps every job it had; blue
+       takes over the interactive elements it was doubling up on. */
+    --primary:#3B82F6; --primary-strong:#2563EB; --on-primary:#FFFFFF;
+    --primary-soft:rgba(59,130,246,.14);
   }
 
+/* Light theme.
+
+     The ground is a cool grey rather than white so that white CARDS become the thing you
+     look at. On a white-on-white page a card has to earn its edge with a border; on a grey
+     ground it only needs a shadow, which is why this reads as calmer while using less ink.
+
+     Text runs on four steps rather than two: headings, body, secondary, placeholder. The
+     old palette had only --text and --muted, so body copy and headings shared a near-black
+     and everything competed. --text is now the heading weight; --text-body carries running
+     text; --muted is secondary. */
 [data-theme="light"]{
-    --bg:#F5F5F7; --surface:#FFFFFF; --surface-alt:#ECECF1;
-    --accent:#E24E15; --steel:#1F6E9C; --text:#16161A; --muted:#6B6B76; --mint:#188F5D;
-    --border:#DEDEE4;
+    --bg:#F8FAFC; --surface:#FFFFFF; --surface-alt:#EFF3F8;
+    --accent:#E24E15; --steel:#1F6E9C; --mint:#188F5D;
+    --text:#111827; --text-body:#4B5563; --muted:#6B7280; --placeholder:#9CA3AF;
+    --border:#E7EBF0; --divider:#E8ECF2;
+
+    /* The reference blue, tuned for a light ground. Same split as the dark theme: this is
+       action, --accent stays data. */
+    --primary:#2563EB; --primary-strong:#1D4ED8; --on-primary:#FFFFFF;
+    --primary-soft:rgba(37,99,235,.10);
+
+    /* Soft and wide rather than dark and tight: 6-8% opacity, 24-32px blur, 6-10px drop.
+       A heavy shadow on a light ground reads as dirt under the card instead of lift. */
+    --shadow-sm: 0 1px 3px rgba(31,41,55,.05);
+    --shadow-md: 0 6px 24px rgba(31,41,55,.07);
+    --shadow-lg: 0 10px 32px rgba(31,41,55,.08);
+    --shadow-card: var(--shadow-md);
   }
+
+/* Placeholders are the lightest step in the scale — present enough to read as a hint,
+   quiet enough never to be mistaken for a filled value. */
+[data-theme="light"] ::placeholder{ color:var(--placeholder); opacity:1; }
 
 [data-theme="light"] .timer-ring{ color:#16161A; }
 
@@ -94,7 +140,7 @@ main{flex:1; overflow-y:auto; padding:0 16px 100px; -webkit-overflow-scrolling:t
 
 .day-tab.active{background:var(--surface-alt); border-color:var(--steel);}
 
-.day-tab .dtop{font-size:10px; font-family:'SF Mono',monospace; font-weight:700; color:var(--muted);}
+.day-tab .dtop{font-size:11px; font-family:'SF Mono',monospace; font-weight:700; color:var(--muted);}
 
 .day-tab.active .dtop{color:var(--steel);}
 
@@ -177,6 +223,50 @@ input,select,textarea{font-family:inherit; background:transparent; color:var(--t
 
 .ex-picker-avatar{width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center;
     font-weight:900; font-size:16px; flex-shrink:0;}
+
+/* The exercise illustration, in place of the letter avatar. Same 44px footprint so a row with
+   artwork and one without line up. Square-with-rounded-corners rather than a circle: these are
+   wide drawings and a circular mask clips the equipment off both sides. White tile and
+   object-fit:contain for the same reason as everywhere else they appear. */
+.ex-picker-photo{width:44px; height:44px; border-radius:10px; overflow:hidden; flex-shrink:0;
+    background:#fff; display:block;}
+.ex-picker-photo img{width:100%; height:100%; object-fit:contain; display:block;}
+
+/* Multi-select. The tick takes the illustration's place rather than sitting beside it: at 44px
+   the row has no spare width, and swapping the whole thumbnail makes the selected state
+   readable while scrolling a long list. */
+.ex-picker-tick{width:44px; height:44px; border-radius:10px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--color-interactive, #2563eb); color:#fff;}
+.ex-picker-row.is-picked{background:rgba(37,99,235,.06);}
+
+/* Commit bar. FIXED to the viewport, not sticky.
+   It was `position:sticky; bottom:0`, which does nothing here: a sticky element only travels
+   inside its own containing block, and this bar is the LAST child of the picker — the parent
+   ends exactly where the bar does, so there is no room for it to stick to. With 452 exercises
+   the results list is ~29,000px tall, which put "Add 3 exercises" 28,800px below the fold.
+   You could select exercises and there was no way to commit them without scrolling the entire
+   library. Reported as "there is no option to add everything".
+
+   z-index above the bottom nav's 40 so the floating pill cannot cover it, and matched to the
+   app shell's 480px column so it lines up with the content rather than the phone. */
+.ex-picker-bar{position:fixed; left:50%; transform:translateX(-50%);
+    /* ABOVE the nav, not over it. At bottom:0 this overlapped the floating nav pill by 63px
+       and simply covered it -- the bar won on z-index, so the tab bar vanished behind it
+       while picking. --nav-float-clear is the pill's own offset plus its height, so the two
+       stay clear of each other without this hardcoding a number that a nav restyle breaks. */
+    bottom:var(--nav-float-clear); width:calc(100% - 24px); max-width:456px; z-index:60;
+    display:flex; gap:10px; align-items:center;
+    padding:10px 12px; border-radius:18px;
+    background:var(--surface, #fff); border:1px solid var(--border);
+    box-shadow:0 8px 30px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.2);}
+/* Room for the bar AND the nav below it, so the last exercises are not stuck underneath. */
+.ex-picker-bar-spacer{height:170px;}
+.ex-picker-bar__clear{background:none; border:none; cursor:pointer; padding:12px 14px;
+    font-size:14px; font-weight:700; color:var(--muted); font-family:inherit;}
+.ex-picker-bar__add{flex:1; border:none; cursor:pointer; padding:14px 16px; border-radius:12px;
+    background:var(--color-interactive, #2563eb); color:#fff;
+    font-size:15px; font-weight:800; font-family:inherit;}
 
 .ex-picker-info{background:none; border:none; color:var(--muted); padding:8px; flex-shrink:0; cursor:pointer;}
 
@@ -264,9 +354,18 @@ input,select,textarea{font-family:inherit; background:transparent; color:var(--t
   .timer-action-bar{ flex-direction:column; max-width:150px; }
 }
 
-nav.bottom-nav{position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px;
-    display:flex; padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px)); gap:2px;
-    background:rgba(23,23,28,.85); backdrop-filter:blur(14px); border-top:1px solid #2a2a32; z-index:40;
+/* THE BOTTOM BAR IS A FLOATING PILL, not a docked strip.
+   It sits inset from all three edges with a full-round radius, so the page scrolls visibly
+   underneath it rather than stopping at a hard border. `bottom` carries the safe-area inset,
+   which is what keeps it clear of the home indicator without padding the bar itself taller.
+   The old version was flush to the bottom, square, and separated by a 1px border-top. */
+nav.bottom-nav{position:fixed; left:50%; transform:translateX(-50%);
+    bottom:calc(10px + env(safe-area-inset-bottom,0px));
+    width:calc(100% - 24px); max-width:456px;
+    display:flex; padding:6px; gap:2px;
+    background:rgba(23,23,28,.86); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    border:1px solid rgba(255,255,255,.08); border-radius:999px; z-index:40;
+    box-shadow:0 8px 30px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.2);
     transition:transform .18s ease;}
 
 /* Keyboard-aware layout: body.kb-open is toggled by the visualViewport listener in app.js
@@ -275,14 +374,22 @@ nav.bottom-nav{position:fixed; bottom:0; left:50%; transform:translateX(-50%); w
    layout viewport doesn't shrink the way the native WebView does under adjustResize. */
 body.kb-open nav.bottom-nav{transform:translate(-50%, 100%);}
 
-.nav-btn{flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 2px;
-    border-radius:10px; background:none; border:none; color:var(--muted); cursor:pointer;}
+/* min-width:0 matters now that the bar carries six items rather than five: without it a
+   flex item refuses to shrink below its content, so "Food Log" would push the row wider than
+   the screen instead of the labels ellipsing. */
+.nav-btn{flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:8px 1px; border-radius:999px; background:none; border:none; color:var(--muted);
+    cursor:pointer; transition:color .16s ease, background-color .16s ease;}
+.nav-btn span{max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 
-.nav-btn.active{color:var(--accent);}
+/* The selected tab carries its own pill inside the bar. That highlight is what makes this read
+   as a segmented control rather than a row of icons -- colour alone did the job before, and at
+   a glance a coloured icon among grey ones is easy to miss. */
+.nav-btn.active{color:var(--accent); background:rgba(255,255,255,.10);}
 
 .nav-btn svg{width:19px; height:19px;}
 
-.nav-btn span{font-size:9px; font-weight:700;}
+.nav-btn span{font-size:11px; font-weight:700;}
 
 .history-row{background:var(--surface); border-radius:10px; padding:10px 14px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;}
 
@@ -296,7 +403,7 @@ select.select-input{background:var(--surface-alt); color:var(--text); padding:10
 
 textarea.note-input{background:var(--surface); border-radius:10px; padding:10px 12px; width:100%; font-size:13px; min-height:60px;}
 
-.muscle-chip{display:inline-block; font-size:10px; font-weight:700; padding:3px 8px; border-radius:6px;
+.muscle-chip{display:inline-block; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px;
     background:var(--surface-alt); color:var(--steel); margin-right:5px; margin-top:2px; text-transform:uppercase; letter-spacing:.03em;}
 
 .muscle-chip.active{background:rgba(255,90,31,.15); color:var(--accent);}
@@ -427,6 +534,11 @@ textarea.note-input{background:var(--surface); border-radius:10px; padding:10px 
   margin:0 auto; background:var(--surface); border-radius:14px; padding:20px; z-index:211;
   box-shadow:0 12px 32px rgba(0,0,0,.5);}
 .dialog-message{font-size:14px; font-weight:600; line-height:1.5; margin-bottom:18px;}
+/* Optional text input for dialogs that ask for a name (Create/Rename diet plan). */
+.dialog-input{width:100%; box-sizing:border-box; margin:-8px 0 18px; padding:11px 12px;
+  border:1px solid var(--rh-border,#ddd); border-radius:10px; background:var(--rh-bg,#fff);
+  color:var(--rh-text,#111); font:inherit; font-size:15px; outline:none;}
+.dialog-input:focus{border-color:var(--rh-blue,#2563EB);}
 .dialog-actions{display:flex; gap:8px;}
 .dialog-actions .btn{flex:1;}
 /* =========================================================
@@ -497,10 +609,19 @@ main{overflow-x:hidden;}
 <link rel="stylesheet" href="css/pages/nutrition.css" />
 <link rel="stylesheet" href="css/pages/progress.css" />
 <link rel="stylesheet" href="css/pages/tools.css" />
+<link rel="stylesheet" href="css/pages/diet-plan.css" />
+<link rel="stylesheet" href="css/pages/fasting.css" />
+<link rel="stylesheet" href="css/pages/progress-photos.css" />
+<link rel="stylesheet" href="css/pages/reminders.css" />
+<link rel="stylesheet" href="css/pages/supplements.css" />
 <link rel="stylesheet" href="css/pages/profile.css" />
+<link rel="stylesheet" href="css/pages/auth.css" />
 <link rel="stylesheet" href="css/pages/ai-coach.css" />
 <link rel="stylesheet" href="css/pages/dark-mode.css" />
 <link rel="stylesheet" href="health-connect.css">
+<!-- LAST on purpose: the gloss layer refines surfaces the sheets above already define,
+     so it must win the cascade without raising its specificity. Keep it here. -->
+<link rel="stylesheet" href="css/gloss.css" />
 </head>
 <body>
 <div id="app"></div>
@@ -534,12 +655,28 @@ try{
 <script src="js/pages/home.js"></script>
 <script src="js/pages/workout.js"></script>
 <script src="js/pages/progress.js"></script>
+<script src="js/diet/diet-plans.js"></script>
+<script src="js/fasting/fasting.js"></script>
+<script src="js/pages/diet-plan.js"></script>
+<script src="js/pages/fasting.js"></script>
+<script src="js/body/photo-sessions.js"></script>
+<script src="js/notify/reminders.js"></script>
+<script src="js/notify/active-workout.js"></script>
+<script src="js/workout/exercise-images.js"></script>
+<script src="js/workout/muscle-map.js"></script>
+<script src="js/workout/exercise-instructions.js"></script>
+<script src="js/supplements/supplements.js"></script>
+<script src="js/pages/supplements.js"></script>
+<script src="js/config.js"></script>
 <script src="js/storage-utils.js"></script>
 <script src="js/body-photos-db.js"></script>
 <script src="js/bloodwork.js"></script>
 <script src="js/goals.js"></script>
 <script src="js/health-uploads.js"></script>
-<script src="js/health/health-security.js"></script>
+<!-- js/health/health-security.js is NOT loaded. It advertises PIN/biometric locking and
+     AES encryption and implements none of it — isUnlocked() returns true unconditionally and
+     the "encryption" is a passthrough. Nothing calls it today, so shipping it only risks a
+     future caller trusting the name. The file stays in the repo for whoever implements it. -->
 <script src="js/health/health-db.js"></script>
 <script src="js/health/health-models.js"></script>
 <script src="js/health/health-utils.js"></script>
@@ -547,12 +684,56 @@ try{
 <script src="js/health/health-dashboard.js"></script>
 <script src="js/health/body-scan-ai.js"></script>
 <script src="js/ai-coach.js"></script>
+<!-- Food modules load in dependency order: seed data and the importer first, then the
+     catalogue that merges them, then search which indexes the catalogue. -->
+<!-- Coach engine. Pure modules with no DOM access, loaded in dependency order; coach.js
+     orchestrates them and is the only entry point the app calls. -->
+<script src="js/coach/profile-engine.js"></script>
+<script src="js/coach/goal-engine.js"></script>
+<script src="js/coach/recovery-engine.js"></script>
+<script src="js/coach/exercise-engine.js"></script>
+<script src="js/coach/plan-engine.js"></script>
+<script src="js/coach/program-engine.js"></script>
+<script src="js/coach/coach.js"></script>
+<script src="js/food/food-db.js"></script>
+<script src="js/food/serving-converter.js"></script>
+<script src="js/food/food-importer.js"></script>
+<script src="js/food/food-catalogue.js"></script>
+<script src="js/food/food-images.js"></script>
+<script src="js/food/nutrition-engine.js"></script>
+<script src="js/food/food-curation.js"></script>
+<script src="js/food/food-search.js"></script>
+<!-- AUTH LOADS BEFORE app.js, AND MUST KEEP DOING SO.
+     app.js calls render() at its top level, and render()'s first act is to ask isSignedIn().
+     With auth.js below app.js, window.IgnytAuth did not exist yet at that moment, so a
+     returning user with a valid cached account was told they were signed out and shown the
+     Sign In screen on every cold launch. On Android refreshFromNative() repaired it a moment
+     later, making it a login-screen flash; when that native call failed it never repaired at
+     all and the account was unreachable until a force-quit.
+     Neither file touches `state` or render() during evaluation — auth.js's own boot() waits
+     for DOMContentLoaded and notifyUI() checks both exist — so loading them first is safe. -->
+<!-- Security layer first: the auth and sync modules below log security events, and a
+     logEvent() call that lands before IgnytSecurity exists is a silently dropped event. -->
+<script src="js/security/security.js"></script>
+<script src="js/auth/firebase-rest-auth.js"></script>
+<script src="auth.js"></script>
 <script src="app.js"></script>
 <script src="health-connect.js"></script>
 <script src="health-settings-integration.js"></script>
-<script src="auth.js"></script>
+<script src="js/motivation/messages.js"></script>
+<script src="js/motivation/xp.js"></script>
+<script src="js/motivation/strength.js"></script>
+<script src="js/motivation/review.js"></script>
+<script src="js/motivation/milestones.js"></script>
+<script src="js/motivation/celebrate.js"></script>
+<script src="js/motivation/score.js"></script>
+<script src="js/motivation/weekly.js"></script>
+<script src="js/motivation/counters.js"></script>
+<script src="js/motivation/report.js"></script>
+<script src="js/motivation/weight.js"></script>
+<script src="js/motivation/bmi.js"></script>
+<script src="js/billing/entitlements.js"></script>
+<!-- firebase-rest-auth.js and auth.js moved above app.js — see the note there. -->
 <script src="cloud-sync.js"></script>
-<script src="backup-encryption.js"></script>
-<script src="drive-backup.js"></script>
 </body>
 </html>

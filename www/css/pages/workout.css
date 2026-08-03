@@ -10,10 +10,10 @@
    inline flow -- the root cause of the column-misalignment/cramped-input
    reports below. Color/theme stays in the .wk-light block further down;
    this block is the un-themed structural layer every theme sits on top of. */
-.set-table-header { display:grid; align-items:center; gap:6px; padding:2px 6px 6px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+.set-table-header { display:grid; align-items:center; gap:6px; padding:2px 6px 6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
 .set-table-header span:last-child { text-align:center; } /* the empty header cell above the check column */
 
-.set-row-wrap { position:relative; border-radius:10px; overflow:hidden; margin-bottom:6px; touch-action:pan-y; }
+.set-row-wrap { position:relative; border-radius:var(--radius-sm); overflow:hidden; margin-bottom:6px; touch-action:pan-y; }
 .set-row-wrap:last-child { margin-bottom:0; }
 .set-row { display:grid; align-items:center; gap:6px; padding:7px 6px; position:relative; z-index:1; border-radius:inherit;
   transition:transform .22s cubic-bezier(.4,0,.2,1), background-color .2s ease, border-color .2s ease; will-change:transform; }
@@ -32,16 +32,16 @@
    translateX exposes it" technique, Duplicate instead of Delete. */
 .swipe-dup-btn { position:absolute; top:0; left:0; bottom:0; width:84px; z-index:0; border:none; cursor:pointer;
   background:var(--rh-blue,#2563EB); color:#fff; display:flex; align-items:center; justify-content:center;
-  border-radius:10px 0 0 10px; }
+  border-radius:var(--radius-sm) 0 0 10px; }
 .swipe-dup-btn:active { background:#1D4ED8; }
 
-.set-num { width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:9px; font-size:15px; }
+.set-num { width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:var(--radius-sm); font-size:15px; }
 .set-prev { text-align:center; font-size:11px; padding:0 2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .set-prev-stack { display:flex; flex-direction:column; align-items:center; gap:1px; min-width:0; }
-.set-prev-1rm { font-size:9px; color:var(--rh-green,#16A34A); font-weight:700; }
+.set-prev-1rm { font-size:11px; color:var(--rh-green,#16A34A); font-weight:700; }
 
 .set-input { font-variant-numeric:tabular-nums; width:100%; min-width:0; box-sizing:border-box; height:38px;
-  border-radius:9px; text-align:center; font-size:16px; font-weight:700; padding:0 4px;
+  border-radius:var(--radius-sm); text-align:center; font-size:16px; font-weight:700; padding:0 4px;
   transition:border-color .15s ease, box-shadow .15s ease;
   scroll-margin-top:var(--pin-height,0px); scroll-margin-bottom:16px; }
 .set-input:focus { outline:none; border-color:var(--rh-blue,#2563EB); box-shadow:0 0 0 3px rgba(37,99,235,.14); }
@@ -64,14 +64,14 @@
    .rpe-btn:focus above): a subtle border + glow on the exact control being edited, leaving the
    row itself on its normal card background. */
 
-.set-check { width:40px; height:40px; border-radius:11px; border:1.5px solid; background:none; cursor:pointer;
+.set-check { width:40px; height:40px; border-radius:var(--radius-sm); border:1.5px solid; background:none; cursor:pointer;
   display:flex; align-items:center; justify-content:center; flex:none; justify-self:center;
   transition:transform .15s ease, background-color .15s ease, border-color .15s ease; }
 .set-check:active { transform:scale(.9); }
 .set-check.done { animation:wk-set-check-pop .25s ease; }
 @keyframes wk-set-check-pop { 0%{ transform:scale(.7); } 60%{ transform:scale(1.12); } 100%{ transform:scale(1); } }
 
-.rpe-btn { min-width:40px; height:38px; border-radius:9px; font-size:13px; font-weight:800; cursor:pointer; }
+.rpe-btn { min-width:40px; height:38px; border-radius:var(--radius-sm); font-size:13px; font-weight:800; cursor:pointer; }
 .add-set-btn { display:flex; align-items:center; justify-content:center; gap:6px; width:100%; border:none;
   cursor:pointer; font-weight:800; font-size:13px; padding:12px; margin-top:8px; transition:transform .1s ease; }
 .add-set-btn:active { transform:scale(.98); }
@@ -110,7 +110,7 @@
 }
 
 /* ---------- Today's Workout hero ---------- */
-.wk-hero { background:var(--rh-card); border-radius:20px; padding:18px; margin-top:4px; box-shadow:0 2px 10px rgba(15,23,42,.06); }
+.wk-hero { background:var(--rh-card); border-radius:var(--radius-card); padding:18px; margin-top:4px; box-shadow:0 2px 10px rgba(15,23,42,.06); }
 .wk-hero__eyebrow { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--rh-blue); }
 .wk-hero__title { font-size:26px; font-weight:800; letter-spacing:-.02em; margin-top:4px; }
 .wk-hero__meta { display:flex; gap:16px; margin-top:10px; font-size:13px; color:var(--rh-muted); font-weight:600; }
@@ -121,12 +121,12 @@
 
 /* ---------- This Week stat grid ---------- */
 .wk-stat-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:16px; }
-.wk-stat-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px; }
-.wk-stat-card__icon { display:inline-flex; width:34px; height:34px; border-radius:10px; align-items:center; justify-content:center; }
+.wk-stat-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-tile); padding:14px; }
+.wk-stat-card__icon { display:inline-flex; width:34px; height:34px; border-radius:var(--radius-sm); align-items:center; justify-content:center; }
 .wk-stat-card__value { font-size:20px; font-weight:800; margin-top:10px; letter-spacing:-.02em; }
 .wk-stat-card__unit { font-size:11px; font-weight:600; color:var(--rh-muted); margin-left:2px; }
 .wk-stat-card__label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:2px; }
-.wk-stat-card__sub { font-size:10px; font-weight:700; color:#B6BEC9; margin-top:3px; }
+.wk-stat-card__sub { font-size:11px; font-weight:700; color:#B6BEC9; margin-top:3px; }
 .wk-stat-card__sub.is-up { color:var(--rh-green); }
 .wk-stat-card__sub.is-down { color:var(--rh-red); }
 
@@ -139,21 +139,21 @@
 .wk-light .cat-chip { flex:none; background:var(--rh-card); color:var(--rh-muted); border:1px solid var(--rh-border); }
 .wk-light .cat-chip.active { background:var(--rh-blue); color:#fff; border-color:var(--rh-blue); }
 
-.wk-sort-select { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:10px; padding:6px 10px; font-size:12px; font-weight:700; color:var(--rh-text); }
+.wk-sort-select { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-sm); padding:6px 10px; font-size:12px; font-weight:700; color:var(--rh-text); }
 
 /* ---------- Routine cards ---------- */
 .wk-empty { color:var(--rh-muted); font-size:13px; text-align:center; padding:20px 16px; }
-.wk-routine-card { position:relative; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:14px; margin-bottom:10px; display:flex; gap:12px; }
-.wk-routine-card__badge { flex:none; width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; }
+.wk-routine-card { position:relative; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-tile); padding:14px; margin-bottom:10px; display:flex; gap:12px; }
+.wk-routine-card__badge { flex:none; width:40px; height:40px; border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; }
 .wk-routine-card__body { flex:1; min-width:0; padding-right:76px; }
 .wk-routine-card__top { display:flex; align-items:center; gap:8px; }
 .wk-routine-card__name { font-size:16px; font-weight:800; overflow-wrap:anywhere; }
-.wk-badge-today { font-size:10px; font-weight:800; color:var(--rh-blue); background:rgba(37,99,235,.1); border-radius:6px; padding:2px 6px; flex:none; }
+.wk-badge-today { font-size:11px; font-weight:800; color:var(--rh-blue); background:rgba(37,99,235,.1); border-radius:var(--radius-xs); padding:2px 6px; flex:none; }
 .wk-routine-card__meta { display:flex; gap:12px; flex-wrap:wrap; margin-top:4px; font-size:12px; color:var(--rh-muted); font-weight:600; }
 .wk-routine-card__meta span { display:flex; align-items:center; gap:4px; }
 .wk-routine-card__preview { font-size:12px; color:var(--rh-muted); margin-top:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .wk-routine-card__foot { display:flex; align-items:flex-end; justify-content:space-between; margin-top:12px; }
-.wk-routine-card__last-label { font-size:10px; color:var(--rh-muted); font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+.wk-routine-card__last-label { font-size:11px; color:var(--rh-muted); font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
 .wk-routine-card__last-value { font-size:13px; font-weight:700; margin-top:2px; }
 .wk-routine-card__actions { position:absolute; top:10px; right:10px; display:flex; gap:2px; }
 .wk-routine-card__actions .del { min-width:30px; min-height:30px; padding:4px; color:var(--rh-muted); }
@@ -171,11 +171,11 @@
 .wk-ring { width:40px; height:40px; border-radius:50%; flex:none; display:grid; place-items:center;
   background:conic-gradient(var(--ring-color,#2563EB) calc(var(--pct,0) * 1%), #EEF1F6 0); }
 .wk-ring__inner { width:31px; height:31px; border-radius:50%; background:var(--rh-card); display:flex; align-items:center; justify-content:center;
-  font-size:9px; font-weight:800; color:var(--rh-text); }
+  font-size:11px; font-weight:800; color:var(--rh-text); }
 
 /* ---------- Recent sessions ---------- */
 .wk-session-row { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; cursor:pointer;
-  background:var(--rh-card); border:1px solid var(--rh-border); border-radius:14px; padding:14px; margin-bottom:8px; }
+  background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-md); padding:14px; margin-bottom:8px; }
 .wk-session-row__title { font-size:15px; font-weight:800; }
 .wk-session-row__meta { font-size:12px; color:var(--rh-muted); margin-top:2px; }
 .wk-session-row__date { font-size:11px; color:var(--rh-muted); margin-top:2px; font-family:'SF Mono',monospace; }
@@ -193,18 +193,23 @@
   font-size:26px; font-weight:800; color:var(--rh-text); margin:14px 0 6px; font-family:inherit; letter-spacing:-.02em; }
 .wk-session__title-input::placeholder { color:var(--rh-muted); }
 .wk-session__notes-wrap { display:flex; align-items:flex-start; gap:8px; background:var(--rh-card); border:1px solid var(--rh-border);
-  border-radius:12px; padding:12px 14px; margin:8px 0 4px; color:var(--rh-blue); }
+  border-radius:var(--radius-md); padding:12px 14px; margin:8px 0 4px; color:var(--rh-blue); }
 .wk-session__notes-wrap textarea { flex:1; min-width:0; background:none; border:none; outline:none; resize:vertical; min-height:38px;
   font-size:13px; color:var(--rh-text); font-family:inherit; }
 .wk-session__notes-wrap textarea::placeholder { color:var(--rh-muted); }
 .wk-session__stat-icon { display:inline-flex; vertical-align:middle; margin-right:5px; color:var(--rh-blue); }
 
 .wk-add-exercise-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
-  border:1.5px dashed var(--rh-blue); border-radius:14px; background:rgba(37,99,235,.05); color:var(--rh-blue);
+  border:1.5px dashed var(--rh-blue); border-radius:var(--radius-md); background:rgba(37,99,235,.05); color:var(--rh-blue);
   font-weight:800; font-size:15px; padding:16px; cursor:pointer; margin-top:4px; }
 
 /* Exercise log card + its interactive set table -- structure/attributes unchanged, colors only. */
-.wk-light .ex-log-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; padding:18px; margin-bottom:14px; box-shadow:0 1px 4px rgba(15,23,42,.05); }
+.wk-light .ex-log-card { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-tile); padding:18px; margin-bottom:14px; box-shadow:0 1px 4px rgba(15,23,42,.05); }
+/* Left to wrap, as it always has. Truncating instead would have kept every header at one line,
+   but it cuts the six longest names in the library ("Single Leg Romanian Deadlift (Dumbbell)")
+   and mid-set you need to know exactly which variant you are on. With the thumbnail at 28px
+   there is room for both: everything up to ~34 characters still fits on one line, so only those
+   six take a second line, and only on their own card. */
 .wk-ex-card__name { font-weight:800; color:var(--rh-text); font-size:20px; line-height:1.25; letter-spacing:-.01em; }
 .wk-light .muscle-chip { background:rgba(37,99,235,.22); color:var(--rh-blue); border-radius:var(--radius-xs); }
 .wk-light .muscle-chip.active { background:rgba(37,99,235,.22); color:var(--rh-blue); border-radius:var(--radius-xs); }
@@ -216,7 +221,7 @@
 .wk-light .ex-menu-item:active { background:var(--rh-bg); }
 
 .wk-light .set-table-header { color:var(--rh-muted); }
-.wk-light .set-row-wrap { border-radius:10px; }
+.wk-light .set-row-wrap { border-radius:var(--radius-sm); }
 .wk-light .set-row { background:var(--rh-bg); }
 /* Solid, not alpha-transparent: this row sits in front of the swipe-delete/duplicate buttons
    (position:absolute, same wrapper) which must stay fully hidden until actually swiped open.
@@ -236,10 +241,10 @@
 .wk-light .add-set-btn { color:var(--rh-blue); background:rgba(37,99,235,.06); border-radius:var(--radius-md); border:1.5px solid var(--rh-blue); }
 
 /* Live stats bar: reused as-is (structure), restyled to the light card + icon row + dividers. */
-.wk-light .live-stats-bar { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:16px; box-shadow:0 2px 10px rgba(15,23,42,.06); margin:12px 0 4px; }
+.wk-light .live-stats-bar { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-tile); box-shadow:0 2px 10px rgba(15,23,42,.06); margin:12px 0 4px; }
 .wk-light .live-stat { display:flex; flex-direction:column; }
 .wk-light .live-stat + .live-stat { border-left:1px solid var(--rh-border); padding-left:14px; }
-.wk-light .live-stat-label { color:var(--rh-muted); font-size:10px; }
+.wk-light .live-stat-label { color:var(--rh-muted); font-size:11px; }
 .wk-light .live-stat-value { color:var(--rh-text); }
 .wk-light .live-stat-unit { color:var(--rh-muted); }
 
@@ -299,14 +304,14 @@
 }
 .rt-set-row--head { margin-bottom:4px; }
 .rt-set-row--head span {
-  font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
   color:var(--color-text-secondary); text-align:center;
 }
 .rt-set-row--head span:first-child { text-align:left; }
 .rt-set-idx { font-size:12px; color:var(--color-text-secondary); text-align:left; }
 .rt-input {
   width:100%; min-width:0; background:var(--surface-alt); border:none;
-  border-radius:6px; padding:8px 4px; text-align:center;
+  border-radius:var(--radius-xs); padding:8px 4px; text-align:center;
   font-size:13px; color:var(--color-text-primary);
   font-variant-numeric:tabular-nums;
 }
@@ -324,7 +329,7 @@
 /* ---- Rest / notes ---- */
 .rt-field-row { display:flex; align-items:center; justify-content:space-between; gap:var(--space-xs); margin-top:12px; }
 .rt-label {
-  display:block; font-size:10px; font-weight:700; letter-spacing:.1em;
+  display:block; font-size:11px; font-weight:700; letter-spacing:.1em;
   text-transform:uppercase; color:var(--color-text-secondary); margin-top:12px;
 }
 .rt-field-row .rt-label { margin-top:0; }
@@ -333,7 +338,7 @@
 .rt-unit { font-size:11px; color:var(--color-text-secondary); }
 .rt-textarea {
   width:100%; margin-top:5px; background:var(--surface-alt); border:none;
-  border-radius:8px; padding:9px; font-size:13px; font-family:inherit;
+  border-radius:var(--radius-xs-plus); padding:9px; font-size:13px; font-family:inherit;
   color:var(--color-text-primary); line-height:1.45; resize:vertical;
 }
 .rt-textarea:focus { outline:2px solid var(--color-interactive); outline-offset:1px; }
@@ -342,7 +347,7 @@
 .rt-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:14px; }
 .rt-act {
   flex:1 1 auto; min-height:34px; display:flex; align-items:center; justify-content:center; gap:5px;
-  background:var(--surface-alt); border:none; border-radius:8px;
+  background:var(--surface-alt); border:none; border-radius:var(--radius-xs-plus);
   padding:7px 10px; font-size:12px; font-weight:600;
   color:var(--color-text-primary); cursor:pointer; white-space:nowrap;
 }
@@ -370,3 +375,154 @@
   color:var(--color-text-secondary); opacity:.55;
 }
 .ex-picker-fav.is-fav { color:var(--color-warning); opacity:1; }
+
+
+/* =========================================================
+   COACH CARD — today's recommendation on the workout tab
+
+   Built on the --rh-* palette the rest of this screen uses rather than the nutrition
+   module's tokens, so it belongs to the workout tab visually instead of looking imported.
+========================================================= */
+.coach-card { padding:16px; margin-bottom:14px; }
+
+.coach-card__head { display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; }
+.coach-card__title { font-size:17px; font-weight:800; letter-spacing:-.01em; line-height:1.25; color:var(--rh-text); }
+.coach-card__sub { font-size:12px; color:var(--rh-muted); margin-top:3px; }
+
+/* Recovery score. Colour carries the band and the number carries the detail — the number is
+   always shown, so the badge never depends on colour alone to be readable. */
+.coach-badge {
+  flex-shrink:0; font-family:'SF Mono',ui-monospace,monospace; font-weight:800;
+  font-size:16px; padding:5px 10px; border-radius:var(--radius-sm); line-height:1;
+}
+.coach-badge__unit { font-size:11px; font-weight:600; opacity:.7; }
+.coach-badge--high   { background:rgba(22,163,74,.12); color:var(--rh-green); }
+.coach-badge--normal { background:rgba(37,99,235,.12); color:var(--rh-blue); }
+.coach-badge--reduced{ background:rgba(217,119,6,.14); color:#D97706; }
+.coach-badge--low    { background:rgba(239,68,68,.12); color:var(--rh-red); }
+
+.coach-ex { display:flex; flex-direction:column; }
+.coach-ex__row {
+  display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+  padding:8px 0; border-bottom:1px solid var(--rh-border);
+}
+.coach-ex__row:last-child { border-bottom:0; }
+.coach-ex__name {
+  font-size:14px; font-weight:600; color:var(--rh-text); min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.coach-ex__dose {
+  font-family:'SF Mono',ui-monospace,monospace; font-size:12px;
+  color:var(--rh-muted); flex-shrink:0; font-variant-numeric:tabular-nums;
+}
+
+.coach-list { margin:0; padding-left:18px; }
+.coach-list li { font-size:13px; color:var(--rh-text); margin:6px 0; line-height:1.45; }
+
+.coach-note {
+  font-size:12px; color:#D97706; background:rgba(217,119,6,.10);
+  border-radius:var(--radius-sm); padding:8px 10px; margin-top:10px;
+}
+.coach-why { font-size:12.5px; color:var(--rh-muted); margin-top:10px; line-height:1.5; }
+
+.coach-start { width:100%; margin-top:12px; }
+
+.coach-toggle {
+  width:100%; margin-top:10px; padding:9px; border:0; cursor:pointer;
+  background:transparent; color:var(--rh-blue); font-size:13px; font-weight:700;
+  font-family:inherit; border-radius:var(--radius-sm); min-height:44px;
+}
+.coach-toggle:active { background:rgba(37,99,235,.08); }
+
+.coach-detail { border-top:1px solid var(--rh-border); margin-top:6px; padding-top:12px; }
+.coach-detail p { font-size:13px; line-height:1.55; color:var(--rh-text); margin:0 0 8px; }
+.coach-detail p:last-child { margin-bottom:0; }
+.coach-detail__muted { color:var(--rh-muted) !important; font-size:12px !important; }
+
+.coach-insights { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+.coach-insight { font-size:12.5px; line-height:1.45; padding:9px 11px; border-radius:var(--radius-sm); color:var(--rh-text); }
+.coach-insight b { display:block; margin-bottom:2px; }
+.coach-insight--good { background:rgba(22,163,74,.10); }
+.coach-insight--info { background:rgba(37,99,235,.09); }
+.coach-insight--warn { background:rgba(217,119,6,.11); }
+.coach-insight--bad  { background:rgba(239,68,68,.10); }
+
+
+/* --- muscle recovery map (§29) ---
+   A bar plus a word, never a bar alone: "Fatigued" has to survive a colour-blind reading and
+   a glance too quick to compare bar lengths. --- */
+
+
+
+/* =========================================================
+   PER-EXERCISE PROGRESS STRIP (active workout)
+
+   Sits below the sticky header rather than inside it: the pin already carries the name, notes,
+   rest timer and column headings, and a taller sticky block eats the set rows it exists to
+   keep visible. This scrolls away with the card, which is right — it is context you read once
+   before the first set, not something you need pinned through every rep.
+========================================================= */
+/* A grid, not a wrapping flex row. As flex the four figures plus the sparkline overflowed
+   305px and re-wrapped into three ragged lines 78px tall; four equal columns with the
+   sparkline spanning underneath is 56px and lines the numbers up with each other. */
+.wk-exprog{
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: center; gap: 8px 6px;
+  padding: 8px 10px; margin: 0 0 8px;
+  border-radius: 10px; background: var(--rh-bg, rgba(128,128,128,.06));
+  border: 1px solid var(--rh-border);
+}
+.wk-exprog__cell{
+  display: flex; flex-direction: column; line-height: 1.15;
+  font-size: 10px; font-weight: 600; color: var(--rh-muted);
+}
+.wk-exprog__cell b{
+  font-size: 13px; font-weight: 800; color: var(--rh-text);
+  font-variant-numeric: tabular-nums;
+}
+/* Direction is coloured, but a drop is muted rather than red: a lighter session is a normal
+   part of training, not an error state. */
+.wk-exprog__cell b.is-up{ color: var(--rh-green, #16a34a); }
+.wk-exprog__cell b.is-down{ color: var(--rh-muted); }
+.wk-exprog__spark{ grid-column: 1 / -1; width: 100%; height: 18px; display: block; }
+.wk-exprog--new{
+  display: block; font-size: 11.5px; font-weight: 600; color: var(--rh-muted);
+}
+.wk-exprog--new{ grid-template-columns: none; }
+.wk-exprog--new svg{ vertical-align: -2px; margin-right: 4px; }
+
+
+/* Exercise illustration at the head of each card in a live workout. 28px -- smaller than the
+   Library's 38 because this header also carries the chevron, the name, the muscle chip and the
+   overflow button, and it is inside the sticky pin where every pixel of height is taken from
+   the set rows below it. The exact size is measured, not chosen: at 30px "Bench Press
+   (Barbell)" needed 206px of name width and had 205, so it ellipsised for the sake of one
+   pixel. 28 clears it and still reads at a glance. White tile and object-fit: contain for the same reasons as everywhere
+   else these appear (see tools.css). */
+.wk-ex-card__photo{
+  width: 28px; height: 28px; flex: none; border-radius: 7px; overflow: hidden;
+  background: #fff; display: block;
+}
+.wk-ex-card__photo img{ width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* =========================================================
+   "You lifted a giraffe" — the volume comparison on the workout summary.
+   The emoji is the graphic, so it is sized like one rather than like text, and sits on a
+   tinted disc so it reads as an illustration instead of a stray character in a sentence.
+========================================================= */
+.wk-animal { display:flex; align-items:center; gap:14px; margin:12px 0; }
+.wk-animal__art {
+  position:relative; flex:none; width:64px; height:64px; border-radius:50%;
+  display:grid; place-items:center;
+  background:rgba(217,119,6,.12);
+}
+.wk-animal__emoji { font-size:34px; line-height:1; }
+.wk-animal__count {
+  position:absolute; right:-4px; bottom:-2px;
+  background:var(--rh-card); border:1px solid var(--rh-border); border-radius:999px;
+  padding:1px 7px; font-size:11px; font-weight:800; color:var(--rh-text);
+  font-variant-numeric:tabular-nums;
+}
+.wk-animal__text { flex:1; min-width:0; }
+.wk-animal__lead { font-size:16px; font-weight:800; letter-spacing:-.01em; line-height:1.25; }
+.wk-animal__sub { font-size:12px; color:var(--rh-muted); margin-top:3px; line-height:1.4; }

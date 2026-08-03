@@ -38,7 +38,7 @@
       '<div style="min-width:0;flex:1;">' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
       '<span style="font-weight:800;font-size:14px;">' + esc(m.label) + '</span>' +
-      '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;color:' + meta.color + ';background:' + meta.bg + ';">' + meta.label + '</span>' +
+      '<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;color:' + meta.color + ';background:' + meta.bg + ';">' + meta.label + '</span>' +
       '</div>' +
       '<div style="font-size:12px;color:var(--rh-muted);margin-top:2px;">' + esc(summary) + '</div>' +
       (m.kind !== "info" ? '<div style="font-size:11px;color:var(--rh-muted);margin-top:2px;">Last updated: ' + esc(window.fmtHealthWhen ? window.fmtHealthWhen(when) : "Never") + '</div>' : '') +

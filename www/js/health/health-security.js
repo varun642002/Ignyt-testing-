@@ -12,12 +12,10 @@
    TODO (future "Data Security" increment):
    - AppLock: PIN/biometric gate before entering any Health Hub screen.
      Wire to Android BiometricPrompt via a new native plugin (same pattern
-     as NotifyPlugin/DriveBackupPlugin) for biometric; PIN can be pure JS.
-   - EncryptionService: reuse the AES-256-GCM + PBKDF2 primitives already
-     built in backup-encryption.js (IgnytBackupCrypto) for per-record
-     encryption at rest, keyed by a passphrase held in Android Keystore
-     instead of session memory (backup-encryption.js's model is
-     session-only by design; health records need a persistent key).
+     as NotifyPlugin) for biometric; PIN can be pure JS.
+   - EncryptionService: AES-256-GCM + PBKDF2 per-record encryption at rest,
+     keyed by a passphrase held in Android Keystore (persistent, not
+     session-only -- health records need a durable key).
    - SecureStorage: once EncryptionService is real, encrypt values here
      before LS.set and decrypt after LS.get, transparently to callers.
 ========================================================= */
@@ -38,8 +36,8 @@
 
   var EncryptionService = {
     isEnabled: function () { return false; },
-    // Passthrough today; TODO wire to IgnytBackupCrypto once a persistent
-    // (Keystore-backed) key exists instead of the session-only passphrase.
+    // Passthrough today; TODO wire real AES-256-GCM encryption once a
+    // persistent Keystore-backed key exists.
     encrypt: function (plaintext) { return Promise.resolve(plaintext); },
     decrypt: function (ciphertext) { return Promise.resolve(ciphertext); }
   };

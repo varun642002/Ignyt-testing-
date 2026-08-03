@@ -1,0 +1,34 @@
+# Local development stack: Postgres + API. Worker service is added in Phase 4/5.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ignyt
+      POSTGRES_PASSWORD: ignyt
+      POSTGRES_DB: ignyt
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ignyt"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://ignyt:ignyt@db:5432/ignyt
+      AUTH_MODE: ${AUTH_MODE:-insecure-uid}
+      IGNYT_SKIP_STARTUP_CHECK: "1"
+      CORS_ORIGINS: http://localhost,http://localhost:4173,capacitor://localhost
+    ports:
+      - "8000:8000"
+
+volumes:
+  pgdata:

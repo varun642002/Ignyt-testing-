@@ -19,3 +19,20 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# ADDED for R8/minification (first enabled for release builds during Play Store prep).
+# Capacitor's Bridge instantiates plugins via reflection at runtime -- without these keep
+# rules, R8 could strip or rename classes/methods that reflection depends on, producing a
+# build that succeeds but crashes or silently breaks plugins at runtime. Standard rules for
+# any Capacitor Android app, plus this project's own custom plugins.
+-keep class com.getcapacitor.** { *; }
+-keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
+-keep class com.varun.ignyt.**.* extends com.getcapacitor.Plugin { *; }
+-keepclassmembers class * extends com.getcapacitor.Plugin {
+    @com.getcapacitor.annotation.PluginMethod <methods>;
+}
+
+# WebView <-> JS bridge: keep any @JavascriptInterface-annotated methods reachable.
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}

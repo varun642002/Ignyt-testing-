@@ -12,20 +12,40 @@
 
 const HealthConnect = (() => {
 
+  /* The platforms are kept apart deliberately, not merged behind one flag.
+   *
+   *   android — Health Connect, answered by the Kotlin HealthConnectPlugin. Untouched.
+   *   ios     — HealthKit, answered by the Swift HealthConnectPlugin. Same JS name, so every
+   *             call below is identical; only which native code responds differs.
+   *
+   *  This is an explicit list rather than `!== "web"` so that a platform with no
+   *  implementation falls through to the honest refusal below instead of calling into
+   *  nothing. Adding a platform has to be a deliberate edit here, and changing one platform
+   *  cannot silently alter the other. */
+  const NATIVE_PLATFORMS = ["android", "ios"];
+
+  function platform() {
+    return (typeof window.Capacitor !== "undefined"
+      && typeof window.Capacitor.getPlatform === "function")
+      ? window.Capacitor.getPlatform() : "web";
+  }
+
   function isNative() {
     return typeof window.Capacitor !== "undefined"
       && typeof window.Capacitor.isNativePlatform === "function"
       && window.Capacitor.isNativePlatform()
-      && window.Capacitor.getPlatform() === "android";
+      && NATIVE_PLATFORMS.indexOf(platform()) !== -1;
   }
 
   function bridge() {
     return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.HealthConnect;
   }
 
+  /* Worded for both platforms now. "Health Connect" is an Android product, and telling an
+     iPhone user their phone needs it would send them looking for an app that does not exist. */
   const NOT_NATIVE_RESPONSE = {
     success: false,
-    error: "Health Connect is only available in the IGNYT Android app, not the web version."
+    error: "Health data is only available in the IGNYT mobile app, not the web version."
   };
 
   async function callNative(methodName, options) {

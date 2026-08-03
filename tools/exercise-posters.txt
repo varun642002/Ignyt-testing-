@@ -1,0 +1,23 @@
+# Exercises whose How To tab shows a full instruction poster instead of an action photo.
+#
+# These are a different asset class from www/assets/exercises: a poster carries its own
+# HOW TO PERFORM steps, a muscles-worked diagram and a goal/sets/reps/rest strip, so it is
+# read rather than glanced at. It is shown uncropped at its natural aspect on the How To
+# tab and deliberately NOT in the Library row or the detail header, where the box is 38-52px
+# and a poster is an unreadable smudge. Those two places keep the muscle icon badge.
+#
+# One slug per line, matching exerciseImageSlug() in app.js. The slug is looked up in the
+# source folder passed to tools/build-exercise-posters.py, so the poster and the action-shot
+# set can live in the same export without the importer having to guess which is which.
+#
+# Every exercise below has no action photo, which is why a poster is a gain rather than a
+# swap. If one later gets a photo too, the poster still wins on the How To tab - it says
+# strictly more - but the row and header will start showing the photo.
+
+bent-over-row-underhand-barbell
+bulgarian-split-squat-dumbbell
+cable-kickback
+lat-closed-grip-pull-down
+low-row
+single-leg-standing-calf-raise-dumbbell
+stiff-leg-deadlift-dumbbell

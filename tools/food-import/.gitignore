@@ -1,0 +1,4 @@
+# Source datasets are never committed — SR Legacy alone is 201 MB unpacked.
+# Extract the USDA zips here (or anywhere) and pass --input.
+data/
+*.zip

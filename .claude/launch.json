@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ignyt-www",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "--yes",
+        "http-server",
+        "www",
+        "-p",
+        "4188",
+        "-c-1"
+      ],
+      "port": 4188
+    }
+  ]
+}

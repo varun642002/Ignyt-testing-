@@ -13,13 +13,25 @@
      customExercises/{id}  <- hx_custom_exercises (no local id; the app's natural key is
                               the exercise NAME -> docId = encodeURIComponent(lowercased
                               name). No local migration needed or performed.)
-   Plus a planProgress section in users/{uid} (completed map + activeWeek/activeLevel)
-   with a per-key union merge for the completed map.
+     foodLog/{id}          <- hx_food_log      (stable id)
+     waterLog/{id}         <- hx_water_log     (stable id)
+     favoriteFoods/{id}    <- hx_favorite_foods (stable id, backfilled by the
+                              hx_favfoods_id_migrated_v1 migration)
+     goals/{id}             <- hx_goals         (stable id; goal engine's own storage,
+                              read/written directly via window.IgnytStorageUtils — the
+                              goals.js module itself is untouched)
+     achievements/{id}     <- hx_achievements  (stable id = achievement definition id;
+                              synced because achievedAt is the moment it was first
+                              unlocked and can't be reconstructed by recomputing the
+                              unlock conditions later — NOT fully derivable)
+   Plus a planProgress section and a goalsMeta section (active goal id, <- hx_active_goal)
+   in users/{uid}, and profile/settings now also carry the previously-unsynced fields
+   (username/phone/dob/medicalConditions/allergies/bloodGroup, heightUnit/dateFormat/
+   timeFormat) alongside a per-key union merge for the completed map.
 
-   DELIBERATELY NOT SYNCED: food log, water log, favorite foods (food domain — later
-   phase), achievements (derived, recomputable), active session / rest duration / UI
-   state (device-local), ALL Health Connect data/state/cache, auth tokens (never stored
-   anywhere by IGNYT).
+   DELIBERATELY NOT SYNCED: favorite exercises, active
+   session / rest duration / UI state / reminder-scheduling bookkeeping (device-local),
+   ALL Health Connect data/state/cache, auth tokens (never stored anywhere by IGNYT).
 
    RECORD SYNC POLICY (3-way, per record, using content hashes of the last-synced
    version kept in hx_cloud_sync_state, keyed to the uid):
@@ -68,7 +80,9 @@ const IgnytCloudSync = (() => {
       fields: {
         weight: "number", height: "number", age: "number", gender: "string",
         activityMultiplier: "number", goalDelta: "number", name: "string",
-        hyroxExperience: "string", trainingDays: "number", equipment: "string[]"
+        hyroxExperience: "string", trainingDays: "number", equipment: "string[]",
+        username: "string", phone: "string", dob: "string", bloodGroup: "string",
+        medicalConditions: "string[]", allergies: "string[]"
       },
       read: () => (typeof state !== "undefined" ? state.profile : null),
       apply: (clean) => { Object.assign(state.profile, clean); }
@@ -79,17 +93,39 @@ const IgnytCloudSync = (() => {
       apply: (clean) => { Object.assign(state.nutrition, clean); }
     },
     settings: {
-      // lastWorkoutReminderDate / lastHydrationReminderDate / lastWeeklyReportAt are
-      // deliberately absent: device-local reminder bookkeeping, not user preferences.
+      // lastWorkoutReminderDate / lastHydrationReminderDate / lastWeeklyReportAt /
+      // notificationsSeenAt are deliberately absent: device-local bookkeeping, not user
+      // preferences.
       fields: {
         sounds: "boolean", vibration: "boolean", defaultRest: "number", keepAwake: "boolean",
         plateCalc: "boolean", rpeTracking: "boolean", autoStartRest: "boolean",
         waterTargetMl: "number", workoutReminders: "boolean", hydrationReminders: "boolean",
         weeklyReports: "boolean", theme: "string", weightUnit: "string",
-        exerciseCalorieBudget: "boolean"
+        exerciseCalorieBudget: "boolean", heightUnit: "string", dateFormat: "string",
+        timeFormat: "string"
       },
       read: () => (typeof state !== "undefined" ? state.settings : null),
       apply: (clean) => { Object.assign(state.settings, clean); }
+    },
+    // Phase 1 (Firestore extension): the goal engine's own active-goal pointer. The goal
+    // records themselves are a RECORD_CATEGORIES entry below; this is just the scalar
+    // "which one is active" flag, read/written directly via IgnytStorageUtils since
+    // goals.js (deliberately) doesn't expose it on `state`.
+    goalsMeta: {
+      clean: (raw) => {
+        const out = {};
+        if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+        if (typeof raw.activeGoalId === "number" || typeof raw.activeGoalId === "string") {
+          out.activeGoalId = raw.activeGoalId;
+        }
+        return out;
+      },
+      read: () => ({ activeGoalId: window.IgnytStorageUtils ? window.IgnytStorageUtils.readJson("hx_active_goal", null) : null }),
+      apply: (clean) => {
+        if (clean.activeGoalId != null && window.IgnytStorageUtils) {
+          window.IgnytStorageUtils.writeJson("hx_active_goal", clean.activeGoalId);
+        }
+      }
     },
     // Phase 2C: Hyrox plan progress. completed is a flat map
     // "week|day|exerciseName" -> completion timestamp (ms).
@@ -172,6 +208,51 @@ const IgnytCloudSync = (() => {
       idOf: (r) => encodeURIComponent(String(r.name).trim().toLowerCase()),
       validate: (r) => !!r && typeof r.name === "string" && r.name.trim().length > 0,
       sort: null // creation order is fine; the library UI sorts/filters itself
+    },
+    // Phase 1 (Firestore extension) additions below.
+    foodLog: {
+      read: () => state.foodLog, write: (arr) => { state.foodLog = arr; },
+      idOf: (r) => String(r.id),
+      validate: (r) => !!r && (typeof r.id === "number" || typeof r.id === "string")
+        && typeof r.date === "string" && typeof r.name === "string",
+      sort: (a, b) => Number(b.id) - Number(a.id)
+    },
+    waterLog: {
+      read: () => state.waterLog, write: (arr) => { state.waterLog = arr; },
+      idOf: (r) => String(r.id),
+      validate: (r) => !!r && (typeof r.id === "number" || typeof r.id === "string")
+        && typeof r.date === "string" && typeof r.ml === "number",
+      sort: (a, b) => Number(b.id) - Number(a.id)
+    },
+    // Favourite foods gained stable ids via the hx_favfoods_id_migrated_v1 migration, which
+    // is what makes them syncable at all. Records predating that migration (or hand-edited
+    // ones) that still lack an id simply fail validate() and stay local — they are never
+    // dropped from storage, matching how every other category treats invalid records.
+    favoriteFoods: {
+      read: () => state.favoriteFoods, write: (arr) => { state.favoriteFoods = arr; },
+      idOf: (r) => String(r.id),
+      validate: (r) => !!r && (typeof r.id === "number" || typeof r.id === "string")
+        && typeof r.name === "string" && r.name.trim().length > 0,
+      sort: null // the Nutrition tab renders these in insertion order
+    },
+    // goals.js owns hx_goals via window.IgnytStorageUtils and doesn't expose it on
+    // `state`; read/write it directly at the same storage layer goals.js itself uses,
+    // rather than reaching into the module or duplicating its data into `state`.
+    goals: {
+      read: () => (window.IgnytStorageUtils ? window.IgnytStorageUtils.readArray("hx_goals") : []),
+      write: (arr) => { if (window.IgnytStorageUtils) window.IgnytStorageUtils.writeJson("hx_goals", arr); },
+      idOf: (r) => String(r.id),
+      validate: (r) => !!r && (typeof r.id === "number" || typeof r.id === "string")
+        && typeof r.status === "string" && typeof r.createdAt === "number",
+      sort: (a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0)
+    },
+    // Synced despite being derived from other synced data because achievedAt is the
+    // moment the achievement was first unlocked, which recomputing later cannot recover.
+    achievements: {
+      read: () => state.achievements, write: (arr) => { state.achievements = arr; },
+      idOf: (r) => String(r.id),
+      validate: (r) => !!r && typeof r.id === "string" && typeof r.achievedAt === "number",
+      sort: (a, b) => (Number(b.achievedAt) || 0) - (Number(a.achievedAt) || 0)
     }
   };
 
@@ -500,6 +581,22 @@ const IgnytCloudSync = (() => {
       }
 
       if (appliedAny && typeof persist === "function") persist();
+
+      // A restore onto a fresh device applies real data AFTER resolveOnboardingStatus()
+      // already ran (synchronously, at boot, against then-empty local storage) and locked in
+      // onboardingComplete=false for good -- that check never re-runs. Recognize a genuine
+      // restore here so a returning user isn't stuck being routed through onboarding despite
+      // now having real profile/history data.
+      if (appliedAny && typeof state !== "undefined" && state.onboardingComplete !== true) {
+        const hasRealData = (state.profile && state.profile.name) ||
+          (state.workoutLog && state.workoutLog.length > 0) ||
+          (state.bodylog && state.bodylog.length > 0) ||
+          (state.routines && state.routines.length > 0);
+        if (hasRealData) {
+          state.onboardingComplete = true;
+          if (typeof LS !== "undefined") LS.set("hx_onboarding_complete", true);
+        }
+      }
 
       syncState.lastSyncAt = now;
       saveSyncState(syncState);
