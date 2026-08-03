@@ -43,7 +43,28 @@ window.IgnytCoachSubstitution = (function () {
     forearm:          ["Seated Wrist Curl (Barbell)", "Reverse Wrist Curl (Dumbbell)", "Reverse Wrist Curl (Dumbbell)", "Dead Hang"],
     carry:            ["Farmers Walk", "Farmers Walk", "Farmers Walk", "Suitcase Carry (Dumbbell)"],
     core_antiext:     ["Ab Wheel", "Ab Wheel", "Plank", "Plank"],
-    calf:             ["Standing Calf Raise (Machine)", "Standing Calf Raise (Dumbbell)", "Standing Calf Raise (Dumbbell)", "Seated Calf Raise"]
+    calf:             ["Standing Calf Raise (Machine)", "Standing Calf Raise (Dumbbell)", "Standing Calf Raise (Dumbbell)", "Seated Calf Raise"],
+
+    /* ---- conditioning and HYROX stations ----------------------------------------------
+       Added after an audit showed the HYROX templates could only resolve 23-56% of their
+       slots. The cause was NOT a thin library — every one of these movements was already in
+       it, all eight stations included. The patterns simply had no chain here, so each slot
+       silently dropped out and a "HYROX Advanced" plan came back as a handful of squats.
+       A template naming a pattern with no chain fails quietly, which is the worst way to
+       fail; validate() checks names against the library but could not see a pattern that was
+       never declared. */
+    run_easy:         ["Running", "Running", "Running", "Running"],
+    run_interval:     ["Running", "Running", "Running", "Running"],
+    sled_push:        ["Sled Push", "Sled Push", "Sled Push", "Sled Push"],
+    sled_pull:        ["Sled Pull", "Sled Pull", "Sled Pull", "Sled Pull"],
+    wall_ball:        ["Wall Ball", "Wall Ball", "Wall Ball", "Wall Ball"],
+    ski_erg:          ["Ski Erg", "Ski Erg", "Ski Erg", "Ski Erg"],
+    row_erg:          ["Rowing Machine", "Rowing Machine", "Rowing Machine", "Rowing Machine"],
+    sandbag_lunge:    ["Walking Lunge (Sandbag)", "Walking Lunge (Sandbag)", "Walking Lunge (Dumbbell)", "Walking Lunge"],
+    /* A race simulation is the whole event, not one movement. It resolves to Running so the
+       session is loggable at all; the athlete logs the stations they actually did alongside
+       it. Mapping it to nothing would drop the single most important session in the plan. */
+    race_simulation:  ["Running", "Running", "Running", "Running"]
   };
 
   var TIER_INDEX = { full_gym: 0, home_gym: 1, dumbbells: 2, bodyweight: 3 };
@@ -122,8 +143,24 @@ window.IgnytCoachSubstitution = (function () {
     }
     Object.keys(CHAINS).forEach(function (pattern) { CHAINS[pattern].forEach(check); });
     Object.keys(INJURY).forEach(function (key) { INJURY[key].ladder.forEach(check); });
+    /* Patterns any template asks for that have no chain at all. This is the gap that let the
+       HYROX templates ship resolving a quarter of their slots: every NAME was valid, so the
+       old check passed, while whole patterns were undeclared and silently dropped. */
+    var undeclared = [];
+    try {
+      if (window.IgnytCoachTemplates) {
+        window.IgnytCoachTemplates.all().forEach(function (t) {
+          Object.keys(t.days || {}).forEach(function (d) {
+            (t.days[d] || []).forEach(function (sl) {
+              if (!CHAINS[sl.pattern] && undeclared.indexOf(sl.pattern) === -1) undeclared.push(sl.pattern);
+            });
+          });
+        });
+      }
+    } catch (e) {}
+
     return {
-      checked: true, missing: missing,
+      checked: true, missing: missing, undeclaredPatterns: undeclared,
       patterns: Object.keys(CHAINS).length, injuries: Object.keys(INJURY).length
     };
   }

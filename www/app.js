@@ -15680,6 +15680,107 @@ function renderLiveSessionBar(){
     </div>`;
 }
 
+/* =========================================================
+   TODAY'S PLAN — the coach's template system, surfaced.
+
+   Turns the four coach modules into something tappable: matcher picks the template, the
+   schedule picks today's day, the substitution map resolves each movement pattern against
+   real equipment, and the injury gate removes anything that would aggravate a reported
+   problem BEFORE any of it is shown.
+
+   Returns null rather than a placeholder when there is nothing honest to show. A card that
+   says "no plan yet" occupies the most valuable space on the screen to communicate nothing.
+========================================================= */
+/* "chest_back" -> "Chest Back". One helper, because the plan card and the session title
+   both label the same day and had drifted apart: the card title-cased it and the session
+   title did not, so a workout started from "Upper" was logged as "upper". */
+function titleCaseDayKey(key){
+  return String(key || "").split("_").map(function(w){
+    return w ? w.charAt(0).toUpperCase() + w.slice(1) : w;
+  }).join(" ");
+}
+
+function buildTodaysPlan(){
+  const M = window.IgnytCoachMatcher, T = window.IgnytCoachTemplates, S = window.IgnytCoachSubstitution;
+  if(!M || !T || !S) return null;
+  try{
+    const resolved = window.IgnytCoachProfile ? IgnytCoachProfile.resolve(state) : null;
+    const p = (resolved && resolved.profile) || {};
+    const match = M.assign({
+      goal: p.primaryGoal,
+      experience: p.experience,
+      days: p.trainingDays,
+      sessionMinutes: p.minutesPerSession || 45,
+      equipment: p.equipment
+    });
+    if(!match || !match.template) return null;
+
+    /* Monday-indexed, because that is how every one of these templates is written — a
+       schedule starting "push, pull, legs" means Monday push, not Sunday push. getDay()
+       returns 0 for Sunday, so it is rotated rather than used directly. */
+    const dayIndex = (new Date().getDay() + 6) % 7;
+    const dayKey = (match.template.schedule || [])[dayIndex];
+    const slots = dayKey ? (match.template.days[dayKey] || []) : [];
+
+    const tier = M.normEquip(p.equipment);
+    const injuries = (p.painAreas || []).map(x => String(x).toLowerCase());
+    const banned = S.bannedPatterns(injuries);
+    const known = new Set(allLibraryExercises().map(e => e.name));
+
+    const exercises = [];
+    const swapped = [];
+    slots.forEach(sl => {
+      if(banned.includes(sl.pattern)){ swapped.push(sl.pattern); return; }
+      const name = S.resolve(sl.pattern, tier);
+      /* A pattern that resolves to something the app cannot log is dropped, not shown. The
+         alternative is a plan containing a row you cannot tap, which is worse than a shorter
+         plan. validate() is meant to prevent this ever happening; this is the belt to its
+         braces. */
+      if(!name || !known.has(name)) return;
+      exercises.push({ name, sets: sl.sets, reps: sl.reps, rest: sl.rest, pattern: sl.pattern });
+    });
+
+    return {
+      template: match.template, dayKey, exercises, swapped, injuries,
+      isRest: !dayKey || dayKey === "rest",
+      why: M.explain(match, injuries)
+    };
+  }catch(e){ console.warn("plan build failed:", e); return null; }
+}
+
+function renderPlanCard(){
+  const plan = buildTodaysPlan();
+  if(!plan) return "";
+
+  if(plan.isRest){
+    return `<div class="wk-plan wk-plan--rest">
+      <div class="wk-plan__head">
+        <span class="wk-plan__label">${escHtml(plan.template.name)}</span>
+        <span class="wk-plan__day">Rest day</span>
+      </div>
+      <div class="wk-plan__why">Scheduled recovery. Training on it costs more than it adds.</div>
+    </div>`;
+  }
+  if(!plan.exercises.length) return "";
+
+  const dayLabel = titleCaseDayKey(plan.dayKey);
+  const totalSets = plan.exercises.reduce((a,e)=>a+e.sets, 0);
+  return `<div class="wk-plan">
+    <div class="wk-plan__head">
+      <span class="wk-plan__label">${escHtml(plan.template.name)}</span>
+      <span class="wk-plan__day">${escHtml(dayLabel)} · ${totalSets} sets</span>
+    </div>
+    <ul class="wk-plan__list">
+      ${plan.exercises.map(e=>`<li>
+        <span class="wk-plan__ex">${escHtml(e.name)}</span>
+        <span class="wk-plan__presc mono">${e.sets}×${e.reps[0]}–${e.reps[1]}</span>
+      </li>`).join("")}
+    </ul>
+    ${plan.swapped.length ? `<div class="wk-plan__why">${svg('shield',11)} Movements that would aggravate your ${escHtml(plan.injuries.join(" and "))} were left out.</div>` : ""}
+    <button class="btn btn-steel btn-block wk-plan__start" data-action="start-planned-session">${svg('workout',15)} Start ${escHtml(dayLabel)}</button>
+  </div>`;
+}
+
 function renderWorkoutTab(){
   if(state.session && state.showExercisePicker) return renderExercisePicker();
   if(state.routineBuilder && state.showExercisePicker && isRoutinePickerContext()) return renderExercisePicker();
@@ -15706,7 +15807,7 @@ function renderWorkoutTab(){
     const prsThisWeek = state.prs.filter(p=>p.achievedAt>=now-7*86400000).length;
     const prevWeekVolume = state.workoutLog.filter(s=>{ const t=new Date(s.date).getTime(); return t>=now-14*86400000 && t<now-7*86400000; }).reduce((a,s)=>a+(s.volume||0),0);
     return window.IgnytPages.renderWorkoutList({
-      state, svg, renderPRCelebration, renderRoutineBuilder, sessionMuscles, sessionTitle,
+      state, svg, renderPRCelebration, renderPlanCard, renderRoutineBuilder, sessionMuscles, sessionTitle,
       workoutDurationLabel, displayW, wUnit, week, plannedDay, weekStats, prsThisWeek,
       volumeTrend: comparisonLabel(weekStats.weeklyVolume, prevWeekVolume),
       todayMuscles: plannedDay ? Array.from(new Set(plannedDay.exercises.map(ex=>getMuscle(ex.name)))).filter(m=>m && m!=="Other").slice(0,3) : [],
@@ -17164,6 +17265,31 @@ function attachHandlers(){
       showToast("Routine deleted.", "info", render);
     });
   });
+  const startPlanned = document.querySelector('[data-action="start-planned-session"]');
+  if(startPlanned) startPlanned.addEventListener("click", ()=>{
+    const plan = buildTodaysPlan();
+    if(!plan || !plan.exercises.length) return;
+    state.session = {
+      startedAt: Date.now(), notes: "",
+      title: plan.template.name + " — " + titleCaseDayKey(plan.dayKey),
+      exercises: plan.exercises.map(e=>({
+        name: e.name, notes: "", restDuration: e.rest,
+        /* Reps are seeded from the template; WEIGHT IS LEFT BLANK on purpose.
+           The template legitimately prescribes how many reps — that is what a plan is. It has
+           no basis for prescribing a load, which depends entirely on this person's history,
+           and a seeded weight is one tap from being logged as a lift that never happened. The
+           overload engine's target line inside the session supplies the number to aim for,
+           computed from what they actually lifted. Template says how many, engine says how
+           heavy, user logs what they did. */
+        sets: Array.from({length: e.sets}, ()=>({ weight:"", reps:String(e.reps[0]), rpe:"", done:false, type:"working" }))
+      }))
+    };
+    state.editingSessionId = null;
+    state.tab = "workout";
+    applyWakeLock();
+    render();
+  });
+
   document.querySelectorAll("[data-start-routine]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const routine = state.routines.find(r=>String(r.id) === String(el.dataset.startRoutine));
