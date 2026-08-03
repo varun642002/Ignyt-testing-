@@ -27,6 +27,11 @@
     --accent:#FF5A1F; --steel:#4FA8D8; --text:#F2F1ED; --muted:#8B8B94; --mint:#3ECF8E;
     --border:#33333d; --kb-inset:0px; --pin-height:0px;
 
+    /* Clearance above the floating bottom nav: its own bottom offset (10px + safe area) plus
+       its height, plus a gap. Anything that pins itself above the nav uses this rather than
+       guessing, so one nav change moves them all. */
+    --nav-float-clear: calc(86px + env(safe-area-inset-bottom,0px));
+
     /* PRIMARY vs ACCENT — the split the reference screens actually use.
        Look closely at them: the calorie ring is ORANGE while the buttons, links and active
        nav item are BLUE. They are not one colour used twice, they are two colours doing two
@@ -246,13 +251,17 @@ input,select,textarea{font-family:inherit; background:transparent; color:var(--t
    z-index above the bottom nav's 40 so the floating pill cannot cover it, and matched to the
    app shell's 480px column so it lines up with the content rather than the phone. */
 .ex-picker-bar{position:fixed; left:50%; transform:translateX(-50%);
-    bottom:0; width:100%; max-width:480px; z-index:60;
+    /* ABOVE the nav, not over it. At bottom:0 this overlapped the floating nav pill by 63px
+       and simply covered it -- the bar won on z-index, so the tab bar vanished behind it
+       while picking. --nav-float-clear is the pill's own offset plus its height, so the two
+       stay clear of each other without this hardcoding a number that a nav restyle breaks. */
+    bottom:var(--nav-float-clear); width:calc(100% - 24px); max-width:456px; z-index:60;
     display:flex; gap:10px; align-items:center;
-    padding:10px 16px calc(14px + env(safe-area-inset-bottom,0px));
-    background:var(--bg, #fff); border-top:1px solid var(--border);
-    box-shadow:0 -6px 20px rgba(0,0,0,.28);}
-/* Room for it, so the last few exercises are not sitting underneath the bar. */
-.ex-picker-bar-spacer{height:86px;}
+    padding:10px 12px; border-radius:18px;
+    background:var(--surface, #fff); border:1px solid var(--border);
+    box-shadow:0 8px 30px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.2);}
+/* Room for the bar AND the nav below it, so the last exercises are not stuck underneath. */
+.ex-picker-bar-spacer{height:170px;}
 .ex-picker-bar__clear{background:none; border:none; cursor:pointer; padding:12px 14px;
     font-size:14px; font-weight:700; color:var(--muted); font-family:inherit;}
 .ex-picker-bar__add{flex:1; border:none; cursor:pointer; padding:14px 16px; border-radius:12px;
