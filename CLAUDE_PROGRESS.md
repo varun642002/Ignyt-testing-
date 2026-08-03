@@ -32,7 +32,9 @@ a timeframe or a health outcome. It caught 3 real problems on first run.
 ### Wired in
 
 - Weigh-in card + BMI card on the Log Weight screen (`renderWeighInCard`, `renderBmiCard`).
-- Compact BMI card on Home, passed through the existing renderHome ctx.
+- BMI card on Log Weight only. It was on Home too and was removed on request; the ctx
+  parameter and the card's `compact` variant went with it, so it is defined once and
+  called once.
 - `IgnytWeight.reward()` + `checkAchievements()` on the weight-save path (app.js, after
   `state.bodylog.unshift(entry)`).
 - Eight new weight badges: 5/30 consecutive logs, 5/10/20 kg toward goal, Goal Achieved,
@@ -40,7 +42,7 @@ a timeframe or a health outcome. It caught 3 real problems on first run.
   Weight Log" already existed as `weigh_first`. The kg badges measure movement toward the
   user's OWN goal, so a gain user earns them going up.
 - Three XP kinds in xp.js: weightStreakWeek 30, weightStreakMonth 100, weightGoalReached 500.
-- Cache **ignyt-v189 -> ignyt-v190**; both modules in ASSETS and covered by NETWORK_FIRST
+- Cache **ignyt-v189 -> ignyt-v191**; both modules in ASSETS and covered by NETWORK_FIRST
   (which already matches all of `/js/`).
 
 ### Removed to avoid duplicates
@@ -68,21 +70,21 @@ Three harnesses in scratchpad, all green against the shipped source:
   states, every band having copy behind it.
 - `test_weight_badges.js` — 22 assertions. Extracts the five new counters out of app.js by name
   so it runs the shipped code, not a copy.
-- `test_cards.js` — 22 assertions. Renders both cards for every band and every empty state,
+- `test_cards.js` — 16 assertions. Renders both cards for every band and every empty state,
   checking for thrown errors, unbalanced divs and stray undefined/NaN in the output.
 
 ### Build
 
-`npx cap sync android` OK. `.\gradlew.bat clean assembleDebug` — **BUILD SUCCESSFUL in 51s**.
-APK 23,065,376 bytes at `android/app/build/outputs/apk/debug/app-debug.apk`.
-Verified inside the artifact, not from the log: sw cache `ignyt-v190`, both modules present in
+`npx cap sync android` OK. `.\gradlew.bat clean assembleDebug` — **BUILD SUCCESSFUL in 32s**.
+APK 23,065,084 bytes at `android/app/build/outputs/apk/debug/app-debug.apk`.
+Verified inside the artifact, not from the log: sw cache `ignyt-v191`, both modules present in
 `assets/public/js/motivation/`, both in index.html and sw.js, both card functions defined and
 called, `PREMIUM_FEATURES = {}`, 8 badge ids, and messages.js evaluating to 1,782 lines / 26
 contexts with the per-context counts above.
 
 ### Not done
 
-- BMI card does not appear during onboarding itself, only on Home and Log Weight afterwards.
+- BMI card appears on Log Weight only — not during onboarding, and no longer on Home.
 - `GRANDFATHER_BEFORE` in entitlements.js still `null` (moot while gating is off).
 - `ignyt_premium` subscription still not created in Play Console (user).
 

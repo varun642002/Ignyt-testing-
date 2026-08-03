@@ -6078,7 +6078,7 @@ function renderHomeTab(){
     })(),
     dayDone, dayTotal, weekStats: thisWeekStats(),
     todayMuscles: plannedDay ? Array.from(new Set(plannedDay.exercises.map(ex=>getMuscle(ex.name)))).filter(m=>m && m!=="Other").slice(0,3) : [],
-    greeting, displayW, wUnit, svg, habitStreak, habitDateStr, renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed, renderHomeHabits, renderBmiCard
+    greeting, displayW, wUnit, svg, habitStreak, habitDateStr, renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed, renderHomeHabits
   });
   return recHtml + renderLegacyHomeTab();
 }
@@ -11717,13 +11717,16 @@ function renderWeighInCard(){
    The band labels are the app's own wording, not the clinical terms. The cut-offs are the
    standard ones (changing those would make the figure incomparable with anything else the
    user reads); the framing is the part that is allowed to be kind.
+
+   Log Weight only. It was on Home too and was taken off — a screening ratio that cannot see
+   muscle does not belong on the screen someone opens every morning. It stays where they have
+   gone looking for the number.
 ========================================================= */
-function renderBmiCard(opts){
+function renderBmiCard(){
   if(!window.IgnytBMI) return "";
   let b = null;
   try { b = IgnytBMI.summary(state); } catch(e){ return ""; }
   if(!b) return "";                      // no height or no weight: show nothing, explain nothing
-  const compact = opts && opts.compact;
 
   const TONES = { blue:"var(--rh-blue)", green:"var(--rh-green)", amber:"#D97706", red:"var(--rh-red)" };
   const col = TONES[b.tone] || "var(--rh-muted)";
@@ -11771,13 +11774,11 @@ function renderBmiCard(opts){
       </div>`}
     </div>` : ""}
     ${b.message ? `<div style="font-size:13px;line-height:1.5;margin-top:12px;padding-top:12px;border-top:1px solid var(--rh-border);">${escHtml(b.message)}</div>` : ""}
-    <!-- The caveat is shortened on Home, never removed. A BMI figure with no qualifier beside
-         it is the thing this card exists to avoid -- the full sentence belongs on Log Weight,
-         where someone came looking for the number rather than met it in passing. -->
-    <div style="font-size:10px;color:var(--rh-muted);margin-top:10px;line-height:1.5;">${compact
-      ? `A screening figure from height and weight alone. It cannot see muscle, and it is not a diagnosis.`
-      : `BMI compares weight with height. It cannot see muscle, bone or body composition, and it is a general
-         screening figure rather than a measure of your health. It is not a diagnosis.`}</div>
+    <!-- The caveat travels with the number, always. A BMI figure shown without a qualifier
+         beside it is the thing this card exists to avoid. -->
+    <div style="font-size:10px;color:var(--rh-muted);margin-top:10px;line-height:1.5;">BMI compares weight with
+      height. It cannot see muscle, bone or body composition, and it is a general screening figure rather than a
+      measure of your health. It is not a diagnosis.</div>
   </div>`;
 }
 

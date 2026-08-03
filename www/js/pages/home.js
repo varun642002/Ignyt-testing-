@@ -24,7 +24,7 @@
     const { state, week, streak, greeting, displayW, wUnit, svg,
       weekStats, targets, eaten, burned, dayDone, dayTotal, plannedDay,
       water, waterTarget, nutritionToday,
-      renderAchievementCelebration, renderPRCelebration, renderHomeHabits, renderBmiCard } = ctx;
+      renderAchievementCelebration, renderPRCelebration, renderHomeHabits } = ctx;
 
     let health = null;
     try { health = JSON.parse(localStorage.getItem('hx_hc_dashboard_cache') || 'null'); } catch (_) {}
@@ -249,13 +249,6 @@
           ? window.IgnytPages.renderFastingHomeCard() : ''}
 
       ${renderHomeHabits ? renderHomeHabits() : ''}
-
-      ${/* BMI. Onboarding's last page collects height, weight and gender, so this is the first
-            screen where the figure can exist — and it renders itself away entirely when either
-            input is missing rather than showing a card that apologises for its own blanks.
-            Compact here: the full caveat paragraph lives on the Log Weight screen, where
-            someone has gone looking for the number rather than met it in passing. */
-        renderBmiCard ? renderBmiCard({ compact: true }) : ''}
 
       ${(() => {
         /* Nutrition card. Only shown once something has been logged today — an empty card of
