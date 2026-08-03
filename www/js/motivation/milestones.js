@@ -177,33 +177,16 @@ window.IgnytMilestones = (function () {
     }
   }
 
-  /* ---- BMI ---------------------------------------------------------------------------
-     The brief asked for BMI to be framed encouragingly rather than shown bare. What this
-     returns is deliberately about what the user can do next, never about how they look, and
-     it never predicts an outcome — "your body can change dramatically in 90 days" is a
-     promise no app can make and some people cannot keep through no fault of their own.
-
-     BMI itself is a crude measure: it cannot tell muscle from fat, which matters a lot in an
-     app whose users lift. Saying so is more useful than dressing the number up. */
-  function bmiEncouragement(bmi) {
-    if (!(bmi > 0)) return "";
-    if (bmi < 18.5) return "Building strength and eating enough is a solid place to aim. Small, consistent surpluses do it.";
-    if (bmi < 25)   return "You're in a healthy range. Training now is about what you want to build, not what you need to fix.";
-    if (bmi < 30)   return "This is a starting point, not a verdict. Consistency over months is what moves it.";
-    return "Every session and every logged meal counts, and the early changes are the ones you feel rather than see.";
-  }
-
-  /** The caveat shown with the number. BMI cannot tell muscle from fat. */
-  function bmiCaveat() {
-    return "BMI is a rough guide from height and weight alone — it can't tell muscle from fat, so treat it as one number among several.";
-  }
+  /* BMI used to live here as a four-band encouragement line plus a caveat. It moved to
+     js/motivation/bmi.js, which owns the six standard bands, the healthy weight range for a
+     given height, and a library of copy per band — one home for the number instead of a
+     formula in app.js and the words in here. */
 
   return {
     THRESHOLDS: THRESHOLDS,
     checkAll: checkAll,
     checkWeight: checkWeight, checkSteps: checkSteps, checkWater: checkWater,
     checkProtein: checkProtein, checkCalories: checkCalories, checkGoal: checkGoal,
-    bmiEncouragement: bmiEncouragement, bmiCaveat: bmiCaveat,
     /** Test seam. */
     _reset: function () { writeFired({}); }
   };

@@ -942,14 +942,20 @@ function formatTime(s){ const m=Math.floor(s/60); const r=s%60; return `${m}:${r
  *  Names are checked against a manifest rather than probed, because a bare <img> onerror
  *  fallback would flash a broken icon on 145 rows every time the Library is opened. */
 /* =========================================================
-   PREMIUM GATING
+   PREMIUM GATING — CURRENTLY OFF. EVERY FEATURE IS FREE.
 
-   Two functions, used at six render seams. Gating at the seam rather than at every button
-   that can reach a feature is what keeps this honest: there are a dozen routes into the AI
-   Coach and only one place it renders.
+   The switch is IgnytEntitlements.PREMIUM_FEATURES, which is empty, so every call below
+   returns true and renderUpgradeWall() is never reached. Since the wall is the only route to
+   the paywall sheet, the paywall is unreachable too.
 
-   premiumAllows() is deliberately tolerant of the entitlements module being absent — a
-   billing failure must never blank a screen. If it did not load, everything is allowed.
+   The seams are left in place rather than deleted. Two functions, six render seams: gating at
+   the seam rather than at every button that can reach a feature is what keeps this honest —
+   there are a dozen routes into the AI Coach and only one place it renders. Rebuilding that
+   discipline later would be more work than the six dead `if`s cost now, and turning gating
+   back on is one map in entitlements.js.
+
+   premiumAllows() is also tolerant of the entitlements module being absent — a billing
+   failure must never blank a screen. If it did not load, everything is allowed.
 ========================================================= */
 
 function premiumAllows(feature){
@@ -3668,6 +3674,82 @@ function distinctTrainingDays(){
   return new Set(state.workoutLog.map(s=>new Date(s.startedAt||s.date).toDateString())).size;
 }
 
+/* --- weight-tracking counters, behind the weigh-in badges ------------------------------
+   All of these read state.bodylog, which only ever grows from an actual weigh-in. Weight
+   *change* is measured against the goal's recorded start weight when there is one, and
+   against the earliest logged entry otherwise -- never against a number the user typed
+   into onboarding months ago and has not revisited. */
+
+/** Longest run of consecutive calendar days that each have a weigh-in. */
+function weightLogStreakBest(){
+  const days = Array.from(new Set((state.bodylog||[]).filter(b=>b && b.date).map(b=>b.date))).sort();
+  if(!days.length) return 0;
+  let best = 1, cur = 1;
+  for(let i=1;i<days.length;i++){
+    // Noon anchors both ends so a DST shift cannot turn 24h into 23h and break a real streak.
+    const gap = Math.round((new Date(days[i]+"T12:00:00") - new Date(days[i-1]+"T12:00:00"))/86400000);
+    if(gap===1){ cur++; if(cur>best) best=cur; } else if(gap>1){ cur=1; }
+  }
+  return best;
+}
+/** Kilograms moved in the direction of the user's goal. Zero when moving the other way. */
+function weightMovedTowardGoalKg(){
+  const log = (state.bodylog||[]).filter(b=>b && Number(b.weight)>0);
+  if(log.length<2) return 0;
+  const sorted = log.slice().sort((a,b)=> new Date(a.date+"T12:00:00") - new Date(b.date+"T12:00:00"));
+  let start = Number(sorted[0].weight);
+  const now = Number(sorted[sorted.length-1].weight);
+  let want = "down";
+  try {
+    const g = window.IgnytGoals ? IgnytGoals.activeGoal() : null;
+    if(g && g.startWeight!=null && g.targetWeight!=null){
+      start = Number(g.startWeight) || start;
+      want = g.targetWeight > g.startWeight ? "up" : "down";
+    }
+  } catch(e){}
+  const delta = want==="up" ? (now-start) : (start-now);
+  return delta > 0 ? delta : 0;
+}
+/** True once the logged weight has reached the goal in the goal's own direction. */
+function weightGoalReached(){
+  try { const a = window.IgnytWeight ? IgnytWeight.analyse(state) : null; return !!(a && a.reachedGoal); }
+  catch(e){ return false; }
+}
+/** Consecutive ISO weeks, ending at the most recent one logged, containing a weigh-in. */
+function weightWeeksRunning(){
+  const weeks = new Set();
+  (state.bodylog||[]).forEach(b=>{
+    if(!b || !b.date) return;
+    const d = new Date(b.date+"T12:00:00");
+    if(isNaN(d)) return;
+    // Monday-based week index counted from the epoch -- only differences matter, so any
+    // consistent origin works and this avoids ISO week-number edge cases at year ends.
+    weeks.add(Math.floor((d.getTime()/86400000 + 3) / 7));
+  });
+  const list = Array.from(weeks).sort((a,b)=>a-b);
+  if(!list.length) return 0;
+  let run = 1;
+  for(let i=list.length-1;i>0;i--){
+    if(list[i]-list[i-1]===1) run++; else break;
+  }
+  return run;
+}
+/** Days on which a weigh-in, a meal and a completed session were all logged. */
+function daysWithFullLog(){
+  const weigh = new Set((state.bodylog||[]).map(b=>b && b.date).filter(Boolean));
+  const food  = new Set((state.foodLog||[]).map(f=>f && f.date).filter(Boolean));
+  // Keyed the same way the app stamps every other date -- todayStr() is UTC, so bodylog and
+  // foodLog day keys are UTC too. Deriving a local key here would put a session and the meal
+  // logged beside it on different days for anyone east of Greenwich.
+  const train = new Set((state.workoutLog||[]).map(s=>{
+    const t = new Date(s.startedAt||s.date);
+    return isNaN(t) ? null : t.toISOString().slice(0,10);
+  }).filter(Boolean));
+  let n = 0;
+  weigh.forEach(d=>{ if(food.has(d) && train.has(d)) n++; });
+  return n;
+}
+
 const ACHIEVEMENT_DEFS = [
   { id:"first_workout", name:"First Workout", desc:"Complete your first freestyle workout.", check:()=> state.workoutLog.length>=1 , category:"milestone", tier:"bronze", value:"1" },
   { id:"workouts_5", name:"5 Workouts", desc:"Log 5 freestyle workouts.", check:()=> state.workoutLog.length>=5 , category:"milestone", tier:"bronze", value:"5" },
@@ -3771,7 +3853,21 @@ const ACHIEVEMENT_DEFS = [
   /* ---- body tracking ---- */
   { id:"weigh_first", name:"First Weigh-In", desc:"Log your body weight.", check:()=> state.bodylog.length>=1 , category:"consistency", tier:"bronze", value:"1" },
   { id:"weigh_10", name:"Ten Weigh-Ins", desc:"Log your body weight ten times.", check:()=> state.bodylog.length>=10 , category:"consistency", tier:"bronze", value:"10" },
-  { id:"weigh_50", name:"Fifty Weigh-Ins", desc:"Log your body weight fifty times.", check:()=> state.bodylog.length>=50 , category:"consistency", tier:"silver", value:"50" }
+  { id:"weigh_50", name:"Fifty Weigh-Ins", desc:"Log your body weight fifty times.", check:()=> state.bodylog.length>=50 , category:"consistency", tier:"silver", value:"50" },
+
+  /* ---- weight tracking ----
+     The kg badges are earned for movement toward the user's OWN goal, so a muscle-gain user
+     earns them for going up. There is deliberately no badge for a number on the scale in
+     absolute terms -- 60kg is an achievement for one person and a warning sign for another,
+     and the app cannot tell which it is looking at. */
+  { id:"weigh_streak_5", name:"5 Consecutive Logs", desc:"Weigh in five days in a row.", check:()=> weightLogStreakBest()>=5 , category:"consistency", tier:"bronze", value:"5" },
+  { id:"weigh_streak_30", name:"30 Consecutive Logs", desc:"Weigh in thirty days in a row.", check:()=> weightLogStreakBest()>=30 , category:"consistency", tier:"gold", value:"30" },
+  { id:"weight_moved_5", name:"5 kg Toward Your Goal", desc:"Move 5 kg in the direction of your goal.", check:()=> weightMovedTowardGoalKg()>=5 , category:"consistency", tier:"bronze", value:"5 kg" },
+  { id:"weight_moved_10", name:"10 kg Toward Your Goal", desc:"Move 10 kg in the direction of your goal.", check:()=> weightMovedTowardGoalKg()>=10 , category:"consistency", tier:"silver", value:"10 kg" },
+  { id:"weight_moved_20", name:"20 kg Toward Your Goal", desc:"Move 20 kg in the direction of your goal.", check:()=> weightMovedTowardGoalKg()>=20 , category:"consistency", tier:"gold", value:"20 kg" },
+  { id:"weight_goal_reached", name:"Goal Achieved", desc:"Reach your target weight.", check:()=> weightGoalReached() , category:"consistency", tier:"gold", value:"🎯" },
+  { id:"weigh_champion", name:"Consistency Champion", desc:"Weigh in at least once a week for twelve weeks running.", check:()=> weightWeeksRunning()>=12 , category:"consistency", tier:"gold", value:"12w" },
+  { id:"habit_hero", name:"Healthy Habit Hero", desc:"Log your weight, a meal and a workout on the same day, thirty times.", check:()=> daysWithFullLog()>=30 , category:"consistency", tier:"gold", value:"30" }
 ];
 
 /* Call after any action that could unlock an achievement (finish workout,
@@ -3936,11 +4032,19 @@ function profileCalorieTarget(){
   return Math.round(profileMaintenance() + state.profile.goalDelta);
 }
 
+/* Reads IgnytBMI so the app has one BMI vocabulary rather than two. The old four labels
+   ("Normal", "Obese") described the person; the shared ones describe where the figure sits.
+   The local fallback exists only for the case where the module has not loaded -- the diet-plan
+   summary that calls this must still render a row. */
 function bmiCategory(bmi){
-  if(bmi<18.5) return "Underweight";
-  if(bmi<25) return "Normal";
-  if(bmi<30) return "Overweight";
-  return "Obese";
+  if(window.IgnytBMI){
+    const band = IgnytBMI.bandFor(bmi);
+    if(band) return band.label;
+  }
+  if(bmi<18.5) return "Below healthy range";
+  if(bmi<25) return "Healthy range";
+  if(bmi<30) return "Above healthy range";
+  return bmi<35 ? "High" : "Very high";
 }
 
 function calcBMR(age, gender, heightCm, weightKg){
@@ -5974,7 +6078,7 @@ function renderHomeTab(){
     })(),
     dayDone, dayTotal, weekStats: thisWeekStats(),
     todayMuscles: plannedDay ? Array.from(new Set(plannedDay.exercises.map(ex=>getMuscle(ex.name)))).filter(m=>m && m!=="Other").slice(0,3) : [],
-    greeting, displayW, wUnit, svg, habitStreak, habitDateStr, renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed, renderHomeHabits
+    greeting, displayW, wUnit, svg, habitStreak, habitDateStr, renderAchievementCelebration, renderPRCelebration, renderHomeHealthFeed, renderHomeHabits, renderBmiCard
   });
   return recHtml + renderLegacyHomeTab();
 }
@@ -11537,6 +11641,146 @@ function renderBodyScanArchive(){
   </div>`;
 }
 
+/* =========================================================
+   THE WEIGH-IN CARD
+
+   Shown above the chart on the Log Weight screen. Its job is to make the number mean
+   something: what it is against the last log, against the 7- and 30-day averages, and against
+   the goal — plus one line of copy chosen by which of those comparisons actually applies.
+
+   The comparisons are the point. A single reading swings with water, salt, sleep and
+   glycogen, so the average columns are what a user should be reading, and putting them beside
+   the raw delta is how the card teaches that without a paragraph of explanation.
+
+   Every figure here is derived, never stored: IgnytWeight reads state.bodylog on demand, so
+   there is no second copy of the weight history to fall out of step with the first.
+========================================================= */
+function renderWeighInCard(){
+  if(!window.IgnytWeight) return "";
+  let s = null;
+  try { s = IgnytWeight.summary(state); } catch(e){ return ""; }
+  if(!s || !s.analysis) return "";
+  const a = s.analysis;
+  const line = (s.message && s.message.line) || "";
+  const ctx = (s.message && s.message.context) || "";
+
+  // Colour follows the user's own direction of travel, not "down is good". A muscle-gain user
+  // seeing red for a gain would be told the opposite of the truth.
+  const good = ctx === "weightProgress" || ctx === "weightMilestone" || ctx === "weightGoalReached";
+  const tone = ctx === "weightSteady" ? "var(--rh-muted)" : good ? "var(--rh-green)" : "var(--rh-blue)";
+  const icon = ctx === "weightGoalReached" ? "🎯" : ctx === "weightMilestone" ? "🏆"
+             : ctx === "weightSteady" ? "➖" : good ? "📈" : "〰️";
+
+  const delta = (v, invert) => {
+    if(v == null) return `<span style="color:var(--rh-muted);">—</span>`;
+    const sign = v > 0 ? "+" : v < 0 ? "−" : "";
+    const col = Math.abs(v) < 0.05 ? "var(--rh-muted)"
+      : ((a.direction === "up") === (v > 0)) ? "var(--rh-green)" : "var(--rh-blue)";
+    return `<span style="color:${a.direction ? col : "var(--rh-text)"};">${sign}${displayW(Math.abs(v),1)}</span>`;
+  };
+
+  const cell = (label, body, sub) => `<div style="flex:1;min-width:0;text-align:center;">
+    <div class="mono" style="font-size:15px;font-weight:800;">${body}</div>
+    <div style="font-size:10px;color:var(--rh-muted);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-top:2px;">${label}</div>
+    ${sub ? `<div style="font-size:10px;color:var(--rh-muted);margin-top:1px;">${sub}</div>` : ""}
+  </div>`;
+
+  // Only comparisons with data behind them get a column. A "vs 30-day average" that is really
+  // "vs the two entries you have" is worse than no column at all.
+  const cells = [];
+  if(a.moved != null) cells.push(cell("vs last", delta(a.moved), a.daysSincePrevious ? a.daysSincePrevious + "d ago" : ""));
+  if(a.avg7 != null && a.entries >= 3) cells.push(cell("vs 7-day avg", delta(a.vsAvg7), displayW(a.avg7,1) + " " + wUnit()));
+  if(a.avg30 != null && a.entries >= 5) cells.push(cell("vs 30-day avg", delta(a.vsAvg30), displayW(a.avg30,1) + " " + wUnit()));
+  if(a.toGoal != null && !a.reachedGoal) cells.push(cell("to goal", displayW(a.toGoal,1), displayW(a.goalWeight,1) + " " + wUnit()));
+
+  return `<div class="pg-card" style="margin-top:12px;border-left:3px solid ${tone};">
+    <div style="display:flex;gap:10px;align-items:flex-start;">
+      <span style="font-size:20px;line-height:1.2;flex:none;">${icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:700;line-height:1.45;">${escHtml(line)}</div>
+        ${a.loggingStreak >= 3 ? `<div style="font-size:11px;color:var(--rh-muted);margin-top:4px;">${a.loggingStreak}-day logging streak.</div>` : ""}
+      </div>
+    </div>
+    ${cells.length ? `<div style="display:flex;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--rh-border);">${cells.join("")}</div>` : ""}
+    <div style="font-size:10px;color:var(--rh-muted);margin-top:10px;">Daily weight moves with water, food and sleep. The averages are the honest signal.</div>
+  </div>`;
+}
+
+/* =========================================================
+   THE BMI CARD
+
+   BMI is weight over height squared and nothing else. It cannot see muscle, and it was built
+   to describe populations rather than people — so this card shows the figure, the band it
+   falls in, the weight range that would sit inside the healthy band for this height, and one
+   line of encouragement, and then says plainly what the number does not know.
+
+   The band labels are the app's own wording, not the clinical terms. The cut-offs are the
+   standard ones (changing those would make the figure incomparable with anything else the
+   user reads); the framing is the part that is allowed to be kind.
+========================================================= */
+function renderBmiCard(opts){
+  if(!window.IgnytBMI) return "";
+  let b = null;
+  try { b = IgnytBMI.summary(state); } catch(e){ return ""; }
+  if(!b) return "";                      // no height or no weight: show nothing, explain nothing
+  const compact = opts && opts.compact;
+
+  const TONES = { blue:"var(--rh-blue)", green:"var(--rh-green)", amber:"#D97706", red:"var(--rh-red)" };
+  const col = TONES[b.tone] || "var(--rh-muted)";
+
+  // A scale from 15 to 40 covers every band boundary with room at both ends; the marker is
+  // clamped so an extreme figure sits at the edge instead of outside the bar.
+  const pos = Math.max(0, Math.min(100, (b.bmi - 15) / 25 * 100));
+  const bar = `<div style="position:relative;height:8px;border-radius:4px;margin:14px 0 6px;
+      background:linear-gradient(to right,
+        #2563EB 0%, #2563EB 14%,
+        var(--rh-green) 14%, var(--rh-green) 40%,
+        #D97706 40%, #D97706 60%,
+        #DC2626 60%, #DC2626 100%);">
+      <div style="position:absolute;top:-4px;left:${pos.toFixed(1)}%;width:4px;height:16px;border-radius:2px;
+        background:var(--rh-text);border:2px solid var(--rh-card);transform:translateX(-50%);"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--rh-muted);font-weight:700;">
+      <span>15</span><span>18.5</span><span>25</span><span>30</span><span>40</span>
+    </div>`;
+
+  const range = b.healthyRange
+    ? `${displayW(b.healthyRange.min,1)}–${displayW(b.healthyRange.max,1)} ${wUnit()}` : null;
+
+  return `<div class="pg-card" style="margin-top:12px;">
+    <div class="pg-card__head" style="margin-bottom:0;">
+      <span class="pg-card__title">Body Mass Index</span>
+      <span style="font-size:11px;font-weight:800;color:${col};">${escHtml(b.label)}</span>
+    </div>
+    <div style="display:flex;align-items:baseline;gap:8px;margin-top:6px;">
+      <span class="mono" style="font-size:34px;font-weight:900;color:${col};line-height:1;">${b.bmi.toFixed(1)}</span>
+      <span style="font-size:11px;color:var(--rh-muted);">from ${displayW(b.weight,1)} ${wUnit()} at ${b.height} cm</span>
+    </div>
+    ${bar}
+    ${range ? `<div style="display:flex;gap:8px;margin-top:12px;">
+      <div style="flex:1;background:var(--rh-bg);border-radius:10px;padding:9px 10px;">
+        <div style="font-size:10px;color:var(--rh-muted);font-weight:700;text-transform:uppercase;">Healthy range for ${b.height} cm</div>
+        <div class="mono" style="font-size:14px;font-weight:800;margin-top:2px;">${range}</div>
+      </div>
+      ${b.distance && b.distance.direction !== "none" ? `<div style="flex:1;background:var(--rh-bg);border-radius:10px;padding:9px 10px;">
+        <div style="font-size:10px;color:var(--rh-muted);font-weight:700;text-transform:uppercase;">To that range</div>
+        <div class="mono" style="font-size:14px;font-weight:800;margin-top:2px;">${displayW(b.distance.kg,1)} ${wUnit()} ${b.distance.direction === "down" ? "down" : "up"}</div>
+      </div>` : `<div style="flex:1;background:var(--rh-bg);border-radius:10px;padding:9px 10px;">
+        <div style="font-size:10px;color:var(--rh-muted);font-weight:700;text-transform:uppercase;">Status</div>
+        <div style="font-size:13px;font-weight:800;margin-top:2px;color:var(--rh-green);">Inside the range</div>
+      </div>`}
+    </div>` : ""}
+    ${b.message ? `<div style="font-size:13px;line-height:1.5;margin-top:12px;padding-top:12px;border-top:1px solid var(--rh-border);">${escHtml(b.message)}</div>` : ""}
+    <!-- The caveat is shortened on Home, never removed. A BMI figure with no qualifier beside
+         it is the thing this card exists to avoid -- the full sentence belongs on Log Weight,
+         where someone came looking for the number rather than met it in passing. -->
+    <div style="font-size:10px;color:var(--rh-muted);margin-top:10px;line-height:1.5;">${compact
+      ? `A screening figure from height and weight alone. It cannot see muscle, and it is not a diagnosis.`
+      : `BMI compares weight with height. It cannot see muscle, bone or body composition, and it is a general
+         screening figure rather than a measure of your health. It is not a diagnosis.`}</div>
+  </div>`;
+}
+
 function renderBodyTab(){
   const entries = state.bodylog;
   const p = state.profile;
@@ -11583,12 +11827,12 @@ function renderBodyTab(){
   const yearlyChangeKg = (latestW && yearAgo && yearAgo!==latestW) ? Number(latestW.weight)-Number(yearAgo.weight) : null;
   const trendLabel = weeklyChangeKg==null ? "—" : weeklyChangeKg<0 ? "Down" : weeklyChangeKg>0 ? "Up" : "Flat";
 
-  // BMI/BMR/TDEE -- always computed live from weight+profile (never stored, never stale).
-  // BMR/TDEE reuse the exact same Mifflin-St Jeor + activity-multiplier formulas the Profile
-  // tab's calorie target already uses (calcBMR/profileMaintenance), so the number here always
+  // BMR/TDEE -- always computed live from weight+profile (never stored, never stale). They
+  // reuse the exact same Mifflin-St Jeor + activity-multiplier formulas the Profile tab's
+  // calorie target already uses (calcBMR/profileMaintenance), so the number here always
   // matches Nutrition's maintenance figure instead of drifting via a second formula.
+  // BMI is not computed here any more -- IgnytBMI owns it, and renderBmiCard() reads state.
   const curWeightKg = latestW ? Number(latestW.weight) : p.weight;
-  const bmiValue = p.height ? curWeightKg/((p.height/100)**2) : null;
   const bmrValue = Math.round(calcBMR(p.age, p.gender, p.height, curWeightKg));
   const tdeeValue = Math.round(bmrValue * p.activityMultiplier);
 
@@ -11647,6 +11891,10 @@ function renderBodyTab(){
         </div>
       </div>
 
+      ${renderWeighInCard()}
+
+      ${renderBmiCard()}
+
       <div class="pg-card" style="margin-top:12px;">
         <div class="pg-card__head">
           <span class="pg-card__title">${escHtml(chartMetric.label)} Trend</span>
@@ -11660,10 +11908,12 @@ function renderBodyTab(){
         ${chartPoints.length ? axisAreaChart(chartPoints, {color:"var(--rh-blue)", unit:' '+chartMetric.unit()}) : `<div class="wk-empty">No ${escHtml(chartMetric.label.toLowerCase())} data in this range yet.</div>`}
       </div>
 
-      <div class="pg-stat-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-top:12px;">
-        <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('body',16)}</span>
-          <div class="pg-stat-card__value">${bmiValue!=null?bmiValue.toFixed(1):'—'}</div>
-          <div class="pg-stat-card__label">BMI</div><div class="pg-stat-card__sub">${bmiValue!=null?bmiCategory(bmiValue):''}</div></div>
+      <!-- BMI moved out of this grid and into renderBmiCard() above, which shows the same
+           figure against the six standard bands, the healthy weight range for this height,
+           and a line of encouragement. Two BMI readouts on one screen was one too many, and
+           the small card's four-band label called 18.5-25 "Normal" -- a word the new card
+           deliberately does not use about a person. -->
+      <div class="pg-stat-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-top:12px;">
         <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(217,119,6,.12);color:#D97706;">${svg('flame',16)}</span>
           <div class="pg-stat-card__value">${bmrValue}<span class="pg-stat-card__unit">kcal</span></div>
           <div class="pg-stat-card__label">BMR</div><div class="pg-stat-card__sub">at rest</div></div>
@@ -11671,12 +11921,6 @@ function renderBodyTab(){
           <div class="pg-stat-card__value">${tdeeValue}<span class="pg-stat-card__unit">kcal</span></div>
           <div class="pg-stat-card__label">TDEE</div><div class="pg-stat-card__sub">daily maintenance</div></div>
       </div>
-
-      ${bmiValue!=null && window.IgnytMilestones ? `
-      <div class="bmi-note">
-        <div class="bmi-note__line">${escHtml(IgnytMilestones.bmiEncouragement(bmiValue))}</div>
-        <div class="bmi-note__caveat">${escHtml(IgnytMilestones.bmiCaveat())}</div>
-      </div>` : ''}
 
       <div class="pg-stat-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-top:8px;">
         <div class="pg-stat-card"><span class="pg-stat-card__icon" style="background:rgba(22,163,74,.1);color:var(--rh-green);">${svg('chevronUp',16)}</span>
@@ -12029,9 +12273,10 @@ function foodPageHeader(title, subtitle, trailing){
    picker opens the camera directly, so they share one path.
 
    WHAT IS SHOWN DEPENDS ON WHAT IS TRUE. The row asks the backend once for scan-status and
-   then renders the honest thing: the allowance when scanning is available, "Premium" when the
-   account is not entitled, and nothing at all when the server has no key configured. An
-   always-visible button that fails on tap is worse than no button.
+   then renders the honest thing: the allowance when scanning is available, and nothing at all
+   when the server has no key configured. An always-visible button that fails on tap is worse
+   than no button. (There was a third case here for an unentitled account; premium gating is
+   off, so it cannot occur.)
 ========================================================= */
 
 
@@ -17304,6 +17549,23 @@ function attachHandlers(){
     state.bodylog.unshift(entry);
     // Weight logged here becomes the single source of truth -> recalcs calories/macros everywhere
     state.profile.weight = Number(weight) || state.profile.weight;
+
+    /* The weigh-in response: XP, any milestone celebration, the weight badges, and the line
+       shown on the card. Everything is derived from the log that was just written, and every
+       award is keyed so a re-render cannot pay twice. Wrapped because a motivation module
+       failing must never lose the weigh-in itself -- the entry is already in state above. */
+    try {
+      if(window.IgnytWeight){
+        const analysis = IgnytWeight.analyse(state);
+        IgnytWeight.reward(state, analysis);
+        state.lastWeighIn = analysis ? { analysis, message: IgnytWeight.message(analysis) } : null;
+      }
+    } catch(e){ console.warn("weight motivation failed", e); }
+    const weighUnlocked = checkAchievements();
+    if(weighUnlocked.length){
+      state.lastUnlockedAchievements = weighUnlocked;
+      if(window.IgnytCelebrate) IgnytCelebrate.forAchievements(weighUnlocked);
+    }
     render();
   });
   document.querySelectorAll("[data-del-body]").forEach(el=>{

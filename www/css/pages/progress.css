@@ -249,14 +249,9 @@
 .bdg--locked{ opacity: .55; }
 .bdg--locked .bdg__medal{ --bdg-fill: var(--rh-bg); --bdg-ring: var(--rh-border); --bdg-ink: var(--rh-muted); }
 
-/* The line under BMI. Encouragement plus the caveat that BMI cannot tell muscle from fat —
-   which matters more than usual in an app whose users lift. */
-.bmi-note{
-  margin-top: 10px; padding: 12px 14px; border-radius: var(--radius-tile, 14px);
-  background: rgba(37,99,235,.06); border: 1px solid rgba(37,99,235,.14);
-}
-.bmi-note__line{ font-size: 12.5px; line-height: 1.5; font-weight: 600; color: var(--rh-text); }
-.bmi-note__caveat{ font-size: 11px; line-height: 1.45; color: var(--rh-muted); margin-top: 6px; }
+/* .bmi-note was the small encouragement strip under the old BMI stat. Both it and that stat
+   were replaced by the full BMI card (app.js renderBmiCard), which carries its own styles
+   inline alongside the band scale it draws. */
 
 /* Weekly and monthly review. Omitted entirely when the period has no data — a grid of zeroes
    shown to someone who took a week off reads as a reproach rather than a summary. */

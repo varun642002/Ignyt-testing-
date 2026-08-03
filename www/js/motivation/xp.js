@@ -37,7 +37,13 @@ window.IgnytXP = (function () {
     /* A week held together is worth more than any single day in it, and there is no way to farm
        it — the target is set from the user's own recent average and can only be met by a week
        of real logs. Keyed by ISO week, so it pays exactly once. */
-    weeklyChallenge: { xp: 250, label: "Weekly challenge completed" }
+    weeklyChallenge: { xp: 250, label: "Weekly challenge completed" },
+
+    /* Weigh-in rewards. The streaks are keyed by the day they were reached, and the goal by the
+       target weight, so each pays exactly once however many times the screen repaints. */
+    weightStreakWeek:  { xp: 30,  label: "7-day logging streak" },
+    weightStreakMonth: { xp: 100, label: "30-day logging streak" },
+    weightGoalReached: { xp: 500, label: "Goal weight reached" }
   };
 
   /* Titles by level. Deliberately about commitment rather than physique — the app cannot see

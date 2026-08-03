@@ -25,21 +25,35 @@
 window.IgnytEntitlements = (function () {
   "use strict";
 
-  /* Free tier keeps everything the user creates and everything they log. What is gated is
-     new capability, never access to their own data — an app that holds someone's workout
-     history hostage earns the review it gets, and Play takes a dim view of it too. */
-  var PREMIUM_FEATURES = {
-    coach:      "AI Coach",
-    diet:       "Diet Plans",
-    health:     "Health Dashboard",
-    insights:   "Insights",
-    photos:     "Progress Photos",
-    sync:       "Cloud Sync & Backup",
-    muscles:    "Muscle Distribution",
-    fasting:    "Fasting Tracker",
-    supplements:"Supplement Tracker",
-    export:     "Data Export"
-  };
+  /* GATING IS OFF. Every feature is free.
+   *
+   * `has()` returns true for anything not named in this map, so an empty map means every
+   * premiumAllows() seam in app.js passes and no upgrade wall ever renders. Because the wall
+   * is the only route to the paywall sheet, that also makes the paywall unreachable — there
+   * is no second switch to find.
+   *
+   * The whole billing stack below is intact and untouched: the Play query, the entitlement
+   * cache, the grace period, purchase and restore. Turning gating back on is restoring this
+   * map and nothing else, which is why it was emptied rather than deleted.
+   *
+   *   var PREMIUM_FEATURES = {
+   *     coach:      "AI Coach",
+   *     diet:       "Diet Plans",
+   *     health:     "Health Dashboard",
+   *     insights:   "Insights",
+   *     photos:     "Progress Photos",
+   *     sync:       "Cloud Sync & Backup",
+   *     muscles:    "Muscle Distribution",
+   *     fasting:    "Fasting Tracker",
+   *     supplements:"Supplement Tracker",
+   *     export:     "Data Export"
+   *   };
+   *
+   * Free tier keeps everything the user creates and everything they log. When this does come
+   * back, what is gated is new capability, never access to their own data — an app that holds
+   * someone's workout history hostage earns the review it gets, and Play takes a dim view of
+   * it too. */
+  var PREMIUM_FEATURES = {};
 
   var PRODUCT_ID = "ignyt_premium";
   var CACHE_KEY = "hx_entitlement";
