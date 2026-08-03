@@ -103,6 +103,23 @@ window.IgnytCoachMatcher = (function () {
       return done(lib.get("running_strength"), reasons);
     }
     if (goal === "fatloss") {
+      /* Three fat-loss templates, and the split between them is real rather than cosmetic.
+         A CIRCUIT is continuous work at a moderate effort; HIIT is genuinely maximal intervals
+         with real rest between them. Prescribing them as the same thing is why "HIIT" so often
+         ends up meaning "a circuit performed while tired", which is neither.
+
+         The circuit stays the default because it is the most accessible: 30 minutes, any
+         equipment down to none. Intervals are routed to only when there is time and kit to do
+         them properly — an interval session cut to 30 minutes is a circuit whether it is
+         labelled one or not. */
+      if (exp === "beginner" && days <= 3 && minutes >= 30 && equip !== "bodyweight") {
+        reasons.push("Two interval sessions and a strength day — enough stimulus without out-running recovery.");
+        return done(lib.get("hiit_beginner"), reasons);
+      }
+      if (exp !== "beginner" && days >= 4 && minutes >= 45) {
+        reasons.push("Intervals and strength alternate so neither lands on tired legs.");
+        return done(lib.get("hiit_conditioning"), reasons);
+      }
       reasons.push("Short rests and full-body circuits preserve muscle while weight comes off.");
       return done(pick(fits, "fat_loss_circuit") || lib.get("fat_loss_circuit"), reasons);
     }

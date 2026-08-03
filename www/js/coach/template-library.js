@@ -173,6 +173,38 @@ window.IgnytCoachTemplates = (function () {
       progression:"density", deloadEvery:8,
       why:"Short rests keep the heart rate up, and resistance training in a deficit is what preserves muscle while weight comes off. Progression is density — same work in less time — because load rarely climbs while eating under maintenance." },
 
+    /* HIIT and metabolic conditioning. Separate from Fat Loss Circuit on purpose: a circuit is
+       continuous work at a moderate effort, HIIT is genuinely maximal intervals with real rest.
+       Prescribing them as the same thing is why "HIIT" so often means "a circuit done tired".
+
+       Only THREE sessions a week at most, and never on consecutive days. Interval work at true
+       intensity is the most fatiguing thing in this whole library, and the common failure is
+       not doing too little of it — it is doing it five days a week until nothing recovers. */
+    { id:"hiit_beginner", name:"HIIT Starter",
+      goals:["fatloss","general","recomp"], experience:["beginner"],
+      daysRange:[2,3], minMinutes:30, equipment:["full_gym","home_gym","dumbbells","bodyweight"],
+      schedule:["hiit","rest","strength","rest","hiit","rest","rest"],
+      days:{
+        hiit:[ slot("run_interval",1,1,1,90,"primary"), slot("squat",3,15,20,60),
+               slot("horizontal_press",3,12,15,60), slot("core_antiext",3,20,30,45) ],
+        strength:[ slot("squat",3,10,12,90,"primary"), slot("horizontal_press",3,10,12,90,"primary"),
+                   slot("horizontal_pull",3,10,12,90,"primary"), slot("hinge",2,10,12,90) ]
+      }, progression:"density", deloadEvery:6,
+      why:"Two interval sessions and one strength day. Intervals are capped at two a week here because a beginner's limiter is recovery, not effort." },
+
+    { id:"hiit_conditioning", name:"HIIT Conditioning",
+      goals:["fatloss","recomp","general"], experience:["intermediate","advanced"],
+      daysRange:[4,5], minMinutes:45, equipment:["full_gym","home_gym"],
+      schedule:["hiit","strength","rest","hiit","strength","zone2","rest"],
+      days:{
+        hiit:[ slot("run_interval",1,1,1,90,"primary"), slot("sled_push",4,1,1,90,"primary"),
+               slot("wall_ball",4,15,20,60), slot("row_erg",3,1,1,90) ],
+        strength:[ slot("squat",4,6,10,120,"primary"), slot("horizontal_press",4,6,10,120,"primary"),
+                   slot("horizontal_pull",4,6,10,120,"primary"), slot("core_antiext",3,15,20,60) ],
+        zone2:[ slot("run_easy",1,1,1,0,"primary") ]
+      }, progression:"density", deloadEvery:5,
+      why:"Intervals and strength alternate so neither is done on tired legs, with one easy aerobic day. Deloads every five weeks — interval work accumulates fatigue faster than lifting does." },
+
     { id:"hyrox_beginner", name:"HYROX Beginner",
       goals:["hyrox"], experience:["beginner"],
       daysRange:[3,3], minMinutes:60, equipment:["full_gym"],
