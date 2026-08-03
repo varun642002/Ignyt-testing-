@@ -1,10 +1,13 @@
 /* Home page module. It intentionally receives dependencies from app.js so the existing
    state and Health Connect behavior stay authoritative during incremental extraction.
 
-   This pass rebuilds Home to match a newer "premium reference" mockup (simple greeting +
-   weekly-goal ring, a real weight-goal progress card, a Today's Summary strip, Quick Actions,
-   and Quick Actions) -- replacing the previous hero-image/recovery-score layout, which the
-   newer reference deck no longer shows. Every value is genuinely sourced from existing app
+   Layout: greeting, weight-goal progress, the summary gauge, then the fasting card, habits,
+   nutrition, challenges and quick actions.
+
+   The gauge replaced two blocks that overlapped -- the IGNYT Score card (ring, level, coach
+   line, four mini stats) and the four-tile Today's Summary beneath it, which repeated steps
+   and training a second time. Three arcs now carry steps, score and training minutes, and the
+   score keeps its arc rather than its block. Every value is genuinely sourced from existing app
    state / Health Connect / the Smart Goal Engine (window.IgnytGoals) -- no fabricated numbers.
    Where the reference shows something this app has no real source for, that element is
    honestly omitted rather than faked. */
@@ -12,7 +15,6 @@
   window.IgnytPages = window.IgnytPages || {};
 
   const DEFAULT_STEPS_GOAL = 10000; // no configurable step goal exists yet; display-only denominator, real numerator
-  const DEFAULT_ACTIVE_CALORIES_GOAL = 2000;
   const DEFAULT_WORKOUT_MINUTES_GOAL = 60;
 
   function healthValue(cache, path, fallback) {
@@ -20,9 +22,24 @@
     catch (_) { return fallback; }
   }
 
+  /* One arc of the summary gauge — a half circle drawn left to right across the top.
+     The path length is exactly pi*r, so stroke-dasharray takes that and stroke-dashoffset the
+     unfilled remainder; no rotate() is needed because the path already starts where the fill
+     should begin. The track is the same arc at low opacity, which is what makes an empty gauge
+     read as "not done yet" rather than "not there". Capped at 100%: an arc running past its own
+     end cap looks like a rendering fault rather than an overachievement. */
+  function gaugeArc(r, pct, color) {
+    const L = Math.PI * r;
+    const p = Math.max(0, Math.min(1, pct || 0));
+    const d = `M ${60 - r} 62 A ${r} ${r} 0 0 1 ${60 + r} 62`;
+    return `<path d="${d}" fill="none" stroke="${color}" stroke-opacity=".16" stroke-width="10" stroke-linecap="round"/>
+      <path d="${d}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round"
+        stroke-dasharray="${L.toFixed(1)}" stroke-dashoffset="${(L * (1 - p)).toFixed(1)}"/>`;
+  }
+
   window.IgnytPages.renderHome = function renderHome(ctx) {
     const { state, week, streak, greeting, displayW, wUnit, svg,
-      weekStats, targets, eaten, burned, dayDone, dayTotal, plannedDay,
+      weekStats, targets, eaten, burned, plannedDay,
       water, waterTarget, nutritionToday,
       renderAchievementCelebration, renderPRCelebration, renderHomeHabits } = ctx;
 
@@ -30,10 +47,24 @@
     try { health = JSON.parse(localStorage.getItem('hx_hc_dashboard_cache') || 'null'); } catch (_) {}
     const steps = healthValue(health, 'steps.steps', null);
 
-    const workoutToday = state.workoutLog.find(s => new Date(s.startedAt || s.date).toDateString() === new Date().toDateString());
-    const workoutMinutes = workoutToday ? Math.round(workoutToday.durationMin || 0) : null;
-    const workoutDoneCount = dayTotal > 0 ? dayDone : (workoutToday ? 1 : 0);
-    const workoutTotalCount = dayTotal > 0 ? dayTotal : (workoutToday ? 1 : 1);
+
+    /* The summary gauge: steps, score, training minutes.
+       Minutes are the SUM of everything logged today, not the first session found — two
+       sessions in a day would otherwise show only the first, which is wrong in the direction
+       that discourages. dayKey() is the app's local-calendar day; the fallback only matters if
+       app.js somehow has not loaded, in which case Home has bigger problems. */
+    const dkey = (typeof dayKey === 'function') ? dayKey : (d) => new Date(d || Date.now()).toISOString().slice(0, 10);
+    const todayKey = dkey();
+    const trainedMin = state.workoutLog.reduce((a, s) =>
+      a + (s && dkey(s.startedAt || s.date) === todayKey ? Number(s.durationMin) || 0 : 0), 0);
+    const scoreToday = (() => {
+      try { return window.IgnytScore ? IgnytScore.summary(state).today.score : null; } catch (_) { return null; }
+    })();
+    const gauge = [
+      { label: 'Steps',       color: '#BF5AF2', now: steps == null ? null : Number(steps), goal: DEFAULT_STEPS_GOAL,           unit: '' },
+      { label: 'IGNYT Score', color: '#30D158', now: scoreToday,                           goal: 160,                          unit: '' },
+      { label: 'Training',    color: '#8CE01F', now: trainedMin,                           goal: DEFAULT_WORKOUT_MINUTES_GOAL, unit: 'min' }
+    ];
 
     const weeklyGoalPct = weekStats.workoutsGoal ? Math.min(100, Math.round(weekStats.workoutsCompleted / weekStats.workoutsGoal * 100)) : 0;
 
@@ -115,13 +146,6 @@
     }
     const weightDeltaKg = (activeGoal && currentWeightKg != null) ? (activeGoal.targetWeight - currentWeightKg) : null;
 
-    const summaryTile = (icon, bg, color, value, unit, label, goalText) => `<div class="pg-card" style="padding:14px;background:${bg};border-color:transparent;">
-      <span style="color:${color};">${svg(icon, 18)}</span>
-      <div style="font-size:18px;font-weight:800;margin-top:8px;">${value}${unit ? `<span style="font-size:11px;font-weight:600;color:var(--rh-muted);"> ${unit}</span>` : ''}</div>
-      <div style="font-size:11px;color:var(--rh-muted);font-weight:600;margin-top:1px;">${label}</div>
-      <div style="font-size:11px;color:var(--rh-muted);font-weight:600;margin-top:1px;">${goalText}</div>
-    </div>`;
-
     const quickAction = (icon, color, label, attrs) => `<button class="rh-quick-card" style="padding:12px 4px;" ${attrs}>
       <span style="color:${color};">${svg(icon, 20)}</span><span>${label}</span>
     </button>`;
@@ -199,50 +223,32 @@
         </div>` : ''}
       </button>`}
 
-      ${window.IgnytScore ? (()=>{
-        /* One pass over the logs for the whole block -- see IgnytScore.summary().
-           Third on the page, under the greeting and the goal: the score is a summary of the
-           day, and a summary reads better after the things it summarises than before them.
-           summary() still computes the suggestion list; it is simply not rendered here any
-           more, and the cost of computing it is one pass either way. */
-        const sum = IgnytScore.summary(state);
-        const t = sum.today, st = sum.stats, line = sum.coachLine;
-        // 46 radius, 289.03 circumference. Stroke-dashoffset draws the arc; the CSS transition
-        // on it is what animates the ring when the score changes.
-        const C = 289.03;
-        const pct = Math.min(1, t.score / 160);
-        return `
-        <div class="ign" style="--ign:${t.level.color};">
-          <div class="ign__ring">
-            <svg viewBox="0 0 100 100" aria-hidden="true">
-              <circle class="ign__track" cx="50" cy="50" r="46"></circle>
-              <circle class="ign__arc" cx="50" cy="50" r="46"
-                      style="stroke-dasharray:${C};stroke-dashoffset:${C - C*pct};"></circle>
-            </svg>
-            <div class="ign__center">
-              <div class="ign__num" data-count="${t.score}" data-count-key="ignyt-score">${t.score}</div>
-              <div class="ign__cap">IGNYT Score</div>
-            </div>
-          </div>
-          <div class="ign__side">
-            <div class="ign__level">${escHtml(t.level.name)}</div>
-            <div class="ign__line">${escHtml(line)}</div>
-            <div class="ign__mini">
-              <span><b>${st.yesterday!=null?st.yesterday:'—'}</b>yesterday</span>
-              <span><b>${st.best}</b>best</span>
-              <span><b>${st.weekAverage!=null?st.weekAverage:'—'}</b>7-day avg</span>
-              <span><b>${st.streak}</b>day streak</span>
-            </div>
-          </div>
-        </div>
-        `; })() : ''}
+      ${/* Replaces the IGNYT Score block and the four-tile Today's Summary that stood here.
+            Both said the same thing at different sizes — the score block carried a ring, a
+            level, a coach line and four mini stats; the tiles repeated steps and training
+            underneath it. This is the three numbers that actually answer "did today move",
+            in one card.
 
-      <div class="rh-section-head"><span>Today's Summary</span><a href="#" class="rh-view-all" data-open-progress-view="analytics">View All</a></div>
-      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
-        ${summaryTile('flame', 'rgba(22,163,74,.08)', 'var(--rh-green)', eaten.toLocaleString(), '', 'Calories', `/ ${Math.round(targets.kcal).toLocaleString()} kcal`)}
-        ${summaryTile('dumbbell', 'rgba(124,58,237,.08)', 'var(--rh-purple)', `${workoutDoneCount}`, `/ ${workoutTotalCount}`, 'Workout', workoutDoneCount >= workoutTotalCount && workoutTotalCount > 0 ? 'Completed' : 'In progress')}
-        ${summaryTile('footprints', 'rgba(217,119,6,.08)', '#D97706', steps == null ? '—' : Number(steps).toLocaleString(), '', 'Steps', `/ ${DEFAULT_STEPS_GOAL.toLocaleString()}`)}
-        ${summaryTile('timer', 'rgba(37,99,235,.08)', 'var(--rh-blue)', workoutMinutes == null ? '—' : workoutMinutes, '', 'Active Minutes', `/ ${DEFAULT_WORKOUT_MINUTES_GOAL} min`)}
+            The score keeps its arc rather than its block, so nothing was lost — and 160 stays
+            its denominator, the same ceiling IgnytScore's own ring used, because a rounder
+            100 would show a full arc for an incomplete day.
+
+            Calories and Active Minutes are not here. Calories has the Nutrition card further
+            down this page and its own tab; active minutes was the same figure as Training. */''}
+      <div class="pg-card hm-gauge">
+        <div class="hm-gauge__arcs">
+          <svg viewBox="0 0 120 72" aria-hidden="true">
+            ${gaugeArc(52, gauge[0].goal ? gauge[0].now / gauge[0].goal : 0, gauge[0].color)}
+            ${gaugeArc(38, gauge[1].goal ? gauge[1].now / gauge[1].goal : 0, gauge[1].color)}
+            ${gaugeArc(24, gauge[2].goal ? gauge[2].now / gauge[2].goal : 0, gauge[2].color)}
+          </svg>
+        </div>
+        <div class="hm-gauge__legend">
+          ${gauge.map(g => `<div class="hm-gauge__row">
+            <span class="hm-gauge__name" style="color:${g.color};">${g.label}</span>
+            <span class="hm-gauge__val">${g.now == null ? '—' : g.now.toLocaleString()}<em>/${g.goal.toLocaleString()}${g.unit ? ' ' + g.unit : ''}</em></span>
+          </div>`).join('')}
+        </div>
       </div>
 
       ${(window.IgnytPages && window.IgnytPages.renderFastingHomeCard)

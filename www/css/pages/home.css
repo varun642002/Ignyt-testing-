@@ -396,3 +396,34 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; }
   font-size: 13px; font-weight: 700;
 }
 .hm-welcome svg{ flex: none; fill: currentColor; }
+
+/* =========================================================
+   HOME — the summary gauge
+
+   Three nested half arcs beside a three-row legend, in place of the IGNYT Score block and the
+   four-tile Today's Summary that used to sit here. Both of those said the same thing at
+   different sizes: the score block carried a ring, a level, a coach line and four mini stats,
+   and the tiles under it repeated steps and training again.
+
+   The wrapper is deliberately not square. The SVG viewBox is 120x72, so a square box would
+   leave a band of dead space beneath the arcs and push the card taller than its own content.
+========================================================= */
+
+.hm-gauge { display: flex; align-items: center; gap: 16px; }
+.hm-gauge__arcs { flex: none; width: 132px; }
+.hm-gauge__arcs svg { width: 100%; height: auto; display: block; overflow: visible; }
+
+.hm-gauge__legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.hm-gauge__row { min-width: 0; }
+.hm-gauge__name { display: block; font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+.hm-gauge__val {
+  display: block; font-size: 13px; font-weight: 700; color: var(--rh-text);
+  font-variant-numeric: tabular-nums; margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hm-gauge__val em { font-style: normal; font-weight: 500; color: var(--rh-muted); }
+
+@media (max-width: 340px) {
+  .hm-gauge { gap: 10px; }
+  .hm-gauge__arcs { width: 112px; }
+}
