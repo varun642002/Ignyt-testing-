@@ -186,32 +186,38 @@
 
       ${activeGoal ? `
       <div class="rh-section-head" style="margin-top:16px;"><span>Goal Progress</span></div>
-      <div class="pg-card" style="display:flex;gap:14px;">
+      ${/* ALIGNMENT.
+            The two weight stats used a fixed 20px gap and took their natural widths, so
+            "Current Weight" and "Goal Weight" started at whatever x their own content decided
+            — the labels did not line up with each other or with anything below. They are equal
+            flex halves now, which puts the second label on a predictable column and lets a long
+            number ellipse instead of shoving the row.
+
+            The Days Left column was flex:none and top-aligned against a taller neighbour, so it
+            sat high with its rule running past it. It now stretches and centres its content, so
+            the divider is full height and the figure sits against the middle of the bar.
+
+            "1 kg per week" is gone. It was the only right-aligned thing in a left-aligned card,
+            which is what made the bottom edge look unbalanced. */''}
+      <div class="pg-card" style="display:flex;gap:14px;align-items:stretch;">
         <div style="flex:1;min-width:0;">
-          <div style="display:flex;gap:20px;">
-            <div style="display:flex;align-items:center;gap:8px;">
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;">
               <span class="tl-card__icon" style="width:32px;height:32px;flex:none;background:rgba(37,99,235,.1);color:var(--rh-blue);">${svg('scale', 16)}</span>
-              <div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Current Weight</div><div style="font-size:15px;font-weight:800;">${currentWeightKg != null ? displayW(currentWeightKg) : '—'} ${wUnit()}</div></div>
+              <div style="min-width:0;"><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Current Weight</div><div style="font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${currentWeightKg != null ? displayW(currentWeightKg) : '—'} ${wUnit()}</div></div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;">
+            <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;">
               <span class="tl-card__icon" style="width:32px;height:32px;flex:none;background:rgba(22,163,74,.1);color:var(--rh-green);">${svg('target', 16)}</span>
-              <div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Goal Weight</div><div style="font-size:15px;font-weight:800;">${displayW(activeGoal.targetWeight)} ${wUnit()}</div></div>
+              <div style="min-width:0;"><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Goal Weight</div><div style="font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${displayW(activeGoal.targetWeight)} ${wUnit()}</div></div>
             </div>
           </div>
           <div class="rh-progress-track"><div class="rh-progress-fill" style="width:${goalPct || 0}%;"></div></div>
           <div class="hm-goal__pct">${goalPct || 0}% of the way there</div>
-          ${/* "You need to lose N kg" removed. The two weights are already side by side above
-                and the bar shows the distance -- saying it a third time in words was the line
-                that made the card feel like it was nagging. The pace stays: it is the one
-                figure here the numbers above do not already give. */''}
-          ${goalCompute && goalCompute.weeklyRate ? `<div style="text-align:right;margin-top:8px;font-size:11px;color:var(--rh-muted);">
-            <b style="color:var(--rh-blue);">${Math.abs(goalCompute.weeklyRate)} ${wUnit()}</b> per week
-          </div>` : ''}
         </div>
-        ${daysLeft != null ? `<div style="flex:none;border-left:1px solid var(--rh-border);padding-left:14px;text-align:center;">
+        ${daysLeft != null ? `<div style="flex:none;min-width:66px;border-left:1px solid var(--rh-border);padding-left:14px;text-align:center;display:flex;flex-direction:column;justify-content:center;">
           <div style="font-size:11px;color:var(--rh-blue);font-weight:700;">Days Left</div>
-          <div style="font-size:22px;font-weight:800;margin-top:2px;">${daysLeft}</div>
-          <div style="font-size:11px;color:var(--rh-muted);margin-top:1px;">days left</div>
+          ${/* The "days left" line that sat under the number said the heading again. */''}
+          <div style="font-size:22px;font-weight:800;margin-top:2px;line-height:1.1;">${daysLeft}</div>
         </div>` : ''}
       </div>` : `
       <div class="rh-section-head" style="margin-top:16px;"><span>Goal Progress</span></div>
