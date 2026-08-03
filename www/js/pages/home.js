@@ -129,22 +129,15 @@
     const currentWeightKg = state.bodylog[0] ? Number(state.bodylog[0].weight) : (activeGoal ? activeGoal.startWeight : null);
     const goalCompute = activeGoal ? goals.compute(activeGoal) : null;
 
-    /* BMI from the latest weigh-in and the profile height. Shown next to the weight goal
-       because it is the same question asked a different way; omitted when either input is
-       missing rather than computed from a default height. */
-    const bmiNow = (() => {
-      const h = Number(state.profile.height);
-      const w = currentWeightKg;
-      if (!h || !w) return null;
-      return w / Math.pow(h / 100, 2);
-    })();
-    const bmiCategoryLabel = (b) => b < 18.5 ? 'Underweight' : b < 25 ? 'Healthy' : b < 30 ? 'Overweight' : 'Obese';
+    /* BMI is no longer on Home. It lives on Log Weight, in a card that shows the figure with
+       the healthy range for the user's height and the caveat that it cannot see muscle -- a
+       screening ratio needs that context, and a bare number with the word "Obese" beside it on
+       the front page was the version without any of it. */
     const goalPct = (activeGoal && goals && currentWeightKg != null) ? (goals.progressPct(activeGoal, currentWeightKg) || 0) : null;
     let daysLeft = null;
     if (goalCompute && goalCompute.completion) {
       daysLeft = Math.max(0, Math.round((new Date(goalCompute.completion) - new Date()) / 86400000));
     }
-    const weightDeltaKg = (activeGoal && currentWeightKg != null) ? (activeGoal.targetWeight - currentWeightKg) : null;
 
     const quickAction = (icon, color, label, attrs) => `<button class="rh-quick-card" style="padding:12px 4px;" ${attrs}>
       <span style="color:${color};">${svg(icon, 20)}</span><span>${label}</span>
@@ -196,31 +189,26 @@
               <div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Goal Weight</div><div style="font-size:15px;font-weight:800;">${displayW(activeGoal.targetWeight)} ${wUnit()}</div></div>
             </div>
           </div>
-          ${bmiNow != null ? `<div class="hm-goal__bmi">
-            <span>BMI <b>${bmiNow.toFixed(1)}</b></span><span class="hm-goal__bmicat">${bmiCategoryLabel(bmiNow)}</span>
-          </div>` : ''}
           <div class="rh-progress-track"><div class="rh-progress-fill" style="width:${goalPct || 0}%;"></div></div>
           <div class="hm-goal__pct">${goalPct || 0}% of the way there</div>
-          <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;">
-            <span style="color:var(--rh-muted);">${weightDeltaKg != null ? `You need to ${weightDeltaKg < 0 ? 'lose' : 'gain'} <b style="color:var(--rh-text);">${Math.abs(displayW(weightDeltaKg, 1))} ${wUnit()}</b>` : ''}</span>
-            <span style="color:var(--rh-muted);">${goalCompute && goalCompute.weeklyRate ? `<b style="color:var(--rh-blue);">${Math.abs(goalCompute.weeklyRate)} ${wUnit()}</b> per week` : ''}</span>
-          </div>
+          ${/* "You need to lose N kg" removed. The two weights are already side by side above
+                and the bar shows the distance -- saying it a third time in words was the line
+                that made the card feel like it was nagging. The pace stays: it is the one
+                figure here the numbers above do not already give. */''}
+          ${goalCompute && goalCompute.weeklyRate ? `<div style="text-align:right;margin-top:8px;font-size:11px;color:var(--rh-muted);">
+            <b style="color:var(--rh-blue);">${Math.abs(goalCompute.weeklyRate)} ${wUnit()}</b> per week
+          </div>` : ''}
         </div>
         ${daysLeft != null ? `<div style="flex:none;border-left:1px solid var(--rh-border);padding-left:14px;text-align:center;">
           <div style="font-size:11px;color:var(--rh-blue);font-weight:700;">Days Left</div>
           <div style="font-size:22px;font-weight:800;margin-top:2px;">${daysLeft}</div>
           <div style="font-size:11px;color:var(--rh-muted);margin-top:1px;">days left</div>
-          <div style="font-size:11px;color:var(--rh-muted);font-weight:700;margin-top:10px;">Target Date</div>
-          <div style="font-size:11px;font-weight:700;margin-top:1px;white-space:nowrap;">${new Date(goalCompute.completion).toLocaleDateString('default',{day:'2-digit',month:'short',year:'numeric'})}</div>
         </div>` : ''}
       </div>` : `
       <div class="rh-section-head" style="margin-top:16px;"><span>Goal Progress</span></div>
       <button class="pg-card" style="width:100%;text-align:left;background:none;border-style:dashed;cursor:pointer;" data-nav="goals">
         <div style="font-size:13px;font-weight:700;">Set your first goal</div>
         <div style="font-size:12px;color:var(--rh-muted);margin-top:2px;">Track your progress toward a target weight and date in Fitness Goals.</div>
-        ${bmiNow != null ? `<div class="hm-goal__bmi" style="margin-top:10px;">
-          <span>Right now · BMI <b>${bmiNow.toFixed(1)}</b></span><span class="hm-goal__bmicat">${bmiCategoryLabel(bmiNow)}</span>
-        </div>` : ''}
       </button>`}
 
       ${/* Replaces the IGNYT Score block and the four-tile Today's Summary that stood here.
@@ -304,8 +292,6 @@
 
       ${window.IgnytReview ? (()=>{
         const line = IgnytReview.coachLine(state);
-        const ch = IgnytReview.challenges(state);
-        const doneCount = ch.filter(c=>c.done).length;
         return `
         ${line ? `<div class="daily-motivation">
           <span class="daily-motivation__icon">${svg('star',16)}</span>
@@ -333,24 +319,16 @@
               : 'Starter target — it adapts once you have a few weeks logged'}</span>
           </div>
         </div>`; })() : ''}
-
-        <div class="rh-section-head"><span>Today's Challenges</span><span class="rh-view-all">${doneCount}/${ch.length}</span></div>
-        <div class="chal">
-          ${ch.map(c=>`<div class="chal__row${c.done?' is-done':''}">
-            <span class="chal__icon">${c.icon}</span>
-            <span class="chal__label">${c.label}</span>
-            <span class="chal__xp">${c.done ? '✓' : '+'+c.xp+' XP'}</span>
-          </div>`).join('')}
-        </div>`; })() : ''}
+`; })() : ''}
 
       <div class="rh-section-head"><span>Quick Actions</span></div>
       <div class="rh-quick-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));">
-        ${quickAction('workout', 'var(--rh-green)', 'Start Workout', 'data-nav="workout"')}
-        ${quickAction('nutrition', '#DC2626', 'Log Food', 'data-nav="nutrition"')}
+        ${/* Three. Workout, Food, Progress and Health all have a bottom-nav tab or a card
+              further up this page, so as shortcuts they were pointing at things already one tap
+              away. These three are the ones with no other route from Home. */''}
         ${quickAction('scale', 'var(--rh-blue)', 'Log Weight', 'data-nav="body"')}
-        ${quickAction('health', '#0891B2', 'Health', 'data-nav="health"')}
-        ${quickAction('progress', 'var(--rh-purple)', 'Progress', 'data-nav="progress"')}
-        ${quickAction('more', 'var(--rh-muted)', 'More', 'data-nav="tools"')}
+        ${quickAction('timer', '#7C3AED', 'Fasting', 'data-nav="fasting"')}
+        ${quickAction('flask', '#0891B2', 'Supplements', 'data-nav="supplements"')}
       </div>
     </div>`;
   };
