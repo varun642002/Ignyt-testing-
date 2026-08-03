@@ -14802,24 +14802,41 @@ function buildWorkoutSummaryText(s){
    survives the CSP and offline. If you want real illustrations, that is a design pass with a
    pair of eyes on it, not something to guess at.
 ========================================================= */
+/* Ordered lightest to heaviest. Every kg is a real approximate adult average — the point of
+   the card is a comparison someone can picture, and a made-up weight would break the only
+   thing it is for.
+
+   `plural` is stated, not derived. Stripping the article and adding "s" produced "persons"
+   and "bisons"; English takes no rule here, so the data carries it.
+
+   The bison is gone, and that is an emoji-vintage decision rather than a zoological one:
+   U+1F9AC is Emoji 13.0 (2020, Android 11), and this app's minSdk is 26 — Android 8, which
+   ships Emoji 5.0. It would have rendered as an empty box on an older phone. The kangaroo and
+   hippo are Emoji 11.0 (Android 9); everything else here is Emoji 5.0 or earlier and safe all
+   the way down. Anything added later should be checked the same way. */
 const VOLUME_ANIMALS = [
-  /* `plural` is stated, not derived. Stripping the article and adding "s" produced
-     "persons" and "bisons"; English takes no rule here, so the data carries it. */
-  { kg: 4.5,     emoji: "\u{1F408}", name: "a cat", plural: "cats" },
-  { kg: 25,      emoji: "\u{1F415}", name: "a labrador", plural: "labradors" },
-  { kg: 62,      emoji: "\u{1F9CD}", name: "an adult person", plural: "people" },
-  { kg: 100,     emoji: "\u{1F43C}", name: "a giant panda", plural: "giant pandas" },
-  { kg: 160,     emoji: "\u{1F98D}", name: "a gorilla", plural: "gorillas" },
-  { kg: 190,     emoji: "\u{1F981}", name: "a lion", plural: "lions" },
-  { kg: 270,     emoji: "\u{1F43B}", name: "a grizzly bear", plural: "grizzly bears" },
-  { kg: 500,     emoji: "\u{1F40E}", name: "a horse", plural: "horses" },
-  { kg: 750,     emoji: "\u{1F404}", name: "a cow", plural: "cows" },
-  { kg: 900,     emoji: "\u{1F9AC}", name: "a bison", plural: "bison" },
-  { kg: 1200,    emoji: "\u{1F992}", name: "a giraffe", plural: "giraffes" },
-  { kg: 1500,    emoji: "\u{1F99B}", name: "a hippo", plural: "hippos" },
-  { kg: 2300,    emoji: "\u{1F98F}", name: "a rhino", plural: "rhinos" },
-  { kg: 6000,    emoji: "\u{1F418}", name: "an elephant", plural: "elephants" },
-  { kg: 150000,  emoji: "\u{1F40B}", name: "a blue whale", plural: "blue whales" }
+  { kg: 4.5,     emoji: "\u{1F408}", name: "a cat",                 plural: "cats" },
+  { kg: 30,      emoji: "\u{1F415}", name: "a labrador",            plural: "labradors" },
+  { kg: 45,      emoji: "\u{1F43A}", name: "a wolf",                plural: "wolves" },
+  { kg: 60,      emoji: "\u{1F406}", name: "a leopard",             plural: "leopards" },
+  { kg: 62,      emoji: "\u{1F9D1}", name: "an adult person",       plural: "people" },
+  { kg: 65,      emoji: "\u{1F998}", name: "a kangaroo",            plural: "kangaroos" },
+  { kg: 100,     emoji: "\u{1F43C}", name: "a giant panda",         plural: "giant pandas" },
+  { kg: 120,     emoji: "\u{1F98C}", name: "a reindeer",            plural: "reindeer" },
+  { kg: 160,     emoji: "\u{1F98D}", name: "a gorilla",             plural: "gorillas" },
+  { kg: 190,     emoji: "\u{1F981}", name: "a lion",                plural: "lions" },
+  { kg: 220,     emoji: "\u{1F405}", name: "a tiger",               plural: "tigers" },
+  { kg: 270,     emoji: "\u{1F43B}", name: "a grizzly bear",        plural: "grizzly bears" },
+  { kg: 500,     emoji: "\u{1F40E}", name: "a horse",               plural: "horses" },
+  { kg: 600,     emoji: "\u{1F42B}", name: "a camel",               plural: "camels" },
+  { kg: 750,     emoji: "\u{1F404}", name: "a cow",                 plural: "cows" },
+  { kg: 1000,    emoji: "\u{1F40A}", name: "a saltwater crocodile", plural: "saltwater crocodiles" },
+  { kg: 1200,    emoji: "\u{1F992}", name: "a giraffe",             plural: "giraffes" },
+  { kg: 1500,    emoji: "\u{1F99B}", name: "a hippo",               plural: "hippos" },
+  { kg: 2300,    emoji: "\u{1F98F}", name: "a rhino",               plural: "rhinos" },
+  { kg: 6000,    emoji: "\u{1F418}", name: "an elephant",           plural: "elephants" },
+  { kg: 19000,   emoji: "\u{1F988}", name: "a whale shark",         plural: "whale sharks" },
+  { kg: 150000,  emoji: "\u{1F40B}", name: "a blue whale",          plural: "blue whales" }
 ];
 
 /** The heaviest animal this volume covers, and how many of it. Null under the lightest one —
