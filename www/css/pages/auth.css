@@ -520,6 +520,35 @@
   box-shadow: 0 0 0 3px rgba(59,130,246,.13);
 }
 
+/* Password field with a reveal toggle. The wrapper is the positioning context and the input
+   keeps its own full width, so the eye overlays rather than shrinking the field — a flex row
+   would have made the input narrower than the email field above it and the column would read
+   as ragged. The extra right padding is what keeps a long password from running under it. */
+.pwd-wrap{ display: block; position: relative; }
+.pwd-wrap input{ padding-right: 48px; }
+.auth-email__field .pwd-wrap input{ padding-right: 48px; }
+.pwd-eye{
+  position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+  display: flex; align-items: center; justify-content: center;
+  /* 40px, not the icon's 18 — this is a tap target on a phone, and one that sits a thumb's
+     width from the Submit button. */
+  width: 40px; height: 40px; padding: 0;
+  border: none; background: none; cursor: pointer;
+  color: var(--auth-muted); border-radius: var(--auth-radius-sm);
+  transition: color .15s ease, background .15s ease;
+}
+.pwd-eye:hover{ color: var(--auth-text); }
+.pwd-eye:disabled{ opacity: .4; cursor: default; }
+.pwd-eye:active{ background: rgba(255,255,255,.06); }
+.pwd-eye:focus-visible{ outline: 2px solid rgba(59,130,246,.6); outline-offset: 1px; }
+
+/* States the whole rule up front. It used to say "At least 6 characters" in the placeholder
+   while validateEmailForm() required 8 plus a letter and a number, so the first thing a new
+   user met was a rejection for following the instruction they were given. */
+.auth-email__hint{
+  margin-top: 7px; font-size: 12px; line-height: 1.5; color: var(--auth-muted);
+}
+
 /* Two links on one row for sign-in, one centred for the other modes — space-between on a
    single child would shove it to the left, so the row centres and gaps instead. */
 .auth-email__links{

@@ -748,6 +748,8 @@ const MOBILITY_RATING_OPTIONS = ["Poor","Fair","Good","Excellent"];
 const FITNESS_LEVELS = ["Beginner","Novice","Intermediate","Advanced","Elite"];
 
 const ICONS = {
+  eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/>',
+  'eye-off':'<path d="M9.9 5.8A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3.2 3.9M6.5 7.6A17 17 0 0 0 2.5 12S6 18.5 12 18.5c1.4 0 2.7-.35 3.8-.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.9 9.9a3.2 3.2 0 0 0 4.35 4.35" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3.5 3.5l17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   plan:'<path d="M6.5 6.5h11v11h-11z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 3v4M16 3v4M6.5 10h11" stroke="currentColor" stroke-width="2" fill="none"/>',
   workout:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 8l6 4-6 4z" fill="currentColor"/>',
   library:'<path d="M5 4h9a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 4h1a2 2 0 0 1 2 2v14h-3" fill="none" stroke="currentColor" stroke-width="2"/>',
@@ -6216,7 +6218,7 @@ function renderDeleteAccountSheet(){
       </div>
       <button class="btn btn-steel btn-block" data-action="delete-account-export" ${busy?'disabled':''}>${svg('download',15)} Export my data first</button>
       <div style="font-size:12px;color:var(--rh-muted);margin:16px 0 6px;font-weight:700;">Enter your password to confirm</div>
-      <input type="password" id="delete-account-password" class="pi-input" autocomplete="current-password" placeholder="Password" ${busy?'disabled':''} style="width:100%;">
+      ${pwdField("delete-account-password", "current-password", "Password", "pi-input", busy)}
       ${err ? `<div style="font-size:12px;color:var(--rh-red);margin-top:10px;line-height:1.5;">${escHtml(err)}</div>` : ''}
       <button class="btn btn-block" style="margin-top:16px;background:var(--rh-red);color:#fff;" data-action="delete-account-confirm" ${busy?'disabled':''}>${busy?'Deleting…':'Delete my account permanently'}</button>
       <button class="btn btn-ghost btn-block" style="margin-top:8px;" data-action="close-delete-account" ${busy?'disabled':''}>Cancel</button>
@@ -6242,8 +6244,8 @@ function renderBackupCryptoSheet(){
           ? `Your backup will be locked with AES-256. <strong>Keep the passphrase somewhere safe — without it the file cannot be opened, not by you and not by us.</strong> There is no reset.`
           : `Enter the passphrase you set when you made this backup.`}
       </div>
-      <input type="password" id="backup-pass" class="pi-input" autocomplete="${exporting?'new-password':'current-password'}" placeholder="Passphrase" ${busy?'disabled':''} style="width:100%;">
-      ${exporting ? `<input type="password" id="backup-pass2" class="pi-input" autocomplete="new-password" placeholder="Confirm passphrase" ${busy?'disabled':''} style="width:100%;margin-top:8px;">` : ''}
+      ${pwdField("backup-pass", exporting?'new-password':'current-password', "Passphrase", "pi-input", busy)}
+      ${exporting ? `<div style="margin-top:8px;">${pwdField("backup-pass2", "new-password", "Confirm passphrase", "pi-input", busy)}</div>` : ''}
       ${err ? `<div style="font-size:12px;color:var(--rh-red);margin-top:10px;line-height:1.5;">${escHtml(err)}</div>` : ''}
       <button class="btn btn-block" style="margin-top:16px;background:var(--accent);color:#0b0b0f;font-weight:800;" data-action="backup-crypto-confirm" ${busy?'disabled':''}>
         ${busy ? (exporting?'Encrypting…':'Decrypting…') : (exporting?'Encrypt and download':'Restore backup')}
@@ -9259,15 +9261,15 @@ function renderAuthEmailStep(mode, authErr, busy){
       ${mode === "forgot" ? "" : `
         <label class="auth-email__field">
           <span>Password</span>
-          <input type="password" id="auth-password"
-                 autocomplete="${mode === "signup" ? "new-password" : "current-password"}"
-                 placeholder="${mode === "signup" ? "At least 6 characters" : "Your password"}">
-        </label>`}
+          ${pwdField("auth-password", mode === "signup" ? "new-password" : "current-password",
+                     mode === "signup" ? "At least 8 characters" : "Your password")}
+        </label>
+        ${mode === "signup" ? `<div class="auth-email__hint" id="auth-pwd-hint">At least 8 characters, including a letter and a number.</div>` : ""}`}
 
       ${mode === "signup" ? `
         <label class="auth-email__field">
           <span>Confirm password</span>
-          <input type="password" id="auth-password2" autocomplete="new-password" placeholder="Repeat it">
+          ${pwdField("auth-password2", "new-password", "Repeat it")}
         </label>` : ""}
 
       ${authErr}
@@ -9285,6 +9287,48 @@ function renderAuthEmailStep(mode, authErr, busy){
           <button data-auth="email-mode" data-mode="signin" type="button">Back to sign in</button>` : ""}
       </div>
     </div>`;
+}
+
+/* A password input with a reveal toggle.
+   The state lives on the DOM node and nowhere else — deliberately. `state` is serialised to
+   localStorage by persist(), so a `revealed: true` flag there would survive to the next launch
+   and quietly hand the next person to pick up the phone an unmasked password field. It also
+   must not trigger a render: this screen rebuilds from scratch on render and password inputs
+   carry no value attribute, so re-rendering to flip one attribute would wipe what the user had
+   already typed — the same reason showAuthEmailError writes into the DOM directly. */
+function pwdField(id, autocomplete, placeholder, cls, disabled){
+  return `
+    <span class="pwd-wrap">
+      <input type="password" id="${id}" autocomplete="${autocomplete}" placeholder="${escHtml(placeholder)}"${cls?` class="${cls}"`:""}${disabled?" disabled":""}>
+      <!-- Deliberately IN the tab order. Skipping it puts the toggle out of reach of anyone
+           navigating by keyboard, which is the group that most needs to check what they typed;
+           the cost is one extra tab stop per password field. -->
+      <button type="button" class="pwd-eye" data-pwd-toggle="${id}"
+              aria-label="Show password" aria-pressed="false"${disabled?" disabled":""}>${svg('eye',18)}</button>
+    </span>`;
+}
+
+/* Delegated so it survives every re-render of this screen without rebinding. */
+function bindPwdToggles(root){
+  (root || document).querySelectorAll("[data-pwd-toggle]").forEach(btn=>{
+    if(btn.dataset.pwdBound) return;      // idempotent: bindSignInScreen can run twice
+    btn.dataset.pwdBound = "1";
+    btn.addEventListener("click", ()=>{
+      const input = document.getElementById(btn.getAttribute("data-pwd-toggle"));
+      if(!input) return;
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      btn.innerHTML = svg(show ? 'eye-off' : 'eye', 18);
+      btn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+      btn.setAttribute("aria-pressed", show ? "true" : "false");
+      /* Focus goes back to the field at the caret's old place. Without this the tap moves
+         focus to the button, the soft keyboard drops, and revealing your password costs you
+         your place in typing it. */
+      const at = input.value.length;
+      input.focus();
+      try{ input.setSelectionRange(at, at); }catch(e){}   // throws on some input types
+    });
+  });
 }
 
 /* Validation happens here rather than being left to Firebase, so the common mistakes get an
@@ -9485,6 +9529,7 @@ function renderSignInScreen(){
 }
 
 function bindSignInScreen(){
+  bindPwdToggles();
   document.querySelectorAll('[data-auth="email-mode"]').forEach(el=>{
     el.addEventListener("click", (e)=>{
       e.preventDefault();
@@ -16572,6 +16617,8 @@ function attachHandlers(){
 
   const accountSignoutBtn = document.querySelector('[data-action="account-signout"]');
   if(accountSignoutBtn) accountSignoutBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signOut(); });
+
+  bindPwdToggles();   // sheets (delete account, encrypted backup) rebuild on every render
 
   /* ---- encrypted backup ---- */
   const encExport = document.querySelector('[data-action="export-json-encrypted"]');
