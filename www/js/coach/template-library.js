@@ -263,6 +263,22 @@ window.IgnytCoachTemplates = (function () {
       }, progression:"mileage_capped", deloadEvery:4,
       why:"Heavy, low-rep strength work improves running economy without adding the muscle mass that would cost you. Weekly mileage is capped at +10% — the most common cause of running injury is doing too much too soon." },
 
+    { id:"mobility_recovery", name:"Mobility & Recovery",
+      goals:["mobility","general"], experience:["beginner","intermediate","advanced"],
+      daysRange:[2,6], minMinutes:30, equipment:["full_gym","home_gym","dumbbells","bodyweight"],
+      schedule:["mobility","strength","mobility","rest","mobility","strength","rest"],
+      days:{
+        mobility:[ slot("hip_mobility",2,1,1,30,"primary"), slot("thoracic_mobility",2,1,1,30,"primary"),
+                   slot("shoulder_mobility",2,1,1,30), slot("ankle_mobility",2,1,1,30),
+                   slot("core_antiext",3,10,15,45) ],
+        /* Strength days are not decoration. Range gained and never loaded is range you lose —
+           the point of the strength work here is to make the new positions ones you can
+           actually hold under load. */
+        strength:[ slot("squat",3,8,12,90,"primary"), slot("horizontal_press",3,8,12,90,"primary"),
+                   slot("horizontal_pull",3,8,12,90,"primary"), slot("hinge",2,8,12,90) ]
+      }, progression:"range_first", deloadEvery:8,
+      why:"Mobility leads and strength follows it, because range you gain and never load is range you give back." },
+
     { id:"home_workout", name:"Home Workout",
       goals:["general","fatloss","muscle"], experience:["beginner","intermediate","advanced"],
       daysRange:[3,4], minMinutes:30, equipment:["home_gym","dumbbells","bodyweight"],

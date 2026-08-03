@@ -588,3 +588,10 @@
 .wk-plan__start{ margin-top:2px; }
 .wk-plan--rest{ opacity:.9; }
 .wk-plan--rest .wk-plan__day{ color:var(--rh-muted); }
+
+/* Week/deload metadata on the plan card. A deload is a normal, planned week, so it is marked
+   by a quiet left rule rather than a warning colour — being told to go lighter is not a
+   failure state and must not look like one. */
+.wk-plan__meta{ font-size:11px; font-weight:700; color:var(--rh-muted); margin:2px 0 8px;
+                text-transform:uppercase; letter-spacing:.05em; }
+.wk-plan--deload{ border-left:3px solid var(--rh-blue); }

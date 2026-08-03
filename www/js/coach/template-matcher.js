@@ -25,16 +25,44 @@ window.IgnytCoachMatcher = (function () {
   function T() { return window.IgnytCoachTemplates; }
 
   /* Onboarding stores free text and legacy values; the tree needs a small closed set. */
+  /* GOAL CLASSIFICATION IS goal-engine's JOB, NOT THIS MODULE'S.
+     This file briefly carried its own normaliser and the two immediately disagreed:
+     goal-engine sends "Athletic Performance" to general, mine sent it to strength, and which
+     plan you got depended on which module happened to be asked. That is the exact failure this
+     codebase keeps hitting — two places deciding the same thing.
+
+     goal-engine is the authority. It classifies into eight keys (fatloss, muscle, strength,
+     recomp, endurance, hyrox, mobility, general), and it is better at it than a regex here
+     would be: it also reads calorieDelta as a second opinion, so someone who says "improve
+     fitness" while eating 500 under maintenance is programmed as the fat-loss case they
+     actually are.
+
+     The local patterns below are a FALLBACK for when the module has not loaded, nothing more.
+     They deliberately mirror goal-engine's own GOAL_PATTERNS rather than improving on them —
+     a fallback that disagrees with the thing it stands in for is worse than no fallback. */
   function normGoal(raw) {
     var g = String(raw || "").toLowerCase();
     if (/hyrox/.test(g)) return "hyrox";
-    if (/endur|run|marathon|5k|10k/.test(g)) return "endurance";
-    if (/strength|power|1rm/.test(g)) return "strength";
-    if (/fat|lose|cut|lean/.test(g)) return "fatloss";
-    if (/muscle|gain|bulk|hypertroph|size/.test(g)) return "muscle";
+    if (/marathon|10k|5k|running|run\b|endurance|stamina|cardio/.test(g)) return "endurance";
+    if (/mobility|flexib/.test(g)) return "mobility";
     if (/recomp/.test(g)) return "recomp";
+    if (/powerlift|strength|power\b/.test(g)) return "strength";
+    if (/muscle|hypertroph|bodybuild|bulk|mass/.test(g)) return "muscle";
+    if (/lose weight|fat loss|weight loss|cut/.test(g)) return "fatloss";
     return "general";
   }
+
+  /** The classification, from goal-engine when it is available. */
+  function classify(p) {
+    try {
+      if (window.IgnytCoachGoal && p.resolvedProfile) {
+        var intent = window.IgnytCoachGoal.resolve(p.resolvedProfile);
+        if (intent && intent.key) return intent.key;
+      }
+    } catch (e) {}
+    return normGoal(p.goal);
+  }
+
   function normExp(raw) {
     var e = String(raw || "").toLowerCase();
     if (/adv|expert/.test(e)) return "advanced";
@@ -51,14 +79,28 @@ window.IgnytCoachMatcher = (function () {
   }
 
   /**
-   * @param {object} p  { goal, experience, days, sessionMinutes, equipment[] }
+   * HYROX intent from something the user actually did, not from a default field.
+   *
+   * state.profile.hyroxExperience is populated for everyone ("first-timer" by default), so it
+   * cannot be the signal — it would route the entire user base to HYROX plans. A logged race
+   * or an explicit secondary goal is a real statement of intent.
+   */
+  function hyroxIntent(p) {
+    if (/hyrox/i.test(String(p.goal || ""))) return true;
+    if ((p.secondaryGoals || []).some(function (g) { return /hyrox/i.test(String(g)); })) return true;
+    if (p.hasRaceLog) return true;
+    return false;
+  }
+
+  /**
+   * @param {object} p  { goal, experience, days, sessionMinutes, equipment[], secondaryGoals[], hasRaceLog }
    * @returns {object}  { template, reasons[], fallback:boolean }
    */
   function assign(p) {
     var lib = T();
     if (!lib) return null;
 
-    var goal = normGoal(p.goal);
+    var goal = hyroxIntent(p) ? "hyrox" : classify(p);
     var exp = normExp(p.experience);
     var equip = normEquip(p.equipment);
     var days = Math.max(2, Math.min(6, Number(p.days) || 3));
@@ -97,6 +139,10 @@ window.IgnytCoachMatcher = (function () {
       reasons.push("HYROX training is its own discipline — running and stations together.");
       var hx = exp === "advanced" ? "hyrox_advanced" : exp === "intermediate" ? "hyrox_intermediate" : "hyrox_beginner";
       return done(lib.get(hx), reasons);
+    }
+    if (goal === "mobility") {
+      reasons.push("Mobility work leads, with enough strength training to keep the range you gain.");
+      return done(lib.get("mobility_recovery"), reasons);
     }
     if (goal === "endurance") {
       reasons.push("Strength work sits around the running rather than competing with it.");
@@ -193,7 +239,7 @@ window.IgnytCoachMatcher = (function () {
   }
 
   return Object.freeze({
-    assign: assign, explain: explain,
+    assign: assign, explain: explain, hyroxIntent: hyroxIntent, classify: classify,
     normGoal: normGoal, normExp: normExp, normEquip: normEquip
   });
 })();

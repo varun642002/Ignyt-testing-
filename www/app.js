@@ -10,7 +10,7 @@ const SCHEMA_VERSION = 1; // bump when localStorage shape changes; add a migrate
 /* ---------- Storage ---------- */
 
 const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_profile","hx_nutrition","hx_bodylog","hx_custom_exercises",
-  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history","hx_deleted_workouts"];
+  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history","hx_deleted_workouts","hx_plan"];
 
 /* The subset of the above whose values are arrays of RECORD OBJECTS — the ones the UI reads
    fields off, and so the ones a null element inside can crash. Used by LS.records() on load
@@ -1491,6 +1491,7 @@ const state = {
   // mid-flow reopens the app in a normal state rather than back on a destructive confirmation.
   deleteAccountOpen: false, deleteAccountBusy: false, deleteAccountError: null,
   backupCryptoOpen: null, backupCryptoBusy: false, backupCryptoError: null, backupCryptoPending: null,
+  plan: LS.get("hx_plan", null),   // assigned training plan — see PROGRAM PROGRESSION
   showExercisePicker: false,
   exercisePickerSearch: "",
   exercisePickerEquipment: "All",
@@ -1582,6 +1583,7 @@ function persist(){
   LS.set("hx_profile", state.profile);
   LS.set("hx_onboarding_complete", state.onboardingComplete);
   LS.set("hx_onboarding_wizard", state.onboarding);
+  LS.set("hx_plan", state.plan);
   LS.set("hx_completed", state.completed);
   LS.set("hx_nutrition", state.nutrition);
   LS.set("hx_bodylog", state.bodylog);
@@ -15709,50 +15711,178 @@ function titleCaseDayKey(key){
   }).join(" ");
 }
 
+/* =========================================================
+   PROGRAM PROGRESSION — what turns an assignment into a plan.
+
+   Before this, buildTodaysPlan() re-ran the matcher on every render. That is a daily lookup,
+   not a program: there was no week two, no deload, no memory of a missed week, and — worst —
+   editing your profile silently swapped the plan out from under you mid-programme.
+
+   The plan is now ASSIGNED ONCE and stored. Everything after that is progression:
+
+     week      derived from startedAt, so it advances by the calendar rather than by a counter
+               that drifts if the app is not opened.
+     deload    every template names its own deloadEvery. Powerlifting deloads at 4 weeks and
+               a beginner full-body at 8, because they accumulate fatigue at different rates.
+     adapt     adaptation-engine runs ONCE per week boundary and the result is stored, not
+               recomputed. Recomputing would let a good Sunday erase a bad week.
+
+   The plan never changes itself. A profile edit does not reassign — reassigning silently is
+   how someone loses week six of a twelve-week block by correcting their bodyweight.
+========================================================= */
+
+function planWeekNumber(plan){
+  if(!plan || !plan.startedAt) return 1;
+  const days = Math.floor((Date.now() - plan.startedAt) / 86400000);
+  return Math.max(1, Math.floor(days / 7) + 1);
+}
+
+function isDeloadWeek(plan, template){
+  const every = (template && template.deloadEvery) || 0;
+  if(!every) return false;
+  return planWeekNumber(plan) % every === 0;
+}
+
+/** Assign (or reassign) a plan from the current profile. Explicit only — never automatic. */
+function assignPlan(){
+  if(!window.IgnytCoachMatcher || !window.IgnytCoachProfile) return null;
+  const resolved = IgnytCoachProfile.resolve(state);
+  const p = (resolved && resolved.profile) || {};
+  const match = IgnytCoachMatcher.assign({
+    goal: p.primaryGoal, experience: p.experience, days: p.trainingDays,
+    sessionMinutes: p.minutesPerSession || 45, equipment: p.equipment,
+    secondaryGoals: p.secondaryGoals || [],
+    // A logged race is a statement of intent that no questionnaire field captures.
+    hasRaceLog: Array.isArray(state.raceLog) && state.raceLog.length > 0
+  });
+  if(!match || !match.template) return null;
+  state.plan = {
+    templateId: match.template.id,
+    startedAt: Date.now(),
+    adaptations: [],
+    lastAdaptedWeek: 0,
+    reasons: match.reasons || []
+  };
+  persist();
+  return state.plan;
+}
+
+/**
+ * Runs the weekly adaptation, at most once per week boundary.
+ *
+ * Guarded on lastAdaptedWeek rather than on a timestamp: the app can be opened twenty times
+ * on a Monday and the week must be adapted once. Storing the RESULT rather than recomputing
+ * it on demand is what stops a strong Sunday from rewriting the judgement made about a week
+ * that was actually missed.
+ */
+function maybeAdaptWeek(){
+  const plan = state.plan;
+  if(!plan || !window.IgnytCoachAdaptation) return null;
+  const week = planWeekNumber(plan);
+  if(week <= (plan.lastAdaptedWeek || 0)) return currentAdaptation();
+  if(week === 1){ plan.lastAdaptedWeek = 1; persist(); return null; }  // nothing to judge yet
+
+  const template = window.IgnytCoachTemplates && IgnytCoachTemplates.get(plan.templateId);
+  const planned = template ? (template.schedule || []).filter(d => d && d !== "rest").length : 0;
+  const summary = IgnytCoachAdaptation.weekSummary(state.workoutLog, planned, planned);
+
+  /* allTargetsHit comes from the overload engine rather than being assumed. Without it the
+     "earned progression" branch can never fire, which would quietly make the engine only
+     capable of making weeks easier. */
+  summary.allTargetsHit = (function(){
+    try{
+      if(!window.IgnytCoachOverload) return false;
+      const recent = state.workoutLog.slice(0, 12);
+      const names = [...new Set(recent.flatMap(w => (w.exercises||[]).map(e=>e.name)))].slice(0, 8);
+      if(!names.length) return false;
+      return names.every(n => {
+        const r = IgnytCoachOverload.next(state.workoutLog, n, { reps: coachRepRange(), unit: wUnit() });
+        return !r || r.action === "add_load" || r.action === "add_reps" || r.action === "add_set";
+      });
+    }catch(e){ return false; }
+  })();
+
+  let recovery = { score: null, avgSoreness: null };
+  try{
+    if(window.IgnytCoachRecovery){
+      const a = IgnytCoachRecovery.assess(state);
+      if(a && isFinite(a.score)) recovery.score = a.score;
+    }
+  }catch(e){}
+
+  const adj = IgnytCoachAdaptation.adaptNextWeek(summary, recovery);
+  plan.adaptations = (plan.adaptations || []).concat([{
+    week, at: Date.now(), reason: adj.reason, volume: adj.volume,
+    intensity: adj.intensity, holdProgression: !!adj.holdProgression, msg: adj.msg
+  }]).slice(-26);              // two seasons of history is plenty; it is not an audit log
+  plan.lastAdaptedWeek = week;
+  persist();
+  return adj;
+}
+
+/** The adjustment in force for this week, or null. */
+function currentAdaptation(){
+  const plan = state.plan;
+  if(!plan || !plan.adaptations || !plan.adaptations.length) return null;
+  const week = planWeekNumber(plan);
+  const a = plan.adaptations[plan.adaptations.length - 1];
+  return (a && a.week === week) ? a : null;
+}
+
 function buildTodaysPlan(){
   const M = window.IgnytCoachMatcher, T = window.IgnytCoachTemplates, S = window.IgnytCoachSubstitution;
   if(!M || !T || !S) return null;
   try{
+    /* Use the STORED plan. Re-running the matcher here is what made this a daily lookup
+       rather than a programme — and it meant a profile edit silently swapped the plan out
+       mid-block. First run assigns; after that the assignment is a fact, not a computation. */
+    if(!state.plan) assignPlan();
+    const plan = state.plan;
+    if(!plan) return null;
+    const template = T.get(plan.templateId);
+    if(!template){ state.plan = null; persist(); return null; }   // template retired — reassign next render
+
+    maybeAdaptWeek();
+    const week = planWeekNumber(plan);
+    const deload = isDeloadWeek(plan, template);
+    const adapt = currentAdaptation();
+
     const resolved = window.IgnytCoachProfile ? IgnytCoachProfile.resolve(state) : null;
-    const p = (resolved && resolved.profile) || {};
-    const match = M.assign({
-      goal: p.primaryGoal,
-      experience: p.experience,
-      days: p.trainingDays,
-      sessionMinutes: p.minutesPerSession || 45,
-      equipment: p.equipment
-    });
-    if(!match || !match.template) return null;
+    const prof = (resolved && resolved.profile) || {};
 
-    /* Monday-indexed, because that is how every one of these templates is written — a
-       schedule starting "push, pull, legs" means Monday push, not Sunday push. getDay()
-       returns 0 for Sunday, so it is rotated rather than used directly. */
-    const dayIndex = (new Date().getDay() + 6) % 7;
-    const dayKey = (match.template.schedule || [])[dayIndex];
-    const slots = dayKey ? (match.template.days[dayKey] || []) : [];
+    const dayIndex = (new Date().getDay() + 6) % 7;    // templates are written Monday-first
+    const dayKeyName = (template.schedule || [])[dayIndex];
+    const slots = dayKeyName ? (template.days[dayKeyName] || []) : [];
 
-    const tier = M.normEquip(p.equipment);
-    const injuries = (p.painAreas || []).map(x => String(x).toLowerCase());
+    const tier = M.normEquip(prof.equipment);
+    const injuries = (prof.painAreas || []).map(x => String(x).toLowerCase());
     const banned = S.bannedPatterns(injuries);
     const known = new Set(allLibraryExercises().map(e => e.name));
+
+    /* One multiplier, from two sources that must not stack. A deload week already IS the
+       volume cut; multiplying it again by an adaptation cut would produce a week so light it
+       reads as the app having given up on you. */
+    const volumeMult = deload ? 0.6 : (adapt ? adapt.volume : 1);
 
     const exercises = [];
     const swapped = [];
     slots.forEach(sl => {
       if(banned.includes(sl.pattern)){ swapped.push(sl.pattern); return; }
       const name = S.resolve(sl.pattern, tier);
-      /* A pattern that resolves to something the app cannot log is dropped, not shown. The
-         alternative is a plan containing a row you cannot tap, which is worse than a shorter
-         plan. validate() is meant to prevent this ever happening; this is the belt to its
-         braces. */
+      /* A pattern resolving to something the app cannot log is dropped, not shown — a plan
+         with a row you cannot tap is worse than a shorter plan. validate() should prevent
+         this; this is the belt to its braces. */
       if(!name || !known.has(name)) return;
-      exercises.push({ name, sets: sl.sets, reps: sl.reps, rest: sl.rest, pattern: sl.pattern });
+      exercises.push({
+        name, pattern: sl.pattern, reps: sl.reps, rest: sl.rest,
+        sets: Math.max(1, Math.round(sl.sets * volumeMult))
+      });
     });
 
     return {
-      template: match.template, dayKey, exercises, swapped, injuries,
-      isRest: !dayKey || dayKey === "rest",
-      why: M.explain(match, injuries)
+      template, plan, week, deload, adapt, dayKey: dayKeyName, exercises, swapped, injuries,
+      isRest: !dayKeyName || dayKeyName === "rest",
+      why: M.explain({ template, reasons: plan.reasons || [] }, injuries)
     };
   }catch(e){ console.warn("plan build failed:", e); return null; }
 }
@@ -15765,7 +15895,7 @@ function renderPlanCard(){
     return `<div class="wk-plan wk-plan--rest">
       <div class="wk-plan__head">
         <span class="wk-plan__label">${escHtml(plan.template.name)}</span>
-        <span class="wk-plan__day">Rest day</span>
+        <span class="wk-plan__day">Week ${plan.week} · Rest day</span>
       </div>
       <div class="wk-plan__why">Scheduled recovery. Training on it costs more than it adds.</div>
     </div>`;
@@ -15774,11 +15904,14 @@ function renderPlanCard(){
 
   const dayLabel = titleCaseDayKey(plan.dayKey);
   const totalSets = plan.exercises.reduce((a,e)=>a+e.sets, 0);
-  return `<div class="wk-plan">
+  return `<div class="wk-plan${plan.deload ? ' wk-plan--deload' : ''}">
     <div class="wk-plan__head">
       <span class="wk-plan__label">${escHtml(plan.template.name)}</span>
-      <span class="wk-plan__day">${escHtml(dayLabel)} · ${totalSets} sets</span>
+      <span class="wk-plan__day">Week ${plan.week}${plan.deload ? ' · Deload' : ''} · ${escHtml(dayLabel)}</span>
     </div>
+    ${plan.deload ? `<div class="wk-plan__why">${svg('shield',11)} Planned deload — lighter on purpose, so the next block has somewhere to go.</div>`
+      : plan.adapt && plan.adapt.msg && plan.adapt.reason !== "steady" ? `<div class="wk-plan__why">${svg('info',11)} ${escHtml(plan.adapt.msg)}</div>` : ''}
+    <div class="wk-plan__meta">${totalSets} sets</div>
     <ul class="wk-plan__list">
       ${plan.exercises.map(e=>`<li>
         <span class="wk-plan__ex">${escHtml(e.name)}</span>

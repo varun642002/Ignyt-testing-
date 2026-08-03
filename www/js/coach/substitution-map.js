@@ -64,7 +64,14 @@ window.IgnytCoachSubstitution = (function () {
     /* A race simulation is the whole event, not one movement. It resolves to Running so the
        session is loggable at all; the athlete logs the stations they actually did alongside
        it. Mapping it to nothing would drop the single most important session in the plan. */
-    race_simulation:  ["Running", "Running", "Running", "Running"]
+    race_simulation:  ["Running", "Running", "Running", "Running"],
+
+    /* Mobility patterns. Same tier list as everything else even though none of these need
+       equipment — the resolver walks by index, and a four-entry chain is what it expects. */
+    hip_mobility:      ["90/90 Hip Switch", "90/90 Hip Switch", "Couch Stretch", "Couch Stretch", "Stretching"],
+    thoracic_mobility: ["Thoracic Rotation Stretch", "Thoracic Rotation Stretch", "Cat-Cow Stretch", "Cat-Cow Stretch", "Stretching"],
+    shoulder_mobility: ["Band Dislocate Stretch", "Band Dislocate Stretch", "Doorway Chest Stretch", "Doorway Chest Stretch", "Stretching"],
+    ankle_mobility:    ["Ankle Circles Stretch", "Ankle Circles Stretch", "Calf Stretch on Wall", "Calf Stretch on Wall", "Stretching"]
   };
 
   var TIER_INDEX = { full_gym: 0, home_gym: 1, dumbbells: 2, bodyweight: 3 };
@@ -95,13 +102,39 @@ window.IgnytCoachSubstitution = (function () {
    * Falls DOWN the chain (never up) if the tier's entry is missing, because a less
    * equipment-dependent movement is always performable by someone with more equipment.
    */
+  function libraryNames() {
+    try {
+      if (typeof allLibraryExercises !== "function") return null;
+      var set = {};
+      allLibraryExercises().forEach(function (e) { set[e.name] = true; });
+      return set;
+    } catch (e) { return null; }
+  }
+
   function resolve(pattern, equipmentTier) {
     var chain = CHAINS[pattern];
     if (!chain) return null;
     var i = TIER_INDEX[equipmentTier];
     if (i == null) i = 3;
-    for (var j = i; j < chain.length; j++) if (chain[j]) return chain[j];
-    return chain[chain.length - 1] || null;
+
+    /* Skip entries the library does not actually contain, rather than returning a name that
+       cannot be logged. This is not defensive padding — it is the difference between a plan
+       and an empty card. The mobility chains name movements that only arrive with the
+       exercise-library import, so before that import every mobility slot would resolve to
+       something untappable and get dropped, leaving a Mobility plan with nothing in it.
+
+       Walk DOWN first (less equipment is always performable by someone with more), then back
+       UP, then give up honestly. Same graceful degradation the equipment tiers already rely
+       on, applied to availability rather than to kit. */
+    var known = libraryNames();
+    var j;
+    if (!known) {
+      for (j = i; j < chain.length; j++) if (chain[j]) return chain[j];
+      return chain[chain.length - 1] || null;
+    }
+    for (j = i; j < chain.length; j++) if (chain[j] && known[chain[j]]) return chain[j];
+    for (j = i - 1; j >= 0; j--) if (chain[j] && known[chain[j]]) return chain[j];
+    return null;
   }
 
   function chainFor(pattern) { return (CHAINS[pattern] || []).slice(); }
