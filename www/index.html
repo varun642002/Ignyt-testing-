@@ -710,6 +710,9 @@ try{
      all and the account was unreachable until a force-quit.
      Neither file touches `state` or render() during evaluation — auth.js's own boot() waits
      for DOMContentLoaded and notifyUI() checks both exist — so loading them first is safe. -->
+<!-- Security layer first: the auth and sync modules below log security events, and a
+     logEvent() call that lands before IgnytSecurity exists is a silently dropped event. -->
+<script src="js/security/security.js"></script>
 <script src="js/auth/firebase-rest-auth.js"></script>
 <script src="auth.js"></script>
 <script src="app.js"></script>

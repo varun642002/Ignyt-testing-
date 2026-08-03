@@ -1488,6 +1488,7 @@ const state = {
   // Delete-account sheet. Transient by design — never persisted, so a crash or a force-quit
   // mid-flow reopens the app in a normal state rather than back on a destructive confirmation.
   deleteAccountOpen: false, deleteAccountBusy: false, deleteAccountError: null,
+  backupCryptoOpen: null, backupCryptoBusy: false, backupCryptoError: null, backupCryptoPending: null,
   showExercisePicker: false,
   exercisePickerSearch: "",
   exercisePickerEquipment: "All",
@@ -2282,6 +2283,28 @@ function importAllJSON(file){
       alert("Could not read that file — it isn't valid JSON.");
       return;
     }
+    /* An encrypted backup is still JSON — an envelope with the ciphertext inside — so it
+       arrives here looking like a file we should reject. Detect it first and divert to the
+       passphrase sheet; without this branch the user gets "this doesn't look like an Ignyt
+       backup" for a file this app produced two minutes earlier. */
+    if(parsed && parsed.format==="ignyt-encrypted-backup"){
+      state.backupCryptoOpen = "import";
+      state.backupCryptoPending = parsed;
+      state.backupCryptoError = null;
+      state.backupCryptoBusy = false;
+      render();
+      return;
+    }
+    commitImportedBackup(parsed);
+  };
+  reader.onerror = ()=> alert("Could not read that file.");
+  reader.readAsText(file);
+}
+
+/* The plain-JSON commit path, shared by the file import above and by the encrypted import
+   once it has decrypted. Same validation either way — a file being encrypted says who wrote
+   it, not that its contents are well-formed, so it earns no shortcut past these checks. */
+function commitImportedBackup(parsed){
     if(!parsed || typeof parsed!=="object" || (parsed.app!=="ignyt" && parsed.app!=="hyrox-prep") || !parsed.data || typeof parsed.data!=="object"){
       alert("This doesn't look like an Ignyt backup file.");
       return;
@@ -2305,10 +2328,8 @@ function importAllJSON(file){
     if(!confirm("Import will REPLACE all current app data with this backup ("+new Date(parsed.exportedAt||Date.now()).toLocaleDateString()+"). Continue?")) return;
     // Everything validated — commit atomically
     Object.entries(staged).forEach(([k,v])=> localStorage.setItem(k, v));
+    if(window.IgnytSecurity) IgnytSecurity.logEvent("backup.restored", { keys:Object.keys(staged).length });
     location.reload();
-  };
-  reader.onerror = ()=> alert("Could not read that file.");
-  reader.readAsText(file);
 }
 
 /* =========================================================
@@ -6103,6 +6124,7 @@ function renderSettingsTab(){
       <div class="rh-section-head"><span>${svg('download',13)} Export Data</span></div>
       <div class="pg-card st-export">
         ${[["export-json","box","Full Backup","JSON · everything, and the only one that imports back"],
+           ["export-json-encrypted","lock","Encrypted Backup","AES-256 · same data, locked with your passphrase"],
            ["export-workouts-csv","file","Workouts","CSV · every session, set and rep"],
            ["export-measurements-csv","file","Measurements","CSV · weight and body metrics"],
            ["export-nutrition-csv","file","Nutrition","CSV · the food log"]
@@ -6122,7 +6144,7 @@ function renderSettingsTab(){
         <button class="tl-card" data-action="import-json"><span class="tl-card__icon">${svg('upload',20)}</span><div class="tl-card__body"><div class="tl-card__label">Choose Backup File…</div><div class="tl-card__desc">Restore from a JSON backup</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-action="import-csv"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Import CSV</div><div class="tl-card__desc">Import workouts or measurements</div></div><span class="tl-card__chev">›</span></button>
       </div>
-      <input type="file" id="import-file" accept=".json,application/json" style="display:none;">
+      <input type="file" id="import-file" accept=".json,.ignyt,application/json" style="display:none;">
       <input type="file" id="import-csv" accept=".csv,text/csv" style="display:none;">
       ${state.csvImportPreview ? `<div class="pg-card" style="margin-top:8px;">${renderCsvImportPreview()}</div>` : ""}
       <div style="font-size:11px;color:var(--rh-muted);margin-top:8px;line-height:1.5;">Imports only add data — three formats are auto-detected (Exercises, Workout History, Foods) and re-importing the same file skips what's already there.</div>
@@ -6163,6 +6185,7 @@ function renderSettingsTab(){
       ` : ''}
     </div>
     ${renderDeleteAccountSheet()}
+    ${renderBackupCryptoSheet()}
   `;
 }
 
@@ -6198,6 +6221,71 @@ function renderDeleteAccountSheet(){
       <button class="btn btn-block" style="margin-top:16px;background:var(--rh-red);color:#fff;" data-action="delete-account-confirm" ${busy?'disabled':''}>${busy?'Deleting…':'Delete my account permanently'}</button>
       <button class="btn btn-ghost btn-block" style="margin-top:8px;" data-action="close-delete-account" ${busy?'disabled':''}>Cancel</button>
     </div>`;
+}
+
+/* Passphrase prompt for the encrypted backup, both directions.
+   One sheet rather than two because the shapes are identical and the wording is the only
+   real difference — and because the export side needs its passphrase typed twice, which is
+   a rule the import side must not accidentally inherit. */
+function renderBackupCryptoSheet(){
+  const mode = state.backupCryptoOpen;
+  if(!mode) return "";
+  const busy = !!state.backupCryptoBusy;
+  const err = state.backupCryptoError;
+  const exporting = mode === "export";
+  return `
+    <div class="sheet-backdrop" data-action="close-backup-crypto"></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="${exporting?'Encrypt backup':'Open encrypted backup'}" style="padding:20px;">
+      <div style="font-size:18px;font-weight:900;margin-bottom:6px;">${exporting?'Encrypt this backup':'Open encrypted backup'}</div>
+      <div style="font-size:13px;color:var(--rh-muted);line-height:1.6;margin-bottom:14px;">
+        ${exporting
+          ? `Your backup will be locked with AES-256. <strong>Keep the passphrase somewhere safe — without it the file cannot be opened, not by you and not by us.</strong> There is no reset.`
+          : `Enter the passphrase you set when you made this backup.`}
+      </div>
+      <input type="password" id="backup-pass" class="pi-input" autocomplete="${exporting?'new-password':'current-password'}" placeholder="Passphrase" ${busy?'disabled':''} style="width:100%;">
+      ${exporting ? `<input type="password" id="backup-pass2" class="pi-input" autocomplete="new-password" placeholder="Confirm passphrase" ${busy?'disabled':''} style="width:100%;margin-top:8px;">` : ''}
+      ${err ? `<div style="font-size:12px;color:var(--rh-red);margin-top:10px;line-height:1.5;">${escHtml(err)}</div>` : ''}
+      <button class="btn btn-block" style="margin-top:16px;background:var(--accent);color:#0b0b0f;font-weight:800;" data-action="backup-crypto-confirm" ${busy?'disabled':''}>
+        ${busy ? (exporting?'Encrypting…':'Decrypting…') : (exporting?'Encrypt and download':'Restore backup')}
+      </button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px;" data-action="close-backup-crypto" ${busy?'disabled':''}>Cancel</button>
+    </div>`;
+}
+
+/* Encrypt the same payload the plain export produces, then hand it over as a file.
+   Deliberately NOT the Keystore key — see security.js. A backup only the phone that wrote it
+   can open is not a backup. */
+async function runEncryptedBackupExport(pass, pass2){
+  if(pass !== pass2){ state.backupCryptoError = "The two passphrases don't match."; render(); return; }
+  if(!pass || pass.length < 8){ state.backupCryptoError = "Use a passphrase of at least 8 characters."; render(); return; }
+  state.backupCryptoBusy = true; state.backupCryptoError = null; render();
+  const res = await IgnytSecurity.encryptBackup(JSON.stringify(buildFullBackupPayload()), pass);
+  state.backupCryptoBusy = false;
+  if(!res.ok){ state.backupCryptoError = res.error; render(); return; }
+  state.backupCryptoOpen = null; render();
+  downloadFile("ignyt-backup-"+todayStr()+".ignyt", JSON.stringify(res.envelope,null,2), "application/json");
+  IgnytSecurity.logEvent("backup.encrypted", { ok:true });
+  showToast("Encrypted backup saved", "success", render);
+}
+
+async function runEncryptedBackupImport(pass){
+  const envelope = state.backupCryptoPending;
+  if(!envelope){ state.backupCryptoOpen = null; render(); return; }
+  state.backupCryptoBusy = true; state.backupCryptoError = null; render();
+  const res = await IgnytSecurity.decryptBackup(envelope, pass);
+  state.backupCryptoBusy = false;
+  if(!res.ok){ state.backupCryptoError = res.error; render(); return; }
+  let parsed = null;
+  try{ parsed = JSON.parse(res.json); }
+  catch(e){
+    /* The tag verified, so the bytes are genuinely ours and unmodified — if they still don't
+       parse, the file was damaged before it was ever encrypted. Say that rather than blaming
+       the passphrase, which is the one thing we now know was right. */
+    state.backupCryptoError = "The passphrase was correct but the backup inside is damaged.";
+    render(); return;
+  }
+  state.backupCryptoOpen = null; state.backupCryptoPending = null; render();
+  commitImportedBackup(parsed);   // same validation as any other import
 }
 
 /* =========================================================
@@ -16485,6 +16573,26 @@ function attachHandlers(){
   const accountSignoutBtn = document.querySelector('[data-action="account-signout"]');
   if(accountSignoutBtn) accountSignoutBtn.addEventListener("click", ()=>{ if(window.IgnytAuth) IgnytAuth.signOut(); });
 
+  /* ---- encrypted backup ---- */
+  const encExport = document.querySelector('[data-action="export-json-encrypted"]');
+  if(encExport) encExport.addEventListener("click", ()=>{
+    state.backupCryptoOpen = "export"; state.backupCryptoPending = null;
+    state.backupCryptoError = null; state.backupCryptoBusy = false; render();
+  });
+  document.querySelectorAll('[data-action="close-backup-crypto"]').forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(state.backupCryptoBusy) return;   // don't dismiss mid-crypt
+      state.backupCryptoOpen = null; state.backupCryptoPending = null; state.backupCryptoError = null; render();
+    });
+  });
+  const encGo = document.querySelector('[data-action="backup-crypto-confirm"]');
+  if(encGo) encGo.addEventListener("click", ()=>{
+    const p1 = (document.getElementById("backup-pass")||{}).value || "";
+    const p2 = (document.getElementById("backup-pass2")||{}).value || "";
+    if(state.backupCryptoOpen === "export") runEncryptedBackupExport(p1, p2);
+    else runEncryptedBackupImport(p1);
+  });
+
   /* ---- account deletion (Play User Data policy) ---- */
   const delOpen = document.querySelector('[data-action="account-delete"]');
   if(delOpen) delOpen.addEventListener("click", ()=>{
@@ -20271,6 +20379,15 @@ setTimeout(()=>{
 
 // Live workout notification: watches app foreground/background and mirrors the open session.
 if(window.IgnytActiveWorkout) IgnytActiveWorkout.start();
+
+/* Device integrity, once per cold start. Records signals to the local security log and
+   NOTHING ELSE — it does not block, warn, or gate a single feature. A root check runs inside
+   the process it is judging, so acting on it would only punish the honest users who happen to
+   trip a signal (an unlocked developer phone, a custom ROM) while anyone actually hiding from
+   it walks past. Its value is the audit trail, so that is all it is used for. */
+if(window.IgnytSecurity){
+  Promise.resolve().then(()=> IgnytSecurity.checkIntegrity()).catch(()=>{});
+}
 
 (function(){
   const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();

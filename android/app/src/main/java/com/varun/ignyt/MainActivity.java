@@ -10,6 +10,8 @@ import com.varun.ignyt.cloudsync.CloudSyncPlugin; // ADDED for Firestore profile
 import com.varun.ignyt.share.SharePlugin; // ADDED for post-workout share cards
 import com.varun.ignyt.notify.NotifyPlugin; // ADDED for background workout/hydration/weekly reminders
 import com.varun.ignyt.billing.BillingPlugin; // ADDED for the premium subscription
+import com.varun.ignyt.security.CryptoPlugin; // ADDED for AES-256-GCM at rest, keys in the Keystore
+import com.varun.ignyt.security.IntegrityPlugin; // ADDED for root/tamper signals
 
 public class MainActivity extends BridgeActivity {
     // Process-lifetime flag: the artificial hold + fade-out below is only applied on the
@@ -27,6 +29,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SharePlugin.class); // ADDED — must be before super.onCreate()
         registerPlugin(NotifyPlugin.class); // ADDED — must be before super.onCreate()
         registerPlugin(BillingPlugin.class); // ADDED — must be before super.onCreate()
+        registerPlugin(CryptoPlugin.class); // ADDED — must be before super.onCreate()
+        registerPlugin(IntegrityPlugin.class); // ADDED — must be before super.onCreate()
         super.onCreate(savedInstanceState);
 
         if (!sColdStartHandled) {

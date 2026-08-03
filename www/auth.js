@@ -126,6 +126,14 @@ const IgnytAuth = (() => {
     render();
   }
 
+  /* Security events, fire-and-forget. Note what is NOT passed: no email, no uid, no error
+     string from Firebase (those name the account: "there is no user record for that
+     identifier" is a user-enumeration answer, and a log is a bad place to keep one). Only
+     the fact and the outcome. */
+  function sec(type, detail) {
+    try { if (window.IgnytSecurity) IgnytSecurity.logEvent(type, detail || {}); } catch (e) {}
+  }
+
   async function signUpWithEmail(email, password) {
     if (_busy) return { success: false, error: "Already in progress." };
     _busy = true; _errorMsg = null; notifyUI();
@@ -134,8 +142,10 @@ const IgnytAuth = (() => {
     if (result.success && result.data && result.data.user) {
       saveAccount(result.data.user);
       _errorMsg = null;
+      sec("auth.signup", { ok: true });
     } else {
       _errorMsg = result.error || "Sign-up failed.";
+      sec("auth.signup", { ok: false });
     }
     notifyUI();
     return result;
@@ -149,8 +159,10 @@ const IgnytAuth = (() => {
     if (result.success && result.data && result.data.user) {
       saveAccount(result.data.user);
       _errorMsg = null;
+      sec("auth.signin", { ok: true });
     } else {
       _errorMsg = result.error || "Sign-in failed.";
+      sec("auth.signin", { ok: false });
     }
     notifyUI();
     return result;
@@ -186,6 +198,7 @@ const IgnytAuth = (() => {
     // cleared even if the native call failed, so the UI can never get stuck "signed in" with
     // no way out. A native failure is surfaced as a non-blocking message.
     clearAccount();
+    sec("auth.signout", { ok: !!result.success });
     _busy = false;
     if (!result.success) _errorMsg = result.error || "Sign-out reported an error (you are signed out locally).";
     notifyUI();
