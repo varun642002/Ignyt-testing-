@@ -4592,6 +4592,13 @@ function renderFoodResultCard(f, labelOverride){
         <span class="food-row__text">${highlightMatch(labelOverride || (window.IgnytFoodCuration ? IgnytFoodCuration.displayName(f) : f.name), state.foodSearchQuery)}</span>${
         f.verified ? `<span class="food-row__verified" title="Measured values from a published source" aria-label="Verified">✓</span>` : ""}</div>
     </div>
+    ${/* The row still opens Food Details — that is where you go to change the serving. The +
+          is the other half: log it at its default portion and stay on the results, because
+          adding three known foods should not be three round trips through a detail screen.
+          It is a real button inside the row, so its click has to stopPropagation() or the
+          row's own handler would navigate anyway. */''}
+    <button class="food-row__add" data-food-quick-add="${escHtml(f.id)}"
+            aria-label="Add ${escHtml(window.IgnytFoodCuration ? IgnytFoodCuration.displayName(f) : f.name)}">+</button>
     <span class="food-row__go" aria-hidden="true">›</span>
   </div>`;
 }
@@ -7636,7 +7643,10 @@ function pickerIsMultiSelect(){
 function renderPickerSelectionBar(){
   const n = (state.pickerSelection||[]).length;
   if(!pickerIsMultiSelect() || !n) return "";
-  return `<div class="ex-picker-bar">
+  /* The spacer is a sibling, not padding on the bar: the bar is fixed, so it takes no space in
+     the flow and the last few exercises would sit underneath it. */
+  return `<div class="ex-picker-bar-spacer" aria-hidden="true"></div>
+  <div class="ex-picker-bar">
     <button class="ex-picker-bar__clear" data-action="clear-picker-selection">Clear</button>
     <button class="ex-picker-bar__add" data-action="add-picked-exercises">
       Add ${n} exercise${n!==1?'s':''}
@@ -7691,9 +7701,11 @@ function updateExercisePickerResults(){
 function updatePickerSelectionBar(){
   const results = document.getElementById("ex-picker-results");
   if(!results) return;
-  const existing = results.parentElement.querySelector(".ex-picker-bar");
+  /* Both nodes: renderPickerSelectionBar() now emits a spacer alongside the bar, and removing
+     only the bar would leave a spacer behind on every re-render until the picker closed. */
+  results.parentElement.querySelectorAll(".ex-picker-bar, .ex-picker-bar-spacer")
+    .forEach(el => el.remove());
   const html = renderPickerSelectionBar();
-  if(existing) existing.remove();
   if(html) results.insertAdjacentHTML("afterend", html);
   attachPickerSelectionBar();
 }
@@ -20486,7 +20498,57 @@ function commitSelectedFood(meal){
   return true;
 }
 
+/* The + on a search result: log it at its default serving and stay put.
+ *
+ * Routed through commitSelectedFood(), the same function the Food Details "Add" button uses,
+ * rather than unshifting a record here. That function owns the quantity validation, the
+ * per-100g scaling and rememberServing(); a second insert path would be a second place for the
+ * record shape to drift, and the whole point of this button is that it is the SAME log entry
+ * you would have got by going through the detail screen and pressing Add.
+ *
+ * It sets foodSearchSelected/Amount/Unit first because that is commitSelectedFood's input —
+ * so "the food gets selected" is literally what happens, it just does not navigate afterwards.
+ */
+function quickAddFoodFromResult(foodId){
+  const food = lookupFood(foodId, state.foodSearchQuery);
+  if(!food){ showToast("That food is no longer in the database.", "error", render); return; }
+
+  const meal = (state.foodFlow && state.foodFlow.meal) || state.mealOpen || mealForNow();
+  const previous = {
+    sel: state.foodSearchSelected, amount: state.foodSearchAmount, unit: state.foodSearchUnit
+  };
+  state.foodSearchSelected = { id: food.id, name: food.name };
+  const d = defaultFoodPortion(food);
+  state.foodSearchAmount = d.amount;
+  state.foodSearchUnit = d.unit;
+
+  const ok = commitSelectedFood(meal);   // shows its own error if the portion is not loggable
+  /* Put the search back exactly as it was either way. Leaving a selection behind would mean
+     the next Add button on the detail screen operated on a food the user had only glanced at. */
+  state.foodSearchSelected = previous.sel;
+  state.foodSearchAmount = previous.amount;
+  state.foodSearchUnit = previous.unit;
+  if(!ok) return;
+
+  // Picking a result is the signal the query was useful, same as tapping the row.
+  if(state.foodSearchQuery && window.IgnytFoodSearch && IgnytFoodSearch.rememberSearch){
+    IgnytFoodSearch.rememberSearch(state.foodSearchQuery);
+  }
+  const added = state.foodLog[0];
+  persist();
+  showToast((added ? added.name : food.name) + " added to " + meal + ".", "success", render);
+}
+
 function bindFoodResultHandlers(){
+    document.querySelectorAll("[data-food-quick-add]").forEach(el=>{
+      if(el.__foodQuickAddBound) return;   // same re-bind guard the row handler uses
+      el.__foodQuickAddBound = true;
+      el.addEventListener("click", (e)=>{
+        e.stopPropagation();               // the row behind this opens Food Details
+        e.preventDefault();
+        quickAddFoodFromResult(el.dataset.foodQuickAdd);
+      });
+    });
     /* One-tap logging from Favourites and Recent. These go straight to Food Details with the
        food resolved, so the "one or two taps" target holds: tap the row, tap Add. */
     document.querySelectorAll("[data-quick-fav]").forEach(el=>{

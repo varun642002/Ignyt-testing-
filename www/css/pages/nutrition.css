@@ -261,8 +261,22 @@
 /* No rule between rows. A divider under each of thirty results drew thirty lines across a
    screen whose only job is to be read down; the gap and the bold name group them already. */
 .food-row:active{ background: var(--surface-alt); }
-/* Chevron, not a second control. The row goes to Food Details — the thumbnail and the
-   favourite star that used to sit here are explained in renderFoodResultCard(). */
+/* There IS a second control now: the + logs the food at its default serving without leaving
+   the results. The chevron stays because the row still goes to Food Details — the two are
+   different jobs, "log this" and "tell me more about this", and the row was only offering the
+   second. 44px so it clears the touch target guidance on its own, and a tint so it reads as a
+   button rather than as punctuation next to the chevron. */
+.food-row__add{
+  flex: 0 0 auto; width: 44px; height: 44px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 50%; cursor: pointer;
+  background: var(--primary-soft); color: var(--primary);
+  font-size: 22px; font-weight: 700; line-height: 1;
+}
+.food-row__add:active{ background: var(--primary); color: var(--on-primary); }
+
+/* Chevron. The row goes to Food Details — the thumbnail and the favourite star that used to
+   sit here are explained in renderFoodResultCard(). */
 .food-row__go{
   flex: 0 0 auto; color: var(--muted); font-size: 20px; line-height: 1;
   opacity: .55; padding-left: 4px;

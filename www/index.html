@@ -235,11 +235,24 @@ input,select,textarea{font-family:inherit; background:transparent; color:var(--t
     background:var(--color-interactive, #2563eb); color:#fff;}
 .ex-picker-row.is-picked{background:rgba(37,99,235,.06);}
 
-/* Commit bar. Sticks to the bottom of the picker so the count and the action stay reachable
-   however far down the list you have scrolled. */
-.ex-picker-bar{position:sticky; bottom:0; display:flex; gap:10px; align-items:center;
-    padding:10px 0 14px; background:var(--bg, #fff);
-    border-top:1px solid var(--border);}
+/* Commit bar. FIXED to the viewport, not sticky.
+   It was `position:sticky; bottom:0`, which does nothing here: a sticky element only travels
+   inside its own containing block, and this bar is the LAST child of the picker — the parent
+   ends exactly where the bar does, so there is no room for it to stick to. With 452 exercises
+   the results list is ~29,000px tall, which put "Add 3 exercises" 28,800px below the fold.
+   You could select exercises and there was no way to commit them without scrolling the entire
+   library. Reported as "there is no option to add everything".
+
+   z-index above the bottom nav's 40 so the floating pill cannot cover it, and matched to the
+   app shell's 480px column so it lines up with the content rather than the phone. */
+.ex-picker-bar{position:fixed; left:50%; transform:translateX(-50%);
+    bottom:0; width:100%; max-width:480px; z-index:60;
+    display:flex; gap:10px; align-items:center;
+    padding:10px 16px calc(14px + env(safe-area-inset-bottom,0px));
+    background:var(--bg, #fff); border-top:1px solid var(--border);
+    box-shadow:0 -6px 20px rgba(0,0,0,.28);}
+/* Room for it, so the last few exercises are not sitting underneath the bar. */
+.ex-picker-bar-spacer{height:86px;}
 .ex-picker-bar__clear{background:none; border:none; cursor:pointer; padding:12px 14px;
     font-size:14px; font-weight:700; color:var(--muted); font-family:inherit;}
 .ex-picker-bar__add{flex:1; border:none; cursor:pointer; padding:14px 16px; border-radius:12px;
