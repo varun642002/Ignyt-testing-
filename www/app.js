@@ -684,7 +684,7 @@ const PREFERRED_CARDIO_OPTIONS = ["Walking","Jogging","Running","Cycling","Swimm
    one thing that can fill several of them in automatically — and by then most people have
    already committed to typing. Asking first also means steps/weight/sleep start flowing from
    the user's first session rather than whenever they later find the toggle. */
-const ONBOARDING_STEP_TITLES = ["Fair Use Policy","About You","Permissions","Your Numbers"];
+const ONBOARDING_STEP_TITLES = ["Fair Use Policy","About You","Permissions","Your Numbers","Where You Are"];
 
 /* The brief's six goals, mapped onto the calorie deltas this app already applies. The keys
    ARE the GOAL_TO_CALORIE_DELTA keys, so the mapping lives in one place instead of becoming a
@@ -1859,6 +1859,35 @@ function runMigrations(){
     LS.set("hx_meal_rename_migrated_v1", true);
   }
 
+  /* The built-in plan's exercises were renamed to the library's own names so the plan, the
+     live workout card and the How To screen all resolve to the same exercise. state.completed
+     is keyed "week|day|exerciseName", so without this every tick a user had earned would point
+     at a name the plan no longer contains and the whole 8-week plan would read as untouched.
+
+     Rewrites the key and keeps the timestamp. Runs once. "Sled Push/Pull" became two rows, so
+     its tick is copied to BOTH — the user did the station, and inventing a half-finished day
+     out of a rename is worse than crediting the pull they almost certainly also did. */
+  if(!LS.get("hx_plan_exercise_rename_v1", false)){
+    try{
+      const done = LS.get("hx_completed", null);
+      if(done && typeof done === "object"){
+        let moved = 0;
+        Object.keys(done).forEach(key=>{
+          const parts = key.split("|");
+          if(parts.length !== 3) return;
+          const targets = PLAN_EXERCISE_RENAMES[parts[2]];
+          if(!targets) return;
+          const when = done[key];
+          delete done[key];
+          targets.forEach(t=>{ done[parts[0]+"|"+parts[1]+"|"+t] = when; });
+          moved++;
+        });
+        if(moved > 0) LS.set("hx_completed", done);
+      }
+    }catch(e){ /* a migration must never break boot */ }
+    LS.set("hx_plan_exercise_rename_v1", true);
+  }
+
   const stored = LS.get("hx_schema_version", null);
   if(stored===null){
     // Pre-versioning install (or brand new) — just stamp current version, no data shape to migrate
@@ -2929,6 +2958,28 @@ function axisAreaChart(points, opts={}){
 
 function phaseFor(w){ if(w<=2)return"base"; if(w<=4)return"build"; if(w<=6)return"load"; if(w===7)return"peak"; return"deload"; }
 
+/* Old plan name -> the library name(s) it became. Consumed by the one-time migration in
+   migrateSchema(), which rewrites state.completed's "week|day|name" keys.
+
+   The values are arrays because "Sled Push/Pull" was one row and is now two.
+
+   The five session instructions the plan also lists -- Warm-up, Intervals, Cool-down,
+   "Row / Ski / Run", "Walk / Mobility / Light Swim" -- are deliberately absent: they were
+   never library exercises, they did not change, and their ticks are already correct. */
+const PLAN_EXERCISE_RENAMES = {
+  "Back Squat":        ["Squat (Barbell)"],
+  "Romanian Deadlift": ["Romanian Deadlift (Barbell)"],
+  "Walking Lunges":    ["Walking Lunge (Dumbbell)"],
+  "Pallof Press":      ["Cable Core Pallof Press"],
+  "Bench Press":       ["Bench Press (Barbell)"],
+  "Bent-Over Row":     ["Bent Over Row (Barbell)"],
+  "Overhead Press":    ["Overhead Press (Barbell)"],
+  "Farmer's Carry":    ["Farmers Walk"],
+  "Sled Push/Pull":    ["Sled Push", "Sled Pull"],
+  "Wall Balls":        ["Wall Ball"],
+  "Weighted Sit-Up":   ["Sit Up (Weighted)"]
+};
+
 function buildWeek(w, level){
   level = level || "intermediate";
   const p = phaseFor(w);
@@ -2961,23 +3012,38 @@ function buildWeek(w, level){
   return {
     week:w, phase:p, phaseLabel:PHASE_LABEL[p], level,
     days:[
+      /* THE NAMES HERE ARE LIBRARY NAMES, EXACTLY. See PLAN_EXERCISE_RENAMES below.
+         They used to be the pre-rebuild names ("Back Squat", "Bench Press"), which the library
+         has not carried since it was rebuilt — so every exercise in the plan resolved to
+         nothing: no illustration on the live card, and an empty How To screen. Sixteen of the
+         plan's twenty names were broken this way.
+
+         Anything added here must be an allLibraryExercises() name or the same thing happens
+         again, silently. The five non-exercises below (Warm-up, Intervals, Cool-down, and the
+         two "pick one" session lines) are deliberately not library entries — they are
+         instructions for the session, and there is nothing to sync them to. */
       {day:"Day 1",session:"Lower Body Strength",exercises:[
-        {name:"Back Squat",presc:scale(T.squat)},{name:"Romanian Deadlift",presc:scale(T.rdl)},
-        {name:"Walking Lunges",presc:scale(T.lunge)},{name:"Plank",presc:"3x45s"},
-        {name:"Pallof Press",presc:scale(T.pallof),note:"Core finisher — anti-rotation, resists sled drift"}]},
+        {name:"Squat (Barbell)",presc:scale(T.squat)},{name:"Romanian Deadlift (Barbell)",presc:scale(T.rdl)},
+        {name:"Walking Lunge (Dumbbell)",presc:scale(T.lunge)},{name:"Plank",presc:"3x45s"},
+        {name:"Cable Core Pallof Press",presc:scale(T.pallof),note:"Core finisher — anti-rotation, resists sled drift"}]},
       {day:"Day 2",session:"Run Intervals",exercises:[
         {name:"Warm-up",presc:"10 min easy jog"},{name:"Intervals",presc:scale(T.intervals,"cond")},
         {name:"Cool-down",presc:"10 min easy jog"}]},
       {day:"Day 3",session:"Upper Body + Carries",exercises:[
-        {name:"Bench Press",presc:scale(T.bench)},{name:"Bent-Over Row",presc:scale(T.row)},
-        {name:"Overhead Press",presc:scale(T.ohp)},{name:"Farmer's Carry",presc:scale(T.carry)},
+        {name:"Bench Press (Barbell)",presc:scale(T.bench)},{name:"Bent Over Row (Barbell)",presc:scale(T.row)},
+        {name:"Overhead Press (Barbell)",presc:scale(T.ohp)},{name:"Farmers Walk",presc:scale(T.carry)},
         {name:"Hanging Leg Raise",presc:scale(T.hanging),note:"Core finisher — swap for dead bug if grip is fried"}]},
       {day:"Day 4",session:"Zone 2 Steady State",exercises:[
         {name:"Row / Ski / Run",presc:scale(T.z2),note:"Stay conversational — don't drift into threshold"}]},
+      /* "Sled Push/Pull" was one row for two race stations, so it could never be a library
+         exercise and never carry an illustration. Split, because both exist in the library
+         with instructions and artwork, and a Hyrox plan that names only one of them is wrong
+         about the race anyway. The prescription applies to each. */
       {day:"Day 5",session:"Hyrox Station Circuit",exercises:[
-        {name:"Sled Push/Pull",presc:scale(T.sled,"cond")},{name:"Wall Balls",presc:scale(T.wallball,"cond")},
+        {name:"Sled Push",presc:scale(T.sled,"cond")},{name:"Sled Pull",presc:scale(T.sled,"cond")},
+        {name:"Wall Ball",presc:scale(T.wallball,"cond")},
         {name:"Burpee Broad Jumps",presc:scale(T.burpee,"cond")},{name:"Ski Erg",presc:scale(T.ski,"cond")},
-        {name:"Weighted Sit-Up",presc:scale(T.situp),note:"Core finisher — race-specific, done under fatigue"}]},
+        {name:"Sit Up (Weighted)",presc:scale(T.situp),note:"Core finisher — race-specific, done under fatigue"}]},
       {day:"Day 6",session:"Optional — Easy Movement",exercises:[
         {name:"Walk / Mobility / Light Swim",presc:"20-30 min, low intensity",note:"Skip if fatigue score is high"}]}
     ]
@@ -7892,13 +7958,23 @@ function obKey(fieldPath){ return fieldPath.split(".")[1]; }
 function obGet(fieldPath){ return obTargetObj(fieldPath)[obKey(fieldPath)]; }
 function obSet(fieldPath, value){ obTargetObj(fieldPath)[obKey(fieldPath)] = value; }
 
-function obChipSingle(fieldPath, options, colStyle){
+/**
+ * A row of single-choice chips.
+ *
+ * `required` picks the handler. data-ob-select TOGGLES — tapping the current value clears it,
+ * which is right for an optional chip and wrong for a field that must hold an answer. Gender
+ * defaults to "male", so on a toggling chip the first tap on "Male" silently set it to null;
+ * that is the same bug the note above obOptionRow describes, and it came back when the numbers
+ * page was consolidated. Pass required:true and the chip always SETS.
+ */
+function obChipSingle(fieldPath, options, colStyle, required){
   const current = obGet(fieldPath);
+  const attr = required ? "data-ob-pick" : "data-ob-select";
   return `<div style="display:${colStyle||'flex'};flex-wrap:wrap;gap:6px;">
     ${options.map(o=>{
       const val = typeof o==="object" ? o.key : o;
       const label = typeof o==="object" ? o.label : o;
-      return `<button class="cat-chip ${current===val?'active':''}" data-ob-select="${obEsc(fieldPath)}|${obEsc(val)}">${obEsc(label)}</button>`;
+      return `<button class="cat-chip ${current===val?'active':''}" ${attr}="${obEsc(fieldPath)}|${obEsc(val)}">${obEsc(label)}</button>`;
     }).join("")}
   </div>`;
 }
@@ -7936,7 +8012,7 @@ function obTextarea(fieldPath, placeholder){
   return `<textarea class="note-input" data-ob-field="${obEsc(fieldPath)}" placeholder="${obEsc(placeholder||'')}" style="margin-bottom:14px;min-height:52px;">${obEsc(v||'')}</textarea>`;
 }
 
-const ONBOARDING_TOTAL_STEPS = 4;   // derived from the renderer list below
+const ONBOARDING_TOTAL_STEPS = 5;   // derived from the renderer list below
 
 function onboardingProgressHeader(step){
   return `
@@ -8350,7 +8426,7 @@ function obHeight(){
   const inch = cm ? Math.round((cm/2.54) - ft*12) : 0;
   return `
     ${obHero("\u{1F4CF}", "Your height", "")}
-    <div class="ob-bigvalue">${cm||'—'}<span class="ob-bigvalue__unit">cm</span></div>
+    <div class="ob-bigvalue" data-ob-readout="profile.height">${cm||'—'}<span class="ob-bigvalue__unit">cm</span></div>
     ${cm?`<div class="ob-derived">${ft} ft ${inch} in</div>`:''}
     <input type="range" class="ob-range" min="120" max="220" step="1" value="${cm||170}" data-ob-range="profile.height" aria-label="Height in centimetres">
     <div class="ob-range__ticks"><span>120</span><span>170</span><span>220</span></div>`;
@@ -8361,7 +8437,7 @@ function obWeight(){
   const kg = Number(state.profile.weight) || 0;
   return `
     ${obHero("\u{2696}\u{FE0F}", "Your weight", "")}
-    <div class="ob-bigvalue">${kg?kg.toFixed(1):'—'}<span class="ob-bigvalue__unit">kg</span></div>
+    <div class="ob-bigvalue" data-ob-readout="profile.weight">${kg?kg.toFixed(1):'—'}<span class="ob-bigvalue__unit">kg</span></div>
     ${kg?`<div class="ob-derived">${(kg*2.20462).toFixed(1)} lb</div>`:''}
     <input type="range" class="ob-range" min="30" max="200" step="0.5" value="${kg||70}" data-ob-range="profile.weight" aria-label="Weight in kilograms">
     <div class="ob-range__ticks"><span>30</span><span>115</span><span>200</span></div>`;
@@ -8636,25 +8712,91 @@ function obBasics(){
     <input type="date" class="ob-date" data-ob-field="onboarding.birthday" value="${obEsc(b)}" max="${new Date().toISOString().slice(0,10)}">
     ${age!=null ? `<div class="ob-derived" style="margin-bottom:14px;">You are <strong>${age}</strong> years old</div>` : '<div style="height:10px;"></div>'}
 
+    <!-- data-ob-readout names which slider each number belongs to. This is the only page with
+         TWO of them, and the live-drag handler used to find its readout with a document-wide
+         querySelector(".ob-bigvalue") \u2014 correct back when height and weight were separate
+         pages with one each, and wrong the moment they were put on one, because it returned
+         the height number to both sliders. Dragging weight moved the height figure. -->
     ${obLabel("Height")}
-    <div class="ob-bigvalue" style="font-size:34px;">${cm||'\u2014'}<span class="ob-bigvalue__unit">cm</span></div>
+    <div class="ob-bigvalue" data-ob-readout="profile.height" style="font-size:34px;">${cm||'\u2014'}<span class="ob-bigvalue__unit">cm</span></div>
     <input type="range" class="ob-range" min="120" max="220" step="1" value="${cm||170}" data-ob-range="profile.height" aria-label="Height in centimetres">
 
     ${obLabel("Weight")}
-    <div class="ob-bigvalue" style="font-size:34px;">${kg?kg.toFixed(1):'\u2014'}<span class="ob-bigvalue__unit">kg</span></div>
+    <div class="ob-bigvalue" data-ob-readout="profile.weight" style="font-size:34px;">${kg?kg.toFixed(1):'\u2014'}<span class="ob-bigvalue__unit">kg</span></div>
     <input type="range" class="ob-range" min="30" max="200" step="0.5" value="${kg||70}" data-ob-range="profile.weight" aria-label="Weight in kilograms">
 
     ${obLabel("Gender")}
-    ${obChipSingle("profile.gender", [{key:"male",label:"Male"},{key:"female",label:"Female"}])}
+    ${obChipSingle("profile.gender", [{key:"male",label:"Male"},{key:"female",label:"Female"}], null, true)}
     <div class="ob-note" style="margin-top:10px;">Used only to pick the right metabolic formula for your calorie target.</div>`;
 }
 
-/* Four pages: terms, who you are, permissions, numbers. The longer flow that also asked for
-   goal, activity level, diet preference, workout preference and the AI personalisation block
-   was cut on request. Those fields still exist on state.onboarding and still default sensibly,
-   so nothing downstream reads an undefined -- they are simply no longer collected up front. */
+/* Page 5: what the numbers on page 4 mean, before the app disappears into itself.
+
+   The only page in the flow that ASKS nothing. It exists because page 4 collects height and
+   weight and then, previously, went straight to Home -- the user handed over two figures and
+   got no acknowledgement that anything was done with them.
+
+   BMI, the healthy weight range for that height, and one line of encouragement. The caveat is
+   not optional and not in small print at the bottom of a scroll: BMI cannot see muscle, this
+   app is not a medical device, and the first time a user meets the number is exactly when that
+   needs saying. Nothing here predicts a change or gives a timeframe.
+
+   Renders nothing at all if height or weight is missing -- page 4's sliders default to 170cm
+   and 70kg so that is unlikely, but a page whose whole content is derived must be able to say
+   so rather than print a card full of dashes. */
+function obBmiSummary(){
+  /* The daily line, not a fresh random one. This page re-renders whenever the wizard does --
+     step back and forward and you are here again -- and an encouragement that reshuffles every
+     time reads as decoration rather than as something said to you. */
+  const b = window.IgnytBMI ? IgnytBMI.summary(state) : null;
+
+  if(!b){
+    return `
+      ${obHero("\u{1F4CA}", "You're <span class='ob-accent'>all set</span>", "")}
+      <div class="ob-note">Add your height and weight on the previous page and IGNYT will show your
+        BMI and healthy weight range here. You can also do it later from Log Weight.</div>`;
+  }
+
+  const TONES = { blue:"#3B82F6", green:"#16A34A", amber:"#D97706", red:"#EF4444" };
+  const col = TONES[b.tone] || "var(--muted)";
+  const r = b.healthyRange;
+
+  return `
+    ${obHero("\u{1F4CA}", "Where you're <span class='ob-accent'>starting</span>", "From the height and weight you just entered.")}
+
+    <div class="ob-bigvalue" style="font-size:52px;color:${col};">${b.bmi.toFixed(1)}<span class="ob-bigvalue__unit">BMI</span></div>
+    <div style="text-align:center;font-size:14px;font-weight:800;color:${col};margin-top:-4px;">${escHtml(b.label)}</div>
+
+    ${r ? `
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <div style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:12px;text-align:center;">
+        <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);">Healthy range</div>
+        <div style="font-size:16px;font-weight:900;margin-top:3px;">${r.min}–${r.max}<span style="font-size:11px;color:var(--muted);"> kg</span></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">for ${b.height} cm</div>
+      </div>
+      <div style="flex:1;background:var(--surface-alt);border-radius:var(--radius-xs-plus);padding:12px;text-align:center;">
+        <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);">${b.inHealthyRange ? "You are" : "To that range"}</div>
+        <div style="font-size:16px;font-weight:900;margin-top:3px;color:${b.inHealthyRange ? TONES.green : "inherit"};">${b.inHealthyRange
+          ? "In range"
+          : `${b.distance.kg}<span style="font-size:11px;color:var(--muted);"> kg ${b.distance.direction === "down" ? "down" : "up"}</span>`}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">from ${b.weight} kg</div>
+      </div>
+    </div>` : ''}
+
+    ${b.message ? `<div style="margin-top:18px;padding:14px 16px;background:var(--surface-alt);border-radius:var(--radius-xs-plus);border-left:3px solid ${col};font-size:14px;line-height:1.55;">${escHtml(b.message)}</div>` : ''}
+
+    <div class="ob-note" style="margin-top:14px;">BMI compares weight with height and nothing else. It cannot
+      see muscle, bone or body composition, and it is a general screening figure rather than a measure of your
+      health. It is not a diagnosis.</div>`;
+}
+
+/* Five pages: terms, who you are, permissions, numbers, and what those numbers mean. The
+   longer flow that also asked for goal, activity level, diet preference, workout preference
+   and the AI personalisation block was cut on request. Those fields still exist on
+   state.onboarding and still default sensibly, so nothing downstream reads an undefined --
+   they are simply no longer collected up front. */
 const ONBOARDING_STEP_RENDERERS = [
-  obFairUse, obYourDetails, obPermissions, obBasics
+  obFairUse, obYourDetails, obPermissions, obBasics, obBmiSummary
 ];
 
 /* Step gates and the Health Connect auto-advance used to compare against literal step numbers
@@ -9145,11 +9287,18 @@ function wireOnboardingWizard(){
      `change`, when the thumb is released. */
   document.querySelectorAll("[data-ob-range]").forEach(el=>{
     const path = el.dataset.obRange;
-    const readout = document.querySelector(".ob-bigvalue");
+    /* Its OWN readout. This was querySelector(".ob-bigvalue"), which returns the first one on
+       the page — fine while height and weight were separate steps with one each, and wrong as
+       soon as obBasics put both on one page: every slider wrote into the height figure, so
+       dragging weight visibly changed the height. Only the display was affected (obSet always
+       had the right path, and the re-render on release restored the true value), but a number
+       that moves when you touch something else is not something a user can be expected to
+       distrust correctly. */
+    const readout = document.querySelector('[data-ob-readout="' + path + '"]');
     el.addEventListener("input", ()=>{
       const v = Number(el.value);
       obSet(path, v);
-      if(readout) readout.firstChild.textContent = path==="profile.weight" ? v.toFixed(1) : String(v);
+      if(readout && readout.firstChild) readout.firstChild.textContent = path==="profile.weight" ? v.toFixed(1) : String(v);
     });
     el.addEventListener("change", ()=>{ obSet(path, Number(el.value)); renderOnboardingWizard(); });
   });
@@ -15009,20 +15158,30 @@ function renderWorkoutTab(){
           ${ex.supersetWithNext ? `<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;color:var(--rh-blue);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">${svg('link',12)} Superset with next exercise</div>` : ''}
           <div class="wk-ex-card__pin">
           <div class="row-between" style="margin-bottom:4px;position:relative;">
-            <button class="wk-ex-card__collapse-toggle" data-toggle-ex-collapse="${exi}" style="min-width:0;flex:1;text-align:left;background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;">
-              <span style="transform:rotate(${collapsed?'-90deg':'0deg'});transition:transform .15s ease;flex:none;color:var(--rh-muted);">${svg('chevronDown',14)}</span>
-              ${(()=>{ const img = exerciseImageSrc(ex.name);
-                /* The illustration leads the row, same as it does in the Library. Mid-set you
-                   are scanning for "which exercise is this" and the picture answers that
-                   faster than the name does. Falls back to nothing rather than to an icon
-                   badge: the chevron and name already identify the row, and an empty 34px box
-                   on the 15 exercises without artwork would misalign the whole header. */
-                return img ? `<span class="wk-ex-card__photo"><img src="${escHtml(img)}" alt="" loading="lazy"></span>` : ""; })()}
-              <span style="min-width:0;">
-                <span class="wk-ex-card__name" style="display:block;">${escHtml(ex.name)}</span>
-                <span class="muscle-chip">${muscle}</span>
-              </span>
-            </button>
+            <!-- The chevron collapses; the picture and the name OPEN THE EXERCISE. Tapping an
+                 exercise mid-session used to do nothing but fold the row away, so the only
+                 route to the instructions was the ⋮ menu, three taps in and easy to miss —
+                 which is why they read as "not available" during a live workout. The library
+                 opens a detail when you tap an exercise, and this now does the same thing, to
+                 the same screen. -->
+            <span style="min-width:0;flex:1;display:flex;align-items:center;gap:6px;">
+              <button class="wk-ex-card__collapse-toggle" data-toggle-ex-collapse="${exi}" aria-label="${collapsed?'Expand':'Collapse'} exercise" aria-expanded="${!collapsed}" style="flex:none;background:none;border:none;cursor:pointer;padding:2px;display:flex;align-items:center;">
+                <span style="transform:rotate(${collapsed?'-90deg':'0deg'});transition:transform .15s ease;color:var(--rh-muted);">${svg('chevronDown',14)}</span>
+              </button>
+              <button data-view-instructions="${encodeURIComponent(ex.name)}" style="min-width:0;flex:1;text-align:left;background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;">
+                ${(()=>{ const img = exerciseImageSrc(ex.name);
+                  /* The illustration leads the row, same as it does in the Library. Mid-set you
+                     are scanning for "which exercise is this" and the picture answers that
+                     faster than the name does. Falls back to nothing rather than to an icon
+                     badge: the chevron and name already identify the row, and an empty 34px box
+                     on the 15 exercises without artwork would misalign the whole header. */
+                  return img ? `<span class="wk-ex-card__photo"><img src="${escHtml(img)}" alt="" loading="lazy"></span>` : ""; })()}
+                <span style="min-width:0;">
+                  <span class="wk-ex-card__name" style="display:block;">${escHtml(ex.name)}</span>
+                  <span class="muscle-chip">${muscle}</span>
+                </span>
+              </button>
+            </span>
             <button class="del" data-toggle-ex-menu="${exi}" aria-label="Exercise options">${svg('moreVert',17)}</button>
             ${menuOpen ? `
               <div class="ex-menu-backdrop" data-close-ex-menu></div>

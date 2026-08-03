@@ -1,5 +1,52 @@
 # CLAUDE_PROGRESS.md
 
+### Onboarding page 5, and three bugs
+
+**Onboarding is five pages now.** New last page (`obBmiSummary`): BMI, the healthy weight range
+for that height, distance to it, and one line of encouragement from IgnytBMI's per-band library
+— the daily line, not a fresh random one, so it does not reshuffle when the wizard re-renders.
+The caveat travels with it. Page 4 asked for height and weight and then went straight to Home;
+this is the acknowledgement that was missing.
+
+**Bug: dragging the weight slider changed the height number.** The live-drag handler found its
+readout with `document.querySelector(".ob-bigvalue")` — the FIRST one on the page. Correct when
+height and weight were separate steps with one readout each, wrong the moment obBasics put both
+on one page. Display only (obSet always had the right path, and the re-render on release
+restored the true value), but a number that moves when you touch something else is not
+something a user can be expected to distrust correctly. Each readout now carries
+`data-ob-readout="<path>"` and the handler asks for its own.
+
+**Bug: tapping "Male" on page 4 cleared the gender.** `obChipSingle` emitted `data-ob-select`,
+which TOGGLES. Gender defaults to "male", so the first tap on the already-selected value set it
+to null. This is exactly what the note above `obOptionRow` documents — it came back when the
+numbers page was consolidated. `obChipSingle` takes a `required` flag now and page 4 passes it.
+
+**Bug: the built-in plan and the exercise library were not in sync.** 16 of the plan's 20
+exercise names were pre-rebuild names ("Back Squat", "Bench Press", "Farmer's Carry") that the
+library has not carried since it was renamed — so inside a plan workout every exercise resolved
+to nothing: no illustration on the card, empty How To screen. Renamed to exact library names;
+"Sled Push/Pull" split into two, since one row could never be a library exercise and a Hyrox
+plan naming only one of the two stations is wrong about the race. 16 of 21 now resolve with
+instructions AND artwork; the 5 that do not are session instructions (Warm-up, Intervals,
+Cool-down, and the two "pick one" lines), which were never library entries.
+`state.completed` is keyed "week|day|exerciseName", so a one-time migration
+(`hx_plan_exercise_rename_v1`) rewrites the keys and keeps the timestamps — without it every
+tick a user had earned would point at a name the plan no longer contains.
+
+**Also: tapping an exercise in a live workout now opens it.** It only collapsed the row before,
+so the instructions were three taps deep in the ⋮ menu and easy to miss — which is what "not
+available during a live workout" was. Chevron collapses; picture and name open the same detail
+screen the library opens.
+
+Cache **v192 -> v193**. BUILD SUCCESSFUL. Verified in the APK; migration covered by
+`scratchpad/test_migration.js` (13 assertions, including idempotence and the one-to-two split).
+
+**Known gap, not a regression:** "Bent Over Row (Barbell)" has artwork but no instruction record
+— it is one of the 43 library exercises the source CSV never covered. Substituting a different
+row that does have text would be filling a screen with the wrong exercise.
+
+---
+
 ### Achievement badges redesigned — flat vector labels
 
 Reference given: a sheet of flat gym-label badges (hexagons, octagons, shields; heavy outline,
