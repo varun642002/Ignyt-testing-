@@ -10,7 +10,7 @@ const SCHEMA_VERSION = 1; // bump when localStorage shape changes; add a migrate
 /* ---------- Storage ---------- */
 
 const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_profile","hx_nutrition","hx_bodylog","hx_custom_exercises",
-  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history","hx_deleted_workouts","hx_plan"];
+  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history","hx_deleted_workouts","hx_plan","hx_injuries"];
 
 /* The subset of the above whose values are arrays of RECORD OBJECTS — the ones the UI reads
    fields off, and so the ones a null element inside can crash. Used by LS.records() on load
@@ -1493,6 +1493,8 @@ const state = {
   deleteAccountOpen: false, deleteAccountBusy: false, deleteAccountError: null,
   backupCryptoOpen: null, backupCryptoBusy: false, backupCryptoError: null, backupCryptoPending: null,
   plan: LS.get("hx_plan", null),   // assigned training plan — see PROGRAM PROGRESSION
+  /* [{id, severity, side, professionalAdvice}] — see js/coach/injury-catalogue.js */
+  injuries: LS.get("hx_injuries", []),
   showExercisePicker: false,
   exercisePickerSearch: "",
   exercisePickerEquipment: "All",
@@ -1585,6 +1587,7 @@ function persist(){
   LS.set("hx_onboarding_complete", state.onboardingComplete);
   LS.set("hx_onboarding_wizard", state.onboarding);
   LS.set("hx_plan", state.plan);
+  LS.set("hx_injuries", state.injuries);
   /* Widgets mirror whatever was just saved. Hooked to persist() rather than to each
      feature so nothing new has to remember to do it; the call is debounced and returns
      immediately when the user has no widgets placed. */
@@ -15899,6 +15902,14 @@ function buildTodaysPlan(){
     const tier = M.normEquip(prof.equipment);
     const injuries = (prof.painAreas || []).map(x => String(x).toLowerCase());
     const banned = S.bannedPatterns(injuries);
+    /* The catalogue gate, alongside the pattern gate above rather than replacing it.
+       bannedPatterns only understands movement patterns, and most of the catalogue is about
+       QUALITIES — jumping, sprinting, twisting under load — that are not patterns at all and
+       show up across dozens of differently-named exercises. Both are needed: patterns catch
+       the template slots, names catch everything else. */
+    const restrictions = window.IgnytCoachInjuries
+      ? IgnytCoachInjuries.restrictionsFor(state.injuries || []) : null;
+    const bannedAll = restrictions ? banned.concat(restrictions.patterns) : banned;
     const known = new Set(allLibraryExercises().map(e => e.name));
 
     /* One multiplier, from two sources that must not stack. A deload week already IS the
@@ -15907,10 +15918,36 @@ function buildTodaysPlan(){
     const volumeMult = deload ? 0.6 : (adapt ? adapt.volume : 1);
 
     const exercises = [];
+    /* What this day resolves to with no substitution applied. A substitute has to avoid these
+       as well as what is already placed: the neck rule swaps vertical_press for Face Pull, and
+       rear_delt further down the same day ALSO resolves to Face Pull — checking only the slots
+       processed so far cannot see that and produces the movement twice. */
+    const naturalNames = new Set(slots.map(sl => S.resolve(sl.pattern, tier)).filter(Boolean));
     const swapped = [];
     slots.forEach(sl => {
-      if(banned.includes(sl.pattern)){ swapped.push(sl.pattern); return; }
-      const name = S.resolve(sl.pattern, tier);
+      /* A restricted slot is SUBSTITUTED, never silently dropped. Dropping leaves a hole the
+         user has to fill by hand — the exact manual work this feature exists to remove — and
+         a five-exercise day becoming two reads as the app breaking rather than as it working
+         around a knee. Only if nothing safe and loggable exists does the slot go. */
+      const patternBanned = bannedAll.includes(sl.pattern);
+      let name = S.resolve(sl.pattern, tier);
+      if(patternBanned || (restrictions && IgnytCoachInjuries.blocksName(restrictions, name))){
+        /* Skips alternatives already used earlier in this session. Both squat and lunge fall
+           back to the same list, so without this a knee injury turned a leg day into Leg Press,
+           Leg Press — technically safe and obviously wrong. Falls back to reusing one only if
+           there is genuinely nothing else, since a repeated exercise still beats a hole. */
+        const used = new Set(exercises.map(x => x.name));
+        const pool = (restrictions ? restrictions.alternatives : []) || [];
+        const ok = alt => known.has(alt) && !(restrictions && IgnytCoachInjuries.blocksName(restrictions, alt));
+        /* No reuse fallback. If every safe alternative is already in this session the slot is
+           dropped instead, because prescribing the same movement twice in one workout is more
+           confusing than a shorter day — the user reads it as a bug, not as an accommodation.
+           A heavily restricted session being shorter is the honest outcome. */
+        const sub = pool.find(alt => ok(alt) && !used.has(alt) && !naturalNames.has(alt))
+                 || pool.find(alt => ok(alt) && !used.has(alt));
+        if(sub){ swapped.push(sl.pattern); name = sub; }
+        else { swapped.push(sl.pattern); return; }
+      }
       /* A pattern resolving to something the app cannot log is dropped, not shown — a plan
          with a row you cannot tap is worse than a shorter plan. validate() should prevent
          this; this is the belt to its braces. */
@@ -15924,7 +15961,9 @@ function buildTodaysPlan(){
     return {
       template, plan, week, deload, adapt, dayKey: dayKeyName, exercises, swapped, injuries,
       isRest: !dayKeyName || dayKeyName === "rest",
-      why: M.explain({ template, reasons: plan.reasons || [] }, injuries)
+      why: M.explain({ template, reasons: plan.reasons || [] }, injuries),
+      safetyNotice: restrictions ? IgnytCoachInjuries.safetyNotice(restrictions) : "",
+      restrictions: restrictions
     };
   }catch(e){ console.warn("plan build failed:", e); return null; }
 }
@@ -15953,6 +15992,7 @@ function renderPlanCard(){
       <span class="wk-plan__day">Week ${plan.week}${plan.deload ? ' · Deload' : ''} · ${escHtml(dayLabel)}</span>
       <button class="wk-plan__hide" data-action="hide-recommendations" aria-label="Turn off workout recommendations" title="Turn off recommendations">${svg('x',13)}</button>
     </div>
+    ${plan.safetyNotice ? `<div class="wk-plan__safety">${svg('shield',11)} ${escHtml(plan.safetyNotice)}</div>` : ''}
     ${plan.deload ? `<div class="wk-plan__why">${svg('shield',11)} Planned deload — lighter on purpose, so the next block has somewhere to go.</div>`
       : plan.adapt && plan.adapt.msg && plan.adapt.reason !== "steady" ? `<div class="wk-plan__why">${svg('info',11)} ${escHtml(plan.adapt.msg)}</div>` : ''}
     <div class="wk-plan__meta">${totalSets} sets</div>

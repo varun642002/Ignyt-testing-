@@ -611,3 +611,15 @@
 /* The head is a flex row; the day label should keep the middle and the X sit at the end. */
 .wk-plan__head{ align-items: center; }
 .wk-plan__day{ margin-left: auto; }
+
+/* Injury/condition notice on the plan card. Amber rather than red: the plan was adjusted
+   successfully, which is the feature working, not an error. Red here would read as "something
+   went wrong" every single session for someone managing a long-term condition. It sits above
+   the exercise list because it explains the list. */
+.wk-plan__safety{
+  display:flex; gap:6px; align-items:flex-start;
+  font-size:11.5px; line-height:1.5; color:var(--rh-text);
+  background:rgba(245,187,69,.10); border-left:2px solid var(--rh-amber, #B3800C);
+  border-radius:var(--radius-xs, 6px);
+  padding:8px 10px; margin:0 0 10px;
+}

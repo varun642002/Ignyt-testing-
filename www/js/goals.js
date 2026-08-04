@@ -299,7 +299,7 @@
       h += '<div class="pg-card">' +
         equipmentPicker() + experiencePicker() +
         iconField("nutrition", "var(--rh-blue)", "Food preference (optional)", '<input id="g-food" class="pi-input" value="' + esc(d.foodPref) + '" placeholder="e.g. Vegetarian">') +
-        iconField("info", "var(--rh-blue)", "Injuries / restrictions (optional)", '<input id="g-inj" class="pi-input" value="' + esc(d.injuries) + '">') +
+        injuryPicker() +
         iconField("flag", "var(--rh-blue)", "Primary motivation (optional)", '<input id="g-mot" class="pi-input" value="' + esc(d.motivation) + '">') +
         '</div>' +
         '<div class="rh-section-head"><span>Your Plan</span></div><div class="pg-card">' + planGrid(c) + '</div>' +
@@ -359,6 +359,51 @@
       }).join("") +
       '</div>' +
       (cur ? "" : '<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Choose one to continue.</div>') +
+      '</div>';
+  }
+
+  /* INJURY INTAKE. Replaces a free-text box whose contents went onto the goal and nowhere
+     else — the same disconnect equipment had, and with worse consequences: someone typed
+     "bad knee" and the app carried on programming box jumps.
+
+     Deliberately NOT in onboarding. It was asked for there, but onboarding is explicitly
+     off-limits, and this is a better home anyway: injuries change, and the goal wizard is a
+     screen people revisit, whereas onboarding is seen once and never again.
+
+     Severity is asked because it decides how much is removed. Stripping a training block for
+     a twinge makes people switch the feature off, and then it protects nobody. */
+  function injuryPicker() {
+    var C = window.IgnytCoachInjuries;
+    if (!C) return "";
+    var sel = (typeof state !== "undefined" && Array.isArray(state.injuries)) ? state.injuries : [];
+    var byId = {}; sel.forEach(function (x) { byId[x.id] = x; });
+    var open = view.injuryOpen;
+
+    var rows = C.all().map(function (e) {
+      var chosen = byId[e.id];
+      var head = '<button type="button" class="cat-chip' + (chosen ? " active" : "") +
+        '" data-goal-injury="' + esc(e.id) + '">' + esc(e.label) + '</button>';
+      if (!chosen) return head;
+      /* Severity appears only once something is selected — four extra chips against every one
+         of twenty-four conditions is a wall nobody reads. */
+      var sevs = C.severities().map(function (s) {
+        return '<button type="button" class="cat-chip cat-chip--sm' +
+          ((chosen.severity || "moderate") === s ? " active" : "") +
+          '" data-goal-injury-sev="' + esc(e.id) + "|" + s + '">' + s + '</button>';
+      }).join("");
+      return head + '<div class="g-sevrow">' + sevs + '</div>';
+    }).join("");
+
+    var restr = C.restrictionsFor(sel);
+    return '<div class="pi-row" style="background:none;border:none;padding:14px 0;display:block;">' +
+      '<div style="font-weight:700;font-size:14px;margin-bottom:2px;">Injuries or conditions</div>' +
+      '<div style="font-size:11px;color:var(--rh-muted);margin-bottom:8px;">' +
+        'Optional, but if you pick something IGNYT will swap the movements that commonly aggravate it.</div>' +
+      (open ? '<div class="g-chipwrap">' + rows + '</div>' +
+              '<button type="button" class="rh-btn rh-btn--ghost" data-goal-injury-toggle style="width:100%;margin-top:10px;">Done</button>'
+            : '<button type="button" class="rh-btn rh-btn--ghost" data-goal-injury-toggle style="width:100%;">' +
+              (sel.length ? esc(restr.labels.join(", ")) : "Add an injury or condition") + '</button>') +
+      (sel.length ? '<div class="g-safety">' + esc(C.safetyNotice(restr)) + '</div>' : "") +
       '</div>';
   }
 
@@ -604,7 +649,10 @@
       if (typeof state === "undefined" || state.tab !== "goals") return;
       var eq = e.target.closest("[data-goal-equip]");
       var ex = e.target.closest("[data-goal-exp]");
-      if (!eq && !ex) return;
+      var inj = e.target.closest("[data-goal-injury]");
+      var sev = e.target.closest("[data-goal-injury-sev]");
+      var tgl = e.target.closest("[data-goal-injury-toggle]");
+      if (!eq && !ex && !inj && !sev && !tgl) return;
       readStep();
       if (eq) {
         var val = eq.getAttribute("data-goal-equip");
@@ -612,9 +660,22 @@
         var k = state.profile.equipment.indexOf(val);
         if (k === -1) state.profile.equipment = state.profile.equipment.concat([val]);
         else state.profile.equipment = state.profile.equipment.filter(function (x) { return x !== val; });
-      } else {
+      } else if (ex) {
         state.onboarding = state.onboarding || {};
         state.onboarding.experienceLevel = ex.getAttribute("data-goal-exp");
+      } else if (tgl) {
+        view.injuryOpen = !view.injuryOpen;
+      } else if (inj) {
+        var id = inj.getAttribute("data-goal-injury");
+        state.injuries = Array.isArray(state.injuries) ? state.injuries : [];
+        var at = state.injuries.map(function (x) { return x.id; }).indexOf(id);
+        if (at === -1) state.injuries = state.injuries.concat([{ id: id, severity: "moderate", side: "both" }]);
+        else state.injuries = state.injuries.filter(function (x) { return x.id !== id; });
+      } else if (sev) {
+        var parts = sev.getAttribute("data-goal-injury-sev").split("|");
+        state.injuries = (state.injuries || []).map(function (x) {
+          return x.id === parts[0] ? { id: x.id, severity: parts[1], side: x.side || "both" } : x;
+        });
       }
       try { persist(); } catch (err) {}
       repaint();
