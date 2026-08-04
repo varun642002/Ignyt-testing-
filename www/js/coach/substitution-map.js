@@ -25,25 +25,25 @@ window.IgnytCoachSubstitution = (function () {
      entry the user's equipment supports, so the PATTERN is always trained and only the
      implement changes. */
   var CHAINS = {
-    horizontal_press: ["Bench Press (Barbell)", "Bench Press (Dumbbell)", "Floor Press (Dumbbell)", "Push Up"],
-    incline_press:    ["Incline Bench Press (Barbell)", "Incline Bench Press (Dumbbell)", "Incline Bench Press (Dumbbell)", "Decline Push Up"],
-    vertical_press:   ["Overhead Press (Barbell)", "Shoulder Press (Dumbbell)", "Shoulder Press (Dumbbell)", "Pike Pushup"],
-    horizontal_pull:  ["Bent Over Row (Barbell)", "Bent Over Row (Dumbbell)", "Bent Over Row (Dumbbell)", "Inverted Row"],
-    vertical_pull:    ["Lat Pulldown (Cable)", "Pull Up", "Pull Up", "Pull Up"],
-    squat:            ["Squat (Barbell)", "Goblet Squat", "Goblet Squat", "Squat (Bodyweight)"],
-    hinge:            ["Deadlift (Barbell)", "Romanian Deadlift (Dumbbell)", "Romanian Deadlift (Dumbbell)", "Single Leg Romanian Deadlift (Dumbbell)"],
-    lunge:            ["Lunge (Barbell)", "Lunge (Dumbbell)", "Lunge (Dumbbell)", "Lunge"],
-    hip_extension:    ["Hip Thrust (Barbell)", "Hip Thrust (Dumbbell)", "Single Leg Glute Bridge", "Glute Bridge"],
-    knee_flexion:     ["Lying Leg Curl (Machine)", "Lying Leg Curl (Machine)", "Lying Leg Curl (Machine)", "Lying Leg Curl (Machine)"],
-    lateral_raise:    ["Lateral Raise (Cable)", "Lateral Raise (Dumbbell)", "Lateral Raise (Dumbbell)", "Lateral Raise (Band)"],
-    rear_delt:        ["Face Pull", "Rear Delt Reverse Fly (Dumbbell)", "Rear Delt Reverse Fly (Dumbbell)", "Band Pullaparts"],
-    chest_fly:        ["Cable Fly Crossovers", "Chest Fly (Dumbbell)", "Chest Fly (Dumbbell)", "Push Up"],
-    bicep_isolation:  ["Bicep Curl (Barbell)", "Bicep Curl (Dumbbell)", "Bicep Curl (Dumbbell)", "Chin Up"],
-    tricep_isolation: ["Single Arm Triceps Pushdown (Cable)", "Skullcrusher (Dumbbell)", "Triceps Extension (Dumbbell)", "Diamond Push Up"],
+    horizontal_press: ["Bench Press (Barbell)", "Bench Press (Dumbbell)", "Floor Press (Dumbbell)", "Push Up", "Chest Press (Machine)", "Kettlebell Shoulder Press"],
+    incline_press: ["Incline Bench Press (Barbell)", "Incline Bench Press (Dumbbell)", "Incline Bench Press (Dumbbell)", "Decline Push Up", "Chest Press (Machine)"],
+    vertical_press: ["Overhead Press (Barbell)", "Shoulder Press (Dumbbell)", "Shoulder Press (Dumbbell)", "Pike Pushup", "Overhead Press (Smith Machine)", "Kettlebell Shoulder Press"],
+    horizontal_pull: ["Bent Over Row (Barbell)", "Bent Over Row (Dumbbell)", "Bent Over Row (Dumbbell)", "Inverted Row", "Seated Row (Machine)", "Gorilla Row (Kettlebell)"],
+    vertical_pull: ["Lat Pulldown (Cable)", "Pull Up", "Pull Up", "Pull Up", "Lat Pulldown (Machine)"],
+    squat: ["Squat (Barbell)", "Goblet Squat", "Goblet Squat", "Squat (Bodyweight)", "Leg Press (Machine)", "Kettlebell Goblet Squat"],
+    hinge: ["Deadlift (Barbell)", "Romanian Deadlift (Dumbbell)", "Romanian Deadlift (Dumbbell)", "Single Leg Romanian Deadlift (Dumbbell)", "Kettlebell Swing", "Back Extension (Machine)", "Single Leg Glute Bridge"],
+    lunge: ["Lunge (Barbell)", "Lunge (Dumbbell)", "Lunge (Dumbbell)", "Lunge", "Kettlebell Goblet Squat"],
+    hip_extension: ["Hip Thrust (Barbell)", "Hip Thrust (Dumbbell)", "Single Leg Glute Bridge", "Glute Bridge", "Hip Thrust (Machine)"],
+    knee_flexion:     ["Lying Leg Curl (Machine)", "Seated Leg Curl (Machine)", "Romanian Deadlift (Dumbbell)", "Nordic Hamstrings Curls", "Single Leg Glute Bridge"],
+    lateral_raise: ["Lateral Raise (Cable)", "Lateral Raise (Dumbbell)", "Lateral Raise (Dumbbell)", "Lateral Raise (Band)", "Lateral Raise (Machine)"],
+    rear_delt: ["Face Pull", "Rear Delt Reverse Fly (Dumbbell)", "Rear Delt Reverse Fly (Dumbbell)", "Band Pullaparts", "Rear Delt Reverse Fly (Machine)"],
+    chest_fly: ["Cable Fly Crossovers", "Chest Fly (Dumbbell)", "Chest Fly (Dumbbell)", "Push Up", "Chest Fly (Machine)", "Wide Push Up"],
+    bicep_isolation: ["Bicep Curl (Barbell)", "Bicep Curl (Dumbbell)", "Bicep Curl (Dumbbell)", "Chin Up", "Bicep Curl (Machine)", "Kettlebell Curl"],
+    tricep_isolation: ["Single Arm Triceps Pushdown (Cable)", "Skullcrusher (Dumbbell)", "Triceps Extension (Dumbbell)", "Diamond Push Up", "Triceps Extension (Machine)"],
     forearm:          ["Seated Wrist Curl (Barbell)", "Reverse Wrist Curl (Dumbbell)", "Reverse Wrist Curl (Dumbbell)", "Dead Hang"],
-    carry:            ["Farmers Walk", "Farmers Walk", "Farmers Walk", "Suitcase Carry (Dumbbell)"],
+    carry: ["Farmers Walk", "Farmers Walk", "Farmers Walk", "Suitcase Carry (Dumbbell)", "Bottoms Up Carry", "Dead Hang"],
     core_antiext:     ["Ab Wheel", "Ab Wheel", "Plank", "Plank"],
-    calf:             ["Standing Calf Raise (Machine)", "Standing Calf Raise (Dumbbell)", "Standing Calf Raise (Dumbbell)", "Seated Calf Raise"],
+    calf: ["Standing Calf Raise (Machine)", "Standing Calf Raise (Dumbbell)", "Standing Calf Raise (Dumbbell)", "Seated Calf Raise", "Smith Machine Calf Raise"],
 
     /* ---- conditioning and HYROX stations ----------------------------------------------
        Added after an audit showed the HYROX templates could only resolve 23-56% of their
@@ -55,11 +55,11 @@ window.IgnytCoachSubstitution = (function () {
        never declared. */
     run_easy:         ["Running", "Running", "Running", "Running"],
     run_interval:     ["Running", "Running", "Running", "Running"],
-    sled_push:        ["Sled Push", "Sled Push", "Sled Push", "Sled Push"],
-    sled_pull:        ["Sled Pull", "Sled Pull", "Sled Pull", "Sled Pull"],
-    wall_ball:        ["Wall Ball", "Wall Ball", "Wall Ball", "Wall Ball"],
-    ski_erg:          ["Ski Erg", "Ski Erg", "Ski Erg", "Ski Erg"],
-    row_erg:          ["Rowing Machine", "Rowing Machine", "Rowing Machine", "Rowing Machine"],
+    sled_push:        ["Sled Push", "Sled Push", "Sled Push", "Sled Push", "Bear Crawl"],
+    sled_pull:        ["Sled Pull", "Sled Pull", "Sled Pull", "Sled Pull", "Broad Jump"],
+    wall_ball:        ["Wall Ball", "Wall Ball", "Wall Ball", "Wall Ball", "Jump Squat"],
+    ski_erg:          ["Ski Erg", "Ski Erg", "Ski Erg", "Ski Erg", "Star Jump"],
+    row_erg:          ["Rowing Machine", "Rowing Machine", "Rowing Machine", "Rowing Machine", "Mountain Climber"],
     sandbag_lunge:    ["Walking Lunge (Sandbag)", "Walking Lunge (Sandbag)", "Walking Lunge (Dumbbell)", "Walking Lunge"],
     /* A race simulation is the whole event, not one movement. It resolves to Running so the
        session is loggable at all; the athlete logs the stations they actually did alongside
@@ -102,6 +102,79 @@ window.IgnytCoachSubstitution = (function () {
    * Falls DOWN the chain (never up) if the tier's entry is missing, because a less
    * equipment-dependent movement is always performable by someone with more equipment.
    */
+  /* WHAT EACH SELECTION ACTUALLY LETS YOU DO.
+
+     The tier model this replaces collapsed twenty equipment options into four buckets, and
+     the collapse lost the answer. Selecting "Barbell" alone matched /barbell/ and became
+     full_gym, so the plan handed out Lat Pulldown (Cable). Selecting "Machines" alone did the
+     same and prescribed barbell bench, squat and deadlift — every single exercise being one
+     the user had just said they do not have. Bodyweight-only was given a dumbbell RDL.
+
+     Filtering on the exercise's real library CATEGORY fixes it, because that is the fact that
+     matters: a Machine exercise needs a machine, whatever bucket the user fell into.
+
+     BODYWEIGHT IS ALWAYS ALLOWED, deliberately and unconditionally. Everyone has their body,
+     so it is the one category that can never be unavailable — and it is what stops a narrow
+     selection like "Kettlebells" resolving to nothing at all for patterns kettlebells cannot
+     cover. A plan is always producible. */
+  var EQUIP_CATEGORIES = {
+    "commercial gym":      ["Barbell", "Dumbbell", "Machine", "Kettlebell", "Conditioning", "Cardio Machine"],
+    "home gym":            ["Dumbbell", "Kettlebell", "Barbell"],
+    "bodyweight only":     [],
+    "adjustable dumbbells":["Dumbbell"],
+    "barbell":             ["Barbell"],
+    "machines":            ["Machine"],
+    "resistance bands":    [],
+    "cable machine":       ["Machine"],
+    "kettlebells":         ["Kettlebell"],
+    "trx":                 [],
+    "medicine balls":      ["Conditioning"],
+    "sled":                ["Conditioning"],
+    "rowerg":              ["Cardio Machine"],
+    "skierg":              ["Cardio Machine"],
+    "assault bike":        ["Cardio Machine"],
+    "treadmill":           ["Cardio Machine"],
+    "exercise bike":       ["Cardio Machine"],
+    "elliptical":          ["Cardio Machine"],
+    "swimming pool":       ["Cardio Outdoor"],
+    "running track":       ["Cardio Outdoor"]
+  };
+
+  /** The library categories a selection unlocks. Always includes the two that need nothing. */
+  function allowedCategories(selection) {
+    var out = { "Bodyweight": true, "Mobility / Stretch": true, "Cardio Outdoor": true };
+    (selection || []).forEach(function (item) {
+      var cats = EQUIP_CATEGORIES[String(item).toLowerCase()];
+      if (cats) cats.forEach(function (c) { out[c] = true; });
+    });
+    return out;
+  }
+
+  /* "Conditioning" is a mixed category: sleds, sandbags and atlas stones sit beside movements
+     that need nothing at all. Recategorising the library would change what every user browses,
+     so instead name the handful that are genuinely equipment-free and let those through for
+     everyone. Without this a bodyweight-only user could not be given a burpee. */
+  var FREE_CONDITIONING = {
+    "Burpee": true, "Burpee Broad Jumps": true, "Shadow Boxing": true,
+    "Carioca Drill": true, "Lateral Shuffle Drill": true
+  };
+
+  /** Movements anyone can do, whatever they own. */
+  function alwaysAvailable(name, cat) {
+    return cat === "Bodyweight" || cat === "Mobility / Stretch" ||
+           cat === "Cardio Outdoor" || !!FREE_CONDITIONING[name];
+  }
+
+  /** Only what the selection unlocks — no free categories. Used to give owned kit priority. */
+  function ownedCategories(selection) {
+    var out = {};
+    (selection || []).forEach(function (item) {
+      var cats = EQUIP_CATEGORIES[String(item).toLowerCase()];
+      if (cats) cats.forEach(function (c) { out[c] = true; });
+    });
+    return out;
+  }
+
   function libraryNames() {
     try {
       if (typeof allLibraryExercises !== "function") return null;
@@ -111,29 +184,97 @@ window.IgnytCoachSubstitution = (function () {
     } catch (e) { return null; }
   }
 
-  function resolve(pattern, equipmentTier) {
+  function libraryCats() {
+    try {
+      if (typeof allLibraryExercises !== "function") return null;
+      var m = {};
+      allLibraryExercises().forEach(function (e) { m[e.name] = e.cat; });
+      return m;
+    } catch (e) { return null; }
+  }
+
+  /**
+   * The exercise a pattern resolves to.
+   *
+   * @param pattern  movement pattern
+   * @param equip    either a legacy tier string, or the user's raw equipment SELECTION array,
+   *                 which is what callers should now pass. The array path filters by real
+   *                 library category; the string path is kept so older callers still work.
+   * @param taken    optional { name: true } of exercises already in this session. Narrow
+   *                 equipment makes chains converge — with only kettlebells both squat and
+   *                 lunge land on the goblet squat — and the same movement listed twice in one
+   *                 day reads as a broken plan. Skipped only while an alternative exists;
+   *                 repeating beats dropping the slot.
+   *
+   * Walks the chain in order — most equipment-dependent first — and takes the first entry the
+   * user can actually perform. Falls back to any loggable entry rather than returning null,
+   * because a plan with a gap is worse than a plan with a compromise.
+   */
+  function resolve(pattern, equip, taken) {
     var chain = CHAINS[pattern];
     if (!chain) return null;
-    var i = TIER_INDEX[equipmentTier];
-    if (i == null) i = 3;
-
-    /* Skip entries the library does not actually contain, rather than returning a name that
-       cannot be logged. This is not defensive padding — it is the difference between a plan
-       and an empty card. The mobility chains name movements that only arrive with the
-       exercise-library import, so before that import every mobility slot would resolve to
-       something untappable and get dropped, leaving a Mobility plan with nothing in it.
-
-       Walk DOWN first (less equipment is always performable by someone with more), then back
-       UP, then give up honestly. Same graceful degradation the equipment tiers already rely
-       on, applied to availability rather than to kit. */
     var known = libraryNames();
-    var j;
+    var cats = libraryCats();
+    var used = taken || {};
+
+    if (Array.isArray(equip) && cats) {
+      var allowed = allowedCategories(equip);
+
+      /* Two passes, and the order matters. Bodyweight is always allowed, which means a single
+         pass lets chain ORDER beat OWNERSHIP: a machines-only user got "Goblet Squat" purely
+         because bodyweight sits earlier in the squat chain than "Leg Press (Machine)". Someone
+         who tells us they have machines should be given the machine.
+         Pass one considers only the categories the selection actually unlocks; pass two opens
+         it up to the free-for-everyone categories. */
+      var owned = ownedCategories(equip);
+
+      /* The three in-bounds passes: owned kit first, then anything the selection permits, then
+         the categories nobody needs equipment for. `skipUsed` excludes what the session already
+         holds. */
+      function inBounds(skipUsed) {
+        var i, n;
+        function free(x) { return !(skipUsed && used[x]); }
+
+        for (i = 0; i < chain.length; i++) {
+          n = chain[i];
+          if (n && known && known[n] && owned[cats[n]] && free(n)) return n;
+        }
+        for (i = 0; i < chain.length; i++) {
+          n = chain[i];
+          if (n && known && known[n] && (allowed[cats[n]] || FREE_CONDITIONING[n]) && free(n)) return n;
+        }
+        /* Prefer an always-available fallback over simply the first chain entry. Taking the
+           first entry handed a bodyweight-only user "Deadlift (Barbell)" whenever a chain had
+           no bodyweight option — the single most obviously wrong thing this feature could do. */
+        for (i = 0; i < chain.length; i++) {
+          n = chain[i];
+          if (n && known && known[n] && alwaysAvailable(n, cats[n]) && free(n)) return n;
+        }
+        return null;
+      }
+
+      /* Order of concessions, and it is deliberate. Repeating a movement is a cosmetic blemish;
+         prescribing kit the user just told us they do not have is the bug this whole path
+         exists to fix. So a REPEAT is conceded before BOUNDS are — otherwise a bodyweight-only
+         chest_fly fell to "Cable Fly Crossovers" purely because the push up was already used
+         by the press slot earlier that day. Only when nothing performable exists at all does
+         the chain's own first entry come back, so a slot is never silently dropped. */
+      var hit = inBounds(true) || inBounds(false);
+      if (hit) return hit;
+      for (var c = 0; c < chain.length; c++) if (chain[c] && (!known || known[chain[c]])) return chain[c];
+      return null;
+    }
+
+    /* Legacy tier path, unchanged. */
+    var i2 = TIER_INDEX[equip];
+    if (i2 == null) i2 = 3;
+    var jj;
     if (!known) {
-      for (j = i; j < chain.length; j++) if (chain[j]) return chain[j];
+      for (jj = i2; jj < chain.length; jj++) if (chain[jj]) return chain[jj];
       return chain[chain.length - 1] || null;
     }
-    for (j = i; j < chain.length; j++) if (chain[j] && known[chain[j]]) return chain[j];
-    for (j = i - 1; j >= 0; j--) if (chain[j] && known[chain[j]]) return chain[j];
+    for (jj = i2; jj < chain.length; jj++) if (chain[jj] && known[chain[jj]]) return chain[jj];
+    for (jj = i2 - 1; jj >= 0; jj--) if (chain[jj] && known[chain[jj]]) return chain[jj];
     return null;
   }
 
@@ -199,7 +340,7 @@ window.IgnytCoachSubstitution = (function () {
   }
 
   return Object.freeze({
-    resolve: resolve, chainFor: chainFor,
+    resolve: resolve, chainFor: chainFor, allowedCategories: allowedCategories,
     bannedPatterns: bannedPatterns, ladderFor: ladderFor,
     validate: validate, CHAINS: CHAINS, INJURY: INJURY
   });
