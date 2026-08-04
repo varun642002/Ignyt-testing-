@@ -9009,8 +9009,8 @@ function obHealthConnect(){
         <span class="ob-hc-ok__tick" aria-hidden="true">✓</span>
         <span>Connected. Your health data will sync automatically.</span>
       </div>` : ""}
-    ${state.onboarding.healthConnectState === "denied" ? `
-      <div class="ob-note">You can connect Health Connect anytime from Profile.</div>` : ""}
+    ${(state.onboarding.healthConnectState === "denied" || state.onboarding.healthConnectState === "skipped") ? `
+      <div class="ob-note">No problem — you can connect Health Connect any time from Profile.</div>` : ""}
 
     ${native
       ? `<button class="btn btn-accent btn-block" data-ob-health ${state.onboarding.healthConnectBusy?'disabled':''}>
@@ -9853,8 +9853,13 @@ function wireOnboardingWizard(){
 
   const notifSkip = document.querySelector("[data-ob-notif-skip]");
   if(notifSkip) notifSkip.addEventListener("click", ()=>{
+    /* Records the choice and STAYS PUT. It used to advance a step, which was right when
+       notifications had a page to themselves — but they now share one with Health Connect, so
+       advancing carried the user straight past a permission prompt they had never seen. The
+       Health Connect skip below already had this reasoning written against it; the same fix
+       simply was not applied here, so the bug it warns about was still live in the other half
+       of the same page. */
     if(!state.onboarding.notifState) state.onboarding.notifState = "denied";
-    state.onboardingStep = Math.min(ONBOARDING_TOTAL_STEPS, state.onboardingStep + 1);
     renderOnboardingWizard();
   });
 
