@@ -1,0 +1,911 @@
+Exercise,Workout Category,Equipment Needed,Can Do At Home,Library Category,Muscle Group,Default Sets x Reps,Log Type
+Landmine 180,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Abdominals,3x15,reps
+Landmine Anti Rotation,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Abdominals,3x12,reps
+Bicep Curl (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Biceps,3x12,reps
+EZ Bar Biceps Curl,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Biceps,3x12,reps
+Preacher Curl (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Biceps,3x12,reps
+Reverse Curl (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Biceps,3x12,reps
+Spider Curl (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Biceps,3x12,reps
+Standing Calf Raise (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Calves,3x15,reps
+Bench Press - Close Grip (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Chest,4x8,reps
+Bench Press - Wide Grip (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Chest,4x8,reps
+Bench Press (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Chest,4x8,reps
+Board Press,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Chest,4x3,reps
+Chain Bench Press,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Chest,4x3,reps
+Decline Bench Press (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Chest,4x8,reps
+Feet Up Bench Press (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Chest,4x8,reps
+Floor Press (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Chest,4x8,reps
+Incline Bench Press (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Chest,4x8,reps
+Larsen Press,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Chest,4x5,reps
+Reverse Band Bench Press,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Chest,4x3,reps
+Spoto Press,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Chest,4x5,reps
+Behind the Back Wrist Curl (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Forearms,3x15,reps
+Fat Grip Hold,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Forearms,3x30s,time
+Seated Wrist Curl (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Forearms,3x15,reps
+Seated Wrist Extension (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Forearms,3x15,reps
+Bear Complex,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Full Body,5x7,reps
+Burpee Deadlift,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Full Body,4x8,reps
+Clean,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Full Body,4x8,reps
+Clean and Jerk,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Full Body,4x8,reps
+Clean and Press,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Full Body,4x8,reps
+Clean Pull,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Full Body,4x8,reps
+Clean to Overhead,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Full Body,4x6,reps
+Hang Clean,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Full Body,4x8,reps
+Hang Snatch,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Full Body,4x8,reps
+Landmine Squat and Press,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Full Body,4x8,reps
+Power Clean,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Full Body,4x8,reps
+Power Snatch,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Full Body,4x8,reps
+Snatch,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Full Body,4x8,reps
+Split Jerk,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Full Body,4x8,reps
+Thruster (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Full Body,4x8,reps
+Axle Deadlift,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Glutes,4x5,reps
+Block Pull Deadlift,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Glutes,4x4,reps
+Deadlift (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Glutes,4x8,reps
+Deadlift (Trap bar),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Glutes,4x8,reps
+Deficit Deadlift,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Glutes,4x4,reps
+Glute Bridge (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Glutes,4x8,reps
+Hip Thrust (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Glutes,4x8,reps
+Jefferson Deadlift,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Glutes,4x6,reps
+Partial Glute Bridge (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Glutes,4x8,reps
+Good Morning (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Hamstrings,4x8,reps
+Romanian Deadlift (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Hamstrings,4x8,reps
+Single Leg Romanian Deadlift (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Hamstrings,4x8,reps
+Jefferson Curl,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Lower Back,3x8,reps
+Anderson Squat,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Quadriceps,4x3,reps
+Box Squat (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Quadriceps,4x8,reps
+Bulgarian Split Squat (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Quadriceps,4x8,reps
+Lunge (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Quadriceps,4x8,reps
+Pause Squat (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Quadriceps,4x8,reps
+Pin Squat,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Quadriceps,4x3,reps
+Reverse Lunge (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Quadriceps,4x8,reps
+Safety Bar Squat,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Quadriceps,4x6,reps
+Squat (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Quadriceps,4x8,reps
+Sumo Squat (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Quadriceps,4x8,reps
+Behind the Neck Press,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Shoulders,4x8,reps
+Bradford Press,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Shoulders,3x10,reps
+Front Raise (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Shoulders,3x12,reps
+Landmine Lateral Raise,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Shoulders,3x12,reps
+Log Press,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Shoulders,4x5,reps
+Muscle Snatch,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Shoulders,4x3,reps
+Overhead Press (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Shoulders,3x12,reps
+Pin Press,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Shoulders,4x3,reps
+Push Jerk,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Shoulders,5x3,reps
+Seated Overhead Press (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Shoulders,3x12,reps
+Single Arm Landmine Press (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Shoulders,3x12,reps
+Standing Military Press (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Shoulders,3x12,reps
+Upright Row (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Shoulders,3x12,reps
+Shrug (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Traps,3x12,reps
+JM Press (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Triceps,3x12,reps
+Skullcrusher (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Triceps,3x12,reps
+Triceps Extension (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Triceps,3x12,reps
+Bent Over Row - Underhand (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Upper Back,4x8,reps
+Bent Over Row (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Upper Back,4x8,reps
+Chest Supported T Bar Row,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Upper Back,4x8,reps
+Landmine Row,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Upper Back,4x8,reps
+Meadows Row,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Upper Back,4x10,reps
+Meadows Rows (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Upper Back,4x8,reps
+Pendlay Row (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Upper Back,4x8,reps
+Seal Row (Barbell),Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Upper Back,4x8,reps
+Snatch Grip Deadlift,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Upper Back,4x5,reps
+Snatch Pull,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Upper Back,4x3,reps
+T Bar Row,Barbell Workout,"Barbell, rack and plates",Gym or home gym,Barbell,Upper Back,4x8,reps
+Air Bike,Cardio - Machine,Air Bike,Gym only,Cardio Machine,Cardio,3x400m,distance
+Elliptical Trainer,Cardio - Machine,Elliptical Trainer,Gym only,Cardio Machine,Cardio,3x400m,distance
+Incline Treadmill Walk,Cardio - Machine,Incline Treadmill Walk,Gym only,Cardio Machine,Cardio,1x20min,time
+Jacob's Ladder,Cardio - Machine,Jacob's Ladder,Gym only,Cardio Machine,Cardio,3x5min,time
+Recumbent Bike,Cardio - Machine,Recumbent Bike,Gym only,Cardio Machine,Cardio,3x400m,distance
+Rowing Erg Sprint,Cardio - Machine,Rowing Erg Sprint,Gym only,Cardio Machine,Cardio,6x250m,distance
+Ski Erg,Cardio - Machine,Ski Erg,Gym only,Cardio Machine,Cardio,3x400m,distance
+Spinning,Cardio - Machine,Spinning,Gym only,Cardio Machine,Cardio,3x45s,time
+Treadmill,Cardio - Machine,Treadmill,Gym only,Cardio Machine,Cardio,3x400m,distance
+Versaclimber,Cardio - Machine,Versaclimber,Gym only,Cardio Machine,Cardio,3x5min,time
+A Skip,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,4x20m,distance
+Aerobics,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,3x45s,time
+B Skip,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,4x20m,distance
+Battle Ropes,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,3x45s,time
+Boxing,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,3x45s,time
+Butt Kick Run,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,4x20m,distance
+Climbing,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,3x400m,distance
+Cycling,Cardio - Outdoor,A bicycle,Yes - outdoors,Cardio Outdoor,Cardio,3x400m,distance
+Falling Start Sprint,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,6x15m,distance
+Fartlek Run,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,1x5000m,distance
+Flying Sprint,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,5x30m,distance
+High Knee Run,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,4x20m,distance
+HIIT,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,3x45s,time
+Hiking,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,3x400m,distance
+Hill Sprint,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,8x40m,distance
+Jump Rope,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,3x45s,time
+Pro Agility Shuttle,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,6x20m,distance
+Ruck Walk,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,1x5000m,distance
+Running,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,3x400m,distance
+Shuttle Run,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,6x20m,distance
+Skating,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,3x400m,distance
+Skiing,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,3x400m,distance
+Snowboarding,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,3x400m,distance
+Sprint Start,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,6x20m,distance
+Sprints,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,3x400m,distance
+Stair Sprints,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,6x30s,time
+Stride Out Run,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,6x100m,distance
+Suicide Run,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,4x1,reps
+Tempo Run,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,3x1000m,distance
+Walking,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,3x400m,distance
+Weighted Vest Walk,Cardio - Outdoor,None - outdoors,Yes - outdoors,Cardio Outdoor,Cardio,1x30min,time
+Swim Breaststroke,Cardio - Swimming,Swimming pool,Pool needed,Cardio Outdoor,Cardio,4x100m,distance
+Swim Butterfly,Cardio - Swimming,Swimming pool,Pool needed,Cardio Outdoor,Cardio,4x50m,distance
+Swim Freestyle,Cardio - Swimming,Swimming pool,Pool needed,Cardio Outdoor,Cardio,4x100m,distance
+Swimming,Cardio - Swimming,Swimming pool,Pool needed,Cardio Outdoor,Cardio,3x400m,distance
+Med Ball Side Toss,Conditioning / Functional,Medicine or slam ball,Gym only,Conditioning,Abdominals,4x8,reps
+Rotational Medicine Ball Throw,Conditioning / Functional,Medicine or slam ball,Gym only,Conditioning,Abdominals,4x6,reps
+Boxing Heavy Bag,Conditioning / Functional,Heavy bag or sledgehammer,Gym only,Conditioning,Cardio,3x3min,time
+Kneeling Med Ball Throw,Conditioning / Functional,Medicine or slam ball,Gym only,Conditioning,Chest,4x8,reps
+Medicine Ball Chest Pass,Conditioning / Functional,Medicine or slam ball,Gym only,Conditioning,Chest,4x8,reps
+Atlas Stone Lift,Conditioning / Functional,Strongman implement,Gym only,Conditioning,Full Body,4x3,reps
+Atlas Stone Over Bar,Conditioning / Functional,Strongman implement,Gym only,Conditioning,Full Body,4x3,reps
+Ball Slams,Conditioning / Functional,Gym equipment,Gym only,Conditioning,Full Body,4x8,reps
+Battle Ropes Slams,Conditioning / Functional,Battle ropes,Gym only,Conditioning,Full Body,4x30s,time
+Farmers Walk,Conditioning / Functional,Gym equipment,Gym only,Conditioning,Full Body,3x400m,distance
+Keg Carry,Conditioning / Functional,Strongman implement,Gym only,Conditioning,Full Body,3x30m,distance
+Med Ball Clean,Conditioning / Functional,Medicine or slam ball,Gym only,Conditioning,Full Body,4x10,reps
+Med Ball Overhead Slam,Conditioning / Functional,Medicine or slam ball,Gym only,Conditioning,Full Body,4x10,reps
+Med Ball Scoop Toss,Conditioning / Functional,Medicine or slam ball,Gym only,Conditioning,Full Body,4x8,reps
+Medicine Ball Slam,Conditioning / Functional,Medicine or slam ball,Gym only,Conditioning,Full Body,4x10,reps
+Overhead Medicine Ball Throw,Conditioning / Functional,Medicine or slam ball,Gym only,Conditioning,Full Body,4x8,reps
+Sandbag Carry,Conditioning / Functional,Sandbag,Gym only,Conditioning,Full Body,3x40m,distance
+Sandbag Clean,Conditioning / Functional,Sandbag,Gym only,Conditioning,Full Body,4x5,reps
+Sandbag Over Shoulder,Conditioning / Functional,Sandbag,Gym only,Conditioning,Full Body,4x5,reps
+Sled Pull,Conditioning / Functional,Sled,Gym only,Conditioning,Full Body,3x400m,distance
+Sled Push,Conditioning / Functional,Sled,Gym only,Conditioning,Full Body,3x400m,distance
+Sledge Tire Strike,Conditioning / Functional,Sled,Gym only,Conditioning,Full Body,4x20,reps
+Sledgehammer Strikes,Conditioning / Functional,Sled,Gym only,Conditioning,Full Body,4x20,reps
+Tire Flip,Conditioning / Functional,Strongman implement,Gym only,Conditioning,Full Body,4x5,reps
+Wall Ball,Conditioning / Functional,Medicine or slam ball,Gym only,Conditioning,Full Body,3x45s,time
+Wall Ball Over Shoulder,Conditioning / Functional,Medicine or slam ball,Gym only,Conditioning,Full Body,4x10,reps
+Yoke Carry,Conditioning / Functional,Strongman implement,Gym only,Conditioning,Full Body,4x20m,distance
+Zercher Carry,Conditioning / Functional,Gym equipment,Gym only,Conditioning,Full Body,3x30m,distance
+Sled Drag,Conditioning / Functional,Sled,Gym only,Conditioning,Hamstrings,4x20m,distance
+Box Step Over,Conditioning / Functional,Gym equipment,Gym only,Conditioning,Quadriceps,4x10,reps
+Sandbag Squat,Conditioning / Functional,Sandbag,Gym only,Conditioning,Quadriceps,4x12,reps
+Slam Ball Squat,Conditioning / Functional,Medicine or slam ball,Gym only,Conditioning,Quadriceps,4x12,reps
+Sled Sprint,Conditioning / Functional,Sled,Gym only,Conditioning,Quadriceps,6x15m,distance
+Walking Lunge (Sandbag),Conditioning / Functional,Sandbag,Gym only,Conditioning,Quadriceps,3x400m,distance
+Battle Ropes Waves,Conditioning / Functional,Battle ropes,Gym only,Conditioning,Shoulders,4x30s,time
+Overhead Carry,Conditioning / Functional,Gym equipment,Gym only,Conditioning,Shoulders,3x30m,distance
+Speed Bag Boxing,Conditioning / Functional,Heavy bag or sledgehammer,Gym only,Conditioning,Shoulders,3x2min,time
+Side Bend (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Abdominals,3x15,reps
+Suitcase Deadlift,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Abdominals,3x10,reps
+Bicep Curl (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Biceps,3x12,reps
+Hammer Curl (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Biceps,3x12,reps
+Pinwheel Curl (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Biceps,3x12,reps
+Preacher Curl (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Biceps,3x12,reps
+Reverse Curl (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Biceps,3x12,reps
+Seated Incline Curl (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Biceps,3x12,reps
+Seated Incline Hammer Curl (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Biceps,3x12,reps
+Spider Curl (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Biceps,3x12,reps
+Waiter Curl (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Biceps,3x12,reps
+Zottman Curl (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Biceps,3x12,reps
+Single Leg Standing Calf Raise (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Calves,3x15,reps
+Standing Calf Raise (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Calves,3x15,reps
+Bench Press (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Chest,4x8,reps
+Chest Fly (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Chest,4x8,reps
+Decline Bench Press (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Chest,4x8,reps
+Decline Chest Fly (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Chest,4x8,reps
+Dumbbell Squeeze Press,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Chest,4x8,reps
+Floor Press (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Chest,4x8,reps
+Hex Press (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Chest,4x8,reps
+Incline Bench Press (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Chest,4x8,reps
+Incline Chest Fly (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Chest,4x8,reps
+Serratus Punch,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Chest,3x15,reps
+Farmer Hold,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Forearms,3x45s,time
+Pronation Supination,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Forearms,3x15,reps
+Reverse Wrist Curl (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Forearms,3x15,reps
+Wrist Extension Eccentric,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Forearms,3x15,reps
+Wrist Flexion Eccentric,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Forearms,3x15,reps
+Devil Press,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Full Body,4x8,reps
+Dumbbell Snatch,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Full Body,4x8,reps
+Lunge to Press,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Full Body,4x10,reps
+Man Maker,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Full Body,4x8,reps
+Suitcase Carry (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Full Body,3x400m,distance
+Deadlift (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Glutes,4x8,reps
+Frog Pumps (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Glutes,4x8,reps
+Hip Thrust (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Glutes,4x8,reps
+Single Leg Hip Thrust (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Glutes,4x8,reps
+Romanian Deadlift (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Hamstrings,4x8,reps
+Single Leg Romanian Deadlift (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Hamstrings,4x8,reps
+Stiff Leg Deadlift (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Hamstrings,4x8,reps
+Dumbbell Row,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Lats,4x8,reps
+Pullover (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Lats,4x8,reps
+Jefferson Curl (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Lower Back,3x8,reps
+Bulgarian Split Squat (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Quadriceps,4x8,reps
+Curtsy Lunge (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Quadriceps,4x8,reps
+Dumbbell Step Up,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Quadriceps,4x8,reps
+Lunge (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Quadriceps,4x8,reps
+Overhead Dumbbell Lunge,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Quadriceps,4x8,reps
+Reverse Lunge (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Quadriceps,4x8,reps
+Split Squat (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Quadriceps,4x8,reps
+Squat (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Quadriceps,4x8,reps
+Sumo Squat (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Quadriceps,4x8,reps
+Walking Lunge (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Quadriceps,3x400m,distance
+Arnold Press (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x12,reps
+Chest Supported Reverse Fly (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x12,reps
+Chest Supported Y Raise (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x12,reps
+Cuban Rotation,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x12,reps
+Dumbbell Snatch Alternating,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,4x10,reps
+Dumbbell Thruster,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,4x10,reps
+Empty Can Raise,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x12,reps
+Front Raise (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x12,reps
+Full Can Raise,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x15,reps
+Half Kneeling Press,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x10,reps
+Lateral Raise (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x12,reps
+Overhead Press (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x12,reps
+Prone External Rotation,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x15,reps
+Rear Delt Reverse Fly (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x12,reps
+Scaption Raise,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x15,reps
+Seated Lateral Raise (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x12,reps
+Seated Overhead Press (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x12,reps
+Shoulder Press (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x12,reps
+Side Lying External Rotation,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x15,reps
+Upright Row (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Shoulders,3x12,reps
+Shrug (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Traps,3x12,reps
+Skullcrusher (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Triceps,3x12,reps
+Tate Press,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Triceps,3x12,reps
+Tricep Kickback,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Triceps,3x15,reps
+Triceps Extension (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Triceps,3x12,reps
+Triceps Kickback (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Triceps,3x12,reps
+Wide-Elbow Triceps Press (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Triceps,3x12,reps
+Bent Over Row (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Upper Back,4x8,reps
+Chest Supported Incline Row (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Upper Back,4x8,reps
+Kroc Row,Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Upper Back,3x15,reps
+Renegade Row (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Upper Back,4x8,reps
+Seal Row (Dumbbell),Dumbbell Workout,Dumbbells,Gym or home,Dumbbell,Upper Back,4x8,reps
+Ab Wheel,Home Workout - Ab Wheel,Ab wheel,Yes - small kit,Bodyweight,Abdominals,3x15,reps
+Standing Ab Wheel,Home Workout - Ab Wheel,Ab wheel,Yes - small kit,Bodyweight,Abdominals,3x6,reps
+Crunch (Weighted),Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Abdominals,3x400m,distance
+Decline Crunch (Weighted),Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Abdominals,3x400m,distance
+Russian Twist (Weighted),Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Abdominals,3x15,reps
+Sit Up (Weighted),Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Abdominals,3x15,reps
+Weighted Hollow Body Hold,Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Abdominals,3x30s,time
+Plate Curl,Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Biceps,3x12,reps
+Chest Dip (Weighted),Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Chest,4x8,reps
+Plate Press,Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Chest,4x8,reps
+Plate Squeeze (Svend Press),Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Chest,4x8,reps
+Push Up (Weighted),Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Chest,4x8,reps
+Plate Pinch Hold,Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Forearms,3x30s,time
+Chin Up (Weighted),Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Lats,4x8,reps
+Pull Up (Weighted),Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Lats,4x8,reps
+Back Extension (Weighted Hyperextension),Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Lower Back,4x8,reps
+Lying Neck Curls (Weighted),Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Neck,3x15,reps
+Lying Neck Extension (Weighted),Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Neck,3x15,reps
+Sissy Squat (Weighted),Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Quadriceps,4x8,reps
+Overhead Plate Raise,Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Shoulders,3x12,reps
+Plate Front Raise,Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Shoulders,3x12,reps
+Bench Dip Weighted,Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Triceps,3x12,reps
+Triceps Dip (Weighted),Home Workout - Added Weight,A plate or dumbbell,Yes - if you own weight,Bodyweight,Triceps,3x12,reps
+Side Plank Dip,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Abdominals,3x15,reps
+Bulgarian Dip,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Chest,3x8,reps
+Chair Incline Push Up,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Chest,3x12,reps
+Chest Dip,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Chest,4x8,reps
+Chest Dip (Assisted),Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Chest,4x8,reps
+Clap Push Up to Box,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Chest,4x6,reps
+Impossible Dip,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Chest,3x5,reps
+Straight Bar Dip,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Chest,3x10,reps
+Chair Pose,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Mobility,2x45s,time
+Couch Stretch,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Mobility,2x60s,time
+Box Drop,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Quadriceps,4x5,reps
+Box Jump,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Quadriceps,4x8,reps
+Chair Bulgarian Split Squat,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Quadriceps,3x10,reps
+Chair Squat,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Quadriceps,3x15,reps
+Chair Step Up,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Quadriceps,3x12,reps
+Continuous Box Jump,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Quadriceps,4x8,reps
+Lateral Box Jump,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Quadriceps,4x8,reps
+Poliquin Step Up,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Quadriceps,3x12,reps
+Seated Box Jump,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Quadriceps,4x5,reps
+Single Leg Box Jump,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Quadriceps,3x5,reps
+Squat Jump to Box,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Quadriceps,4x6,reps
+Step Up,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Quadriceps,4x8,reps
+Step Up (Bodyweight),Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Quadriceps,3x15,reps
+Bench Dip,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Triceps,3x12,reps
+Chair Dip,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Triceps,3x12,reps
+Floor Triceps Dip,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Triceps,3x12,reps
+Korean Dip,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Triceps,3x8,reps
+Russian Dip,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Triceps,3x8,reps
+Triceps Dip,Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Triceps,3x12,reps
+Triceps Dip (Assisted),Home Workout - Bench or Step,"Bench, box or step",Yes - a chair or step works,Bodyweight,Triceps,3x12,reps
+Wrist Roller,Home Workout - Foam Roller,Foam roller,Yes - small kit,Bodyweight,Forearms,3x15,reps
+Foam Rolling Adductors,Home Workout - Foam Roller,Foam roller,Yes - small kit,Bodyweight,Mobility,2x60s,time
+Foam Rolling Calves,Home Workout - Foam Roller,Foam roller,Yes - small kit,Bodyweight,Mobility,2x60s,time
+Foam Rolling Glutes,Home Workout - Foam Roller,Foam roller,Yes - small kit,Bodyweight,Mobility,2x60s,time
+Foam Rolling Hamstrings,Home Workout - Foam Roller,Foam roller,Yes - small kit,Bodyweight,Mobility,2x60s,time
+Foam Rolling IT Band,Home Workout - Foam Roller,Foam roller,Yes - small kit,Bodyweight,Mobility,2x60s,time
+Foam Rolling Lats,Home Workout - Foam Roller,Foam roller,Yes - small kit,Bodyweight,Mobility,2x60s,time
+Foam Rolling Pecs,Home Workout - Foam Roller,Foam roller,Yes - small kit,Bodyweight,Mobility,2x60s,time
+Foam Rolling Quads,Home Workout - Foam Roller,Foam roller,Yes - small kit,Bodyweight,Mobility,2x60s,time
+Foam Rolling Thoracic Spine,Home Workout - Foam Roller,Foam roller,Yes - small kit,Bodyweight,Mobility,2x60s,time
+Foam Rolling Tibialis,Home Workout - Foam Roller,Foam roller,Yes - small kit,Bodyweight,Mobility,2x60s,time
+Ab Rollout from Standing,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x6,reps
+Ab Scissors,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Bicycle Crunch,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x400m,distance
+Bicycle Crunch Raised Legs,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x400m,distance
+Cross Body Mountain Climber,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x30,reps
+Crunch,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x400m,distance
+Curl Up McGill,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x10,reps
+Dead Bug,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Decline Crunch,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x400m,distance
+Dragon Flag,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Dragonfly,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Elbow Lever Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15s,time
+Elbow to Knee,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Flutter Kick,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x30,reps
+Flutter Kicks,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x45s,time
+Heel Tap,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x20,reps
+Heel Taps,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Hollow Rock,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Jackknife Sit Up,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Knee Raise Parallel Bars,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+L-Sit Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x45s,time
+Leg Raise Parallel Bars,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Lying Knee Raise,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Lying Leg Raise,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Oblique Crunch,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x400m,distance
+Pilates Hundred,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x100,reps
+Pilates Roll Up,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x10,reps
+Pilates Teaser,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x8,reps
+Plank,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x45s,time
+Plank Jack,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x20,reps
+Plank Shoulder Tap,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x20,reps
+Reverse Crunch,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x400m,distance
+Reverse Plank,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x45s,time
+Russian Twist (Bodyweight),Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Scissor Kick,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x30,reps
+Side Bend,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Side Bridge McGill Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x30s,time
+Side Plank,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x45s,time
+Sit Up,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Spiderman,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Stir the Pot Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x30s,time
+Toe Touch,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Toe Touch Crunch,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x20,reps
+Torso Rotation,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+V Up,Home Workout - No Equipment,None,Yes,Bodyweight,Abdominals,3x15,reps
+Fire Hydrant,Home Workout - No Equipment,None,Yes,Bodyweight,Abductors,3x15,reps
+Fire Hydrant Rehab,Home Workout - No Equipment,None,Yes,Bodyweight,Abductors,3x15,reps
+Glute Med Isometric,Home Workout - No Equipment,None,Yes,Bodyweight,Abductors,3x30s,time
+Side Lying Hip Abduction,Home Workout - No Equipment,None,Yes,Bodyweight,Abductors,3x15,reps
+Adductor Squeeze Isometric,Home Workout - No Equipment,None,Yes,Bodyweight,Adductors,3x30s,time
+Ape Reach,Home Workout - No Equipment,None,Yes,Bodyweight,Adductors,3x10,reps
+Copenhagen Adduction,Home Workout - No Equipment,None,Yes,Bodyweight,Adductors,3x10,reps
+Copenhagen Plank,Home Workout - No Equipment,None,Yes,Bodyweight,Adductors,3x30s,time
+21s Bicep Curl,Home Workout - No Equipment,None,Yes,Bodyweight,Biceps,3x12,reps
+Concentration Curl,Home Workout - No Equipment,None,Yes,Bodyweight,Biceps,3x12,reps
+Cross Body Hammer Curl,Home Workout - No Equipment,None,Yes,Bodyweight,Biceps,3x12,reps
+Drag Curl,Home Workout - No Equipment,None,Yes,Bodyweight,Biceps,3x12,reps
+Reverse Grip Concentration Curl,Home Workout - No Equipment,None,Yes,Bodyweight,Biceps,3x12,reps
+Achilles Eccentric Drop,Home Workout - No Equipment,None,Yes,Bodyweight,Calves,3x15,reps
+Ankle Alphabet,Home Workout - No Equipment,None,Yes,Bodyweight,Calves,3x2,reps
+Ankle Hop,Home Workout - No Equipment,None,Yes,Bodyweight,Calves,3x20,reps
+Calf Raise Eccentric,Home Workout - No Equipment,None,Yes,Bodyweight,Calves,3x15,reps
+Heel Walk,Home Workout - No Equipment,None,Yes,Bodyweight,Calves,3x20m,distance
+Hurdle Hop,Home Workout - No Equipment,None,Yes,Bodyweight,Calves,4x6,reps
+Pogo Jump,Home Workout - No Equipment,None,Yes,Bodyweight,Calves,3x20,reps
+Reactive Hurdle Jump,Home Workout - No Equipment,None,Yes,Bodyweight,Calves,4x8,reps
+Seated Calf Raise,Home Workout - No Equipment,None,Yes,Bodyweight,Calves,3x15,reps
+Single Leg Calf Raise (Bodyweight),Home Workout - No Equipment,None,Yes,Bodyweight,Calves,3x15,reps
+Single Leg Standing Calf Raise,Home Workout - No Equipment,None,Yes,Bodyweight,Calves,3x15,reps
+Standing Calf Raise,Home Workout - No Equipment,None,Yes,Bodyweight,Calves,3x15,reps
+Standing Calf Raise (Bodyweight),Home Workout - No Equipment,None,Yes,Bodyweight,Calves,3x20,reps
+Tibialis Raise,Home Workout - No Equipment,None,Yes,Bodyweight,Calves,3x20,reps
+Toe Walk,Home Workout - No Equipment,None,Yes,Bodyweight,Calves,3x20m,distance
+Towel Scrunch,Home Workout - No Equipment,A towel,Yes,Bodyweight,Calves,3x20,reps
+Agility Ladder,Home Workout - No Equipment,None,Yes,Conditioning,Cardio,4x30s,time
+Butt Kicks,Home Workout - No Equipment,None,Yes,Bodyweight,Cardio,3x30s,time
+Carioca Drill,Home Workout - No Equipment,None,Yes,Conditioning,Cardio,4x20m,distance
+Cone Drill,Home Workout - No Equipment,None,Yes,Conditioning,Cardio,4x30s,time
+Jump Rope Crossover,Home Workout - No Equipment,None,Yes,Conditioning,Cardio,3x60s,time
+Jump Rope Double Under,Home Workout - No Equipment,None,Yes,Conditioning,Cardio,4x40,reps
+Jump Rope Single Under,Home Workout - No Equipment,None,Yes,Conditioning,Cardio,4x80,reps
+Lateral Shuffle Drill,Home Workout - No Equipment,None,Yes,Conditioning,Cardio,4x20m,distance
+Shadow Boxing,Home Workout - No Equipment,None,Yes,Conditioning,Cardio,3x3min,time
+T Drill,Home Workout - No Equipment,None,Yes,Conditioning,Cardio,4x1,reps
+90 Degree Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,3x5,reps
+Archer Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,3x8,reps
+Around The World,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,4x8,reps
+Aztec Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,3x5,reps
+Clap Push Ups,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,4x8,reps
+Decline Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,4x8,reps
+Drop Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,4x6,reps
+Explosive Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,3x8,reps
+Incline Push Ups,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,4x8,reps
+Iron Cross Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,4x8s,time
+Isometric Push Up Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,3x30s,time
+Kneeling Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,4x8,reps
+Maltese Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,4x5s,time
+One Arm Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,4x8,reps
+One Arm Push Up Negative,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,3x5,reps
+Plank Pushup,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,3x45s,time
+Plank to Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,3x12,reps
+Plyo Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,4x6,reps
+Pseudo Planche Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,3x8,reps
+Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,4x8,reps
+Serratus Wall Slide,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,3x12,reps
+Spiderman Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,3x10,reps
+Staggered Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,3x10,reps
+Superman Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,3x6,reps
+Tempo Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,3x8,reps
+Victorian Cross Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,4x5s,time
+Wall Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,3x15,reps
+Wide Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Chest,3x12,reps
+Captains of Crush Grip,Home Workout - No Equipment,None,Yes,Bodyweight,Forearms,3x10,reps
+Climbing Hangboard Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Forearms,5x10s,time
+Grip Squeeze Ball,Home Workout - No Equipment,None,Yes,Bodyweight,Forearms,3x20,reps
+Hub Lift,Home Workout - No Equipment,None,Yes,Bodyweight,Forearms,3x8,reps
+Nerve Glide Ulnar,Home Workout - No Equipment,None,Yes,Bodyweight,Forearms,3x12,reps
+Reverse Tyler Twist,Home Workout - No Equipment,None,Yes,Bodyweight,Forearms,3x15,reps
+Seated Palms Up Wrist Curl,Home Workout - No Equipment,None,Yes,Bodyweight,Forearms,3x15,reps
+Tyler Twist,Home Workout - No Equipment,None,Yes,Bodyweight,Forearms,3x15,reps
+Bear Crawl,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,3x45s,time
+Bear Crawl Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,3x30s,time
+Beast Crawl,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,3x20,reps
+Broad Jump Burpee,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,4x8,reps
+Burpee,Home Workout - No Equipment,None,Yes,Conditioning,Full Body,4x8,reps
+Burpee Box Jump Over,Home Workout - No Equipment,None,Yes,Conditioning,Full Body,4x10,reps
+Burpee Broad Jumps,Home Workout - No Equipment,None,Yes,Conditioning,Full Body,4x8,reps
+Burpee Over the Bar,Home Workout - No Equipment,None,Yes,Conditioning,Full Body,4x8,reps
+Burpee Tuck Jump,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,4x10,reps
+Deadlift High Pull,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,4x8,reps
+Handstand Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,3x45s,time
+High Knee Skips,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,4x8,reps
+High Knees,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,3x45s,time
+Inchworm,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,3x10,reps
+Jump Shrug,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,4x8,reps
+Jumping Jack,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,4x8,reps
+Mountain Climber,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,3x45s,time
+Overhead Squat,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,4x8,reps
+Press Under,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,4x8,reps
+Sprawl,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,4x15,reps
+Squat Row,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,4x8,reps
+Squat Thrust,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,3x15,reps
+Star Jump,Home Workout - No Equipment,None,Yes,Bodyweight,Full Body,3x20,reps
+Bird Dog,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x8,reps
+Bounding,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x20m,distance
+Broad Jump,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x5,reps
+Clamshell,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x8,reps
+Depth Drop to Broad Jump,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x5,reps
+Donkey Kick,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,3x15,reps
+Fire Hydrants,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x8,reps
+Frog Pump,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,3x20,reps
+Glute Bridge,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x8,reps
+Glute Bridge Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,3x45s,time
+Glute Bridge March Rehab,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,3x12,reps
+Glute Bridge Pulse,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,3x25,reps
+Glute Kickback on Floor,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x8,reps
+Hip Airplane,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,3x8,reps
+Hip Thrust,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x8,reps
+Lateral Bound,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x8,reps
+Lateral Leg Raises,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x8,reps
+Lateral Skater Bound,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x10,reps
+Pilates Side Kick,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,3x15,reps
+Power Skip,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x20m,distance
+Reverse Hyperextension,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x8,reps
+Single Leg Bound,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x6,reps
+Single Leg Glute Bridge,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x8,reps
+Single Leg Glute Bridge March,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,3x12,reps
+Single Leg Hip Thrust,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x8,reps
+Standing Hip CAR,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,3x8,reps
+Standing Long Jump Test,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,3x3,reps
+Sumo Deadlift,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x8,reps
+Triple Jump,Home Workout - No Equipment,None,Yes,Bodyweight,Glutes,4x4,reps
+Glute Ham Raise,Home Workout - No Equipment,None,Yes,Bodyweight,Hamstrings,4x8,reps
+Nerve Flossing Sciatic,Home Workout - No Equipment,None,Yes,Bodyweight,Hamstrings,3x12,reps
+Nordic Hamstrings Curls,Home Workout - No Equipment,None,Yes,Bodyweight,Hamstrings,4x8,reps
+Standing Leg Curls,Home Workout - No Equipment,None,Yes,Bodyweight,Hamstrings,4x8,reps
+Straight Leg Deadlift,Home Workout - No Equipment,None,Yes,Bodyweight,Hamstrings,4x8,reps
+Campus Board,Home Workout - No Equipment,None,Yes,Bodyweight,Lats,4x6,reps
+Lat closed grip pull down,Home Workout - No Equipment,None,Yes,Bodyweight,Lats,4x8,reps
+Back Bridge Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Lower Back,3x30s,time
+Back Extension (Hyperextension),Home Workout - No Equipment,None,Yes,Bodyweight,Lower Back,4x8,reps
+Bird Dog Rehab,Home Workout - No Equipment,None,Yes,Bodyweight,Lower Back,3x12,reps
+Pelvic Tilt,Home Workout - No Equipment,None,Yes,Bodyweight,Lower Back,3x15,reps
+Pilates Swan,Home Workout - No Equipment,None,Yes,Bodyweight,Lower Back,3x10,reps
+Prone Extension,Home Workout - No Equipment,None,Yes,Bodyweight,Lower Back,3x12,reps
+Scorpion Reach,Home Workout - No Equipment,None,Yes,Bodyweight,Lower Back,3x10,reps
+Standing Extension,Home Workout - No Equipment,None,Yes,Bodyweight,Lower Back,3x12,reps
+Superman,Home Workout - No Equipment,None,Yes,Bodyweight,Lower Back,4x8,reps
+Superman Pull,Home Workout - No Equipment,None,Yes,Bodyweight,Lower Back,3x15,reps
+90/90 Hip Switch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Ankle Circles Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Ankle Dorsiflexion Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Arm Circles Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Banded Ankle Distraction Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x60s,time
+Banded Hip Distraction Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x60s,time
+Banded Shoulder Distraction Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x60s,time
+Bow Pose,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Bridge Pose,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Butterfly Groin Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Calf Stretch on Wall,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Calf Wall Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Camel Pose,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Cat Camel,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,3x12,reps
+Cat-Cow Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Child's Pose Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x60s,time
+Chin Tuck Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Cobra Pose Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Cow Face Pose,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Cross Body Shoulder Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Deep Squat Hold Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x60s,time
+Doorway Chest Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Doorway Pec Stretch Rehab,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Downward-Facing Dog Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Eagle Pose,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Frog Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x60s,time
+Half Kneeling Hip Flexor Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Hamstring Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Happy Baby Pose,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x60s,time
+Hip Circles Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Hip Flexor Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Jefferson Curl Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Knee Hug Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Lacrosse Ball Foot Release Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x60s,time
+Lacrosse Ball Glute Release Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x60s,time
+Lat Stretch on Rack,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Leg Swings Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Levator Scapulae Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Lizard Pose Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x60s,time
+Low Lunge Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Lumbar Rotation Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Lying Glute Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Median Nerve Glide Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Neck Rotation Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Neck Side Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Overhead Triceps Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Pigeon Pose Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x60s,time
+Prone Press Up Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Puppy Pose Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Reclined Pigeon Pose,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x60s,time
+Scapular Wall Slide Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Sciatic Nerve Glide Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Seated Forward Fold Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Seated Spinal Twist Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Shoulder Circles Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Shoulder Dislocate Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Sleeper Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Sphinx Pose,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Standing Forward Fold Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Standing IT Band Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Standing Quad Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Standing Side Bend Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Supine Twist Pose,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x60s,time
+Thoracic Rotation Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Thread the Needle Pose,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Thread the Needle Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Torso Twist Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Towel Stretch Shoulder,Home Workout - No Equipment,A towel,Yes,Bodyweight,Mobility,2x45s,time
+Tree Pose,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Triangle Pose,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Upper Trap Stretch Rehab,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Wall Slide Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Warrior I Pose,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Warrior II Pose,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Wide Legged Forward Fold Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+World's Greatest Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x45s,time
+Wrist Circles Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Wrist Extensor Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Wrist Flexor Stretch,Home Workout - No Equipment,None,Yes,Bodyweight,Mobility,2x30s,time
+Chin Tuck Rehab,Home Workout - No Equipment,None,Yes,Bodyweight,Neck,3x15,reps
+Deep Neck Flexor Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Neck,3x20s,time
+Lying Neck Curls,Home Workout - No Equipment,None,Yes,Bodyweight,Neck,3x15,reps
+Lying Neck Extension,Home Workout - No Equipment,None,Yes,Bodyweight,Neck,3x15,reps
+Neck Curl,Home Workout - No Equipment,None,Yes,Bodyweight,Neck,3x15,reps
+Neck Lateral Flexion,Home Workout - No Equipment,None,Yes,Bodyweight,Neck,3x15,reps
+ATG Split Squat,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x10,reps
+Depth Jump,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x5,reps
+Duck Walk,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x20m,distance
+Frog Jumps,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x8,reps
+Front Squat,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x8,reps
+Full Squat,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x8,reps
+Goblet Squat,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x8,reps
+Heel Slide,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x15,reps
+Isometric Lunge Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x45s,time
+Isometric Squat Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x45s,time
+Jump Lunge,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x12,reps
+Jump Squat,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x8,reps
+Jumping Lunge,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x8,reps
+Lateral Lunge,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x8,reps
+Lateral Squat,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x8,reps
+Lunge,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x8,reps
+Patellar Tendon Isometric,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x45s,time
+Pistol Squat,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x8,reps
+Quad Set Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x10s,time
+Reverse Lunge,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x8,reps
+Reverse Nordic Curl,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x8,reps
+Scissor Jump,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x12,reps
+Short Arc Quad,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x15,reps
+Shrimp Squat,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x8,reps
+Single Leg Balance Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x30s,time
+Single Leg Extensions,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x8,reps
+Skater Jump,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x20,reps
+Skater Squat,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x10,reps
+Slant Board Squat,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x12,reps
+Spanish Squat Isometric,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x30s,time
+Speed Skater,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x20,reps
+Split Jump,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x10,reps
+Squat (Bodyweight),Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x8,reps
+Squat Pulse,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x20,reps
+Step Down Eccentric,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x10,reps
+Straight Leg Raise,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x15,reps
+Sumo Squat,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x8,reps
+Tuck Jump,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x8,reps
+Vertical Jump Test,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x3,reps
+VMO Squeeze,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x15,reps
+Walking Lunge,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x400m,distance
+Wall Drill,Home Workout - No Equipment,None,Yes,Conditioning,Quadriceps,4x20s,time
+Wall Sit,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x45s,time
+Wall Sit Isometric,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,3x45s,time
+Zercher Squat,Home Workout - No Equipment,None,Yes,Bodyweight,Quadriceps,4x8,reps
+Advanced Tuck Planche Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,4x15s,time
+Codman Circle,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x20,reps
+Crab Reach,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x10,reps
+Crow Pose,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x20s,time
+Face Pull,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x12,reps
+Freestanding Handstand Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,4x20s,time
+Frog Stand Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x20s,time
+Handstand Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x12,reps
+Handstand Push Up Kipping,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,4x8,reps
+Handstand Walk,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,4x10m,distance
+Headstand Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x45s,time
+Hindu Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x10,reps
+Isometric Shoulder Abduction,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x20s,time
+Isometric Shoulder External Rotation,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x20s,time
+Loaded Beast Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x30s,time
+Passive Shoulder Flexion,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x12,reps
+Pendulum Swing,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x20,reps
+Pike Pushup,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x12,reps
+Planche Lean Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,4x20s,time
+Prone Y Raise,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x15,reps
+Push Press,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x12,reps
+Shoulder Taps,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x12,reps
+Straddle Planche Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,4x10s,time
+Table Slide,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,3x12,reps
+Tuck Planche Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,4x15s,time
+Wall Handstand Hold,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,4x30s,time
+Wall Walk,Home Workout - No Equipment,None,Yes,Bodyweight,Shoulders,4x5,reps
+Close Grip Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Triceps,3x12,reps
+Diamond Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Triceps,3x12,reps
+Seated Triceps Press,Home Workout - No Equipment,None,Yes,Bodyweight,Triceps,3x12,reps
+Triceps Pressdown,Home Workout - No Equipment,None,Yes,Bodyweight,Triceps,3x12,reps
+Blackburn Exercise,Home Workout - No Equipment,None,Yes,Bodyweight,Upper Back,3x12,reps
+Doorway Row,Home Workout - No Equipment,None,Yes,Bodyweight,Upper Back,3x12,reps
+Inverted Row,Home Workout - No Equipment,None,Yes,Bodyweight,Upper Back,4x8,reps
+Inverted Row Feet Elevated,Home Workout - No Equipment,None,Yes,Bodyweight,Upper Back,3x12,reps
+Iso-Lateral Low Row,Home Workout - No Equipment,None,Yes,Bodyweight,Upper Back,4x8,reps
+Low row,Home Workout - No Equipment,None,Yes,Bodyweight,Upper Back,4x8,reps
+Prone Horizontal Abduction,Home Workout - No Equipment,None,Yes,Bodyweight,Upper Back,3x15,reps
+Prone T Raise,Home Workout - No Equipment,None,Yes,Bodyweight,Upper Back,3x15,reps
+Prone W Raise,Home Workout - No Equipment,None,Yes,Bodyweight,Upper Back,3x15,reps
+Rack Pull,Home Workout - No Equipment,None,Yes,Bodyweight,Upper Back,4x8,reps
+Scapular Depression,Home Workout - No Equipment,None,Yes,Bodyweight,Upper Back,3x15,reps
+Scapular Push Up,Home Workout - No Equipment,None,Yes,Bodyweight,Upper Back,3x15,reps
+Scapular Retraction,Home Workout - No Equipment,None,Yes,Bodyweight,Upper Back,3x15,reps
+Table Row,Home Workout - No Equipment,None,Yes,Bodyweight,Upper Back,3x10,reps
+Towel Row,Home Workout - No Equipment,A towel,Yes,Bodyweight,Upper Back,3x12,reps
+Wall Angel,Home Workout - No Equipment,None,Yes,Bodyweight,Upper Back,3x15,reps
+Hanging Knee Raise,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Abdominals,3x15,reps
+Hanging Leg Raise,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Abdominals,3x15,reps
+Hanging Windshield Wiper,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Abdominals,3x8,reps
+Human Flag Hold,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Abdominals,4x10s,time
+Kipping Toes to Bar,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Abdominals,4x10,reps
+Toes to Bar,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Abdominals,3x15,reps
+Bar Hang Hold,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Forearms,3x45s,time
+Towel Pull Up Hold,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Forearms,3x20s,time
+Two Finger Hang Hold,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Forearms,3x15s,time
+Burpee Pull Up,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Full Body,3x8,reps
+Front Lever Hold,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Full Body,3x45s,time
+Front Lever Raise,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Full Body,4x8,reps
+Muscle Up,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Full Body,4x8,reps
+Archer Pull Up,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,3x5,reps
+Around the World Pull Up,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,3x6,reps
+Back Lever Hold,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,4x15s,time
+Chest to Bar Pull Up,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,4x8,reps
+Chin Up,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,4x8,reps
+Chin Up (Assisted),Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,4x8,reps
+Clap Pull Up,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,4x4,reps
+Commando Pull Up,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,3x8,reps
+Explosive Pull Up,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,4x5,reps
+Kipping Pull Up,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,4x8,reps
+Muscle Up Transition,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,4x5,reps
+Negative Pull Up,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,4x8,reps
+One Arm Pull Up,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,3x3,reps
+Pull Up,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,4x8,reps
+Pull Up (Assisted),Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,4x8,reps
+Skin the Cat,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,3x5,reps
+Sternum Pull up (Gironda),Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,4x8,reps
+Tuck Front Lever Hold,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,4x20s,time
+Typewriter Pull Up,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,3x5,reps
+Wide Pull Up,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Lats,4x8,reps
+Dead Hang,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Upper Back,3x45s,time
+Scapular Pull Ups,Home Workout - Pull-Up Bar,Pull-up bar,Yes - with a bar,Bodyweight,Upper Back,4x8,reps
+Band Monster Walk,Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Abductors,3x20m,distance
+Band Bicep Curl,Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Biceps,3x15,reps
+Hammer Curl (Band),Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Biceps,3x12,reps
+Ankle Eversion Band,Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Calves,3x15,reps
+Ankle Inversion Band,Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Calves,3x15,reps
+Chest Fly (Band),Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Chest,4x8,reps
+Chest Press (Band),Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Chest,4x8,reps
+Band Hip Thrust,Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Glutes,3x20,reps
+Deadlift (Band),Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Glutes,4x8,reps
+Lateral Band Walks,Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Glutes,3x400m,distance
+Band Good Morning,Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Hamstrings,3x15,reps
+Kneeling Pulldown (band),Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Lats,4x8,reps
+Lat Pulldown (Band),Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Lats,4x8,reps
+Pull Up (Band),Home Workout - Resistance Band,Resistance band and a pull-up bar,Yes - with a bar,Bodyweight,Lats,4x8,reps
+Band Dislocate Stretch,Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Mobility,2x45s,time
+Squat (Band),Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Quadriceps,4x8,reps
+Terminal Knee Extension Band,Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Quadriceps,3x15,reps
+Band Pull Apart Overhead,Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Shoulders,3x15,reps
+Band Pullaparts,Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Shoulders,3x12,reps
+Band Shoulder Press,Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Shoulders,3x15,reps
+Front Raise (Band),Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Shoulders,3x12,reps
+Lateral Raise (Band),Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Shoulders,3x12,reps
+Band Tricep Extension,Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Triceps,3x15,reps
+Band Face Pull,Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Upper Back,3x15,reps
+Bent Over Row (Band),Home Workout - Resistance Band,Resistance band,Yes - small kit,Bodyweight,Upper Back,4x8,reps
+Jack Knife (Suspension),Home Workout - Suspension,Suspension trainer or rings,Yes - with an anchor,Bodyweight,Abdominals,3x15,reps
+Bicep Curl (Suspension),Home Workout - Suspension,Suspension trainer or rings,Yes - with an anchor,Bodyweight,Biceps,3x12,reps
+Chest Fly (Suspension),Home Workout - Suspension,Suspension trainer or rings,Yes - with an anchor,Bodyweight,Chest,4x8,reps
+Ring Dips,Home Workout - Suspension,Suspension trainer or rings,Yes - with an anchor,Bodyweight,Chest,4x8,reps
+Ring Push Up,Home Workout - Suspension,Suspension trainer or rings,Yes - with an anchor,Bodyweight,Chest,4x8,reps
+Ring Pull Up,Home Workout - Suspension,Suspension trainer or rings,Yes - with an anchor,Bodyweight,Lats,4x8,reps
+Squat (Suspension),Home Workout - Suspension,Suspension trainer or rings,Yes - with an anchor,Bodyweight,Quadriceps,4x8,reps
+Front Raise (Suspension),Home Workout - Suspension,Suspension trainer or rings,Yes - with an anchor,Bodyweight,Shoulders,3x12,reps
+Triceps Extension (Suspension),Home Workout - Suspension,Suspension trainer or rings,Yes - with an anchor,Bodyweight,Triceps,3x12,reps
+Low Row (Suspension),Home Workout - Suspension,Suspension trainer or rings,Yes - with an anchor,Bodyweight,Upper Back,4x8,reps
+Kettlebell Windmill,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Abdominals,3x6,reps
+Kettlebell Curl,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Biceps,3x12,reps
+Kettlebell Clean,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Full Body,4x8,reps
+Kettlebell Figure 8,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Full Body,3x12,reps
+Kettlebell High Pull,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Full Body,4x8,reps
+Kettlebell Snatch,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Full Body,4x8,reps
+Kettlebell Swing,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Full Body,4x8,reps
+Kettlebell Turkish Get Up,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Full Body,4x8,reps
+Thruster (Kettlebell),Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Full Body,4x8,reps
+Kettlebell Swing American,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Glutes,4x15,reps
+Double Kettlebell Front Squat,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Quadriceps,4x8,reps
+Kettlebell Goblet Squat,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Quadriceps,4x8,reps
+Sumo Squat (Kettlebell),Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Quadriceps,4x8,reps
+Bottoms Up Carry,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Shoulders,3x30m,distance
+Kettlebell Around the World,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Shoulders,3x12,reps
+Kettlebell Bottoms Up Press,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Shoulders,3x8,reps
+Kettlebell Clean and Press,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Shoulders,4x6,reps
+Kettlebell Halo,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Shoulders,3x12,reps
+Kettlebell Shoulder Press,Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Shoulders,3x12,reps
+Gorilla Row (Kettlebell),Kettlebell Workout,Kettlebell,Gym or home,Kettlebell,Upper Back,4x8,reps
+Cable Core Pallof Press,Machine & Cable Workout,Cable machine,Gym only,Machine,Abdominals,3x15,reps
+Cable Crunch,Machine & Cable Workout,Cable machine,Gym only,Machine,Abdominals,3x400m,distance
+Cable Reverse Woodchop,Machine & Cable Workout,Cable machine,Gym only,Machine,Abdominals,3x12,reps
+Cable Twist (Down to up),Machine & Cable Workout,Cable machine,Gym only,Machine,Abdominals,3x15,reps
+Cable Twist (Up to down),Machine & Cable Workout,Cable machine,Gym only,Machine,Abdominals,3x15,reps
+Cable Woodchop,Machine & Cable Workout,Cable machine,Gym only,Machine,Abdominals,3x12,reps
+Crunch (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Abdominals,3x400m,distance
+GHD Sit Up,Machine & Cable Workout,Weight machine,Gym only,Machine,Abdominals,3x12,reps
+Kneeling Cable Crunch,Machine & Cable Workout,Cable machine,Gym only,Machine,Abdominals,3x15,reps
+Hip Abduction (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Abductors,4x8,reps
+Hip Abduction (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Abductors,4x8,reps
+Hip Adduction (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Adductors,4x8,reps
+Hip Adduction (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Adductors,4x8,reps
+Bayesian Curl,Machine & Cable Workout,Weight machine,Gym only,Machine,Biceps,3x12,reps
+Behind the Back Curl (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Biceps,3x12,reps
+Bicep Curl (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Biceps,3x12,reps
+Bicep Curl (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Biceps,3x12,reps
+Cable Rope Hammer Curl,Machine & Cable Workout,Cable machine,Gym only,Machine,Biceps,3x15,reps
+Hammer Curl (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Biceps,3x12,reps
+Overhead Curl (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Biceps,3x12,reps
+Preacher Curl (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Biceps,3x12,reps
+Reverse Curl (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Biceps,3x12,reps
+Rope Cable Curl,Machine & Cable Workout,Cable machine,Gym only,Machine,Biceps,3x12,reps
+Single Arm Curl (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Biceps,3x12,reps
+Calf Extension (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Calves,3x15,reps
+Calf Press (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Calves,3x15,reps
+Leg Press Calf Raise,Machine & Cable Workout,Weight machine,Gym only,Machine,Calves,4x15,reps
+Single Leg Standing Calf Raise (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Calves,3x15,reps
+Smith Machine Calf Raise,Machine & Cable Workout,Weight machine,Gym only,Machine,Calves,4x15,reps
+Standing Calf Raise (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Calves,3x15,reps
+Standing Calf Raise (Smith),Machine & Cable Workout,Weight machine,Gym only,Machine,Calves,3x15,reps
+Rowing Machine,Machine & Cable Workout,Weight machine,Gym only,Machine,Cardio,3x400m,distance
+Stair Machine (Floors),Machine & Cable Workout,Weight machine,Gym only,Machine,Cardio,3x400m,distance
+Stair Machine (Steps),Machine & Cable Workout,Weight machine,Gym only,Machine,Cardio,3x400m,distance
+Bench Press (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Chest,4x8,reps
+Bench Press (Smith Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Chest,4x8,reps
+Butterfly (Pec Deck),Machine & Cable Workout,Weight machine,Gym only,Machine,Chest,4x8,reps
+Cable Crossover High,Machine & Cable Workout,Cable machine,Gym only,Machine,Chest,3x15,reps
+Cable Crossover Low,Machine & Cable Workout,Cable machine,Gym only,Machine,Chest,3x15,reps
+Cable Fly Crossovers,Machine & Cable Workout,Cable machine,Gym only,Machine,Chest,4x8,reps
+Chest Fly (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Chest,4x8,reps
+Chest Press (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Chest,4x8,reps
+Decline Bench Press (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Chest,4x8,reps
+Decline Bench Press (Smith Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Chest,4x8,reps
+Incline Bench Press (Smith Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Chest,4x8,reps
+Incline Chest Press (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Chest,4x8,reps
+Iso-Lateral Chest Press (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Chest,4x8,reps
+Low Cable Fly Crossovers,Machine & Cable Workout,Cable machine,Gym only,Machine,Chest,4x8,reps
+Seated Chest Flys (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Chest,4x8,reps
+Single Arm Cable Crossover,Machine & Cable Workout,Cable machine,Gym only,Machine,Chest,4x8,reps
+Cable Kickback,Machine & Cable Workout,Cable machine,Gym only,Machine,Glutes,4x8,reps
+Cable Pull Through,Machine & Cable Workout,Cable machine,Gym only,Machine,Glutes,4x8,reps
+Deadlift (Smith Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Glutes,4x8,reps
+Glute Kickback (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Glutes,4x8,reps
+Hip Thrust (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Glutes,4x8,reps
+Hip Thrust (Smith Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Glutes,4x8,reps
+Rear Kick (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Glutes,4x8,reps
+Standing Cable Glute Kickbacks,Machine & Cable Workout,Cable machine,Gym only,Machine,Glutes,4x8,reps
+Lying Leg Curl (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Hamstrings,4x8,reps
+Romanian Deadlift (Smith Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Hamstrings,4x8,reps
+Seated Leg Curl (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Hamstrings,4x8,reps
+Standing Leg Curl,Machine & Cable Workout,Weight machine,Gym only,Machine,Hamstrings,3x12,reps
+Assisted Pull Up Machine,Machine & Cable Workout,Weight machine,Gym only,Machine,Lats,3x10,reps
+Cable Pullover,Machine & Cable Workout,Cable machine,Gym only,Machine,Lats,3x12,reps
+Iso-Lateral High Row (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Lats,4x8,reps
+Lat Pulldown - Close Grip (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Lats,4x8,reps
+Lat Pulldown (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Lats,4x8,reps
+Lat Pulldown (Machine),Machine & Cable Workout,Cable machine,Gym only,Machine,Lats,4x8,reps
+Nautilus Pullover,Machine & Cable Workout,Weight machine,Gym only,Machine,Lats,3x12,reps
+Pullover (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Lats,4x8,reps
+Reverse Grip Lat Pulldown (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Lats,4x8,reps
+Rope Straight Arm Pulldown,Machine & Cable Workout,Cable machine,Gym only,Machine,Lats,4x8,reps
+Single Arm Lat Pulldown,Machine & Cable Workout,Cable machine,Gym only,Machine,Lats,4x8,reps
+Straight Arm Lat Pulldown (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Lats,4x8,reps
+Vertical Traction (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Lats,4x8,reps
+45 Degree Hyper,Machine & Cable Workout,Weight machine,Gym only,Machine,Lower Back,3x15,reps
+Back Extension (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Lower Back,4x8,reps
+Neck Harness Extension,Machine & Cable Workout,Weight machine,Gym only,Machine,Neck,3x15,reps
+Belt Squat (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Quadriceps,4x8,reps
+Hack Squat,Machine & Cable Workout,Weight machine,Gym only,Machine,Quadriceps,4x8,reps
+Hack Squat (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Quadriceps,4x8,reps
+Leg Extension (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Quadriceps,4x8,reps
+Leg Press (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Quadriceps,4x8,reps
+Leg Press Horizontal (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Quadriceps,4x8,reps
+Pendulum Squat (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Quadriceps,4x8,reps
+Single Leg Press (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Quadriceps,4x8,reps
+Squat (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Quadriceps,4x8,reps
+Squat (Smith Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Quadriceps,4x8,reps
+Terminal Knee Extension,Machine & Cable Workout,Weight machine,Gym only,Machine,Quadriceps,3x15,reps
+External Rotation (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Shoulders,3x15,reps
+Front Raise (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Shoulders,3x12,reps
+Internal Rotation (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Shoulders,3x15,reps
+Lateral Raise (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Shoulders,3x12,reps
+Lateral Raise (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Shoulders,3x12,reps
+Leaning Cable Lateral Raise,Machine & Cable Workout,Cable machine,Gym only,Machine,Shoulders,3x15,reps
+Overhead Press (Smith Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Shoulders,3x12,reps
+Rear Delt Reverse Fly (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Shoulders,3x12,reps
+Rear Delt Reverse Fly (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Shoulders,3x12,reps
+Reverse Fly Single Arm (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Shoulders,3x12,reps
+Seated Shoulder Press (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Shoulders,3x12,reps
+Shoulder Press (Machine Plates),Machine & Cable Workout,Weight machine,Gym only,Machine,Shoulders,3x12,reps
+Single Arm Lateral Raise (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Shoulders,3x12,reps
+Standing Y Raise (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Shoulders,3x12,reps
+Upright Row (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Shoulders,3x12,reps
+Shrug (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Traps,3x12,reps
+Shrug (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Traps,3x12,reps
+Shrug (Smith Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Traps,3x12,reps
+Overhead Triceps Extension (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Triceps,3x12,reps
+Reverse Grip Triceps Pushdown,Machine & Cable Workout,Cable machine,Gym only,Machine,Triceps,3x12,reps
+Seated Dip Machine,Machine & Cable Workout,Weight machine,Gym only,Machine,Triceps,3x12,reps
+Single Arm Cable Kickback,Machine & Cable Workout,Cable machine,Gym only,Machine,Triceps,3x15,reps
+Single Arm Triceps Pushdown (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Triceps,3x12,reps
+Triceps Extension (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Triceps,3x12,reps
+Triceps Extension (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Triceps,3x12,reps
+Triceps Kickback (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Triceps,3x12,reps
+Triceps Pushdown,Machine & Cable Workout,Cable machine,Gym only,Machine,Triceps,3x12,reps
+Triceps Rope Pushdown,Machine & Cable Workout,Cable machine,Gym only,Machine,Triceps,3x12,reps
+Bent Over Row (Smith Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Upper Back,4x8,reps
+Cable Rear Delt Row,Machine & Cable Workout,Cable machine,Gym only,Machine,Upper Back,3x15,reps
+Face Pull Rope,Machine & Cable Workout,Weight machine,Gym only,Machine,Upper Back,3x15,reps
+Iso-Lateral Row (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Upper Back,4x8,reps
+Reverse Pec Deck,Machine & Cable Workout,Weight machine,Gym only,Machine,Upper Back,3x15,reps
+Seated Cable Row - Bar Grip,Machine & Cable Workout,Cable machine,Gym only,Machine,Upper Back,4x8,reps
+Seated Cable Row - Bar Wide Grip,Machine & Cable Workout,Cable machine,Gym only,Machine,Upper Back,4x8,reps
+Seated Cable Row - V Grip (Cable),Machine & Cable Workout,Cable machine,Gym only,Machine,Upper Back,4x8,reps
+Seated Row (Machine),Machine & Cable Workout,Weight machine,Gym only,Machine,Upper Back,4x8,reps
+Single Arm Cable Row,Machine & Cable Workout,Cable machine,Gym only,Machine,Upper Back,4x8,reps
+Downward Dog,Mobility & Stretching,None,Yes,Mobility / Stretch,Full Body,4x8,reps
+Pilates,Mobility & Stretching,None,Yes,Mobility / Stretch,Full Body,3x45s,time
+Stretching,Mobility & Stretching,None,Yes,Mobility / Stretch,Full Body,3x45s,time
+Warm Up,Mobility & Stretching,None,Yes,Mobility / Stretch,Full Body,3x45s,time
+Yoga,Mobility & Stretching,None,Yes,Mobility / Stretch,Full Body,3x45s,time
