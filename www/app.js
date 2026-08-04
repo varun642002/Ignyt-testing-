@@ -5976,20 +5976,26 @@ function applyTheme(){
    ones, which would render dark-toggle colors regardless of the user's actual dark/light
    app-theme setting (that setting still exists and still governs every other, unredesigned
    screen; this row's own colors just aren't wired to it, same as every other light screen). */
+/* One row shape for the whole settings list — a toggle, a dropdown and a pair of chips are
+   all just "the control", so they all line up with each other and with the icon. */
+function settingRow(icon, label, desc, control){
+  return `<div class="set-row">
+    ${icon?`<span class="pi-row__icon">${svg(icon,16)}</span>`:''}
+    <div class="set-row__body">
+      <span class="set-row__label">${label}</span>
+      ${desc?`<div class="set-row__desc">${desc}</div>`:""}
+    </div>
+    <div class="set-row__ctrl">${control}</div>
+  </div>`;
+}
+
 function settingToggle(key, label, desc, icon){
   const on = !!state.settings[key];
-  return `<div class="pi-row" style="background:none;border:none;border-radius:0;padding:14px 0;border-bottom:1px solid var(--rh-border);align-items:center;">
-    ${icon?`<span class="pi-row__icon" style="flex-shrink:0;">${svg(icon,16)}</span>`:''}
-    <div class="pi-row__body" style="flex:1;">
-      <div class="row-between">
-        <span style="font-weight:700;font-size:14px;">${label}</span>
-        <button data-setting-toggle="${key}" style="width:46px;height:26px;border-radius:var(--radius-pill);border:none;cursor:pointer;position:relative;flex-shrink:0;background:${on?'var(--rh-blue)':'#D9DEE7'};transition:background .15s;">
-          <span style="position:absolute;top:3px;${on?'right:3px':'left:3px'};width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
-        </button>
-      </div>
-      ${desc?`<div style="font-size:11px;color:var(--rh-muted);margin-top:3px;max-width:92%;">${desc}</div>`:""}
-    </div>
-  </div>`;
+  return settingRow(icon, label, desc,
+    `<button class="set-switch${on?' is-on':''}" data-setting-toggle="${key}"
+      role="switch" aria-checked="${on?'true':'false'}" aria-label="${escHtml(label)}">
+      <span class="set-switch__knob"></span>
+    </button>`);
 }
 
 /* =========================================================
@@ -6255,7 +6261,8 @@ function renderRemindersScreen(){
         <div class="rm-row__head">
           <button class="rm-row__main" data-rm-open="${escHtml(def.id)}" aria-expanded="${isOpen?'true':'false'}">
             <span class="rm-row__label">${escHtml(def.label)}</span>
-            <span class="rm-row__meta">${s.enabled ? escHtml(time + " · " + repeatLabel) : "Off"}</span>
+            <span class="rm-row__meta">${!s.enabled ? "Off"
+              : def.switchOnly ? "On" : escHtml(time + " · " + repeatLabel)}</span>
           </button>
           <button class="rm-switch${s.enabled?' is-on':''}" data-rm-toggle="${escHtml(def.id)}"
             role="switch" aria-checked="${s.enabled?'true':'false'}" aria-label="${escHtml(def.label)}">
@@ -6266,7 +6273,7 @@ function renderRemindersScreen(){
         ${isOpen ? `<div class="rm-row__body">
           <p class="rm-row__desc">${escHtml(s.body)}</p>
 
-          <label class="rm-field"><span>Time</span>
+          ${def.switchOnly ? "" : `<label class="rm-field"><span>Time</span>
             <input type="time" value="${escHtml(time)}" data-rm-time="${escHtml(def.id)}"></label>
 
           <div class="rm-field"><span>Repeat</span>
@@ -6279,7 +6286,7 @@ function renderRemindersScreen(){
           ${s.repeat === "custom" ? `<div class="rm-days">
             ${REMINDER_DAY_LABELS.map((lab,i)=>`<button class="rm-day${days.indexOf(i)!==-1?' is-on':''}"
               data-rm-day="${escHtml(def.id)}" data-day="${i}" aria-pressed="${days.indexOf(i)!==-1?'true':'false'}">${lab}</button>`).join("")}
-          </div>` : ""}
+          </div>` : ""}`}
 
           <div class="rm-opts">
             <button class="rm-opt${s.vibrate?' is-on':''}" data-rm-flag="${escHtml(def.id)}" data-flag="vibrate">Vibrate</button>
@@ -6351,39 +6358,17 @@ function renderSettingsTab(){
         ${settingToggle("plateCalc","Plate Calculator","Shows a plates button for barbell exercises.","dumbbell")}
         ${settingToggle("rpeTracking","RPE Tracking","Show the RPE column in the workout logger.","progress")}
         ${settingToggle("exerciseCalorieBudget","Exercise Calorie Budget","Add active calories to your Food Log.","flame")}
-        <div class="pi-row" style="background:none;border:none;padding:14px 0;align-items:center;">
-          <span class="pi-row__icon">${svg('timer',16)}</span>
-          <div class="pi-row__body">
-            <div class="row-between"><span style="font-weight:700;font-size:14px;">Default Rest Timer</span>
-              <select class="pi-input" id="default-rest-select" style="width:auto;padding:6px 10px;">
-                ${[0,30,60,90,120,150,180,240].map(v=>`<option value="${v}" ${s.defaultRest===v?'selected':''}>${v===0?'Off':v+'s'}</option>`).join("")}
-              </select>
-            </div>
-            <div style="font-size:11px;color:var(--rh-muted);margin-top:3px;">New exercises use this duration.</div>
-          </div>
-        </div>
-        <div class="pi-row" style="background:none;border:none;padding:14px 0;align-items:center;border-top:1px solid var(--rh-border);">
-          <span class="pi-row__icon">${svg('dumbbell',16)}</span>
-          <div class="pi-row__body">
-            <div class="row-between"><span style="font-weight:700;font-size:14px;">Weight Unit</span>
-              <div style="display:flex;gap:6px;">
-                <button class="cat-chip ${s.weightUnit==='kg'?'active':''}" data-weight-unit="kg">kg</button>
-                <button class="cat-chip ${s.weightUnit==='lb'?'active':''}" data-weight-unit="lb">lb</button>
-              </div>
-            </div>
-            <div style="font-size:11px;color:var(--rh-muted);margin-top:3px;">Applies to workout logging, body weight, and PRs.</div>
-          </div>
-        </div>
-        <div class="pi-row" style="background:none;border:none;padding:14px 0;align-items:center;border-top:1px solid var(--rh-border);">
-          <span class="pi-row__icon">${svg('droplet',16)}</span>
-          <div class="pi-row__body">
-            <div class="row-between"><span style="font-weight:700;font-size:14px;">Daily Water Target</span>
-              <select class="pi-input" id="water-target-select" style="width:auto;padding:6px 10px;">
-                ${[1500,2000,2500,3000,3500,4000].map(v=>`<option value="${v}" ${s.waterTargetMl===v?'selected':''}>${(v/1000).toFixed(1)}L</option>`).join("")}
-              </select>
-            </div>
-          </div>
-        </div>
+        ${settingRow('timer','Default Rest Timer','New exercises use this duration.',
+          `<select class="pi-input set-select" id="default-rest-select">
+            ${[0,30,60,90,120,150,180,240].map(v=>`<option value="${v}" ${s.defaultRest===v?'selected':''}>${v===0?'Off':v+'s'}</option>`).join("")}
+          </select>`)}
+        ${settingRow('dumbbell','Weight Unit','Applies to workout logging, body weight, and PRs.',
+          `<button class="cat-chip ${s.weightUnit==='kg'?'active':''}" data-weight-unit="kg">kg</button>
+           <button class="cat-chip ${s.weightUnit==='lb'?'active':''}" data-weight-unit="lb">lb</button>`)}
+        ${settingRow('droplet','Daily Water Target','',
+          `<select class="pi-input set-select" id="water-target-select">
+            ${[1500,2000,2500,3000,3500,4000].map(v=>`<option value="${v}" ${s.waterTargetMl===v?'selected':''}>${(v/1000).toFixed(1)}L</option>`).join("")}
+          </select>`)}
       </div>
 
       <div class="rh-section-head"><span>${svg('bell',13)} Notifications</span></div>

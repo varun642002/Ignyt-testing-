@@ -79,6 +79,12 @@
     { id: "sleep", group: "Daily", label: "Sleep", hour: 22, minute: 30,
       title: "Wind down", body: "Aiming for a consistent bedtime makes the rest easier.", route: "health", snooze: 15 ,
         defaultOn: true },
+    /* The one reminder that asks nothing of the user. Everything else in this list wants a
+       log, a session or a weigh-in; this exists to be worth reading on its own. 7am sits
+       inside the 6-8 window the copy was written for. */
+    { id: "morning-motivation", group: "Daily", label: "Morning motivation", hour: 7, minute: 0,
+      title: "Good morning", body: "A new day, and nothing in it has gone wrong yet.",
+      route: "home", snooze: 0, defaultOn: true },
 
     // ---- fasting: times come from the ACTIVE FAST, not from settings ----
     { id: "fast-start", group: "Fasting", label: "Fasting starts", hour: 20, minute: 0,
@@ -105,6 +111,14 @@
       title: "Still with us?", body: "Nothing logged in a few days — pick up where you left off.",
       route: "home", snooze: 0, conditional: "any", repeat: "custom", days: [5] ,
         defaultOn: true },
+
+    /* Not a schedule — an event. There is no time of day at which you hit a milestone, so
+       this entry exists purely to give achievements the same on/off switch as everything
+       else; IgnytCelebrate fires the actual notification. Listed under Progress because that
+       is where a user looks for it, not where the code lives. */
+    { id: "achievement", group: "Progress", label: "Achievements", hour: 0, minute: 0,
+      title: "Achievement", body: "You hit a milestone.", route: "progress", snooze: 0,
+      switchOnly: true, defaultOn: true },
 
     // ---- user-defined ----
     { id: "custom", group: "Custom", label: "Custom reminder", hour: 12, minute: 0,
@@ -195,7 +209,33 @@
      varies across days without varying within one. */
   var ROTATING = { workout: "notifyWorkout", "missed-workout": "notifyStreak" };
 
+  /* The two reminders that draw from the dedicated notification library rather than the
+     in-app message pool. Morning and bedtime are the only ones a user reads every single day
+     without being asked to do anything, so they get the widest wording — several hundred lines
+     each, rotated through a recent-history ring so a repeat inside four months is impossible
+     rather than merely unlikely. */
+  var NOTIFY_LIBRARY = { "morning-motivation": "morning", sleep: "bedtime" };
+
+  /** The user's first name, if the app knows one. Only ever used to soften a greeting. */
+  function userName() {
+    try {
+      var st = window.state || {};
+      return (st.profile && st.profile.name) || (st.onboarding && st.onboarding.name) || "";
+    } catch (e) { return ""; }
+  }
+
   function bodyFor(id, s) {
+    var kind = NOTIFY_LIBRARY[id];
+    if (kind && window.IgnytNotifyMessages) {
+      /* A user who has written their own wording keeps it — rotation is a default, not an
+         override. Only the catalogue's own text gets replaced. */
+      var def = byId(id);
+      if (!def || s.body === def.body) {
+        var line = window.IgnytNotifyMessages.pick(kind);
+        if (line) return window.IgnytNotifyMessages.personalise(line, userName());
+      }
+      return s.body;
+    }
     var context = ROTATING[id];
     if (!context || !window.IgnytMessages) return s.body;
     return window.IgnytMessages.next(context) || s.body;
@@ -209,6 +249,10 @@
     // Neither scheduled nor cancelled here: app.js owns this id's alarm entirely, and
     // cancelling would delete the real fast notification it had just armed.
     if (FASTING_SWITCHES[id]) return Promise.resolve(false);
+    /* Event-driven entries have no clock time to arm. Scheduling one would fire "You hit a
+       milestone" at midnight to someone who had not. */
+    var defn = byId(id);
+    if (defn && defn.switchOnly) return Promise.resolve(false);
     var s = settings(id);
     if (!s) return Promise.resolve(false);
     if (!s.enabled) {
@@ -277,11 +321,41 @@
     return !!(s && s.enabled);
   }
 
+  /**
+   * A one-shot for something that just happened, with no schedule behind it.
+   *
+   * Armed two seconds out rather than fired directly: the plugin's only immediate path is
+   * sendTest, which is a diagnostic, and going through the same armOnce every other one-shot
+   * uses means achievements inherit the channel, the route handling and the tap behaviour
+   * already built for them.
+   *
+   * Returns false rather than throwing when notifications are off or unavailable — a missed
+   * congratulation must never break the thing being congratulated.
+   */
+  function sendNow(opts) {
+    var p = plugin();
+    if (!p || !opts || !opts.title) return Promise.resolve(false);
+    var s = settings(opts.settingsId || "achievement");
+    if (s && !s.enabled) return Promise.resolve(false);
+    return p.scheduleAt({
+      id: opts.id || ("event-" + Date.now()),
+      at: Date.now() + 2000,
+      title: opts.title,
+      body: opts.body || "",
+      route: opts.route || "progress"
+    }).then(function () { return true; }).catch(function () { return false; });
+  }
+
+  function enabled(id) {
+    var s = settings(id);
+    return !!(s && s.enabled);
+  }
+
   window.IgnytReminders = {
     CATALOGUE: CATALOGUE, ALL_DAYS: ALL_DAYS, WEEKDAYS: WEEKDAYS, WEEKENDS: WEEKENDS,
     byId: byId, settings: settings, update: update, daysFor: daysFor,
     syncOne: syncOne, syncAll: syncAll, syncConditional: syncConditional,
-    fastingEnabled: fastingEnabled,
+    fastingEnabled: fastingEnabled, sendNow: sendNow, enabled: enabled,
     groups: function () {
       var out = [];
       CATALOGUE.forEach(function (r) { if (out.indexOf(r.group) === -1) out.push(r.group); });
