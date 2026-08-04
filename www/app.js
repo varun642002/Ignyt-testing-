@@ -1454,6 +1454,7 @@ const state = {
        workout really is sitting open, so it cannot become noise for someone who is
        not using the logger. */
     workoutLeftReminder:true, workoutLeftAfterMin:15,
+    workoutRecommendations:true,   // Workout tab's plan card — see renderPlanCard()
     lastWorkoutReminderDate:null, lastHydrationReminderDate:null, lastWeeklyReportAt:null,
     theme:"dark", weightUnit:"kg", exerciseCalorieBudget:true, notificationsSeenAt:0,
     heightUnit:"cm", dateFormat:"DD MMM YYYY", timeFormat:"12h"
@@ -6125,6 +6126,7 @@ function renderSettingsTab(){
 
       <div class="rh-section-head"><span>${svg('dumbbell',13)} Workout Settings</span></div>
       <div class="pg-card">
+        ${settingToggle("workoutRecommendations","Workout Recommendations","Suggest a plan and today's session on the Workout tab. Needs a training goal set.","target")}
         ${settingToggle("sounds","Sounds","Beep when the rest timer finishes.","speaker")}
         ${settingToggle("vibration","Vibration","Vibrate when the rest timer finishes.","vibrate")}
         ${settingToggle("autoStartRest","Auto-Start Rest Timer","Automatically starts rest timer.","timer")}
@@ -15746,6 +15748,15 @@ function isDeloadWeek(plan, template){
 /** Assign (or reassign) a plan from the current profile. Explicit only — never automatic. */
 function assignPlan(){
   if(!window.IgnytCoachMatcher || !window.IgnytCoachProfile) return null;
+  /* Refuses without a goal, and refuses while recommendations are switched off — not just in
+     buildTodaysPlan(). Guarding only the caller would let any other entry point write a plan
+     derived from nothing, or write one for a feature the user has turned off; and once
+     written it persists, outliving the condition that produced it.
+
+     Note it only refuses to CREATE. An existing plan is left alone, so switching the feature
+     off and back on returns you to the programme you were in rather than restarting week 1. */
+  if(!hasStatedGoal()) return null;
+  if(!recommendationsEnabled()) return null;
   const resolved = IgnytCoachProfile.resolve(state);
   const p = (resolved && resolved.profile) || {};
   const match = IgnytCoachMatcher.assign({
@@ -15829,9 +15840,31 @@ function currentAdaptation(){
   return (a && a.week === week) ? a : null;
 }
 
+/**
+ * Has the user actually told us what they are training for?
+ *
+ * goal-engine falls back to "general" for a missing goal, which is right for ITS job — every
+ * other engine still needs parameters to work with. It is wrong for this one: "general"
+ * produced a full plan for someone who had answered nothing, and a recommendation made from
+ * no input is a guess wearing a recommendation's clothes. The plan waits for a real answer.
+ */
+function hasStatedGoal(){
+  try{
+    const r = window.IgnytCoachProfile ? IgnytCoachProfile.resolve(state) : null;
+    const g = r && r.profile && r.profile.primaryGoal;
+    return !!(g && String(g).trim());
+  }catch(e){ return false; }
+}
+
+function recommendationsEnabled(){
+  return state.settings.workoutRecommendations !== false;   // default on for existing installs
+}
+
 function buildTodaysPlan(){
   const M = window.IgnytCoachMatcher, T = window.IgnytCoachTemplates, S = window.IgnytCoachSubstitution;
   if(!M || !T || !S) return null;
+  if(!recommendationsEnabled()) return null;
+  if(!hasStatedGoal()) return null;
   try{
     /* Use the STORED plan. Re-running the matcher here is what made this a daily lookup
        rather than a programme — and it meant a profile edit silently swapped the plan out

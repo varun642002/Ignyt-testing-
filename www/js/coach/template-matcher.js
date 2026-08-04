@@ -72,8 +72,24 @@ window.IgnytCoachMatcher = (function () {
   function normEquip(list) {
     var arr = (list || []).map(function (x) { return String(x).toLowerCase(); });
     var has = function (re) { return arr.some(function (x) { return re.test(x); }); };
+
+    /* HOME IS READ FIRST, before the gym test.
+       The gym pattern matches a bare "gym", which also matches "Home Gym" — so someone who
+       had told the app in as many words that they train at home was classified as a full gym
+       and handed a plan built around a squat rack. The most specific thing the user said has
+       to be read before the looser thing.
+
+       Deliberately no word boundaries in these patterns. An earlier version used them and a
+       shell escape turned every one into a literal backspace character: the regex then matched
+       nothing, every home user fell through to bodyweight, and the source looked correct
+       because a control character prints as nothing. Plain substrings do this job and cannot
+       be mangled that way.
+
+       Someone who lists "Home" AND a barbell still gets the home plan. That is intended —
+       they told us where they train, and where is the more specific fact than what. */
+    if (has(/home/)) return "home_gym";
     if (has(/barbell|rack|machine|cable|gym/)) return "full_gym";
-    if (has(/bench|kettlebell|band|home/)) return "home_gym";
+    if (has(/bench|kettlebell|band/)) return "home_gym";
     if (has(/dumbbell/)) return "dumbbells";
     return "bodyweight";
   }
@@ -131,6 +147,16 @@ window.IgnytCoachMatcher = (function () {
     if (equip === "dumbbells" && goal !== "hyrox" && goal !== "endurance") {
       reasons.push("Dumbbells only — every movement here has a real dumbbell version.");
       return done(pick(fits, "dumbbell_only") || lib.get("dumbbell_only"), reasons);
+    }
+    /* Training at home gets the home plan. Same rule as bodyweight and dumbbells above:
+       equipment is a fact and it decides what can actually be run. Someone who told the app
+       they train at home should not open it to a plan built around a squat rack.
+
+       HYROX and endurance are the exceptions, and deliberately so — both are mostly running,
+       which needs no gym at all, so a home setup is no obstacle to either. */
+    if (equip === "home_gym" && goal !== "hyrox" && goal !== "endurance") {
+      reasons.push("Training at home — built from what a home setup actually has.");
+      return done(pick(fits, "home_workout") || lib.get("home_workout"), reasons);
     }
 
     reasons.push("Goal: " + goal + ".");
