@@ -21,6 +21,8 @@ import com.varun.ignyt.R
 /* ---------- 1. Health Score ------------------------------------------------------------- */
 class ScoreWidget : IgnytWidget() {
     override val layoutId = R.layout.widget_score
+    override val layoutSmallId = R.layout.widget_score_small
+    override val layoutLargeId = R.layout.widget_score_large
     override val destination = "home"
     override fun render(ctx: Context, v: RemoteViews) {
         val score = WidgetData.num(ctx, "score.today")
@@ -42,6 +44,8 @@ class ScoreWidget : IgnytWidget() {
 /* ---------- 2. Workout ------------------------------------------------------------------- */
 class WorkoutWidget : IgnytWidget() {
     override val layoutId = R.layout.widget_workout
+    override val layoutSmallId = R.layout.widget_workout_small
+    override val layoutLargeId = R.layout.widget_workout_large
     override val destination = "workout"
     override fun render(ctx: Context, v: RemoteViews) {
         val title = WidgetData.str(ctx, "workout.title", "")
@@ -67,6 +71,8 @@ class WorkoutWidget : IgnytWidget() {
 /* ---------- 3. Weight -------------------------------------------------------------------- */
 class WeightWidget : IgnytWidget() {
     override val layoutId = R.layout.widget_weight
+    override val layoutSmallId = R.layout.widget_weight_small
+    override val layoutLargeId = R.layout.widget_weight_large
     override val destination = "progress"
     override fun render(ctx: Context, v: RemoteViews) {
         val unit = WidgetData.str(ctx, "weight.unit", "kg")
@@ -92,6 +98,8 @@ class WeightWidget : IgnytWidget() {
 /* ---------- 4. Water --------------------------------------------------------------------- */
 class WaterWidget : IgnytWidget() {
     override val layoutId = R.layout.widget_water
+    override val layoutSmallId = R.layout.widget_water_small
+    override val layoutLargeId = R.layout.widget_water_large
     override val destination = "nutrition"
     override fun render(ctx: Context, v: RemoteViews) {
         val ml = WidgetData.dbl(ctx, "water.ml", 0.0)
@@ -112,6 +120,8 @@ class WaterWidget : IgnytWidget() {
 /* ---------- 5. Steps --------------------------------------------------------------------- */
 class StepsWidget : IgnytWidget() {
     override val layoutId = R.layout.widget_steps
+    override val layoutSmallId = R.layout.widget_steps_small
+    override val layoutLargeId = R.layout.widget_steps_large
     override val destination = "home"
     override fun render(ctx: Context, v: RemoteViews) {
         val steps = WidgetData.num(ctx, "steps.today")
@@ -133,6 +143,8 @@ class StepsWidget : IgnytWidget() {
 /* ---------- 6. Calories ------------------------------------------------------------------ */
 class CaloriesWidget : IgnytWidget() {
     override val layoutId = R.layout.widget_calories
+    override val layoutSmallId = R.layout.widget_calories_small
+    override val layoutLargeId = R.layout.widget_calories_large
     override val destination = "nutrition"
     override fun render(ctx: Context, v: RemoteViews) {
         val kcal = WidgetData.num(ctx, "macros.kcal")
@@ -154,6 +166,8 @@ class CaloriesWidget : IgnytWidget() {
 /* ---------- 7. Daily Motivation ---------------------------------------------------------- */
 class MotivationWidget : IgnytWidget() {
     override val layoutId = R.layout.widget_motivation
+    override val layoutSmallId = R.layout.widget_motivation_small
+    override val layoutLargeId = R.layout.widget_motivation_large
     override val destination = "home"
     override fun render(ctx: Context, v: RemoteViews) {
         trySetText(v, R.id.w_value, WidgetData.str(ctx, "motivation.quote", "Today is another chance."))
@@ -173,6 +187,8 @@ class MotivationWidget : IgnytWidget() {
 /* ---------- 8. Streak -------------------------------------------------------------------- */
 class StreakWidget : IgnytWidget() {
     override val layoutId = R.layout.widget_streak
+    override val layoutSmallId = R.layout.widget_streak_small
+    override val layoutLargeId = R.layout.widget_streak_large
     override val destination = "progress"
     override fun render(ctx: Context, v: RemoteViews) {
         val cur = WidgetData.int(ctx, "streak.current", 0)
@@ -195,6 +211,8 @@ class StreakWidget : IgnytWidget() {
 /* ---------- 9. Sleep --------------------------------------------------------------------- */
 class SleepWidget : IgnytWidget() {
     override val layoutId = R.layout.widget_sleep
+    override val layoutSmallId = R.layout.widget_sleep_small
+    override val layoutLargeId = R.layout.widget_sleep_large
     override val destination = "progress"
     override fun render(ctx: Context, v: RemoteViews) {
         val hrs = WidgetData.num(ctx, "sleep.hours")
@@ -213,6 +231,8 @@ class SleepWidget : IgnytWidget() {
 /* ---------- 10. AI Coach ----------------------------------------------------------------- */
 class CoachWidget : IgnytWidget() {
     override val layoutId = R.layout.widget_coach
+    override val layoutSmallId = R.layout.widget_coach_small
+    override val layoutLargeId = R.layout.widget_coach_large
     override val destination = "workout"
     override fun render(ctx: Context, v: RemoteViews) {
         trySetText(v, R.id.w_value, WidgetData.str(ctx, "coach.headline", "Open IGNYT for today's plan"))

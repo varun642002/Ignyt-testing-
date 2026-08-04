@@ -6,7 +6,7 @@
     android:orientation="vertical"
     android:gravity="center_vertical"
     android:background="@drawable/widget_bg"
-    android:padding="12dp"
+    android:padding="16dp"
     android:theme="@style/IgnytWidgetTheme">
 
     <LinearLayout
@@ -17,8 +17,8 @@
 
         <ImageView
             android:id="@+id/w_ring"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
+            android:layout_width="88dp"
+            android:layout_height="88dp"
             android:layout_marginEnd="12dp"
             android:contentDescription="@string/widget_progress_desc"/>
 
@@ -32,7 +32,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/widget_text"
-        android:textSize="22sp"
+        android:textSize="32sp"
         android:fontFamily="sans-serif-black"
         android:maxLines="1"
         android:ellipsize="end"
@@ -60,16 +60,4 @@
         android:includeFontPadding="false"/>
         </LinearLayout>
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/w_tasks"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:textColor="@color/widget_muted"
-        android:textSize="11sp"
-        android:fontFamily="sans-serif-medium"
-        android:maxLines="1"
-        android:ellipsize="end"
-        android:includeFontPadding="false"/>
 </LinearLayout>

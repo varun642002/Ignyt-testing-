@@ -6,7 +6,7 @@
     android:orientation="vertical"
     android:gravity="center_vertical"
     android:background="@drawable/widget_bg"
-    android:padding="12dp"
+    android:padding="16dp"
     android:theme="@style/IgnytWidgetTheme">
 
     <LinearLayout
@@ -17,8 +17,8 @@
 
         <ImageView
             android:id="@+id/w_ring"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
+            android:layout_width="88dp"
+            android:layout_height="88dp"
             android:layout_marginEnd="12dp"
             android:contentDescription="@string/widget_progress_desc"/>
 
@@ -32,7 +32,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/widget_text"
-        android:textSize="22sp"
+        android:textSize="32sp"
         android:fontFamily="sans-serif-black"
         android:maxLines="1"
         android:ellipsize="end"
@@ -69,7 +69,33 @@
         android:textColor="@color/widget_muted"
         android:textSize="11sp"
         android:fontFamily="sans-serif-medium"
-        android:maxLines="1"
+        android:maxLines="2"
         android:ellipsize="end"
         android:includeFontPadding="false"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp"
+        android:weightSum="3">
+        <TextView android:id="@+id/w_qa_workout"
+            android:layout_width="0dp" android:layout_weight="1" android:layout_height="40dp"
+            android:background="@drawable/widget_chip" android:gravity="center"
+            android:layout_marginEnd="8dp" android:text="@string/widget_qa_workout"
+            android:textColor="@color/widget_text" android:textSize="11sp"
+            android:fontFamily="sans-serif-medium" android:maxLines="1"/>
+        <TextView android:id="@+id/w_qa_food"
+            android:layout_width="0dp" android:layout_weight="1" android:layout_height="40dp"
+            android:background="@drawable/widget_chip" android:gravity="center"
+            android:layout_marginEnd="8dp" android:text="@string/widget_qa_food"
+            android:textColor="@color/widget_text" android:textSize="11sp"
+            android:fontFamily="sans-serif-medium" android:maxLines="1"/>
+        <TextView android:id="@+id/w_qa_water"
+            android:layout_width="0dp" android:layout_weight="1" android:layout_height="40dp"
+            android:background="@drawable/widget_chip" android:gravity="center"
+            android:text="@string/widget_qa_water"
+            android:textColor="@color/widget_text" android:textSize="11sp"
+            android:fontFamily="sans-serif-medium" android:maxLines="1"/>
+    </LinearLayout>
 </LinearLayout>
