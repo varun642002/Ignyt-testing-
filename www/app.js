@@ -16175,6 +16175,23 @@ function hasStatedGoal(){
   return !!statedGoal();
 }
 
+/**
+ * How a planned slot is written on the card.
+ *
+ * "4×8–12" is right for a bench press and meaningless for a walk — the same numbers read as
+ * "1×15–25" would be asking for twenty-five walks. The unit follows what the movement is
+ * actually logged in, which exerciseLogType() already decides for the logger, so the plan and
+ * the log agree on what a cardio slot means instead of each having its own opinion.
+ */
+function planPresc(e){
+  const type = exerciseLogType(e.name);
+  const lo = e.reps[0], hi = e.reps[1];
+  const range = lo === hi ? String(lo) : `${lo}–${hi}`;
+  if(type === "cardio") return e.sets > 1 ? `${e.sets}×${range} min` : `${range} min`;
+  if(type === "hold")   return `${e.sets}×${range}s`;
+  return `${e.sets}×${range}`;
+}
+
 function recommendationsEnabled(){
   return state.settings.workoutRecommendations !== false;   // default on for existing installs
 }
@@ -16320,7 +16337,7 @@ function renderPlanCard(){
     <ul class="wk-plan__list">
       ${plan.exercises.map(e=>`<li>
         <span class="wk-plan__ex">${escHtml(e.name)}</span>
-        <span class="wk-plan__presc mono">${e.sets}×${e.reps[0]}–${e.reps[1]}</span>
+        <span class="wk-plan__presc mono">${planPresc(e)}</span>
       </li>`).join("")}
     </ul>
     ${plan.swapped.length ? `<div class="wk-plan__why">${svg('shield',11)} Movements that would aggravate your ${escHtml(plan.injuries.join(" and "))} were left out.</div>` : ""}

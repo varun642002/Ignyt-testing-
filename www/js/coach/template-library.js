@@ -169,7 +169,10 @@ window.IgnytCoachTemplates = (function () {
       schedule:["circuit","circuit","rest","circuit","circuit","rest","rest"],
       days:{ circuit:[ slot("squat",3,12,20,45,"primary"), slot("horizontal_press",3,12,20,45,"primary"),
                        slot("horizontal_pull",3,12,20,45,"primary"), slot("lunge",3,12,20,45),
-                       slot("core_antiext",3,15,20,45) ] },
+                       slot("core_antiext",3,15,20,45),
+                       /* Reps here are MINUTES — see the cardio branch in renderPlanCard. A
+                          finisher rather than a warm-up: lifting first, then the easy work. */
+                       slot("cardio_easy",1,15,25,0) ] },
       progression:"density", deloadEvery:8,
       why:"Short rests keep the heart rate up, and resistance training in a deficit is what preserves muscle while weight comes off. Progression is density — same work in less time — because load rarely climbs while eating under maintenance." },
 
@@ -299,7 +302,8 @@ window.IgnytCoachTemplates = (function () {
       schedule:["full","rest","full","rest","full","rest","rest"],
       days:{ full:[ slot("squat",3,10,20,60,"primary"), slot("horizontal_press",3,8,20,60,"primary"),
                     slot("vertical_pull",3,3,12,90,"primary"), slot("lunge",3,10,15,60),
-                    slot("core_antiext",3,20,45,45) ] },
+                    slot("core_antiext",3,20,45,45),
+                    slot("cardio_easy",1,15,25,0) ] },
       progression:"leverage", deloadEvery:8,
       why:"Progresses by leverage, not load — incline pushup to flat to decline to archer. Treating bodyweight as 'just add reps' produces 40-rep sets that train endurance rather than strength." }
   ];

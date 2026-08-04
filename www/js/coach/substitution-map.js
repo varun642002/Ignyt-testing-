@@ -53,8 +53,31 @@ window.IgnytCoachSubstitution = (function () {
        A template naming a pattern with no chain fails quietly, which is the worst way to
        fail; validate() checks names against the library but could not see a pattern that was
        never declared. */
-    run_easy:         ["Running", "Running", "Running", "Running"],
-    run_interval:     ["Running", "Running", "Running", "Running"],
+    /* GENERAL CARDIO, as opposed to the run_* patterns below which mean a RUN specifically.
+       The engine had no way to prescribe cardio at all: the only cardio in any chain was the
+       literal string "Running", four times over, so a fat-loss plan came back as five sets of
+       resistance work and nothing else. The library has 45 cardio movements and the coach used
+       one of them.
+
+       Easy cardio leads with WALKING once machines are out of the picture, because that is what
+       easy cardio is for most people — zone 2 is a brisk walk long before it is a jog, and
+       offering a beginner "Running" as their recovery session is how people quit. Interval work
+       leads with running, because that is what an interval is.
+
+       Machines come first in each chain so anyone who owns one gets it; everything from
+       "Walking" onward is Cardio Outdoor, which is always available to everyone. */
+    cardio_easy:      ["Treadmill", "Elliptical Trainer", "Recumbent Bike", "Walking", "Running"],
+    cardio_interval:  ["Air Bike", "Rowing Erg Sprint", "Ski Erg", "Hill Sprint", "Sprints", "Running"],
+    /* Running ahead of Cycling: the library files Cycling as Cardio Outdoor, which the resolver
+       treats as always available, but a bicycle is not something everybody has and the app has
+       no way to ask. A steady run or walk needs nothing. */
+    cardio_steady:    ["Spinning", "Incline Treadmill Walk", "Running", "Walking", "Cycling"],
+
+    /* run_* stay RUNS. A marathon plan's easy day is a slow run, not a walk — only the generic
+       cardio_easy above substitutes down to walking. The treadmill entry is new so a user who
+       owns one is not sent outside. */
+    run_easy:         ["Treadmill", "Running", "Running", "Running"],
+    run_interval:     ["Treadmill", "Running", "Running", "Running"],
     sled_push:        ["Sled Push", "Sled Push", "Sled Push", "Sled Push", "Bear Crawl"],
     sled_pull:        ["Sled Pull", "Sled Pull", "Sled Pull", "Sled Pull", "Broad Jump"],
     wall_ball:        ["Wall Ball", "Wall Ball", "Wall Ball", "Wall Ball", "Jump Squat"],
@@ -198,6 +221,37 @@ window.IgnytCoachSubstitution = (function () {
     return null;
   }
 
+  /* Cardio machines are the one place where the category is too coarse to be useful. Every erg,
+     bike and treadmill is a single "Cardio Machine" library category, so owning a rower unlocked
+     the treadmill too and an easy session came back as "Treadmill" to someone who owns a rower
+     and nothing else. Named machines therefore also have to be owned BY NAME. Anything not
+     listed here is treated as category-level, so this stays a short list of the specific
+     machines rather than a second copy of the equipment table. */
+  var CARDIO_MACHINE_OWNERS = {
+    "Treadmill":            ["treadmill", "commercial gym"],
+    "Incline Treadmill Walk":["treadmill", "commercial gym"],
+    "Air Bike":             ["assault bike", "commercial gym"],
+    "Recumbent Bike":       ["exercise bike", "commercial gym"],
+    "Spinning":             ["exercise bike", "commercial gym"],
+    "Elliptical Trainer":   ["elliptical", "commercial gym"],
+    "Rowing Machine":       ["rowerg", "commercial gym"],
+    "Rowing Erg Sprint":    ["rowerg", "commercial gym"],
+    "Ski Erg":              ["skierg", "commercial gym"],
+    "Jacob's Ladder":       ["commercial gym"],
+    "Versaclimber":         ["commercial gym"]
+  };
+
+  /** True when a named cardio machine is one the selection actually includes. */
+  function ownsMachine(name, selection) {
+    var owners = CARDIO_MACHINE_OWNERS[name];
+    if (!owners) return true;                       // not a named machine — category rules apply
+    var have = (selection || []).map(normKey);
+    return owners.some(function (o) {
+      var k = normKey(o);
+      return have.indexOf(k) !== -1 || have.some(function (h) { return h === k; });
+    });
+  }
+
   /** Anything in the selection this table does not recognise. Should always be empty. */
   function unmatchedEquipment(selection) {
     return (selection || []).filter(function (item) { return categoriesFor(item) === null; });
@@ -299,11 +353,12 @@ window.IgnytCoachSubstitution = (function () {
 
         for (i = 0; i < chain.length; i++) {
           n = chain[i];
-          if (n && known && known[n] && owned[cats[n]] && free(n)) return n;
+          if (n && known && known[n] && owned[cats[n]] && free(n) && ownsMachine(n, equip)) return n;
         }
         for (i = 0; i < chain.length; i++) {
           n = chain[i];
-          if (n && known && known[n] && (allowed[cats[n]] || FREE_CONDITIONING[n]) && free(n)) return n;
+          if (n && known && known[n] && (allowed[cats[n]] || FREE_CONDITIONING[n]) && free(n)
+              && ownsMachine(n, equip)) return n;
         }
         /* Prefer an always-available fallback over simply the first chain entry. Taking the
            first entry handed a bodyweight-only user "Deadlift (Barbell)" whenever a chain had
