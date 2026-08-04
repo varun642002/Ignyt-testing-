@@ -297,7 +297,7 @@
     } else {
       var g = draftToGoal(d), c = compute(g);
       h += '<div class="pg-card">' +
-        iconField("dumbbell", "var(--rh-blue)", "Equipment (optional)", '<input id="g-equip" class="pi-input" value="' + esc(d.equipment) + '" placeholder="e.g. Full gym, dumbbells only">') +
+        equipmentPicker() + experiencePicker() +
         iconField("nutrition", "var(--rh-blue)", "Food preference (optional)", '<input id="g-food" class="pi-input" value="' + esc(d.foodPref) + '" placeholder="e.g. Vegetarian">') +
         iconField("info", "var(--rh-blue)", "Injuries / restrictions (optional)", '<input id="g-inj" class="pi-input" value="' + esc(d.injuries) + '">') +
         iconField("flag", "var(--rh-blue)", "Primary motivation (optional)", '<input id="g-mot" class="pi-input" value="' + esc(d.motivation) + '">') +
@@ -311,6 +311,57 @@
       '</div></div>';
     return h;
   }
+  /* EQUIPMENT IS NOT OPTIONAL AND IS NOT FREE TEXT.
+
+     It used to be a text box whose value was stored on the GOAL and nowhere else, so it never
+     reached state.profile.equipment — the field IgnytCoachMatcher actually reads. Typing
+     "dumbbells only" changed the recommendation not at all, which is worse than not asking:
+     the user answers a question and the answer is discarded.
+
+     Now it writes to state.profile.equipment directly, the same array the onboarding wizard
+     and the Profile screen already edit, so all three edit one fact rather than three copies
+     of it. Multi-select because "Home Gym + Adjustable Dumbbells + Resistance Bands" is a real
+     setup that no single choice describes. */
+  function equipmentPicker() {
+    var chosen = (typeof state !== "undefined" && Array.isArray(state.profile.equipment)) ? state.profile.equipment : [];
+    var opts = (typeof EQUIPMENT_OPTIONS !== "undefined") ? EQUIPMENT_OPTIONS : [];
+    return '<div class="pi-row" style="background:none;border:none;padding:14px 0;display:block;">' +
+      '<div style="font-weight:700;font-size:14px;margin-bottom:2px;">What do you train with?' +
+      '<span style="color:var(--rh-red);"> *</span></div>' +
+      '<div style="font-size:11px;color:var(--rh-muted);margin-bottom:8px;">' +
+        'Pick everything you can actually use. Your plan is built from these.</div>' +
+      '<div class="g-chipwrap">' +
+      opts.map(function (o) {
+        return '<button type="button" class="cat-chip' + (chosen.indexOf(o) !== -1 ? ' active' : '') +
+               '" data-goal-equip="' + esc(o) + '">' + esc(o) + '</button>';
+      }).join("") +
+      '</div>' +
+      (chosen.length ? "" : '<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Choose at least one to continue.</div>') +
+      '</div>';
+  }
+
+  /* EXPERIENCE WAS NEVER ASKED HERE — profile-engine inferred it from session count, so a
+     lifter of ten years arriving with an empty log was programmed as a beginner. Asking is
+     better than guessing, and resolveExperience() already prefers the higher of what you claim
+     and what your history shows, so an honest answer can only help. */
+  function experiencePicker() {
+    var cur = (typeof state !== "undefined" && state.onboarding && state.onboarding.experienceLevel) || "";
+    var opts = (typeof EXPERIENCE_LEVEL_OPTIONS !== "undefined") ? EXPERIENCE_LEVEL_OPTIONS : ["Beginner","Intermediate","Advanced"];
+    return '<div class="pi-row" style="background:none;border:none;padding:14px 0;display:block;">' +
+      '<div style="font-weight:700;font-size:14px;margin-bottom:2px;">Training experience' +
+      '<span style="color:var(--rh-red);"> *</span></div>' +
+      '<div style="font-size:11px;color:var(--rh-muted);margin-bottom:8px;">' +
+        'Sets your rep ranges, rest times and how fast the plan progresses.</div>' +
+      '<div class="g-chipwrap">' +
+      opts.map(function (o) {
+        return '<button type="button" class="cat-chip' + (cur === o ? ' active' : '') +
+               '" data-goal-exp="' + esc(o) + '">' + esc(o) + '</button>';
+      }).join("") +
+      '</div>' +
+      (cur ? "" : '<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Choose one to continue.</div>') +
+      '</div>';
+  }
+
   function planGrid(c) {
     var cell = function (l, v, u) { return '<div class="pg-stat-card"><div class="pg-stat-card__label">' + l + '</div><div class="pg-stat-card__value" style="font-size:16px;">' + v + (u ? '<span class="pg-stat-card__unit">' + u + '</span>' : '') + '</div></div>'; };
     return '<div class="pg-stat-grid">' +
@@ -533,10 +584,41 @@
     var d = view.draft; if (!d) return; var v = function (id) { var e = document.getElementById(id); return e ? e.value : undefined; };
     if (view.step === 1) { d.type = v("g-type"); d.startWeight = v("g-cw"); d.targetWeight = v("g-tw"); d.targetDate = v("g-td"); }
     else if (view.step === 2) { d.height = v("g-h"); d.age = v("g-age"); d.gender = v("g-gender"); d.activityMultiplier = v("g-act"); d.startBodyFat = v("g-cbf"); d.targetBodyFat = v("g-tbf"); d.trainingDays = v("g-days"); d.workoutDuration = v("g-dur"); }
-    else if (view.step === 3) { d.equipment = v("g-equip"); d.foodPref = v("g-food"); d.injuries = v("g-inj"); d.motivation = v("g-mot"); }
+    else if (view.step === 3) {
+      /* d.equipment is deliberately NOT read from an input any more — the chips write straight
+         to state.profile.equipment, which is the field the coach engine reads. It is mirrored
+         onto the draft below only so the saved goal records what the setup was at the time,
+         which is useful history and is not what drives programming. */
+      d.equipment = ((typeof state !== "undefined" && Array.isArray(state.profile.equipment)) ? state.profile.equipment : []).join(", ");
+      d.foodPref = v("g-food"); d.injuries = v("g-inj"); d.motivation = v("g-mot");
+    }
   }
   function attach() {
     if (_bound) return; _bound = true;
+
+    /* Equipment and experience chips. A separate delegated listener rather than more branches
+       in the [data-goal] one, because these write to the PROFILE rather than the wizard draft —
+       different destination, different lifetime. readStep() runs first so nothing typed above
+       is dropped by the repaint. */
+    document.addEventListener("click", function (e) {
+      if (typeof state === "undefined" || state.tab !== "goals") return;
+      var eq = e.target.closest("[data-goal-equip]");
+      var ex = e.target.closest("[data-goal-exp]");
+      if (!eq && !ex) return;
+      readStep();
+      if (eq) {
+        var val = eq.getAttribute("data-goal-equip");
+        if (!Array.isArray(state.profile.equipment)) state.profile.equipment = [];
+        var k = state.profile.equipment.indexOf(val);
+        if (k === -1) state.profile.equipment = state.profile.equipment.concat([val]);
+        else state.profile.equipment = state.profile.equipment.filter(function (x) { return x !== val; });
+      } else {
+        state.onboarding = state.onboarding || {};
+        state.onboarding.experienceLevel = ex.getAttribute("data-goal-exp");
+      }
+      try { persist(); } catch (err) {}
+      repaint();
+    });
     document.addEventListener("click", function (e) {
       if (typeof state === "undefined" || state.tab !== "goals") return;
       var el = e.target.closest("[data-goal]"); if (!el) return;
@@ -551,7 +633,21 @@
       if (a === "edit") { var ag = activeGoal(); if (!ag) return; view.screen = "wizard"; view.step = 1; view.editing = true; view.draft = Object.assign({}, ag); return repaint(); }
       if (a === "next") { readStep(); if (view.step < 3) view.step++; return repaint(); }
       if (a === "prev") { readStep(); if (view.step > 1) view.step--; return repaint(); }
-      if (a === "create") { readStep(); createFromDraft(); return repaint(); }
+      if (a === "create") {
+        readStep();
+        /* The only hard gate in this wizard, and it earns it. Without equipment the matcher
+           falls back to bodyweight and hands a fully-equipped gym user press-ups; without
+           experience it infers from session count, so anyone with an empty log is programmed
+           as a beginner however long they have trained. Both silently produce a plausible
+           wrong plan, which is the kind of failure nobody reports. */
+        var eqOk = Array.isArray(state.profile.equipment) && state.profile.equipment.length > 0;
+        var exOk = !!(state.onboarding && state.onboarding.experienceLevel);
+        if (!eqOk || !exOk) {
+          try { showToast(!eqOk ? "Choose the equipment you train with." : "Choose your training experience.", "error", function () {}); } catch (err) {}
+          return repaint();
+        }
+        createFromDraft(); return repaint();
+      }
       if (a === "history") { view.screen = "history"; return repaint(); }
       if (a === "timeline") { view.screen = "timeline"; return repaint(); }
       if (a === "pause") { updateActive(function (g) { g.status = "paused"; hist(g, "Paused"); }); setActiveId(null); resetView(); return repaint(); }

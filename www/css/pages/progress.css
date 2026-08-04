@@ -396,3 +396,9 @@
   background: #fff; display: block;
 }
 .prx__img img{ width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* Goal wizard chip groups (equipment, experience). Wraps rather than scrolling: unlike the
+   category filters elsewhere, every option here has to be reachable without discovering that
+   the row scrolls — a setup you cannot see is a setup you will not select. */
+.g-chipwrap{ display:flex; flex-wrap:wrap; gap:8px; }
+.g-chipwrap .cat-chip{ flex:none; }

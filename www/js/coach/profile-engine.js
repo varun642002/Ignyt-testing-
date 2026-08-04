@@ -108,7 +108,15 @@
 
       /* logistics */
       trainingDays: Math.max(1, Math.min(7, num(p.trainingDays) || 3)),
-      minutesPerSession: num(o.minutesPerSession),
+      /* Reads the ONBOARDING answer first and the PROFILE second. It only read onboarding,
+         and the goal wizard writes its session length to profile.minutesPerSession — so a user
+         who set 60 minutes there resolved to null, every caller fell back to 45, and GUARD 1
+         in the matcher then filtered out every template needing 60. The effect was invisible
+         and total: nobody could ever be assigned Intermediate Upper Lower, Push Pull Legs or
+         any other hour-long plan, whatever they answered.
+
+         Same shape as trainingDays on the line above, which already reads from the profile.  */
+      minutesPerSession: num(o.minutesPerSession) != null ? num(o.minutesPerSession) : num(p.minutesPerSession),
       equipment: list(p.equipment),
       trainingStyle: str(o.trainingStyle),
       preferredCardio: list(o.preferredCardio),
