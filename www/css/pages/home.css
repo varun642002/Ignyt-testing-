@@ -51,7 +51,11 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; background:rgba(37,9
 @media (max-width:374px) { .rh-hero__image-wrap { width:104px; } .rh-hero__name { font-size:22px; } }
 
 /* ---------- Section heading ---------- */
-.rh-section-head { display:flex; align-items:center; justify-content:space-between; margin:22px 2px 10px; }
+/* No horizontal margin. The 2px that used to be here indented every section heading 2px in
+   from both edges of the card it labels — measured identical on Home, Workout, Progress, Tools,
+   Profile and Settings. Too small to look like a bug and too big to look deliberate; it just
+   made the left rail read as slightly crooked all the way down the page. */
+.rh-section-head { display:flex; align-items:center; justify-content:space-between; margin:22px 0 10px; }
 .rh-section-head span { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--rh-muted); }
 .rh-view-all { font-size:13px; font-weight:700; color:var(--rh-blue); text-decoration:none; }
 

@@ -6332,12 +6332,12 @@ function renderSettingsTab(){
       <div class="rh-section-head"><span>${svg('signout',13)} Authentication</span></div>
       ${renderAccountSection()}
 
-      <div class="rh-section-head" style="margin-top:16px;"><span>${svg('target',13)} Goal Wizard</span></div>
+      <div class="rh-section-head"><span>${svg('target',13)} Goal Wizard</span></div>
       <div class="pg-card">
         <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Your goal, availability, equipment, and health screening — retake it anytime as your situation changes.</div>
         <button class="btn btn-steel btn-block" data-action="retake-goal-wizard">Retake Goal Wizard</button>
       </div>
-      <div class="rh-section-head" style="margin-top:16px;"><span>${svg('moon',13)} Appearance</span></div>
+      <div class="rh-section-head"><span>${svg('moon',13)} Appearance</span></div>
       <div class="pg-card">
         <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">
           ${[{key:"dark",label:"Dark",icon:"moon"},{key:"light",label:"Light",icon:"sun"},{key:"system",label:"System",icon:"monitor"}].map(t=>`
@@ -6439,7 +6439,7 @@ function renderSettingsTab(){
       </div>
 
       <!-- Privacy sits last by request. It was second from the top, above Goal Wizard. -->
-      <div class="rh-section-head" style="margin-top:16px;"><span>${svg('lock',13)} Privacy</span></div>
+      <div class="rh-section-head"><span>${svg('lock',13)} Privacy</span></div>
       <div class="pg-card">
         <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">What is stored, where it lives, and how to remove it.</div>
         <button class="btn btn-steel btn-block" data-action="open-privacy-info">Privacy &amp; Security</button>
