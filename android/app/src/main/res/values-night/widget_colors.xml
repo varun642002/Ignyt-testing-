@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dark theme. Not an inversion of the light values: the surface lifts to #171B24 rather than
+     going pure black so the widget reads as a card sitting on the wallpaper, and the accents
+     brighten because the same blue that is legible on white disappears on a dark ground. -->
+<resources>
+    <color name="widget_bg">#FF171B24</color>
+    <color name="widget_stroke">#FF262B35</color>
+    <color name="widget_text">#FFF4F2EE</color>
+    <color name="widget_muted">#FFA7A9B2</color>
+    <color name="widget_accent">#FF3E82F7</color>
+    <color name="widget_on_accent">#FF0B0B0F</color>
+    <color name="widget_green">#FF45D294</color>
+    <color name="widget_amber">#FFF5BB45</color>
+    <color name="widget_purple">#FFA78BFA</color>
+    <color name="widget_track">#FF21262F</color>
+    <color name="widget_chip">#FF1B1F28</color>
+</resources>

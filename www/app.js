@@ -1585,6 +1585,10 @@ function persist(){
   LS.set("hx_onboarding_complete", state.onboardingComplete);
   LS.set("hx_onboarding_wizard", state.onboarding);
   LS.set("hx_plan", state.plan);
+  /* Widgets mirror whatever was just saved. Hooked to persist() rather than to each
+     feature so nothing new has to remember to do it; the call is debounced and returns
+     immediately when the user has no widgets placed. */
+  try { if (window.IgnytWidgets) IgnytWidgets.schedule(); } catch(e) {}
   LS.set("hx_completed", state.completed);
   LS.set("hx_nutrition", state.nutrition);
   LS.set("hx_bodylog", state.bodylog);
@@ -20789,11 +20793,30 @@ function handleHardwareBack(){
 // Live workout notification: watches app foreground/background and mirrors the open session.
 if(window.IgnytActiveWorkout) IgnytActiveWorkout.start();
 
+/* Resume path. onNewIntent writes window.__ignytWidget while the app is already running,
+   and nothing would read it without this — the classic "widget works from cold, does
+   nothing afterwards" bug. */
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState !== "visible" || !window.IgnytWidgets) return;
+  IgnytWidgets.drain().then(function(){ IgnytWidgets.consumeDeepLink(); }).catch(function(){});
+});
+
 /* Device integrity, once per cold start. Records signals to the local security log and
    NOTHING ELSE — it does not block, warn, or gate a single feature. A root check runs inside
    the process it is judging, so acting on it would only punish the honest users who happen to
    trip a signal (an unlocked developer phone, a custom ROM) while anyone actually hiding from
    it walks past. Its value is the audit trail, so that is all it is used for. */
+/* Home screen widgets: apply anything tapped while the app was closed, then honour a
+   widget tap that opened us. Drain BEFORE the deep link so a "+250ml" tap that also
+   opened the app is already logged by the time the screen it asked for renders. */
+if(window.IgnytWidgets){
+  Promise.resolve()
+    .then(function(){ return IgnytWidgets.drain(); })
+    .then(function(){ IgnytWidgets.consumeDeepLink(); })
+    .then(function(){ return IgnytWidgets.push(true); })
+    .catch(function(){});
+}
+
 if(window.IgnytSecurity){
   Promise.resolve().then(()=> IgnytSecurity.checkIntegrity()).catch(()=>{});
 }

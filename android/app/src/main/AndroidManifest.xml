@@ -63,6 +63,130 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- ================= HOME SCREEN WIDGETS =================
+             exported="false" on every one. A widget provider only ever needs to receive
+             Android's own APPWIDGET_UPDATE, which the system delivers regardless; exporting
+             them would let any app on the device broadcast into them for no benefit. -->
+        <receiver
+            android:name=".widgets.ScoreWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_score_info"/>
+        </receiver>
+
+        <receiver
+            android:name=".widgets.WorkoutWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_workout_info"/>
+        </receiver>
+
+        <receiver
+            android:name=".widgets.WeightWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_weight_info"/>
+        </receiver>
+
+        <receiver
+            android:name=".widgets.WaterWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_water_info"/>
+        </receiver>
+
+        <receiver
+            android:name=".widgets.StepsWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_steps_info"/>
+        </receiver>
+
+        <receiver
+            android:name=".widgets.CaloriesWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_calories_info"/>
+        </receiver>
+
+        <receiver
+            android:name=".widgets.MotivationWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_motivation_info"/>
+        </receiver>
+
+        <receiver
+            android:name=".widgets.StreakWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_streak_info"/>
+        </receiver>
+
+        <receiver
+            android:name=".widgets.SleepWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_sleep_info"/>
+        </receiver>
+
+        <receiver
+            android:name=".widgets.CoachWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_coach_info"/>
+        </receiver>
+
+        <!-- Handles taps on a widget's own controls (the water +250ml button). -->
+        <receiver
+            android:name=".widgets.WidgetActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.varun.ignyt.widget.ADD_WATER"/>
+            </intent-filter>
+        </receiver>
+
     </application>
 
     <!-- Health Connect's own AAR does not declare this. Without it, Android 11+ package

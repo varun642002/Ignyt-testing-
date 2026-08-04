@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Widgets render inside the LAUNCHER's process and inherit its theme, not the app's.
+         Declaring one explicitly is what stops a widget picking up a launcher's odd defaults
+         for text colour and looking wrong on exactly one device. -->
+    <style name="IgnytWidgetTheme" parent="@android:style/Theme.DeviceDefault.DayNight">
+        <item name="android:textColor">@color/widget_text</item>
+    </style>
+</resources>
