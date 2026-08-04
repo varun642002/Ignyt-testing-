@@ -5979,22 +5979,22 @@ function applyTheme(){
 /* One row shape for the whole settings list — a toggle, a dropdown and a pair of chips are
    all just "the control", so they all line up with each other and with the icon. */
 function settingRow(icon, label, desc, control){
-  return `<div class="set-row">
+  return `<div class="stg-row">
     ${icon?`<span class="pi-row__icon">${svg(icon,16)}</span>`:''}
-    <div class="set-row__body">
-      <span class="set-row__label">${label}</span>
-      ${desc?`<div class="set-row__desc">${desc}</div>`:""}
+    <div class="stg-row__body">
+      <span class="stg-row__label">${label}</span>
+      ${desc?`<div class="stg-row__desc">${desc}</div>`:""}
     </div>
-    <div class="set-row__ctrl">${control}</div>
+    <div class="stg-row__ctrl">${control}</div>
   </div>`;
 }
 
 function settingToggle(key, label, desc, icon){
   const on = !!state.settings[key];
   return settingRow(icon, label, desc,
-    `<button class="set-switch${on?' is-on':''}" data-setting-toggle="${key}"
+    `<button class="stg-switch${on?' is-on':''}" data-setting-toggle="${key}"
       role="switch" aria-checked="${on?'true':'false'}" aria-label="${escHtml(label)}">
-      <span class="set-switch__knob"></span>
+      <span class="stg-switch__knob"></span>
     </button>`);
 }
 
@@ -6359,14 +6359,14 @@ function renderSettingsTab(){
         ${settingToggle("rpeTracking","RPE Tracking","Show the RPE column in the workout logger.","progress")}
         ${settingToggle("exerciseCalorieBudget","Exercise Calorie Budget","Add active calories to your Food Log.","flame")}
         ${settingRow('timer','Default Rest Timer','New exercises use this duration.',
-          `<select class="pi-input set-select" id="default-rest-select">
+          `<select class="pi-input stg-select" id="default-rest-select">
             ${[0,30,60,90,120,150,180,240].map(v=>`<option value="${v}" ${s.defaultRest===v?'selected':''}>${v===0?'Off':v+'s'}</option>`).join("")}
           </select>`)}
         ${settingRow('dumbbell','Weight Unit','Applies to workout logging, body weight, and PRs.',
           `<button class="cat-chip ${s.weightUnit==='kg'?'active':''}" data-weight-unit="kg">kg</button>
            <button class="cat-chip ${s.weightUnit==='lb'?'active':''}" data-weight-unit="lb">lb</button>`)}
         ${settingRow('droplet','Daily Water Target','',
-          `<select class="pi-input set-select" id="water-target-select">
+          `<select class="pi-input stg-select" id="water-target-select">
             ${[1500,2000,2500,3000,3500,4000].map(v=>`<option value="${v}" ${s.waterTargetMl===v?'selected':''}>${(v/1000).toFixed(1)}L</option>`).join("")}
           </select>`)}
       </div>
@@ -7037,14 +7037,11 @@ function renderApp(){
     ${renderLiveSessionBar()}
     ${renderPaywallSheet()}
     ${renderPrExerciseSheet()}
-    <nav class="bottom-nav ${isLightTab?'bottom-nav--home-light':''}">
-      ${navBtn("home","Home")}
-      ${navBtn("workout","Workout")}
-      ${navBtn("nutrition","Food Log")}
-      ${navBtn("progress","Progress")}
-      ${navBtn("tools","Tools")}
-    </nav>
   `;
+  /* The bottom nav is NOT part of this template any more — see syncBottomNav(). It lives
+     outside #app precisely so this innerHTML does not destroy it, which is what lets the
+     selection indicator slide instead of cutting. */
+  syncBottomNav(isLightTab);
   const main = document.getElementById("main");
   if(state.tab==="home") main.innerHTML = renderHomeTab();
   if(state.tab==="plan") main.innerHTML = renderPlanTab();
@@ -7923,8 +7920,87 @@ function renderInsightsTab(){
   </div>`;
 }
 
+/* =========================================================
+   BOTTOM NAV
+
+   Built once and then only updated, which is the whole point. Everything else in the shell is
+   re-rendered by replacing #app's innerHTML, and a node that is destroyed and recreated cannot
+   transition — the old selection pill was a background on .nav-btn.active with a
+   background-color transition on it, and it never once animated because the element carrying
+   the transition was a brand new one already in its final state.
+
+   So the nav is a sibling of #app rather than a child, the buttons persist, and a single
+   indicator element slides between them under a transform. That also makes navigation cheaper:
+   a tab change now touches three class lists and one custom property instead of rebuilding six
+   buttons and their SVGs.
+
+   The buttons carry data-navtab, not data-nav, deliberately. attachHandlers() re-binds a click
+   listener to every [data-nav] on every render; on a persistent element that would stack a new
+   listener each time and fire render() once per accumulated tap.
+========================================================= */
+const NAV_TABS = [
+  ["home", "Home"], ["workout", "Workout"], ["nutrition", "Food Log"],
+  ["progress", "Progress"], ["tools", "Tools"]
+];
+
 function navBtn(id,label){
-  return `<button class="nav-btn ${state.tab===id?'active':''}" data-nav="${id}">${svg(id)}<span>${label}</span></button>`;
+  return `<button class="nav-btn" data-navtab="${id}">${svg(id)}<span>${label}</span></button>`;
+}
+
+function buildBottomNav(){
+  const nav = document.createElement("nav");
+  nav.className = "bottom-nav";
+  /* The indicator is first so it paints under the buttons without needing a z-index. */
+  nav.innerHTML = `<span class="nav-ind" aria-hidden="true"></span>` +
+    NAV_TABS.map(([id,label])=>navBtn(id,label)).join("");
+  nav.style.setProperty("--nav-count", NAV_TABS.length);
+
+  /* Bound once, on the element that outlives every render. */
+  nav.addEventListener("click", (e)=>{
+    const btn = e.target.closest("[data-navtab]");
+    if(!btn || !nav.contains(btn)) return;
+    const dest = btn.dataset.navtab;
+    state.notificationsOpen = false;   // any navigation closes the header panel
+    state.tab = dest;
+    state.bodyView = null;             // land on Log Weight, not a stale calculator view
+    render();
+    if(["home","health","nutrition","insights"].includes(state.tab)){
+      window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
+    }
+  });
+  document.body.appendChild(nav);
+  return nav;
+}
+
+/* The nav lives on <body>, outside the #app subtree that render() replaces — which is what
+   keeps it alive long enough to animate, and also means nothing removes it for us. Sign-in and
+   onboarding return early from render() without ever reaching renderApp(), so without this the
+   bar would sit on top of the sign-in screen. syncBottomNav() rebuilds it on the next app
+   render, so removing is free. */
+function removeBottomNav(){
+  const nav = document.querySelector("nav.bottom-nav");
+  if(nav) nav.remove();
+}
+
+function syncBottomNav(isLightTab){
+  const nav = document.querySelector("nav.bottom-nav") || buildBottomNav();
+  nav.classList.toggle("bottom-nav--home-light", !!isLightTab);
+
+  let active = -1;
+  NAV_TABS.forEach(([id], i)=>{
+    const btn = nav.querySelector(`[data-navtab="${id}"]`);
+    if(!btn) return;
+    const on = state.tab === id;
+    if(on) active = i;
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-current", on ? "page" : "false");
+  });
+
+  /* Settings, Profile, Goals and the rest are real destinations with no tab of their own.
+     The indicator fades out and HOLDS ITS LAST POSITION rather than sliding to zero, so
+     coming back to the tab you left does not play a slide you did not ask for. */
+  nav.classList.toggle("has-active", active >= 0);
+  if(active >= 0) nav.style.setProperty("--nav-i", active);
 }
 
 /* =========================================================
@@ -14831,9 +14907,11 @@ function render(){
          new install: someone re-editing their answers is already in, and anyone who has
          signed in or chosen to skip has hx_auth_seen set and never sees it again. */
       if(!isSignedIn() && !state.editingOnboarding){
+        removeBottomNav();
         renderSignInScreen();
         return;
       }
+      removeBottomNav();
       withFocusPreserved(renderOnboardingWizard);
       return;
     }
@@ -14842,6 +14920,7 @@ function render(){
        to add to. hx_auth_seen is no longer consulted: "has seen the screen" and "has an
        account" were the same flag only while skipping existed. */
     if(!isSignedIn()){
+      removeBottomNav();
       renderSignInScreen();
       return;
     }
@@ -15967,7 +16046,9 @@ function assignPlan(){
   const resolved = IgnytCoachProfile.resolve(state);
   const p = (resolved && resolved.profile) || {};
   const match = IgnytCoachMatcher.assign({
-    goal: p.primaryGoal, experience: p.experience, days: p.trainingDays,
+    /* statedGoal(), not p.primaryGoal — otherwise a user whose only goal came from the Goals
+       page passes the gate above and then gets matched on an empty string. */
+    goal: statedGoal(), experience: p.experience, days: p.trainingDays,
     sessionMinutes: p.minutesPerSession || 45, equipment: p.equipment,
     secondaryGoals: p.secondaryGoals || [],
     // A logged race is a statement of intent that no questionnaire field captures.
@@ -16055,12 +16136,43 @@ function currentAdaptation(){
  * produced a full plan for someone who had answered nothing, and a recommendation made from
  * no input is a guess wearing a recommendation's clothes. The plan waits for a real answer.
  */
-function hasStatedGoal(){
+/**
+ * The user's training goal, from EITHER place they can state one.
+ *
+ * primaryGoal is written only by the onboarding questionnaire. The Goals page — the screen
+ * actually called "Goals", with its own fifteen goal types — writes to hx_goals and never
+ * touches it. So someone who set up a goal exactly where the app invites them to still counted
+ * as having stated nothing, the recommendation gate stayed shut, and the Workout tab showed no
+ * plan at all with no explanation. Anyone who had finished onboarding before the Goals page
+ * existed, or who edited their goal there afterwards, was in that state.
+ *
+ * The label is passed through as free text on purpose: goal-engine already classifies strings
+ * into its eight intents, and it maps all fifteen Goals-page labels correctly — including
+ * HYROX, Strength and Marathon, which the onboarding questionnaire cannot express at all. So
+ * this also makes the templates that were unreachable through onboarding reachable.
+ *
+ * Onboarding wins when both exist: it is the more deliberate answer to "what are you training
+ * for", where a Goals-page entry may be about a target weight.
+ */
+function statedGoal(){
   try{
     const r = window.IgnytCoachProfile ? IgnytCoachProfile.resolve(state) : null;
     const g = r && r.profile && r.profile.primaryGoal;
-    return !!(g && String(g).trim());
-  }catch(e){ return false; }
+    if(g && String(g).trim()) return String(g).trim();
+  }catch(e){ /* fall through to the Goals page */ }
+  try{
+    const active = window.IgnytGoals && IgnytGoals.activeGoal ? IgnytGoals.activeGoal() : null;
+    if(!active) return "";
+    /* The label reads better to goal-engine than the id does ("muscle_gain" has no spaces for
+       its patterns to match on), so prefer it and keep the id as the fallback. */
+    const type = (IgnytGoals.GOAL_TYPES || []).filter(t=>t.id===active.type)[0];
+    const label = (type && type.label) || active.type || "";
+    return String(label).trim();
+  }catch(e){ return ""; }
+}
+
+function hasStatedGoal(){
+  return !!statedGoal();
 }
 
 function recommendationsEnabled(){

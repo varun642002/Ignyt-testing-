@@ -141,10 +141,72 @@ window.IgnytCoachSubstitution = (function () {
   };
 
   /** The library categories a selection unlocks. Always includes the two that need nothing. */
+  /* MORE THAN ONE VOCABULARY REACHES THIS TABLE, and an exact-string lookup silently loses the
+     ones it does not recognise — which is the worst possible failure here, because an
+     unrecognised item unlocks NOTHING and a fully equipped gym quietly gets demoted to
+     bodyweight. A real profile held ["Barbell","Dumbbell","Machines","Sled","Rower","Ski Erg",
+     "Kettlebell"] and was prescribed barbell and machine work only: "Dumbbell", "Kettlebell",
+     "Rower" and "Ski Erg" all missed, so it never saw a dumbbell or a kettlebell again.
+
+     So the lookup normalises (case, spaces, punctuation), falls back across the singular/plural
+     boundary, and finally consults this alias table for the words that are genuinely different
+     rather than merely differently spelled. */
+  var EQUIP_ALIASES = {
+    dumbell: "adjustable dumbbells", freeweights: "adjustable dumbbells",
+    kb: "kettlebells",
+    selectorized: "machines", machineweights: "machines",
+    cable: "cable machine", cables: "cable machine",
+    band: "resistance bands", bands: "resistance bands", resistanceband: "resistance bands",
+    bodyweight: "bodyweight only", none: "bodyweight only", nothing: "bodyweight only",
+    gym: "commercial gym", fullgym: "commercial gym",
+    rower: "rowerg", rowingmachine: "rowerg", rowmachine: "rowerg", concept: "rowerg",
+    ski: "skierg",
+    airbike: "assault bike", fanbike: "assault bike", echobike: "assault bike",
+    bike: "exercise bike", stationarybike: "exercise bike", spinbike: "exercise bike",
+    crosstrainer: "elliptical",
+    medball: "medicine balls", slamball: "medicine balls",
+    suspensiontrainer: "trx", rings: "trx", gymnasticrings: "trx",
+    pool: "swimming pool", swimming: "swimming pool",
+    track: "running track",
+    prowler: "sled", sledge: "sled"
+  };
+
+  function normKey(s) { return String(s || "").toLowerCase().replace(/[^a-z]/g, ""); }
+
+  var NORM_INDEX = (function () {
+    var m = {};
+    Object.keys(EQUIP_CATEGORIES).forEach(function (k) { m[normKey(k)] = k; });
+    return m;
+  })();
+
+  /** The library categories one equipment item unlocks, or null if the word is unknown. */
+  function categoriesFor(item) {
+    var n = normKey(item);
+    if (!n) return null;
+    if (NORM_INDEX[n]) return EQUIP_CATEGORIES[NORM_INDEX[n]];
+    if (EQUIP_ALIASES[n]) return EQUIP_CATEGORIES[EQUIP_ALIASES[n]] || null;
+    /* "Dumbbell" for "Adjustable Dumbbells", "Kettlebell" for "Kettlebells" — a plural is not
+       a different piece of equipment. */
+    var alt = n.slice(-1) === "s" ? n.slice(0, -1) : n + "s";
+    if (NORM_INDEX[alt]) return EQUIP_CATEGORIES[NORM_INDEX[alt]];
+    if (EQUIP_ALIASES[alt]) return EQUIP_CATEGORIES[EQUIP_ALIASES[alt]] || null;
+    /* Last resort: a key that CONTAINS the word, so "Dumbbell" finds "adjustable dumbbells". */
+    var keys = Object.keys(NORM_INDEX);
+    for (var i = 0; i < keys.length; i++) {
+      if (keys[i].indexOf(n) !== -1 || n.indexOf(keys[i]) !== -1) return EQUIP_CATEGORIES[NORM_INDEX[keys[i]]];
+    }
+    return null;
+  }
+
+  /** Anything in the selection this table does not recognise. Should always be empty. */
+  function unmatchedEquipment(selection) {
+    return (selection || []).filter(function (item) { return categoriesFor(item) === null; });
+  }
+
   function allowedCategories(selection) {
     var out = { "Bodyweight": true, "Mobility / Stretch": true, "Cardio Outdoor": true };
     (selection || []).forEach(function (item) {
-      var cats = EQUIP_CATEGORIES[String(item).toLowerCase()];
+      var cats = categoriesFor(item);
       if (cats) cats.forEach(function (c) { out[c] = true; });
     });
     return out;
@@ -169,7 +231,7 @@ window.IgnytCoachSubstitution = (function () {
   function ownedCategories(selection) {
     var out = {};
     (selection || []).forEach(function (item) {
-      var cats = EQUIP_CATEGORIES[String(item).toLowerCase()];
+      var cats = categoriesFor(item);
       if (cats) cats.forEach(function (c) { out[c] = true; });
     });
     return out;
@@ -341,6 +403,8 @@ window.IgnytCoachSubstitution = (function () {
 
   return Object.freeze({
     resolve: resolve, chainFor: chainFor, allowedCategories: allowedCategories,
+    EQUIP_CATEGORIES: EQUIP_CATEGORIES, categoriesFor: categoriesFor,
+    unmatchedEquipment: unmatchedEquipment,
     bannedPatterns: bannedPatterns, ladderFor: ladderFor,
     validate: validate, CHAINS: CHAINS, INJURY: INJURY
   });

@@ -362,7 +362,7 @@ input,select,textarea{font-family:inherit; background:transparent; color:var(--t
 nav.bottom-nav{position:fixed; left:50%; transform:translateX(-50%);
     bottom:calc(10px + env(safe-area-inset-bottom,0px));
     width:calc(100% - 24px); max-width:456px;
-    display:flex; padding:6px; gap:2px;
+    display:flex; padding:6px; gap:0;
     background:rgba(23,23,28,.86); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
     border:1px solid rgba(255,255,255,.08); border-radius:999px; z-index:40;
     box-shadow:0 8px 30px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.2);
@@ -384,8 +384,37 @@ body.kb-open nav.bottom-nav{transform:translate(-50%, 100%);}
 
 /* The selected tab carries its own pill inside the bar. That highlight is what makes this read
    as a segmented control rather than a row of icons -- colour alone did the job before, and at
-   a glance a coloured icon among grey ones is easy to miss. */
-.nav-btn.active{color:var(--accent); background:rgba(255,255,255,.10);}
+   a glance a coloured icon among grey ones is easy to miss.
+
+   The pill is now ONE element that slides (.nav-ind) rather than a background on whichever
+   button happens to be active. A background cannot travel between two elements; it can only
+   appear on one and vanish from the other, which is what the bar used to do. */
+.nav-btn.active{color:var(--accent); background:none;}
+
+/* gap is 0 on the bar so each button is exactly 1/5 of the track and the indicator can be
+   positioned with a plain percentage translate -- no measuring, no resize listener, and it
+   stays correct through rotation and split screen. */
+.nav-ind{position:absolute; top:6px; bottom:6px; left:6px; z-index:0;
+    width:calc((100% - 12px) / var(--nav-count, 5));
+    border-radius:999px; background:rgba(255,255,255,.10);
+    transform:translateX(calc(var(--nav-i, 0) * 100%));
+    opacity:0; pointer-events:none;
+    /* Apple's own tab curve: a hard front-load then a long settle, so it reads as fast while
+       still arriving softly. Opacity is quicker than travel -- a pill that fades as slowly as
+       it moves looks like it is being dragged. */
+    transition:transform .38s cubic-bezier(.32,.72,0,1), opacity .2s ease;}
+nav.bottom-nav.has-active .nav-ind{opacity:1;}
+/* The buttons sit above the pill; without this the indicator would cover the icons. */
+.nav-btn{position:relative; z-index:1;}
+
+/* The label and icon lift very slightly into the selected state -- it is the difference
+   between the pill sliding onto a static row and the whole tab responding. */
+.nav-btn svg, .nav-btn span{transition:transform .38s cubic-bezier(.32,.72,0,1);}
+.nav-btn.active svg{transform:translateY(-1px) scale(1.06);}
+
+@media (prefers-reduced-motion: reduce){
+  .nav-ind, .nav-btn svg, .nav-btn span{transition:none;}
+}
 
 .nav-btn svg{width:19px; height:19px;}
 
