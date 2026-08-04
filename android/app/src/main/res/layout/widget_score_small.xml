@@ -11,10 +11,11 @@
 
     <TextView
         android:id="@+id/w_value"
+        android:text="82"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/widget_text"
-        android:textSize="22sp"
+        android:textSize="32sp"
         android:fontFamily="sans-serif-black"
         android:maxLines="1"
         android:ellipsize="end"
@@ -22,8 +23,10 @@
 
     <TextView
         android:id="@+id/w_label"
+        android:text="Strong day"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
         android:textColor="@color/widget_muted"
         android:textSize="13sp"
         android:fontFamily="sans-serif-medium"
@@ -33,6 +36,7 @@
 
     <TextView
         android:id="@+id/w_sub"
+        android:text="12 day streak"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"

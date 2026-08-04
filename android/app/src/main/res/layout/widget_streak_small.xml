@@ -11,6 +11,7 @@
 
     <TextView
         android:id="@+id/w_value"
+        android:text="12"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/widget_text"
@@ -22,8 +23,10 @@
 
     <TextView
         android:id="@+id/w_label"
+        android:text="day streak"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
         android:textColor="@color/widget_muted"
         android:textSize="13sp"
         android:fontFamily="sans-serif-medium"
@@ -33,6 +36,7 @@
 
     <TextView
         android:id="@+id/w_sub"
+        android:text="Best 21"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
@@ -40,6 +44,19 @@
         android:textSize="11sp"
         android:fontFamily="sans-serif-medium"
         android:maxLines="1"
+        android:ellipsize="end"
+        android:includeFontPadding="false"/>
+
+    <TextView
+        android:id="@+id/w_msg"
+        android:text="Nine to go for a new record."
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/widget_accent"
+        android:textSize="11sp"
+        android:fontFamily="sans-serif-medium"
+        android:maxLines="3"
         android:ellipsize="end"
         android:includeFontPadding="false"/>
 </LinearLayout>

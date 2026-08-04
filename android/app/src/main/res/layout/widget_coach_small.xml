@@ -11,6 +11,7 @@
 
     <TextView
         android:id="@+id/w_label"
+        android:text="Today"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/widget_muted"
@@ -22,12 +23,13 @@
 
     <TextView
         android:id="@+id/w_value"
+        android:text="Upper body, moderate"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/widget_text"
-        android:textSize="13sp"
+        android:textSize="16sp"
         android:fontFamily="sans-serif-medium"
-        android:maxLines="3"
+        android:maxLines="5"
         android:ellipsize="end"
         android:includeFontPadding="false"/>
 </LinearLayout>

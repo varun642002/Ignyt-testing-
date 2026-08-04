@@ -10,18 +10,8 @@
     android:theme="@style/IgnytWidgetTheme">
 
     <TextView
-        android:id="@+id/w_label"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="@color/widget_muted"
-        android:textSize="13sp"
-        android:fontFamily="sans-serif-medium"
-        android:maxLines="1"
-        android:ellipsize="end"
-        android:includeFontPadding="false"/>
-
-    <TextView
         android:id="@+id/w_value"
+        android:text="Upper"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/widget_text"
@@ -32,14 +22,28 @@
         android:includeFontPadding="false"/>
 
     <TextView
+        android:id="@+id/w_label"
+        android:text="Beginner Upper Lower"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="@color/widget_muted"
+        android:textSize="13sp"
+        android:fontFamily="sans-serif-medium"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:includeFontPadding="false"/>
+
+    <TextView
         android:id="@+id/w_sub"
+        android:text="5 exercises left"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:textColor="@color/widget_muted"
         android:textSize="11sp"
         android:fontFamily="sans-serif-medium"
-        android:maxLines="1"
+        android:maxLines="2"
         android:ellipsize="end"
         android:includeFontPadding="false"/>
 </LinearLayout>

@@ -11,6 +11,7 @@
 
     <TextView
         android:id="@+id/w_label"
+        android:text="Today"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/widget_muted"
@@ -22,6 +23,7 @@
 
     <TextView
         android:id="@+id/w_value"
+        android:text="Upper body, moderate"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/widget_text"
@@ -33,6 +35,7 @@
 
     <TextView
         android:id="@+id/w_sub"
+        android:text="Recovery is good, push the top sets"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"

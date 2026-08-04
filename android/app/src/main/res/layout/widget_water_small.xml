@@ -10,9 +10,23 @@
     android:theme="@style/IgnytWidgetTheme">
 
     <TextView
-        android:id="@+id/w_label"
+        android:id="@+id/w_value"
+        android:text="1.5L"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:textColor="@color/widget_text"
+        android:textSize="32sp"
+        android:fontFamily="sans-serif-black"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:includeFontPadding="false"/>
+
+    <TextView
+        android:id="@+id/w_label"
+        android:text="of 2.5L"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
         android:textColor="@color/widget_muted"
         android:textSize="13sp"
         android:fontFamily="sans-serif-medium"
@@ -21,12 +35,14 @@
         android:includeFontPadding="false"/>
 
     <TextView
-        android:id="@+id/w_value"
+        android:id="@+id/w_sub"
+        android:text="1.0L to go"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="@color/widget_text"
-        android:textSize="22sp"
-        android:fontFamily="sans-serif-black"
+        android:layout_marginTop="4dp"
+        android:textColor="@color/widget_muted"
+        android:textSize="11sp"
+        android:fontFamily="sans-serif-medium"
         android:maxLines="1"
         android:ellipsize="end"
         android:includeFontPadding="false"/>
@@ -36,7 +52,8 @@
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
         android:layout_height="4dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="12dp"
         android:max="100"
+        android:progress="60"
         android:progressDrawable="@drawable/widget_progress"/>
 </LinearLayout>

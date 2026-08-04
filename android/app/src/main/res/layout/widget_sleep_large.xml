@@ -20,6 +20,7 @@
             android:layout_width="88dp"
             android:layout_height="88dp"
             android:layout_marginEnd="12dp"
+            android:src="@drawable/widget_ring_preview"
             android:contentDescription="@string/widget_progress_desc"/>
 
         <LinearLayout
@@ -29,6 +30,7 @@
             android:orientation="vertical">
     <TextView
         android:id="@+id/w_value"
+        android:text="7h 24m"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/widget_text"
@@ -39,6 +41,7 @@
         android:includeFontPadding="false"/>
     <TextView
         android:id="@+id/w_label"
+        android:text="Last night"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/widget_muted"
@@ -49,6 +52,7 @@
         android:includeFontPadding="false"/>
     <TextView
         android:id="@+id/w_sub"
+        android:text="Recovery 78"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
