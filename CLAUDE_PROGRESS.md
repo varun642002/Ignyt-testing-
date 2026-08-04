@@ -1,5 +1,43 @@
 # CLAUDE_PROGRESS.md
 
+### Equipment filtering, smart notifications, settings alignment
+
+**Branch** `feature/premium-subscription` · **Commits** `a6a427a`, `7113d9a` · both pushed
+**Build** BUILD SUCCESSFUL · `android/app/build/outputs/apk/debug/app-debug.apk`
+
+**Equipment now filters what you are prescribed.** Chains resolved by fixed tier index, which
+ignores what the user owns — bodyweight-only got a dumbbell RDL, barbell-only got a cable
+pulldown, machines-only got barbell squats. Resolution now filters on the exercise's real
+library category, ranks owned kit ahead of chain order, and takes the session's existing
+exercises so narrow selections do not list one movement twice. Bodyweight, mobility and
+outdoor cardio are always available; the equipment-free Conditioning entries are allowlisted
+by name rather than recategorising a library users browse.
+Verified: 14 selections x 19 templates x every day — 0 out of bounds, 0 same-day duplicates,
+0 chain names missing.
+
+**Notifications wired.** `notify-messages.js` existed but nothing loaded it. Now registered in
+index.html and sw.js, feeding a new 7am `morning-motivation` entry and the existing 22:30
+`sleep` entry. 370 morning / 211 bedtime lines; first repeat after ~127 draws. Custom wording
+is preserved — rotation only replaces the catalogue default. Achievements notify only when the
+app is hidden (card otherwise), via a switch-only catalogue entry that syncOne refuses to arm.
+
+**Settings rows aligned.** Every control sat ~9px above its own icon (11.7px for the unit
+chips) because it was nested in the text block against the title while the icon centred on the
+row. Icon/text/control are now siblings on one axis: all 15 rows measure 0px offset with
+identical edges. Toggle gained role="switch" + aria-checked and a sliding knob.
+
+**Pending**
+- §7 Firestore migration; Firestore Security Rules still not in the repo, never reviewed
+- Exercise instructions and images for the 458 new entries — Varun is supplying these
+- `GRANDFATHER_BEFORE` still `null`
+- 6 templates unreachable from the questionnaire (no Strength/HYROX/Endurance goal option)
+- Coach widget passes the wrong argument shape to `IgnytCoachEngine.recommend` (flagged as a
+  separate task); fixing it also needs `exercise-engine.buildPool` equipment matching, where
+  "Commercial Gym" and "Home Gym" currently match nothing
+- Off-state toggle is `#D9DEE7` in dark mode — the brightest thing in the row. Pre-existing;
+  not changed because the ask was alignment.
+
+
 ### Onboarding page 5, and three bugs
 
 **Onboarding is five pages now.** New last page (`obBmiSummary`): BMI, the healthy weight range
