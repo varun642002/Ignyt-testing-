@@ -595,3 +595,19 @@
 .wk-plan__meta{ font-size:11px; font-weight:700; color:var(--rh-muted); margin:2px 0 8px;
                 text-transform:uppercase; letter-spacing:.05em; }
 .wk-plan--deload{ border-left:3px solid var(--rh-blue); }
+
+/* Dismiss control on the plan card. Deliberately quiet and small-but-tappable: a 28px target
+   so it is reachable with a thumb, at low opacity so it never competes with the plan name
+   beside it. It turns a feature off, so it should be findable when wanted and invisible when
+   not — a bright X on every visit reads as an ad you are being invited to close. */
+.wk-plan__hide{
+  flex: none; width: 28px; height: 28px; margin: -4px -4px -4px 0;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: none; cursor: pointer; border-radius: 50%;
+  color: var(--rh-muted); opacity: .45; transition: opacity .15s ease, background .15s ease;
+}
+.wk-plan__hide:hover, .wk-plan__hide:focus-visible{ opacity: 1; background: rgba(127,127,127,.12); }
+.wk-plan__hide:active{ opacity: 1; }
+/* The head is a flex row; the day label should keep the middle and the X sit at the end. */
+.wk-plan__head{ align-items: center; }
+.wk-plan__day{ margin-left: auto; }

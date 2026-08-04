@@ -15929,6 +15929,7 @@ function renderPlanCard(){
       <div class="wk-plan__head">
         <span class="wk-plan__label">${escHtml(plan.template.name)}</span>
         <span class="wk-plan__day">Week ${plan.week} · Rest day</span>
+        <button class="wk-plan__hide" data-action="hide-recommendations" aria-label="Turn off workout recommendations" title="Turn off recommendations">${svg('x',13)}</button>
       </div>
       <div class="wk-plan__why">Scheduled recovery. Training on it costs more than it adds.</div>
     </div>`;
@@ -15941,6 +15942,7 @@ function renderPlanCard(){
     <div class="wk-plan__head">
       <span class="wk-plan__label">${escHtml(plan.template.name)}</span>
       <span class="wk-plan__day">Week ${plan.week}${plan.deload ? ' · Deload' : ''} · ${escHtml(dayLabel)}</span>
+      <button class="wk-plan__hide" data-action="hide-recommendations" aria-label="Turn off workout recommendations" title="Turn off recommendations">${svg('x',13)}</button>
     </div>
     ${plan.deload ? `<div class="wk-plan__why">${svg('shield',11)} Planned deload — lighter on purpose, so the next block has somewhere to go.</div>`
       : plan.adapt && plan.adapt.msg && plan.adapt.reason !== "steady" ? `<div class="wk-plan__why">${svg('info',11)} ${escHtml(plan.adapt.msg)}</div>` : ''}
@@ -17440,6 +17442,14 @@ function attachHandlers(){
       showToast("Routine deleted.", "info", render);
     });
   });
+  const hideRec = document.querySelector('[data-action="hide-recommendations"]');
+  if(hideRec) hideRec.addEventListener("click", ()=>{
+    state.settings.workoutRecommendations = false;
+    persist();
+    render();
+    showToast("Recommendations off. Settings › Workout Settings to turn them back on.", "info", render);
+  });
+
   const startPlanned = document.querySelector('[data-action="start-planned-session"]');
   if(startPlanned) startPlanned.addEventListener("click", ()=>{
     const plan = buildTodaysPlan();
