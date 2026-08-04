@@ -1088,15 +1088,20 @@ main{ -webkit-overflow-scrolling: touch; }
    found. */
 .nd-meal__add{
   width:32px; height:32px; flex:0 0 32px; border-radius:50%;
-  /* --accent, not --primary. This adds food, and calories are already the accent's job
-     everywhere else on this screen; --primary is the app's generic interactive blue. The
-     two + buttons in the food area (here and in the search list) now agree. */
-  border:0; background:var(--accent);
+  /* --color-interactive, which is the blue the rest of the app already wears: the bottom nav's
+     selected tab, the settings toggles, the active chips. Not --primary, which is a near-
+     identical #3B82F6 against this token's #3e82f7 — close enough to look like a mistake rather
+     than a choice, and there is no reason for the app to carry two blues three points apart.
+     It was --accent (orange), which put the loudest colour on this screen on five buttons at
+     once and made the meal headings compete with the calorie figures they sit beside. */
+  border:0; background:var(--color-interactive);
   color:#fff; font-size:20px; font-weight:600; line-height:1; cursor:pointer;
   display:grid; place-items:center;
   -webkit-tap-highlight-color:transparent;
+  transition:background-color .15s var(--ease-standard, ease), transform .15s var(--ease-standard, ease);
 }
-.nd-meal__add:active{ transform:scale(.92); }
+.nd-meal__add:active{ transform:scale(.92); background:var(--color-interactive-strong); }
+@media (prefers-reduced-motion: reduce){ .nd-meal__add{ transition:none; } }
 
 /* The one surface per meal. */
 .nd-meal__body{
