@@ -1291,7 +1291,22 @@ function exerciseImageSrc(name){
   if(!slug) return "";
   const have = window.IGNYT_EXERCISE_IMAGES;
   if(have && !have[slug]) return "";      // manifest says there is none
-  return "assets/exercises/" + slug + ".jpg";
+  /* The manifest value carries the FORMAT, so an animated demonstration can sit beside the
+     still illustrations without a second lookup table or a naming convention to remember.
+     `1` means .jpg — the value every existing entry has, so nothing had to be rewritten — and
+     a string is the extension to use instead. Anything animated (gif, webp) plays on its own
+     in an <img>, so no other code has to change to show it. */
+  const fmt = have ? have[slug] : 1;
+  const ext = (typeof fmt === "string" && /^[a-z0-9]{2,4}$/.test(fmt)) ? fmt : "jpg";
+  return "assets/exercises/" + slug + "." + ext;
+}
+
+/** True when an exercise's illustration is an animation rather than a still. */
+function exerciseImageIsAnimated(name){
+  const slug = exerciseImageSlug(resolveExerciseName(name) || name);
+  const have = window.IGNYT_EXERCISE_IMAGES;
+  const fmt = have && have[slug];
+  return fmt === "gif" || fmt === "webp";
 }
 
 function avatarColorFor(muscle){ return MUSCLE_AVATAR_COLOR[muscle] || "#8B8B94"; }
