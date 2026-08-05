@@ -1,9 +1,23 @@
 # -*- coding: utf-8 -*-
-"""Rebuild LIBRARY in www/app.js from workout_names.csv."""
-import csv, io, re
+"""Rebuild LIBRARY in www/app.js from workout_names.csv.
+
+DO NOT RUN THIS WITHOUT READING THE NEXT PARAGRAPH.
+
+workout_names.csv seeded the library and is no longer the source of truth. LIBRARY in
+www/app.js has since grown to 910 exercises and carries corrections this CSV cannot express
+-- notably the categories of the Olympic lifts and the cable/Smith movements, which the
+category() heuristic below re-derives from the NAME and gets wrong ("Power Clean" has no
+barbell keyword in it, so it lands in Bodyweight, where the equipment filter treats it as
+available to someone who owns nothing).
+
+Running this against the current CSV deletes 458 exercises and reverts those categories.
+The guard in main() stops that. If you genuinely mean to regenerate from a CSV, pass
+--force and make sure the CSV is a superset first.
+"""
+import csv, io, re, sys
 from collections import OrderedDict
 
-CSV = "tools/workout_names.csv"   # the dataset this library was generated from
+CSV = "tools/workout_names.csv"   # the dataset this library was SEEDED from, not its truth
 APP = "www/app.js"
 
 rows = []
@@ -113,6 +127,25 @@ s = io.open(APP, encoding="utf-8").read()
 i = s.index("const LIBRARY = {")
 j = s.index("\n};", i) + 3
 old_len = j - i
+
+# ---- guard -------------------------------------------------------------------------------
+# The CSV stopped being the source of truth once the library grew past it. Overwriting LIBRARY
+# with a smaller set deletes exercises that people may already have logged, and silently
+# reverts the categories corrected by hand. Compare before writing, and make the destructive
+# case something you have to ask for.
+_existing = set(re.findall(r'\["((?:[^"\\]|\\.)*)"', s[i:j]))
+_incoming = set(n for n, _m in rows)
+_lost = sorted(x for x in _existing - _incoming if x)
+if _lost and "--force" not in sys.argv:
+    print("REFUSING: %d exercises in LIBRARY are not in %s and would be deleted." % (len(_lost), CSV))
+    print("  e.g. %s" % ", ".join(_lost[:8]))
+    print("")
+    print("LIBRARY (%d) has outgrown the CSV (%d). The CSV seeded it and is no longer its truth."
+          % (len(_existing), len(_incoming)))
+    print("Regenerate the CSV from LIBRARY first:  python tools/exercise-csv.py --mode names")
+    print("Then re-run. Pass --force only if deleting those %d is genuinely what you want."
+          % len(_lost))
+    sys.exit(1)
 s = s[:i] + HEADER + lib + s[j:]
 io.open(APP, "w", encoding="utf-8").write(s)
 print("LIBRARY replaced: %d -> %d chars" % (old_len, len(lib)))
