@@ -16403,11 +16403,11 @@ function renderWorkoutTab(){
       </div>
       <div class="live-stat"><span class="wk-session__stat-icon">${svg('progress',18)}</span>
         <div class="live-stat-label">Volume</div>
-        <div class="live-stat-value">${displayW(liveVolume,0).toLocaleString()}<span class="live-stat-unit">${wUnit()}</span></div>
+        <div class="live-stat-value" id="live-volume">${displayW(liveVolume,0).toLocaleString()}<span class="live-stat-unit">${wUnit()}</span></div>
       </div>
       <div class="live-stat"><span class="wk-session__stat-icon">${svg('plan',18)}</span>
         <div class="live-stat-label">Sets</div>
-        <div class="live-stat-value">${liveSets}</div>
+        <div class="live-stat-value" id="live-sets">${liveSets}</div>
       </div>
     </div>`}
     <input type="text" id="session-title" class="wk-session__title-input" placeholder="Workout title (e.g. Push Day)" value="${(s.title||'').replace(/"/g,'&quot;')}">
@@ -16417,7 +16417,7 @@ function renderWorkoutTab(){
          the first set is ticked, because "nothing yet" is a legitimate thing to look at. -->
     <button class="wk-muscles" data-action="open-muscle-sheet"
       aria-label="Show muscle distribution for this workout">
-      <span class="wk-muscles__chips">
+      <span class="wk-muscles__chips" id="live-muscles">
         ${muscles.length
           ? muscles.map(m=>`<span class="muscle-chip active">${escHtml(m)}</span>`).join("")
           : `<span class="wk-muscles__none">Muscle distribution</span>`}
@@ -17260,6 +17260,62 @@ function attachRoutineDragReorder(){
       render();
     }
   });
+}
+
+/**
+ * Applies a set-completion tick directly to the DOM, instead of re-rendering the app.
+ *
+ * Everything a tick changes on screen, and nothing else: the row's own styling, the check
+ * button, whether that row's inputs are locked, and the three readouts derived from completed
+ * sets — volume, set count and the worked-muscle chips.
+ *
+ * @returns {boolean} true if every piece was found and updated. false means the DOM was not
+ *   what this expects, and the caller must fall back to a full render — a stale screen is a
+ *   far worse failure than a slow one.
+ */
+function patchSetDone(btn, exi, si, set){
+  try{
+    const row = btn.closest(".set-row");
+    if(!row) return false;
+
+    row.classList.toggle("done", !!set.done);
+    btn.classList.toggle("done", !!set.done);
+    btn.innerHTML = set.done ? svg('check',13) : "";
+    btn.setAttribute("aria-label", set.done ? "Mark set incomplete" : "Mark set complete");
+
+    /* A completed set's inputs are locked, matching the `lock` flag the renderer applies. */
+    row.querySelectorAll("input, .rest-toggle").forEach(f=>{
+      if(set.done) f.setAttribute("disabled",""); else f.removeAttribute("disabled");
+    });
+
+    const s = state.session;
+    if(!s) return false;
+    const vol = document.getElementById("live-volume");
+    if(vol) vol.innerHTML = displayW(Math.round(computeSessionVolume(s.exercises)),0).toLocaleString() +
+      '<span class="live-stat-unit">' + wUnit() + '</span>';
+    const sets = document.getElementById("live-sets");
+    if(sets) sets.textContent = computeCompletedSets(s.exercises);
+    const chips = document.getElementById("live-muscles");
+    if(chips){
+      const muscles = sessionMuscles(s.exercises);
+      chips.innerHTML = muscles.length
+        ? muscles.map(m=>`<span class="muscle-chip active">${escHtml(m)}</span>`).join("")
+        : `<span class="wk-muscles__none">Muscle distribution</span>`;
+    }
+
+    /* The collapsed header shows "N done" and is only in the DOM while collapsed. */
+    const card = btn.closest("[data-ex-index], .wk-ex, .wk-exercise");
+    if(card){
+      const ex = s.exercises[exi];
+      const doneCount = ex.sets.filter(x=>x.done).length;
+      const meta = card.querySelector(".wk-ex__setcount");
+      if(meta) meta.textContent = ex.sets.length + " set" + (ex.sets.length!==1?"s":"") +
+        (doneCount ? " · " + doneCount + " done" : "");
+    }
+    return true;
+  }catch(e){
+    return false;   // anything unexpected falls back to the full render
+  }
 }
 
 function attachHandlers(){
@@ -18637,7 +18693,17 @@ function attachHandlers(){
       const set = ex.sets[si];
       set.done = !set.done;
       if(set.done) vibrate(30); // light haptic on complete only, not on un-checking
-      render();
+      /* Ticking a set is the most repeated action in the app — several times a minute for an
+         hour — and it used to run a full render(), which rebuilds the whole shell and re-binds
+         every handler on the page. Measured at ~47ms on a desktop, so 150-250ms on a phone:
+         a visible stall on the one control that has to feel instant.
+
+         Nothing about a tick changes the page STRUCTURE, only this row and three derived
+         readouts, so patch those and skip the render. Same approach the elapsed clock and the
+         pace readout already take. Falls back to a full render if the DOM is not what it
+         expects, so a missed case is slow rather than stale. */
+      if(!patchSetDone(el, exi, si, set)) render();
+      persist();
       if(set.done && ex.restDuration>0 && state.settings.autoStartRest && !ex.supersetWithNext) startTimer(ex.restDuration, ex.name);
     });
   });
