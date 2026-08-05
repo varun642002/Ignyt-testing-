@@ -196,7 +196,8 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; background:rgba(37,9
 }
 .hb-fill {
   height: 100%; border-radius: 3px; background: var(--rh-blue);
-  transition: width .3s cubic-bezier(.4,0,.2,1);
+  width:100%; transform-origin:left center; transform:scaleX(var(--fill,0));
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
 }
 
 .hb-list { display: flex; flex-direction: column; margin-top: 6px; }
@@ -253,6 +254,8 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; background:rgba(37,9
 
 @media (prefers-reduced-motion: reduce) {
   .hb-fill, .hb-box, .hb-name { transition: none; }
+  /* The XP bar was never listed here; it animates like the others and should stop like them. */
+  .hm-xp__fill { transition: none; }
 }
 
 /* Level and XP on the Home greeting card. Small on purpose — it should reward a glance,
@@ -268,7 +271,8 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; background:rgba(37,9
 .hm-xp__fill{
   height: 100%; border-radius: 999px;
   background: linear-gradient(90deg, var(--rh-blue, #2563eb), var(--rh-purple, #7c3aed));
-  transition: width .4s ease;
+  width:100%; transform-origin:left center; transform:scaleX(var(--fill,0));
+  transition: transform .4s var(--ease-standard, cubic-bezier(.2,.8,.2,1));
 }
 
 /* Today's challenges. Three a day, fixed by date — a list that reshuffles on every render
@@ -375,7 +379,8 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; background:rgba(37,9
 .wch__fill{
   height: 100%; border-radius: 999px;
   background: linear-gradient(90deg, var(--rh-blue, #2563eb), var(--rh-purple, #7c3aed));
-  transition: width .5s cubic-bezier(.22,1,.36,1);
+  width:100%; transform-origin:left center; transform:scaleX(var(--fill,0));
+  transition: transform .5s cubic-bezier(.22,1,.36,1);
 }
 .wch.is-done .wch__fill{ background: var(--rh-green, #16a34a); }
 /* The count on the left, where the target came from on the right. Someone told their target

@@ -358,7 +358,7 @@
           '<span>Today\'s progress</span>' +
           '<span class="dp-progress__count">' + comp.done + ' of ' + comp.total + ' meals · ' + comp.pct + '%</span>' +
         '</div>' +
-        '<div class="dp-progress__track"><div class="dp-progress__fill" style="width:' + comp.pct + '%;"></div></div>' +
+        '<div class="dp-progress__track"><div class="dp-progress__fill" style="--fill:' + (comp.pct/100) + ';"></div></div>' +
       '</div>' : '';
 
     /* Exactly the meals this plan has — no placeholders. The first is open by default so a

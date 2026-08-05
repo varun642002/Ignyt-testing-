@@ -7546,7 +7546,7 @@ function renderHomeHabits(){
       <div class="hb-top__count"><b>${done}</b> / ${habits.length} completed</div>
       <div class="hb-top__pct">${pct}%</div>
     </div>
-    <div class="hb-track"><div class="hb-fill" style="width:${pct}%;"></div></div>
+    <div class="hb-track"><div class="hb-fill" style="--fill:${pct/100};"></div></div>
 
     <div class="hb-list">
       ${shown.map(h=>{
@@ -11412,7 +11412,7 @@ function renderProgressPRs(){
         <div class="pr-hero__level" style="--lvl:${lvl.current.color};">${escHtml(lvl.current.name)}</div>
       </div>
       ${lvl.next ? `
-      <div class="pr-hero__track"><div class="pr-hero__fill" style="width:${lvl.percent}%;--lvl:${lvl.current.color};"></div></div>
+      <div class="pr-hero__track"><div class="pr-hero__fill" style="--fill:${lvl.percent/100};--lvl:${lvl.current.color};"></div></div>
       <div class="pr-hero__next">${lvl.toNext.toLocaleString()} to ${escHtml(lvl.next.name)}</div>` : `
       <div class="pr-hero__next">Top level reached.</div>`}
       <div class="pr-hero__stats">
@@ -14717,7 +14717,7 @@ function renderNutritionTab(){
       </div>
       <div class="nd-hero__mid">
         <div class="nd-hero__eat">Eat up to <strong>${calorieBudget.toLocaleString()}</strong> Cal</div>
-        <div class="nd-hero__bar"><i style="width:${pct}%;"></i></div>
+        <div class="nd-hero__bar"><i style="--fill:${pct/100};"></i></div>
         <div class="nd-hero__pct">${pct}% of daily goal</div>
       </div>
       <div class="nd-hero__rem">
