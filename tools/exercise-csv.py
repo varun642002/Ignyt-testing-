@@ -19,6 +19,9 @@ MODES
               are both filed there and only one can be done in a bare room, so this splits on
               what a movement actually NEEDS.
 
+  instructions Every exercise with NO written how-to steps, with empty columns to fill in.
+              The counterpart to --mode images: same round trip, different content.
+
   worksheet   All exercises with empty instruction columns, for writing the how-to text.
 
   names       name,muscle only -- the shape tools/workout_names.csv expects. Run this before
@@ -66,6 +69,17 @@ def slug(name):
 def read_manifest():
     """{slug: 1 | "gif" | "webp"} -- 1 means a .jpg still, a string is the extension."""
     p = "www/js/workout/exercise-images.js"
+    if not os.path.exists(p):
+        return {}
+    txt = io.open(p, encoding="utf-8").read()
+    return json.loads(txt[txt.index("{"):txt.rindex("}") + 1])
+
+
+def read_instructions():
+    """{exercise name: [step, step, ...]}. Keyed by the EXACT library name, never fuzzily --
+    the library separates movements by equipment, so a near match attaches barbell setup cues
+    to a machine movement, which is worse than having no instructions at all."""
+    p = "www/js/workout/exercise-instructions.js"
     if not os.path.exists(p):
         return {}
     txt = io.open(p, encoding="utf-8").read()
@@ -215,6 +229,21 @@ def main(argv):
         for k in sorted(tally, key=lambda x: -tally[x]):
             print("   %4d  %s" % (tally[k], k))
 
+    elif mode == "instructions":
+        instr = read_instructions()
+        missing = [r for r in rows if r["name"] not in instr]
+        write_csv(out or "ignyt-missing-instructions.csv",
+                  ["name", "cat", "muscle", "presc", "unit", "has image",
+                   "how to do it", "common mistakes"],
+                  [[r["name"], r["cat"], r["muscle"], r["presc"], r["unit"],
+                    "yes" if slug(r["name"]) in manifest else "", "", ""] for r in missing])
+        print("%d of %d have no written steps" % (len(missing), len(rows)))
+        by_cat = {}
+        for r in missing:
+            by_cat[r["cat"]] = by_cat.get(r["cat"], 0) + 1
+        for k in sorted(by_cat, key=lambda x: -by_cat[x]):
+            print("   %4d  %s" % (by_cat[k], k))
+
     elif mode == "worksheet":
         write_csv(out or "ignyt-exercise-content-worksheet.csv",
                   ["name", "cat", "muscle", "presc", "unit", "has image",
@@ -237,8 +266,14 @@ def main(argv):
                 if rx.search(r["name"]) and r["cat"] != implied:
                     wrong.append((r["name"], r["cat"], implied))
                     break
+        instr = read_instructions()
+        no_steps = [r for r in rows if r["name"] not in instr]
+        both = [r for r in rows if slug(r["name"]) not in manifest and r["name"] not in instr]
         print("")
-        print("without an illustration : %d" % len(no_img))
+        print("exercises               : %d" % len(rows))
+        print("without an illustration : %d   (tools/exercise-csv.py --mode images)" % len(no_img))
+        print("without written steps   : %d   (tools/exercise-csv.py --mode instructions)" % len(no_steps))
+        print("without either          : %d" % len(both))
         print("animated demonstrations : %d %s" % (len(animated), animated or ""))
         print("category looks wrong    : %d" % len(wrong))
         for n, have, want in wrong[:20]:
