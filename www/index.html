@@ -681,65 +681,65 @@ try{
   }
 }catch(e){ /* sessionStorage unavailable -- splash just always shows, harmless */ }
 </script>
-<script src="js/pages/home.js"></script>
-<script src="js/pages/workout.js"></script>
-<script src="js/pages/progress.js"></script>
-<script src="js/diet/diet-plans.js"></script>
-<script src="js/fasting/fasting.js"></script>
-<script src="js/pages/diet-plan.js"></script>
-<script src="js/pages/fasting.js"></script>
-<script src="js/body/photo-sessions.js"></script>
-<script src="js/motivation/notify-messages.js"></script>
-<script src="js/notify/reminders.js"></script>
-<script src="js/notify/active-workout.js"></script>
-<script src="js/workout/exercise-images.js"></script>
-<script src="js/workout/muscle-map.js"></script>
-<script src="js/workout/exercise-instructions.js"></script>
-<script src="js/supplements/supplements.js"></script>
-<script src="js/pages/supplements.js"></script>
-<script src="js/config.js"></script>
-<script src="js/storage-utils.js"></script>
-<script src="js/body-photos-db.js"></script>
-<script src="js/bloodwork.js"></script>
-<script src="js/goals.js"></script>
-<script src="js/health-uploads.js"></script>
+<script defer src="js/pages/home.js"></script>
+<script defer src="js/pages/workout.js"></script>
+<script defer src="js/pages/progress.js"></script>
+<script defer src="js/diet/diet-plans.js"></script>
+<script defer src="js/fasting/fasting.js"></script>
+<script defer src="js/pages/diet-plan.js"></script>
+<script defer src="js/pages/fasting.js"></script>
+<script defer src="js/body/photo-sessions.js"></script>
+<script defer src="js/motivation/notify-messages.js"></script>
+<script defer src="js/notify/reminders.js"></script>
+<script defer src="js/notify/active-workout.js"></script>
+<script defer src="js/workout/exercise-images.js"></script>
+<script defer src="js/workout/muscle-map.js"></script>
+<script defer src="js/workout/exercise-instructions.js"></script>
+<script defer src="js/supplements/supplements.js"></script>
+<script defer src="js/pages/supplements.js"></script>
+<script defer src="js/config.js"></script>
+<script defer src="js/storage-utils.js"></script>
+<script defer src="js/body-photos-db.js"></script>
+<script defer src="js/bloodwork.js"></script>
+<script defer src="js/goals.js"></script>
+<script defer src="js/health-uploads.js"></script>
 <!-- js/health/health-security.js is NOT loaded. It advertises PIN/biometric locking and
      AES encryption and implements none of it — isUnlocked() returns true unconditionally and
      the "encryption" is a passthrough. Nothing calls it today, so shipping it only risks a
      future caller trusting the name. The file stays in the repo for whoever implements it. -->
-<script src="js/health/health-db.js"></script>
-<script src="js/health/health-models.js"></script>
-<script src="js/health/health-utils.js"></script>
-<script src="js/health/health-stub.js"></script>
-<script src="js/health/health-dashboard.js"></script>
-<script src="js/health/body-scan-ai.js"></script>
-<script src="js/ai-coach.js"></script>
+<script defer src="js/health/health-db.js"></script>
+<script defer src="js/health/health-models.js"></script>
+<script defer src="js/health/health-utils.js"></script>
+<script defer src="js/health/health-stub.js"></script>
+<script defer src="js/health/health-dashboard.js"></script>
+<script defer src="js/health/body-scan-ai.js"></script>
+<script defer src="js/ai-coach.js"></script>
 <!-- Food modules load in dependency order: seed data and the importer first, then the
      catalogue that merges them, then search which indexes the catalogue. -->
 <!-- Coach engine. Pure modules with no DOM access, loaded in dependency order; coach.js
      orchestrates them and is the only entry point the app calls. -->
-<script src="js/coach/profile-engine.js"></script>
-<script src="js/coach/goal-engine.js"></script>
-<script src="js/coach/recovery-engine.js"></script>
-<script src="js/coach/exercise-engine.js"></script>
-<script src="js/coach/plan-engine.js"></script>
-<script src="js/coach/program-engine.js"></script>
-<script src="js/coach/coach.js"></script>
-<script src="js/coach/overload-engine.js"></script>
-<script src="js/coach/template-library.js"></script>
-<script src="js/coach/template-matcher.js"></script>
-<script src="js/coach/injury-catalogue.js"></script>
-<script src="js/coach/substitution-map.js"></script>
-<script src="js/coach/adaptation-engine.js"></script>
-<script src="js/widgets/widgets.js"></script>
-<script src="js/food/food-db.js"></script>
-<script src="js/food/serving-converter.js"></script>
-<script src="js/food/food-importer.js"></script>
-<script src="js/food/food-catalogue.js"></script>
-<script src="js/food/food-images.js"></script>
-<script src="js/food/nutrition-engine.js"></script>
-<script src="js/food/food-curation.js"></script>
-<script src="js/food/food-search.js"></script>
+<script defer src="js/coach/profile-engine.js"></script>
+<script defer src="js/coach/goal-engine.js"></script>
+<script defer src="js/coach/recovery-engine.js"></script>
+<script defer src="js/coach/exercise-engine.js"></script>
+<script defer src="js/coach/plan-engine.js"></script>
+<script defer src="js/coach/program-engine.js"></script>
+<script defer src="js/coach/coach.js"></script>
+<script defer src="js/coach/overload-engine.js"></script>
+<script defer src="js/coach/template-library.js"></script>
+<script defer src="js/coach/template-matcher.js"></script>
+<script defer src="js/coach/injury-catalogue.js"></script>
+<script defer src="js/coach/substitution-map.js"></script>
+<script defer src="js/coach/adaptation-engine.js"></script>
+<script defer src="js/widgets/widgets.js"></script>
+<script defer src="js/food/food-db.js"></script>
+<script defer src="js/food/serving-converter.js"></script>
+<script defer src="js/food/food-importer.js"></script>
+<script defer src="js/food/food-catalogue.js"></script>
+<script defer src="js/food/food-images.js"></script>
+<script defer src="js/food/nutrition-engine.js"></script>
+<script defer src="js/food/food-curation.js"></script>
+<script defer src="js/food/food-search.js"></script>
 <!-- AUTH LOADS BEFORE app.js, AND MUST KEEP DOING SO.
      app.js calls render() at its top level, and render()'s first act is to ask isSignedIn().
      With auth.js below app.js, window.IgnytAuth did not exist yet at that moment, so a
@@ -751,26 +751,26 @@ try{
      for DOMContentLoaded and notifyUI() checks both exist — so loading them first is safe. -->
 <!-- Security layer first: the auth and sync modules below log security events, and a
      logEvent() call that lands before IgnytSecurity exists is a silently dropped event. -->
-<script src="js/security/security.js"></script>
-<script src="js/auth/firebase-rest-auth.js"></script>
-<script src="auth.js"></script>
-<script src="app.js"></script>
-<script src="health-connect.js"></script>
-<script src="health-settings-integration.js"></script>
-<script src="js/motivation/messages.js"></script>
-<script src="js/motivation/xp.js"></script>
-<script src="js/motivation/strength.js"></script>
-<script src="js/motivation/review.js"></script>
-<script src="js/motivation/milestones.js"></script>
-<script src="js/motivation/celebrate.js"></script>
-<script src="js/motivation/score.js"></script>
-<script src="js/motivation/weekly.js"></script>
-<script src="js/motivation/counters.js"></script>
-<script src="js/motivation/report.js"></script>
-<script src="js/motivation/weight.js"></script>
-<script src="js/motivation/bmi.js"></script>
-<script src="js/billing/entitlements.js"></script>
+<script defer src="js/security/security.js"></script>
+<script defer src="js/auth/firebase-rest-auth.js"></script>
+<script defer src="auth.js"></script>
+<script defer src="app.js"></script>
+<script defer src="health-connect.js"></script>
+<script defer src="health-settings-integration.js"></script>
+<script defer src="js/motivation/messages.js"></script>
+<script defer src="js/motivation/xp.js"></script>
+<script defer src="js/motivation/strength.js"></script>
+<script defer src="js/motivation/review.js"></script>
+<script defer src="js/motivation/milestones.js"></script>
+<script defer src="js/motivation/celebrate.js"></script>
+<script defer src="js/motivation/score.js"></script>
+<script defer src="js/motivation/weekly.js"></script>
+<script defer src="js/motivation/counters.js"></script>
+<script defer src="js/motivation/report.js"></script>
+<script defer src="js/motivation/weight.js"></script>
+<script defer src="js/motivation/bmi.js"></script>
+<script defer src="js/billing/entitlements.js"></script>
 <!-- firebase-rest-auth.js and auth.js moved above app.js — see the note there. -->
-<script src="cloud-sync.js"></script>
+<script defer src="cloud-sync.js"></script>
 </body>
 </html>

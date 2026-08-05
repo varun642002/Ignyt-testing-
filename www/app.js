@@ -1255,11 +1255,20 @@ const LEGACY_EQUIPMENT_PREFIXES = [
   ["Suspension", "Suspension"], ["Trap-Bar", "Trap bar"]
 ];
 
+/* The name lookup is memoised on the same array identity as the list itself: two more passes
+   over 910 entries (a map and a Set build) were happening once per exercise image drawn. */
+let _nameSetCache = null, _nameSetFor = null;
+function libraryNameSet(all){
+  if(_nameSetCache && _nameSetFor === all) return _nameSetCache;
+  _nameSetCache = new Set(all.map(e => e.name));
+  _nameSetFor = all;
+  return _nameSetCache;
+}
+
 function resolveExerciseName(name){
   if(!name) return null;
   const all = allLibraryExercises();
-  const names = all.map(e => e.name);
-  const set = new Set(names);
+  const set = libraryNameSet(all);
   if(set.has(name)) return name;
 
   const planned = PLAN_EXERCISE_RENAMES[name];
@@ -1273,7 +1282,9 @@ function resolveExerciseName(name){
     }
   }
 
-  const cands = names.filter(n => n.startsWith(name + " ("));
+  /* Only the legacy-name fallback needs the flat list, and it is reached only for a name that
+     is not in the library at all — so it is built here rather than on every call. */
+  const cands = all.map(e => e.name).filter(n => n.startsWith(name + " ("));
   if(cands.length === 1) return cands[0];
   if(cands.length > 1){
     // The old names came from a barbell-first library, so that is the honest default when
@@ -1744,6 +1755,7 @@ const state = {
   // Workout History view filters (transient — a fresh visit starts unfiltered)
   historySearch: "", historyRange: "all", historyMuscle: "", historySort: "newest",
   historyPRsOnly: false, historyPage: 1, historyArchived: false, historyBinOpen: false,
+  libPage: 1,
   reportPeriod: "week",
   reminderScreen: false,   // transient — Settings > All Reminders is open
   reminderOpen: null,      // transient — which reminder row is expanded
@@ -3563,7 +3575,40 @@ function recentExerciseNames(limit=10){
   return out;
 }
 
+/* Memo for allLibraryExercises(). Rebuilding the list means walking 910 entries and building a
+   dedupe Set, which measured 0.4ms — fine once, except it was being called 62 times in a single
+   library render. exerciseImageSrc() -> resolveExerciseName() -> allLibraryExercises() runs for
+   every row that draws an illustration, so the cost scaled with rows on screen and showed up on
+   every screen that lists exercises, not just the library.
+
+   Keyed on the custom exercises, because that is the only part that changes at runtime — the
+   built-ins are a literal. The key includes each custom name and category so a rename is caught
+   as well as an add or a delete; there are only ever a handful of these, so building the key is
+   far cheaper than the rebuild it avoids.
+
+   Callers only ever read (map/filter/find/forEach — checked), so handing back the same array is
+   safe. */
+let _allExCache = null, _allExKey = null;
+
+function customExercisesKey(){
+  const c = state.customExercises || [];
+  let k = c.length + "";
+  for(let i = 0; i < c.length; i++) k += "|" + (c[i].name || "") + ":" + (c[i].cat || "");
+  return k;
+}
+
+/** Drops the memo. Only needed if custom exercises are changed without going through state. */
+function invalidateLibraryCache(){ _allExCache = null; _allExKey = null; }
+
 function allLibraryExercises(){
+  const key = customExercisesKey();
+  if(_allExCache && _allExKey === key) return _allExCache;
+  const built = buildAllLibraryExercises();
+  _allExCache = built; _allExKey = key;
+  return built;
+}
+
+function buildAllLibraryExercises(){
   // Reads the in-memory state, not localStorage directly: state.customExercises is only
   // flushed to hx_custom_exercises by persist() at the END of render(), so reading disk here
   // meant a just-added custom exercise wouldn't appear in its own render pass (it showed up
@@ -11954,6 +11999,9 @@ function renderProgressBody(){
    "Load more" button -- so a multi-year log doesn't build thousands of DOM nodes at once. */
 
 const HISTORY_PAGE_SIZE = 20;
+/* 60 fills more than a phone screen, so "load more" is never the first thing you see, and
+   keeps the initial library render near the 5ms the rest of the app runs at. */
+const LIBRARY_PAGE_SIZE = 60;
 
 /* ---------- Recycle bin, archive and workout actions ----------
    Deleting a workout moves it to a recycle bin (hx_deleted_workouts) instead of destroying
@@ -16943,6 +16991,17 @@ function renderLibraryTab(){
   const customCount = state.customExercises.length;
   const totalCount = allLibraryExercises().length;
 
+  /* Paged, because rendering all 910 at once cost 235ms and built 20,000 DOM nodes — 50 times
+     every other tab in the app, none of which exceeds 5ms. Nobody reads 910 rows; they search,
+     or they tap a category. The same page-and-load-more shape History and the food browser
+     already use, so there is nothing new to learn here.
+
+     Note the images: 616 of these rows carry one, and while they are lazy the browser still
+     has to build the element and evaluate whether it is in view. That work is what the cap
+     removes. */
+  const page = Math.max(1, state.libPage || 1);
+  const shown = items.slice(0, page * LIBRARY_PAGE_SIZE);
+
   // Most exercises still have no real photo (EXERCISE_DETAILS.thumbnailUrl null) -- those
   // rows fall back to an icon badge, colored by muscle group, rather than a fabricated photo.
   const rowIcon = (muscle) => {
@@ -16976,7 +17035,7 @@ function renderLibraryTab(){
 
       <div id="custom-form-slot">${state.showCustomForm ? customExerciseForm() : ""}</div>
 
-      ${items.map(ex=>{
+      ${shown.map(ex=>{
         const saved = state.savedExercises.includes(ex.name);
         const equip = equipMeta(ex.cat);
         return `<div class="pg-card lib-ex-row" data-view-exercise="${escHtml(ex.name)}">
@@ -17000,6 +17059,7 @@ function renderLibraryTab(){
           <button class="lib-bookmark ${saved?'is-saved':''}" data-toggle-saved-exercise="${escHtml(ex.name)}" title="${saved?'Remove from saved':'Save exercise'}" aria-label="${saved?'Remove from saved':'Save exercise'}">${svg(saved?'starFilled':'star',16)}</button>
         </div>`;
       }).join("")}
+      ${shown.length < items.length ? `<button class="btn btn-ghost btn-block" data-lib-more="1" style="margin-bottom:16px;">Load ${Math.min(LIBRARY_PAGE_SIZE, items.length-shown.length)} more (${shown.length} of ${items.length})</button>` : ""}
       ${items.length===0?`<div class="empty-note">No exercises match.</div>`:""}
     </div>
   `;
@@ -18753,12 +18813,13 @@ function attachHandlers(){
   const libSearch = document.getElementById("lib-search");
   if(libSearch) libSearch.addEventListener("input", (e)=>{
     state.libSearch = e.target.value;
+    state.libPage = 1;   // a new query always starts from the first page
     debounce("lib-search", ()=>{
       render();
     }, 150);
   });
   document.querySelectorAll("[data-cat]").forEach(el=>{
-    el.addEventListener("click", ()=>{ state.libCategory = el.dataset.cat; render(); });
+    el.addEventListener("click", ()=>{ state.libCategory = el.dataset.cat; state.libPage = 1; render(); });
   });
 
   /* ---- Workout History filters ---- */
@@ -18861,6 +18922,8 @@ function attachHandlers(){
   });
   const histMore = document.querySelector("[data-history-more]");
   if(histMore) histMore.addEventListener("click", ()=>{ state.historyPage = (state.historyPage||1) + 1; render(); });
+  const libMore = document.querySelector("[data-lib-more]");
+  if(libMore) libMore.addEventListener("click", ()=>{ state.libPage = (state.libPage||1) + 1; render(); });
   document.querySelectorAll("[data-view-exercise]").forEach(el=>{
     el.addEventListener("click", ()=>{
       state.viewingExerciseDetail = el.dataset.viewExercise;
