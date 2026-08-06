@@ -87,19 +87,21 @@ workflows:
       # Integrations. Name it exactly "ignyt-app-store-connect" or change the name here.
       app_store_connect: ignyt-app-store-connect
     environment:
+      groups:
+        # Codemagic > your app > Environment variables. Every variable added there belongs to
+        # a GROUP, and a group is not visible to a workflow until it is named here — that is
+        # the whole purpose of this block. Create the group with exactly this name and put
+        # APP_APPLE_ID in it.
+        #
+        # This was the bug: APP_APPLE_ID used to be declared below as `APP_APPLE_ID:
+        # $APP_APPLE_ID`, a self-reference. With no group included there was nothing for the
+        # right-hand side to resolve to, so it expanded to empty and then overwrote itself
+        # with that emptiness. Adding the variable in the Codemagic UI would not have helped;
+        # it would have been set and then shadowed, which is a considerably worse failure than
+        # simply being absent, because the UI shows it present.
+        - ignyt
       node: 22
       xcode: latest
-      vars:
-        # The app's numeric Apple ID (App Store Connect > your app > App Information >
-        # "Apple ID" — a 10-digit number, NOT the bundle id and NOT your email). Set it in
-        # Codemagic as an environment variable so it is not committed here.
-        #
-        # It was referenced by the build-number step below and never defined anywhere, which
-        # is worse than it sounds: the lookup failed silently, the `|| echo 0` caught it, and
-        # every build got number 1. The first TestFlight upload would have worked and the
-        # second would have been rejected as a duplicate — exactly the versionCode collision
-        # Android hit three times.
-        APP_APPLE_ID: $APP_APPLE_ID
       ios_signing:
         # Codemagic creates and manages the certificate and provisioning profile from the API
         # key above. This is the step that normally forces a Mac — Keychain generates the
@@ -130,8 +132,11 @@ workflows:
         script: |
           set -e
           if [ -z "$APP_APPLE_ID" ]; then
-            echo "APP_APPLE_ID is not set. Add it in Codemagic > Environment variables."
-            echo "Find it at App Store Connect > your app > App Information > Apple ID."
+            echo "APP_APPLE_ID is not set."
+            echo "Add it in Codemagic > Environment variables, in a group named 'ignyt'"
+            echo "(the group name must match the one under environment.groups in this file,"
+            echo "or the variable is invisible to the build no matter what the UI shows)."
+            echo "Find the value at App Store Connect > your app > App Information > Apple ID."
             exit 1
           fi
           LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_APPLE_ID" || echo "")
