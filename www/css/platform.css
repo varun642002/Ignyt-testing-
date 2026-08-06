@@ -1,0 +1,62 @@
+/* =========================================================
+   PLATFORM OVERRIDES — the ONE place iOS and Android are allowed to differ.
+
+   Keyed off data-platform on <html>, which index.html sets in <head> before first paint.
+
+   WHY A FILE OF ITS OWN, AND WHY LOADED LAST.
+
+   These rules exist to win. A platform override that loses to a later stylesheet is worse
+   than no override, because it looks correct in the source and does nothing on the device —
+   which is exactly what happened when these lived in index.html's inline <style>: equal
+   specificity against css/layout.css, and the inline block comes first, so layout.css took
+   the background and the override silently did half its job. Last in the cascade means these
+   need no specificity tricks to hold.
+
+   THE RULE FOR ADDING TO THIS FILE.
+
+   Prefer a solution that is correct on both platforms. Reach for a fork only where they
+   genuinely disagree, and write down WHY in the rule — a fork without a reason becomes
+   permanent, because nobody who finds it later can tell whether it is still needed. A
+   codebase where every rule is forked twice is two codebases wearing one name.
+========================================================= */
+
+
+/* ---------------------------------------------------------------------------------------
+   iOS: no backdrop blur on fixed elements that sit over scrolling content.
+
+   A position:fixed element carrying backdrop-filter, over an area that scrolls, is the one
+   composition WebKit handles badly: the blurred backdrop must be recomputed against whatever
+   has just scrolled beneath it, every frame, for the whole length of the scroll. Chromium
+   caches this far more aggressively, which is why the same bar costs nothing on Android and
+   makes an iPhone feel heavy.
+
+   Both elements here are that case — the nav sits over `main`, and the timer overlay covers
+   the whole screen.
+
+   Very little is given up. layout.css already paints the bar at 92% opacity, so the blur
+   contributes under a tenth of what is seen; at 98% on a dark ground the difference is not
+   perceptible, and it costs one composited layer instead of a per-frame recomposite.
+
+   Android keeps the blur, deliberately. Deleting the property outright would have been the
+   easier change and the wrong one: the platforms differ here for a reason that holds. */
+html[data-platform="ios"] nav.bottom-nav {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: rgba(18, 20, 24, .98);
+}
+
+/* The Home tab swaps the bar for a lighter variant, and css/pages/dark-mode.css sets that
+   one's background with !important. Nothing without !important can answer that, so this
+   restates it — the alternative was leaving one tab in five visibly more transparent than the
+   rest with its blur removed, which reads as a rendering fault rather than a choice. */
+html[data-platform="ios"] nav.bottom-nav--home-light {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: rgba(28, 27, 35, .98) !important;
+}
+
+html[data-platform="ios"] .timer-overlay {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: rgba(10, 10, 12, .985);
+}

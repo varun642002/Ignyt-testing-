@@ -482,6 +482,7 @@ nav.bottom-nav .nav-btn{touch-action:none;}
 .nav-btn svg, .nav-btn span{transition:transform .38s cubic-bezier(.32,.72,0,1);}
 .nav-btn.active svg{transform:translateY(-1px) scale(1.06);}
 
+
 /* The .is-dragging rules above are more specific than a bare `.nav-btn svg`, and specificity
    beats source order — so this block has to restate them at equal weight or reduced motion
    would be honoured everywhere EXCEPT during the gesture, which is the one place motion is
@@ -716,6 +717,8 @@ main{overflow-x:hidden;}
 <!-- LAST on purpose: the gloss layer refines surfaces the sheets above already define,
      so it must win the cascade without raising its specificity. Keep it here. -->
 <link rel="stylesheet" href="css/gloss.css" />
+<!-- LAST on purpose: css/platform.css holds the iOS/Android forks and has to win. -->
+<link rel="stylesheet" href="css/platform.css" />
 </head>
 <body>
 <div id="app"></div>
