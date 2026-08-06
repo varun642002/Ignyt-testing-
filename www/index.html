@@ -146,7 +146,10 @@ html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
 .del{color:#5c5c66; font-weight:700; font-size:12px; padding:9px; background:none; border:none; cursor:pointer;
     min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center;}
 
-header.app-header{padding:env(safe-area-inset-top,20px) 16px 12px;}
+/* header.app-header's padding is NOT here. css/layout.css owns it, loads after this block and
+   wins at equal specificity, so a rule written here would look authoritative and do nothing —
+   which is what the previous one did. See the comment there for why the top value is a max()
+   rather than an addition. */
 
 h1.title{font-weight:900; text-transform:uppercase; font-size:30px; letter-spacing:-0.02em; margin:0; line-height:1;}
 

@@ -58,6 +58,11 @@
    what makes white type legible over an image whose brightness is not known in advance.
 --------------------------------------------------------- */
 .auth-hero{
+  /* Through --safe-top (tokens.css), not a bare env(), so the inset is read from one place
+     across the app. max() for the same reason as header.app-header in css/layout.css: the
+     inset is 0px on a phone with no cut-out, so anything relying on it alone leaves Android
+     flush against the status bar while looking correct on iOS. */
+  padding-top: max(var(--safe-top), 12px);
   position: relative;
   flex: 0 0 auto;
   height: 55dvh;
@@ -139,6 +144,9 @@
    Pulled up so its rounded top overlaps the image. That overlap is what makes it read as a
    surface resting on the photograph rather than a second rectangle stacked below it.
 --------------------------------------------------------- */
+/* The sign-in screen has no .app-header, so nothing else on it clears the status bar. Without
+   a top inset the brand lockup sits under the clock and battery, and once the keyboard pushes
+   the hero off the top, "IGNYT" is drawn straight through the status bar. */
 .auth-sheet{
   position: relative;
   z-index: 1;

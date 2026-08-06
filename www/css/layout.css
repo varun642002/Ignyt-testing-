@@ -1,5 +1,19 @@
 #app { max-width: 480px; background: var(--color-bg); }
-header.app-header { padding: calc(var(--safe-top) + var(--space-sm)) var(--space-md) var(--space-sm); }
+/* THE TOP PADDING IS A max(), NOT AN ADDITION.
+   --safe-top is env(safe-area-inset-top, 0px), and on a phone with no cut-out — most Android
+   devices — that is 0px. calc(0px + 12px) gave the header twelve pixels of top padding, so the
+   title sat almost against the status bar; the same rule returned 59 + 12 = 71px on an iPhone,
+   which is why this looked correct on iOS and cramped on Android.
+
+   max() asks the right question: never less than 20px of breathing room, and the full inset
+   plus a gap when the hardware needs more.
+
+   NOTE FOR ANYONE CHANGING THIS: index.html's inline <style> also had a rule for this header,
+   and it was dead — this file loads after it and wins at equal specificity. That has now
+   happened three times in this codebase (main's padding vs base.css, the nav background vs
+   this file, and here), so the inline copy has been removed rather than fixed. One property,
+   one place. */
+header.app-header { padding: max(calc(var(--safe-top) + var(--space-sm)), 20px) var(--space-md) var(--space-sm); }
 .page-title-row { display:flex; align-items:center; justify-content:space-between; gap:var(--space-sm); }
 .page-tools-btn { min-height:44px; min-width:44px; border:1px solid var(--color-border); border-radius:var(--radius-sm); color:var(--color-text-primary); background:var(--color-surface); position:relative; }
 

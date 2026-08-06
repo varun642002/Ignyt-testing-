@@ -10161,6 +10161,12 @@ function renderSignInScreen(){
         </div>
         <p class="auth-brand__sub">Your fitness companion for a stronger, healthier life.</p>
         ${renderAuthEmailStep(mode, authErr, busy)}
+        ${window.IgnytAuth && IgnytAuth.appleAvailable && IgnytAuth.appleAvailable() ? `
+          <div class="auth-or"><span>or</span></div>
+          <button class="apple-signin-btn" data-auth="apple" ${busy?'disabled':''} aria-label="Sign in with Apple">
+            <svg viewBox="0 0 16 20" width="15" height="19" aria-hidden="true" focusable="false"><path fill="currentColor" d="M13.29 10.62c.02 2.4 2.1 3.2 2.12 3.21-.02.05-.33 1.14-1.1 2.26-.66.97-1.35 1.93-2.44 1.95-1.07.02-1.41-.63-2.63-.63-1.22 0-1.6.61-2.61.65-1.05.04-1.85-1.05-2.52-2.01C2.75 14.1 1.7 10.5 3.1 8.08c.7-1.2 1.94-1.96 3.29-1.98 1.03-.02 2 .69 2.63.69.63 0 1.81-.86 3.05-.73.52.02 1.98.21 2.92 1.58-.08.05-1.74 1.02-1.72 3.03M11.3 4.4c.56-.68.94-1.62.84-2.56-.81.03-1.79.54-2.37 1.22-.52.6-.97 1.56-.85 2.48.9.07 1.82-.46 2.38-1.14"/></svg>
+            <span>Sign in with Apple</span>
+          </button>` : ''}
         <p class="auth-legal">
           By continuing you agree to our<br>
           <a href="legal/privacy-policy.html" data-legal-open="privacy">Privacy Policy</a>
@@ -10174,6 +10180,16 @@ function renderSignInScreen(){
 
 function bindSignInScreen(){
   bindPwdToggles();
+  /* Bound HERE and not in attachHandlers(): the sign-in screen renders through
+     renderSignInScreen()/bindSignInScreen() and returns before attachHandlers() is ever
+     reached, so a listener added there is added to a screen that is not on display. */
+  const appleBtn = document.querySelector('[data-auth="apple"]');
+  if(appleBtn) appleBtn.addEventListener("click", async (e)=>{
+    e.preventDefault();
+    if(!window.IgnytAuth || !IgnytAuth.signInWithApple) return;
+    await IgnytAuth.signInWithApple();
+    render();
+  });
   document.querySelectorAll('[data-auth="email-mode"]').forEach(el=>{
     el.addEventListener("click", (e)=>{
       e.preventDefault();
