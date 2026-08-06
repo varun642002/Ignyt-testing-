@@ -134,13 +134,49 @@ workflows:
         # add-certificates installs the certificate so xcodebuild can actually use it, and
         # use-profiles writes the profile into the Xcode project's build settings.
         #
-        # No key material is handled here. The App Store Connect integration above exports
-        # the API key into the environment and the CLI reads it from there.
+        # No key material is handled here. The three variables below are set in the Codemagic
+        # UI and the CLI reads them from the environment on its own.
+        #
+        # THE PRE-FLIGHT CHECK IS NOT DECORATION. app-store-connect is a Python CLI, so when
+        # its credentials are absent it does not report a credentials problem — argparse
+        # rejects the call as malformed and the step dies with a bare "exited with status code
+        # 2". That is indistinguishable from a genuine syntax error in the command, and it is
+        # exactly what happened here. Naming the missing variable turns a dead end into an
+        # instruction.
+        #
+        # Lengths and a shape check, never values. A private key pasted without its BEGIN/END
+        # armour, or with the newlines flattened, is the single most common way this fails,
+        # and both survive a "the variable is set" check while still being unusable.
         #
         # One cost worth knowing: the declarative block failed during initialisation, which is
         # free. These are build steps, so from here a failure burns minutes.
         script: |
           set -e
+
+          missing=""
+          if [ -z "$APP_STORE_CONNECT_ISSUER_ID" ]; then missing="$missing APP_STORE_CONNECT_ISSUER_ID"; fi
+          if [ -z "$APP_STORE_CONNECT_KEY_IDENTIFIER" ]; then missing="$missing APP_STORE_CONNECT_KEY_IDENTIFIER"; fi
+          if [ -z "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then missing="$missing APP_STORE_CONNECT_PRIVATE_KEY"; fi
+          if [ -n "$missing" ]; then
+            echo "Not set:$missing"
+            echo ""
+            echo "Add them in Codemagic > your app > Environment variables, in a group named"
+            echo "exactly 'ignyt' (the name under environment.groups in codemagic.yaml). A"
+            echo "variable in no group, or in a group this workflow does not name, is invisible"
+            echo "to the build however correct it looks in the UI."
+            echo "Generate the key at App Store Connect > Users and Access > Integrations,"
+            echo "with App Manager access."
+            exit 1
+          fi
+
+          echo "Issuer ID: ${#APP_STORE_CONNECT_ISSUER_ID} chars"
+          echo "Key ID:    ${#APP_STORE_CONNECT_KEY_IDENTIFIER} chars"
+          echo "Private key: ${#APP_STORE_CONNECT_PRIVATE_KEY} chars"
+          case "$APP_STORE_CONNECT_PRIVATE_KEY" in
+            *"BEGIN PRIVATE KEY"*) echo "Private key: PEM armour present" ;;
+            *) echo "Private key: NO 'BEGIN PRIVATE KEY' line found — paste the whole .p8 file, header and footer included"; exit 1 ;;
+          esac
+
           keychain initialize
           app-store-connect fetch-signing-files "com.varun.ignyt" \
             --type IOS_APP_STORE \
