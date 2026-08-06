@@ -18124,12 +18124,6 @@ function attachHandlers(){
       render();
     });
   });
-  document.querySelectorAll("[data-workout-filter]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      state.workoutRoutineFilter = el.dataset.workoutFilter;
-      render();
-    });
-  });
   const routineSortSelect = document.getElementById("workout-routine-sort");
   if(routineSortSelect) routineSortSelect.addEventListener("change", ()=>{
     state.workoutRoutineSort = routineSortSelect.value;

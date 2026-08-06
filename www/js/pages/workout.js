@@ -4,12 +4,12 @@
    The active-session renderer (sets, supersets, rest timer, plate calc) is large and
    deeply stateful — left in app.js and extracted in a later, dedicated pass.
 
-   Order: Quick Actions, then routines (filter chips and cards), then Recent Sessions. Do,
+   Order: Quick Actions, then routines, then Recent Sessions. Do, choose, review.
    choose, review. The This Week stat grid used to lead -- workouts, total time, PRs and volume
    against last week -- but that is a report, and this is the screen someone opens to start
    training. Those four figures live on Progress, which is where you go to read them.
 
-   Light "premium reference" styling: category filter chips, routine cards with a real
+   Light "premium reference" styling: routine cards with a real
    per-routine completion ring, recent sessions -- using the same light design system
    introduced for Home (see home.css's --rh-* tokens, duplicated locally here so this module
    stays self-contained). Every value is genuinely sourced from existing app state -- no
@@ -54,16 +54,21 @@
        with the This Week grid. app.js still passes them and other screens still use them; this
        one simply stopped asking. */
     const { state, svg, renderPRCelebration, renderPlanCard, renderRoutineBuilder, sessionMuscles, sessionTitle,
-      workoutDurationLabel, displayW, wUnit, plannedDay, ROUTINE_CATEGORIES, escHtml } = ctx;
+      workoutDurationLabel, displayW, wUnit, plannedDay, escHtml } = ctx;
 
     const showAll = state.showAllSessions;
     const recent = showAll ? state.workoutLog : state.workoutLog.slice(0, 2);
 
-    const filter = state.workoutRoutineFilter || 'All';
+    /* The Push/Pull/Legs/Upper/Lower/Favorites chips are gone, so there is no longer any way
+       to CHANGE this filter — which means a value left behind by an older build would hide
+       most of someone's routines permanently, with no control on screen to clear it. Reset it
+       once, here, rather than leaving a trap in stored state. Sorting is unaffected and its
+       control remains. */
+    if (state.workoutRoutineFilter && state.workoutRoutineFilter !== 'All') {
+      state.workoutRoutineFilter = 'All';
+    }
     const sort = state.workoutRoutineSort || 'recent';
     let routines = state.routines.slice();
-    if (filter === 'Favorites') routines = routines.filter(r => r.favorite);
-    else if (filter !== 'All') routines = routines.filter(r => r.category === filter);
     if (sort === 'name') routines.sort((a, b) => a.name.localeCompare(b.name));
     else if (sort === 'exercises') routines.sort((a, b) => b.exercises.length - a.exercises.length);
     // "recent" = existing stored order (newest-created/edited first) -- no change needed.
@@ -88,16 +93,11 @@
         <div class="rh-section-head"><span>Quick Actions</span></div>
         <div class="wk-quick-grid">
           <button class="rh-quick-card" data-action="toggle-routine-builder">${svg('plus',20)}<span>New Routine</span></button>
-          <button class="rh-quick-card" data-workout-filter="Favorites">${svg('star',20)}<span>Favorites</span></button>
           <button class="rh-quick-card" data-nav="library">${svg('library',20)}<span>Library</span></button>
           <button class="rh-quick-card" data-action="start-session">${svg('workout',20)}<span>Start Empty</span></button>
         </div>
 
         ${state.routineBuilder ? renderRoutineBuilder() : ''}
-
-        <div class="wk-filter-row">
-          ${['All', ...ROUTINE_CATEGORIES, 'Favorites'].map(c => `<button class="cat-chip ${filter===c?'active':''}" data-workout-filter="${c}">${c}</button>`).join('')}
-        </div>
 
         <div class="rh-section-head">
           <span>My Routines</span>
@@ -107,7 +107,7 @@
             <option value="exercises" ${sort==='exercises'?'selected':''}>Sort: Exercises</option>
           </select>
         </div>
-        ${routines.length === 0 ? `<div class="rh-card wk-empty">${state.routines.length===0 ? 'No routines saved yet — build one to start logging faster.' : 'No routines match this filter.'}</div>` :
+        ${routines.length === 0 ? `<div class="rh-card wk-empty">No routines saved yet — build one to start logging faster.</div>` :
           `<div id="routine-card-list">` + routines.map(r => {
             const last = lastSessionForRoutine(state, r.name);
             const pct = last ? sessionCompletionPct(last) : null;
