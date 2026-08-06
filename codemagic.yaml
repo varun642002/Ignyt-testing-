@@ -102,12 +102,6 @@ workflows:
         - ignyt
       node: 22
       xcode: latest
-      ios_signing:
-        # Codemagic creates and manages the certificate and provisioning profile from the API
-        # key above. This is the step that normally forces a Mac — Keychain generates the
-        # signing request locally — and is the reason this project can ship without one.
-        distribution_type: app_store
-        bundle_identifier: com.varun.ignyt
     scripts:
       - name: Install dependencies
         script: npm ci
@@ -115,8 +109,33 @@ workflows:
       - name: Sync the web layer into the iOS project
         script: npx cap sync ios
 
-      - name: Apply the managed signing profile
-        script: xcode-project use-profiles
+      - name: Create the signing certificate and provisioning profile
+        # THIS REPLACED THE DECLARATIVE `ios_signing:` BLOCK, which failed four times with
+        # "No matching profiles found for bundle identifier com.varun.ignyt and distribution
+        # type app_store" — and kept failing after the App ID was registered, HealthKit was
+        # enabled on it, and the app record existed in App Store Connect. The message is
+        # accurate and was never the problem it sounds like: there genuinely was no profile,
+        # because nothing had created one. The shorthand FETCHES signing files; it does not
+        # create them, and a first-ever build has nothing to fetch.
+        #
+        # `--create` is the whole fix. It makes the distribution certificate if the account
+        # has none and the provisioning profile if the App ID has none, then keychain
+        # add-certificates installs the certificate so xcodebuild can actually use it, and
+        # use-profiles writes the profile into the Xcode project's build settings.
+        #
+        # No key material is handled here. The App Store Connect integration above exports
+        # the API key into the environment and the CLI reads it from there.
+        #
+        # One cost worth knowing: the declarative block failed during initialisation, which is
+        # free. These are build steps, so from here a failure burns minutes.
+        script: |
+          set -e
+          keychain initialize
+          app-store-connect fetch-signing-files "com.varun.ignyt" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
 
       - name: Keep the build number ahead of TestFlight
         # TestFlight rejects a build number it has already seen, the same rule that made
