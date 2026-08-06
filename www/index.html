@@ -408,9 +408,18 @@ nav.bottom-nav.has-active .nav-ind{opacity:1;}
 /* While a finger is on the bar the pill is being repositioned every frame, so a transition
    would only hold it behind the finger by its own duration. Off for the gesture, back on for
    the settle when the finger lifts — which is what makes the release feel like it lands. */
-nav.bottom-nav.is-dragging .nav-ind{transition:none;}
+nav.bottom-nav.is-dragging .nav-ind{transition:none;
+    /* Promoted to its own layer for the duration of the gesture, so each frame's move is a
+       compositor transform rather than a repaint of the pill against the blurred bar behind
+       it. Only while dragging: a layer that exists permanently costs memory for nothing. */
+    will-change:transform;}
+
+/* The icon and label under the pill still ease as it passes — but on a shorter curve than
+   the settled one, so a quick sweep isn't trailed by five icons still finishing their grow.
+   Killing the transition outright here was worse: passing over a tab snapped instead of
+   blooming, which reads as a glitch rather than a response. */
 nav.bottom-nav.is-dragging .nav-btn svg,
-nav.bottom-nav.is-dragging .nav-btn span{transition:none;}
+nav.bottom-nav.is-dragging .nav-btn span{transition:transform .18s cubic-bezier(.32,.72,0,1);}
 
 /* touch-action tells the browser we handle horizontal movement here, so dragging along the
    bar does not also try to scroll the page behind it. `pan-y` keeps a vertical swipe that
@@ -426,8 +435,15 @@ nav.bottom-nav .nav-btn{touch-action:none;}
 .nav-btn svg, .nav-btn span{transition:transform .38s cubic-bezier(.32,.72,0,1);}
 .nav-btn.active svg{transform:translateY(-1px) scale(1.06);}
 
+/* The .is-dragging rules above are more specific than a bare `.nav-btn svg`, and specificity
+   beats source order — so this block has to restate them at equal weight or reduced motion
+   would be honoured everywhere EXCEPT during the gesture, which is the one place motion is
+   most pronounced. */
 @media (prefers-reduced-motion: reduce){
   .nav-ind, .nav-btn svg, .nav-btn span{transition:none;}
+  nav.bottom-nav.is-dragging .nav-ind,
+  nav.bottom-nav.is-dragging .nav-btn svg,
+  nav.bottom-nav.is-dragging .nav-btn span{transition:none;}
 }
 
 .nav-btn svg{width:19px; height:19px;}

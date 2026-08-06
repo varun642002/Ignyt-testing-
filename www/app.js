@@ -8045,8 +8045,8 @@ function buildBottomNav(){
      DRAG TO SWITCH.
 
      Hold anywhere on the bar and slide: the indicator follows the finger continuously
-     rather than jumping tab to tab, and the tab under it activates as you pass over.
-     Lifting leaves you wherever you stopped.
+     rather than jumping tab to tab, and the tab under it lights up as you pass over.
+     Lifting settles onto wherever you were heading.
 
      The indicator is driven by --nav-i, which is a tab INDEX. During a drag it is set to
      a fractional index instead — 2.4 sits the pill 40% of the way from the third tab to
@@ -8056,60 +8056,141 @@ function buildBottomNav(){
      Transitions are switched off for the duration. A transition on a value that is already
      being updated every frame does not smooth anything; it just puts the pill behind the
      finger by its own duration, which is exactly the lag this is meant to avoid.
-  --------------------------------------------------------------------------------- */
-  let dragging = false, startX = 0, moved = false, dragEndedAt = 0;
 
-  const indexAt = (clientX)=>{
+     THREE THINGS KEEP THIS ON THE COMPOSITOR, and each was measured before and after.
+
+     1. The bar is measured ONCE per gesture, not once per event. getBoundingClientRect
+        forces the browser to flush pending style and layout so it can answer honestly, so
+        reading it inside pointermove — right after having written a style — is the classic
+        layout thrash: write, read, write, read. A 600ms sweep was doing 72 of them. The
+        bar cannot change size mid-drag, so one measurement on pointerdown is all it needs.
+
+     2. Pointer events are coalesced into ONE write per animation frame. A phone reports
+        touch positions faster than it repaints — every write beyond the first in a frame is
+        computed and then thrown away by the next.
+
+     3. Navigation is DEFERRED to the release. Activating tabs as the pill passed meant a
+        full render() mid-gesture, five of them across a sweep, ~6ms each on a desktop and
+        several times that on a mid-range phone — each one a dropped frame or three, landing
+        exactly while the finger is moving and the smoothness is being judged. What the eye
+        actually tracks is the pill and the tab lighting up under it, and both are a class
+        toggle away; rebuilding the page behind them buys nothing during the gesture. So the
+        bar responds continuously, and the page commits once, on release.
+  --------------------------------------------------------------------------------- */
+  const ind  = nav.querySelector(".nav-ind");
+  const btns = Array.from(nav.querySelectorAll("[data-navtab]"));
+  const LAST = NAV_TABS.length - 1;
+
+  let dragging = false, startX = 0, moved = false, dragEndedAt = 0;
+  let geo = null;                    // bar geometry, measured once per gesture
+  let rafId = 0, pendingX = 0;       // one paint per frame, whatever the input rate
+  let liveIndex = 0, overTab = null;
+  let samples = [];                  // recent {x,t}, for release velocity
+
+  const measure = ()=>{
     const r = nav.getBoundingClientRect();
     const pad = 6;                                   // the bar's own padding, see the CSS
-    const track = r.width - pad * 2;
-    const each = track / NAV_TABS.length;
-    /* Centre-relative, so the pill's middle tracks the finger rather than its left edge. */
-    const raw = (clientX - r.left - pad - each / 2) / each;
-    return Math.max(0, Math.min(NAV_TABS.length - 1, raw));
+    return { left: r.left, pad, each: (r.width - pad * 2) / NAV_TABS.length };
+  };
+
+  /* Centre-relative, so the pill's middle tracks the finger rather than its left edge. */
+  const indexAt = (clientX)=>{
+    const g = geo || measure();
+    return (clientX - g.left - g.pad - g.each / 2) / g.each;
+  };
+
+  /* Past either end the pill keeps moving but gives, approaching a limit instead of
+     stopping dead against it. A hard clamp makes the bar feel broken at the edges — the
+     finger keeps going and nothing answers. The curve is asymptotic, so it can never
+     travel far enough to escape the bar's padding. */
+  const RUBBER = 0.3;
+  const resist = (raw)=>{
+    if(raw < 0)    return -RUBBER * (1 - 1 / (1 + -raw * 2.2));
+    if(raw > LAST) return LAST + RUBBER * (1 - 1 / (1 + (raw - LAST) * 2.2));
+    return raw;
+  };
+
+  /* Set on the indicator, not on the bar. A custom property invalidates style for every
+     element that could inherit it, and on the bar that is all five buttons plus their icons
+     and labels — none of which read it. On the indicator the invalidation is one element. */
+  const paint = ()=>{
+    rafId = 0;
+    if(!dragging) return;
+    liveIndex = resist(indexAt(pendingX));
+    ind.style.setProperty("--nav-i", liveIndex.toFixed(4));
+    nav.classList.add("has-active");
+    /* The tab under the pill lights up as it passes — a class toggle, not a render. */
+    const id = NAV_TABS[Math.round(Math.max(0, Math.min(LAST, liveIndex)))][0];
+    if(id !== overTab){
+      overTab = id;
+      btns.forEach(b => b.classList.toggle("active", b.dataset.navtab === id));
+    }
+  };
+
+  /* Tabs per second over the last ~90ms. A quick flick should carry past the tab the finger
+     happened to be over when it lifted, the way a scroll carries — landing on the nearest
+     tab regardless of how fast you were moving is what makes a gesture feel sticky. */
+  const velocity = ()=>{
+    const now = performance.now();
+    const recent = samples.filter(s => now - s.t < 90);
+    if(recent.length < 2 || !geo) return 0;
+    const a = recent[0], b = recent[recent.length - 1];
+    const dt = (b.t - a.t) / 1000;
+    return dt > 0 ? ((b.x - a.x) / geo.each) / dt : 0;
   };
 
   nav.addEventListener("pointerdown", (e)=>{
     if(e.pointerType === "mouse" && e.button !== 0) return;
-    /* Cleared here, not left to the click that usually follows a drag. A drag whose pointerup
-       lands between buttons produces no click at all, and the flag would then sit set and
-       silently swallow the NEXT genuine tap. Clearing on the way in means it can only ever
-       affect the click belonging to its own gesture. */
     dragging = true; moved = false; startX = e.clientX;
+    geo = measure();                 // once — see (1) above
+    samples = [{ x: e.clientX, t: performance.now() }];
+    overTab = null;
     /* Capture keeps the gesture alive if the finger wanders off the bar mid-drag. It throws
        NotFoundError when the pointer is already gone, which an uncaught throw here would turn
        into a half-initialised drag — `dragging` set, no listeners bound to end it. The drag
        works without capture, just not past the bar's edges, so failing is survivable and
        failing loudly is not. */
     try{ nav.setPointerCapture(e.pointerId); }catch(_){ /* gesture still works, edges aside */ }
-    nav.classList.add("is-dragging");
   });
 
   nav.addEventListener("pointermove", (e)=>{
     if(!dragging) return;
     /* A few pixels of slop so a tap that wobbles is still a tap. */
     if(!moved && Math.abs(e.clientX - startX) < 6) return;
-    moved = true;
-    const i = indexAt(e.clientX);
-    nav.style.setProperty("--nav-i", i.toFixed(3));
-    nav.classList.add("has-active");
-    /* Activate as the pill passes, so the screen behind keeps up with the gesture. */
-    const nearest = NAV_TABS[Math.round(i)];
-    if(nearest) goTo(nearest[0]);
+    if(!moved){
+      moved = true;
+      /* Only now is this a drag, so only now are the transitions in the way. Adding the
+         class on pointerdown would kill the settle of a previous tap still in flight. */
+      nav.classList.add("is-dragging");
+    }
+    pendingX = e.clientX;
+    samples.push({ x: e.clientX, t: performance.now() });
+    if(samples.length > 12) samples.shift();
+    if(!rafId) rafId = requestAnimationFrame(paint);   // see (2) above
   });
 
   const endDrag = (e)=>{
     if(!dragging) return;
     dragging = false;
+    if(rafId){ cancelAnimationFrame(rafId); rafId = 0; }
     nav.classList.remove("is-dragging");
     try{ nav.releasePointerCapture(e.pointerId); }catch(_){ /* already released */ }
     if(!moved) return;                 // a tap: let the click handler deal with it
     dragEndedAt = Date.now();          // and stop the trailing click double-handling this
-    const dest = NAV_TABS[Math.round(indexAt(e.clientX))];
-    if(dest) goTo(dest[0]);
-    /* Hand --nav-i back to whole numbers so the settle animates from where the finger
-       left it to the tab's exact centre. */
-    syncBottomNav(nav.classList.contains("bottom-nav--home-light"));
+
+    /* Where the finger was heading, not just where it stopped. Capped at one tab so a wild
+       flick advances by one rather than skipping the bar. */
+    const carry = Math.max(-1, Math.min(1, velocity() * 0.09));
+    const dest  = Math.max(0, Math.min(LAST, Math.round(liveIndex + carry)));
+
+    /* Settle first, navigate second. Transitions are back on by now, so writing the whole
+       number here starts the pill's slide immediately and it runs on the compositor; the
+       render that follows cannot stutter an animation that has already been handed off. */
+    ind.style.setProperty("--nav-i", dest);
+    btns.forEach((b, i) => b.classList.toggle("active", i === dest));
+
+    /* And one frame later, once that has been committed, the page itself — see (3). */
+    requestAnimationFrame(()=>{ goTo(NAV_TABS[dest][0]); });
   };
   nav.addEventListener("pointerup", endDrag);
   nav.addEventListener("pointercancel", endDrag);
@@ -8146,7 +8227,12 @@ function syncBottomNav(isLightTab){
      The indicator fades out and HOLDS ITS LAST POSITION rather than sliding to zero, so
      coming back to the tab you left does not play a slide you did not ask for. */
   nav.classList.toggle("has-active", active >= 0);
-  if(active >= 0) nav.style.setProperty("--nav-i", active);
+  /* On the indicator rather than the bar: it is the only element that reads --nav-i, and
+     setting a custom property on the bar invalidates style for everything under it. Must
+     stay in step with the drag handler in buildBottomNav, which writes the same property
+     on the same element. */
+  const ind = nav.querySelector(".nav-ind");
+  if(active >= 0 && ind) ind.style.setProperty("--nav-i", active);
 }
 
 /* =========================================================
