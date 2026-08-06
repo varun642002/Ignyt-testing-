@@ -53,7 +53,14 @@ window.IgnytFirestoreRest = (function () {
 
   var TIMEOUT_MS = 25000;
 
-  function fail(message) { return { success: false, error: message }; }
+  /* `status` is the HTTP code and `code` Firestore's own (PERMISSION_DENIED, NOT_FOUND...).
+     Both are carried alongside the message so a caller can branch on a NUMBER instead of
+     matching English — which is what broke here: send() started returning "not-found: ..."
+     and getUserDoc was testing for /NOT_FOUND/i, a hyphen against an underscore, so a first
+     sync stopped being recognised as a first sync. */
+  function fail(message, status, code) {
+    return { success: false, error: message, status: status || 0, code: code || "" };
+  }
   function ok(data) { return { success: true, data: data || {} }; }
 
   /* ---- Firestore's typed value format ------------------------------------------------
@@ -161,26 +168,26 @@ window.IgnytFirestoreRest = (function () {
            Same lesson as the health screen reporting every failure as "Health Connect isn't
            installed". Speak the vocabulary the caller already parses. */
         if (res.status === 403 || status === "PERMISSION_DENIED") {
-          return fail("permission-denied: " + msg);
+          return fail("permission-denied: " + msg, res.status, status);
         }
         if (res.status === 401 || status === "UNAUTHENTICATED") {
-          return fail("unauthenticated: " + msg);
+          return fail("unauthenticated: " + msg, res.status, status);
         }
         if (res.status === 404 || status === "NOT_FOUND") {
-          return fail("not-found: " + msg);
+          return fail("not-found: " + msg, res.status, status);
         }
         /* Firestore returns FAILED_PRECONDITION when the database does not exist yet, and also
            when a query needs an index that has not been built — two very different problems
            that share a code, so the server's own message is passed through rather than
            replaced with a guess about which one it is. */
         if (status === "FAILED_PRECONDITION") {
-          return fail("failed-precondition: " + msg);
+          return fail("failed-precondition: " + msg, res.status, status);
         }
         if (res.status === 429 || res.status >= 500) {
           // Transient by nature; the offline branch already means "retry quietly".
-          return fail("offline: server busy (" + res.status + ")");
+          return fail("offline: server busy (" + res.status + ")", res.status, status);
         }
-        return fail("Cloud request failed: " + msg);
+        return fail("Cloud request failed: " + msg, res.status, status);
       }
       return ok(json || {});
     } catch (e) {
@@ -201,7 +208,15 @@ window.IgnytFirestoreRest = (function () {
     /* A document that has never been written is a 404, which is not an error here — it is a
        first sync. The Kotlin side gets the same answer as snapshot.exists() == false. */
     if (!r.success) {
-      if (/HTTP 404|NOT_FOUND/i.test(r.error)) return ok({ exists: false, fromCache: false });
+      /* 404 here is NOT an error: it means users/{uid} has never been written, which is what a
+         first-ever sync looks like — a brand-new account, or a new sign-in method against a
+         fresh uid. Android reaches the same answer through snapshot.exists() == false.
+
+         Decided on the status CODE. The previous test matched the error text for "NOT_FOUND",
+         which stopped matching the moment send() began prefixing "not-found:" — an underscore
+         against a hyphen — and a first sync was then reported to the user as a missing
+         database. */
+      if (r.status === 404 || r.code === "NOT_FOUND") return ok({ exists: false, fromCache: false });
       return r;
     }
     return ok({
