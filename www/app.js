@@ -6125,9 +6125,12 @@ function renderAccountSection(){
 
   if(!auth) return ""; // auth.js failed to load — never break the rest of Settings over it
 
-  if(!auth.isNativeAndroid()){
+  /* canSignIn(), not isNativeAndroid(). iOS signs in over the Identity Toolkit REST API and has
+     done all along — isNativeAndroid is android-only by design, so this card was telling a
+     signed-in iPhone user that sign-in lives in the Android app. */
+  if(!auth.canSignIn || !auth.canSignIn()){
     return `<div class="pg-card">
-      <div style="font-size:13px;color:var(--rh-muted);">Sign-in is available in the IGNYT Android app.</div>
+      <div style="font-size:13px;color:var(--rh-muted);">Sign-in is available in the IGNYT mobile app.</div>
     </div>`;
   }
 
@@ -6443,7 +6446,7 @@ function renderSettingsTab(){
         ${settingToggle("weeklyReports","Weekly Reports","Summary of your training week.","progress")}
         ${settingToggle("workoutLeftReminder","Workout Left Running",`Remind you ${Math.max(1, Number(state.settings.workoutLeftAfterMin)||15)} min after you leave a workout unfinished.`,"timer")}
         <button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:12px;" data-action="test-notification">Send Test Notification</button>
-        ${nativeNotify() ? (state.nativeNotifPermissionGranted===false ? `<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Notifications are blocked — enable them for IGNYT in Android Settings.</div>` : '')
+        ${nativeNotify() ? (state.nativeNotifPermissionGranted===false ? `<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Notifications are blocked — enable them for IGNYT in ${notifSettingsHint()}.</div>` : '')
           : (typeof Notification!=='undefined' && Notification.permission==='denied' ? `<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Notifications are blocked for this site in your browser settings.</div>` : '')}
       </div>
 
@@ -6991,6 +6994,21 @@ function maybeShowReminders(){
 ========================================================= */
 function nativeNotify(){
   return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytNotify) || null;
+}
+
+/* Where a user goes to turn notifications back on — a different place, under a different name,
+   on each platform. Naming the wrong one is not a cosmetic slip: "enable them in Android
+   Settings" sends an iPhone owner looking for a screen that does not exist, which is the same
+   fault as telling them Health Connect is not installed.
+
+   Reads the marker index.html sets on <html> rather than calling Capacitor, so it is safe in a
+   template string and correct in the browser too. */
+function notifSettingsHint(){
+  switch(document.documentElement.getAttribute("data-platform")){
+    case "ios":     return "Settings › Notifications › IGNYT";
+    case "android": return "Android Settings";
+    default:        return "your browser settings";
+  }
 }
 
 const REMINDER_DEFS = {
@@ -7801,7 +7819,7 @@ function renderHealthDashboard() {
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">${headerIcon}<span style="font-size:22px;font-weight:800;">Health Connect</span></div>
       <div class="pg-card">
         <div style="font-size:13px;color:var(--rh-muted);">Health Connect is not available on this device.</div>
-        <div style="font-size:12px;color:var(--rh-muted);margin-top:6px;">This feature only works in the IGNYT Android app.</div>
+        <div style="font-size:12px;color:var(--rh-muted);margin-top:6px;">This feature only works in the IGNYT mobile app.</div>
       </div>
     </div>`;
   }
@@ -7906,7 +7924,7 @@ function renderInsightsTab(){
     return `<div class="pg-light">
       ${backBtn}
       <div style="font-size:22px;font-weight:800;margin-bottom:14px;">Insights</div>
-      <div class="pg-card"><div style="font-size:13px;color:var(--rh-muted);">Health Connect Insights are only available in the IGNYT Android app.</div></div>
+      <div class="pg-card"><div style="font-size:13px;color:var(--rh-muted);">Health insights are only available in the IGNYT mobile app.</div></div>
     </div>`;
   }
 
@@ -17841,7 +17859,7 @@ function attachHandlers(){
     if(plugin){
       plugin.requestPermission().then(res=>{
         state.nativeNotifPermissionGranted = !!(res && res.granted);
-        if(!res || !res.granted){ showToast("Notifications are blocked — enable them for IGNYT in Android Settings.", "error", render); return; }
+        if(!res || !res.granted){ showToast("Notifications are blocked — enable them for IGNYT in " + notifSettingsHint() + ".", "error", render); return; }
         return plugin.sendTest({ title:"IGNYT", body:"Notifications are working. Reminders will look like this." });
       }).catch(e=>console.error("Test notification failed:", e));
       return;
@@ -20465,7 +20483,7 @@ function attachHandlers(){
           }catch(e){ /* leave as-is */ }
         }
         if(state.nativeNotifPermissionGranted === false){
-          showToast("Notifications are off for IGNYT in Android settings.", "error", render);
+          showToast("Notifications are off for IGNYT in " + notifSettingsHint() + ".", "error", render);
           render();
           return;
         }

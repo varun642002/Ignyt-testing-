@@ -331,6 +331,10 @@ const IgnytAuth = (() => {
 
   return {
     isNativeAndroid: isNative,
+    /* Was defined, documented as the thing to use for "is sign-in possible here", and then
+       never exported — so every caller reached for isNativeAndroid instead and iOS was told
+       sign-in lives in the Android app while it was signing people in over REST. */
+    canSignIn,
     getAccount: loadAccount,   // cached snapshot: instant + offline
     isBusy: () => _busy,
     getError: () => _errorMsg,
