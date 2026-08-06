@@ -40,6 +40,29 @@
   -webkit-font-smoothing: antialiased;
 }
 
+/* THE STATUS BAR STRIP, and why it is sticky rather than padding.
+   .auth is position:fixed; inset:0 with its own scrolling, so its content scrolls to the
+   viewport's top edge — behind the clock and battery. Padding on the hero fixed only the
+   resting state: raise the keyboard and the hero is pushed off the top, and the sheet's
+   heading is drawn straight through the status bar. That is what the screenshots showed.
+
+   This is the first flex child, so it RESERVES the inset, and it is sticky, so it stays
+   pinned there while everything scrolls underneath and behind it. Both jobs, one element.
+
+   Height collapses to 0 on a phone with no cut-out, so Android is byte-identical to before —
+   the hero still bleeds to the very top there, which is the intended look.
+
+   z-index 2 clears .auth-sheet's 1. A scrim the sheet can paint over is not a scrim. */
+.auth::before{
+  content: "";
+  flex: 0 0 auto;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: var(--safe-top);
+  background: var(--auth-bg);
+}
+
 /* ---------------------------------------------------------
    HERO — upper 55%
 
@@ -58,11 +81,6 @@
    what makes white type legible over an image whose brightness is not known in advance.
 --------------------------------------------------------- */
 .auth-hero{
-  /* Through --safe-top (tokens.css), not a bare env(), so the inset is read from one place
-     across the app. max() for the same reason as header.app-header in css/layout.css: the
-     inset is 0px on a phone with no cut-out, so anything relying on it alone leaves Android
-     flush against the status bar while looking correct on iOS. */
-  padding-top: max(var(--safe-top), 12px);
   position: relative;
   flex: 0 0 auto;
   height: 55dvh;
@@ -144,9 +162,6 @@
    Pulled up so its rounded top overlaps the image. That overlap is what makes it read as a
    surface resting on the photograph rather than a second rectangle stacked below it.
 --------------------------------------------------------- */
-/* The sign-in screen has no .app-header, so nothing else on it clears the status bar. Without
-   a top inset the brand lockup sits under the clock and battery, and once the keyboard pushes
-   the hero off the top, "IGNYT" is drawn straight through the status bar. */
 .auth-sheet{
   position: relative;
   z-index: 1;
