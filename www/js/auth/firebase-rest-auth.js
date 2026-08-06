@@ -96,12 +96,26 @@ window.IgnytFirebaseRestAuth = (function () {
     MISSING_OR_INVALID_NONCE: "Apple sign-in could not be verified. Try again."
   };
 
+  /* Codes whose DETAIL is worth showing. Firebase answers some errors as
+     "CODE : a sentence explaining which part was wrong", and split(" :")[0] threw that
+     sentence away — so an Apple token rejected for its audience, its nonce or its provider
+     config all arrived as the same four words. For a wrong password the detail is noise and
+     the friendly line is better; for a setup fault it is the entire diagnosis. */
+  var SHOW_DETAIL = ["INVALID_IDP_RESPONSE", "OPERATION_NOT_ALLOWED", "MISSING_OR_INVALID_NONCE",
+                     "FEDERATED_USER_ID_ALREADY_LINKED", "INVALID_CUSTOM_TOKEN"];
+
   function friendly(code) {
     if (!code) return "Sign-in failed.";
-    var key = String(code).split(" :")[0].trim();
-    if (MESSAGES[key]) return MESSAGES[key];
-    if (key.indexOf("WEAK_PASSWORD") === 0) return MESSAGES.WEAK_PASSWORD;
-    return key.replace(/_/g, " ").toLowerCase();
+    var raw = String(code);
+    var key = raw.split(" :")[0].trim();
+    var detail = raw.slice(key.length).replace(/^\s*:\s*/, "").trim();
+
+    var base = MESSAGES[key]
+      || (key.indexOf("WEAK_PASSWORD") === 0 ? MESSAGES.WEAK_PASSWORD : null)
+      || key.replace(/_/g, " ").toLowerCase();
+
+    if (detail && SHOW_DETAIL.indexOf(key) !== -1) return base + " (" + detail + ")";
+    return base;
   }
 
   async function post(url, body) {
