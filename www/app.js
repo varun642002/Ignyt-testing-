@@ -8069,13 +8069,19 @@ function buildBottomNav(){
         touch positions faster than it repaints — every write beyond the first in a frame is
         computed and then thrown away by the next.
 
-     3. Navigation is DEFERRED to the release. Activating tabs as the pill passed meant a
-        full render() mid-gesture, five of them across a sweep, ~6ms each on a desktop and
-        several times that on a mid-range phone — each one a dropped frame or three, landing
-        exactly while the finger is moving and the smoothness is being judged. What the eye
-        actually tracks is the pill and the tab lighting up under it, and both are a class
-        toggle away; rebuilding the page behind them buys nothing during the gesture. So the
-        bar responds continuously, and the page commits once, on release.
+     3. The page follows the pill, but only once the pill has SETTLED on a tab. Rendering on
+        every tab the pill crossed was the single biggest cost here — five full renders across
+        one sweep, ~6ms each on a desktop and several times that on a mid-range phone, each
+        one a dropped frame or three, landing exactly while the finger is moving and the
+        smoothness is being judged.
+
+        Dwell is what separates the two cases, because they are genuinely different gestures.
+        Sliding slowly along the bar to see what is on each tab is browsing, and the page must
+        keep up or the gesture is pointless. Flicking from one end to the other is aiming, and
+        the four tabs crossed on the way are not being read — rendering them is work nobody
+        asked for and nobody sees, paid for in exactly the frames the flick needed. So a tab
+        renders once the pill has rested on it briefly, and a fast sweep renders only where it
+        lands.
   --------------------------------------------------------------------------------- */
   const ind  = nav.querySelector(".nav-ind");
   const btns = Array.from(nav.querySelectorAll("[data-navtab]"));
@@ -8086,6 +8092,22 @@ function buildBottomNav(){
   let rafId = 0, pendingX = 0;       // one paint per frame, whatever the input rate
   let liveIndex = 0, overTab = null;
   let samples = [];                  // recent {x,t}, for release velocity
+  let navTimer = 0, navTab = null;   // the page, trailing the pill by a dwell
+
+  /* How long the pill must rest on a tab before the page behind it follows. Short enough that
+     a deliberate slide feels live, long enough that a flick across the bar doesn't render
+     every tab it passed. Re-armed on each new tab rather than fired on a fixed interval, so
+     it measures dwell rather than elapsed time. */
+  const DWELL_MS = 80;
+
+  const scheduleLiveNav = (id)=>{
+    navTab = id;
+    clearTimeout(navTimer);
+    navTimer = setTimeout(()=>{
+      navTimer = 0;
+      if(dragging && navTab) goTo(navTab);
+    }, DWELL_MS);
+  };
 
   const measure = ()=>{
     const r = nav.getBoundingClientRect();
@@ -8119,11 +8141,13 @@ function buildBottomNav(){
     liveIndex = resist(indexAt(pendingX));
     ind.style.setProperty("--nav-i", liveIndex.toFixed(4));
     nav.classList.add("has-active");
-    /* The tab under the pill lights up as it passes — a class toggle, not a render. */
+    /* The tab under the pill lights up the instant it passes — a class toggle, not a render,
+       so this never waits on anything. The page behind it is queued separately. */
     const id = NAV_TABS[Math.round(Math.max(0, Math.min(LAST, liveIndex)))][0];
     if(id !== overTab){
       overTab = id;
       btns.forEach(b => b.classList.toggle("active", b.dataset.navtab === id));
+      scheduleLiveNav(id);
     }
   };
 
@@ -8173,15 +8197,24 @@ function buildBottomNav(){
     if(!dragging) return;
     dragging = false;
     if(rafId){ cancelAnimationFrame(rafId); rafId = 0; }
+    /* A queued live-nav is now stale — the release below decides the destination, and letting
+       a pending timer fire afterwards would navigate a second time, to wherever the pill
+       happened to be a moment before the finger lifted. */
+    clearTimeout(navTimer); navTimer = 0; navTab = null;
     nav.classList.remove("is-dragging");
     try{ nav.releasePointerCapture(e.pointerId); }catch(_){ /* already released */ }
     if(!moved) return;                 // a tap: let the click handler deal with it
     dragEndedAt = Date.now();          // and stop the trailing click double-handling this
 
+    /* Measured from the pointer's ACTUAL final position, not from liveIndex. liveIndex is
+       only as fresh as the last frame that ran, so a finger lifted moments after a quick move
+       would land wherever the pill had got to being painted rather than where the finger
+       actually was — a tab short, and only sometimes, which is the worst kind of wrong. */
+    const settled = resist(indexAt(e.clientX));
     /* Where the finger was heading, not just where it stopped. Capped at one tab so a wild
        flick advances by one rather than skipping the bar. */
     const carry = Math.max(-1, Math.min(1, velocity() * 0.09));
-    const dest  = Math.max(0, Math.min(LAST, Math.round(liveIndex + carry)));
+    const dest  = Math.max(0, Math.min(LAST, Math.round(settled + carry)));
 
     /* Settle first, navigate second. Transitions are back on by now, so writing the whole
        number here starts the pill's slide immediately and it runs on the compositor; the
@@ -8227,10 +8260,17 @@ function syncBottomNav(isLightTab){
      The indicator fades out and HOLDS ITS LAST POSITION rather than sliding to zero, so
      coming back to the tab you left does not play a slide you did not ask for. */
   nav.classList.toggle("has-active", active >= 0);
-  /* On the indicator rather than the bar: it is the only element that reads --nav-i, and
-     setting a custom property on the bar invalidates style for everything under it. Must
-     stay in step with the drag handler in buildBottomNav, which writes the same property
-     on the same element. */
+
+  /* NOT while a finger is on the bar. Navigating mid-drag renders, and a render lands here —
+     which would write the new tab's whole-number index over the fractional one the drag is
+     driving and snap the pill out from under the finger, once per tab crossed. During a drag
+     the gesture owns the indicator's position; this owns it every other time.
+
+     Set on the indicator rather than the bar, because it is the only element that reads
+     --nav-i and setting a custom property on the bar invalidates style for everything beneath
+     it. Must stay in step with the drag handler in buildBottomNav, which writes the same
+     property on the same element. */
+  if(nav.classList.contains("is-dragging")) return;
   const ind = nav.querySelector(".nav-ind");
   if(active >= 0 && ind) ind.style.setProperty("--nav-i", active);
 }
