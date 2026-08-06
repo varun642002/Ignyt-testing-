@@ -39,6 +39,38 @@ import { join } from "node:path";
 
 const NATIVE_DIR = join("ios", "App", "App");
 const CONFIG = join(NATIVE_DIR, "capacitor.config.json");
+const PACKAGE_SWIFT = join("ios", "App", "CapApp-SPM", "Package.swift");
+
+/**
+ * Undoes a Windows-only corruption the Capacitor CLI introduces on every `cap sync ios`.
+ *
+ * It rewrites Package.swift's local dependency path using the host's separator, so on Windows
+ * the line becomes:
+ *
+ *     .package(name: "CapacitorApp", path: "..\..\..\node_modules\@capacitor\app")
+ *
+ * which is not merely ugly — it is broken Swift. A backslash starts an escape sequence in a
+ * string literal, so `\n` in `\node_modules` is a newline and `\a` is invalid. The file itself
+ * says "DO NOT MODIFY - managed by Capacitor CLI commands", and it is the CLI producing this.
+ *
+ * It is invisible from Windows because nothing here compiles Swift: the file sits modified in
+ * the working tree, looks like ordinary sync churn in `git status`, and only fails on the build
+ * Mac — after the minutes have been spent. Committing it once would break every iOS build until
+ * someone read a Swift path closely enough to spot the slashes.
+ *
+ * Repaired here rather than gitignored, because the file genuinely does belong in the repo.
+ */
+function repairPackageSwift() {
+  if (!existsSync(PACKAGE_SWIFT)) return;
+  const before = readFileSync(PACKAGE_SWIFT, "utf8");
+  // Only inside path: "..." literals, so nothing else in the file can be touched.
+  const after = before.replace(/path:\s*"([^"]*)"/g, (m, p) => `path: "${p.replace(/\\/g, "/")}"`);
+  if (after === before) return;
+  writeFileSync(PACKAGE_SWIFT, after);
+  console.log("[ios-register-app-plugins] repaired Windows backslashes in Package.swift");
+}
+
+repairPackageSwift();
 
 /* Nothing to do on an Android-only checkout, or when the hook fires for android. */
 if (!existsSync(CONFIG)) {
