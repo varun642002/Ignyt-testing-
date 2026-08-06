@@ -8015,11 +8015,9 @@ function buildBottomNav(){
     NAV_TABS.map(([id,label])=>navBtn(id,label)).join("");
   nav.style.setProperty("--nav-count", NAV_TABS.length);
 
-  /* Bound once, on the element that outlives every render. */
-  nav.addEventListener("click", (e)=>{
-    const btn = e.target.closest("[data-navtab]");
-    if(!btn || !nav.contains(btn)) return;
-    const dest = btn.dataset.navtab;
+  /** The one place navigation happens, whether by tap or by drag. */
+  function goTo(dest){
+    if(!dest || dest === state.tab) return;
     state.notificationsOpen = false;   // any navigation closes the header panel
     state.tab = dest;
     state.bodyView = null;             // land on Log Weight, not a stale calculator view
@@ -8027,7 +8025,95 @@ function buildBottomNav(){
     if(["home","health","nutrition","insights"].includes(state.tab)){
       window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
     }
+  }
+
+  /* Bound once, on the element that outlives every render. */
+  nav.addEventListener("click", (e)=>{
+    const btn = e.target.closest("[data-navtab]");
+    if(!btn || !nav.contains(btn)) return;
+    /* A drag ends by firing a click too, and that click has already been acted on by the
+       gesture. Ignore it — but by TIME, not by a flag. A flag has to be consumed by the click
+       that follows, and a drag ending between two buttons fires no click at all; the flag then
+       sits set and silently swallows the next genuine tap, which is exactly what happened here.
+       The trailing click arrives within a frame or two of the release, so a short window tells
+       the two apart and clears itself. */
+    if(Date.now() - dragEndedAt < 350) return;
+    goTo(btn.dataset.navtab);
   });
+
+  /* ---------------------------------------------------------------------------------
+     DRAG TO SWITCH.
+
+     Hold anywhere on the bar and slide: the indicator follows the finger continuously
+     rather than jumping tab to tab, and the tab under it activates as you pass over.
+     Lifting leaves you wherever you stopped.
+
+     The indicator is driven by --nav-i, which is a tab INDEX. During a drag it is set to
+     a fractional index instead — 2.4 sits the pill 40% of the way from the third tab to
+     the fourth — so the same one property serves both the settled state and the gesture,
+     and there is nothing to reconcile when the drag ends.
+
+     Transitions are switched off for the duration. A transition on a value that is already
+     being updated every frame does not smooth anything; it just puts the pill behind the
+     finger by its own duration, which is exactly the lag this is meant to avoid.
+  --------------------------------------------------------------------------------- */
+  let dragging = false, startX = 0, moved = false, dragEndedAt = 0;
+
+  const indexAt = (clientX)=>{
+    const r = nav.getBoundingClientRect();
+    const pad = 6;                                   // the bar's own padding, see the CSS
+    const track = r.width - pad * 2;
+    const each = track / NAV_TABS.length;
+    /* Centre-relative, so the pill's middle tracks the finger rather than its left edge. */
+    const raw = (clientX - r.left - pad - each / 2) / each;
+    return Math.max(0, Math.min(NAV_TABS.length - 1, raw));
+  };
+
+  nav.addEventListener("pointerdown", (e)=>{
+    if(e.pointerType === "mouse" && e.button !== 0) return;
+    /* Cleared here, not left to the click that usually follows a drag. A drag whose pointerup
+       lands between buttons produces no click at all, and the flag would then sit set and
+       silently swallow the NEXT genuine tap. Clearing on the way in means it can only ever
+       affect the click belonging to its own gesture. */
+    dragging = true; moved = false; startX = e.clientX;
+    /* Capture keeps the gesture alive if the finger wanders off the bar mid-drag. It throws
+       NotFoundError when the pointer is already gone, which an uncaught throw here would turn
+       into a half-initialised drag — `dragging` set, no listeners bound to end it. The drag
+       works without capture, just not past the bar's edges, so failing is survivable and
+       failing loudly is not. */
+    try{ nav.setPointerCapture(e.pointerId); }catch(_){ /* gesture still works, edges aside */ }
+    nav.classList.add("is-dragging");
+  });
+
+  nav.addEventListener("pointermove", (e)=>{
+    if(!dragging) return;
+    /* A few pixels of slop so a tap that wobbles is still a tap. */
+    if(!moved && Math.abs(e.clientX - startX) < 6) return;
+    moved = true;
+    const i = indexAt(e.clientX);
+    nav.style.setProperty("--nav-i", i.toFixed(3));
+    nav.classList.add("has-active");
+    /* Activate as the pill passes, so the screen behind keeps up with the gesture. */
+    const nearest = NAV_TABS[Math.round(i)];
+    if(nearest) goTo(nearest[0]);
+  });
+
+  const endDrag = (e)=>{
+    if(!dragging) return;
+    dragging = false;
+    nav.classList.remove("is-dragging");
+    try{ nav.releasePointerCapture(e.pointerId); }catch(_){ /* already released */ }
+    if(!moved) return;                 // a tap: let the click handler deal with it
+    dragEndedAt = Date.now();          // and stop the trailing click double-handling this
+    const dest = NAV_TABS[Math.round(indexAt(e.clientX))];
+    if(dest) goTo(dest[0]);
+    /* Hand --nav-i back to whole numbers so the settle animates from where the finger
+       left it to the tab's exact centre. */
+    syncBottomNav(nav.classList.contains("bottom-nav--home-light"));
+  };
+  nav.addEventListener("pointerup", endDrag);
+  nav.addEventListener("pointercancel", endDrag);
+
   document.body.appendChild(nav);
   return nav;
 }

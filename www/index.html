@@ -404,6 +404,20 @@ body.kb-open nav.bottom-nav{transform:translate(-50%, 100%);}
        it moves looks like it is being dragged. */
     transition:transform .38s cubic-bezier(.32,.72,0,1), opacity .2s ease;}
 nav.bottom-nav.has-active .nav-ind{opacity:1;}
+
+/* While a finger is on the bar the pill is being repositioned every frame, so a transition
+   would only hold it behind the finger by its own duration. Off for the gesture, back on for
+   the settle when the finger lifts — which is what makes the release feel like it lands. */
+nav.bottom-nav.is-dragging .nav-ind{transition:none;}
+nav.bottom-nav.is-dragging .nav-btn svg,
+nav.bottom-nav.is-dragging .nav-btn span{transition:none;}
+
+/* touch-action tells the browser we handle horizontal movement here, so dragging along the
+   bar does not also try to scroll the page behind it. `pan-y` keeps a vertical swipe that
+   starts on the nav scrolling the page, which is what a user expects. */
+nav.bottom-nav{touch-action:pan-y;}
+/* The buttons must not swallow the pointer stream mid-drag. */
+nav.bottom-nav .nav-btn{touch-action:none;}
 /* The buttons sit above the pill; without this the indicator would cover the icons. */
 .nav-btn{position:relative; z-index:1;}
 
