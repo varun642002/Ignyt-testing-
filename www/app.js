@@ -6166,6 +6166,11 @@ function renderAccountSection(){
       <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Sign in to securely back up your fitness data and enable multi-device sync.</div>
       ${!mode ? errorHtml : ""}
       ${!mode ? `<button class="rh-btn rh-btn--primary" style="width:100%;margin-top:${errorHtml?'10px':'0'};padding:12px;" data-action="auth-form-mode" data-auth-mode="signin">Sign in with Email</button>` : ''}
+      ${!mode && window.IgnytAuth && IgnytAuth.appleAvailable && IgnytAuth.appleAvailable() ? `
+        <button class="apple-signin-btn" data-action="auth-apple" ${busy?'disabled':''} aria-label="Sign in with Apple">
+          <svg viewBox="0 0 16 20" width="15" height="19" aria-hidden="true" focusable="false"><path fill="currentColor" d="M13.29 10.62c.02 2.4 2.1 3.2 2.12 3.21-.02.05-.33 1.14-1.1 2.26-.66.97-1.35 1.93-2.44 1.95-1.07.02-1.41-.63-2.63-.63-1.22 0-1.6.61-2.61.65-1.05.04-1.85-1.05-2.52-2.01C2.75 14.1 1.7 10.5 3.1 8.08c.7-1.2 1.94-1.96 3.29-1.98 1.03-.02 2 .69 2.63.69.63 0 1.81-.86 3.05-.73.52.02 1.98.21 2.92 1.58-.08.05-1.74 1.02-1.72 3.03M11.3 4.4c.56-.68.94-1.62.84-2.56-.81.03-1.79.54-2.37 1.22-.52.6-.97 1.56-.85 2.48.9.07 1.82-.46 2.38-1.14"/></svg>
+          <span>Sign in with Apple</span>
+        </button>` : ''}
       ${emailForm}
       ${renderSigningDiagnostic()}
     </div>`;
@@ -17795,6 +17800,18 @@ function attachHandlers(){
       render();
     });
   });
+  /* Sign in with Apple. Nothing to read from the form — the identity comes from Apple's own
+     sheet — so this only kicks it off and repaints. A cancelled sheet returns
+     {cancelled:true} with no error set, so the screen simply goes back to how it was rather
+     than accusing someone of a failure they chose. */
+  const authAppleBtn = document.querySelector('[data-action="auth-apple"]');
+  if(authAppleBtn) authAppleBtn.addEventListener("click", async ()=>{
+    if(!window.IgnytAuth || !IgnytAuth.signInWithApple) return;
+    const res = await IgnytAuth.signInWithApple();
+    if(res && res.success) state.authFormMode = null;
+    render();
+  });
+
   const authSigninBtn = document.querySelector('[data-action="auth-signin-submit"]');
   if(authSigninBtn) authSigninBtn.addEventListener("click", async ()=>{
     const email = (document.getElementById("auth-email-input")||{}).value || "";

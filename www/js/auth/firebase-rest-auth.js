@@ -169,9 +169,57 @@ window.IgnytFirebaseRestAuth = (function () {
     return ok({ user: toUser(profile || res.data) });
   }
 
+  /**
+   * Sign in with Apple. The native plugin has already run Apple's sheet and produced a signed
+   * identity token; this exchanges it for a Firebase session, which is what the rest of the app
+   * understands.
+   *
+   * THE NONCE IS THE RAW ONE. Apple was given its SHA-256 hash and put that in the token;
+   * Firebase hashes what it is sent here and compares. Passing the hash instead produces
+   * "INVALID_IDP_RESPONSE" with nothing to indicate which of the two values was wrong, so the
+   * direction is stated at both ends of the trip.
+   *
+   * requestUri is required by the endpoint and unused for a native flow — Firebase validates
+   * its presence, not its value.
+   *
+   * APPLE SENDS NAME AND EMAIL EXACTLY ONCE, on the first authorisation ever for this Apple ID
+   * and app, and returns nulls forever after — including after a delete and reinstall. So when
+   * they arrive they are written to the Firebase profile immediately, because there is no
+   * second chance to ask. When they do not arrive, the existing profile is left alone rather
+   * than being overwritten with blanks.
+   */
+  async function signInWithApple(o) {
+    if (!o || !o.identityToken) return fail("Apple did not return an identity token.");
+
+    var res = await post(IDENTITY + "signInWithIdp?key=" + CONFIG.apiKey, {
+      postBody: "id_token=" + encodeURIComponent(o.identityToken) +
+                "&providerId=apple.com" +
+                (o.nonce ? "&nonce=" + encodeURIComponent(o.nonce) : ""),
+      requestUri: "http://localhost",
+      returnSecureToken: true
+    });
+    if (res.networkError) return fail("No connection. Check your network and try again.");
+    if (res.apiError) return fail(friendly(res.apiError));
+
+    saveTokens(res.data.idToken, res.data.refreshToken, res.data.expiresIn, res.data.localId);
+
+    /* Only on the first sign-in, and only for values Apple actually sent. */
+    if (o.displayName) {
+      await post(IDENTITY + "update?key=" + CONFIG.apiKey, {
+        idToken: res.data.idToken,
+        displayName: o.displayName,
+        returnSecureToken: false
+      });
+    }
+
+    var profile = await lookup(res.data.idToken);
+    return ok({ user: toUser(profile || res.data) });
+  }
+
   var handlers = {
     signUpWithEmail: function (o) { return signUpOrIn("signUp", o.email, o.password); },
     signInWithEmail: function (o) { return signUpOrIn("signInWithPassword", o.email, o.password); },
+    signInWithApple: signInWithApple,
 
     sendPasswordReset: async function (o) {
       if (!o.email) return fail("Enter your email address.");

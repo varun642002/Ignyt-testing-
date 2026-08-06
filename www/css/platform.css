@@ -60,3 +60,51 @@ html[data-platform="ios"] .timer-overlay {
   -webkit-backdrop-filter: none;
   background: rgba(10, 10, 12, .985);
 }
+
+
+/* ---------------------------------------------------------------------------------------
+   SIGN IN WITH APPLE BUTTON
+
+   Apple's Human Interface Guidelines govern this button's appearance, and they are a review
+   requirement rather than a suggestion: the logo may not be redrawn or recoloured, the label
+   is one of a fixed set of phrases, the corner radius and height have minimums, and the logo
+   must keep its proportion to the text. A button that "looks Apple-ish" is a rejection.
+
+   White-on-black here because IGNYT is a dark app and Apple's own guidance is to pick the
+   variant that contrasts with the background — the black-on-white variant would sit on a dark
+   card as a bright slab.
+
+   The button lives in app.js next to Sign in with Email, and only renders when
+   IgnytAppleSignIn is present, so this styling is only ever reached on iOS. It is here rather
+   than in components.css because it is a platform's own component, not one of IGNYT's.
+--------------------------------------------------------------------------------------- */
+.apple-signin-btn {
+  width: 100%;
+  margin-top: 10px;
+  /* 44px is the minimum comfortable touch target and also Apple's floor for this button. */
+  min-height: 44px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* The logo sits close to the text as one lockup rather than drifting to the far edge. */
+  gap: 8px;
+  border: none;
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: #000000;
+  font-size: 17px;
+  font-weight: 600;
+  /* The system font, deliberately. Apple's spec names SF, which -apple-system resolves to on
+     the device; substituting IGNYT's stack would be a visible deviation. */
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+}
+
+/* The logo takes its colour from the label, so the two can never drift apart. */
+.apple-signin-btn svg { display: block; }
+
+.apple-signin-btn:active { opacity: .85; }
+
+.apple-signin-btn:disabled { opacity: .5; cursor: default; }

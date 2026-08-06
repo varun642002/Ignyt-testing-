@@ -168,6 +168,67 @@ const IgnytAuth = (() => {
     return result;
   }
 
+  /* ---- Sign in with Apple ---------------------------------------------------------------
+     Two steps that must not be collapsed into one. The native plugin runs Apple's sheet and
+     returns a signed identity token; the REST layer exchanges that token for a Firebase
+     session. Only the second step produces an IGNYT account, so a successful Apple
+     authorisation followed by a failed exchange must NOT leave the user looking signed in.
+  --------------------------------------------------------------------------------------- */
+
+  function appleAvailable() {
+    return platform() === "ios"
+      && !!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytAppleSignIn);
+  }
+
+  async function signInWithApple() {
+    if (_busy) return { success: false, error: "Already in progress." };
+    if (!appleAvailable()) return { success: false, error: "Sign in with Apple is only available on iPhone." };
+
+    _busy = true; _errorMsg = null; notifyUI();
+
+    let native;
+    try {
+      native = await window.Capacitor.Plugins.IgnytAppleSignIn.signIn();
+    } catch (e) {
+      native = { success: false, error: "Apple sign-in failed to start." };
+    }
+
+    /* Dismissing Apple's sheet is a decision, not a failure. Returning quietly with no error
+       set means the screen goes back to how it was — an error toast here would be the app
+       arguing with someone who just said no. */
+    if (native && native.cancelled) {
+      _busy = false; _errorMsg = null; notifyUI();
+      return { success: false, cancelled: true };
+    }
+
+    if (!native || !native.success || !native.identityToken) {
+      _busy = false;
+      _errorMsg = (native && native.error) || "Apple sign-in failed.";
+      sec("auth.signin.apple", { ok: false });
+      notifyUI();
+      return { success: false, error: _errorMsg };
+    }
+
+    const result = await callNative("signInWithApple", {
+      identityToken: native.identityToken,
+      nonce: native.nonce,
+      email: native.email,
+      displayName: native.displayName
+    });
+    _busy = false;
+
+    if (result.success && result.data && result.data.user) {
+      saveAccount(result.data.user);
+      _errorMsg = null;
+      sec("auth.signin.apple", { ok: true });
+    } else {
+      _errorMsg = result.error || "Sign-in failed.";
+      sec("auth.signin.apple", { ok: false });
+    }
+    notifyUI();
+    return result;
+  }
+
   /** Does not touch busy/account state -- this can be called while signed out, and never
    *  signs anyone in itself. Caller decides how to surface success (e.g. a toast). */
   async function sendPasswordReset(email) {
@@ -343,6 +404,8 @@ const IgnytAuth = (() => {
     getSigningInfo: () => _signing,   // sync, cached — null until boot's checkSigning resolves
     signUpWithEmail,
     signInWithEmail,
+    signInWithApple,
+    appleAvailable,
     sendPasswordReset,
     resendVerificationEmail,
     reloadUser,
