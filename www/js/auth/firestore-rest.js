@@ -270,25 +270,30 @@ window.IgnytFirestoreRest = (function () {
     var writes = [];
     for (var i = 0; i < records.length; i++) {
       var rec = records[i] || {};
-      var docId = rec.docId || rec.id;
-      if (!docId) return fail("writeRecords: every record needs a docId.");
+      var docId = rec.docId;
+      var doc = rec.doc;
 
-      /* docId identifies the document and is not a field inside it — Android strips it the
-         same way. Writing it back would store the key twice and drift if one ever changed. */
-      var fields = {};
-      for (var k in rec) {
-        if (!Object.prototype.hasOwnProperty.call(rec, k)) continue;
-        if (k === "docId") continue;
-        fields[k] = rec[k];
+      /* THE SHAPE IS {docId, doc}, NOT A FLAT RECORD. cloud-sync.js pushes
+         { docId, doc: { id, schemaVersion, updatedAt, deleted, data } } and the document body
+         is `doc` — CloudSyncPlugin.kt does batch.set(ref(docId), jsonToMap(doc)).
+
+         Spreading the entry itself would write a single map field literally named "doc",
+         producing documents no read path recognises: updatedAt would be absent, so the
+         incremental pull's `updatedAt > since` filter would never return them and every
+         record would appear to sync and then be invisible forever. Silent, and total. */
+      if (!docId || !doc || typeof doc !== "object" || Array.isArray(doc)) {
+        return fail("writeRecords: every record needs docId and doc.");
       }
 
       writes.push({
         update: {
           name: "projects/" + PROJECT_ID + "/databases/(default)/documents/users/" +
                 u + "/" + name + "/" + docId,
-          fields: encodeFields(fields)
+          fields: encodeFields(doc)
         },
-        updateMask: { fieldPaths: Object.keys(fields) }
+        /* Merge, matching SetOptions.merge(): only these paths are touched, so a tombstone
+           write cannot blank fields it does not carry. */
+        updateMask: { fieldPaths: Object.keys(doc) }
       });
     }
 
