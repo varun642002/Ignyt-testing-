@@ -15,6 +15,48 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 <title>Ignyt</title>
+
+<script>
+/* =========================================================
+   PLATFORM MARKER — data-platform="ios" | "android" | "web" on <html>.
+
+   Set here, in <head>, because it has to exist before the first paint or a rule keyed off it
+   would apply one frame late and the screen would visibly correct itself.
+
+   WHY THIS EXISTS. Until now nothing in the app could tell the platforms apart in CSS, so
+   every layout fix was necessarily a fix to both — which is fine while a difference is
+   genuinely shared (safe-area insets are zero on a phone without a gesture bar, so the same
+   rule is already a no-op on Android) and wrong the moment one platform needs something the
+   other must not get.
+
+   The rule is: prefer a solution that is correct on both. Reach for a data-platform selector
+   only when the platforms genuinely disagree, and say in a comment why. A codebase where
+   every rule is forked twice is two codebases wearing one name.
+
+       html[data-platform="ios"]     .thing { ... }
+       html[data-platform="android"] .thing { ... }
+
+   Capacitor injects its runtime before this script on a device, so getPlatform() is available
+   synchronously. The listener is for the case where it is not — the attribute is corrected
+   before anything the user can see, and "web" is the honest default in a browser.
+========================================================= */
+(function () {
+  function apply() {
+    var p = "web";
+    try {
+      if (window.Capacitor && typeof window.Capacitor.getPlatform === "function") {
+        p = window.Capacitor.getPlatform() || "web";
+      }
+    } catch (e) { /* a platform check must never be why the app fails to start */ }
+    document.documentElement.setAttribute("data-platform", p);
+  }
+  apply();
+  if (document.documentElement.getAttribute("data-platform") === "web") {
+    document.addEventListener("DOMContentLoaded", apply, { once: true });
+  }
+})();
+</script>
+
 <style>
 /* =========================================================
    STYLES — CSS custom properties (dark + light theme), base resets,
@@ -108,7 +150,12 @@ header.app-header{padding:env(safe-area-inset-top,20px) 16px 12px;}
 
 h1.title{font-weight:900; text-transform:uppercase; font-size:30px; letter-spacing:-0.02em; margin:0; line-height:1;}
 
-main{flex:1; overflow-y:auto; padding:0 16px 100px; -webkit-overflow-scrolling:touch;}
+/* The bottom is --main-pad-bottom (tokens.css), which is the ONE definition of nav clearance.
+   It was a flat 100px here and base.css quietly overrode it with the safe-area-aware value —
+   so this number was already dead, and reading it was how three page backgrounds ended up
+   cancelling the wrong amount. Same value in both places now, so the shorthand no longer
+   states something untrue. */
+main{flex:1; overflow-y:auto; padding:0 16px var(--main-pad-bottom); -webkit-overflow-scrolling:touch;}
 
 .week-rail{display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; -ms-overflow-style:none; scrollbar-width:none;}
 

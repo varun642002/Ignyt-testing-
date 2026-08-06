@@ -31,6 +31,17 @@
 (function () {
   "use strict";
 
+  /* Used only to choose wording. "Health Connect" is an Android product name and saying it to
+     an iPhone owner is worse than saying nothing — the two platforms need different sentences
+     for the same condition. */
+  function platformIsIOS() {
+    try {
+      return typeof window.Capacitor !== "undefined"
+        && typeof window.Capacitor.getPlatform === "function"
+        && window.Capacitor.getPlatform() === "ios";
+    } catch (e) { return false; }
+  }
+
   const HC_STATE_KEY = "hx_hc_state";           // {connected, lastSyncAt}
   const HC_EXPORTED_KEY = "hx_hc_exported_ids";  // {workouts:[...ids], weights:[...ids]}
   const HC_INSIGHTS_KEY = "hx_hc_insights_cache"; // {day:{...,fetchedAt}, week:{...}, month:{...}, year:{...}}
@@ -214,10 +225,31 @@
     const availability = await HealthConnect.isAvailable();
     if (!availability.success || !availability.data.available) {
       _busy = false;
-      _errorMsg = availability.data && availability.data.status === "UPDATE_REQUIRED"
-        ? "Health Connect needs an update."
-        : "Health Connect isn't installed.";
-      await HealthConnect.openHealthConnectInstall();
+
+      /* THE CALL FAILING AND THE STORE BEING ABSENT ARE NOT THE SAME THING, and this used to
+         report both as "Health Connect isn't installed."
+
+         availability.error carries the real reason — the plugin not being registered, a
+         native call throwing — and it was being discarded in favour of a sentence that is
+         merely wrong on Android and meaningless on iOS, where Health ships with the operating
+         system and cannot be installed or missing. An iPhone reporting that Health Connect is
+         not installed sends its owner to the App Store looking for something that does not
+         exist, which is exactly what happened.
+
+         So: a real error is shown as itself. Only a successful call that honestly answers
+         "not available" gets the store wording, and only on Android. */
+      if (!availability.success) {
+        _errorMsg = availability.error || "Health data is unavailable on this device.";
+      } else if (availability.data && availability.data.status === "UPDATE_REQUIRED") {
+        _errorMsg = "Health Connect needs an update.";
+        await HealthConnect.openHealthConnectInstall();
+      } else if (platformIsIOS()) {
+        _errorMsg = "Apple Health is unavailable on this device.";
+      } else {
+        _errorMsg = "Health Connect isn't installed.";
+        await HealthConnect.openHealthConnectInstall();
+      }
+
       injectCard(); notifyDashboard();
       return;
     }

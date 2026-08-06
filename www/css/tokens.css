@@ -62,6 +62,22 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --nav-height: 72px;
+
+  /* How far the bottom of a scrolling page must stay clear of the floating nav.
+     THE ONE DEFINITION. Anything that needs this number reads it here.
+
+     It was written out longhand in base.css and hard-coded as 100px in four other places,
+     which agreed on Android by luck: with no gesture bar --safe-bottom is 0, so 96px and
+     100px both clear the bar and nobody noticed they were different numbers. An iPhone makes
+     --safe-bottom 34px, so this becomes 130px while the hard-coded copies stayed at 100 —
+     and Home, Progress and Workout cancel this padding with a negative margin to bleed their
+     background to the bottom. A negative margin that does not match the padding it is
+     cancelling leaves a 30px band of the wrong colour under every one of those pages, plus
+     content that cannot be scrolled out from under the bar.
+
+     Not the same as --nav-float-clear in index.html, and deliberately so: that one is where
+     to PIN something just above the bar, this one is scroll clearance with breathing room. */
+  --main-pad-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--space-lg));
   /* =========================================================
    TYPE SCALE
 
