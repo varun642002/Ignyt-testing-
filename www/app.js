@@ -904,7 +904,7 @@ const PREFERRED_CARDIO_OPTIONS = ["Walking","Jogging","Running","Cycling","Swimm
    one thing that can fill several of them in automatically — and by then most people have
    already committed to typing. Asking first also means steps/weight/sleep start flowing from
    the user's first session rather than whenever they later find the toggle. */
-const ONBOARDING_STEP_TITLES = ["Fair Use Policy","About You","Permissions","Your Numbers","Where You Are"];
+const ONBOARDING_STEP_TITLES = ["Fair Use Policy","About You","Notifications","Health","Your Numbers","Where You Are"];
 
 /* The brief's six goals, mapped onto the calorie deltas this app already applies. The keys
    ARE the GOAL_TO_CALORIE_DELTA keys, so the mapping lives in one place instead of becoming a
@@ -9031,7 +9031,6 @@ function obTextarea(fieldPath, placeholder){
   return `<textarea class="note-input" data-ob-field="${obEsc(fieldPath)}" placeholder="${obEsc(placeholder||'')}" style="margin-bottom:14px;min-height:52px;">${obEsc(v||'')}</textarea>`;
 }
 
-const ONBOARDING_TOTAL_STEPS = 5;   // derived from the renderer list below
 
 function onboardingProgressHeader(step){
   return `
@@ -9708,9 +9707,9 @@ function obYourDetails(){
    two consecutive permission screens read as nagging. Each keeps its own renderer, so the
    Connect and Allow buttons and their busy states behave exactly as they did when the two
    were separate steps. */
-function obPermissions(){
-  return obNotifications() + '<div class="ob-perm-divider"></div>' + obHealthConnect();
-}
+/* obPermissions() — the combined notifications + Health page — is gone. The two are separate
+   steps again: one permission prompt per page, so neither is scrolled past. See
+   ONBOARDING_STEP_RENDERERS. */
 
 /* Page 4: the figures the app actually computes with, on one screen instead of four.
 
@@ -9815,8 +9814,18 @@ function obBmiSummary(){
    state.onboarding and still default sensibly, so nothing downstream reads an undefined --
    they are simply no longer collected up front. */
 const ONBOARDING_STEP_RENDERERS = [
-  obFairUse, obYourDetails, obPermissions, obBasics, obBmiSummary
+  obFairUse, obYourDetails, obNotifications, obHealthConnect, obBasics, obBmiSummary
 ];
+
+/* DERIVED, not a number kept in step by hand. It was `const ONBOARDING_TOTAL_STEPS = 5;`
+   declared hundreds of lines above this array with the comment "derived from the renderer list
+   below" — which it was not. It drives the "Step n of N" label, the progress bar segments and
+   the is-this-the-last-step test, so splitting the permissions page would have left all three
+   describing a flow one page shorter than the one being walked through.
+
+   Declared HERE rather than beside its uses because a const cannot be read before the array it
+   measures exists. Every consumer is inside a function, so none of them run this early. */
+const ONBOARDING_TOTAL_STEPS = ONBOARDING_STEP_RENDERERS.length;
 
 /* Step gates and the Health Connect auto-advance used to compare against literal step numbers
    (=== 1, === 9, === 10). Moving Health Connect from step 10 to step 2 silently pointed all of
@@ -10252,7 +10261,7 @@ function renderOnboardingWizard(){
          collapsing to its content width and centring: 286px of content inside a 412px screen,
          with 63px of dead space either side on every one of the eleven steps. It read as a
          narrow column rather than a page. -->
-    <div style="padding:24px 16px 100px;max-width:480px;width:100%;margin:0 auto;">
+    <div style="padding:max(calc(var(--safe-top) + 12px), 24px) 16px 100px;max-width:480px;width:100%;margin:0 auto;">
       ${step===1 && !state.editingOnboarding ? `
         <div style="text-align:center;margin-bottom:20px;">
           <div style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:800;margin-bottom:4px;">Welcome to</div>
@@ -10428,22 +10437,17 @@ function wireOnboardingWizard(){
     }
     o.notifBusy = false;
     renderOnboardingWizard();
-    /* No auto-advance any more. Notifications and Health Connect now share one page, so
-       moving on the moment notifications were granted would carry the user straight past the
-       Health Connect prompt they had not answered yet. They tap Next when both are dealt
-       with. (The old obStepIndexOf(obNotifications) test would have returned 0 here anyway,
-       since that renderer is no longer in the step list -- a silent no-op rather than a
-       visible bug, which is exactly the kind of thing that survives unnoticed.) */
+    /* Still no auto-advance, now for a different reason. The two prompts have their own pages
+       again, so advancing would no longer skip anything — but a page that moves on by itself
+       the instant a system dialog is answered gives no chance to read the result, and the
+       result is the point: the card underneath says whether notifications ended up on or off.
+       Continue is one tap and it is the user's. */
   });
 
   const notifSkip = document.querySelector("[data-ob-notif-skip]");
   if(notifSkip) notifSkip.addEventListener("click", ()=>{
-    /* Records the choice and STAYS PUT. It used to advance a step, which was right when
-       notifications had a page to themselves — but they now share one with Health Connect, so
-       advancing carried the user straight past a permission prompt they had never seen. The
-       Health Connect skip below already had this reasoning written against it; the same fix
-       simply was not applied here, so the bug it warns about was still live in the other half
-       of the same page. */
+    /* Records the choice and STAYS PUT, so the page can show that the choice registered.
+       Skipping is a decision worth acknowledging rather than a trapdoor. */
     if(!state.onboarding.notifState) state.onboarding.notifState = "denied";
     renderOnboardingWizard();
   });
