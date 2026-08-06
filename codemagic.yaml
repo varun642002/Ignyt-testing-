@@ -99,6 +99,11 @@ workflows:
         #   APP_STORE_CONNECT_ISSUER_ID      secure
         #   APP_STORE_CONNECT_KEY_IDENTIFIER secure
         #   APP_STORE_CONNECT_PRIVATE_KEY    secure — the whole .p8 file, BEGIN/END lines and all
+        #   CERTIFICATE_PRIVATE_KEY          secure — a 2048-bit RSA key you generate yourself:
+        #                                      ssh-keygen -t rsa -b 2048 -m PEM -f cert_key -N ""
+        #                                    Keep it. It is what the distribution certificate
+        #                                    belongs to, and losing it means burning another of
+        #                                    Apple's three certificate slots.
         #
         # The three APP_STORE_CONNECT_* names are not arbitrary and must not be renamed: the
         # CLI looks for exactly these, which is why the signing step below passes no
@@ -157,6 +162,7 @@ workflows:
           if [ -z "$APP_STORE_CONNECT_ISSUER_ID" ]; then missing="$missing APP_STORE_CONNECT_ISSUER_ID"; fi
           if [ -z "$APP_STORE_CONNECT_KEY_IDENTIFIER" ]; then missing="$missing APP_STORE_CONNECT_KEY_IDENTIFIER"; fi
           if [ -z "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then missing="$missing APP_STORE_CONNECT_PRIVATE_KEY"; fi
+          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then missing="$missing CERTIFICATE_PRIVATE_KEY"; fi
           if [ -n "$missing" ]; then
             echo "Not set:$missing"
             echo ""
@@ -178,9 +184,29 @@ workflows:
           esac
 
           keychain initialize
+
+          # --certificate-key is what "Cannot save Signing Certificates without certificate
+          # private key" was asking for, and it is NOT the App Store Connect key despite the
+          # names being nearly identical.
+          #
+          #   APP_STORE_CONNECT_PRIVATE_KEY  proves who you are TO Apple. Apple issues it.
+          #   CERTIFICATE_PRIVATE_KEY        is the key the distribution certificate BELONGS
+          #                                  to. Apple never sees it and never generates it —
+          #                                  a certificate is Apple's signature over a public
+          #                                  key that you hold the other half of, so `--create`
+          #                                  cannot invent one on your behalf.
+          #
+          # On a Mac, Keychain silently makes this key when you tick a box in Xcode, which is
+          # why the step has no obvious counterpart and why the error reads like a bug.
+          #
+          # It MUST be stable across builds. Generating one per build would look like it works
+          # and would mint a fresh distribution certificate every time; Apple allows three,
+          # after which every build fails and the fix is a cleanup in the developer portal.
           app-store-connect fetch-signing-files "com.varun.ignyt" \
             --type IOS_APP_STORE \
+            --certificate-key=@env:CERTIFICATE_PRIVATE_KEY \
             --create
+
           keychain add-certificates
           xcode-project use-profiles
 
