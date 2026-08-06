@@ -1,10 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The launch screen, and deliberately not a splash.
+
+  iOS always draws SOMETHING between the icon being tapped and the first render — the launch
+  storyboard is not optional — so the only question is whether that window looks like a
+  separate branded moment or like the app already being there. This paints the app's own
+  background and nothing else, which is the same decision Android's launch theme makes in
+  android/app/src/main/res/values/colors.xml. The screen never changes colour across the
+  handover, so there is no splash to perceive.
+
+  It used to be a full-screen Splash image on systemBackgroundColor. systemBackgroundColor is
+  WHITE in light appearance, so a cold start on a phone not in dark mode flashed white before
+  the dark app appeared — the exact seam the Android change was made to remove.
+
+  #121216 here is one of four copies of that value. The others are the bg custom property and
+  the theme-color meta tag in www/index.html, and ignytLaunchBackground in Android's
+  colors.xml. All four must stay in step.
+-->
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="17132" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="01J-lp-oVM">
     <device id="retina4_7" orientation="portrait" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="17105"/>
-        <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -12,21 +29,19 @@
         <scene sceneID="EHf-IW-A2E">
             <objects>
                 <viewController id="01J-lp-oVM" sceneMemberID="viewController">
-                    <imageView key="view" userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="Splash" id="snD-IY-ifK">
+                    <view key="view" contentMode="scaleToFill" id="snD-IY-ifK">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
-                        <autoresizingMask key="autoresizingMask"/>
-                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
-                    </imageView>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <!-- A fixed colour, not a system one: the app is dark in both appearances,
+                             so a launch window that follows the phone's light/dark setting would
+                             be wrong half the time. -->
+                        <color key="backgroundColor" red="0.070588235294117646" green="0.070588235294117646" blue="0.086274509803921567" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
+                    </view>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
             <point key="canvasLocation" x="53" y="375"/>
         </scene>
     </scenes>
-    <resources>
-        <image name="Splash" width="1366" height="1366"/>
-        <systemColor name="systemBackgroundColor">
-            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-        </systemColor>
-    </resources>
 </document>
