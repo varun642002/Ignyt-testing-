@@ -150,8 +150,36 @@ window.IgnytFirestoreRest = (function () {
 
       if (!res.ok) {
         var msg = (json && json.error && json.error.message) || ("HTTP " + res.status);
-        if (res.status === 403) return fail("Cloud access denied: " + msg);
-        if (res.status === 401) return fail("Session expired. Sign in again.");
+        var status = (json && json.error && json.error.status) || "";
+
+        /* THE PREFIXES ARE A CONTRACT, not decoration. classifyError() in cloud-sync.js keys
+           off exactly these strings to decide what the user is told and whether to retry, and
+           it was written against the Kotlin plugin's wording. Anything it does not recognise
+           becomes "Sync failed — will retry automatically later", which is what a REST error
+           in different words looked like: a real, specific fault reported as a shrug.
+
+           Same lesson as the health screen reporting every failure as "Health Connect isn't
+           installed". Speak the vocabulary the caller already parses. */
+        if (res.status === 403 || status === "PERMISSION_DENIED") {
+          return fail("permission-denied: " + msg);
+        }
+        if (res.status === 401 || status === "UNAUTHENTICATED") {
+          return fail("unauthenticated: " + msg);
+        }
+        if (res.status === 404 || status === "NOT_FOUND") {
+          return fail("not-found: " + msg);
+        }
+        /* Firestore returns FAILED_PRECONDITION when the database does not exist yet, and also
+           when a query needs an index that has not been built — two very different problems
+           that share a code, so the server's own message is passed through rather than
+           replaced with a guess about which one it is. */
+        if (status === "FAILED_PRECONDITION") {
+          return fail("failed-precondition: " + msg);
+        }
+        if (res.status === 429 || res.status >= 500) {
+          // Transient by nature; the offline branch already means "retry quietly".
+          return fail("offline: server busy (" + res.status + ")");
+        }
         return fail("Cloud request failed: " + msg);
       }
       return ok(json || {});

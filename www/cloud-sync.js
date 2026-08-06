@@ -390,7 +390,20 @@ const IgnytCloudSync = (() => {
     if (text.indexOf("not-found:") === 0 || text.indexOf("failed-precondition:") === 0) {
       return { status: "failed", detail: "Cloud database not set up yet — create Firestore in the Firebase Console." };
     }
-    return { status: "failed", detail: "Sync failed — will retry automatically later." };
+    /* THE REAL TEXT, not a shrug. This used to return "Sync failed — will retry automatically
+       later" for anything unrecognised, which is a sentence that cannot be acted on and cannot
+       be reported: a user seeing it can say only that sync failed, which is what they already
+       knew. Every unclassified cause — an unexpected HTTP status, a malformed record, a
+       Firestore message with no code we match — arrived here and was flattened into it.
+
+       Trimmed to 140 characters because this renders on a settings card, not into a log, and a
+       Firestore error can carry a paragraph of detail. */
+    var detail = text.replace(/\s+/g, " ").trim();
+    if (detail.length > 140) detail = detail.slice(0, 137) + "…";
+    return {
+      status: "failed",
+      detail: detail ? ("Sync failed: " + detail) : "Sync failed — will retry automatically later."
+    };
   }
 
   // Internal marker so record-sync failures carry the native error text up to sync().
