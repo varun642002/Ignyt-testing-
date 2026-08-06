@@ -21471,10 +21471,53 @@ if(window.IgnytBodyPhotosDB){
   }).catch(()=>{});
 }
 
+/* =========================================================
+   SERVICE WORKER — WEB ONLY, and it used to be registered everywhere.
+
+   WHAT IT COSTS INSIDE THE NATIVE APP. Every asset is already a local file in the bundle, so
+   there is nothing for a cache to save. What the worker adds is an interception layer in front
+   of every one of them: the fetch handler runs, calls fetch(), that goes through Capacitor's
+   custom scheme handler to the file on disk, and then caches.put() writes a copy back. sw.js
+   is network-first for index.html, app.js and all of /js/ and /css/ — which is most of the
+   app — so this happens for nearly every file, on every launch, to arrive at exactly the bytes
+   that were already sitting there.
+
+   It is worse on iOS than on Android. WKWebView's service worker interception is considerably
+   more expensive than Chromium's, which is the shape of "everything feels slow on the iPhone
+   and fine on Android": not one slow screen, a toll on every asset.
+
+   It is also a correctness hazard. A cache that outlives an app update can serve yesterday's
+   app.js over the one actually shipped in the bundle — the app store is the update mechanism
+   here, not the network, and a second one underneath it can only disagree.
+
+   UNREGISTERING, NOT JUST SKIPPING. A worker registered by an earlier build stays registered;
+   it does not go away because a later build stopped calling register(). Devices that already
+   ran a build with this bug have to be cleaned up, so any existing registration is torn down
+   and its caches deleted. On a device that never had one, both calls are no-ops.
+
+   The web build keeps the worker. There it is doing its actual job — real network, real
+   offline, real cache invalidation.
+========================================================= */
 if("serviceWorker" in navigator){
-  window.addEventListener("load", ()=>{
-    navigator.serviceWorker.register("sw.js").catch(()=>{});
-  });
+  let isNativeApp = false;
+  try {
+    isNativeApp = !!(window.Capacitor
+      && typeof window.Capacitor.isNativePlatform === "function"
+      && window.Capacitor.isNativePlatform());
+  } catch(e){ /* absent Capacitor means the web build, which wants the worker */ }
+
+  if(isNativeApp){
+    navigator.serviceWorker.getRegistrations()
+      .then(rs => rs.forEach(r => r.unregister()))
+      .catch(()=>{});
+    if(window.caches && caches.keys){
+      caches.keys().then(ks => ks.forEach(k => caches.delete(k))).catch(()=>{});
+    }
+  } else {
+    window.addEventListener("load", ()=>{
+      navigator.serviceWorker.register("sw.js").catch(()=>{});
+    });
+  }
 }
 
 /* =========================================================
