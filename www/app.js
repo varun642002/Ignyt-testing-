@@ -6177,7 +6177,13 @@ function renderAccountSection(){
   }
 
   const initial = esc((account.displayName || account.email || "?").trim().charAt(0).toUpperCase() || "?");
-  const providerLabel = account.provider === "password" ? "Signed in with email" : "Signed in";
+  /* "Signed in" was the catch-all for everything that was not a password, which was fine when
+     nothing else existed. Apple is worth naming: it is the difference between someone knowing
+     which credential opens this account and guessing. */
+  const providerLabel = account.provider === "password" ? "Signed in with email"
+                      : account.provider === "apple.com" ? "Signed in with Apple"
+                      : account.provider === "google.com" ? "Signed in with Google"
+                      : "Signed in";
   const verifyBanner = (account.provider === "password" && account.emailVerified === false) ? `
     <div style="font-size:11px;color:var(--rh-amber,#d97706);margin-top:8px;padding:8px;background:rgba(217,119,6,.1);border-radius:8px;">
       Email not verified.

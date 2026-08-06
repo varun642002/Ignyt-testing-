@@ -83,7 +83,17 @@ window.IgnytFirebaseRestAuth = (function () {
     TOO_MANY_ATTEMPTS_TRY_LATER: "Too many attempts. Wait a few minutes and try again.",
     TOKEN_EXPIRED: "Your session has expired. Sign in again.",
     USER_NOT_FOUND: "Your session is no longer valid. Sign in again.",
-    OPERATION_NOT_ALLOWED: "Email and password sign-in is not enabled for this project."
+    /* Was "Email and password sign-in is not enabled", which is now wrong half the time —
+       this code comes back for whichever provider was used, and Apple is one of them. */
+    OPERATION_NOT_ALLOWED: "That sign-in method is not enabled for this app yet.",
+
+    /* Apple's identity token carries `aud` = the app's bundle id, and Firebase validates it
+       against an iOS app registered in the project. If none is registered there is nothing to
+       match and the token is rejected — which is what this code means far more often than a
+       genuinely malformed response. Worth naming, because "invalid idp response" reads like a
+       bug in the app and the fix is one form in a browser. */
+    INVALID_IDP_RESPONSE: "Apple sign-in is not finished being set up for this app. The iOS app needs registering in the Firebase project.",
+    MISSING_OR_INVALID_NONCE: "Apple sign-in could not be verified. Try again."
   };
 
   function friendly(code) {
@@ -119,13 +129,19 @@ window.IgnytFirebaseRestAuth = (function () {
      Must match what AuthPlugin.kt returns field for field, because saveAccount() reads
      exactly these keys and the rest of the app reads what it wrote. */
 
-  function toUser(account) {
+  function toUser(account, provider) {
     return {
       uid: account.localId || account.user_id || "",
       displayName: account.displayName || "",
       email: account.email || "",
       photoUrl: account.photoUrl || "",
-      provider: "password",
+      /* Was hard-coded "password", which was true while email was the only route here and
+         became a small lie the moment Apple was added: the Settings card reads this to say
+         "Signed in with email", and an Apple account would have claimed a password it does
+         not have. Taken from the lookup's providerUserInfo where present, since that is what
+         Firebase actually recorded, and falling back to what the caller knows it did. */
+      provider: (account.providerUserInfo && account.providerUserInfo[0] && account.providerUserInfo[0].providerId)
+                || provider || "password",
       emailVerified: account.emailVerified === true || account.emailVerified === "true"
     };
   }
@@ -213,7 +229,7 @@ window.IgnytFirebaseRestAuth = (function () {
     }
 
     var profile = await lookup(res.data.idToken);
-    return ok({ user: toUser(profile || res.data) });
+    return ok({ user: toUser(profile || res.data, "apple.com") });
   }
 
   var handlers = {
