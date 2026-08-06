@@ -21192,7 +21192,6 @@ window.addEventListener("storage", (e)=>{
 
 try{
   render();
-  if(window.__hideBootSplash) window.__hideBootSplash();
   /* Ask Play what this user is entitled to, once per launch. Deliberately after the first
      paint and not awaited: the cached entitlement already drove that paint, so a slow or
      unreachable Play service delays nothing the user sees. If Play's answer differs from the
@@ -21237,7 +21236,6 @@ try{
 }catch(err){
   console.error("Ignyt failed to boot:", err);
   renderErrorScreen(err);
-  if(window.__hideBootSplash) window.__hideBootSplash();
 }
 
 // Report the one-time duplicate-workout cleanup to the user, exactly once. showToast needs the

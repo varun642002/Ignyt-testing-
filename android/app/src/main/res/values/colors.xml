@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      The app's own background. Same value as the bg custom property in www/index.html and the
+      theme-color meta tag; the three must stay in step.
+
+      This is what the launch window paints while the process starts and the WebView attaches.
+      Using the app's real background rather than a branded splash image is what makes the
+      handover invisible: the screen never changes colour between tapping the icon and the
+      first render, so there is nothing that reads as a splash at all.
+    -->
+    <color name="ignytLaunchBackground">#121216</color>
+
+</resources>
