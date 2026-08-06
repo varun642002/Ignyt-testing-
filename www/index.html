@@ -618,7 +618,9 @@ main{overflow-x:hidden;}
    external stylesheet, so it is guaranteed to be ready for the very first paint. */
 #boot-splash{position:fixed; inset:0; z-index:9999; display:flex; flex-direction:column;
     align-items:center; justify-content:center; gap:14px; background:var(--bg);
-    transition:opacity .4s ease;}
+    /* Matches the 200ms removal timer in the boot script below. These two must agree: a
+       transition longer than the timer gets cut off mid-fade. */
+    transition:opacity .2s ease;}
 #boot-splash img{width:72px; height:72px; border-radius:18px;}
 #boot-splash .boot-name{font-weight:900; font-size:22px; letter-spacing:.1em; color:var(--text);}
 #boot-splash .boot-spinner{width:26px; height:26px; border-radius:50%; border:3px solid var(--surface-alt);
@@ -664,12 +666,18 @@ window.__bootSplashStart = Date.now();
 window.__hideBootSplash = function(){
   var el = document.getElementById("boot-splash");
   if(!el) return;
-  var minVisibleMs = 1600; // combined with the native splash's own hold, totals ~2s
-  var wait = Math.max(0, minVisibleMs - (Date.now() - window.__bootSplashStart));
-  setTimeout(function(){
-    el.classList.add("hide");
-    setTimeout(function(){ el.remove(); }, 420);
-  }, wait);
+  /* NO MINIMUM HOLD. There used to be one of 1600ms, which together with its 420ms fade put
+     roughly two seconds between tapping the icon and being able to use the app — and every
+     millisecond of it was deliberate waiting, not work. The app was already rendered behind
+     it. A splash exists to cover a wait; holding one open after the wait has ended is just
+     the app refusing to start.
+
+     This now hides the moment app.js reports its first render, so the splash lasts exactly
+     as long as boot actually takes and no longer. The fade is short and overlaps a screen
+     that is already painted underneath, so it reads as the app arriving rather than as a
+     cut. */
+  el.classList.add("hide");
+  setTimeout(function(){ el.remove(); }, 200);
 };
 try{
   if(sessionStorage.getItem("ignyt_boot_splash_shown_v1")){
