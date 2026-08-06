@@ -19269,7 +19269,7 @@ function attachHandlers(){
     showToast(res.unchanged ? "No changes to save." : "Workout updated.", res.unchanged ? "info" : "success", render);
     // Push the correction to Firestore right away when signed in; offline it stays queued
     // locally and the existing sync triggers pick it up on reconnect.
-    if(window.IgnytCloudSync && IgnytCloudSync.isNativeAndroid()) IgnytCloudSync.syncNow();
+    if(window.IgnytCloudSync && IgnytCloudSync.canSync && IgnytCloudSync.canSync()) IgnytCloudSync.syncNow();
   });
 
   const closeExDetailBtn = document.querySelector('[data-action="close-exercise-detail"]');

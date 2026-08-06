@@ -258,15 +258,48 @@ const IgnytCloudSync = (() => {
 
   /* ---------- utils ---------- */
 
-  function isNative() {
-    return typeof window.Capacitor !== "undefined"
+  function platform() {
+    return (typeof window.Capacitor !== "undefined"
       && typeof window.Capacitor.isNativePlatform === "function"
       && window.Capacitor.isNativePlatform()
-      && window.Capacitor.getPlatform() === "android";
+      && typeof window.Capacitor.getPlatform === "function")
+      ? window.Capacitor.getPlatform() : "web";
+  }
+
+  /* Android only, and it stays that way: this reports whether the KOTLIN PLUGIN is the route,
+     which is a different question from whether cloud sync works at all. Kept under its old
+     name because the export is public API. */
+  function isNative() {
+    return platform() === "android";
+  }
+
+  /**
+   * Whether cloud sync is possible here at all. The two platforms reach Firestore by different
+   * routes and both of them work:
+   *
+   *   android  the Kotlin plugin over the Firestore SDK, with its offline cache and durable
+   *            write queue
+   *   ios      js/auth/firestore-rest.js over the REST API, authorised with the Firebase ID
+   *            token the REST auth module already holds. iOS has no Firebase SDK in the
+   *            project, and adding it for four operations would be a large dependency for no
+   *            behaviour the REST API does not already provide.
+   *
+   * This is the check every "can we sync" site wants. isNative() answers a narrower question
+   * and using it for this is what left iOS silently never syncing.
+   */
+  function canSync() {
+    return platform() === "android" || platform() === "ios";
   }
 
   async function callNative(methodName, options) {
-    if (!isNative()) return { success: false, error: "Cloud sync is only available in the IGNYT Android app." };
+    /* iOS: same four method names, same return shapes, no plugin. */
+    if (platform() === "ios") {
+      if (!window.IgnytFirestoreRest) {
+        return { success: false, error: "IgnytFirestoreRest is not loaded." };
+      }
+      return await window.IgnytFirestoreRest.call(methodName, options || {});
+    }
+    if (!isNative()) return { success: false, error: "Cloud sync is only available in the IGNYT mobile app." };
     const plugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytCloudSync;
     if (!plugin || typeof plugin[methodName] !== "function") {
       return { success: false, error: `IgnytCloudSync.${methodName} is not available.` };
@@ -479,7 +512,9 @@ const IgnytCloudSync = (() => {
 
   async function sync(trigger) {
     if (_busy) return;                       // no concurrent syncs, ever
-    if (!isNative()) return;
+    /* canSync(), not isNative(). This is the line that made iOS never sync at all: the
+       platform has a working route to Firestore and was returning here before using it. */
+    if (!canSync()) return;
     const uid = signedInUid();
     if (!uid) { setStatus("signed-out"); return; }
 
@@ -677,6 +712,9 @@ const IgnytCloudSync = (() => {
 
   return {
     isNativeAndroid: isNative,
+    /* What callers actually mean when they ask "can this device sync". isNativeAndroid stays
+       for anything genuinely asking about the Kotlin plugin. */
+    canSync,
     syncNow: () => sync("manual"),
     isBusy: () => _busy,
     getStatus: () => ({

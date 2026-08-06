@@ -795,6 +795,9 @@ main{overflow-x:hidden;}
      logEvent() call that lands before IgnytSecurity exists is a silently dropped event. -->
 <script defer src="js/security/security.js"></script>
 <script defer src="js/auth/firebase-rest-auth.js"></script>
+<!-- After firebase-rest-auth.js, which it takes the ID token from; before cloud-sync.js,
+     which dispatches to it on iOS. -->
+<script defer src="js/auth/firestore-rest.js"></script>
 <script defer src="auth.js"></script>
 <script defer src="app.js"></script>
 <script defer src="health-connect.js"></script>
