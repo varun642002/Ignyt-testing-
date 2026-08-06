@@ -13,7 +13,8 @@
     "test:accessibility": "playwright test tests/accessibility",
     "test:visual": "playwright test tests/visual",
     "test:ui": "playwright test --ui",
-    "test:report": "playwright show-report reports/html"
+    "test:report": "playwright show-report reports/html",
+    "capacitor:sync:after": "node tools/ios-register-app-plugins.mjs"
   },
   "keywords": [],
   "author": "",
