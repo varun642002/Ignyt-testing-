@@ -128,6 +128,47 @@ nav.bottom-nav {
   box-shadow: var(--gloss-edge), 0 8px 30px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.2);
 }
 
+/* The app header, now that it holds still.
+
+   It only earns a treatment because it stopped scrolling — see the min-height:0 note in
+   layout.css. A gradient that scrolls with the page reads as a band across the content; the
+   same gradient on a fixed surface reads as light falling on it.
+
+   GRADIENTS, NOT backdrop-filter, and not by accident. A blurred backdrop over an area that
+   scrolls is the one composition WebKit recomputes every frame — it is why the bottom nav's
+   blur had to be dropped on iOS (css/platform.css). The header sits over exactly that kind of
+   area, so it would have cost the same. Everything here is painted once.
+
+   The token set adapts on its own: --gloss-surface and --gloss-edge are redefined for the
+   light theme at the top of this file, so the Home tab's light header gets a white sheen and
+   a white hairline rather than the dark theme's. Nothing here needs a second rule for it. */
+header.app-header {
+  position: relative;
+  /* Top highlight and a hairline foot: the two edges that make a surface read as lit from
+     above rather than as a flat block of colour. */
+  box-shadow: var(--gloss-edge), 0 1px 0 var(--gloss-hairline);
+}
+
+/* The sheen is a pseudo-element, not background-image on the header, because it kept being
+   erased. Several rules set the header's background with the SHORTHAND —
+   .app-header--home-light and its [data-theme="dark"] variant among them — and `background`
+   resets background-image to none as part of setting the colour. Some of those out-specify
+   `header.app-header` too, so raising specificity would only have moved the argument.
+
+   An overlay cannot be reset by a property on its parent. The header keeps whatever background
+   colour its page wants, and the light falls on top of it either way. */
+header.app-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--gloss-surface);
+}
+
+/* The header's own children must sit above the sheen — without this the overlay paints over
+   the title and the buttons rather than over the surface behind them. */
+header.app-header > * { position: relative; z-index: 1; }
+
 /* =========================================================
    MOTION — all of it transform/opacity, none of it touching layout.
 ========================================================= */

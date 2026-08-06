@@ -1,4 +1,13 @@
-#app { max-width: 480px; background: var(--color-bg); }
+/* HEIGHT, not min-height, and this is the other half of the main{min-height:0} note below.
+   #app had min-height:100vh and no ceiling, so with a tall page it simply grew — measured at
+   1547px against a 660px viewport. main then received all 1469px it asked for, its content fit
+   exactly, and overflow-y:auto had nothing to do. Releasing main's min-height alone changed
+   nothing for the same reason.
+   Bounding #app to the viewport is what makes the flex line finite, so main is forced to
+   overflow and scroll inside it while the header and nav hold still.
+   dvh rather than vh: on a phone the two differ by the browser chrome, and vh would push the
+   bottom of the app under it. */
+#app { max-width: 480px; background: var(--color-bg); height: 100dvh; }
 /* THE TOP PADDING IS A max(), NOT AN ADDITION.
    --safe-top is env(safe-area-inset-top, 0px), and on a phone with no cut-out — most Android
    devices — that is 0px. calc(0px + 12px) gave the header twelve pixels of top padding, so the
@@ -14,6 +23,21 @@
    this file, and here), so the inline copy has been removed rather than fixed. One property,
    one place. */
 header.app-header { padding: max(calc(var(--safe-top) + var(--space-sm)), 20px) var(--space-md) var(--space-sm); }
+
+/* THE HEADER SCROLLED AWAY BECAUSE MAIN NEVER SCROLLED. One line, and it is this one.
+
+   #app is a column flex container; main is flex:1 with overflow-y:auto and was meant to be
+   the scrolling area, with the header and the bottom nav fixed either side of it. It never
+   scrolled once. A flex item's default min-height is AUTO, meaning it refuses to shrink below
+   its own content — so main simply grew to fit, overflow-y:auto never had anything to do,
+   #app grew past the viewport, and the BODY scrolled instead. Measured before the fix: main's
+   scroll range 0px on every tab, the page's 514px on Home, and the header travelling the full
+   400px of any scroll.
+
+   min-height:0 releases that floor. main is then bounded by the flex line, its overflow
+   engages, and the header and nav sit still on every page — which is what the markup was
+   always shaped for. */
+main { min-height: 0; }
 .page-title-row { display:flex; align-items:center; justify-content:space-between; gap:var(--space-sm); }
 .page-tools-btn { min-height:44px; min-width:44px; border:1px solid var(--color-border); border-radius:var(--radius-sm); color:var(--color-text-primary); background:var(--color-surface); position:relative; }
 
