@@ -134,6 +134,31 @@ const IgnytAuth = (() => {
     try { if (window.IgnytSecurity) IgnytSecurity.logEvent(type, detail || {}); } catch (e) {}
   }
 
+  /* Google Sign-In. The native side shows the account picker and does the token-for-session
+     exchange; this only records the result and tells the UI. No timeout is imposed here --
+     the picker is system UI and legitimately waits on the user, and a cancellation comes back
+     as an ordinary error result rather than a rejection.
+
+     ANDROID ONLY. callNative routes ios to the REST module, which has no signIn method, so
+     this would return "not implemented" there. The button is gated on isNativeAndroid() for
+     the same reason — see renderSignInScreen. */
+  async function signIn() {
+    if (_busy) return { success: false, error: "Already in progress." };
+    _busy = true; _errorMsg = null; notifyUI();
+    const result = await callNative("signIn");
+    _busy = false;
+    if (result.success && result.data && result.data.user) {
+      saveAccount(result.data.user);
+      _errorMsg = null;
+      sec("auth.signin.google", { ok: true });
+    } else {
+      _errorMsg = result.error || "Sign-in failed.";
+      sec("auth.signin.google", { ok: false });
+    }
+    notifyUI();
+    return result;
+  }
+
   async function signUpWithEmail(email, password) {
     if (_busy) return { success: false, error: "Already in progress." };
     _busy = true; _errorMsg = null; notifyUI();
@@ -403,6 +428,7 @@ const IgnytAuth = (() => {
     checkSigning,
     getSigningInfo: () => _signing,   // sync, cached — null until boot's checkSigning resolves
     signUpWithEmail,
+    signIn,
     signInWithEmail,
     signInWithApple,
     appleAvailable,

@@ -419,6 +419,13 @@
 .auth-social__btn:active{ transform: scale(.972); border-color: #3A3A3A; background: #202020; }
 .auth-social__btn svg{ width: 21px; height: 21px; display: block; }
 
+/* Google returns as a single full-width button rather than one tile in a row of providers, so
+   it needs the row layout: icon beside the label, normal button height. The tile rule above is
+   left alone -- it is still correct for a grid, which is what it was written for, and would be
+   needed again the moment a second provider appears. */
+.auth-social__btn{ flex-direction: row; min-height: 0; width: 100%; padding: 13px 16px; font-size: 14.5px; }
+.auth-social__btn[disabled]{ opacity: .6; cursor: default; }
+
 /* ---- legal ---- */
 .auth-legal{
   margin: auto 0 0;
