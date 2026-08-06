@@ -81,24 +81,35 @@ workflows:
     name: iOS release to TestFlight
     instance_type: mac_mini_m2
     max_build_duration: 60
-    integrations:
-      # Create this in Codemagic: Teams > Integrations > Developer Portal > Add key, using an
-      # App Store Connect API key generated at appstoreconnect.apple.com > Users and Access >
-      # Integrations. Name it exactly "ignyt-app-store-connect" or change the name here.
-      app_store_connect: ignyt-app-store-connect
+    # NO `integrations:` BLOCK. A named App Store Connect integration is a TEAM feature, and
+    # this account is on an individual plan — referencing one failed with "App Store Connect
+    # integration ignyt-app-store-connect does not exist", which was accurate.
+    #
+    # The API key is supplied as environment variables instead. This is not a workaround: the
+    # codemagic-cli-tools read these three names directly, so it is the same key reaching the
+    # same code by a route that does not depend on the plan.
     environment:
       groups:
         # Codemagic > your app > Environment variables. Every variable added there belongs to
         # a GROUP, and a group is not visible to a workflow until it is named here — that is
-        # the whole purpose of this block. Create the group with exactly this name and put
-        # APP_APPLE_ID in it.
+        # the whole purpose of this block. Create ONE group with exactly this name holding all
+        # four variables below.
         #
-        # This was the bug: APP_APPLE_ID used to be declared below as `APP_APPLE_ID:
+        #   APP_APPLE_ID                     6798095139  (App Store Connect > App Information)
+        #   APP_STORE_CONNECT_ISSUER_ID      secure
+        #   APP_STORE_CONNECT_KEY_IDENTIFIER secure
+        #   APP_STORE_CONNECT_PRIVATE_KEY    secure — the whole .p8 file, BEGIN/END lines and all
+        #
+        # The three APP_STORE_CONNECT_* names are not arbitrary and must not be renamed: the
+        # CLI looks for exactly these, which is why the signing step below passes no
+        # credentials of its own and why no key material appears anywhere in this file.
+        #
+        # A separate bug lived here: APP_APPLE_ID used to be declared as `APP_APPLE_ID:
         # $APP_APPLE_ID`, a self-reference. With no group included there was nothing for the
         # right-hand side to resolve to, so it expanded to empty and then overwrote itself
-        # with that emptiness. Adding the variable in the Codemagic UI would not have helped;
-        # it would have been set and then shadowed, which is a considerably worse failure than
-        # simply being absent, because the UI shows it present.
+        # with that emptiness. Adding the variable in the UI would not have helped; it would
+        # have been set and then shadowed, which is worse than simply being absent, because
+        # the UI shows it present.
         - ignyt
       node: 22
       xcode: latest
@@ -179,7 +190,11 @@ workflows:
       - /tmp/xcode-archive.log
     publishing:
       app_store_connect:
-        auth: integration
+        # Explicit key rather than `auth: integration`, for the same reason as above: the
+        # integration form requires a team. Same key, same variables the signing step uses.
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
         # Not submitted for App Store review automatically. Review is a one-way door and
         # health apps get extra scrutiny over HealthKit usage — that submission should be a
