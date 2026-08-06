@@ -169,7 +169,7 @@
               <span class="hm-xp__level">Level ${x.level} &middot; ${x.title}</span>
               <span class="hm-xp__next">${x.toNext} XP to go</span>
             </div>
-            <div class="hm-xp__track"><div class="hm-xp__fill" style="width:${x.percent}%;"></div></div>
+            <div class="hm-xp__track"><div class="hm-xp__fill" style="--fill:${x.percent/100};"></div></div>
           </div>`; })() : ''}
           <div class="hm-greet__chips">
             <span class="hm-chip hm-chip--streak">🔥 ${streak} day${streak === 1 ? '' : 's'}</span>
@@ -329,7 +329,7 @@
             <span class="wch__xp">${wc.done ? 'Complete ✓' : '+'+wc.xp+' XP'}</span>
           </div>
           <div class="wch__label">${escHtml(wc.label)}</div>
-          <div class="wch__track"><div class="wch__fill" style="width:${wc.percent}%"></div></div>
+          <div class="wch__track"><div class="wch__fill" style="--fill:${wc.percent/100}"></div></div>
           <div class="wch__foot">
             <span><b data-count="${wc.current}" data-count-key="wch-${wc.id}-${wc.weekKey}">${wc.current}</b> / ${wc.target} ${escHtml(wc.unit)}</span>
             <span>${wc.personalised

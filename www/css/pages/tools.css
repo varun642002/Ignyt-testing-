@@ -256,3 +256,40 @@
 .st-export__label{ font-size: 14px; font-weight: 700; }
 .st-export__desc{ font-size: 11.5px; color: var(--rh-muted); }
 .st-export .tl-card__icon{ flex: none; }
+
+/* ---- settings rows ---------------------------------------------------------------------
+   Icon, text and control as three siblings on one centred axis.
+
+   They used to be nested: the control sat inside the text block next to the title, while the
+   icon centred against the whole row. So every control in the settings list sat about 9px
+   above its own icon (11.7px for the unit chips, which are taller) — small enough to look
+   like nothing in particular and large enough to make the column read as crooked. Making them
+   siblings means one align-items does the work for every control type. */
+.stg-row{ display:flex; align-items:center; gap:10px; padding:14px 0; }
+.stg-row + .stg-row{ border-top:1px solid var(--rh-border); }
+.stg-row__body{ flex:1; min-width:0; }
+.stg-row__label{ display:block; font-size:14px; font-weight:700; }
+.stg-row__desc{ font-size:11px; color:var(--rh-muted); margin-top:3px; line-height:1.4; }
+/* margin-left:auto pins the control right whatever the text does, so the right edge is one
+   straight line down the card rather than following each label's width. */
+.stg-row__ctrl{ flex:none; margin-left:auto; display:flex; align-items:center; gap:6px; }
+
+.stg-switch{ position:relative; flex:none; width:46px; height:26px; padding:0; border:none;
+  border-radius:var(--radius-pill); background:#D9DEE7; cursor:pointer; transition:background .15s; }
+.stg-switch.is-on{ background:var(--rh-blue); }
+/* Transform rather than swapping left/right — the knob slides instead of teleporting. */
+.stg-switch__knob{ position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%;
+  background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.2); transition:transform .15s; }
+.stg-switch.is-on .stg-switch__knob{ transform:translateX(20px); }
+@media (prefers-reduced-motion: reduce){
+  .stg-switch, .stg-switch__knob{ transition:none; }
+}
+
+/* The two dropdowns in this list. width:auto so they size to their own content instead of
+   stretching to the pi-input default, which is full width. */
+.stg-select{ width:auto; padding:6px 10px; }
+
+/* .cat-chip carries margin:0 6px 6px 0 for the wrapping chip GRIDS it was built for. In a
+   flush-right control that trailing margin pushed the last chip 6px inside every toggle and
+   dropdown above it — the one control in the list whose right edge did not line up. */
+.stg-row__ctrl .cat-chip{ margin:0; }

@@ -53,7 +53,7 @@
     /* week / weekStats / prsThisWeek / volumeTrend / todayMuscles / routineEstimatedMinutes went
        with the This Week grid. app.js still passes them and other screens still use them; this
        one simply stopped asking. */
-    const { state, svg, renderPRCelebration, renderRoutineBuilder, sessionMuscles, sessionTitle,
+    const { state, svg, renderPRCelebration, renderPlanCard, renderRoutineBuilder, sessionMuscles, sessionTitle,
       workoutDurationLabel, displayW, wUnit, plannedDay, ROUTINE_CATEGORIES, escHtml } = ctx;
 
     const showAll = state.showAllSessions;
@@ -78,6 +78,13 @@
               session: the four figures are all on Progress, which is where someone goes to
               read them. Quick Actions leads now, then routines, then what was logged recently.
               Order: do, then choose, then review. */''}
+        ${/* Today's plan leads. This screen is for starting a session, and the plan is the
+              answer to the question someone opens it with. Quick Actions still sits directly
+              under it for anyone who wants to do something else. Renders nothing at all when
+              there is no plan, rather than an empty-state card taking the best space on the
+              screen to say "no plan yet". */''}
+        ${renderPlanCard ? renderPlanCard() : ''}
+
         <div class="rh-section-head"><span>Quick Actions</span></div>
         <div class="wk-quick-grid">
           <button class="rh-quick-card" data-action="toggle-routine-builder">${svg('plus',20)}<span>New Routine</span></button>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_open_app">Open IGNYT</string>
+    <string name="widget_progress_desc">Progress</string>
+    <string name="widget_qa_workout">Workout</string>
+    <string name="widget_qa_food">Food</string>
+    <string name="widget_qa_water">+250ml</string>
+
+    <string name="widget_desc_score">Your IGNYT Score, streak and quick actions.</string>
+    <string name="widget_desc_workout">Today\'s session and what is left of it.</string>
+    <string name="widget_desc_weight">Current weight, goal and weekly trend.</string>
+    <string name="widget_desc_water">Water intake with a one-tap top-up.</string>
+    <string name="widget_desc_steps">Steps against your daily goal.</string>
+    <string name="widget_desc_calories">Calories and macros for today.</string>
+    <string name="widget_desc_motivation">A line to start the day on.</string>
+    <string name="widget_desc_streak">Current and best training streak.</string>
+    <string name="widget_desc_sleep">Sleep duration and recovery score.</string>
+    <string name="widget_desc_coach">What your coach suggests today.</string>
+</resources>

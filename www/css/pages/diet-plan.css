@@ -135,7 +135,9 @@
   height: 6px; border-radius: 3px; background: var(--rh-border);
   overflow: hidden; margin-top: 8px;
 }
-.dp-progress__fill { height: 100%; background: var(--rh-green); border-radius: 3px; transition: width .25s ease; }
+.dp-progress__fill { height: 100%; width: 100%; background: var(--rh-green); border-radius: 3px;
+  transform-origin: left center; transform: scaleX(var(--fill, 0));
+  transition: transform .25s var(--ease-standard, cubic-bezier(.2,.8,.2,1)); }
 
 /* ---- meal cards ---- */
 .dp-meals { display: flex; flex-direction: column; gap: 10px; }

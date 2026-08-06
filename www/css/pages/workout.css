@@ -485,6 +485,39 @@
 .wk-exprog__cell b.is-up{ color: var(--rh-green, #16a34a); }
 .wk-exprog__cell b.is-down{ color: var(--rh-muted); }
 .wk-exprog__spark{ grid-column: 1 / -1; width: 100%; height: 18px; display: block; }
+
+/* Next-set target from the overload engine. Sits under the history strip: that one says where
+   you are, this one says what to do about it. Tone is carried by the left rule and the number
+   only -- an entire row tinted red for a deload reads as an error state, and being told to
+   take 10% off is a normal, healthy week, not a failure. */
+.wk-target{
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  margin: 6px 0 2px; padding: 7px 10px;
+  border-radius: var(--radius-xs-plus, 8px);
+  border-left: 2px solid var(--rh-blue);
+  background: color-mix(in srgb, var(--rh-blue) 7%, transparent);
+  font-size: 12px; line-height: 1.45;
+}
+.wk-target--push{ border-left-color: var(--rh-green); background: color-mix(in srgb, var(--rh-green) 8%, transparent); }
+.wk-target--ease{ border-left-color: var(--rh-blue);  background: color-mix(in srgb, var(--rh-blue) 7%, transparent); }
+.wk-target--hold{ border-left-color: var(--rh-muted); background: color-mix(in srgb, var(--rh-muted) 8%, transparent); }
+.wk-target__icon{ flex: none; display: inline-flex; align-items: center; color: var(--rh-blue); }
+.wk-target--push .wk-target__icon{ color: var(--rh-green); }
+.wk-target--hold .wk-target__icon{ color: var(--rh-muted); }
+/* Tabular figures: this number sits directly above a column of logged numbers and a
+   proportional font makes the two look like different kinds of value. */
+.wk-target__num{ font-weight: 800; color: var(--rh-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wk-target__why{ color: var(--rh-muted); min-width: 0; }
+
+/* color-mix is Chrome 111+. Android's WebView updates through Play so this is current on
+   nearly every device, but the fallback matters on the few that are not: without it the
+   background is invalid and drops to transparent, leaving the left rule alone to carry the
+   tone -- which still reads correctly, just more quietly. */
+@supports not (background: color-mix(in srgb, red 10%, transparent)){
+  .wk-target{ background: rgba(127,127,127,.08); }
+  .wk-target--push, .wk-target--ease, .wk-target--hold{ background: rgba(127,127,127,.08); }
+}
+
 .wk-exprog--new{
   display: block; font-size: 11.5px; font-weight: 600; color: var(--rh-muted);
 }
@@ -526,3 +559,67 @@
 .wk-animal__text { flex:1; min-width:0; }
 .wk-animal__lead { font-size:16px; font-weight:800; letter-spacing:-.01em; line-height:1.25; }
 .wk-animal__sub { font-size:12px; color:var(--rh-muted); margin-top:3px; line-height:1.4; }
+
+
+/* =========================================================
+   TODAY'S PLAN CARD
+   Leads the workout screen. Styled as a surface rather than a banner: it is content to act
+   on, not an announcement, and an accent-filled block at the top of every visit gets tuned
+   out within a week.
+========================================================= */
+.wk-plan{
+  background: var(--rh-card); border: 1px solid var(--rh-border);
+  border-radius: var(--radius-card); padding: 14px; margin-bottom: 14px;
+}
+.wk-plan__head{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.wk-plan__label{ font-size:15px; font-weight:800; color:var(--rh-text); min-width:0; }
+.wk-plan__day{ font-size:11px; font-weight:700; color:var(--rh-blue); white-space:nowrap;
+               text-transform:uppercase; letter-spacing:.05em; }
+.wk-plan__list{ list-style:none; padding:0; margin:0 0 10px; }
+.wk-plan__list li{
+  display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+  padding:6px 0; border-bottom:1px solid var(--rh-border); font-size:13px;
+}
+.wk-plan__list li:last-child{ border-bottom:none; }
+.wk-plan__ex{ color:var(--rh-text); font-weight:600; min-width:0; }
+/* Tabular figures so the prescriptions form a clean right-hand column rather than a ragged one. */
+.wk-plan__presc{ color:var(--rh-muted); font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.wk-plan__why{ font-size:11.5px; color:var(--rh-muted); line-height:1.5; display:flex; gap:5px; align-items:flex-start; margin-bottom:10px; }
+.wk-plan__start{ margin-top:2px; }
+.wk-plan--rest{ opacity:.9; }
+.wk-plan--rest .wk-plan__day{ color:var(--rh-muted); }
+
+/* Week/deload metadata on the plan card. A deload is a normal, planned week, so it is marked
+   by a quiet left rule rather than a warning colour — being told to go lighter is not a
+   failure state and must not look like one. */
+.wk-plan__meta{ font-size:11px; font-weight:700; color:var(--rh-muted); margin:2px 0 8px;
+                text-transform:uppercase; letter-spacing:.05em; }
+.wk-plan--deload{ border-left:3px solid var(--rh-blue); }
+
+/* Dismiss control on the plan card. Deliberately quiet and small-but-tappable: a 28px target
+   so it is reachable with a thumb, at low opacity so it never competes with the plan name
+   beside it. It turns a feature off, so it should be findable when wanted and invisible when
+   not — a bright X on every visit reads as an ad you are being invited to close. */
+.wk-plan__hide{
+  flex: none; width: 28px; height: 28px; margin: -4px -4px -4px 0;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: none; cursor: pointer; border-radius: 50%;
+  color: var(--rh-muted); opacity: .45; transition: opacity .15s ease, background .15s ease;
+}
+.wk-plan__hide:hover, .wk-plan__hide:focus-visible{ opacity: 1; background: rgba(127,127,127,.12); }
+.wk-plan__hide:active{ opacity: 1; }
+/* The head is a flex row; the day label should keep the middle and the X sit at the end. */
+.wk-plan__head{ align-items: center; }
+.wk-plan__day{ margin-left: auto; }
+
+/* Injury/condition notice on the plan card. Amber rather than red: the plan was adjusted
+   successfully, which is the feature working, not an error. Red here would read as "something
+   went wrong" every single session for someone managing a long-term condition. It sits above
+   the exercise list because it explains the list. */
+.wk-plan__safety{
+  display:flex; gap:6px; align-items:flex-start;
+  font-size:11.5px; line-height:1.5; color:var(--rh-text);
+  background:rgba(245,187,69,.10); border-left:2px solid var(--rh-amber, #B3800C);
+  border-radius:var(--radius-xs, 6px);
+  padding:8px 10px; margin:0 0 10px;
+}

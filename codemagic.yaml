@@ -81,31 +81,43 @@ workflows:
     name: iOS release to TestFlight
     instance_type: mac_mini_m2
     max_build_duration: 60
-    integrations:
-      # Create this in Codemagic: Teams > Integrations > Developer Portal > Add key, using an
-      # App Store Connect API key generated at appstoreconnect.apple.com > Users and Access >
-      # Integrations. Name it exactly "ignyt-app-store-connect" or change the name here.
-      app_store_connect: ignyt-app-store-connect
+    # NO `integrations:` BLOCK. A named App Store Connect integration is a TEAM feature, and
+    # this account is on an individual plan — referencing one failed with "App Store Connect
+    # integration ignyt-app-store-connect does not exist", which was accurate.
+    #
+    # The API key is supplied as environment variables instead. This is not a workaround: the
+    # codemagic-cli-tools read these three names directly, so it is the same key reaching the
+    # same code by a route that does not depend on the plan.
     environment:
+      groups:
+        # Codemagic > your app > Environment variables. Every variable added there belongs to
+        # a GROUP, and a group is not visible to a workflow until it is named here — that is
+        # the whole purpose of this block. Create ONE group with exactly this name holding all
+        # four variables below.
+        #
+        #   APP_APPLE_ID                     6798095139  (App Store Connect > App Information)
+        #   APP_STORE_CONNECT_ISSUER_ID      secure
+        #   APP_STORE_CONNECT_KEY_IDENTIFIER secure
+        #   APP_STORE_CONNECT_PRIVATE_KEY    secure — the whole .p8 file, BEGIN/END lines and all
+        #   CERTIFICATE_PRIVATE_KEY          secure — a 2048-bit RSA key you generate yourself:
+        #                                      ssh-keygen -t rsa -b 2048 -m PEM -f cert_key -N ""
+        #                                    Keep it. It is what the distribution certificate
+        #                                    belongs to, and losing it means burning another of
+        #                                    Apple's three certificate slots.
+        #
+        # The three APP_STORE_CONNECT_* names are not arbitrary and must not be renamed: the
+        # CLI looks for exactly these, which is why the signing step below passes no
+        # credentials of its own and why no key material appears anywhere in this file.
+        #
+        # A separate bug lived here: APP_APPLE_ID used to be declared as `APP_APPLE_ID:
+        # $APP_APPLE_ID`, a self-reference. With no group included there was nothing for the
+        # right-hand side to resolve to, so it expanded to empty and then overwrote itself
+        # with that emptiness. Adding the variable in the UI would not have helped; it would
+        # have been set and then shadowed, which is worse than simply being absent, because
+        # the UI shows it present.
+        - ignyt
       node: 22
       xcode: latest
-      vars:
-        # The app's numeric Apple ID (App Store Connect > your app > App Information >
-        # "Apple ID" — a 10-digit number, NOT the bundle id and NOT your email). Set it in
-        # Codemagic as an environment variable so it is not committed here.
-        #
-        # It was referenced by the build-number step below and never defined anywhere, which
-        # is worse than it sounds: the lookup failed silently, the `|| echo 0` caught it, and
-        # every build got number 1. The first TestFlight upload would have worked and the
-        # second would have been rejected as a duplicate — exactly the versionCode collision
-        # Android hit three times.
-        APP_APPLE_ID: $APP_APPLE_ID
-      ios_signing:
-        # Codemagic creates and manages the certificate and provisioning profile from the API
-        # key above. This is the step that normally forces a Mac — Keychain generates the
-        # signing request locally — and is the reason this project can ship without one.
-        distribution_type: app_store
-        bundle_identifier: com.varun.ignyt
     scripts:
       - name: Install dependencies
         script: npm ci
@@ -113,8 +125,90 @@ workflows:
       - name: Sync the web layer into the iOS project
         script: npx cap sync ios
 
-      - name: Apply the managed signing profile
-        script: xcode-project use-profiles
+      - name: Create the signing certificate and provisioning profile
+        # THIS REPLACED THE DECLARATIVE `ios_signing:` BLOCK, which failed four times with
+        # "No matching profiles found for bundle identifier com.varun.ignyt and distribution
+        # type app_store" — and kept failing after the App ID was registered, HealthKit was
+        # enabled on it, and the app record existed in App Store Connect. The message is
+        # accurate and was never the problem it sounds like: there genuinely was no profile,
+        # because nothing had created one. The shorthand FETCHES signing files; it does not
+        # create them, and a first-ever build has nothing to fetch.
+        #
+        # `--create` is the whole fix. It makes the distribution certificate if the account
+        # has none and the provisioning profile if the App ID has none, then keychain
+        # add-certificates installs the certificate so xcodebuild can actually use it, and
+        # use-profiles writes the profile into the Xcode project's build settings.
+        #
+        # No key material is handled here. The three variables below are set in the Codemagic
+        # UI and the CLI reads them from the environment on its own.
+        #
+        # THE PRE-FLIGHT CHECK IS NOT DECORATION. app-store-connect is a Python CLI, so when
+        # its credentials are absent it does not report a credentials problem — argparse
+        # rejects the call as malformed and the step dies with a bare "exited with status code
+        # 2". That is indistinguishable from a genuine syntax error in the command, and it is
+        # exactly what happened here. Naming the missing variable turns a dead end into an
+        # instruction.
+        #
+        # Lengths and a shape check, never values. A private key pasted without its BEGIN/END
+        # armour, or with the newlines flattened, is the single most common way this fails,
+        # and both survive a "the variable is set" check while still being unusable.
+        #
+        # One cost worth knowing: the declarative block failed during initialisation, which is
+        # free. These are build steps, so from here a failure burns minutes.
+        script: |
+          set -e
+
+          missing=""
+          if [ -z "$APP_STORE_CONNECT_ISSUER_ID" ]; then missing="$missing APP_STORE_CONNECT_ISSUER_ID"; fi
+          if [ -z "$APP_STORE_CONNECT_KEY_IDENTIFIER" ]; then missing="$missing APP_STORE_CONNECT_KEY_IDENTIFIER"; fi
+          if [ -z "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then missing="$missing APP_STORE_CONNECT_PRIVATE_KEY"; fi
+          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then missing="$missing CERTIFICATE_PRIVATE_KEY"; fi
+          if [ -n "$missing" ]; then
+            echo "Not set:$missing"
+            echo ""
+            echo "Add them in Codemagic > your app > Environment variables, in a group named"
+            echo "exactly 'ignyt' (the name under environment.groups in codemagic.yaml). A"
+            echo "variable in no group, or in a group this workflow does not name, is invisible"
+            echo "to the build however correct it looks in the UI."
+            echo "Generate the key at App Store Connect > Users and Access > Integrations,"
+            echo "with App Manager access."
+            exit 1
+          fi
+
+          echo "Issuer ID: ${#APP_STORE_CONNECT_ISSUER_ID} chars"
+          echo "Key ID:    ${#APP_STORE_CONNECT_KEY_IDENTIFIER} chars"
+          echo "Private key: ${#APP_STORE_CONNECT_PRIVATE_KEY} chars"
+          case "$APP_STORE_CONNECT_PRIVATE_KEY" in
+            *"BEGIN PRIVATE KEY"*) echo "Private key: PEM armour present" ;;
+            *) echo "Private key: NO 'BEGIN PRIVATE KEY' line found — paste the whole .p8 file, header and footer included"; exit 1 ;;
+          esac
+
+          keychain initialize
+
+          # --certificate-key is what "Cannot save Signing Certificates without certificate
+          # private key" was asking for, and it is NOT the App Store Connect key despite the
+          # names being nearly identical.
+          #
+          #   APP_STORE_CONNECT_PRIVATE_KEY  proves who you are TO Apple. Apple issues it.
+          #   CERTIFICATE_PRIVATE_KEY        is the key the distribution certificate BELONGS
+          #                                  to. Apple never sees it and never generates it —
+          #                                  a certificate is Apple's signature over a public
+          #                                  key that you hold the other half of, so `--create`
+          #                                  cannot invent one on your behalf.
+          #
+          # On a Mac, Keychain silently makes this key when you tick a box in Xcode, which is
+          # why the step has no obvious counterpart and why the error reads like a bug.
+          #
+          # It MUST be stable across builds. Generating one per build would look like it works
+          # and would mint a fresh distribution certificate every time; Apple allows three,
+          # after which every build fails and the fix is a cleanup in the developer portal.
+          app-store-connect fetch-signing-files "com.varun.ignyt" \
+            --type IOS_APP_STORE \
+            --certificate-key=@env:CERTIFICATE_PRIVATE_KEY \
+            --create
+
+          keychain add-certificates
+          xcode-project use-profiles
 
       - name: Keep the build number ahead of TestFlight
         # TestFlight rejects a build number it has already seen, the same rule that made
@@ -130,8 +224,11 @@ workflows:
         script: |
           set -e
           if [ -z "$APP_APPLE_ID" ]; then
-            echo "APP_APPLE_ID is not set. Add it in Codemagic > Environment variables."
-            echo "Find it at App Store Connect > your app > App Information > Apple ID."
+            echo "APP_APPLE_ID is not set."
+            echo "Add it in Codemagic > Environment variables, in a group named 'ignyt'"
+            echo "(the group name must match the one under environment.groups in this file,"
+            echo "or the variable is invisible to the build no matter what the UI shows)."
+            echo "Find the value at App Store Connect > your app > App Information > Apple ID."
             exit 1
           fi
           LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_APPLE_ID" || echo "")
@@ -155,7 +252,11 @@ workflows:
       - /tmp/xcode-archive.log
     publishing:
       app_store_connect:
-        auth: integration
+        # Explicit key rather than `auth: integration`, for the same reason as above: the
+        # integration form requires a team. Same key, same variables the signing step uses.
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
         # Not submitted for App Store review automatically. Review is a one-way door and
         # health apps get extra scrutiny over HealthKit usage — that submission should be a

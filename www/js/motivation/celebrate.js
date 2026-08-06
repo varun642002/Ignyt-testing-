@@ -35,8 +35,29 @@ window.IgnytCelebrate = (function () {
    *   c.icon    emoji or short string shown in the badge
    *   c.stat    optional secondary line, e.g. "+150 XP"
    */
+  /* An achievement earned while the app is on screen is celebrated on screen. One earned while
+     the app is in the background would otherwise play its card to an empty room and drain from
+     the queue unseen, so that case becomes a notification instead.
+
+     Deliberately one or the other, never both. Telling someone about the same milestone twice
+     — once on the lock screen, once again as a card when they open the app — reads as a bug,
+     and the milestone ledger only claims each one once anyway. */
+  function notifyInstead(c) {
+    try {
+      if (!window.IgnytReminders || !IgnytReminders.sendNow) return false;
+      IgnytReminders.sendNow({
+        id: "achv-" + Date.now(),
+        title: (c.icon ? c.icon + " " : "") + c.title,
+        body: c.body || c.stat || "",
+        route: "progress"
+      });
+      return true;
+    } catch (e) { return false; }
+  }
+
   function celebrate(c) {
     if (!c || !c.title) return;
+    if (typeof document !== "undefined" && document.hidden && notifyInstead(c)) return;
     queue.push(c);
     if (!showing) drain();
   }

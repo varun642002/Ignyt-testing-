@@ -56,7 +56,7 @@
         '<div class="sp-card__title">Today</div>' +
         '<div class="sp-today__count"><b>' + p.done + '</b> / ' + p.total + ' · ' + p.pct + '%</div>' +
       '</div>' +
-      '<div class="sp-track"><div class="sp-fill" style="width:' + p.pct + '%;"></div></div>' +
+      '<div class="sp-track"><div class="sp-fill" style="--fill:' + (p.pct/100) + ';"></div></div>' +
       '<div class="sp-list">' +
         due.map(function (s) {
           var taken = S.isTaken(s.id, key);

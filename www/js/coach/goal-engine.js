@@ -118,6 +118,11 @@
 
     var intent = Object.assign({}, INTENTS[key]);
     intent.matchedGoal = profile.primaryGoal || null;
+    /* The resolved key, not just the raw string it came from. Downstream needs to branch on
+       the CLASSIFICATION, and without this every consumer re-derives it from matchedGoal with
+       its own regex — which is exactly how the template matcher ended up with a second,
+       disagreeing goal normaliser. */
+    intent.key = key;
 
     /* --- experience adjustments (the Experience Engine, §3) --- */
     if (profile.experience === "Beginner") {

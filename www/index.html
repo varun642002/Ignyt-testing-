@@ -362,7 +362,7 @@ input,select,textarea{font-family:inherit; background:transparent; color:var(--t
 nav.bottom-nav{position:fixed; left:50%; transform:translateX(-50%);
     bottom:calc(10px + env(safe-area-inset-bottom,0px));
     width:calc(100% - 24px); max-width:456px;
-    display:flex; padding:6px; gap:2px;
+    display:flex; padding:6px; gap:0;
     background:rgba(23,23,28,.86); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
     border:1px solid rgba(255,255,255,.08); border-radius:999px; z-index:40;
     box-shadow:0 8px 30px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.2);
@@ -384,8 +384,67 @@ body.kb-open nav.bottom-nav{transform:translate(-50%, 100%);}
 
 /* The selected tab carries its own pill inside the bar. That highlight is what makes this read
    as a segmented control rather than a row of icons -- colour alone did the job before, and at
-   a glance a coloured icon among grey ones is easy to miss. */
-.nav-btn.active{color:var(--accent); background:rgba(255,255,255,.10);}
+   a glance a coloured icon among grey ones is easy to miss.
+
+   The pill is now ONE element that slides (.nav-ind) rather than a background on whichever
+   button happens to be active. A background cannot travel between two elements; it can only
+   appear on one and vanish from the other, which is what the bar used to do. */
+.nav-btn.active{color:var(--accent); background:none;}
+
+/* gap is 0 on the bar so each button is exactly 1/5 of the track and the indicator can be
+   positioned with a plain percentage translate -- no measuring, no resize listener, and it
+   stays correct through rotation and split screen. */
+.nav-ind{position:absolute; top:6px; bottom:6px; left:6px; z-index:0;
+    width:calc((100% - 12px) / var(--nav-count, 5));
+    border-radius:999px; background:rgba(255,255,255,.10);
+    transform:translateX(calc(var(--nav-i, 0) * 100%));
+    opacity:0; pointer-events:none;
+    /* Apple's own tab curve: a hard front-load then a long settle, so it reads as fast while
+       still arriving softly. Opacity is quicker than travel -- a pill that fades as slowly as
+       it moves looks like it is being dragged. */
+    transition:transform .38s cubic-bezier(.32,.72,0,1), opacity .2s ease;}
+nav.bottom-nav.has-active .nav-ind{opacity:1;}
+
+/* While a finger is on the bar the pill is being repositioned every frame, so a transition
+   would only hold it behind the finger by its own duration. Off for the gesture, back on for
+   the settle when the finger lifts — which is what makes the release feel like it lands. */
+nav.bottom-nav.is-dragging .nav-ind{transition:none;
+    /* Promoted to its own layer for the duration of the gesture, so each frame's move is a
+       compositor transform rather than a repaint of the pill against the blurred bar behind
+       it. Only while dragging: a layer that exists permanently costs memory for nothing. */
+    will-change:transform;}
+
+/* The icon and label under the pill still ease as it passes — but on a shorter curve than
+   the settled one, so a quick sweep isn't trailed by five icons still finishing their grow.
+   Killing the transition outright here was worse: passing over a tab snapped instead of
+   blooming, which reads as a glitch rather than a response. */
+nav.bottom-nav.is-dragging .nav-btn svg,
+nav.bottom-nav.is-dragging .nav-btn span{transition:transform .18s cubic-bezier(.32,.72,0,1);}
+
+/* touch-action tells the browser we handle horizontal movement here, so dragging along the
+   bar does not also try to scroll the page behind it. `pan-y` keeps a vertical swipe that
+   starts on the nav scrolling the page, which is what a user expects. */
+nav.bottom-nav{touch-action:pan-y;}
+/* The buttons must not swallow the pointer stream mid-drag. */
+nav.bottom-nav .nav-btn{touch-action:none;}
+/* The buttons sit above the pill; without this the indicator would cover the icons. */
+.nav-btn{position:relative; z-index:1;}
+
+/* The label and icon lift very slightly into the selected state -- it is the difference
+   between the pill sliding onto a static row and the whole tab responding. */
+.nav-btn svg, .nav-btn span{transition:transform .38s cubic-bezier(.32,.72,0,1);}
+.nav-btn.active svg{transform:translateY(-1px) scale(1.06);}
+
+/* The .is-dragging rules above are more specific than a bare `.nav-btn svg`, and specificity
+   beats source order — so this block has to restate them at equal weight or reduced motion
+   would be honoured everywhere EXCEPT during the gesture, which is the one place motion is
+   most pronounced. */
+@media (prefers-reduced-motion: reduce){
+  .nav-ind, .nav-btn svg, .nav-btn span{transition:none;}
+  nav.bottom-nav.is-dragging .nav-ind,
+  nav.bottom-nav.is-dragging .nav-btn svg,
+  nav.bottom-nav.is-dragging .nav-btn span{transition:none;}
+}
 
 .nav-btn svg{width:19px; height:19px;}
 
@@ -583,19 +642,7 @@ main{overflow-x:hidden;}
     *{animation-duration:0.001s !important; animation-iteration-count:1 !important; transition-duration:0.001s !important;}
   }
 
-/* Boot splash: takes over from the native Android splash (MainActivity.java) the instant
-   the WebView paints, and owns the rest of the ~2s branded cold-start hold (logo, app name,
-   loading spinner) plus the fade-out. Lives in this first inline <style> block, not an
-   external stylesheet, so it is guaranteed to be ready for the very first paint. */
-#boot-splash{position:fixed; inset:0; z-index:9999; display:flex; flex-direction:column;
-    align-items:center; justify-content:center; gap:14px; background:var(--bg);
-    transition:opacity .4s ease;}
-#boot-splash img{width:72px; height:72px; border-radius:18px;}
-#boot-splash .boot-name{font-weight:900; font-size:22px; letter-spacing:.1em; color:var(--text);}
-#boot-splash .boot-spinner{width:26px; height:26px; border-radius:50%; border:3px solid var(--surface-alt);
-    border-top-color:var(--accent); animation:boot-spin .8s linear infinite;}
-@keyframes boot-spin{ to{transform:rotate(360deg);} }
-#boot-splash.hide{opacity:0; pointer-events:none;}
+
 </style>
 <!-- New modular stylesheet layers intentionally follow legacy inline CSS so migrated
      design tokens and components take precedence without changing legacy screens. -->
@@ -625,84 +672,66 @@ main{overflow-x:hidden;}
 </head>
 <body>
 <div id="app"></div>
-<div id="boot-splash"><img src="icon-192.png" alt="" /><div class="boot-name">IGNYT</div><div class="boot-spinner"></div></div>
-<script>
-// Only once per cold start: sessionStorage survives Activity recreation (rotation) within
-// the same app process but is gone on a real cold start, which is exactly the "once per
-// cold start" rule asked for. window.__hideBootSplash is called by app.js right after its
-// first successful render() -- see the bottom of app.js.
-window.__bootSplashStart = Date.now();
-window.__hideBootSplash = function(){
-  var el = document.getElementById("boot-splash");
-  if(!el) return;
-  var minVisibleMs = 1600; // combined with the native splash's own hold, totals ~2s
-  var wait = Math.max(0, minVisibleMs - (Date.now() - window.__bootSplashStart));
-  setTimeout(function(){
-    el.classList.add("hide");
-    setTimeout(function(){ el.remove(); }, 420);
-  }, wait);
-};
-try{
-  if(sessionStorage.getItem("ignyt_boot_splash_shown_v1")){
-    var already = document.getElementById("boot-splash");
-    if(already) already.remove();
-    window.__hideBootSplash = function(){};
-  } else {
-    sessionStorage.setItem("ignyt_boot_splash_shown_v1", "1");
-  }
-}catch(e){ /* sessionStorage unavailable -- splash just always shows, harmless */ }
-</script>
-<script src="js/pages/home.js"></script>
-<script src="js/pages/workout.js"></script>
-<script src="js/pages/progress.js"></script>
-<script src="js/diet/diet-plans.js"></script>
-<script src="js/fasting/fasting.js"></script>
-<script src="js/pages/diet-plan.js"></script>
-<script src="js/pages/fasting.js"></script>
-<script src="js/body/photo-sessions.js"></script>
-<script src="js/notify/reminders.js"></script>
-<script src="js/notify/active-workout.js"></script>
-<script src="js/workout/exercise-images.js"></script>
-<script src="js/workout/muscle-map.js"></script>
-<script src="js/workout/exercise-instructions.js"></script>
-<script src="js/supplements/supplements.js"></script>
-<script src="js/pages/supplements.js"></script>
-<script src="js/config.js"></script>
-<script src="js/storage-utils.js"></script>
-<script src="js/body-photos-db.js"></script>
-<script src="js/bloodwork.js"></script>
-<script src="js/goals.js"></script>
-<script src="js/health-uploads.js"></script>
+
+<script defer src="js/pages/home.js"></script>
+<script defer src="js/pages/workout.js"></script>
+<script defer src="js/pages/progress.js"></script>
+<script defer src="js/diet/diet-plans.js"></script>
+<script defer src="js/fasting/fasting.js"></script>
+<script defer src="js/pages/diet-plan.js"></script>
+<script defer src="js/pages/fasting.js"></script>
+<script defer src="js/body/photo-sessions.js"></script>
+<script defer src="js/motivation/notify-messages.js"></script>
+<script defer src="js/notify/reminders.js"></script>
+<script defer src="js/notify/active-workout.js"></script>
+<script defer src="js/workout/exercise-images.js"></script>
+<script defer src="js/workout/muscle-map.js"></script>
+<script defer src="js/workout/exercise-instructions.js"></script>
+<script defer src="js/supplements/supplements.js"></script>
+<script defer src="js/pages/supplements.js"></script>
+<script defer src="js/config.js"></script>
+<script defer src="js/storage-utils.js"></script>
+<script defer src="js/body-photos-db.js"></script>
+<script defer src="js/bloodwork.js"></script>
+<script defer src="js/goals.js"></script>
+<script defer src="js/health-uploads.js"></script>
 <!-- js/health/health-security.js is NOT loaded. It advertises PIN/biometric locking and
      AES encryption and implements none of it — isUnlocked() returns true unconditionally and
      the "encryption" is a passthrough. Nothing calls it today, so shipping it only risks a
      future caller trusting the name. The file stays in the repo for whoever implements it. -->
-<script src="js/health/health-db.js"></script>
-<script src="js/health/health-models.js"></script>
-<script src="js/health/health-utils.js"></script>
-<script src="js/health/health-stub.js"></script>
-<script src="js/health/health-dashboard.js"></script>
-<script src="js/health/body-scan-ai.js"></script>
-<script src="js/ai-coach.js"></script>
+<script defer src="js/health/health-db.js"></script>
+<script defer src="js/health/health-models.js"></script>
+<script defer src="js/health/health-utils.js"></script>
+<script defer src="js/health/health-stub.js"></script>
+<script defer src="js/health/health-dashboard.js"></script>
+<script defer src="js/health/body-scan-ai.js"></script>
+<script defer src="js/ai-coach.js"></script>
 <!-- Food modules load in dependency order: seed data and the importer first, then the
      catalogue that merges them, then search which indexes the catalogue. -->
 <!-- Coach engine. Pure modules with no DOM access, loaded in dependency order; coach.js
      orchestrates them and is the only entry point the app calls. -->
-<script src="js/coach/profile-engine.js"></script>
-<script src="js/coach/goal-engine.js"></script>
-<script src="js/coach/recovery-engine.js"></script>
-<script src="js/coach/exercise-engine.js"></script>
-<script src="js/coach/plan-engine.js"></script>
-<script src="js/coach/program-engine.js"></script>
-<script src="js/coach/coach.js"></script>
-<script src="js/food/food-db.js"></script>
-<script src="js/food/serving-converter.js"></script>
-<script src="js/food/food-importer.js"></script>
-<script src="js/food/food-catalogue.js"></script>
-<script src="js/food/food-images.js"></script>
-<script src="js/food/nutrition-engine.js"></script>
-<script src="js/food/food-curation.js"></script>
-<script src="js/food/food-search.js"></script>
+<script defer src="js/coach/profile-engine.js"></script>
+<script defer src="js/coach/goal-engine.js"></script>
+<script defer src="js/coach/recovery-engine.js"></script>
+<script defer src="js/coach/exercise-engine.js"></script>
+<script defer src="js/coach/plan-engine.js"></script>
+<script defer src="js/coach/program-engine.js"></script>
+<script defer src="js/coach/coach.js"></script>
+<script defer src="js/coach/overload-engine.js"></script>
+<script defer src="js/coach/template-library.js"></script>
+<script defer src="js/coach/template-matcher.js"></script>
+<script defer src="js/coach/injury-catalogue.js"></script>
+<script defer src="js/coach/substitution-map.js"></script>
+<script defer src="js/coach/adaptation-engine.js"></script>
+<script defer src="js/widgets/widgets.js"></script>
+<script defer src="js/food/food-db.js"></script>
+<script defer src="js/food/serving-converter.js"></script>
+<script defer src="js/food/food-importer.js"></script>
+<script defer src="js/food/food-catalogue.js"></script>
+<script defer src="js/food/food-images.js"></script>
+<script defer src="js/food/nutrition-engine.js"></script>
+<script defer src="js/food/food-curation.js"></script>
+<script defer src="js/food/food-search.js"></script>
 <!-- AUTH LOADS BEFORE app.js, AND MUST KEEP DOING SO.
      app.js calls render() at its top level, and render()'s first act is to ask isSignedIn().
      With auth.js below app.js, window.IgnytAuth did not exist yet at that moment, so a
@@ -714,26 +743,26 @@ try{
      for DOMContentLoaded and notifyUI() checks both exist — so loading them first is safe. -->
 <!-- Security layer first: the auth and sync modules below log security events, and a
      logEvent() call that lands before IgnytSecurity exists is a silently dropped event. -->
-<script src="js/security/security.js"></script>
-<script src="js/auth/firebase-rest-auth.js"></script>
-<script src="auth.js"></script>
-<script src="app.js"></script>
-<script src="health-connect.js"></script>
-<script src="health-settings-integration.js"></script>
-<script src="js/motivation/messages.js"></script>
-<script src="js/motivation/xp.js"></script>
-<script src="js/motivation/strength.js"></script>
-<script src="js/motivation/review.js"></script>
-<script src="js/motivation/milestones.js"></script>
-<script src="js/motivation/celebrate.js"></script>
-<script src="js/motivation/score.js"></script>
-<script src="js/motivation/weekly.js"></script>
-<script src="js/motivation/counters.js"></script>
-<script src="js/motivation/report.js"></script>
-<script src="js/motivation/weight.js"></script>
-<script src="js/motivation/bmi.js"></script>
-<script src="js/billing/entitlements.js"></script>
+<script defer src="js/security/security.js"></script>
+<script defer src="js/auth/firebase-rest-auth.js"></script>
+<script defer src="auth.js"></script>
+<script defer src="app.js"></script>
+<script defer src="health-connect.js"></script>
+<script defer src="health-settings-integration.js"></script>
+<script defer src="js/motivation/messages.js"></script>
+<script defer src="js/motivation/xp.js"></script>
+<script defer src="js/motivation/strength.js"></script>
+<script defer src="js/motivation/review.js"></script>
+<script defer src="js/motivation/milestones.js"></script>
+<script defer src="js/motivation/celebrate.js"></script>
+<script defer src="js/motivation/score.js"></script>
+<script defer src="js/motivation/weekly.js"></script>
+<script defer src="js/motivation/counters.js"></script>
+<script defer src="js/motivation/report.js"></script>
+<script defer src="js/motivation/weight.js"></script>
+<script defer src="js/motivation/bmi.js"></script>
+<script defer src="js/billing/entitlements.js"></script>
 <!-- firebase-rest-auth.js and auth.js moved above app.js — see the note there. -->
-<script src="cloud-sync.js"></script>
+<script defer src="cloud-sync.js"></script>
 </body>
 </html>

@@ -12,6 +12,7 @@ import com.varun.ignyt.notify.NotifyPlugin; // ADDED for background workout/hydr
 import com.varun.ignyt.billing.BillingPlugin; // ADDED for the premium subscription
 import com.varun.ignyt.security.CryptoPlugin; // ADDED for AES-256-GCM at rest, keys in the Keystore
 import com.varun.ignyt.security.IntegrityPlugin; // ADDED for root/tamper signals
+import com.varun.ignyt.widgets.WidgetDataPlugin; // ADDED for home screen widgets
 
 public class MainActivity extends BridgeActivity {
     // Process-lifetime flag: the artificial hold + fade-out below is only applied on the
@@ -31,6 +32,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(BillingPlugin.class); // ADDED — must be before super.onCreate()
         registerPlugin(CryptoPlugin.class); // ADDED — must be before super.onCreate()
         registerPlugin(IntegrityPlugin.class); // ADDED — must be before super.onCreate()
+        registerPlugin(WidgetDataPlugin.class); // ADDED — must be before super.onCreate()
         super.onCreate(savedInstanceState);
 
         if (!sColdStartHandled) {
@@ -67,6 +69,7 @@ public class MainActivity extends BridgeActivity {
         super.onNewIntent(intent);
         setIntent(intent);
         deliverRoute(intent);
+        deliverWidgetIntent(intent);
     }
 
     /**
@@ -89,5 +92,38 @@ public class MainActivity extends BridgeActivity {
         getBridge().getWebView().post(() ->
             getBridge().getWebView().evaluateJavascript(
                 "window.__ignytRoute = '" + safe + "';", null));
+    }
+
+    /* ---------- WIDGET DEEP LINKS ----------
+       Follows deliverRoute's pattern above rather than firing a JS event, and for the reason
+       that comment already records: on a cold start the WebView may not have loaded, and an
+       event dispatched at nobody is simply lost — which is exactly the "widget tap does
+       nothing the first time" bug. A property waits to be read.
+
+       Called from the SAME onNewIntent as deliverRoute so both delivery paths stay in one
+       place; adding a second onNewIntent is what the compiler just rejected, and merging is
+       the right answer rather than renaming around it.
+
+       Values are whitelisted to [A-Za-z0-9_-] before being interpolated into evaluateJavascript.
+       These strings originate in this app's own PendingIntents, but an Intent is an external
+       input on Android — any app can construct one — and building JS by concatenation with
+       anything unsanitised is how that becomes script injection into the WebView. */
+    private void deliverWidgetIntent(android.content.Intent intent) {
+        if (intent == null || getBridge() == null || getBridge().getWebView() == null) return;
+        String dest = intent.getStringExtra("ignyt_widget_dest");
+        if (dest == null || dest.isEmpty()) return;
+        String action = intent.getStringExtra("ignyt_widget_action");
+
+        final String safeDest = dest.replaceAll("[^A-Za-z0-9_-]", "");
+        final String safeAction = action == null ? "" : action.replaceAll("[^A-Za-z0-9_-]", "");
+        if (safeDest.isEmpty()) return;
+
+        getBridge().getWebView().post(() ->
+            getBridge().getWebView().evaluateJavascript(
+                "window.__ignytWidget = { dest: '" + safeDest + "', action: '" + safeAction + "' };", null));
+
+        // Consumed, so a rotation cannot replay the navigation mid-scroll.
+        intent.removeExtra("ignyt_widget_dest");
+        intent.removeExtra("ignyt_widget_action");
     }
 }

@@ -10,7 +10,7 @@ const SCHEMA_VERSION = 1; // bump when localStorage shape changes; add a migrate
 /* ---------- Storage ---------- */
 
 const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_profile","hx_nutrition","hx_bodylog","hx_custom_exercises",
-  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history","hx_deleted_workouts"];
+  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history","hx_deleted_workouts","hx_plan","hx_injuries"];
 
 /* The subset of the above whose values are arrays of RECORD OBJECTS — the ones the UI reads
    fields off, and so the ones a null element inside can crash. Used by LS.records() on load
@@ -126,264 +126,474 @@ const LEVELS = {
    attribution. Adding them back is now only a question of whether the movement belongs. */
 const LIBRARY = {
   "Barbell":[
-    ["Behind the Back Wrist Curl (Barbell)","3x15","reps","Forearms"],["Bench Press (Barbell)","4x8","reps","Chest"],
-    ["Bench Press - Close Grip (Barbell)","4x8","reps","Chest"],
-    ["Bench Press - Wide Grip (Barbell)","4x8","reps","Chest"],["Bent Over Row (Barbell)","4x8","reps","Upper Back"],
-    ["Bent Over Row - Underhand (Barbell)","4x8","reps","Upper Back"],
-    ["Bicep Curl (Barbell)","3x12","reps","Biceps"],["Box Squat (Barbell)","4x8","reps","Quadriceps"],
-    ["Bulgarian Split Squat (Barbell)","4x8","reps","Quadriceps"],["Deadlift (Barbell)","4x8","reps","Glutes"],
-    ["Deadlift (Trap bar)","4x8","reps","Glutes"],["Decline Bench Press (Barbell)","4x8","reps","Chest"],
-    ["EZ Bar Biceps Curl","3x12","reps","Biceps"],["Feet Up Bench Press (Barbell)","4x8","reps","Chest"],
-    ["Floor Press (Barbell)","4x8","reps","Chest"],["Front Raise (Barbell)","3x12","reps","Shoulders"],
-    ["Glute Bridge (Barbell)","4x8","reps","Glutes"],["Good Morning (Barbell)","4x8","reps","Hamstrings"],
-    ["Hip Thrust (Barbell)","4x8","reps","Glutes"],["Incline Bench Press (Barbell)","4x8","reps","Chest"],
-    ["JM Press (Barbell)","3x12","reps","Triceps"],["Landmine 180","3x15","reps","Abdominals"],
-    ["Landmine Row","4x8","reps","Upper Back"],["Landmine Squat and Press","4x8","reps","Full Body"],
-    ["Lunge (Barbell)","4x8","reps","Quadriceps"],["Meadows Rows (Barbell)","4x8","reps","Upper Back"],
-    ["Overhead Press (Barbell)","3x12","reps","Shoulders"],["Partial Glute Bridge (Barbell)","4x8","reps","Glutes"],
-    ["Pause Squat (Barbell)","4x8","reps","Quadriceps"],["Pendlay Row (Barbell)","4x8","reps","Upper Back"],
-    ["Preacher Curl (Barbell)","3x12","reps","Biceps"],["Reverse Curl (Barbell)","3x12","reps","Biceps"],
-    ["Reverse Lunge (Barbell)","4x8","reps","Quadriceps"],["Romanian Deadlift (Barbell)","4x8","reps","Hamstrings"],
+    ["Anderson Squat","4x3","reps","Quadriceps"],["Axle Deadlift","4x5","reps","Glutes"],
+    ["Bear Complex","5x7","reps","Full Body"],["Behind the Back Wrist Curl (Barbell)","3x15","reps","Forearms"],
+    ["Behind the Neck Press","4x8","reps","Shoulders"],["Bench Press - Close Grip (Barbell)","4x8","reps","Chest"],
+    ["Bench Press - Wide Grip (Barbell)","4x8","reps","Chest"],["Bench Press (Barbell)","4x8","reps","Chest"],
+    ["Bent Over Row - Underhand (Barbell)","4x8","reps","Upper Back"],["Bent Over Row (Barbell)","4x8","reps","Upper Back"],
+    ["Bicep Curl (Barbell)","3x12","reps","Biceps"],["Block Pull Deadlift","4x4","reps","Glutes"],
+    ["Board Press","4x3","reps","Chest"],["Box Squat (Barbell)","4x8","reps","Quadriceps"],
+    ["Bradford Press","3x10","reps","Shoulders"],["Bulgarian Split Squat (Barbell)","4x8","reps","Quadriceps"],
+    ["Burpee Deadlift","4x8","reps","Full Body"],["Chain Bench Press","4x3","reps","Chest"],
+    ["Chest Supported T Bar Row","4x8","reps","Upper Back"],["Clean","4x8","reps","Full Body"],
+    ["Clean and Jerk","4x8","reps","Full Body"],["Clean and Press","4x8","reps","Full Body"],
+    ["Clean Pull","4x8","reps","Full Body"],["Clean to Overhead","4x6","reps","Full Body"],
+    ["Deadlift (Barbell)","4x8","reps","Glutes"],["Deadlift (Trap bar)","4x8","reps","Glutes"],
+    ["Decline Bench Press (Barbell)","4x8","reps","Chest"],["Deficit Deadlift","4x4","reps","Glutes"],
+    ["EZ Bar Biceps Curl","3x12","reps","Biceps"],["Fat Grip Hold","3x30s","time","Forearms"],
+    ["Feet Up Bench Press (Barbell)","4x8","reps","Chest"],["Floor Press (Barbell)","4x8","reps","Chest"],
+    ["Front Raise (Barbell)","3x12","reps","Shoulders"],["Glute Bridge (Barbell)","4x8","reps","Glutes"],
+    ["Good Morning (Barbell)","4x8","reps","Hamstrings"],["Hang Clean","4x8","reps","Full Body"],
+    ["Hang Snatch","4x8","reps","Full Body"],["Hip Thrust (Barbell)","4x8","reps","Glutes"],
+    ["Incline Bench Press (Barbell)","4x8","reps","Chest"],["Jefferson Curl","3x8","reps","Lower Back"],
+    ["Jefferson Deadlift","4x6","reps","Glutes"],["JM Press (Barbell)","3x12","reps","Triceps"],
+    ["Landmine 180","3x15","reps","Abdominals"],["Landmine Anti Rotation","3x12","reps","Abdominals"],
+    ["Landmine Lateral Raise","3x12","reps","Shoulders"],["Landmine Row","4x8","reps","Upper Back"],
+    ["Landmine Squat and Press","4x8","reps","Full Body"],["Larsen Press","4x5","reps","Chest"],
+    ["Log Press","4x5","reps","Shoulders"],["Lunge (Barbell)","4x8","reps","Quadriceps"],
+    ["Meadows Row","4x10","reps","Upper Back"],["Meadows Rows (Barbell)","4x8","reps","Upper Back"],
+    ["Muscle Snatch","4x3","reps","Shoulders"],["Overhead Press (Barbell)","3x12","reps","Shoulders"],
+    ["Partial Glute Bridge (Barbell)","4x8","reps","Glutes"],["Pause Squat (Barbell)","4x8","reps","Quadriceps"],
+    ["Pendlay Row (Barbell)","4x8","reps","Upper Back"],["Pin Press","4x3","reps","Shoulders"],
+    ["Pin Squat","4x3","reps","Quadriceps"],["Power Clean","4x8","reps","Full Body"],
+    ["Power Snatch","4x8","reps","Full Body"],["Preacher Curl (Barbell)","3x12","reps","Biceps"],
+    ["Push Jerk","5x3","reps","Shoulders"],["Reverse Band Bench Press","4x3","reps","Chest"],
+    ["Reverse Curl (Barbell)","3x12","reps","Biceps"],["Reverse Lunge (Barbell)","4x8","reps","Quadriceps"],
+    ["Romanian Deadlift (Barbell)","4x8","reps","Hamstrings"],["Safety Bar Squat","4x6","reps","Quadriceps"],
     ["Seal Row (Barbell)","4x8","reps","Upper Back"],["Seated Overhead Press (Barbell)","3x12","reps","Shoulders"],
-    ["Seated Wrist Curl (Barbell)","3x15","reps","Forearms"],
-    ["Seated Wrist Extension (Barbell)","3x15","reps","Forearms"],["Shrug (Barbell)","3x12","reps","Traps"],
-    ["Single Arm Landmine Press (Barbell)","3x12","reps","Shoulders"],
-    ["Single Leg Romanian Deadlift (Barbell)","4x8","reps","Hamstrings"],
-    ["Skullcrusher (Barbell)","3x12","reps","Triceps"],["Spider Curl (Barbell)","3x12","reps","Biceps"],
+    ["Seated Wrist Curl (Barbell)","3x15","reps","Forearms"],["Seated Wrist Extension (Barbell)","3x15","reps","Forearms"],
+    ["Shrug (Barbell)","3x12","reps","Traps"],["Single Arm Landmine Press (Barbell)","3x12","reps","Shoulders"],
+    ["Single Leg Romanian Deadlift (Barbell)","4x8","reps","Hamstrings"],["Skullcrusher (Barbell)","3x12","reps","Triceps"],
+    ["Snatch","4x8","reps","Full Body"],["Snatch Grip Deadlift","4x5","reps","Upper Back"],
+    ["Snatch Pull","4x3","reps","Upper Back"],["Spider Curl (Barbell)","3x12","reps","Biceps"],
+    ["Split Jerk","4x8","reps","Full Body"],["Spoto Press","4x5","reps","Chest"],
     ["Squat (Barbell)","4x8","reps","Quadriceps"],["Standing Calf Raise (Barbell)","3x15","reps","Calves"],
-    ["Standing Military Press (Barbell)","3x12","reps","Shoulders"],
-    ["Sumo Squat (Barbell)","4x8","reps","Quadriceps"],["Thruster (Barbell)","4x8","reps","Full Body"],
+    ["Standing Military Press (Barbell)","3x12","reps","Shoulders"],["Sumo Squat (Barbell)","4x8","reps","Quadriceps"],
+    ["T Bar Row","4x8","reps","Upper Back"],["Thruster (Barbell)","4x8","reps","Full Body"],
     ["Triceps Extension (Barbell)","3x12","reps","Triceps"],["Upright Row (Barbell)","3x12","reps","Shoulders"]
   ],
   "Dumbbell":[
     ["Arnold Press (Dumbbell)","3x12","reps","Shoulders"],["Bench Press (Dumbbell)","4x8","reps","Chest"],
     ["Bent Over Row (Dumbbell)","4x8","reps","Upper Back"],["Bicep Curl (Dumbbell)","3x12","reps","Biceps"],
     ["Bulgarian Split Squat (Dumbbell)","4x8","reps","Quadriceps"],["Chest Fly (Dumbbell)","4x8","reps","Chest"],
-    ["Chest Supported Incline Row (Dumbbell)","4x8","reps","Upper Back"],
-    ["Chest Supported Reverse Fly (Dumbbell)","3x12","reps","Shoulders"],
-    ["Chest Supported Y Raise (Dumbbell)","3x12","reps","Shoulders"],
+    ["Chest Supported Incline Row (Dumbbell)","4x8","reps","Upper Back"],["Chest Supported Reverse Fly (Dumbbell)","3x12","reps","Shoulders"],
+    ["Chest Supported Y Raise (Dumbbell)","3x12","reps","Shoulders"],["Cuban Rotation","3x12","reps","Shoulders"],
     ["Curtsy Lunge (Dumbbell)","4x8","reps","Quadriceps"],["Deadlift (Dumbbell)","4x8","reps","Glutes"],
     ["Decline Bench Press (Dumbbell)","4x8","reps","Chest"],["Decline Chest Fly (Dumbbell)","4x8","reps","Chest"],
-    ["Dumbbell Row","4x8","reps","Lats"],["Dumbbell Snatch","4x8","reps","Full Body"],
+    ["Devil Press","4x8","reps","Full Body"],["Dumbbell Row","4x8","reps","Lats"],
+    ["Dumbbell Snatch","4x8","reps","Full Body"],["Dumbbell Snatch Alternating","4x10","reps","Shoulders"],
     ["Dumbbell Squeeze Press","4x8","reps","Chest"],["Dumbbell Step Up","4x8","reps","Quadriceps"],
-    ["Floor Press (Dumbbell)","4x8","reps","Chest"],["Frog Pumps (Dumbbell)","4x8","reps","Glutes"],
-    ["Front Raise (Dumbbell)","3x12","reps","Shoulders"],["Hammer Curl (Dumbbell)","3x12","reps","Biceps"],
-    ["Hex Press (Dumbbell)","4x8","reps","Chest"],["Hip Thrust (Dumbbell)","4x8","reps","Glutes"],
-    ["Incline Bench Press (Dumbbell)","4x8","reps","Chest"],["Incline Chest Fly (Dumbbell)","4x8","reps","Chest"],
-    ["Lateral Raise (Dumbbell)","3x12","reps","Shoulders"],["Lunge (Dumbbell)","4x8","reps","Quadriceps"],
-    ["Overhead Dumbbell Lunge","4x8","reps","Quadriceps"],["Overhead Press (Dumbbell)","3x12","reps","Shoulders"],
-    ["Pinwheel Curl (Dumbbell)","3x12","reps","Biceps"],["Preacher Curl (Dumbbell)","3x12","reps","Biceps"],
-    ["Pullover (Dumbbell)","4x8","reps","Lats"],["Rear Delt Reverse Fly (Dumbbell)","3x12","reps","Shoulders"],
-    ["Renegade Row (Dumbbell)","4x8","reps","Upper Back"],["Reverse Curl (Dumbbell)","3x12","reps","Biceps"],
-    ["Reverse Lunge (Dumbbell)","4x8","reps","Quadriceps"],
-    ["Reverse Wrist Curl (Dumbbell)","3x15","reps","Forearms"],
-    ["Romanian Deadlift (Dumbbell)","4x8","reps","Hamstrings"],["Seal Row (Dumbbell)","4x8","reps","Upper Back"],
-    ["Seated Incline Curl (Dumbbell)","3x12","reps","Biceps"],
-    ["Seated Incline Hammer Curl (Dumbbell)","3x12","reps","Biceps"],
-    ["Seated Lateral Raise (Dumbbell)","3x12","reps","Shoulders"],
-    ["Seated Overhead Press (Dumbbell)","3x12","reps","Shoulders"],
-    ["Shoulder Press (Dumbbell)","3x12","reps","Shoulders"],["Shrug (Dumbbell)","3x12","reps","Traps"],
-    ["Side Bend (Dumbbell)","3x15","reps","Abdominals"],["Single Leg Hip Thrust (Dumbbell)","4x8","reps","Glutes"],
-    ["Single Leg Romanian Deadlift (Dumbbell)","4x8","reps","Hamstrings"],
-    ["Single Leg Standing Calf Raise (Dumbbell)","3x15","reps","Calves"],
+    ["Dumbbell Thruster","4x10","reps","Shoulders"],["Empty Can Raise","3x12","reps","Shoulders"],
+    ["Farmer Hold","3x45s","time","Forearms"],["Floor Press (Dumbbell)","4x8","reps","Chest"],
+    ["Frog Pumps (Dumbbell)","4x8","reps","Glutes"],["Front Raise (Dumbbell)","3x12","reps","Shoulders"],
+    ["Full Can Raise","3x15","reps","Shoulders"],["Half Kneeling Press","3x10","reps","Shoulders"],
+    ["Hammer Curl (Dumbbell)","3x12","reps","Biceps"],["Hex Press (Dumbbell)","4x8","reps","Chest"],
+    ["Hip Thrust (Dumbbell)","4x8","reps","Glutes"],["Incline Bench Press (Dumbbell)","4x8","reps","Chest"],
+    ["Incline Chest Fly (Dumbbell)","4x8","reps","Chest"],["Jefferson Curl (Dumbbell)","3x8","reps","Lower Back"],
+    ["Kroc Row","3x15","reps","Upper Back"],["Lateral Raise (Dumbbell)","3x12","reps","Shoulders"],
+    ["Lunge (Dumbbell)","4x8","reps","Quadriceps"],["Lunge to Press","4x10","reps","Full Body"],
+    ["Man Maker","4x8","reps","Full Body"],["Overhead Dumbbell Lunge","4x8","reps","Quadriceps"],
+    ["Overhead Press (Dumbbell)","3x12","reps","Shoulders"],["Pinwheel Curl (Dumbbell)","3x12","reps","Biceps"],
+    ["Preacher Curl (Dumbbell)","3x12","reps","Biceps"],["Pronation Supination","3x15","reps","Forearms"],
+    ["Prone External Rotation","3x15","reps","Shoulders"],["Pullover (Dumbbell)","4x8","reps","Lats"],
+    ["Rear Delt Reverse Fly (Dumbbell)","3x12","reps","Shoulders"],["Renegade Row (Dumbbell)","4x8","reps","Upper Back"],
+    ["Reverse Curl (Dumbbell)","3x12","reps","Biceps"],["Reverse Lunge (Dumbbell)","4x8","reps","Quadriceps"],
+    ["Reverse Wrist Curl (Dumbbell)","3x15","reps","Forearms"],["Romanian Deadlift (Dumbbell)","4x8","reps","Hamstrings"],
+    ["Scaption Raise","3x15","reps","Shoulders"],["Seal Row (Dumbbell)","4x8","reps","Upper Back"],
+    ["Seated Incline Curl (Dumbbell)","3x12","reps","Biceps"],["Seated Incline Hammer Curl (Dumbbell)","3x12","reps","Biceps"],
+    ["Seated Lateral Raise (Dumbbell)","3x12","reps","Shoulders"],["Seated Overhead Press (Dumbbell)","3x12","reps","Shoulders"],
+    ["Serratus Punch","3x15","reps","Chest"],["Shoulder Press (Dumbbell)","3x12","reps","Shoulders"],
+    ["Shrug (Dumbbell)","3x12","reps","Traps"],["Side Bend (Dumbbell)","3x15","reps","Abdominals"],
+    ["Side Lying External Rotation","3x15","reps","Shoulders"],["Single Leg Hip Thrust (Dumbbell)","4x8","reps","Glutes"],
+    ["Single Leg Romanian Deadlift (Dumbbell)","4x8","reps","Hamstrings"],["Single Leg Standing Calf Raise (Dumbbell)","3x15","reps","Calves"],
     ["Skullcrusher (Dumbbell)","3x12","reps","Triceps"],["Spider Curl (Dumbbell)","3x12","reps","Biceps"],
     ["Split Squat (Dumbbell)","4x8","reps","Quadriceps"],["Squat (Dumbbell)","4x8","reps","Quadriceps"],
-    ["Standing Calf Raise (Dumbbell)","3x15","reps","Calves"],
-    ["Stiff Leg Deadlift (Dumbbell)","4x8","reps","Hamstrings"],
-    ["Suitcase Carry (Dumbbell)","3x400m","distance","Full Body"],
-    ["Sumo Squat (Dumbbell)","4x8","reps","Quadriceps"],["Triceps Extension (Dumbbell)","3x12","reps","Triceps"],
+    ["Standing Calf Raise (Dumbbell)","3x15","reps","Calves"],["Stiff Leg Deadlift (Dumbbell)","4x8","reps","Hamstrings"],
+    ["Suitcase Carry (Dumbbell)","3x400m","distance","Full Body"],["Suitcase Deadlift","3x10","reps","Abdominals"],
+    ["Sumo Squat (Dumbbell)","4x8","reps","Quadriceps"],["Tate Press","3x12","reps","Triceps"],
+    ["Tricep Kickback","3x15","reps","Triceps"],["Triceps Extension (Dumbbell)","3x12","reps","Triceps"],
     ["Triceps Kickback (Dumbbell)","3x12","reps","Triceps"],["Upright Row (Dumbbell)","3x12","reps","Shoulders"],
     ["Waiter Curl (Dumbbell)","3x12","reps","Biceps"],["Walking Lunge (Dumbbell)","3x400m","distance","Quadriceps"],
-    ["Wide-Elbow Triceps Press (Dumbbell)","3x12","reps","Triceps"],
-    ["Zottman Curl (Dumbbell)","3x12","reps","Biceps"]
+    ["Wide-Elbow Triceps Press (Dumbbell)","3x12","reps","Triceps"],["Wrist Extension Eccentric","3x15","reps","Forearms"],
+    ["Wrist Flexion Eccentric","3x15","reps","Forearms"],["Zottman Curl (Dumbbell)","3x12","reps","Biceps"]
   ],
   "Machine":[
-    ["Back Extension (Machine)","4x8","reps","Lower Back"],["Behind the Back Curl (Cable)","3x12","reps","Biceps"],
-    ["Belt Squat (Machine)","4x8","reps","Quadriceps"],["Bench Press (Cable)","4x8","reps","Chest"],
-    ["Bench Press (Smith Machine)","4x8","reps","Chest"],["Bent Over Row (Smith Machine)","4x8","reps","Upper Back"],
-    ["Bicep Curl (Cable)","3x12","reps","Biceps"],["Bicep Curl (Machine)","3x12","reps","Biceps"],
-    ["Butterfly (Pec Deck)","4x8","reps","Chest"],["Cable Core Pallof Press","3x15","reps","Abdominals"],
-    ["Cable Crunch","3x400m","distance","Abdominals"],["Cable Fly Crossovers","4x8","reps","Chest"],
-    ["Cable Kickback","4x8","reps","Glutes"],["Cable Pull Through","4x8","reps","Glutes"],
-    ["Cable Twist (Down to up)","3x15","reps","Abdominals"],["Cable Twist (Up to down)","3x15","reps","Abdominals"],
+    ["45 Degree Hyper","3x15","reps","Lower Back"],["Assisted Pull Up Machine","3x10","reps","Lats"],
+    ["Back Extension (Machine)","4x8","reps","Lower Back"],["Bayesian Curl","3x12","reps","Biceps"],
+    ["Behind the Back Curl (Cable)","3x12","reps","Biceps"],["Belt Squat (Machine)","4x8","reps","Quadriceps"],
+    ["Bench Press (Cable)","4x8","reps","Chest"],["Bench Press (Smith Machine)","4x8","reps","Chest"],
+    ["Bent Over Row (Smith Machine)","4x8","reps","Upper Back"],["Bicep Curl (Cable)","3x12","reps","Biceps"],
+    ["Bicep Curl (Machine)","3x12","reps","Biceps"],["Butterfly (Pec Deck)","4x8","reps","Chest"],
+    ["Cable Core Pallof Press","3x15","reps","Abdominals"],["Cable Crossover High","3x15","reps","Chest"],
+    ["Cable Crossover Low","3x15","reps","Chest"],["Cable Crunch","3x400m","distance","Abdominals"],
+    ["Cable Fly Crossovers","4x8","reps","Chest"],["Cable Kickback","4x8","reps","Glutes"],
+    ["Cable Pull Through","4x8","reps","Glutes"],["Cable Pullover","3x12","reps","Lats"],
+    ["Cable Rear Delt Row","3x15","reps","Upper Back"],["Cable Reverse Woodchop","3x12","reps","Abdominals"],
+    ["Cable Rope Hammer Curl","3x15","reps","Biceps"],["Cable Twist (Down to up)","3x15","reps","Abdominals"],
+    ["Cable Twist (Up to down)","3x15","reps","Abdominals"],["Cable Woodchop","3x12","reps","Abdominals"],
     ["Calf Extension (Machine)","3x15","reps","Calves"],["Calf Press (Machine)","3x15","reps","Calves"],
     ["Chest Fly (Machine)","4x8","reps","Chest"],["Chest Press (Machine)","4x8","reps","Chest"],
     ["Crunch (Machine)","3x400m","distance","Abdominals"],["Deadlift (Smith Machine)","4x8","reps","Glutes"],
-    ["Decline Bench Press (Machine)","4x8","reps","Chest"],
-    ["Decline Bench Press (Smith Machine)","4x8","reps","Chest"],["Front Raise (Cable)","3x12","reps","Shoulders"],
-    ["Glute Kickback (Machine)","4x8","reps","Glutes"],["Hack Squat (Machine)","4x8","reps","Quadriceps"],
-    ["Hammer Curl (Cable)","3x12","reps","Biceps"],["Hip Abduction (Cable)","4x8","reps","Abductors"],
-    ["Hip Abduction (Machine)","4x8","reps","Abductors"],["Hip Adduction (Cable)","4x8","reps","Adductors"],
-    ["Hip Adduction (Machine)","4x8","reps","Adductors"],["Hip Thrust (Machine)","4x8","reps","Glutes"],
-    ["Hip Thrust (Smith Machine)","4x8","reps","Glutes"],
-    ["Incline Bench Press (Smith Machine)","4x8","reps","Chest"],
-    ["Incline Chest Press (Machine)","4x8","reps","Chest"],
-    ["Iso-Lateral Chest Press (Machine)","4x8","reps","Chest"],
+    ["Decline Bench Press (Machine)","4x8","reps","Chest"],["Decline Bench Press (Smith Machine)","4x8","reps","Chest"],
+    ["External Rotation (Cable)","3x15","reps","Shoulders"],["Face Pull Rope","3x15","reps","Upper Back"],
+    ["Front Raise (Cable)","3x12","reps","Shoulders"],["GHD Sit Up","3x12","reps","Abdominals"],
+    ["Glute Kickback (Machine)","4x8","reps","Glutes"],["Hack Squat","4x8","reps","Quadriceps"],
+    ["Hack Squat (Machine)","4x8","reps","Quadriceps"],["Hammer Curl (Cable)","3x12","reps","Biceps"],
+    ["Hip Abduction (Cable)","4x8","reps","Abductors"],["Hip Abduction (Machine)","4x8","reps","Abductors"],
+    ["Hip Adduction (Cable)","4x8","reps","Adductors"],["Hip Adduction (Machine)","4x8","reps","Adductors"],
+    ["Hip Thrust (Machine)","4x8","reps","Glutes"],["Hip Thrust (Smith Machine)","4x8","reps","Glutes"],
+    ["Incline Bench Press (Smith Machine)","4x8","reps","Chest"],["Incline Chest Press (Machine)","4x8","reps","Chest"],
+    ["Internal Rotation (Cable)","3x15","reps","Shoulders"],["Iso-Lateral Chest Press (Machine)","4x8","reps","Chest"],
     ["Iso-Lateral High Row (Machine)","4x8","reps","Lats"],["Iso-Lateral Row (Machine)","4x8","reps","Upper Back"],
+    ["Kneeling Cable Crunch","3x15","reps","Abdominals"],["Lat Pulldown - Close Grip (Cable)","4x8","reps","Lats"],
     ["Lat Pulldown (Cable)","4x8","reps","Lats"],["Lat Pulldown (Machine)","4x8","reps","Lats"],
-    ["Lat Pulldown - Close Grip (Cable)","4x8","reps","Lats"],["Lateral Raise (Cable)","3x12","reps","Shoulders"],
-    ["Lateral Raise (Machine)","3x12","reps","Shoulders"],["Leg Extension (Machine)","4x8","reps","Quadriceps"],
-    ["Leg Press (Machine)","4x8","reps","Quadriceps"],["Leg Press Horizontal (Machine)","4x8","reps","Quadriceps"],
-    ["Low Cable Fly Crossovers","4x8","reps","Chest"],["Lying Leg Curl (Machine)","4x8","reps","Hamstrings"],
-    ["Overhead Curl (Cable)","3x12","reps","Biceps"],["Overhead Press (Smith Machine)","3x12","reps","Shoulders"],
-    ["Overhead Triceps Extension (Cable)","3x12","reps","Triceps"],
+    ["Lateral Raise (Cable)","3x12","reps","Shoulders"],["Lateral Raise (Machine)","3x12","reps","Shoulders"],
+    ["Leaning Cable Lateral Raise","3x15","reps","Shoulders"],["Leg Extension (Machine)","4x8","reps","Quadriceps"],
+    ["Leg Press (Machine)","4x8","reps","Quadriceps"],["Leg Press Calf Raise","4x15","reps","Calves"],
+    ["Leg Press Horizontal (Machine)","4x8","reps","Quadriceps"],["Low Cable Fly Crossovers","4x8","reps","Chest"],
+    ["Lying Leg Curl (Machine)","4x8","reps","Hamstrings"],["Nautilus Pullover","3x12","reps","Lats"],
+    ["Neck Harness Extension","3x15","reps","Neck"],["Overhead Curl (Cable)","3x12","reps","Biceps"],
+    ["Overhead Press (Smith Machine)","3x12","reps","Shoulders"],["Overhead Triceps Extension (Cable)","3x12","reps","Triceps"],
     ["Pendulum Squat (Machine)","4x8","reps","Quadriceps"],["Preacher Curl (Machine)","3x12","reps","Biceps"],
     ["Pullover (Machine)","4x8","reps","Lats"],["Rear Delt Reverse Fly (Cable)","3x12","reps","Shoulders"],
     ["Rear Delt Reverse Fly (Machine)","3x12","reps","Shoulders"],["Rear Kick (Machine)","4x8","reps","Glutes"],
     ["Reverse Curl (Cable)","3x12","reps","Biceps"],["Reverse Fly Single Arm (Cable)","3x12","reps","Shoulders"],
-    ["Reverse Grip Lat Pulldown (Cable)","4x8","reps","Lats"],
-    ["Romanian Deadlift (Smith Machine)","4x8","reps","Hamstrings"],["Rope Cable Curl","3x12","reps","Biceps"],
+    ["Reverse Grip Lat Pulldown (Cable)","4x8","reps","Lats"],["Reverse Grip Triceps Pushdown","3x12","reps","Triceps"],
+    ["Reverse Pec Deck","3x15","reps","Upper Back"],["Romanian Deadlift (Smith Machine)","4x8","reps","Hamstrings"],
+    ["Rope Cable Curl","3x12","reps","Biceps"],["Rope Straight Arm Pulldown","4x8","reps","Lats"],
     ["Rowing Machine","3x400m","distance","Cardio"],["Seated Cable Row - Bar Grip","4x8","reps","Upper Back"],
-    ["Seated Cable Row - Bar Wide Grip","4x8","reps","Upper Back"],
-    ["Seated Cable Row - V Grip (Cable)","4x8","reps","Upper Back"],
+    ["Seated Cable Row - Bar Wide Grip","4x8","reps","Upper Back"],["Seated Cable Row - V Grip (Cable)","4x8","reps","Upper Back"],
     ["Seated Chest Flys (Cable)","4x8","reps","Chest"],["Seated Dip Machine","3x12","reps","Triceps"],
     ["Seated Leg Curl (Machine)","4x8","reps","Hamstrings"],["Seated Row (Machine)","4x8","reps","Upper Back"],
-    ["Seated Shoulder Press (Machine)","3x12","reps","Shoulders"],
-    ["Shoulder Press (Machine Plates)","3x12","reps","Shoulders"],["Shrug (Cable)","3x12","reps","Traps"],
-    ["Shrug (Machine)","3x12","reps","Traps"],["Shrug (Smith Machine)","3x12","reps","Traps"],
-    ["Single Arm Cable Crossover","4x8","reps","Chest"],["Single Arm Cable Row","4x8","reps","Upper Back"],
-    ["Single Arm Curl (Cable)","3x12","reps","Biceps"],
-    ["Single Arm Lateral Raise (Cable)","3x12","reps","Shoulders"],
-    ["Single Arm Triceps Pushdown (Cable)","3x12","reps","Triceps"],
-    ["Single Leg Press (Machine)","4x8","reps","Quadriceps"],
-    ["Single Leg Standing Calf Raise (Machine)","3x15","reps","Calves"],
-    ["Squat (Machine)","4x8","reps","Quadriceps"],["Squat (Smith Machine)","4x8","reps","Quadriceps"],
-    ["Stair Machine (Floors)","3x400m","distance","Cardio"],["Stair Machine (Steps)","3x400m","distance","Cardio"],
-    ["Standing Cable Glute Kickbacks","4x8","reps","Glutes"],
-    ["Standing Calf Raise (Machine)","3x15","reps","Calves"],["Standing Y Raise (Cable)","3x12","reps","Shoulders"],
-    ["Straight Arm Lat Pulldown (Cable)","4x8","reps","Lats"],["Triceps Extension (Cable)","3x12","reps","Triceps"],
-    ["Triceps Extension (Machine)","3x12","reps","Triceps"],["Triceps Kickback (Cable)","3x12","reps","Triceps"],
-    ["Upright Row (Cable)","3x12","reps","Shoulders"],["Vertical Traction (Machine)","4x8","reps","Lats"]
+    ["Seated Shoulder Press (Machine)","3x12","reps","Shoulders"],["Shoulder Press (Machine Plates)","3x12","reps","Shoulders"],
+    ["Shrug (Cable)","3x12","reps","Traps"],["Shrug (Machine)","3x12","reps","Traps"],
+    ["Shrug (Smith Machine)","3x12","reps","Traps"],["Single Arm Cable Crossover","4x8","reps","Chest"],
+    ["Single Arm Cable Kickback","3x15","reps","Triceps"],["Single Arm Cable Row","4x8","reps","Upper Back"],
+    ["Single Arm Curl (Cable)","3x12","reps","Biceps"],["Single Arm Lat Pulldown","4x8","reps","Lats"],
+    ["Single Arm Lateral Raise (Cable)","3x12","reps","Shoulders"],["Single Arm Triceps Pushdown (Cable)","3x12","reps","Triceps"],
+    ["Single Leg Press (Machine)","4x8","reps","Quadriceps"],["Single Leg Standing Calf Raise (Machine)","3x15","reps","Calves"],
+    ["Smith Machine Calf Raise","4x15","reps","Calves"],["Squat (Machine)","4x8","reps","Quadriceps"],
+    ["Squat (Smith Machine)","4x8","reps","Quadriceps"],["Stair Machine (Floors)","3x400m","distance","Cardio"],
+    ["Stair Machine (Steps)","3x400m","distance","Cardio"],["Standing Cable Glute Kickbacks","4x8","reps","Glutes"],
+    ["Standing Calf Raise (Machine)","3x15","reps","Calves"],["Standing Calf Raise (Smith)","3x15","reps","Calves"],
+    ["Standing Leg Curl","3x12","reps","Hamstrings"],["Standing Y Raise (Cable)","3x12","reps","Shoulders"],
+    ["Straight Arm Lat Pulldown (Cable)","4x8","reps","Lats"],["Terminal Knee Extension","3x15","reps","Quadriceps"],
+    ["Triceps Extension (Cable)","3x12","reps","Triceps"],["Triceps Extension (Machine)","3x12","reps","Triceps"],
+    ["Triceps Kickback (Cable)","3x12","reps","Triceps"],["Triceps Pushdown","3x12","reps","Triceps"],
+    ["Triceps Rope Pushdown","3x12","reps","Triceps"],["Upright Row (Cable)","3x12","reps","Shoulders"],
+    ["Vertical Traction (Machine)","4x8","reps","Lats"]
   ],
   "Kettlebell":[
+    ["Bottoms Up Carry","3x30m","distance","Shoulders"],["Double Kettlebell Front Squat","4x8","reps","Quadriceps"],
     ["Gorilla Row (Kettlebell)","4x8","reps","Upper Back"],["Kettlebell Around the World","3x12","reps","Shoulders"],
-    ["Kettlebell Clean","4x8","reps","Full Body"],["Kettlebell Curl","3x12","reps","Biceps"],
-    ["Kettlebell Goblet Squat","4x8","reps","Quadriceps"],["Kettlebell Halo","3x12","reps","Shoulders"],
-    ["Kettlebell High Pull","4x8","reps","Full Body"],["Kettlebell Shoulder Press","3x12","reps","Shoulders"],
-    ["Kettlebell Snatch","4x8","reps","Full Body"],["Kettlebell Swing","4x8","reps","Full Body"],
-    ["Kettlebell Turkish Get Up","4x8","reps","Full Body"],["Sumo Squat (Kettlebell)","4x8","reps","Quadriceps"],
-    ["Thruster (Kettlebell)","4x8","reps","Full Body"]
+    ["Kettlebell Bottoms Up Press","3x8","reps","Shoulders"],["Kettlebell Clean","4x8","reps","Full Body"],
+    ["Kettlebell Clean and Press","4x6","reps","Shoulders"],["Kettlebell Curl","3x12","reps","Biceps"],
+    ["Kettlebell Figure 8","3x12","reps","Full Body"],["Kettlebell Goblet Squat","4x8","reps","Quadriceps"],
+    ["Kettlebell Halo","3x12","reps","Shoulders"],["Kettlebell High Pull","4x8","reps","Full Body"],
+    ["Kettlebell Shoulder Press","3x12","reps","Shoulders"],["Kettlebell Snatch","4x8","reps","Full Body"],
+    ["Kettlebell Swing","4x8","reps","Full Body"],["Kettlebell Swing American","4x15","reps","Glutes"],
+    ["Kettlebell Turkish Get Up","4x8","reps","Full Body"],["Kettlebell Windmill","3x6","reps","Abdominals"],
+    ["Sumo Squat (Kettlebell)","4x8","reps","Quadriceps"],["Thruster (Kettlebell)","4x8","reps","Full Body"]
   ],
   "Bodyweight":[
-    ["21s Bicep Curl","3x12","reps","Biceps"],["Ab Scissors","3x15","reps","Abdominals"],
-    ["Ab Wheel","3x15","reps","Abdominals"],["Around The World","4x8","reps","Chest"],
-    ["Back Extension (Hyperextension)","4x8","reps","Lower Back"],
-    ["Back Extension (Weighted Hyperextension)","4x8","reps","Lower Back"],
-    ["Band Pullaparts","3x12","reps","Shoulders"],["Bear Crawl","3x45s","time","Full Body"],
-    ["Bench Dip","3x12","reps","Triceps"],["Bent Over Row (Band)","4x8","reps","Upper Back"],
-    ["Bicep Curl (Suspension)","3x12","reps","Biceps"],["Bicycle Crunch","3x400m","distance","Abdominals"],
-    ["Bicycle Crunch Raised Legs","3x400m","distance","Abdominals"],["Bird Dog","4x8","reps","Glutes"],
-    ["Box Jump","4x8","reps","Quadriceps"],["Chest Dip","4x8","reps","Chest"],
+    ["21s Bicep Curl","3x12","reps","Biceps"],["90 Degree Push Up","3x5","reps","Chest"],
+    ["90/90 Hip Switch","2x45s","time","Mobility"],["Ab Rollout from Standing","3x6","reps","Abdominals"],
+    ["Ab Scissors","3x15","reps","Abdominals"],["Ab Wheel","3x15","reps","Abdominals"],
+    ["Achilles Eccentric Drop","3x15","reps","Calves"],["Adductor Squeeze Isometric","3x30s","time","Adductors"],
+    ["Advanced Tuck Planche Hold","4x15s","time","Shoulders"],["Ankle Alphabet","3x2","reps","Calves"],
+    ["Ankle Circles Stretch","2x45s","time","Mobility"],["Ankle Dorsiflexion Stretch","2x45s","time","Mobility"],
+    ["Ankle Eversion Band","3x15","reps","Calves"],["Ankle Hop","3x20","reps","Calves"],
+    ["Ankle Inversion Band","3x15","reps","Calves"],["Ape Reach","3x10","reps","Adductors"],
+    ["Archer Pull Up","3x5","reps","Lats"],["Archer Push Up","3x8","reps","Chest"],
+    ["Arm Circles Stretch","2x30s","time","Mobility"],["Around The World","4x8","reps","Chest"],
+    ["Around the World Pull Up","3x6","reps","Lats"],["ATG Split Squat","3x10","reps","Quadriceps"],
+    ["Aztec Push Up","3x5","reps","Chest"],["Back Bridge Hold","3x30s","time","Lower Back"],
+    ["Back Extension (Hyperextension)","4x8","reps","Lower Back"],["Back Extension (Weighted Hyperextension)","4x8","reps","Lower Back"],
+    ["Back Lever Hold","4x15s","time","Lats"],["Band Bicep Curl","3x15","reps","Biceps"],
+    ["Band Dislocate Stretch","2x45s","time","Mobility"],["Band Face Pull","3x15","reps","Upper Back"],
+    ["Band Good Morning","3x15","reps","Hamstrings"],["Band Hip Thrust","3x20","reps","Glutes"],
+    ["Band Monster Walk","3x20m","distance","Abductors"],["Band Pull Apart Overhead","3x15","reps","Shoulders"],
+    ["Band Pullaparts","3x12","reps","Shoulders"],["Band Shoulder Press","3x15","reps","Shoulders"],
+    ["Band Tricep Extension","3x15","reps","Triceps"],["Banded Ankle Distraction Stretch","2x60s","time","Mobility"],
+    ["Banded Hip Distraction Stretch","2x60s","time","Mobility"],["Banded Shoulder Distraction Stretch","2x60s","time","Mobility"],
+    ["Bar Hang Hold","3x45s","time","Forearms"],["Bear Crawl","3x45s","time","Full Body"],
+    ["Bear Crawl Hold","3x30s","time","Full Body"],["Beast Crawl","3x20","reps","Full Body"],
+    ["Bench Dip","3x12","reps","Triceps"],["Bench Dip Weighted","3x12","reps","Triceps"],
+    ["Bent Over Row (Band)","4x8","reps","Upper Back"],["Bicep Curl (Suspension)","3x12","reps","Biceps"],
+    ["Bicycle Crunch","3x400m","distance","Abdominals"],["Bicycle Crunch Raised Legs","3x400m","distance","Abdominals"],
+    ["Bird Dog","4x8","reps","Glutes"],["Bird Dog Rehab","3x12","reps","Lower Back"],
+    ["Blackburn Exercise","3x12","reps","Upper Back"],["Bounding","4x20m","distance","Glutes"],
+    ["Bow Pose","2x30s","time","Mobility"],["Box Drop","4x5","reps","Quadriceps"],
+    ["Box Jump","4x8","reps","Quadriceps"],["Bridge Pose","2x45s","time","Mobility"],
+    ["Broad Jump","4x5","reps","Glutes"],["Broad Jump Burpee","4x8","reps","Full Body"],
+    ["Bulgarian Dip","3x8","reps","Chest"],["Burpee Pull Up","3x8","reps","Full Body"],
+    ["Burpee Tuck Jump","4x10","reps","Full Body"],["Butt Kicks","3x30s","time","Cardio"],
+    ["Butterfly Groin Stretch","2x45s","time","Mobility"],["Calf Raise Eccentric","3x15","reps","Calves"],
+    ["Calf Stretch on Wall","2x45s","time","Mobility"],["Calf Wall Stretch","2x45s","time","Mobility"],
+    ["Camel Pose","2x30s","time","Mobility"],["Campus Board","4x6","reps","Lats"],
+    ["Captains of Crush Grip","3x10","reps","Forearms"],["Cat Camel","3x12","reps","Mobility"],
+    ["Cat-Cow Stretch","2x45s","time","Mobility"],["Chair Bulgarian Split Squat","3x10","reps","Quadriceps"],
+    ["Chair Dip","3x12","reps","Triceps"],["Chair Incline Push Up","3x12","reps","Chest"],
+    ["Chair Pose","2x45s","time","Mobility"],["Chair Squat","3x15","reps","Quadriceps"],
+    ["Chair Step Up","3x12","reps","Quadriceps"],["Chest Dip","4x8","reps","Chest"],
     ["Chest Dip (Assisted)","4x8","reps","Chest"],["Chest Dip (Weighted)","4x8","reps","Chest"],
     ["Chest Fly (Band)","4x8","reps","Chest"],["Chest Fly (Suspension)","4x8","reps","Chest"],
-    ["Chest Press (Band)","4x8","reps","Chest"],["Chest Supported T Bar Row","4x8","reps","Upper Back"],
-    ["Chin Up","4x8","reps","Lats"],["Chin Up (Assisted)","4x8","reps","Lats"],
-    ["Chin Up (Weighted)","4x8","reps","Lats"],["Clamshell","4x8","reps","Glutes"],
-    ["Clap Push Ups","4x8","reps","Chest"],["Clean","4x8","reps","Full Body"],
-    ["Clean Pull","4x8","reps","Full Body"],["Clean and Jerk","4x8","reps","Full Body"],
-    ["Clean and Press","4x8","reps","Full Body"],["Concentration Curl","3x12","reps","Biceps"],
-    ["Cross Body Hammer Curl","3x12","reps","Biceps"],["Crunch","3x400m","distance","Abdominals"],
-    ["Crunch (Weighted)","3x400m","distance","Abdominals"],["Dead Bug","3x15","reps","Abdominals"],
+    ["Chest Press (Band)","4x8","reps","Chest"],["Chest to Bar Pull Up","4x8","reps","Lats"],
+    ["Child's Pose Stretch","2x60s","time","Mobility"],["Chin Tuck Rehab","3x15","reps","Neck"],
+    ["Chin Tuck Stretch","2x30s","time","Mobility"],["Chin Up","4x8","reps","Lats"],
+    ["Chin Up (Assisted)","4x8","reps","Lats"],["Chin Up (Weighted)","4x8","reps","Lats"],
+    ["Clamshell","4x8","reps","Glutes"],["Clap Pull Up","4x4","reps","Lats"],
+    ["Clap Push Up to Box","4x6","reps","Chest"],["Clap Push Ups","4x8","reps","Chest"],
+    ["Climbing Hangboard Hold","5x10s","time","Forearms"],["Close Grip Push Up","3x12","reps","Triceps"],
+    ["Cobra Pose Stretch","2x45s","time","Mobility"],["Codman Circle","3x20","reps","Shoulders"],
+    ["Commando Pull Up","3x8","reps","Lats"],["Concentration Curl","3x12","reps","Biceps"],
+    ["Continuous Box Jump","4x8","reps","Quadriceps"],["Copenhagen Adduction","3x10","reps","Adductors"],
+    ["Copenhagen Plank","3x30s","time","Adductors"],["Couch Stretch","2x60s","time","Mobility"],
+    ["Cow Face Pose","2x45s","time","Mobility"],["Crab Reach","3x10","reps","Shoulders"],
+    ["Cross Body Hammer Curl","3x12","reps","Biceps"],["Cross Body Mountain Climber","3x30","reps","Abdominals"],
+    ["Cross Body Shoulder Stretch","2x45s","time","Mobility"],["Crow Pose","3x20s","time","Shoulders"],
+    ["Crunch","3x400m","distance","Abdominals"],["Crunch (Weighted)","3x400m","distance","Abdominals"],
+    ["Curl Up McGill","3x10","reps","Abdominals"],["Dead Bug","3x15","reps","Abdominals"],
     ["Dead Hang","3x45s","time","Upper Back"],["Deadlift (Band)","4x8","reps","Glutes"],
     ["Deadlift High Pull","4x8","reps","Full Body"],["Decline Crunch","3x400m","distance","Abdominals"],
     ["Decline Crunch (Weighted)","3x400m","distance","Abdominals"],["Decline Push Up","4x8","reps","Chest"],
-    ["Diamond Push Up","3x12","reps","Triceps"],["Drag Curl","3x12","reps","Biceps"],
-    ["Dragon Flag","3x15","reps","Abdominals"],["Dragonfly","3x15","reps","Abdominals"],
-    ["Elbow to Knee","3x15","reps","Abdominals"],["Face Pull","3x12","reps","Shoulders"],
-    ["Fire Hydrants","4x8","reps","Glutes"],["Floor Triceps Dip","3x12","reps","Triceps"],
-    ["Flutter Kicks","3x45s","time","Abdominals"],["Frog Jumps","4x8","reps","Quadriceps"],
+    ["Deep Neck Flexor Hold","3x20s","time","Neck"],["Deep Squat Hold Stretch","2x60s","time","Mobility"],
+    ["Depth Drop to Broad Jump","4x5","reps","Glutes"],["Depth Jump","4x5","reps","Quadriceps"],
+    ["Diamond Push Up","3x12","reps","Triceps"],["Donkey Kick","3x15","reps","Glutes"],
+    ["Doorway Chest Stretch","2x45s","time","Mobility"],["Doorway Pec Stretch Rehab","2x45s","time","Mobility"],
+    ["Doorway Row","3x12","reps","Upper Back"],["Downward-Facing Dog Stretch","2x45s","time","Mobility"],
+    ["Drag Curl","3x12","reps","Biceps"],["Dragon Flag","3x15","reps","Abdominals"],
+    ["Dragonfly","3x15","reps","Abdominals"],["Drop Push Up","4x6","reps","Chest"],
+    ["Duck Walk","3x20m","distance","Quadriceps"],["Eagle Pose","2x30s","time","Mobility"],
+    ["Elbow Lever Hold","3x15s","time","Abdominals"],["Elbow to Knee","3x15","reps","Abdominals"],
+    ["Explosive Pull Up","4x5","reps","Lats"],["Explosive Push Up","3x8","reps","Chest"],
+    ["Face Pull","3x12","reps","Shoulders"],["Fire Hydrant","3x15","reps","Abductors"],
+    ["Fire Hydrant Rehab","3x15","reps","Abductors"],["Fire Hydrants","4x8","reps","Glutes"],
+    ["Floor Triceps Dip","3x12","reps","Triceps"],["Flutter Kick","3x30","reps","Abdominals"],
+    ["Flutter Kicks","3x45s","time","Abdominals"],["Foam Rolling Adductors","2x60s","time","Mobility"],
+    ["Foam Rolling Calves","2x60s","time","Mobility"],["Foam Rolling Glutes","2x60s","time","Mobility"],
+    ["Foam Rolling Hamstrings","2x60s","time","Mobility"],["Foam Rolling IT Band","2x60s","time","Mobility"],
+    ["Foam Rolling Lats","2x60s","time","Mobility"],["Foam Rolling Pecs","2x60s","time","Mobility"],
+    ["Foam Rolling Quads","2x60s","time","Mobility"],["Foam Rolling Thoracic Spine","2x60s","time","Mobility"],
+    ["Foam Rolling Tibialis","2x60s","time","Mobility"],["Freestanding Handstand Hold","4x20s","time","Shoulders"],
+    ["Frog Jumps","4x8","reps","Quadriceps"],["Frog Pump","3x20","reps","Glutes"],
+    ["Frog Stand Hold","3x20s","time","Shoulders"],["Frog Stretch","2x60s","time","Mobility"],
     ["Front Lever Hold","3x45s","time","Full Body"],["Front Lever Raise","4x8","reps","Full Body"],
     ["Front Raise (Band)","3x12","reps","Shoulders"],["Front Raise (Suspension)","3x12","reps","Shoulders"],
     ["Front Squat","4x8","reps","Quadriceps"],["Full Squat","4x8","reps","Quadriceps"],
-    ["Glute Bridge","4x8","reps","Glutes"],["Glute Ham Raise","4x8","reps","Hamstrings"],
-    ["Glute Kickback on Floor","4x8","reps","Glutes"],["Goblet Squat","4x8","reps","Quadriceps"],
-    ["Hack Squat","4x8","reps","Quadriceps"],["Hammer Curl (Band)","3x12","reps","Biceps"],
+    ["Glute Bridge","4x8","reps","Glutes"],["Glute Bridge Hold","3x45s","time","Glutes"],
+    ["Glute Bridge March Rehab","3x12","reps","Glutes"],["Glute Bridge Pulse","3x25","reps","Glutes"],
+    ["Glute Ham Raise","4x8","reps","Hamstrings"],["Glute Kickback on Floor","4x8","reps","Glutes"],
+    ["Glute Med Isometric","3x30s","time","Abductors"],["Goblet Squat","4x8","reps","Quadriceps"],
+    ["Grip Squeeze Ball","3x20","reps","Forearms"],["Half Kneeling Hip Flexor Stretch","2x45s","time","Mobility"],
+    ["Hammer Curl (Band)","3x12","reps","Biceps"],["Hamstring Stretch","2x45s","time","Mobility"],
     ["Handstand Hold","3x45s","time","Full Body"],["Handstand Push Up","3x12","reps","Shoulders"],
-    ["Hang Clean","4x8","reps","Full Body"],["Hang Snatch","4x8","reps","Full Body"],
+    ["Handstand Push Up Kipping","4x8","reps","Shoulders"],["Handstand Walk","4x10m","distance","Shoulders"],
     ["Hanging Knee Raise","3x15","reps","Abdominals"],["Hanging Leg Raise","3x15","reps","Abdominals"],
-    ["Heel Taps","3x15","reps","Abdominals"],["High Knee Skips","4x8","reps","Full Body"],
-    ["High Knees","3x45s","time","Full Body"],["Hip Thrust","4x8","reps","Glutes"],
-    ["Hollow Rock","3x15","reps","Abdominals"],["Incline Push Ups","4x8","reps","Chest"],
-    ["Inverted Row","4x8","reps","Upper Back"],["Iso-Lateral Low Row","4x8","reps","Upper Back"],
+    ["Hanging Windshield Wiper","3x8","reps","Abdominals"],["Happy Baby Pose","2x60s","time","Mobility"],
+    ["Headstand Hold","3x45s","time","Shoulders"],["Heel Slide","3x15","reps","Quadriceps"],
+    ["Heel Tap","3x20","reps","Abdominals"],["Heel Taps","3x15","reps","Abdominals"],
+    ["Heel Walk","3x20m","distance","Calves"],["High Knee Skips","4x8","reps","Full Body"],
+    ["High Knees","3x45s","time","Full Body"],["Hindu Push Up","3x10","reps","Shoulders"],
+    ["Hip Airplane","3x8","reps","Glutes"],["Hip Circles Stretch","2x30s","time","Mobility"],
+    ["Hip Flexor Stretch","2x45s","time","Mobility"],["Hip Thrust","4x8","reps","Glutes"],
+    ["Hollow Rock","3x15","reps","Abdominals"],["Hub Lift","3x8","reps","Forearms"],
+    ["Human Flag Hold","4x10s","time","Abdominals"],["Hurdle Hop","4x6","reps","Calves"],
+    ["Impossible Dip","3x5","reps","Chest"],["Inchworm","3x10","reps","Full Body"],
+    ["Incline Push Ups","4x8","reps","Chest"],["Inverted Row","4x8","reps","Upper Back"],
+    ["Inverted Row Feet Elevated","3x12","reps","Upper Back"],["Iron Cross Hold","4x8s","time","Chest"],
+    ["Iso-Lateral Low Row","4x8","reps","Upper Back"],["Isometric Lunge Hold","3x45s","time","Quadriceps"],
+    ["Isometric Push Up Hold","3x30s","time","Chest"],["Isometric Shoulder Abduction","3x20s","time","Shoulders"],
+    ["Isometric Shoulder External Rotation","3x20s","time","Shoulders"],["Isometric Squat Hold","3x45s","time","Quadriceps"],
     ["Jack Knife (Suspension)","3x15","reps","Abdominals"],["Jackknife Sit Up","3x15","reps","Abdominals"],
+    ["Jefferson Curl Stretch","2x45s","time","Mobility"],["Jump Lunge","3x12","reps","Quadriceps"],
     ["Jump Shrug","4x8","reps","Full Body"],["Jump Squat","4x8","reps","Quadriceps"],
     ["Jumping Jack","4x8","reps","Full Body"],["Jumping Lunge","4x8","reps","Quadriceps"],
-    ["Kipping Pull Up","4x8","reps","Lats"],["Knee Raise Parallel Bars","3x15","reps","Abdominals"],
+    ["Kipping Pull Up","4x8","reps","Lats"],["Kipping Toes to Bar","4x10","reps","Abdominals"],
+    ["Knee Hug Stretch","2x30s","time","Mobility"],["Knee Raise Parallel Bars","3x15","reps","Abdominals"],
     ["Kneeling Pulldown (band)","4x8","reps","Lats"],["Kneeling Push Up","4x8","reps","Chest"],
-    ["L-Sit Hold","3x45s","time","Abdominals"],["Lat Pulldown (Band)","4x8","reps","Lats"],
-    ["Lat closed grip pull down","4x8","reps","Lats"],["Lateral Band Walks","3x400m","distance","Glutes"],
-    ["Lateral Box Jump","4x8","reps","Quadriceps"],["Lateral Leg Raises","4x8","reps","Glutes"],
-    ["Lateral Lunge","4x8","reps","Quadriceps"],["Lateral Raise (Band)","3x12","reps","Shoulders"],
+    ["Korean Dip","3x8","reps","Triceps"],["L-Sit Hold","3x45s","time","Abdominals"],
+    ["Lacrosse Ball Foot Release Stretch","2x60s","time","Mobility"],["Lacrosse Ball Glute Release Stretch","2x60s","time","Mobility"],
+    ["Lat closed grip pull down","4x8","reps","Lats"],["Lat Pulldown (Band)","4x8","reps","Lats"],
+    ["Lat Stretch on Rack","2x45s","time","Mobility"],["Lateral Band Walks","3x400m","distance","Glutes"],
+    ["Lateral Bound","4x8","reps","Glutes"],["Lateral Box Jump","4x8","reps","Quadriceps"],
+    ["Lateral Leg Raises","4x8","reps","Glutes"],["Lateral Lunge","4x8","reps","Quadriceps"],
+    ["Lateral Raise (Band)","3x12","reps","Shoulders"],["Lateral Skater Bound","4x10","reps","Glutes"],
     ["Lateral Squat","4x8","reps","Quadriceps"],["Leg Raise Parallel Bars","3x15","reps","Abdominals"],
-    ["Low Row (Suspension)","4x8","reps","Upper Back"],["Low row","4x8","reps","Upper Back"],
-    ["Lunge","4x8","reps","Quadriceps"],["Lying Knee Raise","3x15","reps","Abdominals"],
-    ["Lying Leg Raise","3x15","reps","Abdominals"],["Lying Neck Curls","3x15","reps","Neck"],
-    ["Lying Neck Curls (Weighted)","3x15","reps","Neck"],["Lying Neck Extension","3x15","reps","Neck"],
-    ["Lying Neck Extension (Weighted)","3x15","reps","Neck"],["Mountain Climber","3x45s","time","Full Body"],
-    ["Muscle Up","4x8","reps","Full Body"],["Negative Pull Up","4x8","reps","Lats"],
+    ["Leg Swings Stretch","2x30s","time","Mobility"],["Levator Scapulae Stretch","2x30s","time","Mobility"],
+    ["Lizard Pose Stretch","2x60s","time","Mobility"],["Loaded Beast Hold","3x30s","time","Shoulders"],
+    ["Low Lunge Stretch","2x45s","time","Mobility"],["Low row","4x8","reps","Upper Back"],
+    ["Low Row (Suspension)","4x8","reps","Upper Back"],["Lumbar Rotation Stretch","2x45s","time","Mobility"],
+    ["Lunge","4x8","reps","Quadriceps"],["Lying Glute Stretch","2x45s","time","Mobility"],
+    ["Lying Knee Raise","3x15","reps","Abdominals"],["Lying Leg Raise","3x15","reps","Abdominals"],
+    ["Lying Neck Curls","3x15","reps","Neck"],["Lying Neck Curls (Weighted)","3x15","reps","Neck"],
+    ["Lying Neck Extension","3x15","reps","Neck"],["Lying Neck Extension (Weighted)","3x15","reps","Neck"],
+    ["Maltese Hold","4x5s","time","Chest"],["Median Nerve Glide Stretch","2x30s","time","Mobility"],
+    ["Mountain Climber","3x45s","time","Full Body"],["Muscle Up","4x8","reps","Full Body"],
+    ["Muscle Up Transition","4x5","reps","Lats"],["Neck Curl","3x15","reps","Neck"],
+    ["Neck Lateral Flexion","3x15","reps","Neck"],["Neck Rotation Stretch","2x30s","time","Mobility"],
+    ["Neck Side Stretch","2x30s","time","Mobility"],["Negative Pull Up","4x8","reps","Lats"],
+    ["Nerve Flossing Sciatic","3x12","reps","Hamstrings"],["Nerve Glide Ulnar","3x12","reps","Forearms"],
     ["Nordic Hamstrings Curls","4x8","reps","Hamstrings"],["Oblique Crunch","3x400m","distance","Abdominals"],
-    ["One Arm Push Up","4x8","reps","Chest"],["Overhead Plate Raise","3x12","reps","Shoulders"],
-    ["Overhead Squat","4x8","reps","Full Body"],["Pike Pushup","3x12","reps","Shoulders"],
-    ["Pistol Squat","4x8","reps","Quadriceps"],["Plank","3x45s","time","Abdominals"],
-    ["Plank Pushup","3x45s","time","Chest"],["Plate Curl","3x12","reps","Biceps"],
-    ["Plate Front Raise","3x12","reps","Shoulders"],["Plate Press","4x8","reps","Chest"],
-    ["Plate Squeeze (Svend Press)","4x8","reps","Chest"],["Power Clean","4x8","reps","Full Body"],
-    ["Power Snatch","4x8","reps","Full Body"],["Press Under","4x8","reps","Full Body"],
-    ["Pull Up","4x8","reps","Lats"],["Pull Up (Assisted)","4x8","reps","Lats"],
-    ["Pull Up (Band)","4x8","reps","Lats"],["Pull Up (Weighted)","4x8","reps","Lats"],
+    ["One Arm Pull Up","3x3","reps","Lats"],["One Arm Push Up","4x8","reps","Chest"],
+    ["One Arm Push Up Negative","3x5","reps","Chest"],["Overhead Plate Raise","3x12","reps","Shoulders"],
+    ["Overhead Squat","4x8","reps","Full Body"],["Overhead Triceps Stretch","2x45s","time","Mobility"],
+    ["Passive Shoulder Flexion","3x12","reps","Shoulders"],["Patellar Tendon Isometric","3x45s","time","Quadriceps"],
+    ["Pelvic Tilt","3x15","reps","Lower Back"],["Pendulum Swing","3x20","reps","Shoulders"],
+    ["Pigeon Pose Stretch","2x60s","time","Mobility"],["Pike Pushup","3x12","reps","Shoulders"],
+    ["Pilates Hundred","3x100","reps","Abdominals"],["Pilates Roll Up","3x10","reps","Abdominals"],
+    ["Pilates Side Kick","3x15","reps","Glutes"],["Pilates Swan","3x10","reps","Lower Back"],
+    ["Pilates Teaser","3x8","reps","Abdominals"],["Pistol Squat","4x8","reps","Quadriceps"],
+    ["Planche Lean Hold","4x20s","time","Shoulders"],["Plank","3x45s","time","Abdominals"],
+    ["Plank Jack","3x20","reps","Abdominals"],["Plank Pushup","3x45s","time","Chest"],
+    ["Plank Shoulder Tap","3x20","reps","Abdominals"],["Plank to Push Up","3x12","reps","Chest"],
+    ["Plate Curl","3x12","reps","Biceps"],["Plate Front Raise","3x12","reps","Shoulders"],
+    ["Plate Pinch Hold","3x30s","time","Forearms"],["Plate Press","4x8","reps","Chest"],
+    ["Plate Squeeze (Svend Press)","4x8","reps","Chest"],["Plyo Push Up","4x6","reps","Chest"],
+    ["Pogo Jump","3x20","reps","Calves"],["Poliquin Step Up","3x12","reps","Quadriceps"],
+    ["Power Skip","4x20m","distance","Glutes"],["Press Under","4x8","reps","Full Body"],
+    ["Prone Extension","3x12","reps","Lower Back"],["Prone Horizontal Abduction","3x15","reps","Upper Back"],
+    ["Prone Press Up Stretch","2x45s","time","Mobility"],["Prone T Raise","3x15","reps","Upper Back"],
+    ["Prone W Raise","3x15","reps","Upper Back"],["Prone Y Raise","3x15","reps","Shoulders"],
+    ["Pseudo Planche Push Up","3x8","reps","Chest"],["Pull Up","4x8","reps","Lats"],
+    ["Pull Up (Assisted)","4x8","reps","Lats"],["Pull Up (Band)","4x8","reps","Lats"],
+    ["Pull Up (Weighted)","4x8","reps","Lats"],["Puppy Pose Stretch","2x45s","time","Mobility"],
     ["Push Press","3x12","reps","Shoulders"],["Push Up","4x8","reps","Chest"],
-    ["Push Up (Weighted)","4x8","reps","Chest"],["Rack Pull","4x8","reps","Upper Back"],
-    ["Reverse Crunch","3x400m","distance","Abdominals"],["Reverse Grip Concentration Curl","3x12","reps","Biceps"],
-    ["Reverse Grip Triceps Pushdown","3x12","reps","Triceps"],["Reverse Hyperextension","4x8","reps","Glutes"],
-    ["Reverse Lunge","4x8","reps","Quadriceps"],["Reverse Plank","3x45s","time","Abdominals"],
-    ["Ring Dips","4x8","reps","Chest"],["Ring Pull Up","4x8","reps","Lats"],["Ring Push Up","4x8","reps","Chest"],
-    ["Rope Straight Arm Pulldown","4x8","reps","Lats"],["Russian Twist (Bodyweight)","3x15","reps","Abdominals"],
-    ["Russian Twist (Weighted)","3x15","reps","Abdominals"],["Scapular Pull Ups","4x8","reps","Upper Back"],
-    ["Seated Calf Raise","3x15","reps","Calves"],["Seated Palms Up Wrist Curl","3x15","reps","Forearms"],
-    ["Seated Triceps Press","3x12","reps","Triceps"],["Shoulder Taps","3x12","reps","Shoulders"],
-    ["Side Bend","3x15","reps","Abdominals"],["Side Plank","3x45s","time","Abdominals"],
-    ["Single Arm Lat Pulldown","4x8","reps","Lats"],["Single Leg Extensions","4x8","reps","Quadriceps"],
-    ["Single Leg Glute Bridge","4x8","reps","Glutes"],["Single Leg Hip Thrust","4x8","reps","Glutes"],
+    ["Push Up (Weighted)","4x8","reps","Chest"],["Quad Set Hold","3x10s","time","Quadriceps"],
+    ["Rack Pull","4x8","reps","Upper Back"],["Reactive Hurdle Jump","4x8","reps","Calves"],
+    ["Reclined Pigeon Pose","2x60s","time","Mobility"],["Reverse Crunch","3x400m","distance","Abdominals"],
+    ["Reverse Grip Concentration Curl","3x12","reps","Biceps"],["Reverse Hyperextension","4x8","reps","Glutes"],
+    ["Reverse Lunge","4x8","reps","Quadriceps"],["Reverse Nordic Curl","3x8","reps","Quadriceps"],
+    ["Reverse Plank","3x45s","time","Abdominals"],["Reverse Tyler Twist","3x15","reps","Forearms"],
+    ["Ring Dips","4x8","reps","Chest"],["Ring Pull Up","4x8","reps","Lats"],
+    ["Ring Push Up","4x8","reps","Chest"],["Russian Dip","3x8","reps","Triceps"],
+    ["Russian Twist (Bodyweight)","3x15","reps","Abdominals"],["Russian Twist (Weighted)","3x15","reps","Abdominals"],
+    ["Scapular Depression","3x15","reps","Upper Back"],["Scapular Pull Ups","4x8","reps","Upper Back"],
+    ["Scapular Push Up","3x15","reps","Upper Back"],["Scapular Retraction","3x15","reps","Upper Back"],
+    ["Scapular Wall Slide Stretch","2x45s","time","Mobility"],["Sciatic Nerve Glide Stretch","2x30s","time","Mobility"],
+    ["Scissor Jump","4x12","reps","Quadriceps"],["Scissor Kick","3x30","reps","Abdominals"],
+    ["Scorpion Reach","3x10","reps","Lower Back"],["Seated Box Jump","4x5","reps","Quadriceps"],
+    ["Seated Calf Raise","3x15","reps","Calves"],["Seated Forward Fold Stretch","2x45s","time","Mobility"],
+    ["Seated Palms Up Wrist Curl","3x15","reps","Forearms"],["Seated Spinal Twist Stretch","2x45s","time","Mobility"],
+    ["Seated Triceps Press","3x12","reps","Triceps"],["Serratus Wall Slide","3x12","reps","Chest"],
+    ["Short Arc Quad","3x15","reps","Quadriceps"],["Shoulder Circles Stretch","2x30s","time","Mobility"],
+    ["Shoulder Dislocate Stretch","2x45s","time","Mobility"],["Shoulder Taps","3x12","reps","Shoulders"],
+    ["Shrimp Squat","3x8","reps","Quadriceps"],["Side Bend","3x15","reps","Abdominals"],
+    ["Side Bridge McGill Hold","3x30s","time","Abdominals"],["Side Lying Hip Abduction","3x15","reps","Abductors"],
+    ["Side Plank","3x45s","time","Abdominals"],["Side Plank Dip","3x15","reps","Abdominals"],
+    ["Single Leg Balance Hold","3x30s","time","Quadriceps"],["Single Leg Bound","4x6","reps","Glutes"],
+    ["Single Leg Box Jump","3x5","reps","Quadriceps"],["Single Leg Calf Raise (Bodyweight)","3x15","reps","Calves"],
+    ["Single Leg Extensions","4x8","reps","Quadriceps"],["Single Leg Glute Bridge","4x8","reps","Glutes"],
+    ["Single Leg Glute Bridge March","3x12","reps","Glutes"],["Single Leg Hip Thrust","4x8","reps","Glutes"],
     ["Single Leg Standing Calf Raise","3x15","reps","Calves"],["Sissy Squat (Weighted)","4x8","reps","Quadriceps"],
     ["Sit Up","3x15","reps","Abdominals"],["Sit Up (Weighted)","3x15","reps","Abdominals"],
-    ["Snatch","4x8","reps","Full Body"],["Spiderman","3x15","reps","Abdominals"],
-    ["Split Jerk","4x8","reps","Full Body"],["Squat (Band)","4x8","reps","Quadriceps"],
-    ["Squat (Bodyweight)","4x8","reps","Quadriceps"],["Squat (Suspension)","4x8","reps","Quadriceps"],
-    ["Squat Row","4x8","reps","Full Body"],["Standing Calf Raise","3x15","reps","Calves"],
-    ["Standing Calf Raise (Smith)","3x15","reps","Calves"],["Standing Leg Curls","4x8","reps","Hamstrings"],
-    ["Step Up","4x8","reps","Quadriceps"],["Sternum Pull up (Gironda)","4x8","reps","Lats"],
-    ["Straight Leg Deadlift","4x8","reps","Hamstrings"],["Sumo Deadlift","4x8","reps","Glutes"],
+    ["Skater Jump","3x20","reps","Quadriceps"],["Skater Squat","3x10","reps","Quadriceps"],
+    ["Skin the Cat","3x5","reps","Lats"],["Slant Board Squat","3x12","reps","Quadriceps"],
+    ["Sleeper Stretch","2x45s","time","Mobility"],["Spanish Squat Isometric","3x30s","time","Quadriceps"],
+    ["Speed Skater","3x20","reps","Quadriceps"],["Sphinx Pose","2x45s","time","Mobility"],
+    ["Spiderman","3x15","reps","Abdominals"],["Spiderman Push Up","3x10","reps","Chest"],
+    ["Split Jump","4x10","reps","Quadriceps"],["Sprawl","4x15","reps","Full Body"],
+    ["Squat (Band)","4x8","reps","Quadriceps"],["Squat (Bodyweight)","4x8","reps","Quadriceps"],
+    ["Squat (Suspension)","4x8","reps","Quadriceps"],["Squat Jump to Box","4x6","reps","Quadriceps"],
+    ["Squat Pulse","3x20","reps","Quadriceps"],["Squat Row","4x8","reps","Full Body"],
+    ["Squat Thrust","3x15","reps","Full Body"],["Staggered Push Up","3x10","reps","Chest"],
+    ["Standing Ab Wheel","3x6","reps","Abdominals"],["Standing Calf Raise","3x15","reps","Calves"],
+    ["Standing Calf Raise (Bodyweight)","3x20","reps","Calves"],["Standing Extension","3x12","reps","Lower Back"],
+    ["Standing Forward Fold Stretch","2x45s","time","Mobility"],["Standing Hip CAR","3x8","reps","Glutes"],
+    ["Standing IT Band Stretch","2x45s","time","Mobility"],["Standing Leg Curls","4x8","reps","Hamstrings"],
+    ["Standing Long Jump Test","3x3","reps","Glutes"],["Standing Quad Stretch","2x45s","time","Mobility"],
+    ["Standing Side Bend Stretch","2x30s","time","Mobility"],["Star Jump","3x20","reps","Full Body"],
+    ["Step Down Eccentric","3x10","reps","Quadriceps"],["Step Up","4x8","reps","Quadriceps"],
+    ["Step Up (Bodyweight)","3x15","reps","Quadriceps"],["Sternum Pull up (Gironda)","4x8","reps","Lats"],
+    ["Stir the Pot Hold","3x30s","time","Abdominals"],["Straddle Planche Hold","4x10s","time","Shoulders"],
+    ["Straight Bar Dip","3x10","reps","Chest"],["Straight Leg Deadlift","4x8","reps","Hamstrings"],
+    ["Straight Leg Raise","3x15","reps","Quadriceps"],["Sumo Deadlift","4x8","reps","Glutes"],
     ["Sumo Squat","4x8","reps","Quadriceps"],["Superman","4x8","reps","Lower Back"],
-    ["T Bar Row","4x8","reps","Upper Back"],["Toe Touch","3x15","reps","Abdominals"],
+    ["Superman Pull","3x15","reps","Lower Back"],["Superman Push Up","3x6","reps","Chest"],
+    ["Supine Twist Pose","2x60s","time","Mobility"],["Table Row","3x10","reps","Upper Back"],
+    ["Table Slide","3x12","reps","Shoulders"],["Tempo Push Up","3x8","reps","Chest"],
+    ["Terminal Knee Extension Band","3x15","reps","Quadriceps"],["Thoracic Rotation Stretch","2x45s","time","Mobility"],
+    ["Thread the Needle Pose","2x45s","time","Mobility"],["Thread the Needle Stretch","2x45s","time","Mobility"],
+    ["Tibialis Raise","3x20","reps","Calves"],["Toe Touch","3x15","reps","Abdominals"],
+    ["Toe Touch Crunch","3x20","reps","Abdominals"],["Toe Walk","3x20m","distance","Calves"],
     ["Toes to Bar","3x15","reps","Abdominals"],["Torso Rotation","3x15","reps","Abdominals"],
-    ["Triceps Dip","3x12","reps","Triceps"],["Triceps Dip (Assisted)","3x12","reps","Triceps"],
-    ["Triceps Dip (Weighted)","3x12","reps","Triceps"],["Triceps Extension (Suspension)","3x12","reps","Triceps"],
-    ["Triceps Pressdown","3x12","reps","Triceps"],["Triceps Pushdown","3x12","reps","Triceps"],
-    ["Triceps Rope Pushdown","3x12","reps","Triceps"],["V Up","3x15","reps","Abdominals"],
-    ["Walking Lunge","3x400m","distance","Quadriceps"],["Wall Sit","3x45s","time","Quadriceps"],
-    ["Wide Pull Up","4x8","reps","Lats"],["Wrist Roller","3x15","reps","Forearms"],
-    ["Zercher Squat","4x8","reps","Quadriceps"]
+    ["Torso Twist Stretch","2x30s","time","Mobility"],["Towel Pull Up Hold","3x20s","time","Forearms"],
+    ["Towel Row","3x12","reps","Upper Back"],["Towel Scrunch","3x20","reps","Calves"],
+    ["Towel Stretch Shoulder","2x45s","time","Mobility"],["Tree Pose","2x45s","time","Mobility"],
+    ["Triangle Pose","2x45s","time","Mobility"],["Triceps Dip","3x12","reps","Triceps"],
+    ["Triceps Dip (Assisted)","3x12","reps","Triceps"],["Triceps Dip (Weighted)","3x12","reps","Triceps"],
+    ["Triceps Extension (Suspension)","3x12","reps","Triceps"],["Triceps Pressdown","3x12","reps","Triceps"],
+    ["Triple Jump","4x4","reps","Glutes"],["Tuck Front Lever Hold","4x20s","time","Lats"],
+    ["Tuck Jump","4x8","reps","Quadriceps"],["Tuck Planche Hold","4x15s","time","Shoulders"],
+    ["Two Finger Hang Hold","3x15s","time","Forearms"],["Tyler Twist","3x15","reps","Forearms"],
+    ["Typewriter Pull Up","3x5","reps","Lats"],["Upper Trap Stretch Rehab","2x45s","time","Mobility"],
+    ["V Up","3x15","reps","Abdominals"],["Vertical Jump Test","3x3","reps","Quadriceps"],
+    ["Victorian Cross Hold","4x5s","time","Chest"],["VMO Squeeze","3x15","reps","Quadriceps"],
+    ["Walking Lunge","3x400m","distance","Quadriceps"],["Wall Angel","3x15","reps","Upper Back"],
+    ["Wall Handstand Hold","4x30s","time","Shoulders"],["Wall Push Up","3x15","reps","Chest"],
+    ["Wall Sit","3x45s","time","Quadriceps"],["Wall Sit Isometric","3x45s","time","Quadriceps"],
+    ["Wall Slide Stretch","2x45s","time","Mobility"],["Wall Walk","4x5","reps","Shoulders"],
+    ["Warrior I Pose","2x45s","time","Mobility"],["Warrior II Pose","2x45s","time","Mobility"],
+    ["Weighted Hollow Body Hold","3x30s","time","Abdominals"],["Wide Legged Forward Fold Stretch","2x45s","time","Mobility"],
+    ["Wide Pull Up","4x8","reps","Lats"],["Wide Push Up","3x12","reps","Chest"],
+    ["World's Greatest Stretch","2x45s","time","Mobility"],["Wrist Circles Stretch","2x30s","time","Mobility"],
+    ["Wrist Extensor Stretch","2x30s","time","Mobility"],["Wrist Flexor Stretch","2x30s","time","Mobility"],
+    ["Wrist Roller","3x15","reps","Forearms"],["Zercher Squat","4x8","reps","Quadriceps"]
   ],
   "Conditioning":[
-    ["Ball Slams","4x8","reps","Full Body"],["Burpee","4x8","reps","Full Body"],
+    ["Agility Ladder","4x30s","time","Cardio"],["Atlas Stone Lift","4x3","reps","Full Body"],
+    ["Atlas Stone Over Bar","4x3","reps","Full Body"],["Ball Slams","4x8","reps","Full Body"],
+    ["Battle Ropes Slams","4x30s","time","Full Body"],["Battle Ropes Waves","4x30s","time","Shoulders"],
+    ["Box Step Over","4x10","reps","Quadriceps"],["Boxing Heavy Bag","3x3min","time","Cardio"],
+    ["Burpee","4x8","reps","Full Body"],["Burpee Box Jump Over","4x10","reps","Full Body"],
     ["Burpee Broad Jumps","4x8","reps","Full Body"],["Burpee Over the Bar","4x8","reps","Full Body"],
-    ["Farmers Walk","3x400m","distance","Full Body"],["Sled Pull","3x400m","distance","Full Body"],
-    ["Sled Push","3x400m","distance","Full Body"],["Walking Lunge (Sandbag)","3x400m","distance","Quadriceps"],
-    ["Wall Ball","3x45s","time","Full Body"]
+    ["Carioca Drill","4x20m","distance","Cardio"],["Cone Drill","4x30s","time","Cardio"],
+    ["Farmers Walk","3x400m","distance","Full Body"],["Jump Rope Crossover","3x60s","time","Cardio"],
+    ["Jump Rope Double Under","4x40","reps","Cardio"],["Jump Rope Single Under","4x80","reps","Cardio"],
+    ["Keg Carry","3x30m","distance","Full Body"],["Kneeling Med Ball Throw","4x8","reps","Chest"],
+    ["Lateral Shuffle Drill","4x20m","distance","Cardio"],["Med Ball Clean","4x10","reps","Full Body"],
+    ["Med Ball Overhead Slam","4x10","reps","Full Body"],["Med Ball Scoop Toss","4x8","reps","Full Body"],
+    ["Med Ball Side Toss","4x8","reps","Abdominals"],["Medicine Ball Chest Pass","4x8","reps","Chest"],
+    ["Medicine Ball Slam","4x10","reps","Full Body"],["Overhead Carry","3x30m","distance","Shoulders"],
+    ["Overhead Medicine Ball Throw","4x8","reps","Full Body"],["Rotational Medicine Ball Throw","4x6","reps","Abdominals"],
+    ["Sandbag Carry","3x40m","distance","Full Body"],["Sandbag Clean","4x5","reps","Full Body"],
+    ["Sandbag Over Shoulder","4x5","reps","Full Body"],["Sandbag Squat","4x12","reps","Quadriceps"],
+    ["Shadow Boxing","3x3min","time","Cardio"],["Slam Ball Squat","4x12","reps","Quadriceps"],
+    ["Sled Drag","4x20m","distance","Hamstrings"],["Sled Pull","3x400m","distance","Full Body"],
+    ["Sled Push","3x400m","distance","Full Body"],["Sled Sprint","6x15m","distance","Quadriceps"],
+    ["Sledge Tire Strike","4x20","reps","Full Body"],["Sledgehammer Strikes","4x20","reps","Full Body"],
+    ["Speed Bag Boxing","3x2min","time","Shoulders"],["T Drill","4x1","reps","Cardio"],
+    ["Tire Flip","4x5","reps","Full Body"],["Walking Lunge (Sandbag)","3x400m","distance","Quadriceps"],
+    ["Wall Ball","3x45s","time","Full Body"],["Wall Ball Over Shoulder","4x10","reps","Full Body"],
+    ["Wall Drill","4x20s","time","Quadriceps"],["Yoke Carry","4x20m","distance","Full Body"],
+    ["Zercher Carry","3x30m","distance","Full Body"]
   ],
   "Cardio Machine":[
     ["Air Bike","3x400m","distance","Cardio"],["Elliptical Trainer","3x400m","distance","Cardio"],
-    ["Recumbent Bike","3x400m","distance","Cardio"],["Ski Erg","3x400m","distance","Cardio"],
-    ["Spinning","3x45s","time","Cardio"],["Treadmill","3x400m","distance","Cardio"]
+    ["Incline Treadmill Walk","1x20min","time","Cardio"],["Jacob's Ladder","3x5min","time","Cardio"],
+    ["Recumbent Bike","3x400m","distance","Cardio"],["Rowing Erg Sprint","6x250m","distance","Cardio"],
+    ["Ski Erg","3x400m","distance","Cardio"],["Spinning","3x45s","time","Cardio"],
+    ["Treadmill","3x400m","distance","Cardio"],["Versaclimber","3x5min","time","Cardio"]
   ],
   "Cardio Outdoor":[
-    ["Aerobics","3x45s","time","Cardio"],["Battle Ropes","3x45s","time","Cardio"],["Boxing","3x45s","time","Cardio"],
+    ["A Skip","4x20m","distance","Cardio"],["Aerobics","3x45s","time","Cardio"],
+    ["B Skip","4x20m","distance","Cardio"],["Battle Ropes","3x45s","time","Cardio"],
+    ["Boxing","3x45s","time","Cardio"],["Butt Kick Run","4x20m","distance","Cardio"],
     ["Climbing","3x400m","distance","Cardio"],["Cycling","3x400m","distance","Cardio"],
-    ["HIIT","3x45s","time","Cardio"],["Hiking","3x400m","distance","Cardio"],["Jump Rope","3x45s","time","Cardio"],
-    ["Running","3x400m","distance","Cardio"],["Skating","3x400m","distance","Cardio"],
-    ["Skiing","3x400m","distance","Cardio"],["Snowboarding","3x400m","distance","Cardio"],
-    ["Sprints","3x400m","distance","Cardio"],["Swimming","3x400m","distance","Cardio"],
-    ["Walking","3x400m","distance","Cardio"]
+    ["Falling Start Sprint","6x15m","distance","Cardio"],["Fartlek Run","1x5000m","distance","Cardio"],
+    ["Flying Sprint","5x30m","distance","Cardio"],["High Knee Run","4x20m","distance","Cardio"],
+    ["HIIT","3x45s","time","Cardio"],["Hiking","3x400m","distance","Cardio"],
+    ["Hill Sprint","8x40m","distance","Cardio"],["Jump Rope","3x45s","time","Cardio"],
+    ["Pro Agility Shuttle","6x20m","distance","Cardio"],["Ruck Walk","1x5000m","distance","Cardio"],
+    ["Running","3x400m","distance","Cardio"],["Shuttle Run","6x20m","distance","Cardio"],
+    ["Skating","3x400m","distance","Cardio"],["Skiing","3x400m","distance","Cardio"],
+    ["Snowboarding","3x400m","distance","Cardio"],["Sprint Start","6x20m","distance","Cardio"],
+    ["Sprints","3x400m","distance","Cardio"],["Stair Sprints","6x30s","time","Cardio"],
+    ["Stride Out Run","6x100m","distance","Cardio"],["Suicide Run","4x1","reps","Cardio"],
+    ["Swim Breaststroke","4x100m","distance","Cardio"],["Swim Butterfly","4x50m","distance","Cardio"],
+    ["Swim Freestyle","4x100m","distance","Cardio"],["Swimming","3x400m","distance","Cardio"],
+    ["Tempo Run","3x1000m","distance","Cardio"],["Walking","3x400m","distance","Cardio"],
+    ["Weighted Vest Walk","1x30min","time","Cardio"]
   ],
   "Mobility / Stretch":[
     ["Downward Dog","4x8","reps","Full Body"],["Pilates","3x45s","time","Full Body"],
@@ -1045,11 +1255,20 @@ const LEGACY_EQUIPMENT_PREFIXES = [
   ["Suspension", "Suspension"], ["Trap-Bar", "Trap bar"]
 ];
 
+/* The name lookup is memoised on the same array identity as the list itself: two more passes
+   over 910 entries (a map and a Set build) were happening once per exercise image drawn. */
+let _nameSetCache = null, _nameSetFor = null;
+function libraryNameSet(all){
+  if(_nameSetCache && _nameSetFor === all) return _nameSetCache;
+  _nameSetCache = new Set(all.map(e => e.name));
+  _nameSetFor = all;
+  return _nameSetCache;
+}
+
 function resolveExerciseName(name){
   if(!name) return null;
   const all = allLibraryExercises();
-  const names = all.map(e => e.name);
-  const set = new Set(names);
+  const set = libraryNameSet(all);
   if(set.has(name)) return name;
 
   const planned = PLAN_EXERCISE_RENAMES[name];
@@ -1063,7 +1282,9 @@ function resolveExerciseName(name){
     }
   }
 
-  const cands = names.filter(n => n.startsWith(name + " ("));
+  /* Only the legacy-name fallback needs the flat list, and it is reached only for a name that
+     is not in the library at all — so it is built here rather than on every call. */
+  const cands = all.map(e => e.name).filter(n => n.startsWith(name + " ("));
   if(cands.length === 1) return cands[0];
   if(cands.length > 1){
     // The old names came from a barbell-first library, so that is the honest default when
@@ -1081,7 +1302,22 @@ function exerciseImageSrc(name){
   if(!slug) return "";
   const have = window.IGNYT_EXERCISE_IMAGES;
   if(have && !have[slug]) return "";      // manifest says there is none
-  return "assets/exercises/" + slug + ".jpg";
+  /* The manifest value carries the FORMAT, so an animated demonstration can sit beside the
+     still illustrations without a second lookup table or a naming convention to remember.
+     `1` means .jpg — the value every existing entry has, so nothing had to be rewritten — and
+     a string is the extension to use instead. Anything animated (gif, webp) plays on its own
+     in an <img>, so no other code has to change to show it. */
+  const fmt = have ? have[slug] : 1;
+  const ext = (typeof fmt === "string" && /^[a-z0-9]{2,4}$/.test(fmt)) ? fmt : "jpg";
+  return "assets/exercises/" + slug + "." + ext;
+}
+
+/** True when an exercise's illustration is an animation rather than a still. */
+function exerciseImageIsAnimated(name){
+  const slug = exerciseImageSlug(resolveExerciseName(name) || name);
+  const have = window.IGNYT_EXERCISE_IMAGES;
+  const fmt = have && have[slug];
+  return fmt === "gif" || fmt === "webp";
 }
 
 function avatarColorFor(muscle){ return MUSCLE_AVATAR_COLOR[muscle] || "#8B8B94"; }
@@ -1454,6 +1690,7 @@ const state = {
        workout really is sitting open, so it cannot become noise for someone who is
        not using the logger. */
     workoutLeftReminder:true, workoutLeftAfterMin:15,
+    workoutRecommendations:true,   // Workout tab's plan card — see renderPlanCard()
     lastWorkoutReminderDate:null, lastHydrationReminderDate:null, lastWeeklyReportAt:null,
     theme:"dark", weightUnit:"kg", exerciseCalorieBudget:true, notificationsSeenAt:0,
     heightUnit:"cm", dateFormat:"DD MMM YYYY", timeFormat:"12h"
@@ -1491,6 +1728,9 @@ const state = {
   // mid-flow reopens the app in a normal state rather than back on a destructive confirmation.
   deleteAccountOpen: false, deleteAccountBusy: false, deleteAccountError: null,
   backupCryptoOpen: null, backupCryptoBusy: false, backupCryptoError: null, backupCryptoPending: null,
+  plan: LS.get("hx_plan", null),   // assigned training plan — see PROGRAM PROGRESSION
+  /* [{id, severity, side, professionalAdvice}] — see js/coach/injury-catalogue.js */
+  injuries: LS.get("hx_injuries", []),
   showExercisePicker: false,
   exercisePickerSearch: "",
   exercisePickerEquipment: "All",
@@ -1515,6 +1755,7 @@ const state = {
   // Workout History view filters (transient — a fresh visit starts unfiltered)
   historySearch: "", historyRange: "all", historyMuscle: "", historySort: "newest",
   historyPRsOnly: false, historyPage: 1, historyArchived: false, historyBinOpen: false,
+  libPage: 1,
   reportPeriod: "week",
   reminderScreen: false,   // transient — Settings > All Reminders is open
   reminderOpen: null,      // transient — which reminder row is expanded
@@ -1582,6 +1823,12 @@ function persist(){
   LS.set("hx_profile", state.profile);
   LS.set("hx_onboarding_complete", state.onboardingComplete);
   LS.set("hx_onboarding_wizard", state.onboarding);
+  LS.set("hx_plan", state.plan);
+  LS.set("hx_injuries", state.injuries);
+  /* Widgets mirror whatever was just saved. Hooked to persist() rather than to each
+     feature so nothing new has to remember to do it; the call is debounced and returns
+     immediately when the user has no widgets placed. */
+  try { if (window.IgnytWidgets) IgnytWidgets.schedule(); } catch(e) {}
   LS.set("hx_completed", state.completed);
   LS.set("hx_nutrition", state.nutrition);
   LS.set("hx_bodylog", state.bodylog);
@@ -3328,7 +3575,40 @@ function recentExerciseNames(limit=10){
   return out;
 }
 
+/* Memo for allLibraryExercises(). Rebuilding the list means walking 910 entries and building a
+   dedupe Set, which measured 0.4ms — fine once, except it was being called 62 times in a single
+   library render. exerciseImageSrc() -> resolveExerciseName() -> allLibraryExercises() runs for
+   every row that draws an illustration, so the cost scaled with rows on screen and showed up on
+   every screen that lists exercises, not just the library.
+
+   Keyed on the custom exercises, because that is the only part that changes at runtime — the
+   built-ins are a literal. The key includes each custom name and category so a rename is caught
+   as well as an add or a delete; there are only ever a handful of these, so building the key is
+   far cheaper than the rebuild it avoids.
+
+   Callers only ever read (map/filter/find/forEach — checked), so handing back the same array is
+   safe. */
+let _allExCache = null, _allExKey = null;
+
+function customExercisesKey(){
+  const c = state.customExercises || [];
+  let k = c.length + "";
+  for(let i = 0; i < c.length; i++) k += "|" + (c[i].name || "") + ":" + (c[i].cat || "");
+  return k;
+}
+
+/** Drops the memo. Only needed if custom exercises are changed without going through state. */
+function invalidateLibraryCache(){ _allExCache = null; _allExKey = null; }
+
 function allLibraryExercises(){
+  const key = customExercisesKey();
+  if(_allExCache && _allExKey === key) return _allExCache;
+  const built = buildAllLibraryExercises();
+  _allExCache = built; _allExKey = key;
+  return built;
+}
+
+function buildAllLibraryExercises(){
   // Reads the in-memory state, not localStorage directly: state.customExercises is only
   // flushed to hx_custom_exercises by persist() at the END of render(), so reading disk here
   // meant a just-added custom exercise wouldn't appear in its own render pass (it showed up
@@ -3555,8 +3835,17 @@ const EXERCISE_LOG_TYPES = {
 function exerciseLogType(name){
   const n = (name||"").toLowerCase();
   if(/\bcarry\b|sled push|sled pull|yoke walk/.test(n)) return "carry";
-  if(/\bplank\b|wall sit|dead hang|hollow (hold|body)|\bl-sit\b|handstand hold|stretch|\bpose\b|foam rolling|dislocate|ankle circles|cat-cow|child's pose|downward-facing dog|warrior (i|ii)|deep squat hold|bird dog|90\/90 hip switch|thoracic rotation|meditation|\byoga\b/.test(n)) return "hold";
-  if(/running|\bwalk|\bjog|cycling|\bswim|rowing|ski ?erg|bike ?erg|assault bike|jump rope|stair climber|stairmaster|elliptical|\bhiking\b|treadmill|stationary (bike|cycling)|jacob's ladder/.test(n)) return "cardio";
+  /* `hold` and `isometric` added as general keywords rather than continuing to list every
+     movement one at a time. The list was already 20 entries and still missed things: "Front
+     Lever Hold" logged as reps, which asks how many front levers you did rather than for how
+     long. Anything whose NAME says it is held is timed. Checked against the whole library
+     before widening — Front Lever Hold was the only existing entry it changed, and changing
+     it was the point. */
+  if(/\bplank\b|wall sit|dead hang|hollow (hold|body)|\bl-sit\b|\bhold\b|isometric|stretch|\bpose\b|foam rolling|dislocate|ankle circles|cat-cow|child's pose|downward-facing dog|warrior (i|ii)|bird dog|90\/90 hip switch|thoracic rotation|meditation|\byoga\b/.test(n)) return "hold";
+  /* Conditioning terms added alongside the machines: a sprint, a bound and a skip are measured
+     in distance or time, never in reps, and this list only covered machines. Blast radius was
+     measured against all 452 existing entries before widening — none changed type. */
+  if(/running|\bwalk|\bjog|cycling|\bswim|rowing|ski ?erg|bike ?erg|assault bike|jump rope|stair climber|stairmaster|elliptical|\bhiking\b|treadmill|stationary (bike|cycling)|jacob's ladder|versaclimber|\bsprints?\b|shuttle run|sled drag|battle ropes?|shadow boxing|butt kicks|\bbounding\b|power skip|\brun\b|\bskips?\b|boxing|agility|\bdrill\b/.test(n)) return "cardio";
   return "strength";
 }
 // New set object for a given real exercise, shaped for its real log type. `prefillFrom`
@@ -4255,6 +4544,64 @@ function exercisesWithHistory(){
 
    Shown only once there is something to say. On the first ever session there is no best, no
    last and no trend, so it says so in one line instead of printing three dashes. */
+/* The next-set target, from the progressive overload engine.
+   Renders above the sets, under the history strip: history answers "where am I", this answers
+   "what now".
+
+   IT DOES NOT PREFILL THE INPUTS, and that is the whole design.
+   Writing the suggested weight into the weight field would be one tap from becoming a logged
+   record of a lift that never happened — the user taps the checkmark, the set is "done", and
+   the app's own history now contains a number it invented. Every downstream thing that reads
+   that history, this engine included, would then be reasoning about fiction. A line of text
+   the lifter reads and acts on keeps the log a record of what was actually done.
+
+   Strength only. The engine progresses by load, and a plank or a 5 km row has no load to add. */
+function renderNextTargetHint(name){
+  if(!window.IgnytCoachOverload) return "";
+  if(exerciseLogType(name) !== "strength") return "";
+  let rec = null;
+  try{
+    rec = IgnytCoachOverload.next(state.workoutLog, name, {
+      reps: coachRepRange(),
+      maxSets: 5,
+      unit: wUnit()          // so the load is rounded to plates this user's gym actually has
+    });
+  }catch(e){ console.warn("overload hint failed:", e); return ""; }
+
+  /* Nothing to say, or nothing worth saying twice. `establish` is skipped because the history
+     strip directly above already tells a first-timer they are setting a baseline, and two
+     lines saying the same thing reads as a bug rather than as encouragement. */
+  if(!rec || rec.action === "establish") return "";
+
+  const tone = rec.action === "deload" || rec.action === "backoff" ? "ease"
+             : rec.action === "add_load" || rec.action === "add_set" ? "push" : "hold";
+  const target = `${displayW(rec.load)}${wUnit()} × ${rec.reps}${rec.action==="add_set" ? ` · ${rec.sets} sets` : ""}`;
+  return `<div class="wk-target wk-target--${tone}">
+    <span class="wk-target__icon">${svg(tone==="ease"?'shield':tone==="push"?'trend':'target',12)}</span>
+    <span class="wk-target__num">${target}</span>
+    <span class="wk-target__why">${escHtml(rec.why)}</span>
+  </div>`;
+}
+
+/* Rep range for progression. Comes from the coach's goal engine when the user has a goal set,
+   so "strength" progresses in a 3-6 range rather than being told to chase 12 reps. Falls back
+   to 8-12 -- the range the library's own default prescriptions sit in -- rather than to a
+   number invented here. */
+function coachRepRange(){
+  try{
+    /* Both calls, in this order. IgnytCoachGoal.resolve() takes a RESOLVED profile from
+       IgnytCoachProfile.resolve(state) and reads `primaryGoal` off it — passing a raw goal
+       string, or state.profile (which has no `goal` field at all), silently resolves to
+       "general" and the goal engine may as well not be wired in. Same call coach.js makes. */
+    if(window.IgnytCoachGoal && window.IgnytCoachProfile){
+      const resolved = IgnytCoachProfile.resolve(state);
+      const intent = IgnytCoachGoal.resolve(resolved);
+      if(intent && Array.isArray(intent.repRange)) return intent.repRange;
+    }
+  }catch(e){}
+  return [8, 12];
+}
+
 function renderWorkoutExerciseProgress(name){
   const trend = exerciseProgressTrend(name, 12);
   if(!trend.length){
@@ -5689,20 +6036,26 @@ function applyTheme(){
    ones, which would render dark-toggle colors regardless of the user's actual dark/light
    app-theme setting (that setting still exists and still governs every other, unredesigned
    screen; this row's own colors just aren't wired to it, same as every other light screen). */
+/* One row shape for the whole settings list — a toggle, a dropdown and a pair of chips are
+   all just "the control", so they all line up with each other and with the icon. */
+function settingRow(icon, label, desc, control){
+  return `<div class="stg-row">
+    ${icon?`<span class="pi-row__icon">${svg(icon,16)}</span>`:''}
+    <div class="stg-row__body">
+      <span class="stg-row__label">${label}</span>
+      ${desc?`<div class="stg-row__desc">${desc}</div>`:""}
+    </div>
+    <div class="stg-row__ctrl">${control}</div>
+  </div>`;
+}
+
 function settingToggle(key, label, desc, icon){
   const on = !!state.settings[key];
-  return `<div class="pi-row" style="background:none;border:none;border-radius:0;padding:14px 0;border-bottom:1px solid var(--rh-border);align-items:center;">
-    ${icon?`<span class="pi-row__icon" style="flex-shrink:0;">${svg(icon,16)}</span>`:''}
-    <div class="pi-row__body" style="flex:1;">
-      <div class="row-between">
-        <span style="font-weight:700;font-size:14px;">${label}</span>
-        <button data-setting-toggle="${key}" style="width:46px;height:26px;border-radius:var(--radius-pill);border:none;cursor:pointer;position:relative;flex-shrink:0;background:${on?'var(--rh-blue)':'#D9DEE7'};transition:background .15s;">
-          <span style="position:absolute;top:3px;${on?'right:3px':'left:3px'};width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
-        </button>
-      </div>
-      ${desc?`<div style="font-size:11px;color:var(--rh-muted);margin-top:3px;max-width:92%;">${desc}</div>`:""}
-    </div>
-  </div>`;
+  return settingRow(icon, label, desc,
+    `<button class="stg-switch${on?' is-on':''}" data-setting-toggle="${key}"
+      role="switch" aria-checked="${on?'true':'false'}" aria-label="${escHtml(label)}">
+      <span class="stg-switch__knob"></span>
+    </button>`);
 }
 
 /* =========================================================
@@ -5968,7 +6321,8 @@ function renderRemindersScreen(){
         <div class="rm-row__head">
           <button class="rm-row__main" data-rm-open="${escHtml(def.id)}" aria-expanded="${isOpen?'true':'false'}">
             <span class="rm-row__label">${escHtml(def.label)}</span>
-            <span class="rm-row__meta">${s.enabled ? escHtml(time + " · " + repeatLabel) : "Off"}</span>
+            <span class="rm-row__meta">${!s.enabled ? "Off"
+              : def.switchOnly ? "On" : escHtml(time + " · " + repeatLabel)}</span>
           </button>
           <button class="rm-switch${s.enabled?' is-on':''}" data-rm-toggle="${escHtml(def.id)}"
             role="switch" aria-checked="${s.enabled?'true':'false'}" aria-label="${escHtml(def.label)}">
@@ -5979,7 +6333,7 @@ function renderRemindersScreen(){
         ${isOpen ? `<div class="rm-row__body">
           <p class="rm-row__desc">${escHtml(s.body)}</p>
 
-          <label class="rm-field"><span>Time</span>
+          ${def.switchOnly ? "" : `<label class="rm-field"><span>Time</span>
             <input type="time" value="${escHtml(time)}" data-rm-time="${escHtml(def.id)}"></label>
 
           <div class="rm-field"><span>Repeat</span>
@@ -5992,7 +6346,7 @@ function renderRemindersScreen(){
           ${s.repeat === "custom" ? `<div class="rm-days">
             ${REMINDER_DAY_LABELS.map((lab,i)=>`<button class="rm-day${days.indexOf(i)!==-1?' is-on':''}"
               data-rm-day="${escHtml(def.id)}" data-day="${i}" aria-pressed="${days.indexOf(i)!==-1?'true':'false'}">${lab}</button>`).join("")}
-          </div>` : ""}
+          </div>` : ""}`}
 
           <div class="rm-opts">
             <button class="rm-opt${s.vibrate?' is-on':''}" data-rm-flag="${escHtml(def.id)}" data-flag="vibrate">Vibrate</button>
@@ -6038,12 +6392,12 @@ function renderSettingsTab(){
       <div class="rh-section-head"><span>${svg('signout',13)} Authentication</span></div>
       ${renderAccountSection()}
 
-      <div class="rh-section-head" style="margin-top:16px;"><span>${svg('target',13)} Goal Wizard</span></div>
+      <div class="rh-section-head"><span>${svg('target',13)} Goal Wizard</span></div>
       <div class="pg-card">
         <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Your goal, availability, equipment, and health screening — retake it anytime as your situation changes.</div>
         <button class="btn btn-steel btn-block" data-action="retake-goal-wizard">Retake Goal Wizard</button>
       </div>
-      <div class="rh-section-head" style="margin-top:16px;"><span>${svg('moon',13)} Appearance</span></div>
+      <div class="rh-section-head"><span>${svg('moon',13)} Appearance</span></div>
       <div class="pg-card">
         <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">
           ${[{key:"dark",label:"Dark",icon:"moon"},{key:"light",label:"Light",icon:"sun"},{key:"system",label:"System",icon:"monitor"}].map(t=>`
@@ -6056,6 +6410,7 @@ function renderSettingsTab(){
 
       <div class="rh-section-head"><span>${svg('dumbbell',13)} Workout Settings</span></div>
       <div class="pg-card">
+        ${settingToggle("workoutRecommendations","Workout Recommendations","Suggest a plan and today's session on the Workout tab. Needs a training goal set.","target")}
         ${settingToggle("sounds","Sounds","Beep when the rest timer finishes.","speaker")}
         ${settingToggle("vibration","Vibration","Vibrate when the rest timer finishes.","vibrate")}
         ${settingToggle("autoStartRest","Auto-Start Rest Timer","Automatically starts rest timer.","timer")}
@@ -6063,39 +6418,17 @@ function renderSettingsTab(){
         ${settingToggle("plateCalc","Plate Calculator","Shows a plates button for barbell exercises.","dumbbell")}
         ${settingToggle("rpeTracking","RPE Tracking","Show the RPE column in the workout logger.","progress")}
         ${settingToggle("exerciseCalorieBudget","Exercise Calorie Budget","Add active calories to your Food Log.","flame")}
-        <div class="pi-row" style="background:none;border:none;padding:14px 0;align-items:center;">
-          <span class="pi-row__icon">${svg('timer',16)}</span>
-          <div class="pi-row__body">
-            <div class="row-between"><span style="font-weight:700;font-size:14px;">Default Rest Timer</span>
-              <select class="pi-input" id="default-rest-select" style="width:auto;padding:6px 10px;">
-                ${[0,30,60,90,120,150,180,240].map(v=>`<option value="${v}" ${s.defaultRest===v?'selected':''}>${v===0?'Off':v+'s'}</option>`).join("")}
-              </select>
-            </div>
-            <div style="font-size:11px;color:var(--rh-muted);margin-top:3px;">New exercises use this duration.</div>
-          </div>
-        </div>
-        <div class="pi-row" style="background:none;border:none;padding:14px 0;align-items:center;border-top:1px solid var(--rh-border);">
-          <span class="pi-row__icon">${svg('dumbbell',16)}</span>
-          <div class="pi-row__body">
-            <div class="row-between"><span style="font-weight:700;font-size:14px;">Weight Unit</span>
-              <div style="display:flex;gap:6px;">
-                <button class="cat-chip ${s.weightUnit==='kg'?'active':''}" data-weight-unit="kg">kg</button>
-                <button class="cat-chip ${s.weightUnit==='lb'?'active':''}" data-weight-unit="lb">lb</button>
-              </div>
-            </div>
-            <div style="font-size:11px;color:var(--rh-muted);margin-top:3px;">Applies to workout logging, body weight, and PRs.</div>
-          </div>
-        </div>
-        <div class="pi-row" style="background:none;border:none;padding:14px 0;align-items:center;border-top:1px solid var(--rh-border);">
-          <span class="pi-row__icon">${svg('droplet',16)}</span>
-          <div class="pi-row__body">
-            <div class="row-between"><span style="font-weight:700;font-size:14px;">Daily Water Target</span>
-              <select class="pi-input" id="water-target-select" style="width:auto;padding:6px 10px;">
-                ${[1500,2000,2500,3000,3500,4000].map(v=>`<option value="${v}" ${s.waterTargetMl===v?'selected':''}>${(v/1000).toFixed(1)}L</option>`).join("")}
-              </select>
-            </div>
-          </div>
-        </div>
+        ${settingRow('timer','Default Rest Timer','New exercises use this duration.',
+          `<select class="pi-input stg-select" id="default-rest-select">
+            ${[0,30,60,90,120,150,180,240].map(v=>`<option value="${v}" ${s.defaultRest===v?'selected':''}>${v===0?'Off':v+'s'}</option>`).join("")}
+          </select>`)}
+        ${settingRow('dumbbell','Weight Unit','Applies to workout logging, body weight, and PRs.',
+          `<button class="cat-chip ${s.weightUnit==='kg'?'active':''}" data-weight-unit="kg">kg</button>
+           <button class="cat-chip ${s.weightUnit==='lb'?'active':''}" data-weight-unit="lb">lb</button>`)}
+        ${settingRow('droplet','Daily Water Target','',
+          `<select class="pi-input stg-select" id="water-target-select">
+            ${[1500,2000,2500,3000,3500,4000].map(v=>`<option value="${v}" ${s.waterTargetMl===v?'selected':''}>${(v/1000).toFixed(1)}L</option>`).join("")}
+          </select>`)}
       </div>
 
       <div class="rh-section-head"><span>${svg('bell',13)} Notifications</span></div>
@@ -6166,7 +6499,7 @@ function renderSettingsTab(){
       </div>
 
       <!-- Privacy sits last by request. It was second from the top, above Goal Wizard. -->
-      <div class="rh-section-head" style="margin-top:16px;"><span>${svg('lock',13)} Privacy</span></div>
+      <div class="rh-section-head"><span>${svg('lock',13)} Privacy</span></div>
       <div class="pg-card">
         <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">What is stored, where it lives, and how to remove it.</div>
         <button class="btn btn-steel btn-block" data-action="open-privacy-info">Privacy &amp; Security</button>
@@ -6764,14 +7097,11 @@ function renderApp(){
     ${renderLiveSessionBar()}
     ${renderPaywallSheet()}
     ${renderPrExerciseSheet()}
-    <nav class="bottom-nav ${isLightTab?'bottom-nav--home-light':''}">
-      ${navBtn("home","Home")}
-      ${navBtn("workout","Workout")}
-      ${navBtn("nutrition","Food Log")}
-      ${navBtn("progress","Progress")}
-      ${navBtn("tools","Tools")}
-    </nav>
   `;
+  /* The bottom nav is NOT part of this template any more — see syncBottomNav(). It lives
+     outside #app precisely so this innerHTML does not destroy it, which is what lets the
+     selection indicator slide instead of cutting. */
+  syncBottomNav(isLightTab);
   const main = document.getElementById("main");
   if(state.tab==="home") main.innerHTML = renderHomeTab();
   if(state.tab==="plan") main.innerHTML = renderPlanTab();
@@ -7216,7 +7546,7 @@ function renderHomeHabits(){
       <div class="hb-top__count"><b>${done}</b> / ${habits.length} completed</div>
       <div class="hb-top__pct">${pct}%</div>
     </div>
-    <div class="hb-track"><div class="hb-fill" style="width:${pct}%;"></div></div>
+    <div class="hb-track"><div class="hb-fill" style="--fill:${pct/100};"></div></div>
 
     <div class="hb-list">
       ${shown.map(h=>{
@@ -7650,8 +7980,299 @@ function renderInsightsTab(){
   </div>`;
 }
 
+/* =========================================================
+   BOTTOM NAV
+
+   Built once and then only updated, which is the whole point. Everything else in the shell is
+   re-rendered by replacing #app's innerHTML, and a node that is destroyed and recreated cannot
+   transition — the old selection pill was a background on .nav-btn.active with a
+   background-color transition on it, and it never once animated because the element carrying
+   the transition was a brand new one already in its final state.
+
+   So the nav is a sibling of #app rather than a child, the buttons persist, and a single
+   indicator element slides between them under a transform. That also makes navigation cheaper:
+   a tab change now touches three class lists and one custom property instead of rebuilding six
+   buttons and their SVGs.
+
+   The buttons carry data-navtab, not data-nav, deliberately. attachHandlers() re-binds a click
+   listener to every [data-nav] on every render; on a persistent element that would stack a new
+   listener each time and fire render() once per accumulated tap.
+========================================================= */
+const NAV_TABS = [
+  ["home", "Home"], ["workout", "Workout"], ["nutrition", "Food Log"],
+  ["progress", "Progress"], ["tools", "Tools"]
+];
+
 function navBtn(id,label){
-  return `<button class="nav-btn ${state.tab===id?'active':''}" data-nav="${id}">${svg(id)}<span>${label}</span></button>`;
+  return `<button class="nav-btn" data-navtab="${id}">${svg(id)}<span>${label}</span></button>`;
+}
+
+function buildBottomNav(){
+  const nav = document.createElement("nav");
+  nav.className = "bottom-nav";
+  /* The indicator is first so it paints under the buttons without needing a z-index. */
+  nav.innerHTML = `<span class="nav-ind" aria-hidden="true"></span>` +
+    NAV_TABS.map(([id,label])=>navBtn(id,label)).join("");
+  nav.style.setProperty("--nav-count", NAV_TABS.length);
+
+  /** The one place navigation happens, whether by tap or by drag. */
+  function goTo(dest){
+    if(!dest || dest === state.tab) return;
+    state.notificationsOpen = false;   // any navigation closes the header panel
+    state.tab = dest;
+    state.bodyView = null;             // land on Log Weight, not a stale calculator view
+    render();
+    if(["home","health","nutrition","insights"].includes(state.tab)){
+      window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
+    }
+  }
+
+  /* Bound once, on the element that outlives every render. */
+  nav.addEventListener("click", (e)=>{
+    const btn = e.target.closest("[data-navtab]");
+    if(!btn || !nav.contains(btn)) return;
+    /* A drag ends by firing a click too, and that click has already been acted on by the
+       gesture. Ignore it — but by TIME, not by a flag. A flag has to be consumed by the click
+       that follows, and a drag ending between two buttons fires no click at all; the flag then
+       sits set and silently swallows the next genuine tap, which is exactly what happened here.
+       The trailing click arrives within a frame or two of the release, so a short window tells
+       the two apart and clears itself. */
+    if(Date.now() - dragEndedAt < 350) return;
+    goTo(btn.dataset.navtab);
+  });
+
+  /* ---------------------------------------------------------------------------------
+     DRAG TO SWITCH.
+
+     Hold anywhere on the bar and slide: the indicator follows the finger continuously
+     rather than jumping tab to tab, and the tab under it lights up as you pass over.
+     Lifting settles onto wherever you were heading.
+
+     The indicator is driven by --nav-i, which is a tab INDEX. During a drag it is set to
+     a fractional index instead — 2.4 sits the pill 40% of the way from the third tab to
+     the fourth — so the same one property serves both the settled state and the gesture,
+     and there is nothing to reconcile when the drag ends.
+
+     Transitions are switched off for the duration. A transition on a value that is already
+     being updated every frame does not smooth anything; it just puts the pill behind the
+     finger by its own duration, which is exactly the lag this is meant to avoid.
+
+     THREE THINGS KEEP THIS ON THE COMPOSITOR, and each was measured before and after.
+
+     1. The bar is measured ONCE per gesture, not once per event. getBoundingClientRect
+        forces the browser to flush pending style and layout so it can answer honestly, so
+        reading it inside pointermove — right after having written a style — is the classic
+        layout thrash: write, read, write, read. A 600ms sweep was doing 72 of them. The
+        bar cannot change size mid-drag, so one measurement on pointerdown is all it needs.
+
+     2. Pointer events are coalesced into ONE write per animation frame. A phone reports
+        touch positions faster than it repaints — every write beyond the first in a frame is
+        computed and then thrown away by the next.
+
+     3. The page follows the pill, but only once the pill has SETTLED on a tab. Rendering on
+        every tab the pill crossed was the single biggest cost here — five full renders across
+        one sweep, ~6ms each on a desktop and several times that on a mid-range phone, each
+        one a dropped frame or three, landing exactly while the finger is moving and the
+        smoothness is being judged.
+
+        Dwell is what separates the two cases, because they are genuinely different gestures.
+        Sliding slowly along the bar to see what is on each tab is browsing, and the page must
+        keep up or the gesture is pointless. Flicking from one end to the other is aiming, and
+        the four tabs crossed on the way are not being read — rendering them is work nobody
+        asked for and nobody sees, paid for in exactly the frames the flick needed. So a tab
+        renders once the pill has rested on it briefly, and a fast sweep renders only where it
+        lands.
+  --------------------------------------------------------------------------------- */
+  const ind  = nav.querySelector(".nav-ind");
+  const btns = Array.from(nav.querySelectorAll("[data-navtab]"));
+  const LAST = NAV_TABS.length - 1;
+
+  let dragging = false, startX = 0, moved = false, dragEndedAt = 0;
+  let geo = null;                    // bar geometry, measured once per gesture
+  let rafId = 0, pendingX = 0;       // one paint per frame, whatever the input rate
+  let liveIndex = 0, overTab = null;
+  let samples = [];                  // recent {x,t}, for release velocity
+  let navTimer = 0, navTab = null;   // the page, trailing the pill by a dwell
+
+  /* How long the pill must rest on a tab before the page behind it follows. Short enough that
+     a deliberate slide feels live, long enough that a flick across the bar doesn't render
+     every tab it passed. Re-armed on each new tab rather than fired on a fixed interval, so
+     it measures dwell rather than elapsed time. */
+  const DWELL_MS = 80;
+
+  const scheduleLiveNav = (id)=>{
+    navTab = id;
+    clearTimeout(navTimer);
+    navTimer = setTimeout(()=>{
+      navTimer = 0;
+      if(dragging && navTab) goTo(navTab);
+    }, DWELL_MS);
+  };
+
+  const measure = ()=>{
+    const r = nav.getBoundingClientRect();
+    const pad = 6;                                   // the bar's own padding, see the CSS
+    return { left: r.left, pad, each: (r.width - pad * 2) / NAV_TABS.length };
+  };
+
+  /* Centre-relative, so the pill's middle tracks the finger rather than its left edge. */
+  const indexAt = (clientX)=>{
+    const g = geo || measure();
+    return (clientX - g.left - g.pad - g.each / 2) / g.each;
+  };
+
+  /* Past either end the pill keeps moving but gives, approaching a limit instead of
+     stopping dead against it. A hard clamp makes the bar feel broken at the edges — the
+     finger keeps going and nothing answers. The curve is asymptotic, so it can never
+     travel far enough to escape the bar's padding. */
+  const RUBBER = 0.3;
+  const resist = (raw)=>{
+    if(raw < 0)    return -RUBBER * (1 - 1 / (1 + -raw * 2.2));
+    if(raw > LAST) return LAST + RUBBER * (1 - 1 / (1 + (raw - LAST) * 2.2));
+    return raw;
+  };
+
+  /* Set on the indicator, not on the bar. A custom property invalidates style for every
+     element that could inherit it, and on the bar that is all five buttons plus their icons
+     and labels — none of which read it. On the indicator the invalidation is one element. */
+  const paint = ()=>{
+    rafId = 0;
+    if(!dragging) return;
+    liveIndex = resist(indexAt(pendingX));
+    ind.style.setProperty("--nav-i", liveIndex.toFixed(4));
+    nav.classList.add("has-active");
+    /* The tab under the pill lights up the instant it passes — a class toggle, not a render,
+       so this never waits on anything. The page behind it is queued separately. */
+    const id = NAV_TABS[Math.round(Math.max(0, Math.min(LAST, liveIndex)))][0];
+    if(id !== overTab){
+      overTab = id;
+      btns.forEach(b => b.classList.toggle("active", b.dataset.navtab === id));
+      scheduleLiveNav(id);
+    }
+  };
+
+  /* Tabs per second over the last ~90ms. A quick flick should carry past the tab the finger
+     happened to be over when it lifted, the way a scroll carries — landing on the nearest
+     tab regardless of how fast you were moving is what makes a gesture feel sticky. */
+  const velocity = ()=>{
+    const now = performance.now();
+    const recent = samples.filter(s => now - s.t < 90);
+    if(recent.length < 2 || !geo) return 0;
+    const a = recent[0], b = recent[recent.length - 1];
+    const dt = (b.t - a.t) / 1000;
+    return dt > 0 ? ((b.x - a.x) / geo.each) / dt : 0;
+  };
+
+  nav.addEventListener("pointerdown", (e)=>{
+    if(e.pointerType === "mouse" && e.button !== 0) return;
+    dragging = true; moved = false; startX = e.clientX;
+    geo = measure();                 // once — see (1) above
+    samples = [{ x: e.clientX, t: performance.now() }];
+    overTab = null;
+    /* Capture keeps the gesture alive if the finger wanders off the bar mid-drag. It throws
+       NotFoundError when the pointer is already gone, which an uncaught throw here would turn
+       into a half-initialised drag — `dragging` set, no listeners bound to end it. The drag
+       works without capture, just not past the bar's edges, so failing is survivable and
+       failing loudly is not. */
+    try{ nav.setPointerCapture(e.pointerId); }catch(_){ /* gesture still works, edges aside */ }
+  });
+
+  nav.addEventListener("pointermove", (e)=>{
+    if(!dragging) return;
+    /* A few pixels of slop so a tap that wobbles is still a tap. */
+    if(!moved && Math.abs(e.clientX - startX) < 6) return;
+    if(!moved){
+      moved = true;
+      /* Only now is this a drag, so only now are the transitions in the way. Adding the
+         class on pointerdown would kill the settle of a previous tap still in flight. */
+      nav.classList.add("is-dragging");
+    }
+    pendingX = e.clientX;
+    samples.push({ x: e.clientX, t: performance.now() });
+    if(samples.length > 12) samples.shift();
+    if(!rafId) rafId = requestAnimationFrame(paint);   // see (2) above
+  });
+
+  const endDrag = (e)=>{
+    if(!dragging) return;
+    dragging = false;
+    if(rafId){ cancelAnimationFrame(rafId); rafId = 0; }
+    /* A queued live-nav is now stale — the release below decides the destination, and letting
+       a pending timer fire afterwards would navigate a second time, to wherever the pill
+       happened to be a moment before the finger lifted. */
+    clearTimeout(navTimer); navTimer = 0; navTab = null;
+    nav.classList.remove("is-dragging");
+    try{ nav.releasePointerCapture(e.pointerId); }catch(_){ /* already released */ }
+    if(!moved) return;                 // a tap: let the click handler deal with it
+    dragEndedAt = Date.now();          // and stop the trailing click double-handling this
+
+    /* Measured from the pointer's ACTUAL final position, not from liveIndex. liveIndex is
+       only as fresh as the last frame that ran, so a finger lifted moments after a quick move
+       would land wherever the pill had got to being painted rather than where the finger
+       actually was — a tab short, and only sometimes, which is the worst kind of wrong. */
+    const settled = resist(indexAt(e.clientX));
+    /* Where the finger was heading, not just where it stopped. Capped at one tab so a wild
+       flick advances by one rather than skipping the bar. */
+    const carry = Math.max(-1, Math.min(1, velocity() * 0.09));
+    const dest  = Math.max(0, Math.min(LAST, Math.round(settled + carry)));
+
+    /* Settle first, navigate second. Transitions are back on by now, so writing the whole
+       number here starts the pill's slide immediately and it runs on the compositor; the
+       render that follows cannot stutter an animation that has already been handed off. */
+    ind.style.setProperty("--nav-i", dest);
+    btns.forEach((b, i) => b.classList.toggle("active", i === dest));
+
+    /* And one frame later, once that has been committed, the page itself — see (3). */
+    requestAnimationFrame(()=>{ goTo(NAV_TABS[dest][0]); });
+  };
+  nav.addEventListener("pointerup", endDrag);
+  nav.addEventListener("pointercancel", endDrag);
+
+  document.body.appendChild(nav);
+  return nav;
+}
+
+/* The nav lives on <body>, outside the #app subtree that render() replaces — which is what
+   keeps it alive long enough to animate, and also means nothing removes it for us. Sign-in and
+   onboarding return early from render() without ever reaching renderApp(), so without this the
+   bar would sit on top of the sign-in screen. syncBottomNav() rebuilds it on the next app
+   render, so removing is free. */
+function removeBottomNav(){
+  const nav = document.querySelector("nav.bottom-nav");
+  if(nav) nav.remove();
+}
+
+function syncBottomNav(isLightTab){
+  const nav = document.querySelector("nav.bottom-nav") || buildBottomNav();
+  nav.classList.toggle("bottom-nav--home-light", !!isLightTab);
+
+  let active = -1;
+  NAV_TABS.forEach(([id], i)=>{
+    const btn = nav.querySelector(`[data-navtab="${id}"]`);
+    if(!btn) return;
+    const on = state.tab === id;
+    if(on) active = i;
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-current", on ? "page" : "false");
+  });
+
+  /* Settings, Profile, Goals and the rest are real destinations with no tab of their own.
+     The indicator fades out and HOLDS ITS LAST POSITION rather than sliding to zero, so
+     coming back to the tab you left does not play a slide you did not ask for. */
+  nav.classList.toggle("has-active", active >= 0);
+
+  /* NOT while a finger is on the bar. Navigating mid-drag renders, and a render lands here —
+     which would write the new tab's whole-number index over the fractional one the drag is
+     driving and snap the pill out from under the finger, once per tab crossed. During a drag
+     the gesture owns the indicator's position; this owns it every other time.
+
+     Set on the indicator rather than the bar, because it is the only element that reads
+     --nav-i and setting a custom property on the bar invalidates style for everything beneath
+     it. Must stay in step with the drag handler in buildBottomNav, which writes the same
+     property on the same element. */
+  if(nav.classList.contains("is-dragging")) return;
+  const ind = nav.querySelector(".nav-ind");
+  if(active >= 0 && ind) ind.style.setProperty("--nav-i", active);
 }
 
 /* =========================================================
@@ -8934,8 +9555,8 @@ function obHealthConnect(){
         <span class="ob-hc-ok__tick" aria-hidden="true">✓</span>
         <span>Connected. Your health data will sync automatically.</span>
       </div>` : ""}
-    ${state.onboarding.healthConnectState === "denied" ? `
-      <div class="ob-note">You can connect Health Connect anytime from Profile.</div>` : ""}
+    ${(state.onboarding.healthConnectState === "denied" || state.onboarding.healthConnectState === "skipped") ? `
+      <div class="ob-note">No problem — you can connect Health Connect any time from Profile.</div>` : ""}
 
     ${native
       ? `<button class="btn btn-accent btn-block" data-ob-health ${state.onboarding.healthConnectBusy?'disabled':''}>
@@ -9778,8 +10399,13 @@ function wireOnboardingWizard(){
 
   const notifSkip = document.querySelector("[data-ob-notif-skip]");
   if(notifSkip) notifSkip.addEventListener("click", ()=>{
+    /* Records the choice and STAYS PUT. It used to advance a step, which was right when
+       notifications had a page to themselves — but they now share one with Health Connect, so
+       advancing carried the user straight past a permission prompt they had never seen. The
+       Health Connect skip below already had this reasoning written against it; the same fix
+       simply was not applied here, so the bug it warns about was still live in the other half
+       of the same page. */
     if(!state.onboarding.notifState) state.onboarding.notifState = "denied";
-    state.onboardingStep = Math.min(ONBOARDING_TOTAL_STEPS, state.onboardingStep + 1);
     renderOnboardingWizard();
   });
 
@@ -10998,7 +11624,7 @@ function renderProgressPRs(){
         <div class="pr-hero__level" style="--lvl:${lvl.current.color};">${escHtml(lvl.current.name)}</div>
       </div>
       ${lvl.next ? `
-      <div class="pr-hero__track"><div class="pr-hero__fill" style="width:${lvl.percent}%;--lvl:${lvl.current.color};"></div></div>
+      <div class="pr-hero__track"><div class="pr-hero__fill" style="--fill:${lvl.percent/100};--lvl:${lvl.current.color};"></div></div>
       <div class="pr-hero__next">${lvl.toNext.toLocaleString()} to ${escHtml(lvl.next.name)}</div>` : `
       <div class="pr-hero__next">Top level reached.</div>`}
       <div class="pr-hero__stats">
@@ -11585,6 +12211,9 @@ function renderProgressBody(){
    "Load more" button -- so a multi-year log doesn't build thousands of DOM nodes at once. */
 
 const HISTORY_PAGE_SIZE = 20;
+/* 60 fills more than a phone screen, so "load more" is never the first thing you see, and
+   keeps the initial library render near the 5ms the rest of the app runs at. */
+const LIBRARY_PAGE_SIZE = 60;
 
 /* ---------- Recycle bin, archive and workout actions ----------
    Deleting a workout moves it to a recycle bin (hx_deleted_workouts) instead of destroying
@@ -14300,7 +14929,7 @@ function renderNutritionTab(){
       </div>
       <div class="nd-hero__mid">
         <div class="nd-hero__eat">Eat up to <strong>${calorieBudget.toLocaleString()}</strong> Cal</div>
-        <div class="nd-hero__bar"><i style="width:${pct}%;"></i></div>
+        <div class="nd-hero__bar"><i style="--fill:${pct/100};"></i></div>
         <div class="nd-hero__pct">${pct}% of daily goal</div>
       </div>
       <div class="nd-hero__rem">
@@ -14553,9 +15182,11 @@ function render(){
          new install: someone re-editing their answers is already in, and anyone who has
          signed in or chosen to skip has hx_auth_seen set and never sees it again. */
       if(!isSignedIn() && !state.editingOnboarding){
+        removeBottomNav();
         renderSignInScreen();
         return;
       }
+      removeBottomNav();
       withFocusPreserved(renderOnboardingWizard);
       return;
     }
@@ -14564,6 +15195,7 @@ function render(){
        to add to. hx_auth_seen is no longer consulted: "has seen the screen" and "has an
        account" were the same flag only while skipping existed. */
     if(!isSignedIn()){
+      removeBottomNav();
       renderSignInScreen();
       return;
     }
@@ -15622,6 +16254,372 @@ function renderLiveSessionBar(){
     </div>`;
 }
 
+/* =========================================================
+   TODAY'S PLAN — the coach's template system, surfaced.
+
+   Turns the four coach modules into something tappable: matcher picks the template, the
+   schedule picks today's day, the substitution map resolves each movement pattern against
+   real equipment, and the injury gate removes anything that would aggravate a reported
+   problem BEFORE any of it is shown.
+
+   Returns null rather than a placeholder when there is nothing honest to show. A card that
+   says "no plan yet" occupies the most valuable space on the screen to communicate nothing.
+========================================================= */
+/* "chest_back" -> "Chest Back". One helper, because the plan card and the session title
+   both label the same day and had drifted apart: the card title-cased it and the session
+   title did not, so a workout started from "Upper" was logged as "upper". */
+function titleCaseDayKey(key){
+  return String(key || "").split("_").map(function(w){
+    return w ? w.charAt(0).toUpperCase() + w.slice(1) : w;
+  }).join(" ");
+}
+
+/* =========================================================
+   PROGRAM PROGRESSION — what turns an assignment into a plan.
+
+   Before this, buildTodaysPlan() re-ran the matcher on every render. That is a daily lookup,
+   not a program: there was no week two, no deload, no memory of a missed week, and — worst —
+   editing your profile silently swapped the plan out from under you mid-programme.
+
+   The plan is now ASSIGNED ONCE and stored. Everything after that is progression:
+
+     week      derived from startedAt, so it advances by the calendar rather than by a counter
+               that drifts if the app is not opened.
+     deload    every template names its own deloadEvery. Powerlifting deloads at 4 weeks and
+               a beginner full-body at 8, because they accumulate fatigue at different rates.
+     adapt     adaptation-engine runs ONCE per week boundary and the result is stored, not
+               recomputed. Recomputing would let a good Sunday erase a bad week.
+
+   The plan never changes itself. A profile edit does not reassign — reassigning silently is
+   how someone loses week six of a twelve-week block by correcting their bodyweight.
+========================================================= */
+
+function planWeekNumber(plan){
+  if(!plan || !plan.startedAt) return 1;
+  const days = Math.floor((Date.now() - plan.startedAt) / 86400000);
+  return Math.max(1, Math.floor(days / 7) + 1);
+}
+
+function isDeloadWeek(plan, template){
+  const every = (template && template.deloadEvery) || 0;
+  if(!every) return false;
+  return planWeekNumber(plan) % every === 0;
+}
+
+/** Assign (or reassign) a plan from the current profile. Explicit only — never automatic. */
+function assignPlan(){
+  if(!window.IgnytCoachMatcher || !window.IgnytCoachProfile) return null;
+  /* Refuses without a goal, and refuses while recommendations are switched off — not just in
+     buildTodaysPlan(). Guarding only the caller would let any other entry point write a plan
+     derived from nothing, or write one for a feature the user has turned off; and once
+     written it persists, outliving the condition that produced it.
+
+     Note it only refuses to CREATE. An existing plan is left alone, so switching the feature
+     off and back on returns you to the programme you were in rather than restarting week 1. */
+  if(!hasStatedGoal()) return null;
+  if(!recommendationsEnabled()) return null;
+  const resolved = IgnytCoachProfile.resolve(state);
+  const p = (resolved && resolved.profile) || {};
+  const match = IgnytCoachMatcher.assign({
+    /* statedGoal(), not p.primaryGoal — otherwise a user whose only goal came from the Goals
+       page passes the gate above and then gets matched on an empty string. */
+    goal: statedGoal(), experience: p.experience, days: p.trainingDays,
+    sessionMinutes: p.minutesPerSession || 45, equipment: p.equipment,
+    secondaryGoals: p.secondaryGoals || [],
+    // A logged race is a statement of intent that no questionnaire field captures.
+    hasRaceLog: Array.isArray(state.raceLog) && state.raceLog.length > 0
+  });
+  if(!match || !match.template) return null;
+  state.plan = {
+    templateId: match.template.id,
+    startedAt: Date.now(),
+    adaptations: [],
+    lastAdaptedWeek: 0,
+    reasons: match.reasons || []
+  };
+  persist();
+  return state.plan;
+}
+
+/**
+ * Runs the weekly adaptation, at most once per week boundary.
+ *
+ * Guarded on lastAdaptedWeek rather than on a timestamp: the app can be opened twenty times
+ * on a Monday and the week must be adapted once. Storing the RESULT rather than recomputing
+ * it on demand is what stops a strong Sunday from rewriting the judgement made about a week
+ * that was actually missed.
+ */
+function maybeAdaptWeek(){
+  const plan = state.plan;
+  if(!plan || !window.IgnytCoachAdaptation) return null;
+  const week = planWeekNumber(plan);
+  if(week <= (plan.lastAdaptedWeek || 0)) return currentAdaptation();
+  if(week === 1){ plan.lastAdaptedWeek = 1; persist(); return null; }  // nothing to judge yet
+
+  const template = window.IgnytCoachTemplates && IgnytCoachTemplates.get(plan.templateId);
+  const planned = template ? (template.schedule || []).filter(d => d && d !== "rest").length : 0;
+  const summary = IgnytCoachAdaptation.weekSummary(state.workoutLog, planned, planned);
+
+  /* allTargetsHit comes from the overload engine rather than being assumed. Without it the
+     "earned progression" branch can never fire, which would quietly make the engine only
+     capable of making weeks easier. */
+  summary.allTargetsHit = (function(){
+    try{
+      if(!window.IgnytCoachOverload) return false;
+      const recent = state.workoutLog.slice(0, 12);
+      const names = [...new Set(recent.flatMap(w => (w.exercises||[]).map(e=>e.name)))].slice(0, 8);
+      if(!names.length) return false;
+      return names.every(n => {
+        const r = IgnytCoachOverload.next(state.workoutLog, n, { reps: coachRepRange(), unit: wUnit() });
+        return !r || r.action === "add_load" || r.action === "add_reps" || r.action === "add_set";
+      });
+    }catch(e){ return false; }
+  })();
+
+  let recovery = { score: null, avgSoreness: null };
+  try{
+    if(window.IgnytCoachRecovery){
+      const a = IgnytCoachRecovery.assess(state);
+      if(a && isFinite(a.score)) recovery.score = a.score;
+    }
+  }catch(e){}
+
+  const adj = IgnytCoachAdaptation.adaptNextWeek(summary, recovery);
+  plan.adaptations = (plan.adaptations || []).concat([{
+    week, at: Date.now(), reason: adj.reason, volume: adj.volume,
+    intensity: adj.intensity, holdProgression: !!adj.holdProgression, msg: adj.msg
+  }]).slice(-26);              // two seasons of history is plenty; it is not an audit log
+  plan.lastAdaptedWeek = week;
+  persist();
+  return adj;
+}
+
+/** The adjustment in force for this week, or null. */
+function currentAdaptation(){
+  const plan = state.plan;
+  if(!plan || !plan.adaptations || !plan.adaptations.length) return null;
+  const week = planWeekNumber(plan);
+  const a = plan.adaptations[plan.adaptations.length - 1];
+  return (a && a.week === week) ? a : null;
+}
+
+/**
+ * Has the user actually told us what they are training for?
+ *
+ * goal-engine falls back to "general" for a missing goal, which is right for ITS job — every
+ * other engine still needs parameters to work with. It is wrong for this one: "general"
+ * produced a full plan for someone who had answered nothing, and a recommendation made from
+ * no input is a guess wearing a recommendation's clothes. The plan waits for a real answer.
+ */
+/**
+ * The user's training goal, from EITHER place they can state one.
+ *
+ * primaryGoal is written only by the onboarding questionnaire. The Goals page — the screen
+ * actually called "Goals", with its own fifteen goal types — writes to hx_goals and never
+ * touches it. So someone who set up a goal exactly where the app invites them to still counted
+ * as having stated nothing, the recommendation gate stayed shut, and the Workout tab showed no
+ * plan at all with no explanation. Anyone who had finished onboarding before the Goals page
+ * existed, or who edited their goal there afterwards, was in that state.
+ *
+ * The label is passed through as free text on purpose: goal-engine already classifies strings
+ * into its eight intents, and it maps all fifteen Goals-page labels correctly — including
+ * HYROX, Strength and Marathon, which the onboarding questionnaire cannot express at all. So
+ * this also makes the templates that were unreachable through onboarding reachable.
+ *
+ * Onboarding wins when both exist: it is the more deliberate answer to "what are you training
+ * for", where a Goals-page entry may be about a target weight.
+ */
+function statedGoal(){
+  try{
+    const r = window.IgnytCoachProfile ? IgnytCoachProfile.resolve(state) : null;
+    const g = r && r.profile && r.profile.primaryGoal;
+    if(g && String(g).trim()) return String(g).trim();
+  }catch(e){ /* fall through to the Goals page */ }
+  try{
+    const active = window.IgnytGoals && IgnytGoals.activeGoal ? IgnytGoals.activeGoal() : null;
+    if(!active) return "";
+    /* The label reads better to goal-engine than the id does ("muscle_gain" has no spaces for
+       its patterns to match on), so prefer it and keep the id as the fallback. */
+    const type = (IgnytGoals.GOAL_TYPES || []).filter(t=>t.id===active.type)[0];
+    const label = (type && type.label) || active.type || "";
+    return String(label).trim();
+  }catch(e){ return ""; }
+}
+
+function hasStatedGoal(){
+  return !!statedGoal();
+}
+
+/**
+ * How a planned slot is written on the card.
+ *
+ * "4×8–12" is right for a bench press and meaningless for a walk — the same numbers read as
+ * "1×15–25" would be asking for twenty-five walks. The unit follows what the movement is
+ * actually logged in, which exerciseLogType() already decides for the logger, so the plan and
+ * the log agree on what a cardio slot means instead of each having its own opinion.
+ */
+function planPresc(e){
+  const type = exerciseLogType(e.name);
+  const lo = e.reps[0], hi = e.reps[1];
+  const range = lo === hi ? String(lo) : `${lo}–${hi}`;
+  if(type === "cardio") return e.sets > 1 ? `${e.sets}×${range} min` : `${range} min`;
+  if(type === "hold")   return `${e.sets}×${range}s`;
+  return `${e.sets}×${range}`;
+}
+
+function recommendationsEnabled(){
+  return state.settings.workoutRecommendations !== false;   // default on for existing installs
+}
+
+function buildTodaysPlan(){
+  const M = window.IgnytCoachMatcher, T = window.IgnytCoachTemplates, S = window.IgnytCoachSubstitution;
+  if(!M || !T || !S) return null;
+  if(!recommendationsEnabled()) return null;
+  if(!hasStatedGoal()) return null;
+  try{
+    /* Use the STORED plan. Re-running the matcher here is what made this a daily lookup
+       rather than a programme — and it meant a profile edit silently swapped the plan out
+       mid-block. First run assigns; after that the assignment is a fact, not a computation. */
+    if(!state.plan) assignPlan();
+    const plan = state.plan;
+    if(!plan) return null;
+    const template = T.get(plan.templateId);
+    if(!template){ state.plan = null; persist(); return null; }   // template retired — reassign next render
+
+    maybeAdaptWeek();
+    const week = planWeekNumber(plan);
+    const deload = isDeloadWeek(plan, template);
+    const adapt = currentAdaptation();
+
+    const resolved = window.IgnytCoachProfile ? IgnytCoachProfile.resolve(state) : null;
+    const prof = (resolved && resolved.profile) || {};
+
+    const dayIndex = (new Date().getDay() + 6) % 7;    // templates are written Monday-first
+    const dayKeyName = (template.schedule || [])[dayIndex];
+    const slots = dayKeyName ? (template.days[dayKeyName] || []) : [];
+
+    /* The raw SELECTION, not the collapsed tier. normEquip flattens twenty options into four
+       buckets, which is right for choosing a template but wrong for choosing an exercise: it
+       is how a barbell-only user was handed a cable pulldown and a machines-only user got a
+       barbell squat. resolve() filters on the exercise's real library category instead. */
+    const tier = Array.isArray(prof.equipment) ? prof.equipment : M.normEquip(prof.equipment);
+    const injuries = (prof.painAreas || []).map(x => String(x).toLowerCase());
+    const banned = S.bannedPatterns(injuries);
+    /* The catalogue gate, alongside the pattern gate above rather than replacing it.
+       bannedPatterns only understands movement patterns, and most of the catalogue is about
+       QUALITIES — jumping, sprinting, twisting under load — that are not patterns at all and
+       show up across dozens of differently-named exercises. Both are needed: patterns catch
+       the template slots, names catch everything else. */
+    const restrictions = window.IgnytCoachInjuries
+      ? IgnytCoachInjuries.restrictionsFor(state.injuries || []) : null;
+    const bannedAll = restrictions ? banned.concat(restrictions.patterns) : banned;
+    const known = new Set(allLibraryExercises().map(e => e.name));
+
+    /* One multiplier, from two sources that must not stack. A deload week already IS the
+       volume cut; multiplying it again by an adaptation cut would produce a week so light it
+       reads as the app having given up on you. */
+    const volumeMult = deload ? 0.6 : (adapt ? adapt.volume : 1);
+
+    const exercises = [];
+    /* What this day resolves to with no substitution applied. A substitute has to avoid these
+       as well as what is already placed: the neck rule swaps vertical_press for Face Pull, and
+       rear_delt further down the same day ALSO resolves to Face Pull — checking only the slots
+       processed so far cannot see that and produces the movement twice. */
+    const naturalTaken = {};
+    const naturalNames = new Set(slots.map(sl => {
+      const n = S.resolve(sl.pattern, tier, naturalTaken);
+      if(n) naturalTaken[n] = true;
+      return n;
+    }).filter(Boolean));
+    const swapped = [];
+    /* Fed back into resolve() so narrow equipment does not list one movement twice. With only
+       kettlebells, squat and lunge both land on the goblet squat; with only dumbbells, hinge
+       and knee_flexion both land on the RDL. */
+    const placed = {};
+    slots.forEach(sl => {
+      /* A restricted slot is SUBSTITUTED, never silently dropped. Dropping leaves a hole the
+         user has to fill by hand — the exact manual work this feature exists to remove — and
+         a five-exercise day becoming two reads as the app breaking rather than as it working
+         around a knee. Only if nothing safe and loggable exists does the slot go. */
+      const patternBanned = bannedAll.includes(sl.pattern);
+      let name = S.resolve(sl.pattern, tier, placed);
+      if(patternBanned || (restrictions && IgnytCoachInjuries.blocksName(restrictions, name))){
+        /* Skips alternatives already used earlier in this session. Both squat and lunge fall
+           back to the same list, so without this a knee injury turned a leg day into Leg Press,
+           Leg Press — technically safe and obviously wrong. Falls back to reusing one only if
+           there is genuinely nothing else, since a repeated exercise still beats a hole. */
+        const used = new Set(exercises.map(x => x.name));
+        const pool = (restrictions ? restrictions.alternatives : []) || [];
+        const ok = alt => known.has(alt) && !(restrictions && IgnytCoachInjuries.blocksName(restrictions, alt));
+        /* No reuse fallback. If every safe alternative is already in this session the slot is
+           dropped instead, because prescribing the same movement twice in one workout is more
+           confusing than a shorter day — the user reads it as a bug, not as an accommodation.
+           A heavily restricted session being shorter is the honest outcome. */
+        const sub = pool.find(alt => ok(alt) && !used.has(alt) && !naturalNames.has(alt))
+                 || pool.find(alt => ok(alt) && !used.has(alt));
+        if(sub){ swapped.push(sl.pattern); name = sub; }
+        else { swapped.push(sl.pattern); return; }
+      }
+      /* A pattern resolving to something the app cannot log is dropped, not shown — a plan
+         with a row you cannot tap is worse than a shorter plan. validate() should prevent
+         this; this is the belt to its braces. */
+      if(!name || !known.has(name)) return;
+      placed[name] = true;
+      exercises.push({
+        name, pattern: sl.pattern, reps: sl.reps, rest: sl.rest,
+        sets: Math.max(1, Math.round(sl.sets * volumeMult))
+      });
+    });
+
+    return {
+      template, plan, week, deload, adapt, dayKey: dayKeyName, exercises, swapped, injuries,
+      isRest: !dayKeyName || dayKeyName === "rest",
+      why: M.explain({ template, reasons: plan.reasons || [] }, injuries),
+      safetyNotice: restrictions ? IgnytCoachInjuries.safetyNotice(restrictions) : "",
+      restrictions: restrictions
+    };
+  }catch(e){ console.warn("plan build failed:", e); return null; }
+}
+
+function renderPlanCard(){
+  const plan = buildTodaysPlan();
+  if(!plan) return "";
+
+  if(plan.isRest){
+    return `<div class="wk-plan wk-plan--rest">
+      <div class="wk-plan__head">
+        <span class="wk-plan__label">${escHtml(plan.template.name)}</span>
+        <span class="wk-plan__day">Week ${plan.week} · Rest day</span>
+        <button class="wk-plan__hide" data-action="hide-recommendations" aria-label="Turn off workout recommendations" title="Turn off recommendations">${svg('x',13)}</button>
+      </div>
+      <div class="wk-plan__why">Scheduled recovery. Training on it costs more than it adds.</div>
+    </div>`;
+  }
+  if(!plan.exercises.length) return "";
+
+  const dayLabel = titleCaseDayKey(plan.dayKey);
+  const totalSets = plan.exercises.reduce((a,e)=>a+e.sets, 0);
+  return `<div class="wk-plan${plan.deload ? ' wk-plan--deload' : ''}">
+    <div class="wk-plan__head">
+      <span class="wk-plan__label">${escHtml(plan.template.name)}</span>
+      <span class="wk-plan__day">Week ${plan.week}${plan.deload ? ' · Deload' : ''} · ${escHtml(dayLabel)}</span>
+      <button class="wk-plan__hide" data-action="hide-recommendations" aria-label="Turn off workout recommendations" title="Turn off recommendations">${svg('x',13)}</button>
+    </div>
+    ${plan.safetyNotice ? `<div class="wk-plan__safety">${svg('shield',11)} ${escHtml(plan.safetyNotice)}</div>` : ''}
+    ${plan.deload ? `<div class="wk-plan__why">${svg('shield',11)} Planned deload — lighter on purpose, so the next block has somewhere to go.</div>`
+      : plan.adapt && plan.adapt.msg && plan.adapt.reason !== "steady" ? `<div class="wk-plan__why">${svg('info',11)} ${escHtml(plan.adapt.msg)}</div>` : ''}
+    <div class="wk-plan__meta">${totalSets} sets</div>
+    <ul class="wk-plan__list">
+      ${plan.exercises.map(e=>`<li>
+        <span class="wk-plan__ex">${escHtml(e.name)}</span>
+        <span class="wk-plan__presc mono">${planPresc(e)}</span>
+      </li>`).join("")}
+    </ul>
+    ${plan.swapped.length ? `<div class="wk-plan__why">${svg('shield',11)} Movements that would aggravate your ${escHtml(plan.injuries.join(" and "))} were left out.</div>` : ""}
+    <button class="btn btn-steel btn-block wk-plan__start" data-action="start-planned-session">${svg('workout',15)} Start ${escHtml(dayLabel)}</button>
+  </div>`;
+}
+
 function renderWorkoutTab(){
   if(state.session && state.showExercisePicker) return renderExercisePicker();
   if(state.routineBuilder && state.showExercisePicker && isRoutinePickerContext()) return renderExercisePicker();
@@ -15648,7 +16646,7 @@ function renderWorkoutTab(){
     const prsThisWeek = state.prs.filter(p=>p.achievedAt>=now-7*86400000).length;
     const prevWeekVolume = state.workoutLog.filter(s=>{ const t=new Date(s.date).getTime(); return t>=now-14*86400000 && t<now-7*86400000; }).reduce((a,s)=>a+(s.volume||0),0);
     return window.IgnytPages.renderWorkoutList({
-      state, svg, renderPRCelebration, renderRoutineBuilder, sessionMuscles, sessionTitle,
+      state, svg, renderPRCelebration, renderPlanCard, renderRoutineBuilder, sessionMuscles, sessionTitle,
       workoutDurationLabel, displayW, wUnit, week, plannedDay, weekStats, prsThisWeek,
       volumeTrend: comparisonLabel(weekStats.weeklyVolume, prevWeekVolume),
       todayMuscles: plannedDay ? Array.from(new Set(plannedDay.exercises.map(ex=>getMuscle(ex.name)))).filter(m=>m && m!=="Other").slice(0,3) : [],
@@ -15680,11 +16678,11 @@ function renderWorkoutTab(){
       </div>
       <div class="live-stat"><span class="wk-session__stat-icon">${svg('progress',18)}</span>
         <div class="live-stat-label">Volume</div>
-        <div class="live-stat-value">${displayW(liveVolume,0).toLocaleString()}<span class="live-stat-unit">${wUnit()}</span></div>
+        <div class="live-stat-value" id="live-volume">${displayW(liveVolume,0).toLocaleString()}<span class="live-stat-unit">${wUnit()}</span></div>
       </div>
       <div class="live-stat"><span class="wk-session__stat-icon">${svg('plan',18)}</span>
         <div class="live-stat-label">Sets</div>
-        <div class="live-stat-value">${liveSets}</div>
+        <div class="live-stat-value" id="live-sets">${liveSets}</div>
       </div>
     </div>`}
     <input type="text" id="session-title" class="wk-session__title-input" placeholder="Workout title (e.g. Push Day)" value="${(s.title||'').replace(/"/g,'&quot;')}">
@@ -15694,7 +16692,7 @@ function renderWorkoutTab(){
          the first set is ticked, because "nothing yet" is a legitimate thing to look at. -->
     <button class="wk-muscles" data-action="open-muscle-sheet"
       aria-label="Show muscle distribution for this workout">
-      <span class="wk-muscles__chips">
+      <span class="wk-muscles__chips" id="live-muscles">
         ${muscles.length
           ? muscles.map(m=>`<span class="muscle-chip active">${escHtml(m)}</span>`).join("")
           : `<span class="wk-muscles__none">Muscle distribution</span>`}
@@ -15788,6 +16786,7 @@ function renderWorkoutTab(){
           </div>
           ${collapsed ? '' : `
           ${renderWorkoutExerciseProgress(ex.name)}
+          ${renderNextTargetHint(ex.name)}
           ${ex.sets.map((set,si)=>{
             const prev = getPreviousSet(ex.name, si);
             const prevLabel = previousSetLabel(logType, prev);
@@ -16204,6 +17203,17 @@ function renderLibraryTab(){
   const customCount = state.customExercises.length;
   const totalCount = allLibraryExercises().length;
 
+  /* Paged, because rendering all 910 at once cost 235ms and built 20,000 DOM nodes — 50 times
+     every other tab in the app, none of which exceeds 5ms. Nobody reads 910 rows; they search,
+     or they tap a category. The same page-and-load-more shape History and the food browser
+     already use, so there is nothing new to learn here.
+
+     Note the images: 616 of these rows carry one, and while they are lazy the browser still
+     has to build the element and evaluate whether it is in view. That work is what the cap
+     removes. */
+  const page = Math.max(1, state.libPage || 1);
+  const shown = items.slice(0, page * LIBRARY_PAGE_SIZE);
+
   // Most exercises still have no real photo (EXERCISE_DETAILS.thumbnailUrl null) -- those
   // rows fall back to an icon badge, colored by muscle group, rather than a fabricated photo.
   const rowIcon = (muscle) => {
@@ -16237,7 +17247,7 @@ function renderLibraryTab(){
 
       <div id="custom-form-slot">${state.showCustomForm ? customExerciseForm() : ""}</div>
 
-      ${items.map(ex=>{
+      ${shown.map(ex=>{
         const saved = state.savedExercises.includes(ex.name);
         const equip = equipMeta(ex.cat);
         return `<div class="pg-card lib-ex-row" data-view-exercise="${escHtml(ex.name)}">
@@ -16261,6 +17271,7 @@ function renderLibraryTab(){
           <button class="lib-bookmark ${saved?'is-saved':''}" data-toggle-saved-exercise="${escHtml(ex.name)}" title="${saved?'Remove from saved':'Save exercise'}" aria-label="${saved?'Remove from saved':'Save exercise'}">${svg(saved?'starFilled':'star',16)}</button>
         </div>`;
       }).join("")}
+      ${shown.length < items.length ? `<button class="btn btn-ghost btn-block" data-lib-more="1" style="margin-bottom:16px;">Load ${Math.min(LIBRARY_PAGE_SIZE, items.length-shown.length)} more (${shown.length} of ${items.length})</button>` : ""}
       ${items.length===0?`<div class="empty-note">No exercises match.</div>`:""}
     </div>
   `;
@@ -16536,6 +17547,62 @@ function attachRoutineDragReorder(){
       render();
     }
   });
+}
+
+/**
+ * Applies a set-completion tick directly to the DOM, instead of re-rendering the app.
+ *
+ * Everything a tick changes on screen, and nothing else: the row's own styling, the check
+ * button, whether that row's inputs are locked, and the three readouts derived from completed
+ * sets — volume, set count and the worked-muscle chips.
+ *
+ * @returns {boolean} true if every piece was found and updated. false means the DOM was not
+ *   what this expects, and the caller must fall back to a full render — a stale screen is a
+ *   far worse failure than a slow one.
+ */
+function patchSetDone(btn, exi, si, set){
+  try{
+    const row = btn.closest(".set-row");
+    if(!row) return false;
+
+    row.classList.toggle("done", !!set.done);
+    btn.classList.toggle("done", !!set.done);
+    btn.innerHTML = set.done ? svg('check',13) : "";
+    btn.setAttribute("aria-label", set.done ? "Mark set incomplete" : "Mark set complete");
+
+    /* A completed set's inputs are locked, matching the `lock` flag the renderer applies. */
+    row.querySelectorAll("input, .rest-toggle").forEach(f=>{
+      if(set.done) f.setAttribute("disabled",""); else f.removeAttribute("disabled");
+    });
+
+    const s = state.session;
+    if(!s) return false;
+    const vol = document.getElementById("live-volume");
+    if(vol) vol.innerHTML = displayW(Math.round(computeSessionVolume(s.exercises)),0).toLocaleString() +
+      '<span class="live-stat-unit">' + wUnit() + '</span>';
+    const sets = document.getElementById("live-sets");
+    if(sets) sets.textContent = computeCompletedSets(s.exercises);
+    const chips = document.getElementById("live-muscles");
+    if(chips){
+      const muscles = sessionMuscles(s.exercises);
+      chips.innerHTML = muscles.length
+        ? muscles.map(m=>`<span class="muscle-chip active">${escHtml(m)}</span>`).join("")
+        : `<span class="wk-muscles__none">Muscle distribution</span>`;
+    }
+
+    /* The collapsed header shows "N done" and is only in the DOM while collapsed. */
+    const card = btn.closest("[data-ex-index], .wk-ex, .wk-exercise");
+    if(card){
+      const ex = s.exercises[exi];
+      const doneCount = ex.sets.filter(x=>x.done).length;
+      const meta = card.querySelector(".wk-ex__setcount");
+      if(meta) meta.textContent = ex.sets.length + " set" + (ex.sets.length!==1?"s":"") +
+        (doneCount ? " · " + doneCount + " done" : "");
+    }
+    return true;
+  }catch(e){
+    return false;   // anything unexpected falls back to the full render
+  }
 }
 
 function attachHandlers(){
@@ -17105,6 +18172,39 @@ function attachHandlers(){
       showToast("Routine deleted.", "info", render);
     });
   });
+  const hideRec = document.querySelector('[data-action="hide-recommendations"]');
+  if(hideRec) hideRec.addEventListener("click", ()=>{
+    state.settings.workoutRecommendations = false;
+    persist();
+    render();
+    showToast("Recommendations off. Settings › Workout Settings to turn them back on.", "info", render);
+  });
+
+  const startPlanned = document.querySelector('[data-action="start-planned-session"]');
+  if(startPlanned) startPlanned.addEventListener("click", ()=>{
+    const plan = buildTodaysPlan();
+    if(!plan || !plan.exercises.length) return;
+    state.session = {
+      startedAt: Date.now(), notes: "",
+      title: plan.template.name + " — " + titleCaseDayKey(plan.dayKey),
+      exercises: plan.exercises.map(e=>({
+        name: e.name, notes: "", restDuration: e.rest,
+        /* Reps are seeded from the template; WEIGHT IS LEFT BLANK on purpose.
+           The template legitimately prescribes how many reps — that is what a plan is. It has
+           no basis for prescribing a load, which depends entirely on this person's history,
+           and a seeded weight is one tap from being logged as a lift that never happened. The
+           overload engine's target line inside the session supplies the number to aim for,
+           computed from what they actually lifted. Template says how many, engine says how
+           heavy, user logs what they did. */
+        sets: Array.from({length: e.sets}, ()=>({ weight:"", reps:String(e.reps[0]), rpe:"", done:false, type:"working" }))
+      }))
+    };
+    state.editingSessionId = null;
+    state.tab = "workout";
+    applyWakeLock();
+    render();
+  });
+
   document.querySelectorAll("[data-start-routine]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const routine = state.routines.find(r=>String(r.id) === String(el.dataset.startRoutine));
@@ -17880,7 +18980,17 @@ function attachHandlers(){
       const set = ex.sets[si];
       set.done = !set.done;
       if(set.done) vibrate(30); // light haptic on complete only, not on un-checking
-      render();
+      /* Ticking a set is the most repeated action in the app — several times a minute for an
+         hour — and it used to run a full render(), which rebuilds the whole shell and re-binds
+         every handler on the page. Measured at ~47ms on a desktop, so 150-250ms on a phone:
+         a visible stall on the one control that has to feel instant.
+
+         Nothing about a tick changes the page STRUCTURE, only this row and three derived
+         readouts, so patch those and skip the render. Same approach the elapsed clock and the
+         pace readout already take. Falls back to a full render if the DOM is not what it
+         expects, so a missed case is slow rather than stale. */
+      if(!patchSetDone(el, exi, si, set)) render();
+      persist();
       if(set.done && ex.restDuration>0 && state.settings.autoStartRest && !ex.supersetWithNext) startTimer(ex.restDuration, ex.name);
     });
   });
@@ -17915,12 +19025,13 @@ function attachHandlers(){
   const libSearch = document.getElementById("lib-search");
   if(libSearch) libSearch.addEventListener("input", (e)=>{
     state.libSearch = e.target.value;
+    state.libPage = 1;   // a new query always starts from the first page
     debounce("lib-search", ()=>{
       render();
     }, 150);
   });
   document.querySelectorAll("[data-cat]").forEach(el=>{
-    el.addEventListener("click", ()=>{ state.libCategory = el.dataset.cat; render(); });
+    el.addEventListener("click", ()=>{ state.libCategory = el.dataset.cat; state.libPage = 1; render(); });
   });
 
   /* ---- Workout History filters ---- */
@@ -18023,6 +19134,8 @@ function attachHandlers(){
   });
   const histMore = document.querySelector("[data-history-more]");
   if(histMore) histMore.addEventListener("click", ()=>{ state.historyPage = (state.historyPage||1) + 1; render(); });
+  const libMore = document.querySelector("[data-lib-more]");
+  if(libMore) libMore.addEventListener("click", ()=>{ state.libPage = (state.libPage||1) + 1; render(); });
   document.querySelectorAll("[data-view-exercise]").forEach(el=>{
     el.addEventListener("click", ()=>{
       state.viewingExerciseDetail = el.dataset.viewExercise;
@@ -20291,7 +21404,6 @@ window.addEventListener("storage", (e)=>{
 
 try{
   render();
-  if(window.__hideBootSplash) window.__hideBootSplash();
   /* Ask Play what this user is entitled to, once per launch. Deliberately after the first
      paint and not awaited: the cached entitlement already drove that paint, so a slow or
      unreachable Play service delays nothing the user sees. If Play's answer differs from the
@@ -20336,7 +21448,6 @@ try{
 }catch(err){
   console.error("Ignyt failed to boot:", err);
   renderErrorScreen(err);
-  if(window.__hideBootSplash) window.__hideBootSplash();
 }
 
 // Report the one-time duplicate-workout cleanup to the user, exactly once. showToast needs the
@@ -20419,11 +21530,30 @@ function handleHardwareBack(){
 // Live workout notification: watches app foreground/background and mirrors the open session.
 if(window.IgnytActiveWorkout) IgnytActiveWorkout.start();
 
+/* Resume path. onNewIntent writes window.__ignytWidget while the app is already running,
+   and nothing would read it without this — the classic "widget works from cold, does
+   nothing afterwards" bug. */
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState !== "visible" || !window.IgnytWidgets) return;
+  IgnytWidgets.drain().then(function(){ IgnytWidgets.consumeDeepLink(); }).catch(function(){});
+});
+
 /* Device integrity, once per cold start. Records signals to the local security log and
    NOTHING ELSE — it does not block, warn, or gate a single feature. A root check runs inside
    the process it is judging, so acting on it would only punish the honest users who happen to
    trip a signal (an unlocked developer phone, a custom ROM) while anyone actually hiding from
    it walks past. Its value is the audit trail, so that is all it is used for. */
+/* Home screen widgets: apply anything tapped while the app was closed, then honour a
+   widget tap that opened us. Drain BEFORE the deep link so a "+250ml" tap that also
+   opened the app is already logged by the time the screen it asked for renders. */
+if(window.IgnytWidgets){
+  Promise.resolve()
+    .then(function(){ return IgnytWidgets.drain(); })
+    .then(function(){ IgnytWidgets.consumeDeepLink(); })
+    .then(function(){ return IgnytWidgets.push(true); })
+    .catch(function(){});
+}
+
 if(window.IgnytSecurity){
   Promise.resolve().then(()=> IgnytSecurity.checkIntegrity()).catch(()=>{});
 }

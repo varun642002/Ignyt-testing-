@@ -16,7 +16,26 @@
     </style>
 
 
+    <!--
+      NO SPLASH SCREEN.
+
+      This used to paint @drawable/splash — a full-bleed branded image in eleven density
+      variants — which is what made the app appear to "load" before it started. The image and
+      all eleven files are gone.
+
+      What remains is unavoidable rather than chosen. From Android 12 the system draws its own
+      splash from the launcher icon on every cold start; an app cannot opt out of it. What an
+      app CAN do is make it indistinguishable from itself, which is what this does: the launch
+      window paints the app's own background colour, so the screen never changes colour between
+      the icon being tapped and the first render. There is no branded moment, no logo, no
+      spinner — just the app's background, and then the app.
+
+      windowSplashScreenBackground covers Android 12+, android:background covers 8 to 11 where
+      the compat library draws the launch window itself. Both are the same colour on purpose.
+    -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/ignytLaunchBackground</item>
+        <item name="android:background">@color/ignytLaunchBackground</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

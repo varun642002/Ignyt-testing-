@@ -1,0 +1,459 @@
+name,cat,presc,unit,muscle
+Atlas Stone Lift,Conditioning,4x3,reps,Full Body
+Atlas Stone Over Bar,Conditioning,4x3,reps,Full Body
+Tire Flip,Conditioning,4x5,reps,Full Body
+Log Press,Barbell,4x5,reps,Shoulders
+Yoke Carry,Conditioning,4x20m,distance,Full Body
+Zercher Carry,Conditioning,3x30m,distance,Full Body
+Sandbag Carry,Conditioning,3x40m,distance,Full Body
+Sandbag Clean,Conditioning,4x5,reps,Full Body
+Sandbag Over Shoulder,Conditioning,4x5,reps,Full Body
+Keg Carry,Conditioning,3x30m,distance,Full Body
+Overhead Carry,Conditioning,3x30m,distance,Shoulders
+Sled Drag,Conditioning,4x20m,distance,Hamstrings
+Sled Sprint,Conditioning,6x15m,distance,Quadriceps
+Axle Deadlift,Barbell,4x5,reps,Glutes
+Safety Bar Squat,Barbell,4x6,reps,Quadriceps
+Pin Squat,Barbell,4x3,reps,Quadriceps
+Anderson Squat,Barbell,4x3,reps,Quadriceps
+Board Press,Barbell,4x3,reps,Chest
+Spoto Press,Barbell,4x5,reps,Chest
+Larsen Press,Barbell,4x5,reps,Chest
+Pin Press,Barbell,4x3,reps,Shoulders
+Reverse Band Bench Press,Barbell,4x3,reps,Chest
+Chain Bench Press,Barbell,4x3,reps,Chest
+Deficit Deadlift,Barbell,4x4,reps,Glutes
+Block Pull Deadlift,Barbell,4x4,reps,Glutes
+Push Jerk,Barbell,5x3,reps,Shoulders
+Snatch Pull,Barbell,4x3,reps,Upper Back
+Muscle Snatch,Barbell,4x3,reps,Shoulders
+Depth Jump,Bodyweight,4x5,reps,Quadriceps
+Hurdle Hop,Bodyweight,4x6,reps,Calves
+Tuck Jump,Bodyweight,4x8,reps,Quadriceps
+Pogo Jump,Bodyweight,3x20,reps,Calves
+Bounding,Bodyweight,4x20m,distance,Glutes
+Single Leg Box Jump,Bodyweight,3x5,reps,Quadriceps
+Medicine Ball Slam,Conditioning,4x10,reps,Full Body
+Rotational Medicine Ball Throw,Conditioning,4x6,reps,Abdominals
+Overhead Medicine Ball Throw,Conditioning,4x8,reps,Full Body
+Medicine Ball Chest Pass,Conditioning,4x8,reps,Chest
+Slant Board Squat,Bodyweight,3x12,reps,Quadriceps
+Terminal Knee Extension,Machine,3x15,reps,Quadriceps
+Tibialis Raise,Bodyweight,3x20,reps,Calves
+Poliquin Step Up,Bodyweight,3x12,reps,Quadriceps
+ATG Split Squat,Bodyweight,3x10,reps,Quadriceps
+Reverse Nordic Curl,Bodyweight,3x8,reps,Quadriceps
+Jefferson Curl,Barbell,3x8,reps,Lower Back
+Copenhagen Plank,Bodyweight,3x30s,time,Adductors
+Planche Lean Hold,Bodyweight,4x20s,time,Shoulders
+Tuck Planche Hold,Bodyweight,4x15s,time,Shoulders
+Pseudo Planche Push Up,Bodyweight,3x8,reps,Chest
+Skin the Cat,Bodyweight,3x5,reps,Lats
+Back Lever Hold,Bodyweight,4x15s,time,Lats
+Archer Pull Up,Bodyweight,3x5,reps,Lats
+Typewriter Pull Up,Bodyweight,3x5,reps,Lats
+Human Flag Hold,Bodyweight,4x10s,time,Abdominals
+Hanging Windshield Wiper,Bodyweight,3x8,reps,Abdominals
+Ab Rollout from Standing,Bodyweight,3x6,reps,Abdominals
+Stir the Pot Hold,Bodyweight,3x30s,time,Abdominals
+GHD Sit Up,Machine,3x12,reps,Abdominals
+Weighted Hollow Body Hold,Bodyweight,3x30s,time,Abdominals
+Man Maker,Dumbbell,4x8,reps,Full Body
+Devil Press,Dumbbell,4x8,reps,Full Body
+Sledgehammer Strikes,Conditioning,4x20,reps,Full Body
+Shuttle Run,Cardio Outdoor,6x20m,distance,Cardio
+Jacob's Ladder,Cardio Machine,3x5min,time,Cardio
+Versaclimber,Cardio Machine,3x5min,time,Cardio
+Battle Ropes Waves,Conditioning,4x30s,time,Shoulders
+Battle Ropes Slams,Conditioning,4x30s,time,Full Body
+Kettlebell Clean and Press,Kettlebell,4x6,reps,Shoulders
+Kettlebell Windmill,Kettlebell,3x6,reps,Abdominals
+Kettlebell Bottoms Up Press,Kettlebell,3x8,reps,Shoulders
+Kettlebell Figure 8,Kettlebell,3x12,reps,Full Body
+Double Kettlebell Front Squat,Kettlebell,4x8,reps,Quadriceps
+Cable Woodchop,Machine,3x12,reps,Abdominals
+Cable Reverse Woodchop,Machine,3x12,reps,Abdominals
+World's Greatest Stretch,Bodyweight,2x45s,time,Mobility
+Couch Stretch,Bodyweight,2x60s,time,Mobility
+Cat-Cow Stretch,Bodyweight,2x45s,time,Mobility
+90/90 Hip Switch,Bodyweight,2x45s,time,Mobility
+Thoracic Rotation Stretch,Bodyweight,2x45s,time,Mobility
+Wall Slide Stretch,Bodyweight,2x45s,time,Mobility
+Band Dislocate Stretch,Bodyweight,2x45s,time,Mobility
+Ankle Circles Stretch,Bodyweight,2x45s,time,Mobility
+Deep Squat Hold Stretch,Bodyweight,2x60s,time,Mobility
+Hip Flexor Stretch,Bodyweight,2x45s,time,Mobility
+Hamstring Stretch,Bodyweight,2x45s,time,Mobility
+Pigeon Pose Stretch,Bodyweight,2x60s,time,Mobility
+Child's Pose Stretch,Bodyweight,2x60s,time,Mobility
+Downward-Facing Dog Stretch,Bodyweight,2x45s,time,Mobility
+Cobra Pose Stretch,Bodyweight,2x45s,time,Mobility
+Seated Forward Fold Stretch,Bodyweight,2x45s,time,Mobility
+Standing Quad Stretch,Bodyweight,2x45s,time,Mobility
+Calf Stretch on Wall,Bodyweight,2x45s,time,Mobility
+Doorway Chest Stretch,Bodyweight,2x45s,time,Mobility
+Cross Body Shoulder Stretch,Bodyweight,2x45s,time,Mobility
+Overhead Triceps Stretch,Bodyweight,2x45s,time,Mobility
+Neck Side Stretch,Bodyweight,2x30s,time,Mobility
+Levator Scapulae Stretch,Bodyweight,2x30s,time,Mobility
+Wrist Flexor Stretch,Bodyweight,2x30s,time,Mobility
+Wrist Extensor Stretch,Bodyweight,2x30s,time,Mobility
+Butterfly Groin Stretch,Bodyweight,2x45s,time,Mobility
+Seated Spinal Twist Stretch,Bodyweight,2x45s,time,Mobility
+Lying Glute Stretch,Bodyweight,2x45s,time,Mobility
+Standing IT Band Stretch,Bodyweight,2x45s,time,Mobility
+Lat Stretch on Rack,Bodyweight,2x45s,time,Mobility
+Puppy Pose Stretch,Bodyweight,2x45s,time,Mobility
+Thread the Needle Stretch,Bodyweight,2x45s,time,Mobility
+Foam Rolling Quads,Bodyweight,2x60s,time,Mobility
+Foam Rolling IT Band,Bodyweight,2x60s,time,Mobility
+Foam Rolling Thoracic Spine,Bodyweight,2x60s,time,Mobility
+Foam Rolling Glutes,Bodyweight,2x60s,time,Mobility
+Foam Rolling Calves,Bodyweight,2x60s,time,Mobility
+Foam Rolling Lats,Bodyweight,2x60s,time,Mobility
+Shrimp Squat,Bodyweight,3x8,reps,Quadriceps
+Skater Squat,Bodyweight,3x10,reps,Quadriceps
+Chair Squat,Bodyweight,3x15,reps,Quadriceps
+Step Up (Bodyweight),Bodyweight,3x15,reps,Quadriceps
+Duck Walk,Bodyweight,3x20m,distance,Quadriceps
+Jump Lunge,Bodyweight,3x12,reps,Quadriceps
+Broad Jump,Bodyweight,4x5,reps,Glutes
+Single Leg Glute Bridge March,Bodyweight,3x12,reps,Glutes
+Frog Pump,Bodyweight,3x20,reps,Glutes
+Donkey Kick,Bodyweight,3x15,reps,Glutes
+Fire Hydrant,Bodyweight,3x15,reps,Abductors
+Standing Calf Raise (Bodyweight),Bodyweight,3x20,reps,Calves
+Single Leg Calf Raise (Bodyweight),Bodyweight,3x15,reps,Calves
+Wide Push Up,Bodyweight,3x12,reps,Chest
+Close Grip Push Up,Bodyweight,3x12,reps,Triceps
+Archer Push Up,Bodyweight,3x8,reps,Chest
+Hindu Push Up,Bodyweight,3x10,reps,Shoulders
+Spiderman Push Up,Bodyweight,3x10,reps,Chest
+Staggered Push Up,Bodyweight,3x10,reps,Chest
+Wall Push Up,Bodyweight,3x15,reps,Chest
+Explosive Push Up,Bodyweight,3x8,reps,Chest
+Tempo Push Up,Bodyweight,3x8,reps,Chest
+Chair Incline Push Up,Bodyweight,3x12,reps,Chest
+Chair Dip,Bodyweight,3x12,reps,Triceps
+Chair Step Up,Bodyweight,3x12,reps,Quadriceps
+Chair Bulgarian Split Squat,Bodyweight,3x10,reps,Quadriceps
+Towel Row,Bodyweight,3x12,reps,Upper Back
+Table Row,Bodyweight,3x10,reps,Upper Back
+Doorway Row,Bodyweight,3x12,reps,Upper Back
+Superman Pull,Bodyweight,3x15,reps,Lower Back
+Prone Y Raise,Bodyweight,3x15,reps,Shoulders
+Prone T Raise,Bodyweight,3x15,reps,Upper Back
+Prone W Raise,Bodyweight,3x15,reps,Upper Back
+Band Face Pull,Bodyweight,3x15,reps,Upper Back
+Band Bicep Curl,Bodyweight,3x15,reps,Biceps
+Band Tricep Extension,Bodyweight,3x15,reps,Triceps
+Band Shoulder Press,Bodyweight,3x15,reps,Shoulders
+Band Good Morning,Bodyweight,3x15,reps,Hamstrings
+Band Hip Thrust,Bodyweight,3x20,reps,Glutes
+Band Monster Walk,Bodyweight,3x20m,distance,Abductors
+Flutter Kick,Bodyweight,3x30,reps,Abdominals
+Scissor Kick,Bodyweight,3x30,reps,Abdominals
+Heel Tap,Bodyweight,3x20,reps,Abdominals
+Toe Touch Crunch,Bodyweight,3x20,reps,Abdominals
+Side Plank Dip,Bodyweight,3x15,reps,Abdominals
+Plank Shoulder Tap,Bodyweight,3x20,reps,Abdominals
+Plank Jack,Bodyweight,3x20,reps,Abdominals
+Bear Crawl Hold,Bodyweight,3x30s,time,Full Body
+Butt Kicks,Bodyweight,3x30s,time,Cardio
+Star Jump,Bodyweight,3x20,reps,Full Body
+Skater Jump,Bodyweight,3x20,reps,Quadriceps
+Squat Thrust,Bodyweight,3x15,reps,Full Body
+Inchworm,Bodyweight,3x10,reps,Full Body
+Shadow Boxing,Conditioning,3x3min,time,Cardio
+Stair Sprints,Cardio Outdoor,6x30s,time,Cardio
+Burpee Pull Up,Bodyweight,3x8,reps,Full Body
+Isometric Squat Hold,Bodyweight,3x45s,time,Quadriceps
+Isometric Push Up Hold,Bodyweight,3x30s,time,Chest
+Isometric Lunge Hold,Bodyweight,3x45s,time,Quadriceps
+Glute Bridge Hold,Bodyweight,3x45s,time,Glutes
+Straddle Planche Hold,Bodyweight,4x10s,time,Shoulders
+Advanced Tuck Planche Hold,Bodyweight,4x15s,time,Shoulders
+Tuck Front Lever Hold,Bodyweight,4x20s,time,Lats
+One Arm Pull Up,Bodyweight,3x3,reps,Lats
+Commando Pull Up,Bodyweight,3x8,reps,Lats
+Around the World Pull Up,Bodyweight,3x6,reps,Lats
+Explosive Pull Up,Bodyweight,4x5,reps,Lats
+Clap Pull Up,Bodyweight,4x4,reps,Lats
+Kipping Toes to Bar,Bodyweight,4x10,reps,Abdominals
+Muscle Up Transition,Bodyweight,4x5,reps,Lats
+Handstand Walk,Bodyweight,4x10m,distance,Shoulders
+Freestanding Handstand Hold,Bodyweight,4x20s,time,Shoulders
+Wall Handstand Hold,Bodyweight,4x30s,time,Shoulders
+Headstand Hold,Bodyweight,3x45s,time,Shoulders
+Crow Pose,Bodyweight,3x20s,time,Shoulders
+Frog Stand Hold,Bodyweight,3x20s,time,Shoulders
+Elbow Lever Hold,Bodyweight,3x15s,time,Abdominals
+Back Bridge Hold,Bodyweight,3x30s,time,Lower Back
+Wall Walk,Bodyweight,4x5,reps,Shoulders
+Iron Cross Hold,Bodyweight,4x8s,time,Chest
+Victorian Cross Hold,Bodyweight,4x5s,time,Chest
+Maltese Hold,Bodyweight,4x5s,time,Chest
+One Arm Push Up Negative,Bodyweight,3x5,reps,Chest
+90 Degree Push Up,Bodyweight,3x5,reps,Chest
+Superman Push Up,Bodyweight,3x6,reps,Chest
+Aztec Push Up,Bodyweight,3x5,reps,Chest
+Russian Dip,Bodyweight,3x8,reps,Triceps
+Korean Dip,Bodyweight,3x8,reps,Triceps
+Straight Bar Dip,Bodyweight,3x10,reps,Chest
+Bulgarian Dip,Bodyweight,3x8,reps,Chest
+Impossible Dip,Bodyweight,3x5,reps,Chest
+Box Drop,Bodyweight,4x5,reps,Quadriceps
+Lateral Bound,Bodyweight,4x8,reps,Glutes
+Single Leg Bound,Bodyweight,4x6,reps,Glutes
+Lateral Skater Bound,Bodyweight,4x10,reps,Glutes
+Split Jump,Bodyweight,4x10,reps,Quadriceps
+Scissor Jump,Bodyweight,4x12,reps,Quadriceps
+Squat Jump to Box,Bodyweight,4x6,reps,Quadriceps
+Continuous Box Jump,Bodyweight,4x8,reps,Quadriceps
+Seated Box Jump,Bodyweight,4x5,reps,Quadriceps
+Reactive Hurdle Jump,Bodyweight,4x8,reps,Calves
+Triple Jump,Bodyweight,4x4,reps,Glutes
+Ankle Hop,Bodyweight,3x20,reps,Calves
+Power Skip,Bodyweight,4x20m,distance,Glutes
+Depth Drop to Broad Jump,Bodyweight,4x5,reps,Glutes
+Plyo Push Up,Bodyweight,4x6,reps,Chest
+Drop Push Up,Bodyweight,4x6,reps,Chest
+Clap Push Up to Box,Bodyweight,4x6,reps,Chest
+Med Ball Scoop Toss,Conditioning,4x8,reps,Full Body
+Med Ball Side Toss,Conditioning,4x8,reps,Abdominals
+Med Ball Overhead Slam,Conditioning,4x10,reps,Full Body
+Kneeling Med Ball Throw,Conditioning,4x8,reps,Chest
+Vertical Jump Test,Bodyweight,3x3,reps,Quadriceps
+Standing Long Jump Test,Bodyweight,3x3,reps,Glutes
+Jefferson Deadlift,Barbell,4x6,reps,Glutes
+Snatch Grip Deadlift,Barbell,4x5,reps,Upper Back
+Suitcase Deadlift,Dumbbell,3x10,reps,Abdominals
+Behind the Neck Press,Barbell,4x8,reps,Shoulders
+Bradford Press,Barbell,3x10,reps,Shoulders
+Half Kneeling Press,Dumbbell,3x10,reps,Shoulders
+Landmine Lateral Raise,Barbell,3x12,reps,Shoulders
+Landmine Anti Rotation,Barbell,3x12,reps,Abdominals
+Meadows Row,Barbell,4x10,reps,Upper Back
+Kroc Row,Dumbbell,3x15,reps,Upper Back
+Inverted Row Feet Elevated,Bodyweight,3x12,reps,Upper Back
+Cable Pullover,Machine,3x12,reps,Lats
+Tate Press,Dumbbell,3x12,reps,Triceps
+Tricep Kickback,Dumbbell,3x15,reps,Triceps
+Cuban Rotation,Dumbbell,3x12,reps,Shoulders
+Scapular Push Up,Bodyweight,3x15,reps,Upper Back
+Serratus Punch,Dumbbell,3x15,reps,Chest
+Copenhagen Adduction,Bodyweight,3x10,reps,Adductors
+45 Degree Hyper,Machine,3x15,reps,Lower Back
+Standing Ab Wheel,Bodyweight,3x6,reps,Abdominals
+Jefferson Curl (Dumbbell),Dumbbell,3x8,reps,Lower Back
+Jefferson Curl Stretch,Bodyweight,2x45s,time,Mobility
+Shoulder Dislocate Stretch,Bodyweight,2x45s,time,Mobility
+Scapular Wall Slide Stretch,Bodyweight,2x45s,time,Mobility
+Prone Press Up Stretch,Bodyweight,2x45s,time,Mobility
+Frog Stretch,Bodyweight,2x60s,time,Mobility
+Lizard Pose Stretch,Bodyweight,2x60s,time,Mobility
+Half Kneeling Hip Flexor Stretch,Bodyweight,2x45s,time,Mobility
+Standing Side Bend Stretch,Bodyweight,2x30s,time,Mobility
+Neck Rotation Stretch,Bodyweight,2x30s,time,Mobility
+Chin Tuck Stretch,Bodyweight,2x30s,time,Mobility
+Wrist Circles Stretch,Bodyweight,2x30s,time,Mobility
+Shoulder Circles Stretch,Bodyweight,2x30s,time,Mobility
+Hip Circles Stretch,Bodyweight,2x30s,time,Mobility
+Leg Swings Stretch,Bodyweight,2x30s,time,Mobility
+Arm Circles Stretch,Bodyweight,2x30s,time,Mobility
+Torso Twist Stretch,Bodyweight,2x30s,time,Mobility
+Knee Hug Stretch,Bodyweight,2x30s,time,Mobility
+Ankle Dorsiflexion Stretch,Bodyweight,2x45s,time,Mobility
+Calf Wall Stretch,Bodyweight,2x45s,time,Mobility
+Sciatic Nerve Glide Stretch,Bodyweight,2x30s,time,Mobility
+Median Nerve Glide Stretch,Bodyweight,2x30s,time,Mobility
+Thread the Needle Pose,Bodyweight,2x45s,time,Mobility
+Happy Baby Pose,Bodyweight,2x60s,time,Mobility
+Supine Twist Pose,Bodyweight,2x60s,time,Mobility
+Sphinx Pose,Bodyweight,2x45s,time,Mobility
+Bow Pose,Bodyweight,2x30s,time,Mobility
+Camel Pose,Bodyweight,2x30s,time,Mobility
+Bridge Pose,Bodyweight,2x45s,time,Mobility
+Warrior I Pose,Bodyweight,2x45s,time,Mobility
+Warrior II Pose,Bodyweight,2x45s,time,Mobility
+Triangle Pose,Bodyweight,2x45s,time,Mobility
+Tree Pose,Bodyweight,2x45s,time,Mobility
+Chair Pose,Bodyweight,2x45s,time,Mobility
+Eagle Pose,Bodyweight,2x30s,time,Mobility
+Cow Face Pose,Bodyweight,2x45s,time,Mobility
+Reclined Pigeon Pose,Bodyweight,2x60s,time,Mobility
+Standing Forward Fold Stretch,Bodyweight,2x45s,time,Mobility
+Wide Legged Forward Fold Stretch,Bodyweight,2x45s,time,Mobility
+Low Lunge Stretch,Bodyweight,2x45s,time,Mobility
+Foam Rolling Hamstrings,Bodyweight,2x60s,time,Mobility
+Foam Rolling Adductors,Bodyweight,2x60s,time,Mobility
+Foam Rolling Pecs,Bodyweight,2x60s,time,Mobility
+Foam Rolling Tibialis,Bodyweight,2x60s,time,Mobility
+Lacrosse Ball Glute Release Stretch,Bodyweight,2x60s,time,Mobility
+Lacrosse Ball Foot Release Stretch,Bodyweight,2x60s,time,Mobility
+Banded Hip Distraction Stretch,Bodyweight,2x60s,time,Mobility
+Banded Shoulder Distraction Stretch,Bodyweight,2x60s,time,Mobility
+Banded Ankle Distraction Stretch,Bodyweight,2x60s,time,Mobility
+External Rotation (Cable),Machine,3x15,reps,Shoulders
+Internal Rotation (Cable),Machine,3x15,reps,Shoulders
+Prone External Rotation,Dumbbell,3x15,reps,Shoulders
+Side Lying External Rotation,Dumbbell,3x15,reps,Shoulders
+Full Can Raise,Dumbbell,3x15,reps,Shoulders
+Empty Can Raise,Dumbbell,3x12,reps,Shoulders
+Scaption Raise,Dumbbell,3x15,reps,Shoulders
+Sleeper Stretch,Bodyweight,2x45s,time,Mobility
+Wall Angel,Bodyweight,3x15,reps,Upper Back
+Band Pull Apart Overhead,Bodyweight,3x15,reps,Shoulders
+Blackburn Exercise,Bodyweight,3x12,reps,Upper Back
+Bottoms Up Carry,Kettlebell,3x30m,distance,Shoulders
+Neck Curl,Bodyweight,3x15,reps,Neck
+Neck Lateral Flexion,Bodyweight,3x15,reps,Neck
+Neck Harness Extension,Machine,3x15,reps,Neck
+Plate Pinch Hold,Bodyweight,3x30s,time,Forearms
+Fat Grip Hold,Barbell,3x30s,time,Forearms
+Farmer Hold,Dumbbell,3x45s,time,Forearms
+Captains of Crush Grip,Bodyweight,3x10,reps,Forearms
+Towel Pull Up Hold,Bodyweight,3x20s,time,Forearms
+Bar Hang Hold,Bodyweight,3x45s,time,Forearms
+Two Finger Hang Hold,Bodyweight,3x15s,time,Forearms
+Hub Lift,Bodyweight,3x8,reps,Forearms
+Smith Machine Calf Raise,Machine,4x15,reps,Calves
+Leg Press Calf Raise,Machine,4x15,reps,Calves
+Standing Leg Curl,Machine,3x12,reps,Hamstrings
+Reverse Pec Deck,Machine,3x15,reps,Upper Back
+Assisted Pull Up Machine,Machine,3x10,reps,Lats
+Nautilus Pullover,Machine,3x12,reps,Lats
+Cable Crossover High,Machine,3x15,reps,Chest
+Cable Crossover Low,Machine,3x15,reps,Chest
+Kneeling Cable Crunch,Machine,3x15,reps,Abdominals
+Bayesian Curl,Machine,3x12,reps,Biceps
+Cable Rope Hammer Curl,Machine,3x15,reps,Biceps
+Single Arm Cable Kickback,Machine,3x15,reps,Triceps
+Bench Dip Weighted,Bodyweight,3x12,reps,Triceps
+Leaning Cable Lateral Raise,Machine,3x15,reps,Shoulders
+Cable Rear Delt Row,Machine,3x15,reps,Upper Back
+Face Pull Rope,Machine,3x15,reps,Upper Back
+Boxing Heavy Bag,Conditioning,3x3min,time,Cardio
+Speed Bag Boxing,Conditioning,3x2min,time,Shoulders
+Jump Rope Crossover,Conditioning,3x60s,time,Cardio
+Sprint Start,Cardio Outdoor,6x20m,distance,Cardio
+Agility Ladder,Conditioning,4x30s,time,Cardio
+Cone Drill,Conditioning,4x30s,time,Cardio
+T Drill,Conditioning,4x1,reps,Cardio
+Pro Agility Shuttle,Cardio Outdoor,6x20m,distance,Cardio
+Sledge Tire Strike,Conditioning,4x20,reps,Full Body
+Climbing Hangboard Hold,Bodyweight,5x10s,time,Forearms
+Campus Board,Bodyweight,4x6,reps,Lats
+Rowing Erg Sprint,Cardio Machine,6x250m,distance,Cardio
+Swim Freestyle,Cardio Outdoor,4x100m,distance,Cardio
+Swim Breaststroke,Cardio Outdoor,4x100m,distance,Cardio
+Swim Butterfly,Cardio Outdoor,4x50m,distance,Cardio
+Pilates Hundred,Bodyweight,3x100,reps,Abdominals
+Pilates Roll Up,Bodyweight,3x10,reps,Abdominals
+Pilates Teaser,Bodyweight,3x8,reps,Abdominals
+Pilates Swan,Bodyweight,3x10,reps,Lower Back
+Pilates Side Kick,Bodyweight,3x15,reps,Glutes
+Beast Crawl,Bodyweight,3x20,reps,Full Body
+Crab Reach,Bodyweight,3x10,reps,Shoulders
+Ape Reach,Bodyweight,3x10,reps,Adductors
+Scorpion Reach,Bodyweight,3x10,reps,Lower Back
+Loaded Beast Hold,Bodyweight,3x30s,time,Shoulders
+Bear Complex,Barbell,5x7,reps,Full Body
+A Skip,Cardio Outdoor,4x20m,distance,Cardio
+B Skip,Cardio Outdoor,4x20m,distance,Cardio
+High Knee Run,Cardio Outdoor,4x20m,distance,Cardio
+Butt Kick Run,Cardio Outdoor,4x20m,distance,Cardio
+Wall Drill,Conditioning,4x20s,time,Quadriceps
+Falling Start Sprint,Cardio Outdoor,6x15m,distance,Cardio
+Flying Sprint,Cardio Outdoor,5x30m,distance,Cardio
+Tempo Run,Cardio Outdoor,3x1000m,distance,Cardio
+Fartlek Run,Cardio Outdoor,1x5000m,distance,Cardio
+Hill Sprint,Cardio Outdoor,8x40m,distance,Cardio
+Stride Out Run,Cardio Outdoor,6x100m,distance,Cardio
+Box Step Over,Conditioning,4x10,reps,Quadriceps
+Burpee Box Jump Over,Conditioning,4x10,reps,Full Body
+Burpee Deadlift,Barbell,4x8,reps,Full Body
+Burpee Tuck Jump,Bodyweight,4x10,reps,Full Body
+Broad Jump Burpee,Bodyweight,4x8,reps,Full Body
+Sprawl,Bodyweight,4x15,reps,Full Body
+Dumbbell Snatch Alternating,Dumbbell,4x10,reps,Shoulders
+Dumbbell Thruster,Dumbbell,4x10,reps,Shoulders
+Kettlebell Swing American,Kettlebell,4x15,reps,Glutes
+Chest to Bar Pull Up,Bodyweight,4x8,reps,Lats
+Handstand Push Up Kipping,Bodyweight,4x8,reps,Shoulders
+Jump Rope Double Under,Conditioning,4x40,reps,Cardio
+Jump Rope Single Under,Conditioning,4x80,reps,Cardio
+Sandbag Squat,Conditioning,4x12,reps,Quadriceps
+Slam Ball Squat,Conditioning,4x12,reps,Quadriceps
+Med Ball Clean,Conditioning,4x10,reps,Full Body
+Wall Ball Over Shoulder,Conditioning,4x10,reps,Full Body
+Plank to Push Up,Bodyweight,3x12,reps,Chest
+Lunge to Press,Dumbbell,4x10,reps,Full Body
+Clean to Overhead,Barbell,4x6,reps,Full Body
+Cross Body Mountain Climber,Bodyweight,3x30,reps,Abdominals
+Speed Skater,Bodyweight,3x20,reps,Quadriceps
+Squat Pulse,Bodyweight,3x20,reps,Quadriceps
+Glute Bridge Pulse,Bodyweight,3x25,reps,Glutes
+Lateral Shuffle Drill,Conditioning,4x20m,distance,Cardio
+Carioca Drill,Conditioning,4x20m,distance,Cardio
+Suicide Run,Cardio Outdoor,4x1,reps,Cardio
+Incline Treadmill Walk,Cardio Machine,1x20min,time,Cardio
+Weighted Vest Walk,Cardio Outdoor,1x30min,time,Cardio
+Ruck Walk,Cardio Outdoor,1x5000m,distance,Cardio
+Straight Leg Raise,Bodyweight,3x15,reps,Quadriceps
+Short Arc Quad,Bodyweight,3x15,reps,Quadriceps
+Quad Set Hold,Bodyweight,3x10s,time,Quadriceps
+Heel Slide,Bodyweight,3x15,reps,Quadriceps
+Wall Sit Isometric,Bodyweight,3x45s,time,Quadriceps
+Step Down Eccentric,Bodyweight,3x10,reps,Quadriceps
+Spanish Squat Isometric,Bodyweight,3x30s,time,Quadriceps
+Single Leg Balance Hold,Bodyweight,3x30s,time,Quadriceps
+Terminal Knee Extension Band,Bodyweight,3x15,reps,Quadriceps
+Patellar Tendon Isometric,Bodyweight,3x45s,time,Quadriceps
+VMO Squeeze,Bodyweight,3x15,reps,Quadriceps
+Pendulum Swing,Bodyweight,3x20,reps,Shoulders
+Codman Circle,Bodyweight,3x20,reps,Shoulders
+Passive Shoulder Flexion,Bodyweight,3x12,reps,Shoulders
+Table Slide,Bodyweight,3x12,reps,Shoulders
+Towel Stretch Shoulder,Bodyweight,2x45s,time,Mobility
+Isometric Shoulder Abduction,Bodyweight,3x20s,time,Shoulders
+Isometric Shoulder External Rotation,Bodyweight,3x20s,time,Shoulders
+Scapular Retraction,Bodyweight,3x15,reps,Upper Back
+Scapular Depression,Bodyweight,3x15,reps,Upper Back
+Serratus Wall Slide,Bodyweight,3x12,reps,Chest
+Prone Horizontal Abduction,Bodyweight,3x15,reps,Upper Back
+Pelvic Tilt,Bodyweight,3x15,reps,Lower Back
+Glute Bridge March Rehab,Bodyweight,3x12,reps,Glutes
+Cat Camel,Bodyweight,3x12,reps,Mobility
+Prone Extension,Bodyweight,3x12,reps,Lower Back
+Curl Up McGill,Bodyweight,3x10,reps,Abdominals
+Side Bridge McGill Hold,Bodyweight,3x30s,time,Abdominals
+Bird Dog Rehab,Bodyweight,3x12,reps,Lower Back
+Nerve Flossing Sciatic,Bodyweight,3x12,reps,Hamstrings
+Lumbar Rotation Stretch,Bodyweight,2x45s,time,Mobility
+Standing Extension,Bodyweight,3x12,reps,Lower Back
+Ankle Alphabet,Bodyweight,3x2,reps,Calves
+Calf Raise Eccentric,Bodyweight,3x15,reps,Calves
+Heel Walk,Bodyweight,3x20m,distance,Calves
+Toe Walk,Bodyweight,3x20m,distance,Calves
+Ankle Inversion Band,Bodyweight,3x15,reps,Calves
+Ankle Eversion Band,Bodyweight,3x15,reps,Calves
+Towel Scrunch,Bodyweight,3x20,reps,Calves
+Achilles Eccentric Drop,Bodyweight,3x15,reps,Calves
+Side Lying Hip Abduction,Bodyweight,3x15,reps,Abductors
+Fire Hydrant Rehab,Bodyweight,3x15,reps,Abductors
+Hip Airplane,Bodyweight,3x8,reps,Glutes
+Standing Hip CAR,Bodyweight,3x8,reps,Glutes
+Adductor Squeeze Isometric,Bodyweight,3x30s,time,Adductors
+Glute Med Isometric,Bodyweight,3x30s,time,Abductors
+Wrist Flexion Eccentric,Dumbbell,3x15,reps,Forearms
+Wrist Extension Eccentric,Dumbbell,3x15,reps,Forearms
+Tyler Twist,Bodyweight,3x15,reps,Forearms
+Reverse Tyler Twist,Bodyweight,3x15,reps,Forearms
+Pronation Supination,Dumbbell,3x15,reps,Forearms
+Nerve Glide Ulnar,Bodyweight,3x12,reps,Forearms
+Grip Squeeze Ball,Bodyweight,3x20,reps,Forearms
+Chin Tuck Rehab,Bodyweight,3x15,reps,Neck
+Deep Neck Flexor Hold,Bodyweight,3x20s,time,Neck
+Upper Trap Stretch Rehab,Bodyweight,2x45s,time,Mobility
+Doorway Pec Stretch Rehab,Bodyweight,2x45s,time,Mobility

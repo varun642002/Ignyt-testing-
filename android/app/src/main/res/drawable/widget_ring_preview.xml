@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shown only in the widget picker. The real ring is a bitmap drawn per update by
+     IgnytWidget.ring(); an ImageView with no src renders nothing at all, which left the picker
+     preview missing the one element that identifies these widgets. Replaced at runtime by
+     setImageViewBitmap on the first update. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval">
+            <stroke android:width="7dp" android:color="@color/widget_track"/>
+        </shape>
+    </item>
+    <item>
+        <rotate android:fromDegrees="-90" android:toDegrees="-90" android:pivotX="50%" android:pivotY="50%">
+            <shape android:shape="ring" android:thickness="7dp" android:useLevel="true">
+                <solid android:color="@color/widget_accent"/>
+            </shape>
+        </rotate>
+    </item>
+</layer-list>
