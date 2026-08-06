@@ -6283,7 +6283,7 @@ function renderPrivacySecurityInfo(){
       <div class="pg-card" style="margin-top:12px;">
         <div style="font-size:15px;font-weight:800;margin-bottom:10px;">Real permission status</div>
         <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('bell',16)}</span><div class="pi-row__body"><div class="pi-row__label">Notifications</div><div class="pi-row__value" style="text-transform:capitalize;">${notifPerm}</div></div></div>
-        <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('health',16)}</span><div class="pi-row__body"><div class="pi-row__label">Health Connect</div><div class="pi-row__value">${hcConnected?'Connected':'Not connected'}</div></div></div>
+        <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('health',16)}</span><div class="pi-row__body"><div class="pi-row__label">${hcName()}</div><div class="pi-row__value">${hcConnected?'Connected':'Not connected'}</div></div></div>
         <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('signout',16)}</span><div class="pi-row__body"><div class="pi-row__label">Account</div><div class="pi-row__value">${signedIn?'Signed in':'Not signed in'}</div></div></div>
         <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('cloud',16)}</span><div class="pi-row__body"><div class="pi-row__label">Cloud Sync</div><div class="pi-row__value">${cs?cs.getStatus().status:'Not available'}</div></div></div>
       </div>
@@ -6997,6 +6997,15 @@ function maybeShowReminders(){
    above stays as the in-app-open fallback for browser/PWA use, where
    there is no such thing as a background reminder.
 ========================================================= */
+/* "Health Connect" is Android's product name and means nothing on an iPhone, where Health
+   ships with the OS and cannot be installed. One source of truth in health-connect.js; this is
+   just a short alias so the templates below stay readable. Falls back to the Android name when
+   health-connect.js has not loaded, which is the only case where neither answer is better. */
+function hcName(){
+  try { return (window.HealthConnect && HealthConnect.brandName) ? HealthConnect.brandName() : "Health Connect"; }
+  catch(e){ return "Health Connect"; }
+}
+
 function nativeNotify(){
   return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytNotify) || null;
 }
@@ -7189,7 +7198,7 @@ function renderToolsTab(){
          got above. Deleting the module would also remove the read path to files a user has
          already uploaded, and "take it out of the app" need not mean "make their data
          unrecoverable". */
-      {id:"health", label:"Health Connect", desc:"Sync with apps, track all metrics", icon:"health"}
+      {id:"health", label:hcName(), desc:"Sync with apps, track all metrics", icon:"health"}
     ]],
     ["Nutrition", [
       /* Food Log is deliberately not listed. It is a bottom-nav tab, permanently one tap
@@ -7321,7 +7330,7 @@ function renderProfileTab(){
           <div class="pf-progress-item">
             <div class="pf-progress-item__head"><span class="pf-progress-item__icon" style="color:var(--rh-purple);">${svg('dumbbell',16)}</span>Muscle Mass</div>
             <div class="pf-progress-item__value">${hcLeanMass!=null?displayW(hcLeanMass):'—'}<span class="pf-progress-item__unit">${wUnit()}</span></div>
-            <div class="pf-progress-item__sub" style="margin-top:6px;">${hcLeanMass!=null?'Latest Health Connect reading':'No data'}</div>
+            <div class="pf-progress-item__sub" style="margin-top:6px;">${hcLeanMass!=null?`Latest ${hcName()} reading`:'No data'}</div>
           </div>
           <div class="pf-progress-item">
             <div class="pf-progress-item__head"><span class="pf-progress-item__icon" style="color:#D97706;">${svg('trend',16)}</span>BMI</div>
@@ -7369,7 +7378,7 @@ function renderAiCoachTab(){
   return `<section class="premium-card premium-card--elevated coach-empty">
     <div class="coach-empty__icon">${svg('more',28)}</div>
     <div style="font-size:24px;font-weight:900;">AI Coach</div>
-    <p style="margin:8px auto 18px;max-width:300px;color:var(--color-text-secondary);line-height:1.5;">Coach is unavailable right now. Your workout, nutrition, progress, and Health Connect data remain available in their existing screens.</p>
+    <p style="margin:8px auto 18px;max-width:300px;color:var(--color-text-secondary);line-height:1.5;">Coach is unavailable right now. Your workout, nutrition, progress, and ${hcName()} data remain available in their existing screens.</p>
     <button class="btn btn-secondary" data-nav="progress">Explore your progress</button>
   </section>`;
 }
@@ -7478,7 +7487,7 @@ function hcTimeAgo(isoString) {
  *  "No data" and skips the chart entirely, rather than drawing an empty/fake one. */
 function hcCard(opts) {
   const { label, rangeLabel, value, unit, timeLabel, chartHtml, hasData, source } = opts;
-  const sourceLabel = source || "Health Connect"; // real metadata when available, honest fallback otherwise -- never hardcoded to one provider
+  const sourceLabel = source || hcName(); // real metadata when available, honest fallback otherwise -- never hardcoded to one provider
   return `
     <button class="hc-home-card" data-nav="health" style="width:100%;text-align:left;background:var(--surface);border:none;border-radius:var(--radius-card);padding:16px;margin-bottom:12px;cursor:pointer;display:block;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
@@ -7605,7 +7614,7 @@ function renderHomeHealthFeed() {
   try { cache = JSON.parse(localStorage.getItem("hx_hc_dashboard_cache") || "null"); } catch (e) { /* ignore */ }
   const liveData = integ ? integ.getSyncData() : null;
   const d = liveData || cache;
-  if (!d) return `<div class="eyebrow-label">Health Connect</div><div class="info-box" style="padding:14px;font-size:13px;color:var(--muted);">Tap Sync in Health Connect to see your data here.</div>`;
+  if (!d) return `<div class="eyebrow-label">${hcName()}</div><div class="info-box" style="padding:14px;font-size:13px;color:var(--muted);">Tap Sync in ${hcName()} to see your data here.</div>`;
 
   const cards = [];
 
@@ -7720,7 +7729,7 @@ function renderHomeHealthFeed() {
     timeLabel: d.nutrition ? `${Math.round(d.nutrition.proteinG||0)}g protein &middot; ${Math.round(d.nutrition.carbsG||0)}g carbs &middot; ${Math.round(d.nutrition.fatG||0)}g fat` : "Today"
   }));
 
-  return `<div class="eyebrow-label">Health Connect</div>${cards.join("")}`;
+  return `<div class="eyebrow-label">${hcName()}</div>${cards.join("")}`;
 }
 
 // icon/bg/color are only passed by the redesigned Insights screen (renderInsightsTab);
@@ -7821,9 +7830,9 @@ function renderHealthDashboard() {
   if (!isNative) {
     return `<div class="pg-light">
       ${backBtn}
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">${headerIcon}<span style="font-size:22px;font-weight:800;">Health Connect</span></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">${headerIcon}<span style="font-size:22px;font-weight:800;">${hcName()}</span></div>
       <div class="pg-card">
-        <div style="font-size:13px;color:var(--rh-muted);">Health Connect is not available on this device.</div>
+        <div style="font-size:13px;color:var(--rh-muted);">${hcName()} is not available on this device.</div>
         <div style="font-size:12px;color:var(--rh-muted);margin-top:6px;">This feature only works in the IGNYT mobile app.</div>
       </div>
     </div>`;
@@ -7837,12 +7846,12 @@ function renderHealthDashboard() {
     return `<div class="pg-light">
       ${backBtn}
       <div class="row-between" style="margin-bottom:14px;">
-        <div style="display:flex;align-items:center;gap:10px;">${headerIcon}<span style="font-size:22px;font-weight:800;">Health Connect</span></div>
+        <div style="display:flex;align-items:center;gap:10px;">${headerIcon}<span style="font-size:22px;font-weight:800;">${hcName()}</span></div>
         ${statusPill}
       </div>
       <div class="pg-card">
         ${errorMsg ? `<div style="font-size:13px;color:var(--rh-red);margin-bottom:10px;">${errorMsg}</div>` : `<div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Sync your fitness and health data with IGNYT.</div>`}
-        <button class="rh-btn rh-btn--primary" style="width:100%;" data-action="health-connect" ${busy ? "disabled" : ""}>${busy ? "Connecting\u2026" : "Connect Health Connect"}</button>
+        <button class="rh-btn rh-btn--primary" style="width:100%;" data-action="health-connect" ${busy ? "disabled" : ""}>${busy ? "Connecting\u2026" : `Connect ${hcName()}`}</button>
       </div>
     </div>`;
   }
@@ -7867,7 +7876,7 @@ function renderHealthDashboard() {
   return `<div class="pg-light">
     ${backBtn}
     <div class="row-between" style="margin-bottom:14px;">
-      <div style="display:flex;align-items:center;gap:10px;">${headerIcon}<span style="font-size:22px;font-weight:800;">Health Connect</span></div>
+      <div style="display:flex;align-items:center;gap:10px;">${headerIcon}<span style="font-size:22px;font-weight:800;">${hcName()}</span></div>
       ${statusPill}
     </div>
 
@@ -7941,8 +7950,8 @@ function renderInsightsTab(){
       ${backBtn}
       <div style="font-size:22px;font-weight:800;margin-bottom:14px;">Insights</div>
       <div class="pg-card">
-        <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Connect Health Connect to see your real Day, Week, Month and Year health trends.</div>
-        <button class="rh-btn rh-btn--primary" style="width:100%;" data-nav="health">Go to Health Connect</button>
+        <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Connect ${hcName()} to see your real Day, Week, Month and Year health trends.</div>
+        <button class="rh-btn rh-btn--primary" style="width:100%;" data-nav="health">Go to ${hcName()}</button>
       </div>
     </div>`;
   }
@@ -9568,7 +9577,7 @@ function obHealthConnect(){
     catch (e) { return false; }
   })();
   return `
-    ${obHero("\u{1F499}", "Connect <span class='ob-accent'>Health Connect</span>", "Sync your health data for better insights and accurate tracking.")}
+    ${obHero("\u{1F499}", `Connect <span class='ob-accent'>${hcName()}</span>`, "Sync your health data for better insights and accurate tracking.")}
     <div class="ob-policy">
       ${OB_HEALTH_METRICS.map(m=>`<div class="ob-policy__row"><span aria-hidden="true" style="color:var(--mint);">✓</span><span>${obEsc(m)}</span></div>`).join("")}
     </div>
@@ -9578,17 +9587,17 @@ function obHealthConnect(){
         <span>Connected. Your health data will sync automatically.</span>
       </div>` : ""}
     ${(state.onboarding.healthConnectState === "denied" || state.onboarding.healthConnectState === "skipped") ? `
-      <div class="ob-note">No problem — you can connect Health Connect any time from Profile.</div>` : ""}
+      <div class="ob-note">No problem — you can connect ${hcName()} any time from Profile.</div>` : ""}
 
     ${native
       ? `<button class="btn btn-accent btn-block" data-ob-health ${state.onboarding.healthConnectBusy?'disabled':''}>
            ${state.onboarding.healthConnectBusy ? 'Connecting…'
              : (state.onboarding.healthConnectState === "ok" || alreadyConnected)
-               ? 'Sync now' : 'Sync with Health Connect'}
+               ? 'Sync now' : `Sync with ${hcName()}`}
          </button>`
-      : `<div class="ob-note">Health Connect is an Android feature, so it isn't available in this
-           preview. On a device you'll be able to sync steps, weight, sleep and workouts here —
-           for now the app uses manual entry, and you can connect later from Tools.</div>`}
+      : `<div class="ob-note">Health syncing needs the IGNYT mobile app, so it isn't available in
+           this preview. On a phone you'll be able to sync steps, weight, sleep and workouts
+           here — for now the app uses manual entry, and you can connect later from Tools.</div>`}
 
     <!-- Secondary, and never absent. Health Connect must not be able to block onboarding:
          a denied permission, an unsupported device or a missing app all still need a way
@@ -14788,7 +14797,7 @@ function renderNutritionInsightsPage(){
       <div class="stat-label">${netDeficit>=0?'Deficit Created':'Surplus (over target)'}</div>
       <div class="mono" style="font-weight:900;font-size:22px;color:${netDeficit>=0?'var(--mint)':'var(--accent)'};margin-top:2px;">${netDeficit>=0?'':'+'}${Math.abs(netDeficit)}<span style="font-size:12px;font-weight:700;color:var(--muted);margin-left:4px;">kcal</span></div>
       <div style="font-size:11px;color:var(--muted);margin-top:4px;">Burned = ${profileMaintenance()} maintenance + ~${activityKcal} workout est.${!isToday?" (today's figures)":""}</div>
-      ${useExerciseBudget ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">${activeCalories == null ? `Health Connect active calories: ${hcConnected ? 'No data' : 'Permission required'}` : `Budget includes ${Math.round(activeCalories)} kcal from Health Connect.`}</div>` : ''}
+      ${useExerciseBudget ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">${activeCalories == null ? `${hcName()} active calories: ${hcConnected ? 'No data' : 'Permission required'}` : `Budget includes ${Math.round(activeCalories)} kcal from ${hcName()}.`}</div>` : ''}
     </div>
 
     <div class="eyebrow-label">Calorie & Macro Budget</div>
