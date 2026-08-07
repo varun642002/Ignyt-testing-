@@ -428,6 +428,82 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; background:rgba(37,9
 /* The legend sets the card's height (three rows), and the arc block is much shorter, so the
    semicircle was sitting with 46px of dead space above and below it -- centred, but stranded.
    A wider arc column and a tighter row gap bring the two sides to a comparable height. */
+/* =========================================================
+   THE IGNYT SCORE HERO
+
+   Replaces the three co-equal arcs. The score gets a full ring at the size the app's own
+   metric deserves; steps and training keep their real numbers in a supporting row rather than
+   being deleted or repeated elsewhere.
+
+   THE RING ANIMATES BECAUSE OF ONE PROPERTY. stroke-dashoffset is set inline to the unfilled
+   remainder, and transitioning it makes the arc sweep from empty to its value on every render
+   where the score changed. It is a paint-only property on an SVG stroke — no layout, no
+   reflow, and it composites like an opacity change rather than a width animation.
+
+   The colour is never written here. IgnytScore.LEVELS carries all six bands and their colours
+   through to gold at Legendary, and home.js reads the band from levelFor(), so the ring, the
+   band name and the coach line under it cannot disagree with the engine.
+========================================================= */
+.hm-score {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "ring meta" "stats stats";
+  align-items: center;
+  /* ROW GAP ZERO, deliberately. The stats row carries its own padding-top and a divider rule,
+     so a row gap here stacked on top of it — 14 + 12 = 26px of dead space between the ring and
+     the numbers, which read as the card having come apart. One source of separation, not two.
+     The column gap stays: that one is between the ring and the text beside it. */
+  gap: 0 16px;
+  text-align: left;
+  background: var(--rh-card, var(--surface));
+  border: 1px solid var(--rh-border, var(--border));
+  cursor: pointer;
+  /* The press response. transform only — see the note in gloss.css about layout animation. */
+  transition: transform .16s cubic-bezier(.32,.72,0,1), border-color .16s ease;
+}
+.hm-score:active { transform: scale(.985); }
+
+.hm-score__ringwrap { grid-area: ring; position: relative; width: 104px; height: 104px; flex: none; }
+.hm-score__ring { width: 100%; height: 100%; display: block; }
+/* The sweep. Long and eased, so a score that jumped 18 points reads as earned rather than
+   as the number simply being different. */
+.hm-score__ring circle:last-child { transition: stroke-dashoffset .9s cubic-bezier(.22,1,.36,1); }
+
+.hm-score__center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px; pointer-events: none;
+}
+.hm-score__value { font-size: 31px; font-weight: 900; line-height: 1; letter-spacing: -.03em;
+  color: var(--rh-text, var(--text)); font-variant-numeric: tabular-nums; }
+.hm-score__cap { font-size: 12px; font-weight: 700; color: var(--rh-muted, var(--muted)); }
+
+.hm-score__meta { grid-area: meta; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.hm-score__eyebrow { font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--rh-muted, var(--muted)); }
+.hm-score__band { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+.hm-score__line { font-size: 12px; line-height: 1.4; color: var(--rh-muted, var(--muted)); }
+.hm-score__chev { font-size: 11.5px; font-weight: 700; color: var(--rh-blue, var(--primary)); margin-top: 2px; }
+
+/* The supporting numbers. Deliberately quieter than the ring — same data as before, a rank
+   below it, which is the whole point of promoting the score. */
+.hm-score__stats {
+  grid-area: stats; display: flex; gap: 10px;
+  margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--rh-border, var(--border));
+}
+.hm-score__stat { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hm-score__statlabel { font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.hm-score__statval { font-size: 15px; font-weight: 800; color: var(--rh-text, var(--text));
+  font-variant-numeric: tabular-nums; }
+.hm-score__statval em { font-style: normal; font-size: 11.5px; font-weight: 600;
+  color: var(--rh-muted, var(--muted)); margin-left: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-score__ring circle:last-child { transition: none; }
+  .hm-score { transition: none; }
+}
+
 .hm-gauge { display: flex; align-items: center; gap: 14px; }
 .hm-gauge__arcs { flex: none; width: 152px; }
 .hm-gauge__arcs svg { width: 100%; height: auto; display: block; overflow: visible; }
@@ -446,3 +522,30 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; background:rgba(37,9
   .hm-gauge { gap: 10px; }
   .hm-gauge__arcs { width: 124px; }
 }
+
+
+/* =========================================================
+   IGNYT SCORE BREAKDOWN SHEET
+   Reuses the app's existing .sheet / .sheet-backdrop chrome, so it inherits the same entry
+   animation, backdrop and dismiss behaviour as every other sheet rather than inventing a
+   fourth kind of overlay.
+========================================================= */
+.sc-sheet { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.sc-head { text-align: center; }
+.sc-head__score { font-size: 42px; font-weight: 900; letter-spacing: -.035em; line-height: 1;
+  font-variant-numeric: tabular-nums; }
+.sc-head__score em { font-style: normal; font-size: 15px; font-weight: 700; opacity: .6; margin-left: 6px; }
+.sc-head__band { font-size: 16px; font-weight: 800; margin-top: 6px; }
+.sc-head__line { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin-top: 6px; }
+
+.sc-group__title { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 8px; }
+.sc-row { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 9px 0; border-top: 1px solid var(--border); font-size: 13.5px; }
+.sc-row:first-of-type { border-top: none; }
+.sc-row__label { font-weight: 600; min-width: 0; }
+.sc-row__pts { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--mint); flex: none; }
+/* Points not yet earned are stated in the same units but quieter — available, not achieved. */
+.sc-row__pts--open { color: var(--muted); }
+.sc-row--done .sc-row__label { opacity: .9; }
+.sc-empty { font-size: 13px; line-height: 1.5; color: var(--muted); }

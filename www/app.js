@@ -1695,7 +1695,8 @@ const state = {
     theme:"dark", weightUnit:"kg", exerciseCalorieBudget:true, notificationsSeenAt:0,
     heightUnit:"cm", dateFormat:"DD MMM YYYY", timeFormat:"12h"
   }, LS.get("hx_settings", {})),
-  notificationsOpen: false, // transient — not persisted, matches other dropdown/menu UI state
+  notificationsOpen: false,
+  scoreDetailOpen: false,   // transient — the IGNYT Score breakdown sheet // transient — not persisted, matches other dropdown/menu UI state
   authFormMode: null, // transient — null|"signin"|"signup"|"forgot" when the email auth form is open in Settings
   authSeen: LS.get("hx_auth_seen", false), // the Sign In screen has been passed, by signing in or skipping
   authPhone: "",      // transient — the number being typed on the Sign In screen
@@ -7131,6 +7132,7 @@ function renderApp(){
     ${renderHoldTimerOverlay()}
     ${renderToast()}
     ${renderConfirmDialog()}
+    ${renderScoreDetail()}
     ${renderLegalViewer()}
     ${renderLiveSessionBar()}
     ${renderPaywallSheet()}
@@ -10171,6 +10173,67 @@ function hasThirdPartySignIn(){
   const google = !!(a.isNativeAndroid && a.isNativeAndroid());
   const apple  = !!(a.appleAvailable && a.appleAvailable());
   return google || apple;
+}
+
+/* =========================================================
+   IGNYT SCORE BREAKDOWN
+
+   The score is the app's own metric and was, until now, a number with no explanation. A number
+   nobody can act on is a number nobody trusts — "84" says nothing about what moved it or what
+   would move it next, which is the difference between a score and a scoreboard.
+
+   Everything here is read from IgnytScore rather than recomputed: today() for what has already
+   been earned, suggestions() for what is still available and worth how much, levelFor() for the
+   band. Restating any of that here would create a second definition of the score that could
+   drift from the engine's.
+========================================================= */
+function renderScoreDetail(){
+  if(!state.scoreDetailOpen) return "";
+  let t = null, sugg = [], band = null, cap = 160;
+  try {
+    t = IgnytScore.summary(state).today;
+    sugg = IgnytScore.suggestions(state) || [];
+    band = IgnytScore.levelFor(t.score || 0);
+  } catch(e){ /* engine unavailable — the sheet still opens and says so */ }
+
+  const colour = (band && band.color) || "var(--accent)";
+  const earned = t && t.done ? Object.keys(t.done).filter(k => t.done[k]) : [];
+
+  return `<div class="sheet-backdrop" data-action="close-score-detail"></div>
+    <div class="sheet sc-sheet" role="dialog" aria-modal="true" aria-label="IGNYT Score breakdown">
+      <div class="sc-head">
+        <div class="sc-head__score" style="color:${colour};">${t ? t.score : "—"}<em>/ ${cap}</em></div>
+        ${band ? `<div class="sc-head__band" style="color:${colour};">${escHtml(band.name)}</div>` : ""}
+        ${band && band.line ? `<div class="sc-head__line">${escHtml(band.line)}</div>` : ""}
+      </div>
+
+      ${earned.length ? `
+        <div class="sc-group">
+          <div class="sc-group__title">Earned today</div>
+          ${earned.map(k => {
+            const def = (IgnytScore.ACTIONS || {})[k] || {};
+            const n = t.done[k];
+            const pts = def.per ? (def.points * n) : def.points;
+            return `<div class="sc-row sc-row--done">
+              <span class="sc-row__label">${escHtml(def.label || k)}${def.per && n > 1 ? ` ×${n}` : ""}</span>
+              <span class="sc-row__pts">+${pts}</span>
+            </div>`;
+          }).join("")}
+        </div>` : `
+        <div class="sc-empty">Nothing logged yet today — every item below is still available.</div>`}
+
+      ${sugg.length ? `
+        <div class="sc-group">
+          <div class="sc-group__title">Still available</div>
+          ${sugg.slice(0, 6).map(x => `<div class="sc-row">
+            <span class="sc-row__label">${escHtml(x.label || x.key)}</span>
+            <span class="sc-row__pts sc-row__pts--open">+${x.points || x.pts || 0}</span>
+          </div>`).join("")}
+        </div>` : `
+        <div class="sc-empty">Everything available today is already logged. That is a full day.</div>`}
+
+      <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:4px;" data-action="close-score-detail">Done</button>
+    </div>`;
 }
 
 function renderSignInScreen(){
@@ -18187,6 +18250,15 @@ function attachHandlers(){
       render();
     });
   });
+  /* The IGNYT Score hero opens its own breakdown. Bound here with the rest of the delegated
+     handlers so it is re-attached on every render, like every other data-action on the page. */
+  document.querySelectorAll('[data-action="open-score-detail"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.scoreDetailOpen = true; render(); });
+  });
+  document.querySelectorAll('[data-action="close-score-detail"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.scoreDetailOpen = false; render(); });
+  });
+
   const routineSortSelect = document.getElementById("workout-routine-sort");
   if(routineSortSelect) routineSortSelect.addEventListener("change", ()=>{
     state.workoutRoutineSort = routineSortSelect.value;

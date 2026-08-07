@@ -241,21 +241,61 @@
             Calories and Active Minutes are not here. Calories has the Nutrition card further
             down this page and its own tab; active minutes was the same figure as Training. */''}
       <div class="rh-section-head"><span>Today's Summary</span></div>
-      <div class="pg-card hm-gauge">
-        <div class="hm-gauge__arcs">
-          <svg viewBox="0 0 120 72" aria-hidden="true">
-            ${gaugeArc(52, gauge[0].goal ? gauge[0].now / gauge[0].goal : 0, gauge[0].color)}
-            ${gaugeArc(38, gauge[1].goal ? gauge[1].now / gauge[1].goal : 0, gauge[1].color)}
-            ${gaugeArc(24, gauge[2].goal ? gauge[2].now / gauge[2].goal : 0, gauge[2].color)}
+      ${(() => {
+        /* THE SCORE IS THE HERO, and steps and training support it rather than sitting beside
+           it as equals. Three arcs of the same weight said "here are three numbers"; the app is
+           built around one. The other two are kept — removing them would lose real data — but
+           demoted to a row beneath, which is also what stops this card re-acquiring the
+           duplication the three-arc gauge was built to remove. Nothing here is shown twice.
+
+           Everything is read from IgnytScore rather than restated: LEVELS carries the six bands,
+           their names and their colours (through to gold at Legendary), so the ring's colour and
+           the label under it cannot disagree with what the engine thinks. */
+        const cap = 160;
+        const val = scoreToday == null ? null : Math.max(0, Number(scoreToday));
+        const pct = val == null ? 0 : Math.min(1, val / cap);
+        let band = null;
+        try { band = window.IgnytScore ? IgnytScore.levelFor(val || 0) : null; } catch (_) {}
+        const ringColor = (band && band.color) || 'var(--accent)';
+        const bandName  = (band && band.name)  || '';
+
+        /* A full circle, drawn from the top. r=54 in a 128 box leaves room for the 12px stroke
+           without clipping. The dash offset is animated by the CSS transition on stroke-dashoffset
+           in home.css, so the ring fills rather than appearing filled. */
+        const R = 54, C = 2 * Math.PI * R;
+
+        const support = [gauge[0], gauge[2]].map(g => `
+          <div class="hm-score__stat">
+            <span class="hm-score__statlabel" style="color:${g.color};">${g.label}</span>
+            <span class="hm-score__statval">${g.now == null ? '—'
+              : `<b data-count="${g.now}" data-count-key="home-${g.label}">${g.now.toLocaleString()}</b>`}<em>/${g.goal.toLocaleString()}${g.unit ? ' ' + g.unit : ''}</em></span>
+          </div>`).join('');
+
+        return `
+      <button class="pg-card hm-score" data-action="open-score-detail"
+              aria-label="IGNYT Score ${val == null ? 'not available' : val + ' out of ' + cap}${bandName ? ', ' + bandName : ''}. Tap for the breakdown.">
+        <div class="hm-score__ringwrap">
+          <svg class="hm-score__ring" viewBox="0 0 128 128" aria-hidden="true">
+            <circle cx="64" cy="64" r="${R}" fill="none" stroke="${ringColor}" stroke-opacity=".14" stroke-width="12"/>
+            <circle cx="64" cy="64" r="${R}" fill="none" stroke="${ringColor}" stroke-width="12" stroke-linecap="round"
+                    transform="rotate(-90 64 64)"
+                    stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - pct)).toFixed(1)}"/>
           </svg>
+          <div class="hm-score__center">
+            <span class="hm-score__value">${val == null ? '—'
+              : `<b data-count="${val}" data-count-key="home-ignyt-score">${val}</b>`}</span>
+            <span class="hm-score__cap">/ ${cap}</span>
+          </div>
         </div>
-        <div class="hm-gauge__legend">
-          ${gauge.map(g => `<div class="hm-gauge__row">
-            <span class="hm-gauge__name" style="color:${g.color};">${g.label}</span>
-            <span class="hm-gauge__val">${g.now == null ? '—' : g.now.toLocaleString()}<em>/${g.goal.toLocaleString()}${g.unit ? ' ' + g.unit : ''}</em></span>
-          </div>`).join('')}
+        <div class="hm-score__meta">
+          <span class="hm-score__eyebrow">IGNYT Score</span>
+          ${bandName ? `<span class="hm-score__band" style="color:${ringColor};">${bandName}</span>` : ''}
+          ${band && band.line ? `<span class="hm-score__line">${band.line}</span>` : ''}
+          <span class="hm-score__chev">Breakdown ›</span>
         </div>
-      </div>
+        <div class="hm-score__stats">${support}</div>
+      </button>`;
+      })()}
 
       ${(window.IgnytPages && window.IgnytPages.renderFastingHomeCard)
           ? window.IgnytPages.renderFastingHomeCard() : ''}
