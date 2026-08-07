@@ -827,7 +827,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Orange Bar",
-  "reason": "serving has no weight (1 bar)"
+  "reason": "energy 170 does not match macros 328"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -957,7 +957,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Snack Bar, Orange, Eat Any Time",
-  "reason": "serving has no weight (1 bar)"
+  "reason": "energy 170 does not match macros 328"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1121,6 +1121,11 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry, Dannon",
+  "reason": "667 kcal per 100 g from an assumed 12 g serving \u2014 the dish is not one serve"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
   "name": "Strawberry, Kellogg's",
   "reason": "calories 1500 per 100 g is out of range"
  },
@@ -1128,6 +1133,11 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Strawberry, Raw (USDA)",
   "reason": "serving has no weight (1 whole)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "YOGURT, STRAWBERRY",
+  "reason": "667 kcal per 100 g from an assumed 12 g serving \u2014 the dish is not one serve"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1172,7 +1182,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Fruits Soy Bar, Raisin Almond, Soyjoy",
-  "reason": "serving has no weight (1 bar)"
+  "reason": "energy 121 does not match macros 287"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1193,11 +1203,6 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Fruits with Oats",
   "reason": "energy 106 does not match macros 173"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Fruits Yoghurt Jelly, Signature Market",
-  "reason": "serving has no weight (1 Vv)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1357,7 +1362,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Aloo Bread Pakoda",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "energy 243 does not match macros 1376"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1367,17 +1372,22 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Besan Bread",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "energy 243 does not match macros 1376"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Besan Bread Pakora",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "energy 243 does not match macros 1376"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Bread Aloo Pakora",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread and Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1387,7 +1397,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Bread Bajji",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "energy 243 does not match macros 1376"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1397,12 +1407,22 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Bread Bhajiya",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Bonda",
+  "reason": "652 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one piece"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Bread Bun",
   "reason": "energy 161 does not match macros 1893"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1426,8 +1446,23 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Makhan",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Malpua",
+  "reason": "672 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one piece"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Maska",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
   "name": "Bread Pakoda",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "energy 243 does not match macros 1376"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1437,12 +1472,27 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Bread Pattice",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Pizza",
+  "reason": "728 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Pua",
+  "reason": "672 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one piece"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Bread Pudla",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Roast",
+  "reason": "664 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one piece"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1461,8 +1511,28 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Toast with Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
   "name": "Bread Upma",
   "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Vada",
+  "reason": "652 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one piece"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread with Amul Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread with Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1488,6 +1558,16 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Brown Bread Pakora with Potato",
   "reason": "calories 1024 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Butter Toasted Bread",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Buttered Bread",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1526,6 +1606,16 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
+  "name": "Grilled Bread with Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Homemade Bread Malpua",
+  "reason": "672 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one piece"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
   "name": "Kissan Jam-and Bread",
   "reason": "energy 19 does not match macros 118"
  },
@@ -1537,12 +1627,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Potato Bread Pakoda",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "energy 243 does not match macros 1376"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Potato Bread Patties",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "energy 243 does not match macros 1376"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1562,12 +1652,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Stuffed Bread Pakora",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "energy 243 does not match macros 1376"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Tawa Bread Pakoda",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "energy 243 does not match macros 1376"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1576,8 +1666,23 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
+  "name": "Toasted Bread with Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
   "name": "Toasted White Bread",
   "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Toasted White Bread with Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vegetable White Bread Pizza",
+  "reason": "728 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1596,8 +1701,23 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
+  "name": "White Bread Toast with butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
   "name": "White Bread Toast with Jam",
   "reason": "energy 19 does not match macros 118"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "White Bread With Amul Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "White Bread With Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1631,8 +1751,23 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Cha",
+  "reason": "867 kcal per 100 g from an assumed 45 g serving \u2014 the dish is not one serve"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Chole",
+  "reason": "700 kcal per 100 g from an assumed 45 g serving \u2014 the dish is not one bun"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
   "name": "Bun Dosa",
   "reason": "energy 16 does not match macros 123"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Kebab",
+  "reason": "887 kcal per 100 g from an assumed 45 g serving \u2014 the dish is not one bun"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1656,13 +1791,18 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Nirachathu",
+  "reason": "836 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
   "name": "Bun Omelette",
   "reason": "calories 960 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Bun Samosa",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "carbs 120 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1732,7 +1872,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Beef Kizhi Parotta",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "calories 928 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1743,6 +1883,11 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Ceylon Chicken Paratha",
   "reason": "energy 154 does not match macros 494"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Ceylon Egg Parotta",
+  "reason": "812 kcal per 100 g from an assumed 60 g serving \u2014 the dish is not one paratha"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1806,6 +1951,21 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
+  "name": "Mughlai Egg Paratha",
+  "reason": "812 kcal per 100 g from an assumed 60 g serving \u2014 the dish is not one paratha"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mughlai Paratha",
+  "reason": "812 kcal per 100 g from an assumed 60 g serving \u2014 the dish is not one paratha"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mughlai Paratha Stuffed with Egg",
+  "reason": "812 kcal per 100 g from an assumed 60 g serving \u2014 the dish is not one paratha"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
   "name": "Omelette Paratha",
   "reason": "missing a macro"
  },
@@ -1817,7 +1977,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Pork Kizhi Parotta",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "897 kcal per 100 g from an assumed 60 g serving \u2014 the dish is not one parotta"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1852,7 +2012,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Barley Noodles, Nalabagam",
-  "reason": "serving has no weight (1 pack)"
+  "reason": "calories 985 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1868,11 +2028,6 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Noodles",
   "reason": "already in catalogue"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Manchurian Noodles, Patanjali",
-  "reason": "serving has no weight (1 pack)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1992,22 +2147,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Noodles, Barley, Nalabagam",
-  "reason": "serving has no weight (1 pack)"
+  "reason": "calories 985 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Noodles, Horlicks",
   "reason": "missing a macro"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Noodles, Manchurian, Patanjali",
-  "reason": "serving has no weight (1 pack)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Noodles, Schezwan, Patanjali",
-  "reason": "serving has no weight (1 pack)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2021,13 +2166,8 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Schezwan Noodles, Patanjali",
-  "reason": "serving has no weight (1 pack)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Uncooked Barley Noodles",
-  "reason": "serving has no weight (1 pack)"
+  "reason": "calories 985 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2092,17 +2232,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Cake Rusk",
-  "reason": "serving has no weight (1 rusk)"
+  "reason": "energy 99 does not match macros 151"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Cake Rusk, KCB",
   "reason": "serving has no weight (1 cake)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Cake Rusk, Om Sweets",
-  "reason": "serving has no weight (1 rusk)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2117,7 +2252,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Cake Rusk, Verka",
-  "reason": "serving has no weight (1 rusk)"
+  "reason": "energy 120 does not match macros 420"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2143,6 +2278,11 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Cake Tape",
   "reason": "carbs 124 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake Toast",
+  "reason": "668 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2177,7 +2317,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Dry Cake",
-  "reason": "serving has no weight (1 rusk)"
+  "reason": "energy 99 does not match macros 151"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2236,13 +2376,8 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Boneless Chicken Drumstick",
-  "reason": "serving has no weight (1 drumstick)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Boneless Chicken Leg",
-  "reason": "serving has no weight (1 drumstick)"
+  "name": "Baked Chicken Bun",
+  "reason": "680 kcal per 100 g from an assumed 45 g serving \u2014 the dish is not one bun"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2251,8 +2386,8 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Chicken Bao",
-  "reason": "serving has no weight (1 bao)"
+  "name": "Chicken Bun",
+  "reason": "680 kcal per 100 g from an assumed 45 g serving \u2014 the dish is not one bun"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2281,16 +2416,6 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Chicken Leg",
-  "reason": "serving has no weight (1 drumstick)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Chicken Leg (Skin Eaten)",
-  "reason": "serving has no weight (1 drumstick)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Chicken Momos",
   "reason": "serving has no weight (1 momo)"
  },
@@ -2303,11 +2428,6 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Chicken Noodles with Gravy",
   "reason": "energy 314 does not match macros 1356"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Chicken Pau",
-  "reason": "serving has no weight (1 pau)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2336,11 +2456,6 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Chicken, broilers or fryers, leg, meat",
-  "reason": "serving has no weight (1 drumstick)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Cracker Barrel Chicken Fried Chicken",
   "reason": "missing a macro"
  },
@@ -2353,6 +2468,11 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Steamed Chicken Momos",
   "reason": "serving has no weight (1 momo)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Stuffed Chicken Bun",
+  "reason": "680 kcal per 100 g from an assumed 45 g serving \u2014 the dish is not one bun"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2496,11 +2616,6 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Fish Bao",
-  "reason": "serving has no weight (1 bao)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Fish Batter Fry",
   "reason": "serving has no weight (1 fillet)"
  },
@@ -2636,33 +2751,13 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "3 Egg Omelette",
-  "reason": "serving has no weight (1 serve)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Aloo Omelette",
-  "reason": "serving has no weight (1 egg))"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Anchovies Omelette",
-  "reason": "serving has no weight (1 omelette)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Beef Mince Omelette",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "energy 153 does not match macros 217"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Beef Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Bran Omelette",
-  "reason": "serving has no weight (1 egg))"
+  "reason": "energy 153 does not match macros 217"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2676,13 +2771,8 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Capsicum and Carrot Egg Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Crab Omelette",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "energy 156 does not match macros 500"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2691,53 +2781,18 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Double Egg Cabbage Omelette",
-  "reason": "serving has no weight (1 omelette)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Egg Omelette in Ghee",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Egg Omelette with Capsicum and",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Egg Omelette with Carrot and",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Egg Omelette with Mixed Veg",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Omelette with Onion and",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Egg Omelette with Peas",
-  "reason": "serving has no weight (1 egg))"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Plain Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Egg Vegetable Omelette",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2746,158 +2801,58 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Filipino Canned Sardines Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Fish Omelette",
-  "reason": "serving has no weight (1 omelette)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Ghee Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Ground Beef Omelette",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "energy 153 does not match macros 217"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Hen Egg Omelette",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Herb Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Kale Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Keto Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Kuli Omelette",
-  "reason": "serving has no weight (1 omelette)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Kuzhi Omelette",
-  "reason": "serving has no weight (1 omelette)"
+  "reason": "energy 129 does not match macros 50"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Lady Finger Omelette",
-  "reason": "serving has no weight (1 omelette)"
+  "reason": "energy 151 does not match macros 61"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Masala Omelette with Spinach and",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Minced Beef Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Mixed Veg Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Mumbai Omelette Pav",
-  "reason": "serving has no weight (1 one)"
+  "reason": "energy 153 does not match macros 217"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Nandu Omelette",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Oats Egg Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Oats Omelette",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "energy 156 does not match macros 500"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Okra Omelette",
-  "reason": "serving has no weight (1 omelette)"
+  "reason": "energy 151 does not match macros 61"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Omelette Chapati Roll",
-  "reason": "serving has no weight (1 roll)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Omelette in Ghee",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Omelette Pav",
-  "reason": "serving has no weight (1 one)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Omelette with Herbs",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Omelette with Vegetables",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Onion Spinach Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Peas Omelette",
-  "reason": "serving has no weight (1 egg))"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Plain Omelette in Desi Ghee",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Plain Omelette in Oil",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Potato Egg Omelette",
-  "reason": "serving has no weight (1 egg))"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Sardines Omelette",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2906,58 +2861,23 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Spanish Omelette",
-  "reason": "serving has no weight (1 egg))"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Three Egg Omelette",
-  "reason": "serving has no weight (1 serve)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Three Whole Eggs Omelette",
-  "reason": "serving has no weight (1 serve)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Tuna Egg Omelette",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Tuna Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Veg Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Vegetable Egg Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Vegetable Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Veggie Omelette",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Whole Egg Omelette",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Whole Egg Omelette with Onion and",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4242,7 +4162,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Soup, onion, dry, mix",
-  "reason": "serving has no weight (1 packet)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4257,12 +4177,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Soup, Tomato, Chings Secret",
-  "reason": "serving has no weight (1 pack)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Soup, Vegetable & Beef, Continental",
-  "reason": "serving has no weight (1 pack)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4287,7 +4207,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Tomato Soup, Chings Secret",
-  "reason": "serving has no weight (1 pack)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4331,21 +4251,6 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "All Natural Flavored Juice Drink, Kiwi",
-  "reason": "serving has no weight (1 bottle)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Apple Juice - Simply Apple",
-  "reason": "serving has no weight (1 pack)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Apple Juice, Just Juice",
-  "reason": "serving has no weight (1 pack)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Cold Pressed Orange Juice",
   "reason": "energy 13 does not match macros 175"
  },
@@ -4381,11 +4286,6 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Juice Based Drink, Mojito, City Buzz",
-  "reason": "serving has no weight (1 bottle)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Juice Beverage, Cranberry",
   "reason": "missing a macro"
  },
@@ -4417,17 +4317,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Juice Drink with Nata De Coco",
-  "reason": "serving has no weight (1 bottle)"
+  "reason": "energy 159 does not match macros 230"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Juice Drink, Fruit Juicy Red, Hawaiian",
   "reason": "serving has no weight (blank)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Juice Drink, Kiwi Strawberry, Snapple",
-  "reason": "serving has no weight (1 bottle)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4467,12 +4362,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Lychee Juice with Nata De Coco",
-  "reason": "serving has no weight (1 bottle)"
+  "reason": "energy 159 does not match macros 230"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Lychee Juice, Mogu Mogu",
-  "reason": "serving has no weight (1 bottle)"
+  "reason": "energy 159 does not match macros 230"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4482,7 +4377,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Mogu Mogu Lychee Juice with Nata",
-  "reason": "serving has no weight (1 bottle)"
+  "reason": "energy 159 does not match macros 230"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4532,7 +4427,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Chocolate, Mondelez Foods India",
-  "reason": "serving has no weight (1 square)"
+  "reason": "energy 28 does not match macros 174"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4572,7 +4467,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Dairy Milk Chocolate, Durian",
-  "reason": "serving has no weight (1 square)"
+  "reason": "energy 24 does not match macros 130"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4597,17 +4492,17 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Dairy Milk, Durian, Cadbury",
-  "reason": "serving has no weight (1 square)"
+  "reason": "energy 24 does not match macros 130"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Dairy Milk, Mondele",
-  "reason": "serving has no weight (1 square)"
+  "reason": "energy 27 does not match macros 149"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Dairy Milk, Silk Oreo",
-  "reason": "serving has no weight (1 square)"
+  "reason": "energy 28 does not match macros 174"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4657,7 +4552,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Kes. B pairy FP Daf",
-  "reason": "serving has no weight (1 square)"
+  "reason": "energy 27 does not match macros 149"
  },
  {
   "file": "IGNYT_master_nutrition.csv",

@@ -73,6 +73,13 @@ HOUSEHOLD_G = {
     "slice": 25, "bun": 45, "paratha": 60, "parotta": 60, "dosa": 80,
     "chapati": 35, "roti": 35, "idli": 50, "egg": 50,
     "tablespoon": 15, "tbsp": 15, "teaspoon": 5, "tsp": 5,
+    # A second pass of lookups, for the units the first round left rejected. Each is a published
+    # average rather than a guess: a two-egg omelette is 2 x the 50 g large egg; a drumstick
+    # averages 120 g; instant noodle packs run 55-100 g and 75 g is the middle; a rusk is 20 g
+    # (the 90 kcal piece every nutrition listing uses); a cheese square is 18-22 g; a juice
+    # bottle is 250 ml.
+    "omelette": 100, "omelet": 100, "drumstick": 120, "pack": 75, "packet": 75,
+    "rusk": 20, "square": 20, "bottle": 250,
 }
 HOUSEHOLD = re.compile(r"^\s*([\d.]+)?\s*(" + "|".join(HOUSEHOLD_G) + r")s?\s*$", re.I)
 
@@ -95,8 +102,19 @@ HOUSEHOLD = re.compile(r"^\s*([\d.]+)?\s*(" + "|".join(HOUSEHOLD_G) + r")s?\s*$"
 CATEGORY_PIECE_G = {
     "apple": 182, "orange": 131, "strawberry": 12, "fruits": 118,
     "egg": 50, "bread": 25, "bun": 45, "parotta": 60, "idli": 53,
-    "fish": 170, "chicken": 174, "nuts": 30,
+    "fish": 170, "chicken": 174, "nuts": 30, "omelette": 100,
 }
+
+# A UNIT THE SCAN DESTROYED IS NOT THE SAME AS A UNIT WITH NO STANDARD. "1 Vv" and "1.0 WU" are
+# not units at all — the row HAD one and the scan lost it. Where the category has a single
+# well-defined piece (above), one piece is by far the likeliest thing the lost unit said: these
+# rows sit in Omelette, Bread and Egg, where a serving is one omelette, one slice, one egg.
+#
+# It is applied ONLY to those categories. Alcoholic, Oats, Biriyani and Curry also have destroyed
+# units and get nothing, because "one serving" of those is not a fixed thing — a spirit is 30 ml
+# and a beer is 330 ml, and guessing between them to raise a count is the trade this file exists
+# to refuse.
+UNREADABLE = re.compile(r"^\s*[\d.]*\s*(?:[A-Za-z]{1,3}|WU|Vv|WVICGSUIS)\s*\)?\s*$")
 # "small" and "large" are deliberately NOT here. The reference weights above are for a MEDIUM
 # item, and the source distinguishes the three — applying 182 g to a row that says "1 small
 # apple" is knowably wrong, not merely uncertain, so those rows stay rejected.
@@ -170,15 +188,17 @@ def serving_grams(s, category=None, recovered=None, name=None):
     if recovered:
         return (recovered, None)
 
-    v = VAGUE.match((s or "").strip())
+    v = VAGUE.match((s or "").strip()) or UNREADABLE.match((s or "").strip())
     if v:
         cat = (category or "").strip().lower()
         if cat in CATEGORY_PIECE_G and name:
             want = NAME_MUST_CONTAIN.get(cat, cat.rstrip("s"))
             if re.search(want, name, re.I) and not misfiled(name):
-                count = float(v.group(1)) if v.group(1) else 1.0
+                g1 = v.group(1) if v.re.groups >= 1 else None
+                count = float(g1) if g1 else 1.0
+                unit = v.group(2).lower() if v.re.groups >= 2 else cat
                 if count > 0:
-                    return (count * CATEGORY_PIECE_G[cat], v.group(2).lower())
+                    return (count * CATEGORY_PIECE_G[cat], unit)
     return None
 
 
@@ -268,6 +288,19 @@ def convert(row, source_label, trust, recovered=None):
     for k, ceiling in MAX.items():
         if out[k] < 0 or out[k] > ceiling:
             return None, "%s %.0f per 100 g is out of range" % (k, out[k])
+
+    # AN IMPLAUSIBLE DENSITY MEANS THE ESTIMATED WEIGHT WAS WRONG, so the row goes rather than
+    # the figure. Only rows whose weight THIS FILE estimated are judged here — where the source
+    # gave grams, the number is its data and not mine to overrule.
+    #
+    # What it catches is a composite dish weighed as a single piece: "Bun Kebab" is a meal, not
+    # one 45 g bun, and dividing a meal's energy by a bun's weight produced 887 kcal/100 g.
+    # Mughlai Paratha, Bread Pizza and Pork Kizhi Parotta all failed the same way. Nothing but
+    # fat is that dense — oil is 884 and ghee 900 — so above 650 the assumption is what broke.
+    # Nuts are exempt because they genuinely reach 550-700.
+    if household and out["calories"] > 650 and (cat_l := (row.get("category") or "").strip().lower()) != "nuts":
+        return None, ("%d kcal per 100 g from an assumed %d g serving — the dish is not one %s"
+                      % (out["calories"], round(grams), household))
 
     cat = (row.get("category") or "").strip() or "Other"
     return {
