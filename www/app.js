@@ -11965,12 +11965,21 @@ const BADGE_SHAPES = {
    name being loose. Gold and diamond take near-black band ink because white reversed out of
    either is not readable. */
 const BADGE_TIER_ORDER = ["bronze", "silver", "gold", "diamond", "platinum"];
+/* Each tier now carries a three-stop METAL RAMP as well as its flat hue.
+   hue stays and is still what the locked state, the stars and the icon read — every existing
+   consumer is untouched. lo/mid/hi are only used by the earned gradient.
+
+   A real metal is not one colour lightened and darkened. It is a dark base, a bright specular
+   band where the light hits, and a warmer bounce underneath — which is why each ramp shifts
+   HUE across the three stops rather than only lightness. Bronze warms toward orange at the
+   highlight, silver cools toward blue, gold goes almost white. Lightening a single hex gives
+   plastic. */
 const BADGE_TIERS = {
-  bronze:   { hue: "#A85A29", ink: "#FFFFFF" },
-  silver:   { hue: "#5A6B7D", ink: "#FFFFFF" },
-  gold:     { hue: "#E0A800", ink: "#1A1205" },
-  diamond:  { hue: "#3FBBE0", ink: "#052A3A" },
-  platinum: { hue: "#7C5CD6", ink: "#FFFFFF" }
+  bronze:   { hue: "#A85A29", ink: "#FFFFFF", lo: "#5E2F12", mid: "#C87A3C", hi: "#F0B27A" },
+  silver:   { hue: "#5A6B7D", ink: "#FFFFFF", lo: "#33404D", mid: "#8798A8", hi: "#D9E4EC" },
+  gold:     { hue: "#E0A800", ink: "#1A1205", lo: "#8A5E00", mid: "#F0C020", hi: "#FFF2B0" },
+  diamond:  { hue: "#3FBBE0", ink: "#052A3A", lo: "#0E5C77", mid: "#5FD0EE", hi: "#DFF7FF" },
+  platinum: { hue: "#7C5CD6", ink: "#FFFFFF", lo: "#3D2A80", mid: "#9B7EE8", hi: "#E3D8FF" }
 };
 
 /* The trophy is gone. A trophy is a prize for beating someone and none of these are that --
@@ -11987,6 +11996,40 @@ const BADGE_ICONS = { milestone:"dumbbell", streak:"flame", strength:"bolt",
  * @param {boolean} earned locked badges keep their shape and their target — a blanked-out
  *                         mystery gives nobody a reason to come back, "100 workouts" does.
  */
+/**
+ * How far along a LOCKED achievement is, as {have, need, pct} — or null when it cannot be known.
+ *
+ * WHY THIS IS NOT DERIVED FROM check(). Every definition's check() returns a boolean: it
+ * answers "is it done", and there is no way to ask a boolean how close it came. Showing a
+ * percentage therefore needs a second, explicit source for the countable ones.
+ *
+ * NULL IS A REAL ANSWER AND IS RETURNED OFTEN. "Hit 100kg on any lift" has a sensible
+ * fraction; "log a workout on Christmas Day" does not, and neither does anything whose
+ * condition is a state rather than a count. Those keep the plain description they always had.
+ * A progress bar on a badge whose progress cannot be computed would be a guess presented as a
+ * measurement, which is worse than no bar.
+ *
+ * Counts are read from the same state the check() reads, so a bar cannot disagree with the
+ * unlock it is predicting.
+ */
+function badgeProgress(def){
+  const N = (v) => (typeof v === "number" && isFinite(v)) ? v : 0;
+  let have = null, need = null;
+  try {
+    const m = /^(workouts|sets|volume|streak|prs)_(\d+)$/.exec(def.id || "");
+    if (m) {
+      need = Number(m[2]);
+      if (m[1] === "workouts") have = N(state.workoutLog.length);
+      else if (m[1] === "sets") have = N(typeof totalWorkingSets === "function" ? totalWorkingSets() : 0);
+      else if (m[1] === "prs")  have = N(state.prs.length);
+      else if (m[1] === "streak") have = N(typeof computeLongestStreak === "function" ? computeLongestStreak() : 0);
+    }
+  } catch (e) { return null; }
+
+  if (have == null || !need || need <= 0) return null;
+  return { have, need, pct: Math.max(0, Math.min(99, Math.round(have / need * 100))) };
+}
+
 function achievementBadgeSvg(d, earned){
   const tier = BADGE_TIERS[d.tier] || BADGE_TIERS.bronze;
   // Star count is the tier. An unknown tier string falls back to one star rather than none,
@@ -12010,10 +12053,52 @@ function achievementBadgeSvg(d, earned){
   const fs = v.length <= 2 ? 27 : v.length === 3 ? 21 : v.length <= 5 ? 15 : 12;
   const icon = ICONS[BADGE_ICONS[d.category]] || ICONS.dumbbell;
 
-  return `<svg viewBox="0 0 100 100" class="bdg__svg" role="img" aria-label="${escHtml(d.name)}">
-    <defs><clipPath id="${id}">${pts
+  /* THE METAL. Four defs, and each is doing one job that a flat fill cannot.
+
+     grad    the tier ramp at 135deg — dark base, specular band, warm bounce. This is what
+             makes it read as a struck medal rather than a coloured sticker.
+     bevel   a soft inner shadow: the shape blurred, offset down, and composited back INSIDE
+             itself. It is what gives the rim thickness.
+     shine   a narrow bright diagonal that sweeps across on unlock and on hover, clipped to
+             the badge so it never escapes the shape.
+     glow    an outer drop shadow in the tier hue, so a gold badge sits in warm light and a
+             diamond one in cold. Earned only — a locked badge that glows is a lie.
+
+     All four are inert on a locked badge: it keeps the flat muted fill it always had, which
+     is what makes the earned ones look like they cost something. */
+  const gid = id + "-g", bid = id + "-b", sid = id + "-s";
+  const metal = earned ? `
+      <linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%"   stop-color="${tier.lo}"/>
+        <stop offset="45%"  stop-color="${tier.mid}"/>
+        <stop offset="72%"  stop-color="${tier.hi}"/>
+        <stop offset="100%" stop-color="${tier.mid}"/>
+      </linearGradient>
+      <filter id="${bid}" x="-20%" y="-20%" width="140%" height="140%">
+        <feOffset dx="0" dy="2.5" in="SourceAlpha" result="o"/>
+        <feGaussianBlur stdDeviation="2.2" in="o" result="bl"/>
+        <feComposite operator="out" in="bl" in2="SourceAlpha" result="inner"/>
+        <feColorMatrix in="inner" type="matrix"
+          values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .45 0" result="shadow"/>
+        <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="shadow"/></feMerge>
+      </filter>
+      <linearGradient id="${sid}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%"   stop-color="#fff" stop-opacity="0"/>
+        <stop offset="45%"  stop-color="#fff" stop-opacity="0"/>
+        <stop offset="52%"  stop-color="#fff" stop-opacity=".55"/>
+        <stop offset="59%"  stop-color="#fff" stop-opacity="0"/>
+        <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+      </linearGradient>` : "";
+
+  const face = pts
+    ? `<polygon points="${pts}" fill="url(#${gid})"/>`
+    : `<circle cx="50" cy="50" r="47" fill="url(#${gid})"/>`;
+
+  return `<svg viewBox="0 0 100 100" class="bdg__svg${earned ? " is-metal" : ""}" role="img" aria-label="${escHtml(d.name)}">
+    <defs>${metal}<clipPath id="${id}">${pts
       ? `<polygon points="${pts}"/>`
       : `<circle cx="50" cy="50" r="47"/>`}</clipPath></defs>
+    ${earned ? `<g filter="url(#${bid})">${face}</g>` : ""}
     ${shape(1, 6)}
     ${shape(0.82, 2)}
     <g style="color:${hue};" transform="translate(37,11) scale(1.06)">${icon}</g>
@@ -12022,6 +12107,7 @@ function achievementBadgeSvg(d, earned){
       font-size="${fs}" font-weight="900" letter-spacing="0.4"
       style="font-family:inherit;dominant-baseline:middle;">${escHtml(v)}</text>` : ""}
     ${badgeStars(stars, hue)}
+    ${earned ? `<g clip-path="url(#${id})"><rect class="bdg__shine" x="-100" y="0" width="100" height="100" fill="url(#${sid})"/></g>` : ""}
   </svg>`;
 }
 
@@ -12086,12 +12172,17 @@ function renderProgressAchievements(){
 
   const tile = (d) => {
     const earned = unlockedIds.has(d.id);
-    return `<div class="bdg${earned ? "" : " bdg--locked"}" title="${escHtml(d.desc)}">
+    const prog = earned ? null : badgeProgress(d);
+    return `<div class="bdg${earned ? "" : " bdg--locked"}" data-tier="${escHtml(d.tier||'bronze')}" title="${escHtml(d.desc)}">
       ${achievementBadgeSvg(d, earned)}
       <div class="bdg__name">${escHtml(d.name)}</div>
       <div class="bdg__meta">${earned
         ? new Date(earnedAt[d.id]||Date.now()).toLocaleDateString('default',{month:'short',day:'2-digit'})
         : escHtml(d.desc)}</div>
+      ${prog ? `<div class="bdg__prog">
+        <div class="bdg__prog-track"><i style="width:${prog.pct}%;"></i></div>
+        <div class="bdg__prog-label">${prog.have.toLocaleString()} / ${prog.need.toLocaleString()} · ${prog.pct}%</div>
+      </div>` : ""}
     </div>`;
   };
 
