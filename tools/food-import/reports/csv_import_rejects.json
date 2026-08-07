@@ -1,11 +1,11 @@
 [
  {
-  "file": "idli_food_data_1.csv",
+  "file": "idli_food_data.csv",
   "name": "Idli",
   "reason": "already in catalogue"
  },
  {
-  "file": "idli_food_data_1.csv",
+  "file": "idli_food_data.csv",
   "name": "Idli",
   "reason": "already in catalogue"
  },
@@ -26,11 +26,6 @@
  },
  {
   "file": "egg_food_data_1.csv",
-  "name": "Egg Rice",
-  "reason": "serving has no weight (blank)"
- },
- {
-  "file": "egg_food_data_1.csv",
   "name": "Egg Puff",
   "reason": "already in catalogue"
  },
@@ -41,17 +36,7 @@
  },
  {
   "file": "egg_food_data_1.csv",
-  "name": "Egg Cake",
-  "reason": "serving has no weight (blank)"
- },
- {
-  "file": "egg_food_data_1.csv",
   "name": "Egg Vada",
-  "reason": "serving has no weight (blank)"
- },
- {
-  "file": "egg_food_data_1.csv",
-  "name": "Egg Flan",
   "reason": "serving has no weight (blank)"
  },
  {
@@ -86,16 +71,6 @@
  },
  {
   "file": "food_nutrition_all.csv",
-  "name": "Egg and Vegetable Fried 3 :",
-  "reason": "serving has no weight (blank)"
- },
- {
-  "file": "food_nutrition_all.csv",
-  "name": "Egg and Vegetable Rice a",
-  "reason": "serving has no weight (blank)"
- },
- {
-  "file": "food_nutrition_all.csv",
   "name": "Egg Appe :",
   "reason": "serving has no weight (blank)"
  },
@@ -121,8 +96,8 @@
  },
  {
   "file": "food_nutrition_all.csv",
-  "name": "Egg Chapati",
-  "reason": "serving has no weight (blank)"
+  "name": "Egg Cake",
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "food_nutrition_all.csv",
@@ -146,18 +121,13 @@
  },
  {
   "file": "food_nutrition_all.csv",
-  "name": "Egg Flan ;",
-  "reason": "serving has no weight (blank)"
+  "name": "Egg Flan",
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "food_nutrition_all.csv",
-  "name": "Egg Fried Rice = :",
-  "reason": "serving has no weight (blank)"
- },
- {
-  "file": "food_nutrition_all.csv",
-  "name": "Egg Fried Rice with es :",
-  "reason": "serving has no weight (blank)"
+  "name": "Egg Fried Rice",
+  "reason": "already in catalogue"
  },
  {
   "file": "food_nutrition_all.csv",
@@ -167,7 +137,7 @@
  {
   "file": "food_nutrition_all.csv",
   "name": "Egg Mass",
-  "reason": "serving has no weight (blank)"
+  "reason": "missing a macro"
  },
  {
   "file": "food_nutrition_all.csv",
@@ -217,12 +187,7 @@
  {
   "file": "food_nutrition_all.csv",
   "name": "Egg Roti",
-  "reason": "serving has no weight (blank)"
- },
- {
-  "file": "food_nutrition_all.csv",
-  "name": "Egg Roti with Oil",
-  "reason": "serving has no weight (blank)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "food_nutrition_all.csv",
@@ -233,11 +198,6 @@
   "file": "food_nutrition_all.csv",
   "name": "Egg stew",
   "reason": "duplicate of a more trusted row"
- },
- {
-  "file": "food_nutrition_all.csv",
-  "name": "Egg Stuffed Roti",
-  "reason": "serving has no weight (blank)"
  },
  {
   "file": "food_nutrition_all.csv",
@@ -333,16 +293,6 @@
   "file": "food_nutrition_all.csv",
   "name": "Recipe } EQQ",
   "reason": "unreadable name"
- },
- {
-  "file": "food_nutrition_all.csv",
-  "name": "Rice with Egg a",
-  "reason": "serving has no weight (blank)"
- },
- {
-  "file": "food_nutrition_all.csv",
-  "name": "Vegetable Ginger Egg Fried a :",
-  "reason": "serving has no weight (blank)"
  },
  {
   "file": "food_nutrition_all.csv",
@@ -777,7 +727,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Apple Ber",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -797,7 +747,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Chinese Apple",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -807,7 +757,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Green Apple",
-  "reason": "serving has no weight (1 medium)"
+  "reason": "already in catalogue"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -833,11 +783,6 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Cold Pressed Orange Juice",
   "reason": "energy 13 does not match macros 175"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Coorg Orange",
-  "reason": "serving has no weight (1 fruit)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -876,18 +821,8 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Malta Oranges",
-  "reason": "serving has no weight (1 fruit)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Nagpur Orange",
-  "reason": "serving has no weight (1 fruit)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Orange",
-  "reason": "serving has no weight (1 fruit)"
+  "reason": "already in catalogue"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -902,7 +837,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Orange Bread",
-  "reason": "carbs 133 per 100 g is out of range"
+  "reason": "calories 948 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -912,12 +847,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Orange Cake",
-  "reason": "calories 907 per 100 g is out of range"
+  "reason": "calories 1016 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Orange Candy",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "energy 18 does not match macros 176"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -926,33 +861,8 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Orange Eggs",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Orange Fruit",
-  "reason": "serving has no weight (1 fruit)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Orange Gola",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Orange Jam",
   "reason": "missing a macro"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Orange Jello",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Orange Jelly",
-  "reason": "serving has no weight (1 piece)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -987,7 +897,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Orange Pound Cake",
-  "reason": "calories 907 per 100 g is out of range"
+  "reason": "calories 1016 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1022,7 +932,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Orange Tart",
-  "reason": "calories 1064 per 100 g is out of range"
+  "reason": "calories 1192 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1032,12 +942,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Orange Toffee",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "energy 18 does not match macros 176"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oranges",
-  "reason": "serving has no weight (1 fruit)"
+  "reason": "already in catalogue"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1067,12 +977,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Fanta Flavored Soda, Strawberry",
-  "reason": "serving has no weight (1 serve)"
+  "reason": "calories 1333 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Fanta Strawberry Soda",
-  "reason": "serving has no weight (1 serve)"
+  "reason": "calories 1333 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1082,17 +992,17 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Sparkling Water, Strawberry, Bubly",
-  "reason": "serving has no weight (1 serve)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Sparkling Water, Strawberry, Clear",
-  "reason": "serving has no weight (1 serve)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "STRAWBERRY",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "calories 1500 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1102,37 +1012,37 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "STRAWBERRY BANANA BLEND",
-  "reason": "serving has no weight (1 serve)"
+  "reason": "energy 80 does not match macros 120"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Strawberry Banana Blend, Great",
-  "reason": "serving has no weight (1 serve)"
+  "reason": "energy 80 does not match macros 120"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Strawberry Cake",
-  "reason": "calories 1689 per 100 g is out of range"
+  "reason": "calories 1892 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Strawberry Cone",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "calories 1417 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Strawberry Cone Ice Cream",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "calories 1417 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Strawberry Flan",
-  "reason": "serving has no weight (1 serve)"
+  "reason": "calories 4258 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "STRAWBERRY FLAVOR SODA",
-  "reason": "serving has no weight (1 serve)"
+  "reason": "calories 1333 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1142,7 +1052,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Strawberry Ice Cream Cone",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "calories 1417 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1187,7 +1097,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "STRAWBERRY SPARKLING WATER",
-  "reason": "serving has no weight (1 serve)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1211,23 +1121,13 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Strawberry, Dannon",
-  "reason": "serving has no weight (1 serve)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Strawberry, Kellogg's",
-  "reason": "serving has no weight (1 serve)"
+  "reason": "calories 1500 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Strawberry, Raw (USDA)",
   "reason": "serving has no weight (1 whole)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "YOGURT, STRAWBERRY",
-  "reason": "serving has no weight (1 serve)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1246,18 +1146,8 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Chewing Gum, Fruits Flavour, Center",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Fruits & Honey Seed Mix, Sainsbury's",
   "reason": "energy 41 does not match macros 231"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Fruits & Plants, Grape and Rose",
-  "reason": "serving has no weight (1 piece)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1276,16 +1166,6 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Fruits Fitbar - Kalbe",
-  "reason": "serving has no weight (1 serve)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Fruits Flavour, Center Fruit",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Fruits Nuts and Honey, Gem",
   "reason": "energy 49 does not match macros 211"
  },
@@ -1298,11 +1178,6 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Fruits Strained Yoghurt, Strawberry",
   "reason": "missing a macro"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Fruits Strained Yoghurt, Vanilla, Fage",
-  "reason": "serving has no weight (1 serve)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1381,23 +1256,8 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Nuts Bar",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Nuts Bar, Kirkland Signature",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Nuts Cluster",
   "reason": "serving has no weight (1 cluster)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Nuts Crisp, Twinfish",
-  "reason": "serving has no weight (1 piece)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1426,18 +1286,8 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Nuts Pakoda",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Nuts Protein Ball",
   "reason": "serving has no weight (blank)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Nuts, Almond Fresh",
-  "reason": "serving has no weight (1 piece)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1472,7 +1322,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Nuts, pecans",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1497,7 +1347,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Pecan Nuts",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1531,18 +1381,8 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Bread Aloo Tikki",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Bread and Jam",
   "reason": "energy 19 does not match macros 118"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Bread Bada",
-  "reason": "serving has no weight (1 serve)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1561,43 +1401,18 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Bread Bonda",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Bread Bun",
   "reason": "energy 161 does not match macros 1893"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Bread Chop",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Bread Cutlet",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Bread Dahi Vada",
-  "reason": "serving has no weight (1 serve)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Bread Dosa",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "carbs 127 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Bread Egg",
-  "reason": "serving has no weight (1 bread)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Bread Idli",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "calories 1088 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1611,18 +1426,13 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Bread Malpua",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Bread Pakoda",
   "reason": "serving has no weight (1 Vv)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Bread Pakora With Brown Bread",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "calories 1024 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1631,23 +1441,8 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Bread Potato Tikki",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Bread Pua",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Bread Pudla",
   "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Bread Roast",
-  "reason": "serving has no weight (1 piece)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1671,13 +1466,8 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Bread Vada",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Bread with Egg",
-  "reason": "serving has no weight (1 bread)"
+  "reason": "calories 1088 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1692,12 +1482,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Brown Bread Pakora",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "calories 1024 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Brown Bread Pakora with Potato",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "calories 1024 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1717,17 +1507,17 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg and Bread",
-  "reason": "serving has no weight (1 bread)"
+  "reason": "calories 1088 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg bread",
-  "reason": "serving has no weight (1 bread)"
+  "reason": "calories 1088 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg with Bread",
-  "reason": "serving has no weight (1 bread)"
+  "reason": "calories 1088 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1736,23 +1526,13 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Homemade Bread Malpua",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Kissan Jam-and Bread",
   "reason": "energy 19 does not match macros 118"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Multigrain Bread, Bon & Bread",
-  "reason": "serving has no weight (1 iA)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Plain Bread Roll",
-  "reason": "serving has no weight (1 bread)"
+  "reason": "energy 212 does not match macros 1950"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1767,7 +1547,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Potato Bread Roll",
-  "reason": "serving has no weight (1 bread)"
+  "reason": "energy 212 does not match macros 1950"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1807,7 +1587,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "White Bread and Boiled Egg",
-  "reason": "serving has no weight (1 bread)"
+  "reason": "calories 1088 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1822,7 +1602,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "White Bread with Egg",
-  "reason": "serving has no weight (1 bread)"
+  "reason": "calories 1088 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1851,23 +1631,8 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Bun Cha",
-  "reason": "serving has no weight (1 serve)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Bun Coklat",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Bun Dosa",
   "reason": "energy 16 does not match macros 123"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Bun Egg",
-  "reason": "serving has no weight (1 piece)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1896,18 +1661,13 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Bun Rieu Cua",
-  "reason": "serving has no weight (1 serve)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Bun Samosa",
   "reason": "serving has no weight (1 Vv)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Bun Tikki",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "carbs 111 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1917,7 +1677,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Bun with Jam",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "carbs 133 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1932,7 +1692,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Bun with Tikki",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "carbs 111 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -1946,23 +1706,13 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Chocolate Bun",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Chocolate Stuffed Bun",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Buns",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Stuffed Buns",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2031,11 +1781,6 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Kanda Paratha",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Kerala Parotta",
   "reason": "already in catalogue"
  },
@@ -2066,16 +1811,6 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Onion Paratha",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Onion Parotta",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Paneer kizhi parotta",
   "reason": "serving has no weight (1 kizhi)"
  },
@@ -2086,16 +1821,6 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Pyaaz ka Paratha",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Pyaz Paratha",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Roti Parotta",
   "reason": "energy 299 does not match macros 466"
  },
@@ -2103,11 +1828,6 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Sri Lankan Paratha",
   "reason": "energy 154 does not match macros 494"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Stuffed Onion Paratha",
-  "reason": "serving has no weight (1 piece)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2128,11 +1848,6 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Wheat Kothu Parotta",
   "reason": "missing a macro"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Wheat Onion Paratha",
-  "reason": "serving has no weight (1 piece)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2327,7 +2042,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Baked Sponge Tape",
-  "reason": "carbs 111 per 100 g is out of range"
+  "reason": "carbs 124 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2352,7 +2067,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Cake Fudge",
-  "reason": "calories 1821 per 100 g is out of range"
+  "reason": "calories 2040 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2422,12 +2137,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Cake Tapai",
-  "reason": "carbs 111 per 100 g is out of range"
+  "reason": "carbs 124 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Cake Tape",
-  "reason": "carbs 111 per 100 g is out of range"
+  "reason": "carbs 124 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2457,7 +2172,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Chocolate Fudge Cake",
-  "reason": "calories 1821 per 100 g is out of range"
+  "reason": "calories 2040 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2472,7 +2187,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Fermented Cassava Cake",
-  "reason": "carbs 111 per 100 g is out of range"
+  "reason": "carbs 124 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2521,16 +2236,6 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Bhuna Chicken Roll",
-  "reason": "serving has no weight (1 roll)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Bhuna Chicken Wrap",
-  "reason": "serving has no weight (1 roll)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Boneless Chicken Drumstick",
   "reason": "serving has no weight (1 drumstick)"
  },
@@ -2543,11 +2248,6 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Chicken",
   "reason": "duplicate of a more trusted row"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Chicken Ada",
-  "reason": "serving has no weight (1 piece)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2567,7 +2267,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Chicken Egg",
-  "reason": "serving has no weight (1 medium)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2578,26 +2278,6 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Chicken Hoagie",
   "reason": "serving has no weight (1 sandwich)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Chicken Hot Pockets",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Chicken Jumbo Roll",
-  "reason": "serving has no weight (1 roll)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Chicken Keema Pav Bhaji",
-  "reason": "serving has no weight (1 serving)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Chicken KFC",
-  "reason": "serving has no weight (1 piece)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2617,22 +2297,17 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Chicken Noodles with Chicken Gravy",
-  "reason": "serving has no weight (1 serve)"
+  "reason": "energy 314 does not match macros 1356"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Chicken Noodles with Gravy",
-  "reason": "serving has no weight (1 serve)"
+  "reason": "energy 314 does not match macros 1356"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Chicken Pau",
   "reason": "serving has no weight (1 pau)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Chicken Pav",
-  "reason": "serving has no weight (1 serving)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2643,11 +2318,6 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Chicken Puff Pastry",
   "reason": "serving has no weight (1 puff)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Chicken Roll without Mayonnaise",
-  "reason": "serving has no weight (1 roll)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2666,11 +2336,6 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Chicken Tender, Krispy Krunchy",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Chicken, broilers or fryers, leg, meat",
   "reason": "serving has no weight (1 drumstick)"
  },
@@ -2681,38 +2346,8 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Fried Chicken KFC",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Homemade Chicken Roll",
-  "reason": "serving has no weight (1 roll)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Homemade Chicken Sub",
   "reason": "serving has no weight (1 sandwich)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Hot & Crispy Chicken, KFC",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "KFC Chicken",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "KFC Fried Chicken",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Krispy Krunchy Chicken Tenders",
-  "reason": "serving has no weight (1 piece)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2856,38 +2491,8 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Basa Fish Cakes",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Basa Fish Cutlet",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Boiled Fish Ball",
-  "reason": "serving has no weight (1 fish)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Boneless Fish Fry",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Fish 65",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Fish Ada",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Fish Ball",
-  "reason": "serving has no weight (1 fish)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2898,11 +2503,6 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Fish Batter Fry",
   "reason": "serving has no weight (1 fillet)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Fish Cake",
-  "reason": "serving has no weight (1 piece)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -2941,11 +2541,6 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Fish Masala Fry",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Fish Munia",
   "reason": "serving has no weight (1 fillet)"
  },
@@ -2966,11 +2561,6 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Fish Pate",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Fish Pita",
   "reason": "serving has no weight (1 pita)"
  },
@@ -2978,16 +2568,6 @@
   "file": "IGNYT_master_nutrition.csv",
   "name": "Fish Potato Patty",
   "reason": "serving has no weight (1 cutlet)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Fish Roll",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Fish Sixty Five",
-  "reason": "serving has no weight (1 piece)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -3031,43 +2611,13 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Fishball",
-  "reason": "serving has no weight (1 fish)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Fishballs",
-  "reason": "serving has no weight (1 fish)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Fishcake",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Fried Fish",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Fried Fish Roll",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Indonesian Steamed Mackerel Fish",
-  "reason": "serving has no weight (1 fish)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Masala Fish Fry",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Neymeen Fish Fry",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -3077,32 +2627,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Seer Fish Fry",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Steamed Fish Ball",
-  "reason": "serving has no weight (1 fish)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Steamed Fish Momo",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "already in catalogue"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "t=) RECIDEG Bee",
   "reason": "unreadable name"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Vanjaram Fish Fry",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "White Fish Ball",
-  "reason": "serving has no weight (1 fish)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -3366,11 +2896,6 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Ragi Omelette",
-  "reason": "serving has no weight (1 Vv)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Sardines Omelette",
   "reason": "serving has no weight (1 Vv)"
  },
@@ -3437,17 +2962,17 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Boiled Egg with Yolk",
-  "reason": "serving has no weight (1 large)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Boiled Eggs",
-  "reason": "serving has no weight (1 large)"
+  "reason": "already in catalogue"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Bun Egg",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -3462,12 +2987,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Chicken Egg",
-  "reason": "serving has no weight (1 medium)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Cooked Egg",
-  "reason": "serving has no weight (1 large)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -3482,7 +3007,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg (Whole)",
-  "reason": "serving has no weight (1 medium)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -3491,8 +3016,13 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg and Vegetable Rice",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Appe",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -3517,37 +3047,37 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Buns",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Cake",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Chapati",
-  "reason": "serving has no weight (blank)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Chop",
-  "reason": "serving has no weight (1 chop)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Chops",
-  "reason": "serving has no weight (1 chop)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Egg Custard Pie",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "energy 159 does not match macros 318"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Dosa with Oil",
   "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Flan",
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -3597,22 +3127,22 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Paddu",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Paniyaram",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Pav",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Pie",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -3622,37 +3152,42 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Ponganalu",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Puff",
-  "reason": "serving has no weight (1 puff)"
+  "reason": "already in catalogue"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Puff in Air Fryer",
-  "reason": "serving has no weight (1 puff)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Puff Pastry",
-  "reason": "serving has no weight (1 puff)"
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Rice",
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Roll",
-  "reason": "serving has no weight (1 roll)"
+  "reason": "already in catalogue"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Roti",
-  "reason": "serving has no weight (blank)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Roti with Oil",
-  "reason": "serving has no weight (blank)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -3667,7 +3202,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Soup",
-  "reason": "serving has no weight (1 Medium)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -3677,17 +3212,17 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Stuffed Buns",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Stuffed Roti",
-  "reason": "serving has no weight (blank)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Tarts",
-  "reason": "serving has no weight (1 tart)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -3717,27 +3252,22 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg, hen",
-  "reason": "serving has no weight (1 medium)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Half Boiled Egg",
-  "reason": "serving has no weight (1 large)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Half Cook Eggs",
-  "reason": "serving has no weight (1 large)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Hanjuku Egg",
-  "reason": "serving has no weight (1 large)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Malaysian Egg Tart",
-  "reason": "serving has no weight (1 tart)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -3776,23 +3306,18 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Pie, egg custard, commercially",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Plain Egg Thosai",
   "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Raw Egg",
-  "reason": "serving has no weight (1 medium)"
+  "name": "Rice with Egg",
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Soft Boiled Egg",
-  "reason": "serving has no weight (1 large)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -3817,22 +3342,22 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Whole Boiled Egg",
-  "reason": "serving has no weight (1 large)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Whole Egg",
-  "reason": "serving has no weight (1 medium)"
+  "reason": "already in catalogue"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Whole Eggs",
-  "reason": "serving has no weight (1 medium)"
+  "reason": "already in catalogue"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Whole Eggs Boiled",
-  "reason": "serving has no weight (1 large)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4367,12 +3892,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Stuffed Idli",
-  "reason": "serving has no weight (1 stuffed)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Ghee Idli",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "energy 76 does not match macros 113"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4382,7 +3907,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Idli (Plain)",
-  "reason": "serving has no weight (1 idli(regular))"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4392,7 +3917,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Idli and Sambar",
-  "reason": "serving has no weight (blank)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4431,11 +3956,6 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Idli Dnokla",
-  "reason": "serving has no weight (1 piece)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Idli Fry",
   "reason": "duplicate of a more trusted row"
  },
@@ -4462,12 +3982,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Idli Pakoda",
-  "reason": "serving has no weight (1 Vv)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Idli Pindi Dosa",
-  "reason": "serving has no weight (1 medium)"
+  "reason": "energy 147 does not match macros 528"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4482,7 +4002,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Idli Rasam",
-  "reason": "serving has no weight (1 serve)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4492,7 +4012,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Idli Rava Dosa",
-  "reason": "serving has no weight (1 medium)"
+  "reason": "energy 161 does not match macros 537"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4502,7 +4022,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Idli Sambar",
-  "reason": "serving has no weight (blank)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4512,7 +4032,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Idli Sandwich",
-  "reason": "serving has no weight (1 sandwich)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4542,12 +4062,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Idli with Egg",
-  "reason": "serving has no weight (1 stuffed)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Idli with Ghee",
-  "reason": "serving has no weight (1 piece)"
+  "reason": "energy 76 does not match macros 113"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4572,7 +4092,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Minapappu Idli",
-  "reason": "serving has no weight (1 idli(regular))"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4582,7 +4102,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Rice Idli",
-  "reason": "serving has no weight (1 idli(regular))"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -4592,7 +4112,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Sambar Idli",
-  "reason": "serving has no weight (blank)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5037,7 +4557,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Dairy Free Apple Pie",
-  "reason": "calories 1118 per 100 g is out of range"
+  "reason": "calories 1252 per 100 g is out of range"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5161,11 +4681,6 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Dahi Oats",
-  "reason": "serving has no weight (1.0 WU)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "ew INCOUCIVe",
   "reason": "unreadable name"
  },
@@ -5176,18 +4691,13 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "HONEY & OATS WAFELS, HONEY",
-  "reason": "serving has no weight (1.0 WUdTIt)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Instant Oatmeal with Milk",
   "reason": "serving has no weight (1.0 WU)"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Miso Oats",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "energy 268 does not match macros 608"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5202,7 +4712,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oatmeal with Water",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5217,17 +4727,17 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oats Appe",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oats Bhel",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oats Cake",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5237,12 +4747,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oats Curd",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oats Ladoo",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5252,22 +4762,22 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oats Momo",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oats Momos",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oats Paddu",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oats Poha",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5277,37 +4787,32 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oats Rusk",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "energy 62 does not match macros 7410"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oats Soup",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "energy 75 does not match macros 1050"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oats Unda",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oats Vada",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oats, French Toast, Oats Overnight",
-  "reason": "serving has no weight (1.0 WU)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Oats, Peppermint Mocha",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Oats, S mores, Oats Overnight",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5317,17 +4822,17 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Rye Oats",
-  "reason": "serving has no weight (30.0 WU)"
+  "reason": "energy 100 does not match macros 244"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Salted Oats",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Steel Cut Oats, Stoked Oats",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "missing a macro"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5346,23 +4851,13 @@
  },
  {
   "file": "IGNYT_master_nutrition.csv",
-  "name": "Aloo Biryani",
-  "reason": "serving has no weight (1.0 WU)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
   "name": "Ayam Beriani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Banana Flower Biryani",
-  "reason": "serving has no weight (1.0 WU)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Beef Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5372,7 +4867,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Biryani Ikan",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5387,22 +4882,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Biryani Rice",
-  "reason": "serving has no weight (210.0 WU)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Biryani Rice and Grilled Chicken",
-  "reason": "serving has no weight (1.0 WU)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Biryani Rice with Dates",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Biryani Rice without Meat",
-  "reason": "serving has no weight (210.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5412,22 +4897,17 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Dondakaya Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Egg Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "energy 149 does not match macros 503"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Fish Biryani",
-  "reason": "serving has no weight (1.0 WU)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Homemade Fish Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "already in catalogue"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5437,87 +4917,72 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Ivy Gourd Biryani",
-  "reason": "serving has no weight (1.0 WU)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Karachi Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Keema Ball Biryani without Oil",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Keema Mutti Biryani without Oil",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Kovakkai Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Malaysian Beef Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "energy 270 does not match macros 999"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Malaysian Chicken Biryani",
-  "reason": "serving has no weight (1.0 WU)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Malaysian Chicken Biryani Rice",
-  "reason": "serving has no weight (250.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Malaysian Fish Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Meal Maker Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Millet Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Millet Vegetable Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Mushroom Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Muttai Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "energy 149 does not match macros 2400"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Mutton Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "already in catalogue"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Mutton Dum Biryani",
-  "reason": "serving has no weight (1.0 WU)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Nasi Ayam Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5527,12 +4992,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Nasi Beriani Ayam",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Nasi Beriani Daging",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "energy 270 does not match macros 999"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5547,17 +5012,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Nasi Biryani Ayam",
-  "reason": "serving has no weight (1.0 WU)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Nasi Biryani Ayam Bakar",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Nasi Biryani Ayam, Brahim's",
-  "reason": "serving has no weight (230.0 WU)"
+  "reason": "energy 410 does not match macros 1464"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5567,12 +5027,12 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Nasi Biryani Daging",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "energy 270 does not match macros 999"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Nasi Biryani Ikan",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5582,72 +5042,62 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Nasi Biryani Udang",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Paneer Tikka Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "energy 189 does not match macros 0"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Pork Biryani",
-  "reason": "serving has no weight (1.0 WU)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Potato Biryani",
-  "reason": "serving has no weight (1.0 WU)"
- },
- {
-  "file": "IGNYT_master_nutrition.csv",
-  "name": "Potato Dum Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Soya Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Soya Chunk Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Spring Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "energy 94 does not match macros 183"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Telur Beriani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "energy 149 does not match macros 2400"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Tindora Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Tofu Biryani",
-  "reason": "serving has no weight (210.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Vazhaipoo Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Vegetable Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "already in catalogue"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Vegetable Dum Biryani",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5697,7 +5147,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Alcoholic Popsicle",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5802,7 +5252,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Tiramisu without Alcohol",
-  "reason": "serving has no weight (80.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",
@@ -5817,7 +5267,7 @@
  {
   "file": "IGNYT_master_nutrition.csv",
   "name": "Vanilla extract, imitation, alcohol",
-  "reason": "serving has no weight (1.0 WU)"
+  "reason": "duplicate of a more trusted row"
  },
  {
   "file": "IGNYT_master_nutrition.csv",

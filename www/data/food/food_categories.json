@@ -13,7 +13,7 @@
  },
  {
   "name": "Biriyani",
-  "count": 37
+  "count": 48
  },
  {
   "name": "Branded Biscuits",
@@ -53,7 +53,7 @@
  },
  {
   "name": "Bread",
-  "count": 48
+  "count": 62
  },
  {
   "name": "Breakfast Brands",
@@ -61,7 +61,7 @@
  },
  {
   "name": "Bun",
-  "count": 34
+  "count": 40
  },
  {
   "name": "Cake",
@@ -77,7 +77,7 @@
  },
  {
   "name": "Chicken",
-  "count": 48
+  "count": 64
  },
  {
   "name": "Coffee, Tea & Hot Beverages",
@@ -109,7 +109,7 @@
  },
  {
   "name": "Egg",
-  "count": 40
+  "count": 47
  },
  {
   "name": "Eggs",
@@ -121,7 +121,7 @@
  },
  {
   "name": "Fish",
-  "count": 19
+  "count": 40
  },
  {
   "name": "Fish (by Species)",
@@ -133,7 +133,7 @@
  },
  {
   "name": "Fruits",
-  "count": 108
+  "count": 113
  },
  {
   "name": "Gym Supplements",
@@ -141,7 +141,7 @@
  },
  {
   "name": "Idli",
-  "count": 2
+  "count": 3
  },
  {
   "name": "Juice",
@@ -161,7 +161,7 @@
  },
  {
   "name": "Nuts",
-  "count": 13
+  "count": 18
  },
  {
   "name": "Nuts & Seeds",
@@ -169,7 +169,7 @@
  },
  {
   "name": "Oats",
-  "count": 18
+  "count": 21
  },
  {
   "name": "Oats, Cereals & Healthy Breakfast Foods",
@@ -181,19 +181,19 @@
  },
  {
   "name": "Omelette",
-  "count": 6
+  "count": 7
  },
  {
   "name": "Orange",
-  "count": 19
+  "count": 27
  },
  {
   "name": "Other",
-  "count": 71
+  "count": 74
  },
  {
   "name": "Parotta",
-  "count": 36
+  "count": 43
  },
  {
   "name": "Pasta, Noodles & International Staples",
@@ -245,7 +245,7 @@
  },
  {
   "name": "Strawberry",
-  "count": 19
+  "count": 21
  },
  {
   "name": "Vegetables",

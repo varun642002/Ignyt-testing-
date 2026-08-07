@@ -70,13 +70,62 @@ SERVING = re.compile(r"([\d.]+)\s*(g|gram|grams|oz|ml|kg)\b", re.I)
 # 150 ml serving bowl, a cup and a glass are 240 ml — not numbers chosen to make anything fit.
 HOUSEHOLD_G = {
     "katori": 150, "cup": 240, "glass": 240, "bowl": 200,
-    "slice": 28, "bun": 45, "paratha": 60, "parotta": 60, "dosa": 60,
-    "chapati": 40, "roti": 40, "idli": 50, "egg": 50,
+    "slice": 25, "bun": 45, "paratha": 60, "parotta": 60, "dosa": 80,
+    "chapati": 35, "roti": 35, "idli": 50, "egg": 50,
     "tablespoon": 15, "tbsp": 15, "teaspoon": 5, "tsp": 5,
 }
-# Deliberately absent: piece, serve, pack, medium, small, large. There is no standard weight for
-# "1 piece" that holds across a dataset spanning cake, fish and fruit, so those stay rejected.
 HOUSEHOLD = re.compile(r"^\s*([\d.]+)?\s*(" + "|".join(HOUSEHOLD_G) + r")s?\s*$", re.I)
+
+# "1 PIECE" HAS NO WEIGHT — "1 PIECE OF WHAT" DOES.
+#
+# A piece of cake, a piece of fish and a piece of fruit have nothing in common, which is why
+# these units were rejected outright at first. But the CSV gives a CATEGORY beside every row,
+# and that names the food: "1 medium" in Apple is a medium apple, "1 piece" in Fish is a fish
+# portion. With the category the question becomes answerable, and each of these is a published
+# reference weight rather than a guess:
+#
+#   apple 182 g, orange 131 g, strawberry 12 g, banana 118 g, bread slice 25 g,
+#   large egg 50 g without shell, chicken breast 174 g, fish serving 170 g, nuts 30 g
+#     - USDA / average-weight reference chart, and the ICMR-NIN Indian portion guide for the
+#       roti, dosa and katori figures above.
+#
+# Categories left out on purpose: Cake, Juice, Soup, Curry, Noodles, Dairy, Mutton, Omelette,
+# Vegetables. A "piece" of curry or a "pack" of noodles has no published standard, and inventing
+# one to raise the import count is the thing this file exists to avoid.
+CATEGORY_PIECE_G = {
+    "apple": 182, "orange": 131, "strawberry": 12, "fruits": 118,
+    "egg": 50, "bread": 25, "bun": 45, "parotta": 60, "idli": 53,
+    "fish": 170, "chicken": 174, "nuts": 30,
+}
+# "small" and "large" are deliberately NOT here. The reference weights above are for a MEDIUM
+# item, and the source distinguishes the three — applying 182 g to a row that says "1 small
+# apple" is knowably wrong, not merely uncertain, so those rows stay rejected.
+VAGUE = re.compile(r"^\s*([\d.]+)?\s*(piece|serve|serving|medium|fruit|fish|bread|roll|nos?|unit)s?\s*$", re.I)
+
+# The category has to be CONFIRMED BY THE NAME before its weight is used. These categories are
+# search groupings, not identities: everything matching the word lands in the bucket, so
+# "Apple Rumani Mango" sits under Apple. Requiring the word in the name is what stops a mango
+# being weighed as an apple. Paratha and parotta are the same bread spelled two ways.
+NAME_MUST_CONTAIN = {"fruits": "fruit", "nuts": "nut", "parotta": "parat|parot"}
+
+# ...and containing the word is still not enough. "Custard Apple" and "Apple Rumani Mango" both
+# contain "apple" and are neither of them an apple — a custard apple is an annona and the other
+# is a mango. A search grouping will always collect names like this, so the few that carry the
+# word without being the food are named here rather than left to a cleverer rule that would
+# quietly get some other pair wrong.
+# Plain substrings rather than a pattern. This started as a regex and was written into this
+# file twice with its word boundaries silently turned into literal backspace bytes by the
+# shell doing the writing — it compiled, matched nothing, and let a mango through weighed as
+# an apple. There is nothing here that needed a regex.
+NOT_REALLY = ("custard apple", "wood apple", "elephant apple", "rose apple",
+              "star apple", "sugar apple", "pineapple", "pine apple", "mango",
+              "watermelon", "water melon", "muskmelon", "musk melon")
+
+
+def misfiled(name):
+    """True when the name carries the category word without being that food."""
+    low = re.sub(r"[^a-z]+", " ", (name or "").lower())
+    return any(t in low for t in NOT_REALLY)
 
 # Trailing debris the scan left on names: "Egg Roll :", "Oats Idli ie", "Dosa with Egg [",
 # "Meal Maker Biryani a", "Spring Biryani 7". Stripped, not rejected — the name is still good.
@@ -94,7 +143,7 @@ def num(v):
     return f if f == f and abs(f) != float("inf") else None
 
 
-def serving_grams(s):
+def serving_grams(s, category=None, recovered=None, name=None):
     """Mass of one serving, or None when the source gave a household unit.
 
     ml is treated as grams. That is exact for water and close enough for the drinks in these
@@ -115,6 +164,21 @@ def serving_grams(s):
         if count <= 0:
             return None
         return (count * HOUSEHOLD_G[unit], unit)   # weight estimated — see HOUSEHOLD_G
+
+    # A weight this same food carries in another file. Sourced from the dataset, so it is a
+    # recovery rather than an estimate — the OCR simply lost the unit on this copy of the row.
+    if recovered:
+        return (recovered, None)
+
+    v = VAGUE.match((s or "").strip())
+    if v:
+        cat = (category or "").strip().lower()
+        if cat in CATEGORY_PIECE_G and name:
+            want = NAME_MUST_CONTAIN.get(cat, cat.rstrip("s"))
+            if re.search(want, name, re.I) and not misfiled(name):
+                count = float(v.group(1)) if v.group(1) else 1.0
+                if count > 0:
+                    return (count * CATEGORY_PIECE_G[cat], v.group(2).lower())
     return None
 
 
@@ -164,7 +228,7 @@ def read_rows(path):
         return list(csv.DictReader(fh))
 
 
-def convert(row, source_label, trust):
+def convert(row, source_label, trust, recovered=None):
     """One CSV row to a catalogue entry, or a (None, reason) rejection."""
     name = clean_name(row.get("food_name"))
     if not name:
@@ -177,7 +241,7 @@ def convert(row, source_label, trust):
     # the flag is recorded on the entry so the provenance is not lost.
     flag = (row.get("flag") or "").strip()
 
-    resolved = serving_grams(row.get("serving_size"))
+    resolved = serving_grams(row.get("serving_size"), row.get("category"), recovered, name)
     if resolved is None:
         return None, "serving has no weight (" + ((row.get("serving_size") or "").strip() or "blank") + ")"
     grams, household = resolved
@@ -220,10 +284,12 @@ def convert(row, source_label, trust):
         "sourceNote": source_label
                       + (" [source flagged: %s]" % flag if flag else "")
                       + (" [1 %s taken as %d g — standard portion, not from the source]"
-                         % (household, HOUSEHOLD_G[household]) if household else ""),
+                         % (household, grams) if household else "")
+                      + (" [serving weight recovered from the same food in another file]"
+                         if recovered and not household else ""),
         # The serving the source actually measured, so logging it returns the source's own
         # figures rather than anything derived.
-        "portions": ([{"unit": household, "grams": HOUSEHOLD_G[household],
+        "portions": ([{"unit": household, "grams": round(grams, 1),
                        "estimated": True}] if household else None),
         "portionEstimated": bool(household),
         "_trust": trust,                  # dropped before writing
@@ -245,6 +311,36 @@ def main():
     # A file naming ONE food family was hand-checked and is trusted over the bulk scrape, which
     # holds corrupted duplicates of the same rows — "Egg Yolk" is protein 2.7 in egg_food_data
     # and 276 in food_nutrition_all. Higher wins a name collision.
+    # SERVING WEIGHTS RECOVERED FROM THE DATA ITSELF, built before anything is converted.
+    #
+    # The scan lost the unit on a lot of rows — 111 read "1.0 WU" and 61 read "1 Vv", which
+    # mean nothing. But the same food often appears in another of these files with its weight
+    # intact: "Dahi Oats, 121 kcal" is "1.0 WU" in the master file and "130 g" in
+    # food_nutrition_all. Taking the weight from there is a recovery, not an estimate.
+    #
+    # Two indexes, because a name is not always intact either. The macro signature —
+    # calories + protein + carbs — identifies the same row when its NAME was the thing the scan
+    # mangled, and is specific enough that a collision would have to agree on three numbers.
+    by_name, by_sig = {}, {}
+    for path in args.csvs:
+        for r in read_rows(Path(path)):
+            got = serving_grams(r.get("serving_size"))
+            if not got:
+                continue
+            w = got[0]
+            by_name.setdefault(key(clean_name(r.get("food_name")) or ""), w)
+            sig = tuple((r.get(k) or "").strip() for k in ("calories", "protein_g", "carbs_g"))
+            if all(sig):
+                by_sig.setdefault(sig, w)
+    by_name.pop("", None)
+
+    def recover(r):
+        w = by_name.get(key(clean_name(r.get("food_name")) or ""))
+        if w:
+            return w
+        sig = tuple((r.get(k) or "").strip() for k in ("calories", "protein_g", "carbs_g"))
+        return by_sig.get(sig) if all(sig) else None
+
     accepted, rejects = {}, []
     for path in args.csvs:
         p = Path(path)
@@ -253,7 +349,7 @@ def main():
         label = "HealthifyMe OCR (%s)" % p.name
         ok = 0
         for r in rows:
-            food, why = convert(r, label, trust)
+            food, why = convert(r, label, trust, recover(r))
             if not food:
                 rejects.append({"file": p.name, "name": (r.get("food_name") or "").strip()[:60],
                                 "reason": why})
