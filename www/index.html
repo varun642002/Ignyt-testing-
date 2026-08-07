@@ -54,6 +54,46 @@
   if (document.documentElement.getAttribute("data-platform") === "web") {
     document.addEventListener("DOMContentLoaded", apply, { once: true });
   }
+
+  /* =========================================================
+     SAFE-AREA REPAIR — only when env() lies.
+
+     THE SYMPTOM. On an iPhone the header was drawn UNDER the status bar: the clock and the
+     battery sat on top of the eyebrow and the header buttons. The CSS is not the cause — one
+     rule owns that padding (css/layout.css) and it already asks for
+     max(calc(var(--safe-top) + 8px), 20px). It came out at the 20px floor, which only happens
+     if env(safe-area-inset-top) reported 0 on a device that plainly has a cut-out. The meta
+     viewport carries viewport-fit=cover, so it should not have.
+
+     WHY MEASURE RATHER THAN ASSUME. Hard-coding a value per platform would be wrong the day
+     env() starts working, and wrong forever on the iPhones that report correctly. So the inset
+     is READ from a probe element, and this only substitutes a value when the reading is 0 on a
+     device whose screen is tall enough to have a notch or an island. If env() works, nothing
+     here changes anything: --safe-top keeps its env() definition and the probe simply confirms
+     it. The repair disables itself.
+
+     THE HEIGHT TEST. Every notched iPhone is at least 812 CSS px tall (X, 11, 12 mini); every
+     iPhone that genuinely has a 20px status bar is shorter (SE at 667, 8 Plus at 736). 54px is
+     the Dynamic Island inset, the largest of the modern set — over-padding by a few px on an
+     older notch is invisible, whereas under-padding puts the title back under the clock.
+  ========================================================= */
+  function repairSafeTop() {
+    if (document.documentElement.getAttribute("data-platform") !== "ios") return;
+    var probe = document.createElement("div");
+    probe.style.cssText =
+      "position:fixed;top:0;left:0;width:0;visibility:hidden;pointer-events:none;" +
+      "padding-top:env(safe-area-inset-top,0px)";
+    (document.body || document.documentElement).appendChild(probe);
+    var measured = parseFloat(getComputedStyle(probe).paddingTop) || 0;
+    probe.remove();
+
+    if (measured > 0) return;                       // env() works — leave it alone
+    var tall = Math.max(screen.width, screen.height) >= 812;
+    document.documentElement.style.setProperty("--safe-top", tall ? "54px" : "20px");
+    document.documentElement.setAttribute("data-safe-top-repaired", tall ? "54" : "20");
+  }
+  if (document.body) repairSafeTop();
+  else document.addEventListener("DOMContentLoaded", repairSafeTop, { once: true });
 })();
 </script>
 

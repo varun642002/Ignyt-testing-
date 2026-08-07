@@ -192,6 +192,11 @@ header.app-header::after {
   inset: 0;
   pointer-events: none;
   background-image: var(--gloss-header);
+  /* Follow the header's rounded foot (layout.css). Without this the sheen paints as a square
+     and its corners stick out past the curve — and it cannot be fixed with overflow:hidden on
+     the header, because that would clip the notification dropdown. */
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
 }
 
 /* The header's own children must sit above the sheen — without this the overlay paints over

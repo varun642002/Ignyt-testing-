@@ -77,10 +77,10 @@
 .pg-card__trend.is-up { color:var(--rh-green); }
 .pg-card__trend.is-down { color:var(--rh-red); }
 .pg-card__sub-label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:8px; }
-/* Only where it follows the weekly-goal block. It captions the count in that block, and 8px of
-   air between a number and its own label reads as two unrelated lines. Scoped to the adjacent
-   sibling so the class keeps its spacing everywhere else it is used. */
-.pg-weekly-goal + .pg-card__sub-label { margin-top:4px; }
+/* Inside the weekly-goal block the caption belongs to the number directly above it, so it gets
+   almost no air — 8px between a figure and its own label reads as two unrelated lines. Scoped so
+   the class keeps its normal spacing everywhere else it is used. */
+.pg-weekly-goal .pg-card__sub-label { margin-top:1px; }
 
 .pg-chart-bubble { display:inline-block; margin-top:-26px; margin-left:calc(100% - 46px); background:var(--rh-blue); color:#fff;
   font-size:11px; font-weight:800; padding:3px 8px; border-radius:var(--radius-xs-plus); position:relative; }
@@ -94,9 +94,14 @@
    to 14px — the single largest gap in a card whose content is only 115px tall. Margins between
    siblings belong to one side or the other, not both. */
 .pg-weekly-goal { display:flex; align-items:center; gap:12px; }
-.pg-weekly-goal__count { font-size:22px; font-weight:800; }
+/* The number and its caption as one unit beside the ring. This column is what lets the ring's
+   64px carry both lines instead of only the count, which is where the spare row came from. */
+.pg-weekly-goal__body { min-width:0; }
+.pg-weekly-goal__count { font-size:22px; font-weight:800; line-height:1.1; }
 .pg-weekly-goal__count span { font-size:14px; color:var(--rh-muted); font-weight:700; }
-.pg-weekly-goal__msg { font-size:11px; color:var(--rh-muted); margin-top:6px; line-height:1.4; }
+/* 6px was measured against a card whose content is only ~115px tall; the message is a footnote
+   to the block above, not a separate section. */
+.pg-weekly-goal__msg { font-size:11px; color:var(--rh-muted); margin-top:4px; line-height:1.4; }
 .pg-ring { width:64px; height:64px; border-radius:50%; flex:none; display:grid; place-items:center;
   background:conic-gradient(var(--ring-color,#2563EB) calc(var(--pct,0) * 1%), #EEF1F6 0); }
 .pg-ring__inner { width:50px; height:50px; border-radius:50%; background:var(--rh-card); display:flex; align-items:center; justify-content:center;

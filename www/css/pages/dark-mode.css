@@ -32,7 +32,7 @@
 [data-theme="dark"] .app-header--home-light .title { color:var(--color-text-primary); }
 [data-theme="dark"] .app-header--home-light .page-tools-btn { background:var(--color-surface-elevated); border-color:var(--color-border); color:var(--color-interactive); box-shadow:none; }
 [data-theme="dark"] nav.bottom-nav--home-light {
-  background:rgba(28,27,35,.90) !important; border:1px solid rgba(255,255,255,.08);
+  background:rgba(28,27,35,.34) !important; border:1px solid rgba(255,255,255,.08);
   box-shadow:0 8px 30px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.25);
 }
 [data-theme="dark"] nav.bottom-nav--home-light .nav-btn { color:var(--color-text-secondary); }

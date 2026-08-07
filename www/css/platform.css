@@ -39,10 +39,22 @@
 
    Android keeps the blur, deliberately. Deleting the property outright would have been the
    easier change and the wrong one: the platforms differ here for a reason that holds. */
+/* THE NAV IS THE EXCEPTION NOW, and the reason above is what makes it one. Dropping the blur
+   here was close to free while the bar was painted at 92% opacity — the blur contributed under
+   a tenth of what you saw, so 98% flat looked the same and cost one composited layer instead of
+   a per-frame recomposite.
+
+   The bar is transparent now (layout.css), which inverts that trade completely: the blur is no
+   longer a tenth of the effect, it IS the effect, and it is the only thing holding 11px labels
+   against whatever content scrolls under them. Replacing it with a near-opaque fill would not
+   be an optimisation of a transparent bar, it would be the opposite of one.
+
+   So iOS keeps the blur here and pays for it. The timer overlay below still drops it: that one
+   covers the whole screen and has an opaque surface of its own, so the original reasoning holds
+   there unchanged. */
 html[data-platform="ios"] nav.bottom-nav {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  background: rgba(18, 20, 24, .98);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 /* The Home tab swaps the bar for a lighter variant, and css/pages/dark-mode.css sets that
@@ -50,9 +62,9 @@ html[data-platform="ios"] nav.bottom-nav {
    restates it — the alternative was leaving one tab in five visibly more transparent than the
    rest with its blur removed, which reads as a rendering fault rather than a choice. */
 html[data-platform="ios"] nav.bottom-nav--home-light {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  background: rgba(28, 27, 35, .98) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  background: rgba(28, 27, 35, .34) !important;
 }
 
 html[data-platform="ios"] .timer-overlay {

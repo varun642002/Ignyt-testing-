@@ -22,7 +22,19 @@
    happened three times in this codebase (main's padding vs base.css, the nav background vs
    this file, and here), so the inline copy has been removed rather than fixed. One property,
    one place. */
-header.app-header { padding: max(calc(var(--safe-top) + var(--space-sm)), 20px) var(--space-md) var(--space-sm); }
+header.app-header {
+  padding: max(calc(var(--safe-top) + var(--space-sm)), 20px) var(--space-md) var(--space-sm);
+  /* Rounded foot. Only the bottom two corners: the top pair sit against the physical screen
+     edge, where the device's own corner radius already does the job and a second curve inside
+     it reads as a mistake.
+
+     NOT overflow:hidden to clip the sheen. The header holds the notification bell, whose
+     dropdown opens BELOW it — clipping the box would cut the panel off at the header's edge.
+     The ::after overlay is given the same radius instead, so the gloss follows the curve and
+     the dropdown still escapes. */
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+}
 
 /* THE HEADER SCROLLED AWAY BECAUSE MAIN NEVER SCROLLED. One line, and it is this one.
 
@@ -60,10 +72,19 @@ main { min-height: 0; }
 .hdr-notif-item__time { font-size:11px; color:var(--color-text-secondary); margin-top:2px; }
 /* The bar is a floating pill (see index.html) -- these only re-skin it per theme. No
    border-color here: a docked strip wanted a top border, a pill wants a hairline all the way
-   round, and setting both left a heavier line across the top edge than the other three. */
-nav.bottom-nav { min-height:64px; background:rgba(18,20,24,.92); }
+   round, and setting both left a heavier line across the top edge than the other three.
+
+   TRANSPARENT, so the content scrolls visibly beneath it. What is left is a tint, not a fill:
+   enough to hold white icons and 11px labels against whatever passes under them, and no more.
+   Zero alpha was the literal reading of the request and is the one value that does not work —
+   over a light card the labels disappear entirely, and a navigation bar that is unreadable
+   against some content is a bug however good it looks against the rest.
+
+   The blur is what makes this legible, so it is no longer optional on any platform — see the
+   note in platform.css, which used to switch it off on iOS. */
+nav.bottom-nav { min-height:64px; background:rgba(18,20,24,.34); }
 [data-theme="light"] nav.bottom-nav {
-  background:rgba(255,255,255,.94); border-color:rgba(15,23,42,.08);
+  background:rgba(255,255,255,.40); border-color:rgba(15,23,42,.08);
   box-shadow:0 8px 28px rgba(15,23,42,.12), 0 2px 6px rgba(15,23,42,.06);
 }
 /* On a white pill a white highlight is invisible, so the selected tab tints toward the
