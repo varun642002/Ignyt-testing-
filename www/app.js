@@ -12030,6 +12030,29 @@ function badgeProgress(def){
   return { have, need, pct: Math.max(0, Math.min(99, Math.round(have / need * 100))) };
 }
 
+/* =========================================================
+   BADGE ORNAMENT — laurel, crown and the faceted interior.
+
+   Drawn as paths rather than shipped as images. The reference this follows is rendered 3D art
+   and a vector cannot equal it; what a vector CAN do is carry the same STRUCTURE — a heavy
+   bevelled frame, a dark faceted face, a wreath around the numeral and a crown at the top of
+   the range — so the grid reads as a set of struck medals instead of coloured labels.
+
+   Every ornament is optional and tier-gated. Handing a laurel to every badge would make the
+   first workout look like the five-hundredth, which is the one thing a collection must not do.
+========================================================= */
+
+/** A five-point crown, only ever on the top tiers. */
+function badgeCrown(fill){
+  return `<g class="bdg__crown" transform="translate(50,15)">
+    <path d="M-13,4 L-13,-5 L-7.5,0.5 L-3.5,-7 L0,0 L3.5,-7 L7.5,0.5 L13,-5 L13,4 Z"
+          fill="${fill}" stroke="${fill}" stroke-width="1.1" stroke-linejoin="round"/>
+    <circle cx="-13" cy="-6.5" r="1.7" fill="${fill}"/>
+    <circle cx="0"   cy="-8.6" r="1.9" fill="${fill}"/>
+    <circle cx="13"  cy="-6.5" r="1.7" fill="${fill}"/>
+  </g>`;
+}
+
 function achievementBadgeSvg(d, earned){
   const tier = BADGE_TIERS[d.tier] || BADGE_TIERS.bronze;
   // Star count is the tier. An unknown tier string falls back to one star rather than none,
@@ -12099,14 +12122,39 @@ function achievementBadgeSvg(d, earned){
       ? `<polygon points="${pts}"/>`
       : `<circle cx="50" cy="50" r="47"/>`}</clipPath></defs>
     ${earned ? `<g filter="url(#${bid})">${face}</g>` : ""}
-    ${shape(1, 6)}
-    ${shape(0.82, 2)}
-    <g style="color:${hue};" transform="translate(37,11) scale(1.06)">${icon}</g>
-    <g clip-path="url(#${id})"><rect x="0" y="41" width="100" height="20" fill="${hue}"/></g>
-    ${v ? `<text x="50" y="51" text-anchor="middle" fill="${ink}"
-      font-size="${fs}" font-weight="900" letter-spacing="0.4"
+    ${/* THE FACE. A dark faceted interior inset inside the metal frame, rather than the flat
+          card colour the old badge used. Two overlaid triangles at low opacity give it the
+          shallow "struck plate" break the reference has — enough to catch the light without
+          becoming a pattern you notice. Earned only; a locked badge stays flat. */''}
+    ${earned ? `<g clip-path="url(#${id})">
+        ${pts ? `<polygon points="${pts}" transform="translate(9,9) scale(0.82)" fill="#12131A"/>`
+              : `<circle cx="50" cy="50" r="38.5" fill="#12131A"/>`}
+        <polygon points="0,100 50,34 100,100" fill="#ffffff" fill-opacity=".035"/>
+        <polygon points="0,0 50,52 100,0"    fill="#000000" fill-opacity=".22"/>
+      </g>` : ""}
+    ${/* Three rules rather than two. The reference's depth comes mostly from the frame, and a
+          6px edge with a 2px inner line reads thin at tile size — this adds a mid-weight band
+          between them so the rim has thickness rather than being a coloured outline. */''}
+    ${shape(1, 7)}
+    ${shape(0.90, 3)}
+    ${shape(0.78, 1.5)}
+    ${/* Laurel from silver up, crown from gold up. The bronze badges stay plain, which is what
+          makes the higher ones look earned rather than decorated. */''}
+    ${/* NO LAUREL. It was drawn and removed in the same pass: on a 100x100 face already
+          carrying an icon at the top, a numeral across the middle and a star row at the
+          bottom, there is no radius where a wreath clears all three. Rendered at size it
+          crossed the numeral and read as a smudge rather than an ornament. The tier is
+          already carried by the metal, the crown and the star count; a fourth signal that
+          damages legibility is not worth having. */''}
+    ${earned && stars >= 3 ? badgeCrown(tier.hi) : ""}
+    <g style="color:${earned ? tier.hi : hue};" transform="translate(37,${earned && stars >= 3 ? 21 : 15}) scale(0.92)">${icon}</g>
+    ${v ? `<text x="50" y="53" text-anchor="middle"
+      fill="${earned ? `url(#${gid})` : hue}"
+      stroke="${earned ? tier.lo : "none"}" stroke-width="${earned ? 0.7 : 0}"
+      paint-order="stroke"
+      font-size="${fs + 10}" font-weight="900" letter-spacing="-0.2"
       style="font-family:inherit;dominant-baseline:middle;">${escHtml(v)}</text>` : ""}
-    ${badgeStars(stars, hue)}
+    ${badgeStars(stars, earned ? tier.hi : hue)}
     ${earned ? `<g clip-path="url(#${id})"><rect class="bdg__shine" x="-100" y="0" width="100" height="100" fill="url(#${sid})"/></g>` : ""}
   </svg>`;
 }
