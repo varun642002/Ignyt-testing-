@@ -115,6 +115,29 @@ CATEGORY_PIECE_G = {
 # and a beer is 330 ml, and guessing between them to raise a count is the trade this file exists
 # to refuse.
 UNREADABLE = re.compile(r"^\s*[\d.]*\s*(?:[A-Za-z]{1,3}|WU|Vv|WVICGSUIS)\s*\)?\s*$")
+
+# THE DATASET KNOWS ITS OWN PORTION CONVENTION, which beats anything lookable-up.
+#
+# For the rows left over — mostly a blank serving — the weight is learned from the rows in the
+# SAME CATEGORY that DO carry one: Oats rows that state a weight say 100 g, Biriyani says 124 g,
+# Curry 130 g, Mutton 110 g. That is this source describing its own servings, not an external
+# average imposed on it, and it is measured per run rather than written down here so it stays
+# true if the files change.
+#
+# Only where the category has enough weighed rows to have a median worth the name. Below this
+# the sample says nothing: Bread has ONE weighed row and Bun has three, whose median of 330 g is
+# plainly a bun-based dish rather than a bun.
+MEDIAN_MIN_ROWS = 5
+
+# ALCOHOL CANNOT USE A CATEGORY MEDIAN, and is the clearest case of why the medians are gated.
+# "Alcoholic" spans a 30 ml spirit and a 330 ml beer, so one number for the category is wrong for
+# almost every row in it. The drink is named in the food name, and these are the standard serves.
+ALCOHOL_ML = [
+    (("beer", "lager", "cider", "stout", "ale", "brew"), 330),
+    (("wine", "prosecco", "champagne", "sangria"), 150),
+    (("whisk", "vodka", "gin", "rum", "brandy", "tequila", "liqueur", "raki", "pastis"), 30),
+    (("cocktail", "punch", "mule", "mojito", "glogg", "margarita"), 200),
+]
 # "small" and "large" are deliberately NOT here. The reference weights above are for a MEDIUM
 # item, and the source distinguishes the three — applying 182 g to a row that says "1 small
 # apple" is knowably wrong, not merely uncertain, so those rows stay rejected.
@@ -161,7 +184,7 @@ def num(v):
     return f if f == f and abs(f) != float("inf") else None
 
 
-def serving_grams(s, category=None, recovered=None, name=None):
+def serving_grams(s, category=None, recovered=None, name=None, medians=None):
     """Mass of one serving, or None when the source gave a household unit.
 
     ml is treated as grams. That is exact for water and close enough for the drinks in these
@@ -199,6 +222,18 @@ def serving_grams(s, category=None, recovered=None, name=None):
                 unit = v.group(2).lower() if v.re.groups >= 2 else cat
                 if count > 0:
                     return (count * CATEGORY_PIECE_G[cat], unit)
+
+    cat = (category or "").strip().lower()
+    if cat == "alcoholic" and name:
+        low = name.lower()
+        for words, ml in ALCOHOL_ML:
+            if any(w in low for w in words):
+                return (float(ml), "serve")
+        return None                     # an unnamed drink could be either; leave it out
+
+    # Last resort: what a serving weighs in this category, learned from the rows that say so.
+    if medians and cat in medians:
+        return (medians[cat], "serve")
     return None
 
 
@@ -248,7 +283,7 @@ def read_rows(path):
         return list(csv.DictReader(fh))
 
 
-def convert(row, source_label, trust, recovered=None):
+def convert(row, source_label, trust, recovered=None, medians=None):
     """One CSV row to a catalogue entry, or a (None, reason) rejection."""
     name = clean_name(row.get("food_name"))
     if not name:
@@ -261,7 +296,7 @@ def convert(row, source_label, trust, recovered=None):
     # the flag is recorded on the entry so the provenance is not lost.
     flag = (row.get("flag") or "").strip()
 
-    resolved = serving_grams(row.get("serving_size"), row.get("category"), recovered, name)
+    resolved = serving_grams(row.get("serving_size"), row.get("category"), recovered, name, medians)
     if resolved is None:
         return None, "serving has no weight (" + ((row.get("serving_size") or "").strip() or "blank") + ")"
     grams, household = resolved
@@ -367,6 +402,28 @@ def main():
                 by_sig.setdefault(sig, w)
     by_name.pop("", None)
 
+    # Median serving weight per category, from the rows that state one. Outliers are excluded by
+    # the 5-600 g window: a 1 kg "serving" is a pack size, not a portion.
+    import statistics
+    # ONLY rows the SOURCE weighed feed this. Running serving_grams() here instead would fold in
+    # this file's own katori and cup estimates and the median would then be partly learned from
+    # itself — measured as exactly 150 g, the katori figure, across eight unrelated categories,
+    # including an Idli median of 150 g when an idli is 50 g.
+    seen_cat = {}
+    for path in args.csvs:
+        for r in read_rows(Path(path)):
+            m = SERVING.search(r.get("serving_size") or "")
+            if not m:
+                continue
+            v, unit = float(m.group(1)), m.group(2).lower()
+            w = v * OZ_G if unit == "oz" else v * 1000 if unit == "kg" else v
+            if 5 <= w <= 600:
+                seen_cat.setdefault((r.get("category") or "").strip().lower(), []).append(w)
+    medians = {c: round(statistics.median(v), 1) for c, v in seen_cat.items()
+               if len(v) >= MEDIAN_MIN_ROWS}
+    print("learned a serving weight for %d categories (>= %d weighed rows each)"
+          % (len(medians), MEDIAN_MIN_ROWS))
+
     def recover(r):
         w = by_name.get(key(clean_name(r.get("food_name")) or ""))
         if w:
@@ -382,7 +439,7 @@ def main():
         label = "HealthifyMe OCR (%s)" % p.name
         ok = 0
         for r in rows:
-            food, why = convert(r, label, trust, recover(r))
+            food, why = convert(r, label, trust, recover(r), medians)
             if not food:
                 rejects.append({"file": p.name, "name": (r.get("food_name") or "").strip()[:60],
                                 "reason": why})

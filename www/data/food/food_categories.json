@@ -1,7 +1,7 @@
 [
  {
   "name": "Alcoholic",
-  "count": 3
+  "count": 13
  },
  {
   "name": "Baking Ingredients & Flours",
@@ -13,7 +13,7 @@
  },
  {
   "name": "Biriyani",
-  "count": 48
+  "count": 58
  },
  {
   "name": "Branded Biscuits",
@@ -65,7 +65,7 @@
  },
  {
   "name": "Cake",
-  "count": 23
+  "count": 29
  },
  {
   "name": "Cakes & Cake Varieties",
@@ -73,11 +73,11 @@
  },
  {
   "name": "Cheera",
-  "count": 24
+  "count": 27
  },
  {
   "name": "Chicken",
-  "count": 68
+  "count": 74
  },
  {
   "name": "Coffee, Tea & Hot Beverages",
@@ -89,11 +89,11 @@
  },
  {
   "name": "Curry",
-  "count": 28
+  "count": 42
  },
  {
   "name": "Dairy Products",
-  "count": 67
+  "count": 72
  },
  {
   "name": "Dal & Legumes",
@@ -121,7 +121,7 @@
  },
  {
   "name": "Fish",
-  "count": 41
+  "count": 49
  },
  {
   "name": "Fish (by Species)",
@@ -149,7 +149,7 @@
  },
  {
   "name": "Mutton",
-  "count": 41
+  "count": 56
  },
  {
   "name": "Mutton/Lamb",
@@ -157,11 +157,11 @@
  },
  {
   "name": "Noodles",
-  "count": 34
+  "count": 44
  },
  {
   "name": "Nuts",
-  "count": 18
+  "count": 20
  },
  {
   "name": "Nuts & Seeds",
@@ -169,7 +169,7 @@
  },
  {
   "name": "Oats",
-  "count": 21
+  "count": 33
  },
  {
   "name": "Oats, Cereals & Healthy Breakfast Foods",
@@ -185,11 +185,11 @@
  },
  {
   "name": "Orange",
-  "count": 27
+  "count": 30
  },
  {
   "name": "Other",
-  "count": 74
+  "count": 76
  },
  {
   "name": "Parotta",
@@ -229,7 +229,7 @@
  },
  {
   "name": "Soup",
-  "count": 12
+  "count": 17
  },
  {
   "name": "South Indian dishes",
