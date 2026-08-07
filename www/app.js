@@ -15105,6 +15105,63 @@ function renderNutritionTab(){
       <span class="nd-hero__chev" aria-hidden="true">›</span>
     </div>
 
+    ${(() => {
+      /* THE NUTRIENT STRIP. The calorie hero above answers "how much is left"; this answers
+         "of what". The macros only appeared inside Insights, a tap away, which is where a
+         number goes to be ignored.
+
+         Nothing is recomputed. T, targets, waterMl and waterTarget are already in scope and
+         are the same values the hero, the insights and the score all read, so a bar here
+         cannot disagree with the ring above it.
+
+         Water sits in this list rather than in a card of its own: it is a daily target with a
+         number and a goal exactly like the others, and separating it made the page carry two
+         designs for one idea.
+
+         Each bar caps at 100% while its label keeps the true figure — a bar running past its
+         own end reads as a rendering fault, but the number still has to say you are over. */
+      const NUTS = [
+        { label:'Protein', now:T.protein, goal:targets.protein, unit:'g',  color:'var(--primary)' },
+        { label:'Carbs',   now:T.carbs,   goal:targets.carbs,   unit:'g',  color:'var(--accent)' },
+        { label:'Fat',     now:T.fat,     goal:targets.fat,     unit:'g',  color:'#a78bfa' },
+        { label:'Fibre',   now:T.fibre,   goal:targets.fibre,   unit:'g',  color:'var(--mint)' },
+        { label:'Water',   now:waterMl,   goal:waterTarget,     unit:'ml', color:'#38bdf8' }
+      ].filter(n => Number(n.goal) > 0);
+      if (!NUTS.length) return '';
+
+      const sc = nutritionScore(T, targets, waterMl, waterTarget);
+      const rows = NUTS.map(n => {
+        const now = Math.round(Number(n.now) || 0);
+        const goal = Math.round(Number(n.goal));
+        const pct = Math.max(0, Math.min(100, Math.round(now / goal * 100)));
+        const over = now > goal;
+        return '<div class="nd-nut">'
+          + '<div class="nd-nut__top">'
+          +   '<span class="nd-nut__label">' + n.label + '</span>'
+          +   '<span class="nd-nut__val' + (over ? ' is-over' : '') + '">' + now.toLocaleString()
+          +     '<em>/' + goal.toLocaleString() + n.unit + '</em></span>'
+          + '</div>'
+          + '<div class="nd-nut__track"><i style="width:' + pct + '%;background:' + n.color + ';"></i></div>'
+          + '</div>';
+      }).join('');
+
+      /* Shown once something has been logged, not when the score is non-zero. Those differ on
+         exactly the day that matters: an untouched day scores 0, and "0 — Needs work" before
+         breakfast is the app telling someone off for not having eaten yet. Keyed on entries so
+         a genuine 0 after logging still shows, which is the case worth seeing. */
+      const scoreHtml = (sc && dayEntries.length)
+        ? '<span class="nd-nutrients__score nd-nutrients__score--' + sc.tone + '">'
+          + '<b data-count="' + sc.score + '" data-count-key="nutri-score">' + sc.score + '</b> '
+          + escHtml(sc.band) + '</span>'
+        : '';
+
+      return '<div class="nd-nutrients">'
+        + '<div class="nd-nutrients__head">'
+        +   '<span class="nd-nutrients__title">Today\'s Nutrition</span>' + scoreHtml
+        + '</div>' + rows
+        + '</div>';
+    })()}
+
     ${renderNutritionFastingStrip()}
 
     <!-- Three shortcuts. Each goes somewhere that already exists rather than being a tile
