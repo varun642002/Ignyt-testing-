@@ -74,26 +74,27 @@ main { min-height: 0; }
    border-color here: a docked strip wanted a top border, a pill wants a hairline all the way
    round, and setting both left a heavier line across the top edge than the other three.
 
-   TRANSPARENT, so the content scrolls visibly beneath it. 7%, arrived at over three passes —
-   34%, then 16%, and each still read as a dark bar.
+   TRANSPARENT, so the content scrolls visibly beneath it. 3%, over four passes — 34, 16, 7 —
+   and each earlier stop still read as a bar rather than as glass. Every pass found a DIFFERENT
+   thing responsible, which is why lowering the fill alone never settled it:
 
-   THE FILL WAS NOT THE ONLY THING MAKING IT LOOK SOLID, which is why lowering it twice did not
-   settle the question. The pill also carried a 30px black glow at 35%, and under a bar this
-   transparent that shadow was the darkest thing about it — a band of dark under the glass,
-   defeating the fill above. It is down to 18px at 20% here and in index.html. A shadow has to
-   be proportional to the surface casting it, and a near-transparent surface casts almost none.
+     the fill        34% -> 3%
+     the shadow      a 30px black glow at 35% became the darkest thing about the bar once the
+                     fill went under 20% — a dark band under the glass. Now 18px at 20%.
+     THE BLUR        at 26px it was frosted glass, and frosted glass is a SURFACE — it reads as
+                     opaque whatever the alpha says. 9px lets what is behind stay legibly itself
+                     while still separating it from the labels.
+     the saturation  150% amplified whatever sat behind: over a blue button the whole bar went
+                     blue. 115% keeps the colour honest.
 
-   NOT ZERO, and that is the one judgement call. At zero the white icons and 11px labels sit
-   directly on whatever scrolls beneath them and disappear over a light card; a navigation bar
-   that vanishes against some content is a bug however good it looks against the rest.
-
-   THE BLUR DOES ALMOST ALL OF THE WORK NOW, so it went up with the transparency: 18px to 26px,
-   with saturate(150%) to put back the colour a heavy blur washes out — without it a frosted bar
-   over a colourful screen turns grey and reads as dirt rather than glass. It is therefore not
-   optional on any platform, which is why platform.css no longer strips it on iOS. */
-nav.bottom-nav { min-height:64px; background:rgba(18,20,24,.07); }
+   THE LABELS CARRY THEIR OWN CONTRAST NOW, and that is what makes 3% survivable. Twice before,
+   this note said the floor was wherever the fill stopped holding 11px text — true only while the
+   text had nothing behind it but that fill. A shadow on the glyphs themselves is the standard
+   way out and costs nothing (see .nav-btn below), so legibility no longer depends on the bar and
+   the bar is free to be as transparent as asked. */
+nav.bottom-nav { min-height:64px; background:rgba(18,20,24,.03); }
 [data-theme="light"] nav.bottom-nav {
-  background:rgba(255,255,255,.13); border-color:rgba(15,23,42,.10);
+  background:rgba(255,255,255,.06); border-color:rgba(15,23,42,.07);
   box-shadow:0 6px 18px rgba(15,23,42,.07), 0 1px 3px rgba(15,23,42,.04);
 }
 /* On a white pill a white highlight is invisible, so the selected tab tints toward the
@@ -102,6 +103,24 @@ nav.bottom-nav { min-height:64px; background:rgba(18,20,24,.07); }
 [data-theme="light"] .nav-ind { background:var(--color-interactive-soft, rgba(37,99,235,.10)); }
 .nav-btn { min-height:52px; }
 .nav-btn span { font-size:11px; }
+
+/* THE GLYPHS HOLD THEMSELVES UP. With the bar at 3% the icons and labels sit almost directly on
+   whatever is scrolling underneath, and a tight dark shadow is what keeps them readable over a
+   bright card without putting the fill back. It is invisible over a dark ground — a 2px blur at
+   45% against a near-black backdrop changes nothing you can see — and does all its work exactly
+   when the content behind turns pale, which is the case that used to force the floor.
+
+   drop-shadow, not box-shadow, for the icons: box-shadow would outline the button's rectangle,
+   while a filter follows the drawn strokes of the SVG. */
+nav.bottom-nav .nav-btn span { text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+nav.bottom-nav .nav-btn svg  { filter: drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
+
+/* On the light theme the ground behind the bar is pale, so a dark halo would read as grime.
+   The same trick inverted: a soft light shadow that lifts dark glyphs off a busy background. */
+[data-theme="light"] nav.bottom-nav .nav-btn span,
+nav.bottom-nav--home-light .nav-btn span { text-shadow: 0 1px 2px rgba(255,255,255,.65); }
+[data-theme="light"] nav.bottom-nav .nav-btn svg,
+nav.bottom-nav--home-light .nav-btn svg  { filter: drop-shadow(0 1px 2px rgba(255,255,255,.65)); }
 /* Reference: "blue primary accent for active tab" -- overrides the legacy orange active
    state (.nav-btn.active{color:var(--accent)} in the inline stylesheet) for the primary
    bottom nav specifically. Deliberately NOT a blanket --accent token redefinition: --accent

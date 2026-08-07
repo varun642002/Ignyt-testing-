@@ -53,8 +53,8 @@
    covers the whole screen and has an opaque surface of its own, so the original reasoning holds
    there unchanged. */
 html[data-platform="ios"] nav.bottom-nav {
-  backdrop-filter: blur(26px) saturate(150%);
-  -webkit-backdrop-filter: blur(26px) saturate(150%);
+  backdrop-filter: blur(9px) saturate(115%);
+  -webkit-backdrop-filter: blur(9px) saturate(115%);
 }
 
 /* The Home tab swaps the bar for a lighter variant, and css/pages/dark-mode.css sets that
@@ -62,9 +62,9 @@ html[data-platform="ios"] nav.bottom-nav {
    restates it — the alternative was leaving one tab in five visibly more transparent than the
    rest with its blur removed, which reads as a rendering fault rather than a choice. */
 html[data-platform="ios"] nav.bottom-nav--home-light {
-  backdrop-filter: blur(26px) saturate(150%);
-  -webkit-backdrop-filter: blur(26px) saturate(150%);
-  background: rgba(28, 27, 35, .07) !important;
+  backdrop-filter: blur(9px) saturate(115%);
+  -webkit-backdrop-filter: blur(9px) saturate(115%);
+  background: rgba(28, 27, 35, .03) !important;
 }
 
 html[data-platform="ios"] .timer-overlay {

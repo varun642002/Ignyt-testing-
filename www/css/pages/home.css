@@ -25,7 +25,7 @@
 .app-header--home-light .title { color:#0F172A; }
 .app-header--home-light .page-tools-btn { background:#FFFFFF; border-color:#E9EDF3; color:#2563EB; box-shadow:0 1px 3px rgba(15,23,42,.08); }
 nav.bottom-nav--home-light {
-  background:rgba(255,255,255,.13) !important; border:1px solid rgba(15,23,42,.10);
+  background:rgba(255,255,255,.06) !important; border:1px solid rgba(15,23,42,.07);
   box-shadow:0 6px 18px rgba(15,23,42,.07), 0 1px 3px rgba(15,23,42,.04);
 }
 nav.bottom-nav--home-light .nav-btn { color:#94A3B8; }
