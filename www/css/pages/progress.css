@@ -479,15 +479,14 @@
   font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .bdg__prog-track i { transition: none; } }
 
-/* ---------- Generated badge art ----------
-   The frame is a background image; the numeral and stars are an SVG laid over it. Same box as
-   .bdg__svg so a grid mixing generated and hand-drawn badges stays on one baseline — which is
-   the normal case during a partial generation run, not an edge case. */
+/* ---------- Imported badge art ----------
+   The whole medal is one background image, numeral included — nothing is laid over it. Same box
+   as .bdg__svg so a grid mixing imported art and hand-drawn badges stays on one baseline, which
+   is the normal case while badges are still being supplied, not an edge case. */
 .bdg__art {
-  width: 84px; height: 84px; position: relative;
+  width: 84px; height: 84px;
   background-size: contain; background-repeat: no-repeat; background-position: center;
   transition: transform .22s cubic-bezier(.32,.72,0,1);
 }
-.bdg__svg--over { position: absolute; inset: 0; width: 100%; height: 100%; }
 .bdg:hover .bdg__art, .bdg:active .bdg__art { transform: translateY(-2px) scale(1.03); }
 @media (prefers-reduced-motion: reduce) { .bdg__art { transition: none; } }

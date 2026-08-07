@@ -1,0 +1,83 @@
+filename,achievement_name,category,tier
+first_workout.png,"First Workout",milestone,bronze
+workouts_5.png,"5 Workouts",milestone,bronze
+workouts_10.png,"10 Workouts",milestone,bronze
+workouts_25.png,"25 Workouts",milestone,silver
+workouts_50.png,"50 Workouts",milestone,silver
+workouts_100.png,"100 Workouts",milestone,gold
+workouts_250.png,"250 Workouts",milestone,gold
+workouts_500.png,"500 Workouts",milestone,diamond
+first_pr.png,"First Personal Record",strength,bronze
+first_100kg.png,"First 100kg Lift",strength,silver
+sets_100.png,"100 Working Sets",strength,bronze
+volume_1m.png,"1,000,000kg Lifetime Volume",strength,diamond
+hyrox_week1.png,"Complete HYROX Week 1",program,bronze
+hyrox_full_program.png,"Complete 8-Week HYROX Program",program,gold
+streak_3.png,"3-Day Streak",streak,bronze
+streak_7.png,"7-Day Streak",streak,bronze
+streak_14.png,"14-Day Streak",streak,silver
+streak_30.png,"30-Day Streak",streak,silver
+streak_60.png,"60-Day Streak",streak,gold
+streak_100.png,"100-Day Streak",streak,diamond
+workouts_750.png,"750 Workouts",milestone,diamond
+workouts_1000.png,"1,000 Workouts",milestone,platinum
+training_days_50.png,"50 Training Days",milestone,silver
+training_days_200.png,"200 Training Days",milestone,gold
+hours_10.png,"10 Hours Trained",milestone,bronze
+hours_50.png,"50 Hours Trained",milestone,silver
+hours_100.png,"100 Hours Trained",milestone,gold
+hours_500.png,"500 Hours Trained",milestone,diamond
+sets_500.png,"500 Working Sets",strength,silver
+sets_1000.png,"1,000 Working Sets",strength,silver
+sets_5000.png,"5,000 Working Sets",strength,diamond
+reps_1000.png,"1,000 Reps",strength,bronze
+reps_10000.png,"10,000 Reps",strength,silver
+reps_50000.png,"50,000 Reps",strength,diamond
+first_60kg.png,"First 60kg Lift",strength,bronze
+first_140kg.png,"First 140kg Lift",strength,gold
+first_180kg.png,"First 180kg Lift",strength,diamond
+volume_50k.png,"50,000kg Lifted",strength,bronze
+volume_250k.png,"250,000kg Lifted",strength,silver
+volume_500k.png,"500,000kg Lifted",strength,gold
+volume_5m.png,"5,000,000kg Lifted",strength,platinum
+prs_10.png,"10 Personal Records",strength,bronze
+prs_25.png,"25 Personal Records",strength,silver
+prs_50.png,"50 Personal Records",strength,gold
+prs_100.png,"100 Personal Records",strength,diamond
+muscles_5.png,"Five Muscle Groups",milestone,bronze
+muscles_10.png,"Ten Muscle Groups",milestone,silver
+exercises_25.png,"25 Exercises",milestone,bronze
+exercises_50.png,"50 Exercises",milestone,silver
+exercises_100.png,"100 Exercises",milestone,gold
+early_bird.png,"Early Bird",consistency,bronze
+early_bird_10.png,"Sunrise Regular",consistency,silver
+night_owl.png,"Night Owl",consistency,bronze
+streak_21.png,"21-Day Streak",streak,silver
+streak_180.png,"180-Day Streak",streak,diamond
+streak_365.png,"One Year Streak",streak,platinum
+score_70_once.png,"Great Day",consistency,bronze
+score_100_once.png,"Excellent Day",consistency,silver
+score_130_once.png,"Elite Day",consistency,gold
+score_70_x30.png,"Thirty Strong Days",consistency,gold
+weekly_1.png,"First Weekly Challenge",consistency,bronze
+weekly_5.png,"Five Weekly Challenges",consistency,silver
+weekly_20.png,"Twenty Weekly Challenges",consistency,gold
+food_first.png,"First Meal Logged",nutrition,bronze
+food_days_7.png,"A Week of Food Logs",nutrition,bronze
+food_days_30.png,"A Month of Food Logs",nutrition,silver
+food_days_100.png,"100 Days Logged",nutrition,gold
+food_entries_500.png,"500 Food Entries",nutrition,silver
+water_first.png,"Hydrated",nutrition,bronze
+water_days_30.png,"Thirty Hydrated Days",nutrition,silver
+water_days_100.png,"A Hundred Hydrated Days",nutrition,gold
+weigh_first.png,"First Weigh-In",consistency,bronze
+weigh_10.png,"Ten Weigh-Ins",consistency,bronze
+weigh_50.png,"Fifty Weigh-Ins",consistency,silver
+weigh_streak_5.png,"5 Consecutive Logs",consistency,bronze
+weigh_streak_30.png,"30 Consecutive Logs",consistency,gold
+weight_moved_5.png,"5 kg Toward Your Goal",consistency,bronze
+weight_moved_10.png,"10 kg Toward Your Goal",consistency,silver
+weight_moved_20.png,"20 kg Toward Your Goal",consistency,gold
+weight_goal_reached.png,"Goal Achieved",consistency,diamond
+weigh_champion.png,"Consistency Champion",consistency,gold
+habit_hero.png,"Healthy Habit Hero",consistency,diamond
