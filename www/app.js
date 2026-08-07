@@ -7459,8 +7459,20 @@ const HC_METRIC_PERMISSION = {
 function hcPermissionMissing(d, label) {
   if (!d || !Array.isArray(d.grantedPermissions)) return false;
   if (d.readAuthorizationIsUnknowable) return false;
+  /* AND THE SAME CONCLUSION WITHOUT THE FLAG, because depending on every payload to remember it
+     is how this broke twice. The dashboard sent it and the Insights payload did not, so Insights
+     went on reporting "Permission required" for nine metrics after the dashboard beside it had
+     started showing real numbers — same list, same comparison, one missing field.
+
+     This asks the list itself. Every string this map compares against is an
+     android.permission.health.* identifier, so a list containing none of them is not a Health
+     Connect list at all and the comparison cannot mean anything — which is exactly the state of
+     an iOS payload, where the list holds HealthKit's own write-type names. An empty list says
+     nothing either way and is left to the flag. */
+  const perms = d.grantedPermissions;
+  if (perms.length && !perms.some(p => String(p).startsWith("android.permission.health."))) return false;
   const perm = HC_METRIC_PERMISSION[label];
-  return !!perm && !d.grantedPermissions.includes(perm);
+  return !!perm && !perms.includes(perm);
 }
 
 /* =========================================================

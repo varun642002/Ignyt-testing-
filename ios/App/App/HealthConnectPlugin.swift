@@ -126,7 +126,9 @@ public class HealthConnectPlugin: CAPPlugin, CAPBridgedPlugin {
                 try await manager.requestAuthorization()
                 // iOS reports nothing about reads, so `granted` here means the sheet completed
                 // without error — not that any particular type was allowed.
-                ok(call, ["granted": true, "partial": partialWrites(), "grantedPermissions": grantedList()])
+                ok(call, ["granted": true, "partial": partialWrites(),
+                          "grantedPermissions": grantedList(),
+                          "readAuthorizationIsUnknowable": true])
             } catch {
                 fail(call, "requestPermissions failed: \(error.localizedDescription)")
             }
@@ -260,7 +262,16 @@ public class HealthConnectPlugin: CAPPlugin, CAPBridgedPlugin {
         let period = ["day", "week", "month", "year"].contains(requested) ? requested : "day"
         Task {
             let range = self.manager.periodRange(period)
-            var data: [String: Any] = ["period": period, "grantedPermissions": self.grantedList()]
+            // The flag travels with EVERY payload that carries grantedPermissions, not just
+            // syncNow's. Leaving it off here is what kept the Insights screen showing
+            // "Permission required" on every metric after the dashboard had started reporting
+            // real numbers: same list, same comparison, but without the flag the web layer had
+            // no way to know the list could not contain a read permission.
+            var data: [String: Any] = [
+                "period": period,
+                "grantedPermissions": self.grantedList(),
+                "readAuthorizationIsUnknowable": true
+            ]
             data["steps"]              = await self.orNull { try await self.manager.stepsFor(range) }
             data["activeCalories"]     = await self.orNull { try await self.manager.activeCaloriesFor(range) }
             data["distance"]           = await self.orNull { try await self.manager.distanceFor(range) }
