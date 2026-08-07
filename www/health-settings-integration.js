@@ -303,7 +303,17 @@
       hcState.lastSyncAt = result.data.syncedAt;
       saveHcState(hcState);
       _errorMsg = null;
-      if (result.data.partialPermissions) _errorMsg = `Permission required for some ${hcName()} metrics.`;
+      /* The same field means different things on the two platforms, so the message cannot be
+         the same. Health Connect reports read grants, so "partial" there really does mean some
+         metrics cannot be read. On iOS the only statuses HealthKit will reveal are for the two
+         types IGNYT WRITES, so "partial" means it cannot save back — reads may be working
+         perfectly. Showing the Android wording there sends the user off to fix a permission
+         that is not broken. */
+      if (result.data.partialPermissions) {
+        _errorMsg = result.data.readAuthorizationIsUnknowable
+          ? `IGNYT can't save workouts or weight back to ${hcName()}. Turn those on in Settings › Privacy & Security › Health › IGNYT.`
+          : `Permission required for some ${hcName()} metrics.`;
+      }
       // Fast-load cache for Home: written only on a SUCCESSFUL explicit sync, read by
       // renderHomeHealthFeed() so Home never has to wait on (or trigger) a native call.
       try { localStorage.setItem("hx_hc_dashboard_cache", JSON.stringify(result.data)); } catch (e) { /* storage full/unavailable -- non-fatal, Home just falls back to no cached data */ }

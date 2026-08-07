@@ -7429,9 +7429,27 @@ const HC_METRIC_PERMISSION = {
 /** true only when we positively know the permission was denied (a real grantedPermissions
  *  list came back from a fresh sync and this metric's permission isn't in it). Older cached
  *  payloads from before this field existed have no grantedPermissions array -- those fall
- *  back to the plain "no data" reading rather than a false "permission required" claim. */
+ *  back to the plain "no data" reading rather than a false "permission required" claim.
+ *
+ *  ON iOS THE ANSWER IS UNKNOWABLE, AND SAYING SO IS THE FIX. HealthKit will not tell an app
+ *  whether a READ was granted: authorizationStatus(for:) answers only for types the app can
+ *  WRITE, and a denied read is deliberately indistinguishable from an empty data set. IGNYT
+ *  writes just two types, workouts and body mass, so the grantedPermissions list coming back
+ *  from iOS can only ever contain those — and it carries HealthKit's own names, which never
+ *  match the android.permission.health.* strings this map is keyed on.
+ *
+ *  The result was that EVERY read metric on iPhone reported "Permission required" for ever,
+ *  whatever the user had actually allowed: steps, calories, distance, heart rate, sleep,
+ *  hydration and nutrition all missing from a list that structurally could not contain them.
+ *  It was never a permissions bug on the device — the grant was fine and the screen was wrong.
+ *
+ *  The plugin already states this in every payload it sends. Honouring the flag is all that was
+ *  missing: where the platform cannot know, claim nothing and let the value speak. A real value
+ *  renders; no value reads "No data", which is the honest answer when a denied read and an empty
+ *  day are genuinely the same observation. */
 function hcPermissionMissing(d, label) {
   if (!d || !Array.isArray(d.grantedPermissions)) return false;
+  if (d.readAuthorizationIsUnknowable) return false;
   const perm = HC_METRIC_PERMISSION[label];
   return !!perm && !d.grantedPermissions.includes(perm);
 }
