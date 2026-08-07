@@ -42,6 +42,31 @@
     return total ? Math.round(done / total * 100) : null;
   }
 
+  /* The muscles a routine trains, from the same getMuscle() the rest of the app uses rather
+     than a second table. Deduped and capped at three: a card listing eight muscle groups has
+     stopped summarising and started transcribing.
+
+     "Other" is dropped. It is getMuscle's answer for anything unmapped, and printing it tells
+     the reader nothing while looking like a real group. */
+  function routineMuscles(r, getMuscle) {
+    if (!getMuscle) return [];
+    const seen = [];
+    for (const ex of (r.exercises || [])) {
+      const m = getMuscle(ex.name);
+      if (m && m !== 'Other' && seen.indexOf(m) === -1) seen.push(m);
+      if (seen.length === 3) break;
+    }
+    return seen;
+  }
+
+  /* Personal records set in the last session of this routine. Counted from state.prs by that
+     session's id, which is how the rest of the app attributes them — not recomputed from the
+     lifts, which would be a second definition of what a PR is. */
+  function prsInSession(state, session) {
+    if (!session || !state.prs) return 0;
+    return state.prs.filter(p => p.workoutId === session.id).length;
+  }
+
   function completionRing(pct, color) {
     const clamped = pct == null ? 0 : Math.max(0, Math.min(100, pct));
     return `<div class="wk-ring" style="--pct:${clamped};--ring-color:${color};">
@@ -54,7 +79,7 @@
        with the This Week grid. app.js still passes them and other screens still use them; this
        one simply stopped asking. */
     const { state, svg, renderPRCelebration, renderPlanCard, renderRoutineBuilder, sessionMuscles, sessionTitle,
-      workoutDurationLabel, displayW, wUnit, plannedDay, escHtml } = ctx;
+      workoutDurationLabel, displayW, wUnit, plannedDay, escHtml, getMuscle, routineEstimatedMinutes } = ctx;
 
     const showAll = state.showAllSessions;
     const recent = showAll ? state.workoutLog : state.workoutLog.slice(0, 2);
@@ -112,6 +137,18 @@
             const last = lastSessionForRoutine(state, r.name);
             const pct = last ? sessionCompletionPct(last) : null;
             const color = r.category ? CATEGORY_COLOR[r.category] : '#64748B';
+            /* WHAT THIS CARD DOES NOT SHOW, and why. The brief asks for estimated calories and
+               a difficulty rating. Neither has a source in this app: calories from resistance
+               work depend on bodyweight, rest and intensity that nothing here records, and
+               "difficulty" would be a number invented from exercise count. A fabricated figure
+               on a card people use to choose their training is worse than a missing one — so
+               they are omitted, which is the same rule the rest of this file already follows.
+
+               Everything below is real: muscles from the app's own getMuscle(), minutes from
+               routineEstimatedMinutes(), PRs counted from state.prs by session id. */
+            const muscles = routineMuscles(r, getMuscle);
+            const prCount = prsInSession(state, last);
+            const estMin = (!last && routineEstimatedMinutes) ? routineEstimatedMinutes(r) : null;
             const preview = r.exercises.slice(0, 3).map(e => escHtml(e.name)).join(' • ') + (r.exercises.length > 3 ? ` • +${r.exercises.length - 3} more` : '');
             return `<div class="wk-routine-card" data-routine-card="${r.id}">
               <button class="rt-drag" data-routine-drag="${r.id}" aria-label="Reorder ${escHtml(r.name)}" title="Drag to reorder">${svg('drag',16)}</button>
@@ -123,9 +160,14 @@
                 </div>
                 <div class="wk-routine-card__meta">
                   <span>${svg('dumbbell',13)} ${r.exercises.length} Exercises</span>
-                  ${last ? `<span>${svg('timer',13)} ${workoutDurationLabel(last)}</span>` : ''}
+                  ${last ? `<span>${svg('timer',13)} ${workoutDurationLabel(last)}</span>`
+                         : (estMin ? `<span>${svg('timer',13)} ~${estMin} min</span>` : '')}
                   ${last && last.volume ? `<span>${svg('flame',13)} ${displayW(last.volume,0).toLocaleString()} ${wUnit()}</span>` : ''}
+                  ${prCount ? `<span class="wk-pr-flag">${svg('trophy',13)} ${prCount} PR${prCount>1?'s':''}</span>` : ''}
                 </div>
+                ${muscles.length ? `<div class="wk-routine-card__muscles">${
+                  muscles.map(m => `<span class="wk-muscle" style="--m:${color};">${escHtml(m)}</span>`).join('')
+                }</div>` : ''}
                 <div class="wk-routine-card__preview">${preview}</div>
                 <div class="wk-routine-card__foot">
                   <div>

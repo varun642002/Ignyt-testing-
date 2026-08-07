@@ -626,3 +626,18 @@
   border-radius:var(--radius-xs, 6px);
   padding:8px 10px; margin:0 0 10px;
 }
+
+/* Muscle chips and the PR flag on a routine card. Both are real data — muscles from the app's
+   own getMuscle(), PRs counted from state.prs by session id. Estimated calories and a
+   difficulty rating are deliberately absent; see the note in js/pages/workout.js. */
+.wk-routine-card__muscles { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.wk-muscle {
+  font-size: 10.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase;
+  padding: 3px 7px; border-radius: 999px;
+  /* Tinted from the routine's own category colour, so the chips belong to the card rather than
+     introducing a sixth palette. */
+  color: var(--m, var(--rh-muted)); background: color-mix(in srgb, var(--m, #64748B) 13%, transparent);
+}
+/* A PR is the one thing on this card worth interrupting for, so it is the only item that
+   carries a colour of its own rather than the muted meta grey. */
+.wk-pr-flag { color: #f59e0b; font-weight: 800; }
