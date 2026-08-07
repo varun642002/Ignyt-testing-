@@ -142,7 +142,7 @@
 .wk-light .cat-chip { flex:none; background:var(--rh-card); color:var(--rh-muted); border:1px solid var(--rh-border); }
 .wk-light .cat-chip.active { background:var(--rh-blue); color:#fff; border-color:var(--rh-blue); }
 
-.wk-sort-select { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-sm); padding:6px 10px; font-size:12px; font-weight:700; color:var(--rh-text); }
+.wk-sort-select { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-sm); padding:6px 10px; font-size:16px; font-weight:700; color:var(--rh-text); }
 
 /* ---------- Routine cards ---------- */
 .wk-empty { color:var(--rh-muted); font-size:13px; text-align:center; padding:20px 16px; }
@@ -198,7 +198,7 @@
 .wk-session__notes-wrap { display:flex; align-items:flex-start; gap:8px; background:var(--rh-card); border:1px solid var(--rh-border);
   border-radius:var(--radius-md); padding:12px 14px; margin:8px 0 4px; color:var(--rh-blue); }
 .wk-session__notes-wrap textarea { flex:1; min-width:0; background:none; border:none; outline:none; resize:vertical; min-height:38px;
-  font-size:13px; color:var(--rh-text); font-family:inherit; }
+  font-size:16px; color:var(--rh-text); font-family:inherit; }
 .wk-session__notes-wrap textarea::placeholder { color:var(--rh-muted); }
 .wk-session__stat-icon { display:inline-flex; vertical-align:middle; margin-right:5px; color:var(--rh-blue); }
 
@@ -315,7 +315,7 @@
 .rt-input {
   width:100%; min-width:0; background:var(--surface-alt); border:none;
   border-radius:var(--radius-xs); padding:8px 4px; text-align:center;
-  font-size:13px; color:var(--color-text-primary);
+  font-size:16px; color:var(--color-text-primary);
   font-variant-numeric:tabular-nums;
 }
 .rt-input:focus { outline:2px solid var(--color-interactive); outline-offset:1px; }
@@ -341,7 +341,7 @@
 .rt-unit { font-size:11px; color:var(--color-text-secondary); }
 .rt-textarea {
   width:100%; margin-top:5px; background:var(--surface-alt); border:none;
-  border-radius:var(--radius-xs-plus); padding:9px; font-size:13px; font-family:inherit;
+  border-radius:var(--radius-xs-plus); padding:9px; font-size:16px; font-family:inherit;
   color:var(--color-text-primary); line-height:1.45; resize:vertical;
 }
 .rt-textarea:focus { outline:2px solid var(--color-interactive); outline-offset:1px; }

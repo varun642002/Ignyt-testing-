@@ -13515,8 +13515,15 @@ function renderBmiCard(){
 function renderBodyTab(){
   const entries = state.bodylog;
   const p = state.profile;
-  const fieldSm = (id,label,ph,color) => `<div><label class="pi-label" style="text-transform:uppercase;">${label}</label>
-    <input type="number" id="${id}" placeholder="${ph}" class="pi-input" style="color:${color};"></div>`;
+  /* ONE PLACE THAT DRAWS A FIELD LABEL. The Date field used to write its own markup, so it was
+     the only label on the card without the uppercase treatment fieldSm applies — "Date" beside
+     "WEIGHT (KG)", "WAIST (CM)", "SLEEP (HRS)". The two labels then rendered at different
+     heights and the two inputs in that row stopped lining up, which is the misalignment on the
+     Log Entry card. Both go through this now, so they cannot drift apart again. */
+  const fieldWrap = (label, control) =>
+    `<div><label class="pi-label" style="text-transform:uppercase;">${label}</label>${control}</div>`;
+  const fieldSm = (id,label,ph,color) => fieldWrap(label,
+    `<input type="number" id="${id}" placeholder="${ph}" class="pi-input" style="color:${color};">`);
 
   // Dedicated calculator view (opened by a calculator card or "View All Calculators")
   if(state.bodyView==='calculators'){
@@ -13713,7 +13720,7 @@ function renderBodyTab(){
       <div class="rh-section-head"><span>Log Entry</span></div>
       <div class="pg-card" id="body-log-entry">
         <div class="pi-grid2">
-          <div><label class="pi-label">Date</label><input type="date" id="b-date" value="${dayKey()}" class="pi-input"></div>
+          ${fieldWrap("Date", `<input type="date" id="b-date" value="${dayKey()}" class="pi-input pi-input--date">`)}
           ${fieldSm("b-weight",`Weight (${wUnit()})`,wUnit()==='lb'?'220':'101.0',"var(--rh-blue)")}
         </div>
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">Body</div>

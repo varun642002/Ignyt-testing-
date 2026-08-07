@@ -251,7 +251,7 @@
   background: transparent;
   color: var(--auth-text);
   font: inherit;
-  font-size: 15.5px;
+  font-size:16px;
   letter-spacing: .01em;
   font-variant-numeric: tabular-nums;
   outline: none;
@@ -541,7 +541,7 @@
   width: 100%; box-sizing: border-box; padding: 15px 16px;
   border: 1px solid var(--auth-border); border-radius: var(--auth-radius-sm);
   background: var(--auth-card); color: var(--auth-text);
-  font: inherit; font-size: 15.5px; outline: none;
+  font: inherit; font-size:16px; outline: none;
   transition: border-color .18s ease, box-shadow .18s ease;
 }
 .auth-email__field input::placeholder{ color: #6B7280; }

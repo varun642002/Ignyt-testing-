@@ -514,7 +514,7 @@
   flex: 1; min-width: 0;
   background: none; border: 0; outline: none;
   color: var(--text);
-  font-size: 15px;              /* 16px-ish keeps iOS from zooming the viewport on focus */
+  font-size:16px;              /* 16px-ish keeps iOS from zooming the viewport on focus */
   padding: 11px 0;
 }
 .food-search-bar__clear,
@@ -566,7 +566,7 @@
   border: 0;
   border-radius: var(--radius-sm);
   padding: 11px 12px;
-  font-size: 14px;
+  font-size:16px;
   color: var(--text);
   min-height: 44px;
 }
@@ -584,7 +584,7 @@
   background: var(--surface-alt);
   border: 0; border-radius: var(--radius-sm);
   text-align: center;
-  font-size: 15px; font-weight: 700;
+  font-size:16px; font-weight: 700;
   color: var(--text);
   font-family: 'SF Mono', ui-monospace, monospace;
 }
