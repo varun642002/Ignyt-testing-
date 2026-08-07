@@ -41,6 +41,22 @@
   --gloss-shadow: 0 1px 2px rgba(0,0,0,.28), 0 8px 24px -6px rgba(0,0,0,.42);
   --gloss-shadow-lift: 0 2px 4px rgba(0,0,0,.30), 0 16px 40px -10px rgba(0,0,0,.50);
   --gloss-hairline: rgba(255,255,255,.07);
+
+  /* THE HEADER GETS ITS OWN SHEEN, stronger than a card's. --gloss-surface is tuned for a
+     100-200px card where anything heavier reads as a colour change; the header is a wide, short
+     band that never moves, and at that shape the card value is so faint it may as well not be
+     there. Turning up --gloss-surface instead would have brightened every card in the app.
+
+     Two layers, because one cannot do it. The linear pass is the light falling from above; the
+     radial pass is the specular — a soft pool centred above the header that falls off before the
+     edges, which is what stops a wide band looking like a flat tint. Both are painted once, no
+     backdrop-filter, for the reason given below. */
+  --gloss-header:
+    linear-gradient(180deg, rgba(255,255,255,.11) 0%, rgba(255,255,255,.045) 38%,
+                            rgba(255,255,255,.012) 68%, rgba(255,255,255,0) 100%),
+    radial-gradient(130% 90% at 50% -25%, rgba(255,255,255,.09) 0%, rgba(255,255,255,0) 62%);
+  --gloss-header-edge: inset 0 1px 0 rgba(255,255,255,.20);
+  --gloss-header-foot: rgba(255,255,255,.09);
 }
 
 [data-theme="light"] {
@@ -54,6 +70,17 @@
   --gloss-shadow: 0 1px 2px rgba(30,41,59,.06), 0 8px 24px -8px rgba(30,58,138,.13);
   --gloss-shadow-lift: 0 2px 6px rgba(30,41,59,.08), 0 18px 44px -12px rgba(30,58,138,.20);
   --gloss-hairline: rgba(255,255,255,.9);
+
+  /* On white the sheen cannot be made of more white, so the light theme's header gloss is a
+     gradient DOWNWARD into a faint blue-grey and back — the surface catching light at the top
+     and picking up a little of the page beneath it at the foot. The specular stays white and is
+     what keeps it reading as gloss rather than as a grey band. */
+  --gloss-header:
+    linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(250,252,255,.72) 46%,
+                            rgba(238,243,250,.55) 100%),
+    radial-gradient(130% 90% at 50% -25%, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 60%);
+  --gloss-header-edge: inset 0 1px 0 rgba(255,255,255,1);
+  --gloss-header-foot: rgba(15,23,42,.07);
 }
 
 /* =========================================================
@@ -145,8 +172,10 @@ nav.bottom-nav {
 header.app-header {
   position: relative;
   /* Top highlight and a hairline foot: the two edges that make a surface read as lit from
-     above rather than as a flat block of colour. */
-  box-shadow: var(--gloss-edge), 0 1px 0 var(--gloss-hairline);
+     above rather than as a flat block of colour. The header's own pair, brighter than a card's
+     — a 1px line has to be stronger to register across a full-width band than it does around a
+     small radius. */
+  box-shadow: var(--gloss-header-edge), 0 1px 0 var(--gloss-header-foot);
 }
 
 /* The sheen is a pseudo-element, not background-image on the header, because it kept being
@@ -162,7 +191,7 @@ header.app-header::after {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image: var(--gloss-surface);
+  background-image: var(--gloss-header);
 }
 
 /* The header's own children must sit above the sheen — without this the overlay paints over
