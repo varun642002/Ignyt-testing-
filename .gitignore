@@ -65,3 +65,6 @@ cert_key.pub
 *.p12
 *.cer
 *.mobileprovision
+
+# Badge generator API key — never committed.
+badge-image-generator/.env

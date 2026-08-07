@@ -12053,6 +12053,41 @@ function badgeCrown(fill){
   </g>`;
 }
 
+/**
+ * One badge. Generated art when a frame exists for this category+tier, the hand-drawn SVG
+ * otherwise — see js/badges/badge-frames.js for why both paths are permanent.
+ *
+ * The numeral and the star row are drawn as SVG ON TOP of the art in either case, so they stay
+ * crisp at any density and a threshold change never means regenerating an image.
+ */
+function achievementBadge(d, earned){
+  var F = window.IgnytBadgeFrames;
+  if (earned && F && F.has(d.category, d.tier)) {
+    var tier = BADGE_TIERS[d.tier] || BADGE_TIERS.bronze;
+    var stars = Math.max(1, BADGE_TIER_ORDER.indexOf(d.tier) + 1);
+    var v = String(d.value || "").toUpperCase();
+    var fs = v.length <= 2 ? 33 : v.length === 3 ? 27 : v.length <= 5 ? 21 : 18;
+    var gid = "bfg-" + String(d.id).replace(/[^a-z0-9_-]/gi, "");
+    /* The frame is a background image and the text an SVG laid over it, rather than the text
+       being a sibling in normal flow — that keeps one coordinate system for the numeral and
+       the stars whatever size the tile is rendered at. */
+    return '<div class="bdg__art" style="background-image:url(' + F.src(d.category, d.tier) + ')">' +
+      '<svg viewBox="0 0 100 100" class="bdg__svg bdg__svg--over" role="img" aria-label="' + escHtml(d.name) + '">' +
+        '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="1" y2="1">' +
+          '<stop offset="0%" stop-color="' + tier.hi + '"/>' +
+          '<stop offset="55%" stop-color="' + tier.mid + '"/>' +
+          '<stop offset="100%" stop-color="' + tier.hi + '"/>' +
+        '</linearGradient></defs>' +
+        (v ? '<text x="50" y="52" text-anchor="middle" fill="url(#' + gid + ')" stroke="' + tier.lo +
+             '" stroke-width="0.9" paint-order="stroke" font-size="' + fs +
+             '" font-weight="900" letter-spacing="-0.2" style="font-family:inherit;dominant-baseline:middle;">' +
+             escHtml(v) + '</text>' : '') +
+        badgeStars(stars, tier.hi) +
+      '</svg></div>';
+  }
+  return achievementBadgeSvg(d, earned);
+}
+
 function achievementBadgeSvg(d, earned){
   const tier = BADGE_TIERS[d.tier] || BADGE_TIERS.bronze;
   // Star count is the tier. An unknown tier string falls back to one star rather than none,
@@ -12222,7 +12257,7 @@ function renderProgressAchievements(){
     const earned = unlockedIds.has(d.id);
     const prog = earned ? null : badgeProgress(d);
     return `<div class="bdg${earned ? "" : " bdg--locked"}" data-tier="${escHtml(d.tier||'bronze')}" title="${escHtml(d.desc)}">
-      ${achievementBadgeSvg(d, earned)}
+      ${achievementBadge(d, earned)}
       <div class="bdg__name">${escHtml(d.name)}</div>
       <div class="bdg__meta">${earned
         ? new Date(earnedAt[d.id]||Date.now()).toLocaleDateString('default',{month:'short',day:'2-digit'})
@@ -18890,6 +18925,13 @@ function attachHandlers(){
   /* Count the numbers up. Last, so every [data-count] on the freshly rendered screen is in
      the DOM; the module itself decides which of them are actually new to the user. */
   if(window.IgnytCounters) IgnytCounters.attach();
+  /* The badge manifest resolves asynchronously and render() is synchronous, so the first paint
+     after load always uses the hand-drawn SVG. One re-render when it lands swaps in whatever
+     art exists. Guarded by a flag: this fires once per session, not once per render. */
+  if(window.IgnytBadgeFrames && !window.__badgeFramesReady){
+    window.__badgeFramesReady = true;
+    IgnytBadgeFrames.ready().then(function(){ try { render(); } catch(e){} });
+  }
 
   /* Reconcile the live workout notification with the current session. Cheap and idempotent, so
      it goes on the render path rather than being toggled at each of the four places a session
