@@ -15177,9 +15177,20 @@ function renderNutritionTab(){
         <span class="nd-short__body"><span class="nd-short__title">Insights</span><span class="nd-short__sub">See your progress</span></span>
         <span class="nd-short__chev">›</span>
       </button>
-      <button class="nd-short" data-nav="recipes">
-        <span class="nd-short__icon nd-short__icon--orange">🍲</span>
-        <span class="nd-short__body"><span class="nd-short__title">Recipes</span><span class="nd-short__sub">Healthy recipes</span></span>
+      ${/* Was a Recipes shortcut pointing at data-nav="recipes" — a tab with NO renderer
+            anywhere in this file. renderApp's switch has no branch for it, so tapping it set
+            state.tab to a value nothing matched, left main.innerHTML untouched from the last
+            paint, and the page went blank. Not an empty state; an absent screen.
+
+            Fasting replaces it because Fasting genuinely exists — renderFastingScreen, a tab
+            in the whitelist, and the data-open-fasting handler this button now uses. It also
+            has no permanent entry point on this page: renderNutritionFastingStrip above
+            returns "" unless a fast is ACTIVE, so until now there was no way to start one
+            from the screen where eating is decided, which is exactly where that decision is
+            made. */''}
+      <button class="nd-short" data-open-fasting="1">
+        <span class="nd-short__icon nd-short__icon--orange">⏱</span>
+        <span class="nd-short__body"><span class="nd-short__title">Fasting</span><span class="nd-short__sub">Track your eating window</span></span>
         <span class="nd-short__chev">›</span>
       </button>
     </div>
