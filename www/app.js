@@ -14001,7 +14001,11 @@ function renderFoodSearchPage(){
     .reduce((a,f)=>a+Number(f.calories||0),0));
   const total = cat ? cat.count() : IgnytFoodDB.count();
 
-  return `<div class="food-page">
+  /* --has-pinned-cta: this is the one food page of four carrying the sticky "Can't find your
+     food?" card, and the only one that must reserve room at the bottom for it. Scoped with a
+     modifier rather than styling .food-page itself, which would put 76px of dead space under
+     the three pages that have no pinned control. */
+  return `<div class="food-page food-page--has-pinned-cta">
     ${foodPageHeader(meal, `${mealKcal} kcal logged`,
       `<button class="food-page__icon" data-food-scan="1" aria-label="Scan barcode">▤</button>`)}
 
