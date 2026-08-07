@@ -1297,43 +1297,6 @@ body.kb-open
 
 .fs-noresult{ font-size: 13.5px; color: var(--muted); padding: 18px 2px; }
 
-/* Pinned below the results. Placed after the last row it would be unreachable exactly when
-   it is wanted — the list is long and paged, and "it is not here" is a conclusion reached
-   while still scrolling. Same control and same form as before; only the presentation is new. */
-.food-missing__wrap{ position: sticky; bottom: 0; z-index: 2; margin-top: var(--space-sm); }
-
-/* IT STAYS PINNED, so the list has to make room for it rather than run underneath it.
-
-   THE BUG. Sticky puts the card at the bottom of the VISIBLE area, and with the keyboard up
-   that area is only a few hundred pixels tall — so the card stopped sitting below the results
-   and landed across the middle of the autocomplete. Measured on a search for "Banana": 48px of
-   overlap, two suggestions completely covered, and no way to reach them because the page had
-   nothing left to scroll.
-
-   THE FIX IS THE RESERVED STRIP, not unpinning. A sticky element is out of flow at the bottom
-   edge, so the scrolling content has to end above it — otherwise the last rows have nowhere to
-   go and simply sit underneath. Reserving the card's own height at the end of the page means
-   anything the card covers can always be scrolled clear of it, and the pinned control the
-   design wants is exactly as reachable as before.
-
-   The background is not decoration either: without it, rows passing behind a transparent card
-   show through the text and read as a rendering fault. */
-.food-page--has-pinned-cta{ padding-bottom: 76px; }
-.food-missing__wrap{ background: var(--bg, var(--surface)); }
-.food-missing{
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  width: 100%; padding: 14px 16px;
-  border: 0; border-radius: 12px;
-  background: var(--surface-alt); color: var(--primary);
-  font: inherit; font-size: 14.5px; font-weight: 700; text-align: left; cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.food-missing__go{
-  flex: none; width: 30px; height: 30px; border-radius: 50%;
-  display: grid; place-items: center;
-  background: var(--primary); color: #fff; font-size: 15px; line-height: 1; font-weight: 700;
-}
-
 /* ---- food search: sections and rows ----
    These were .sp-* and collided with the supplements page, which also owns an .sp-*
    family and loads AFTER this file. .sp-row, .sp-head and .sp-row__body were defined

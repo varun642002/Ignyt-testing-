@@ -1788,7 +1788,6 @@ const state = {
   quickAddOpen: false, quickAddMeal: null,
   // Whether the coach / recovery card detail is expanded (transient).
   // Manual food entry on the search route (transient).
-  manualEntryOpen: false,
   muscleSheetOpen: false,   // Muscle Distribution sheet in the workout logger
   // Which variant groups are expanded, keyed by group key (transient).
   expandedVariants: {},
@@ -14036,11 +14035,7 @@ function renderFoodSearchPage(){
     .reduce((a,f)=>a+Number(f.calories||0),0));
   const total = cat ? cat.count() : IgnytFoodDB.count();
 
-  /* --has-pinned-cta: this is the one food page of four carrying the sticky "Can't find your
-     food?" card, and the only one that must reserve room at the bottom for it. Scoped with a
-     modifier rather than styling .food-page itself, which would put 76px of dead space under
-     the three pages that have no pinned control. */
-  return `<div class="food-page food-page--has-pinned-cta">
+  return `<div class="food-page">
     ${foodPageHeader(meal, `${mealKcal} kcal logged`,
       `<button class="food-page__icon" data-food-scan="1" aria-label="Scan barcode">▤</button>`)}
 
@@ -14054,33 +14049,17 @@ function renderFoodSearchPage(){
 
     <div id="food-search-results">${foodSearchResultsHtml(meal)}</div>
 
-    <!-- Manual entry. It used to live inside the meal card, gated behind the accordion that
-         Part 1 removed; it is not superseded by anything, so it moves here rather than being
-         deleted — without it there is no way to log a food the database does not have.
-         Collapsed by default so the search screen does not open with a form in your face. -->
-    <div class="food-missing__wrap">
-      <button class="food-missing" data-action="toggle-manual-entry"
-        aria-expanded="${state.manualEntryOpen?'true':'false'}">
-        <span>Can&rsquo;t find your food?</span>
-        <span class="food-missing__go" aria-hidden="true">${state.manualEntryOpen?'−':'→'}</span>
-      </button>
+    ${/* The "Can't find your food?" card and the manual-entry form behind it were removed from
+          this screen on request. Everything that existed only to serve them went with it: the
+          toggle handler, the [data-log-meal-food] and save-as-favorite listeners, state
+          .manualEntryOpen, the .food-missing* rules and the padding that reserved room for the
+          pinned card.
 
-      ${state.manualEntryOpen ? `
-        <div style="margin-top:var(--space-sm);">
-          <input type="text" id="food-name" class="food-input" placeholder="Food name" style="margin-bottom:var(--space-xs);">
-          <div style="display:flex;gap:var(--space-2xs);margin-bottom:var(--space-xs);">
-            <input type="number" id="food-cal" class="food-input" placeholder="kcal*" style="text-align:center;color:var(--accent);padding:11px 4px;">
-            <input type="number" id="food-protein" class="food-input" placeholder="P" style="text-align:center;padding:11px 4px;">
-            <input type="number" id="food-carbs" class="food-input" placeholder="C" style="text-align:center;padding:11px 4px;">
-            <input type="number" id="food-fat" class="food-input" placeholder="F" style="text-align:center;padding:11px 4px;">
-            <input type="number" id="food-fibre" class="food-input" placeholder="Fb" style="text-align:center;padding:11px 4px;">
-          </div>
-          <div style="display:flex;gap:var(--space-2xs);">
-            <button class="btn btn-accent" style="flex:1;" data-log-meal-food="${escHtml(meal)}">Add to ${escHtml(meal)}</button>
-            <button class="btn btn-ghost" style="width:48px;flex-shrink:0;" data-action="save-as-favorite" title="Save as favourite">★</button>
-          </div>
-        </div>` : ""}
-    </div>
+          WHAT THIS COSTS, recorded because the old comment here spelled it out and it is still
+          true: this was the only way to log a food the catalogue does not have, and the only
+          way to save one as a favourite. The catalogue is 4,062 foods, so it is a rarer need
+          than it was, but it is not gone — bringing it back means restoring this block and the
+          two listeners in the food-search wiring. */''}
   </div>`;
 }
 
@@ -20713,30 +20692,6 @@ function attachHandlers(){
   /* The meal accordion is gone — meals are always expanded, so there is nothing to toggle.
      state.mealOpen survives as "which meal is the user working in", which the search route
      and quick-add still read; it just no longer controls visibility. */
-  const manualToggle = document.querySelector('[data-action="toggle-manual-entry"]');
-  if(manualToggle) manualToggle.addEventListener("click", ()=>{
-    state.manualEntryOpen = !state.manualEntryOpen;
-    render();
-  });
-  document.querySelectorAll("[data-log-meal-food]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      const meal = el.dataset.logMealFood;
-      const name = document.getElementById("food-name").value.trim();
-      // A blank calorie field also reads as "0" through Number(), same as a deliberately
-      // logged 0-calorie item (black coffee, water) -- checking the raw string for blank/NaN
-      // instead of falsy-0 lets a genuine 0 through without also accepting an empty field.
-      const calStr = document.getElementById("food-cal").value.trim();
-      const cal = Number(calStr);
-      if(!name || calStr === "" || isNaN(cal) || cal < 0) return;
-      state.foodLog.unshift({ id: nextId(), date: nutritionDateStr(), name, calories: cal, meal,
-        protein: Number(document.getElementById("food-protein").value)||0,
-        carbs: Number(document.getElementById("food-carbs").value)||0,
-        fat: Number(document.getElementById("food-fat").value)||0,
-        fibre: Number(document.getElementById("food-fibre").value)||0
-      });
-      render();
-    });
-  });
   /* ---- Food search (Phase 3) ---- */
   const foodSearchInput = document.getElementById("food-search-input");
   if(foodSearchInput) foodSearchInput.addEventListener("input", (e)=>{
@@ -21520,25 +21475,6 @@ function attachHandlers(){
       });
       render();
     });
-  });
-  const saveFavBtn = document.querySelector('[data-action="save-as-favorite"]');
-  if(saveFavBtn) saveFavBtn.addEventListener("click", ()=>{
-    const name = document.getElementById("food-name").value.trim();
-    const calStr = document.getElementById("food-cal").value.trim();
-    const cal = Number(calStr);
-    if(!name || calStr === "" || isNaN(cal) || cal < 0) return;
-    const fav = {
-      id: nextId(), // stable id -- required for the record-based cloud sync
-      name, calories: cal,
-      protein: Number(document.getElementById("food-protein").value)||0,
-      carbs: Number(document.getElementById("food-carbs").value)||0,
-      fat: Number(document.getElementById("food-fat").value)||0,
-      fibre: Number(document.getElementById("food-fibre").value)||0
-    };
-    if(!state.favoriteFoods.some(f=>f.name.toLowerCase()===name.toLowerCase())){
-      state.favoriteFoods.push(fav);
-    }
-    render();
   });
   const openMuscleSheet = document.querySelector('[data-action="open-muscle-sheet"]');
   if(openMuscleSheet) openMuscleSheet.addEventListener("click", ()=>{ state.muscleSheetOpen = true; render(); });
