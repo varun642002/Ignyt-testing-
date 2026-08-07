@@ -455,7 +455,11 @@ nav.bottom-nav{position:fixed; left:50%; transform:translateX(-50%);
     display:flex; padding:6px; gap:0;
     background:rgba(23,23,28,.86); backdrop-filter:blur(26px) saturate(150%); -webkit-backdrop-filter:blur(26px) saturate(150%);
     border:1px solid rgba(255,255,255,.08); border-radius:999px; z-index:40;
-    box-shadow:0 8px 30px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.2);
+    /* Lighter than it was. A 30px black glow at 35% under a bar that is now 7% opaque is not a
+       shadow any more, it is the darkest thing about the bar — it was reading as a solid band
+       and defeating the transparency above it. A shadow has to be proportional to the surface
+       casting it; a near-transparent pill casts almost nothing. */
+    box-shadow:0 6px 18px rgba(0,0,0,.20), 0 1px 3px rgba(0,0,0,.12);
     transition:transform .18s ease;}
 
 /* Keyboard-aware layout: body.kb-open is toggled by the visualViewport listener in app.js
