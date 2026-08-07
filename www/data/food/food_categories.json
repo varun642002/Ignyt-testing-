@@ -1,166 +1,254 @@
 [
-  {
-    "name": "Branded Whey Protein & Sports Protein Products",
-    "count": 150
-  },
-  {
-    "name": "Fast food",
-    "count": 137
-  },
-  {
-    "name": "Curries & Gravies",
-    "count": 132
-  },
-  {
-    "name": "Branded Chocolates & Candy",
-    "count": 100
-  },
-  {
-    "name": "Branded Ice Cream",
-    "count": 100
-  },
-  {
-    "name": "Breakfast Brands",
-    "count": 100
-  },
-  {
-    "name": "Fish (by Species)",
-    "count": 100
-  },
-  {
-    "name": "Processed Meat",
-    "count": 100
-  },
-  {
-    "name": "Sauces, Spreads & Condiments",
-    "count": 100
-  },
-  {
-    "name": "Spices & Seasonings",
-    "count": 100
-  },
-  {
-    "name": "Vegetables",
-    "count": 100
-  },
-  {
-    "name": "Branded Biscuits & Cookies",
-    "count": 99
-  },
-  {
-    "name": "Salt, Sugar & Sweeteners",
-    "count": 99
-  },
-  {
-    "name": "Snacks & Street Foods",
-    "count": 93
-  },
-  {
-    "name": "Branded Biscuits",
-    "count": 85
-  },
-  {
-    "name": "Baking Ingredients & Flours",
-    "count": 80
-  },
-  {
-    "name": "Coffee, Tea & Hot Beverages",
-    "count": 80
-  },
-  {
-    "name": "Rice & Bread items",
-    "count": 80
-  },
-  {
-    "name": "Branded Breakfast Cereals",
-    "count": 78
-  },
-  {
-    "name": "Fruits",
-    "count": 78
-  },
-  {
-    "name": "Dal & Legumes",
-    "count": 76
-  },
-  {
-    "name": "Desserts",
-    "count": 76
-  },
-  {
-    "name": "Pasta, Noodles & International Staples",
-    "count": 76
-  },
-  {
-    "name": "Frozen & Ready-to-Eat Foods",
-    "count": 75
-  },
-  {
-    "name": "South Indian dishes",
-    "count": 75
-  },
-  {
-    "name": "Dry Fruits",
-    "count": 74
-  },
-  {
-    "name": "Spreads & Condiments",
-    "count": 72
-  },
-  {
-    "name": "Branded Coffee, Tea & Hot Drinks",
-    "count": 70
-  },
-  {
-    "name": "Branded Noodles & Instant Pasta",
-    "count": 70
-  },
-  {
-    "name": "Cakes & Cake Varieties",
-    "count": 68
-  },
-  {
-    "name": "Oats, Cereals & Healthy Breakfast Foods",
-    "count": 66
-  },
-  {
-    "name": "Protein-Related Products",
-    "count": 61
-  },
-  {
-    "name": "Nuts & Seeds",
-    "count": 60
-  },
-  {
-    "name": "Gym Supplements",
-    "count": 59
-  },
-  {
-    "name": "Branded soft drink",
-    "count": 50
-  },
-  {
-    "name": "Dairy Products",
-    "count": 50
-  },
-  {
-    "name": "Beverages",
-    "count": 36
-  },
-  {
-    "name": "Seafood",
-    "count": 31
-  },
-  {
-    "name": "Oil Types",
-    "count": 29
-  },
-  {
-    "name": "Mutton/Lamb",
-    "count": 22
-  },
-  {
-    "name": "Chicken",
-    "count": 20
-  }
+ {
+  "name": "Alcoholic",
+  "count": 3
+ },
+ {
+  "name": "Baking Ingredients & Flours",
+  "count": 80
+ },
+ {
+  "name": "Beverages",
+  "count": 36
+ },
+ {
+  "name": "Biriyani",
+  "count": 37
+ },
+ {
+  "name": "Branded Biscuits",
+  "count": 82
+ },
+ {
+  "name": "Branded Biscuits & Cookies",
+  "count": 95
+ },
+ {
+  "name": "Branded Breakfast Cereals",
+  "count": 74
+ },
+ {
+  "name": "Branded Chocolates & Candy",
+  "count": 100
+ },
+ {
+  "name": "Branded Coffee, Tea & Hot Drinks",
+  "count": 70
+ },
+ {
+  "name": "Branded Ice Cream",
+  "count": 100
+ },
+ {
+  "name": "Branded Noodles & Instant Pasta",
+  "count": 70
+ },
+ {
+  "name": "Branded Whey Protein & Sports Protein Products",
+  "count": 150
+ },
+ {
+  "name": "Branded soft drink",
+  "count": 50
+ },
+ {
+  "name": "Bread",
+  "count": 48
+ },
+ {
+  "name": "Breakfast Brands",
+  "count": 97
+ },
+ {
+  "name": "Bun",
+  "count": 34
+ },
+ {
+  "name": "Cake",
+  "count": 23
+ },
+ {
+  "name": "Cakes & Cake Varieties",
+  "count": 68
+ },
+ {
+  "name": "Cheera",
+  "count": 24
+ },
+ {
+  "name": "Chicken",
+  "count": 48
+ },
+ {
+  "name": "Coffee, Tea & Hot Beverages",
+  "count": 80
+ },
+ {
+  "name": "Curries & Gravies",
+  "count": 132
+ },
+ {
+  "name": "Curry",
+  "count": 28
+ },
+ {
+  "name": "Dairy Products",
+  "count": 67
+ },
+ {
+  "name": "Dal & Legumes",
+  "count": 76
+ },
+ {
+  "name": "Desserts",
+  "count": 76
+ },
+ {
+  "name": "Dry Fruits",
+  "count": 74
+ },
+ {
+  "name": "Egg",
+  "count": 40
+ },
+ {
+  "name": "Eggs",
+  "count": 5
+ },
+ {
+  "name": "Fast food",
+  "count": 136
+ },
+ {
+  "name": "Fish",
+  "count": 19
+ },
+ {
+  "name": "Fish (by Species)",
+  "count": 100
+ },
+ {
+  "name": "Frozen & Ready-to-Eat Foods",
+  "count": 75
+ },
+ {
+  "name": "Fruits",
+  "count": 108
+ },
+ {
+  "name": "Gym Supplements",
+  "count": 53
+ },
+ {
+  "name": "Idli",
+  "count": 2
+ },
+ {
+  "name": "Juice",
+  "count": 22
+ },
+ {
+  "name": "Mutton",
+  "count": 41
+ },
+ {
+  "name": "Mutton/Lamb",
+  "count": 22
+ },
+ {
+  "name": "Noodles",
+  "count": 30
+ },
+ {
+  "name": "Nuts",
+  "count": 13
+ },
+ {
+  "name": "Nuts & Seeds",
+  "count": 60
+ },
+ {
+  "name": "Oats",
+  "count": 18
+ },
+ {
+  "name": "Oats, Cereals & Healthy Breakfast Foods",
+  "count": 66
+ },
+ {
+  "name": "Oil Types",
+  "count": 29
+ },
+ {
+  "name": "Omelette",
+  "count": 6
+ },
+ {
+  "name": "Orange",
+  "count": 19
+ },
+ {
+  "name": "Other",
+  "count": 71
+ },
+ {
+  "name": "Parotta",
+  "count": 36
+ },
+ {
+  "name": "Pasta, Noodles & International Staples",
+  "count": 76
+ },
+ {
+  "name": "Processed Meat",
+  "count": 96
+ },
+ {
+  "name": "Protein-Related Products",
+  "count": 59
+ },
+ {
+  "name": "Rice & Bread items",
+  "count": 80
+ },
+ {
+  "name": "Salt, Sugar & Sweeteners",
+  "count": 99
+ },
+ {
+  "name": "Sauces, Spreads & Condiments",
+  "count": 83
+ },
+ {
+  "name": "Seafood",
+  "count": 31
+ },
+ {
+  "name": "Snacks & Street Foods",
+  "count": 93
+ },
+ {
+  "name": "Soup",
+  "count": 12
+ },
+ {
+  "name": "South Indian dishes",
+  "count": 76
+ },
+ {
+  "name": "Spices & Seasonings",
+  "count": 100
+ },
+ {
+  "name": "Spreads & Condiments",
+  "count": 65
+ },
+ {
+  "name": "Strawberry",
+  "count": 19
+ },
+ {
+  "name": "Vegetables",
+  "count": 138
+ }
 ]
