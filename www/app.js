@@ -962,6 +962,15 @@ const ICONS = {
   'eye-off':'<path d="M9.9 5.8A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3.2 3.9M6.5 7.6A17 17 0 0 0 2.5 12S6 18.5 12 18.5c1.4 0 2.7-.35 3.8-.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.9 9.9a3.2 3.2 0 0 0 4.35 4.35" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3.5 3.5l17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   plan:'<path d="M6.5 6.5h11v11h-11z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 3v4M16 3v4M6.5 10h11" stroke="currentColor" stroke-width="2" fill="none"/>',
   workout:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 8l6 4-6 4z" fill="currentColor"/>',
+  /* A loaded bar seen side on: two collars, two plates, and the knurl between them. Kept
+     separate from `dumbbell`, which is a one-handed weight used by the protein and 1RM
+     calculators and would be wrong at this size, and separate from `workout`, which is a play
+     triangle — right on a "Start Workout" button because there it means start, and wrong in the
+     nav where the label is a destination rather than an action.
+
+     Drawn on the same 24-grid and to the same weight as the rest of the set: 2px strokes, round
+     caps, plates filled so they hold at 22px where an outlined plate closes up into a blob. */
+  barbell:'<path d="M9 12h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="5.5" y="7.5" width="3.5" height="9" rx="1.2" fill="currentColor"/><rect x="15" y="7.5" width="3.5" height="9" rx="1.2" fill="currentColor"/><path d="M3 9.5v5M21 9.5v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   library:'<path d="M5 4h9a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 4h1a2 2 0 0 1 2 2v14h-3" fill="none" stroke="currentColor" stroke-width="2"/>',
   body:'<circle cx="12" cy="5" r="2.2" fill="currentColor"/><path d="M12 8v7M8 11h8M9 20l3-5 3 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
   profile:'<circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 20c1.2-4 4-6 7.5-6s6.3 2 7.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
@@ -8061,8 +8070,15 @@ const NAV_TABS = [
   ["progress", "Progress"], ["tools", "Tools"]
 ];
 
+/* The nav's icon is USUALLY the tab's own icon, and this is the list of where it is not.
+   `workout` is a play triangle in the other ten places it appears — "Start Workout", "Resume",
+   "Repeat Workout" — where it correctly reads as start. In the nav the label names a place, not
+   an action, so it takes a barbell. Overriding the shared icon instead would have put a barbell
+   on the timer's Start button. */
+const NAV_ICONS = { workout: "barbell" };
+
 function navBtn(id,label){
-  return `<button class="nav-btn" data-navtab="${id}">${svg(id)}<span>${label}</span></button>`;
+  return `<button class="nav-btn" data-navtab="${id}">${svg(NAV_ICONS[id] || id)}<span>${label}</span></button>`;
 }
 
 function buildBottomNav(){
