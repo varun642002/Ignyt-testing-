@@ -297,69 +297,6 @@
       </button>`;
       })()}
 
-      ${(() => {
-        /* TODAY'S MISSION — four things, and they are SCORE ACTIONS rather than a second list.
-
-           A mission list written here would be a parallel definition of "what counts today":
-           it would carry its own labels, its own points, and its own idea of what is done, and
-           it would drift from IgnytScore within a week. Ticking a mission would then say one
-           thing while the ring above it said another, on the same screen, at the same time.
-
-           So the four come from IgnytScore.ACTIONS, their state from today().done, and the
-           reward is the sum of their real point values. The card cannot disagree with the ring
-           because it is reading the ring's own source.
-
-           A mission the user CANNOT complete is not shown — today().unavailable carries that,
-           and it is how a phone with no step data avoids being told to walk 10,000 of them
-           with no way to record it. Fewer honest rows beat four dishonest ones. */
-        let t = null, ACTIONS = null;
-        try { t = IgnytScore.summary(state).today; ACTIONS = IgnytScore.ACTIONS; } catch (_) {}
-        if (!t || !ACTIONS) return '';
-
-        const WANT = [
-          { key: 'workout', nav: 'workout',   verb: 'Start a workout' },
-          { key: 'steps',   nav: 'health',    verb: 'Walk your step goal' },
-          { key: 'protein', nav: 'nutrition', verb: 'Hit your protein goal' },
-          { key: 'water',   nav: 'nutrition', verb: 'Finish your water goal' }
-        ].filter(m => ACTIONS[m.key] && !t.unavailable[m.key]);
-        if (!WANT.length) return '';
-
-        const doneCount = WANT.filter(m => t.done[m.key]).length;
-        const allDone   = doneCount === WANT.length;
-        const reward    = WANT.reduce((a, m) => a + (ACTIONS[m.key].points || 0), 0);
-        const earned    = WANT.reduce((a, m) => a + (t.done[m.key] ? (ACTIONS[m.key].points || 0) : 0), 0);
-
-        return `
-      <div class="rh-section-head"><span>Today's Mission</span></div>
-      <div class="pg-card hm-mission${allDone ? ' is-complete' : ''}">
-        <div class="hm-mission__head">
-          <div class="hm-mission__count">
-            <b data-count="${doneCount}" data-count-key="home-mission-done">${doneCount}</b><em>/${WANT.length}</em>
-          </div>
-          <div class="hm-mission__reward">${allDone
-            ? `<span class="hm-mission__claimed">＋${reward} earned</span>`
-            : `＋${earned} of ${reward}`}</div>
-        </div>
-        <div class="hm-mission__bar"><span style="width:${Math.round(doneCount / WANT.length * 100)}%"></span></div>
-        <ul class="hm-mission__list">
-          ${WANT.map(m => {
-            const done = !!t.done[m.key];
-            const def  = ACTIONS[m.key];
-            return `<li class="hm-mission__item${done ? ' is-done' : ''}">
-              ${done
-                ? `<span class="hm-mission__tick" aria-hidden="true">${svg('check', 13)}</span>`
-                : `<span class="hm-mission__box" aria-hidden="true"></span>`}
-              <button class="hm-mission__label" data-nav="${m.nav}"${done ? ' tabindex="-1"' : ''}>
-                ${done ? def.label : m.verb}
-              </button>
-              <span class="hm-mission__pts">＋${def.points}</span>
-            </li>`;
-          }).join('')}
-        </ul>
-        ${allDone ? `<div class="hm-mission__done">Every mission cleared. That is a complete day.</div>` : ''}
-      </div>`;
-      })()}
-
       ${(window.IgnytPages && window.IgnytPages.renderFastingHomeCard)
           ? window.IgnytPages.renderFastingHomeCard() : ''}
 
