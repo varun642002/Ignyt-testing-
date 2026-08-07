@@ -51,7 +51,7 @@
   ];
 
   /* Foods whose USDA name is beyond mechanical repair, or where the everyday word is simply
-     different. Deliberately short — a hand-written map that tries to cover 7,697 foods is a
+     different. Deliberately short — a hand-written map that tries to cover 4,000-odd foods is a
      map nobody maintains. */
   var NAME_OVERRIDES = {
     "beverages, protein powder whey based": "Whey Protein",

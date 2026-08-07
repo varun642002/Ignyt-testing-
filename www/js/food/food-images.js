@@ -6,8 +6,9 @@
    rejected for four reasons, each on its own sufficient:
 
      Matching.   Photo search works for "Apple". It does not work for "Beans, Snap, Green,
-                 Canned, Regular Pack, Drained Solids", and most of the 7,697 USDA foods are
-                 named like that. A confidently wrong photo attached to someone's food log is
+                 Canned, Regular Pack, Drained Solids", and a great many of the catalogue's
+                 4,062 foods are named like that. A confidently wrong photo attached to a
+                 food log is
                  worse than no photo.
      Licensing.  Wikimedia Commons is largely CC-BY-SA, which requires visible attribution
                  and carries share-alike obligations. The others have their own terms.
