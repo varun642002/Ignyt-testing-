@@ -74,17 +74,21 @@ main { min-height: 0; }
    border-color here: a docked strip wanted a top border, a pill wants a hairline all the way
    round, and setting both left a heavier line across the top edge than the other three.
 
-   TRANSPARENT, so the content scrolls visibly beneath it. What is left is a tint, not a fill:
-   enough to hold white icons and 11px labels against whatever passes under them, and no more.
-   Zero alpha was the literal reading of the request and is the one value that does not work —
-   over a light card the labels disappear entirely, and a navigation bar that is unreadable
-   against some content is a bug however good it looks against the rest.
+   TRANSPARENT, so the content scrolls visibly beneath it. 16% is a veil rather than a tint —
+   the first pass at this used 34%, which still read as a dark bar, and the ask was repeated.
 
-   The blur is what makes this legible, so it is no longer optional on any platform — see the
-   note in platform.css, which used to switch it off on iOS. */
-nav.bottom-nav { min-height:64px; background:rgba(18,20,24,.34); }
+   NOT ZERO, and that is the one judgement call in here. A bar at zero alpha is unreadable over
+   a light card — white icons and 11px labels on whatever happens to scroll under them — and a
+   navigation bar that disappears against some content is a bug however good it looks against
+   the rest. 16% is the least that still holds them.
+
+   THE BLUR IS NOW DOING ALMOST ALL THE WORK, so it went up with the transparency: 18px to 26px,
+   with saturate(150%) to put back the colour a heavy blur washes out — without it a frosted bar
+   over a colourful screen turns grey and reads as dirt rather than glass. It is therefore not
+   optional on any platform, which is why platform.css no longer strips it on iOS. */
+nav.bottom-nav { min-height:64px; background:rgba(18,20,24,.16); }
 [data-theme="light"] nav.bottom-nav {
-  background:rgba(255,255,255,.40); border-color:rgba(15,23,42,.08);
+  background:rgba(255,255,255,.22); border-color:rgba(15,23,42,.10);
   box-shadow:0 8px 28px rgba(15,23,42,.12), 0 2px 6px rgba(15,23,42,.06);
 }
 /* On a white pill a white highlight is invisible, so the selected tab tints toward the
