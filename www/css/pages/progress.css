@@ -77,6 +77,10 @@
 .pg-card__trend.is-up { color:var(--rh-green); }
 .pg-card__trend.is-down { color:var(--rh-red); }
 .pg-card__sub-label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:8px; }
+/* Only where it follows the weekly-goal block. It captions the count in that block, and 8px of
+   air between a number and its own label reads as two unrelated lines. Scoped to the adjacent
+   sibling so the class keeps its spacing everywhere else it is used. */
+.pg-weekly-goal + .pg-card__sub-label { margin-top:4px; }
 
 .pg-chart-bubble { display:inline-block; margin-top:-26px; margin-left:calc(100% - 46px); background:var(--rh-blue); color:#fff;
   font-size:11px; font-weight:800; padding:3px 8px; border-radius:var(--radius-xs-plus); position:relative; }
@@ -86,10 +90,13 @@
    the only markup that used them. */
 
 /* ---------- Weekly goal ring ---------- */
-.pg-weekly-goal { display:flex; align-items:center; gap:12px; margin-top:6px; }
+/* No margin-top. .pg-card__head above already carries margin-bottom:8px, and the two stacked
+   to 14px — the single largest gap in a card whose content is only 115px tall. Margins between
+   siblings belong to one side or the other, not both. */
+.pg-weekly-goal { display:flex; align-items:center; gap:12px; }
 .pg-weekly-goal__count { font-size:22px; font-weight:800; }
 .pg-weekly-goal__count span { font-size:14px; color:var(--rh-muted); font-weight:700; }
-.pg-weekly-goal__msg { font-size:11px; color:var(--rh-muted); margin-top:10px; line-height:1.4; }
+.pg-weekly-goal__msg { font-size:11px; color:var(--rh-muted); margin-top:6px; line-height:1.4; }
 .pg-ring { width:64px; height:64px; border-radius:50%; flex:none; display:grid; place-items:center;
   background:conic-gradient(var(--ring-color,#2563EB) calc(var(--pct,0) * 1%), #EEF1F6 0); }
 .pg-ring__inner { width:50px; height:50px; border-radius:50%; background:var(--rh-card); display:flex; align-items:center; justify-content:center;
