@@ -30,7 +30,16 @@
 [data-theme="dark"] .app-header--home-light .eyebrow { color:var(--color-interactive); }
 [data-theme="dark"] .app-header--home-light .eyebrow-dash { background:var(--color-interactive); }
 [data-theme="dark"] .app-header--home-light .title { color:var(--color-text-primary); }
-[data-theme="dark"] .app-header--home-light .page-tools-btn { background:var(--color-surface-elevated); border-color:var(--color-border); color:var(--color-interactive); box-shadow:none; }
+[data-theme="dark"] .app-header--home-light .page-tools-btn { background:var(--color-surface-elevated); border-color:var(--color-border); color:#FFFFFF; box-shadow:none; }
+
+/* THE THREE HEADER BUTTONS ARE WHITE ON EVERY PAGE — notifications, profile and the theme
+   toggle. Home was the only screen where they were not: its header carries the --home-light
+   modifier, and the rule above painted their glyphs --color-interactive, so the same three
+   buttons were blue there and white everywhere else.
+   This second rule covers the other pages, where the colour came from --color-text-primary and
+   rendered as a warm off-white (247,244,239). Close enough to miss side by side, but the two
+   headers are one component and there is no reason for them to disagree. */
+[data-theme="dark"] .app-header .page-tools-btn { color:#FFFFFF; }
 [data-theme="dark"] nav.bottom-nav--home-light {
   background:rgba(28,27,35,.03) !important; border:1px solid rgba(255,255,255,.07);
   box-shadow:0 6px 18px rgba(0,0,0,.20), 0 1px 3px rgba(0,0,0,.12);
