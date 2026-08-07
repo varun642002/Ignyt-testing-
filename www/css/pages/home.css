@@ -549,3 +549,55 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; background:rgba(37,9
 .sc-row__pts--open { color: var(--muted); }
 .sc-row--done .sc-row__label { opacity: .9; }
 .sc-empty { font-size: 13px; line-height: 1.5; color: var(--muted); }
+
+/* =========================================================
+   TODAY'S MISSION
+
+   Four rows, read from IgnytScore.ACTIONS — see the note in home.js for why they are score
+   actions rather than a list of their own. Everything visual here follows from that: the point
+   values are the engine's, so they are shown rather than invented, and a completed row states
+   what the engine calls it instead of what the prompt to do it said.
+========================================================= */
+.hm-mission { display: flex; flex-direction: column; gap: 12px; }
+/* The whole card lifts a shade once the day is cleared. A completion that changes nothing
+   about the surface it lives on does not read as an achievement. */
+.hm-mission.is-complete { border-color: color-mix(in srgb, var(--mint) 45%, var(--rh-border, var(--border))); }
+
+.hm-mission__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.hm-mission__count { font-size: 24px; font-weight: 900; letter-spacing: -.03em;
+  color: var(--rh-text, var(--text)); font-variant-numeric: tabular-nums; }
+.hm-mission__count em { font-style: normal; font-size: 14px; font-weight: 700;
+  color: var(--rh-muted, var(--muted)); margin-left: 1px; }
+.hm-mission__reward { font-size: 12px; font-weight: 700; color: var(--rh-muted, var(--muted));
+  font-variant-numeric: tabular-nums; }
+.hm-mission__claimed { color: var(--mint); }
+
+/* One bar, transform-scaled rather than width-animated: width is layout, transform is not. */
+.hm-mission__bar { height: 6px; border-radius: 999px; background: var(--rh-border, var(--border)); overflow: hidden; }
+.hm-mission__bar span { display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--rh-blue, var(--primary)), var(--mint));
+  transition: width .5s cubic-bezier(.22,1,.36,1); }
+
+.hm-mission__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.hm-mission__item { display: flex; align-items: center; gap: 10px; padding: 9px 0;
+  border-top: 1px solid var(--rh-border, var(--border)); }
+.hm-mission__item:first-child { border-top: none; }
+
+.hm-mission__box { width: 18px; height: 18px; flex: none; border-radius: 6px;
+  border: 1.5px solid var(--rh-border, var(--border)); }
+.hm-mission__tick { width: 18px; height: 18px; flex: none; border-radius: 6px; display: grid;
+  place-items: center; background: var(--mint); color: #06281a; }
+
+/* A button, because an incomplete mission goes somewhere. Completed rows keep the element for
+   layout but drop out of the tab order — there is nothing left to do there. */
+.hm-mission__label { flex: 1; min-width: 0; text-align: left; background: none; border: none;
+  padding: 0; font: inherit; font-size: 13.5px; font-weight: 600;
+  color: var(--rh-text, var(--text)); cursor: pointer; }
+.hm-mission__item.is-done .hm-mission__label { color: var(--rh-muted, var(--muted)); cursor: default; }
+.hm-mission__pts { flex: none; font-size: 12px; font-weight: 800;
+  color: var(--rh-muted, var(--muted)); font-variant-numeric: tabular-nums; }
+.hm-mission__item.is-done .hm-mission__pts { color: var(--mint); }
+
+.hm-mission__done { font-size: 12.5px; font-weight: 600; color: var(--mint); }
+
+@media (prefers-reduced-motion: reduce) { .hm-mission__bar span { transition: none; } }
