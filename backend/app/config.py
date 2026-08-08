@@ -16,6 +16,38 @@ from typing import List
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# asyncpg does not speak `sslmode`. That spelling is libpq's, which means psycopg2 accepts it
+# and asyncpg raises `TypeError: connect() got an unexpected keyword argument 'sslmode'` —
+# reproduced against a Render-shaped URL. asyncpg's own parameter is `ssl`, and it takes the
+# same values, so the fix is a rename rather than a translation table.
+#
+# This matters because Render puts `?sslmode=require` on the External Database URL, which is
+# the one shown most prominently on the dashboard and the obvious thing to paste. The failure
+# surfaces at connect time, not startup, so /v1/health stays green while every route that
+# touches the database returns 500 — the symptom pointing nowhere near the cause.
+_SSLMODE_VALUES = {"disable", "allow", "prefer", "require", "verify-ca", "verify-full"}
+
+
+def _asyncpg_sslmode_fix(url: str) -> str:
+    """Rename `sslmode` to `ssl` for asyncpg. Left alone for every other driver."""
+    if "+asyncpg" not in url or "sslmode=" not in url:
+        return url
+
+    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+    parts = urlsplit(url)
+    query = parse_qsl(parts.query, keep_blank_values=True)
+    rebuilt = []
+    for key, value in query:
+        if key != "sslmode":
+            rebuilt.append((key, value))
+            continue
+        # An unrecognised value is passed through under the original name rather than guessed
+        # at: failing loudly on a typo beats quietly connecting with weaker transport security
+        # than was asked for.
+        rebuilt.append(("ssl", value) if value in _SSLMODE_VALUES else (key, value))
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(rebuilt), parts.fragment))
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
@@ -152,7 +184,7 @@ class Settings(BaseSettings):
             url = "postgresql://" + url[len("postgres://"):]
         if url.startswith("postgresql://"):
             url = "postgresql+asyncpg://" + url[len("postgresql://"):]
-        return url
+        return _asyncpg_sslmode_fix(url)
 
     @property
     def sync_database_url(self) -> str:
