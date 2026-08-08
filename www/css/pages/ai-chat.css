@@ -120,3 +120,6 @@
                 text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px; }
 .ex-ai__row { display:flex; gap:7px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
 .ex-ai__row::-webkit-scrollbar { display:none; }
+
+.aic-hello__line { font-size:var(--text-body); color:var(--rh-text); margin:6px 0 12px;
+                   font-weight:var(--weight-bold); }

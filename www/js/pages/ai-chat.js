@@ -99,6 +99,42 @@
     return "";
   }
 
+  /* ---------- the daily companion ------------------------------------------------------
+     One line on the empty screen, built from what is actually true right now: a session in
+     progress, a planned day, a live streak, or nothing logged yet.
+
+     IT DOES NOT INVENT A GREETING PER VISIT. The brief asks for a companion and warns against
+     spam in the same breath, and those pull in opposite directions unless the line is tied to
+     STATE rather than to time — "Push day. Ready?" is worth reading once and irritating on the
+     fourth visit before lunch, so it changes when the day does, not when the screen opens.
+
+     Tone comes from IgnytMessages, which already keeps a per-context list of recently-shown
+     lines in localStorage. Rolling a second dedupe here would mean two systems disagreeing
+     about what the user has already read today. */
+  function companion(st) {
+    var A = window.IgnytAIActions;
+    if (!A) return null;
+
+    if (st.session) {
+      var n = (st.session.exercises || []).length;
+      return { line: "Workout in progress — " + n + " exercise" + (n === 1 ? "" : "s") + ".",
+               say: "I finished my workout" , cta: "Finish it" };
+    }
+    var planned = (typeof todaysPlannedDay === "function") ? todaysPlannedDay() : null;
+    if (planned && planned.session) {
+      return { line: "Today: " + planned.session + ".", say: "What should I train today?", cta: "Show me" };
+    }
+    var streak = (typeof computeStreak === "function") ? computeStreak() : 0;
+    if (streak > 0) {
+      return { line: streak + " day streak. Keep it going.", say: "What should I train today?", cta: "Today's plan" };
+    }
+    var logged = (st.foodLog || []).filter(function (f) {
+      return f && f.date === (typeof todayStr === "function" ? todayStr() : "");
+    }).length;
+    if (!logged) return { line: "Nothing logged yet today.", say: "Log food", cta: "Log food" };
+    return null;
+  }
+
   window.IgnytPages.renderAIChat = function (ctx) {
     var st = ctx.state;
     var chat = st.aiChat || [];
@@ -126,8 +162,17 @@
 
       '<div class="aic-scroll" id="ai-scroll">' +
         (empty
-          ? '<div class="aic-hello"><div class="aic-hello__greet">' + greet + (name ? ", " + esc(name) : "") + '</div>' +
-            '<div class="aic-hello__sub">What can I help with?</div></div>'
+          ? (function () {
+              var c = companion(st);
+              return '<div class="aic-hello">' +
+                '<div class="aic-hello__greet">' + greet + (name ? ", " + esc(name) : "") + '</div>' +
+                (c ? '<div class="aic-hello__line">' + esc(c.line) + '</div>' +
+                     '<div class="aic-quick aic-quick--inline">' +
+                       '<button class="aic-chip" data-ai-say="' + esc(c.say) + '">' + esc(c.cta) + '</button>' +
+                     '</div>'
+                   : '<div class="aic-hello__sub">What can I help with?</div>') +
+              '</div>';
+            })()
           : chat.map(bubble).join("")) +
         (st.aiBusy ? '<div class="aic-typing" aria-label="Thinking"><i></i><i></i><i></i></div>' : '') +
       '</div>' +
