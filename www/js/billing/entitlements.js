@@ -153,6 +153,32 @@ window.IgnytEntitlements = (function () {
    * Never throws and never downgrades a user because the network failed — only Play
    * answering "no active purchase" clears premium.
    */
+  /* THE RECEIPT GOES TO THE SERVER, and this is the only reason the plugin returns a token.
+   *
+   * Everything in this file is a CACHE for drawing the UI — has() answers instantly and
+   * offline, which is right for deciding whether to render a lock icon and wrong as a
+   * security boundary, because a modified app can simply return true. The backend cannot take
+   * this file's word for anything, so it gets the purchase token and asks Google itself.
+   *
+   * Deliberately silent and deliberately not awaited. A failure here means the server keeps
+   * whatever it last verified — which is the safe direction — and the user is not shown an
+   * error about a background reconciliation they did not ask for. */
+  async function syncReceipt(purchaseToken) {
+    if (!purchaseToken) return;                       // nothing bought, nothing to verify
+    var base = (window.IgnytConfig && IgnytConfig.apiBase && IgnytConfig.apiBase()) || "";
+    if (!base) return;
+    try {
+      var headers = { "Content-Type": "application/json" };
+      var tok = window.IgnytAuth && IgnytAuth.getIdToken ? await IgnytAuth.getIdToken() : null;
+      if (!tok) return;                               // signed out: nothing to attach it to
+      headers.Authorization = "Bearer " + tok;
+      await fetch(base + "/v1/billing/verify", {
+        method: "POST", headers: headers,
+        body: JSON.stringify({ purchaseToken: String(purchaseToken) })
+      });
+    } catch (e) { /* offline or backend down — the server keeps its last verified answer */ }
+  }
+
   async function refresh() {
     if (!paywallApplies()) return true;
     var plugin = bridge();
@@ -161,6 +187,10 @@ window.IgnytEntitlements = (function () {
       var result = await plugin.getEntitlement({ productId: PRODUCT_ID });
       if (!result || result.success !== true || !result.data) return isPremium();
       saveCache(result.data.entitled === true, "play");
+      // Hand the receipt to the backend so IT can decide too. Fire-and-forget on purpose:
+      // this cache drives what the UI draws and must not wait on a network call, while the
+      // server's copy is what actually gates anything expensive.
+      syncReceipt(result.data.purchaseToken);
       return result.data.entitled === true;
     } catch (e) {
       return isPremium();   // transient failure keeps whatever was last confirmed
@@ -190,7 +220,13 @@ window.IgnytEntitlements = (function () {
       var result = await plugin.purchase({
         productId: PRODUCT_ID, basePlanId: basePlanId, offerToken: offerToken || null
       });
-      if (result && result.success) await refresh();
+      if (result && result.success) {
+        // Verify with the backend from the purchase result directly, rather than relying on
+        // refresh() to re-query — this is the moment the user paid, and the sooner the server
+        // knows, the sooner Pro works on their other devices.
+        if (result.data && result.data.purchaseToken) syncReceipt(result.data.purchaseToken);
+        await refresh();
+      }
       return result;
     } catch (e) {
       return { success: false, error: "Purchase failed: " + (e && e.message ? e.message : String(e)) };

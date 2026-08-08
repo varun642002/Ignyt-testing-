@@ -70,6 +70,10 @@ class BillingPlugin : Plugin() {
                 resolveSuccess(call, JSObject().apply {
                     put("purchased", true)
                     put("entitled", purchases?.any { isEntitling(it) } == true)
+                    // Returned here as well as from getEntitlement so the app can verify with
+                    // the backend the instant a purchase completes, rather than waiting for
+                    // the next entitlement query.
+                    put("purchaseToken", entitlingToken(purchases.orEmpty()) ?: JSObject.NULL)
                 })
             }
             // Not an error worth surfacing as one: the user changed their mind.
@@ -185,6 +189,17 @@ class BillingPlugin : Plugin() {
             resolveSuccess(call, JSObject().apply {
                 put("entitled", entitled)
                 put("purchaseCount", purchases.size)
+                // THE RECEIPT, for the server to verify with Google.
+                //
+                // `entitled` above is this device's own opinion, and it is only good enough to
+                // decide what to draw. The backend cannot take an app's word for it — a
+                // modified build says yes — so it needs the token itself, which it hands
+                // straight back to Google. Nothing here is trusted; the token is evidence.
+                //
+                // Only an ENTITLING purchase's token is exposed. A PENDING one has not been
+                // paid for, and offering its token would have the server verify a purchase
+                // that may never settle.
+                put("purchaseToken", entitlingToken(purchases) ?: JSObject.NULL)
             })
         }
     }
@@ -257,6 +272,16 @@ class BillingPlugin : Plugin() {
     /** Purchased and paid for. A PENDING purchase is not entitling until Play settles it. */
     private fun isEntitling(purchase: Purchase): Boolean =
         purchase.purchaseState == Purchase.PurchaseState.PURCHASED
+
+    /**
+     * The token of the purchase that actually entitles this user, or null.
+     *
+     * Deliberately not "the first purchase": a user can hold a PENDING one alongside a settled
+     * one, and handing the server a pending token would ask Google to verify a payment that
+     * may never complete. Only a PURCHASED one is evidence of anything.
+     */
+    private fun entitlingToken(purchases: List<Purchase>): String? =
+        purchases.firstOrNull { isEntitling(it) }?.purchaseToken
 
     private suspend fun acknowledgeIfNeeded(purchase: Purchase) {
         if (!isEntitling(purchase) || purchase.isAcknowledged) return
