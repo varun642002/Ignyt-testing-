@@ -1071,12 +1071,6 @@ window.IgnytExerciseInstructionsExtra = {
     "Lean your body backward while keeping your spine neutral.",
     "Pull your chest toward the doorway by squeezing your shoulder blades, then slowly return."
   ],
-  "Downward-Facing Dog Stretch": [
-    "Start on your hands and knees.",
-    "Lift your hips upward and backward while straightening your legs as comfortably as possible.",
-    "Keep your hands planted and spine long.",
-    "Pedal your heels gently if desired, then hold and breathe steadily."
-  ],
   "Drop Push Up": [
     "Start in a high plank with your hands positioned under your shoulders.",
     "Quickly lower your body toward the floor while maintaining control, then immediately push yourself back up.",
@@ -1099,22 +1093,11 @@ window.IgnytExerciseInstructionsExtra = {
     "Keep your core tight, then lower under control.",
     "Only use a range that you can safely control."
   ],
-  "Fire Hydrant": [
-    "Start on your hands and knees with your back neutral.",
-    "Keeping one knee bent, lift it out to the side while keeping your hips level.",
-    "Raise only as far as you can without rotating your torso, then lower slowly.",
-    "Switch sides."
-  ],
   "Fire Hydrant Rehab": [
     "Start on your hands and knees with your core gently braced.",
     "Slowly lift one bent knee outward to the side while keeping your pelvis stable.",
     "Pause briefly, then lower with control.",
     "Use a small, comfortable range and switch sides."
-  ],
-  "Flutter Kick": [
-    "Lie on your back with your legs extended.",
-    "Brace your core and lift your legs slightly off the floor.",
-    "Alternate small, quick up-and-down movements with your legs while keeping your lower back controlled against the floor."
   ],
   "Foam Rolling Adductors": [
     "Lie face down and extend one leg out to the side.",
@@ -1249,11 +1232,6 @@ window.IgnytExerciseInstructionsExtra = {
     "Lie on your back with your knees bent and feet flat.",
     "Slowly slide one heel forward until the leg is nearly straight while keeping your core engaged.",
     "Slide the heel back toward your body and repeat on the other side."
-  ],
-  "Heel Tap": [
-    "Lie on your back with your knees bent and feet elevated.",
-    "Brace your core and lower one foot toward the floor until the heel gently taps it.",
-    "Bring the leg back up and alternate sides while keeping your lower back controlled."
   ],
   "Heel Walk": [
     "Stand tall and lift your toes off the floor so your weight rests on your heels.",
@@ -2785,11 +2763,6 @@ window.IgnytExerciseInstructionsExtra = {
     "Position yourself under the Smith machine bar with the balls of your feet on a stable raised platform.",
     "Keep the bar secure and knees slightly bent.",
     "Raise your heels as high as possible, pause, then lower slowly into a controlled stretch."
-  ],
-  "Standing Leg Curl": [
-    "Position your working leg against the machine's curl pad and hold the support handles.",
-    "Bend your knee to bring your heel toward your glutes while keeping your thigh stable.",
-    "Squeeze your hamstring, then lower the leg slowly."
   ],
   "Terminal Knee Extension": [
     "Attach a resistance strap or cable behind your knee.",
