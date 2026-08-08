@@ -17784,6 +17784,21 @@ function renderExerciseDetail(name){
     ${tab==="howto" ? renderExerciseDetailHowTo(name, nd, libEntry) : ""}
 
     <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:8px;" data-action="add-detail-to-workout" data-exercise-name="${escHtml(name)}">${svg('plus',16)} Add to Workout</button>
+    ${/* The AI already knows WHICH exercise because the question carries its name — that is
+         cheaper and more reliable than giving the model a "current screen" it has to be told
+         about and might carry into the next question. Gated through the same seam as the
+         chat screen, so an unentitled user is not offered a button that opens a paywall. */''}
+    ${(!window.IgnytEntitlements || !IgnytEntitlements.has || IgnytEntitlements.has("coach")) ? `
+    <div class="ex-ai">
+      <div class="ex-ai__label">${svg('bolt',13)} Ask IGNYT AI</div>
+      <div class="ex-ai__row">
+        <button class="aic-chip" data-ai-ask="How do I perform ${escHtml(name)} with good form?">How do I do it?</button>
+        <button class="aic-chip" data-ai-ask="What muscles does ${escHtml(name)} work?">Muscles worked</button>
+        <button class="aic-chip" data-ai-ask="What are common mistakes on ${escHtml(name)}?">Common mistakes</button>
+        <button class="aic-chip" data-ai-ask="How can I make ${escHtml(name)} easier?">Make it easier</button>
+        <button class="aic-chip" data-ai-ask="How do I progress ${escHtml(name)}?">Progress it</button>
+      </div>
+    </div>` : ''}
   </div>`;
 }
 
@@ -18457,6 +18472,12 @@ function attachHandlers(){
 
   /* The transcript scrolls in its own box, so this cannot use the page scroller. rAF because
      the new bubble has no height until the browser has laid it out. */
+  /* Reachable from OTHER screens. The exercise page's "Ask IGNYT AI" chips switch tab and
+     then send, and they need this after render() has rebuilt the DOM — assigning inside
+     aiSend() would only publish it after the first message, so the very first question from
+     an exercise page silently did nothing. */
+  window.__aiSend = aiSend;
+
   function aiScrollToEnd(){
     requestAnimationFrame(()=>{
       const el = document.getElementById("ai-scroll");
@@ -18464,6 +18485,16 @@ function attachHandlers(){
     });
   }
 
+  document.querySelectorAll("[data-ai-ask]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const q = el.dataset.aiAsk;
+      state.viewingExerciseDetail = null;
+      state.tab = "ai";
+      render();
+      /* After the tab has rendered, so aiSend() appends to a transcript that is on screen. */
+      setTimeout(()=>{ const f = window.__aiSend; if(f) f(q); }, 0);
+    });
+  });
   document.querySelectorAll("[data-ai-send]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const inp = document.getElementById("ai-input");

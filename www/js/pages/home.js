@@ -355,10 +355,11 @@
 `; })() : ''}
 
       <div class="rh-section-head"><span>Quick Actions</span></div>
-      <div class="rh-quick-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+      <div class="rh-quick-grid" style="grid-template-columns:repeat(4,minmax(0,1fr));">
         ${/* Three. Workout, Food, Progress and Health all have a bottom-nav tab or a card
               further up this page, so as shortcuts they were pointing at things already one tap
               away. These three are the ones with no other route from Home. */''}
+        ${quickAction('bolt', 'var(--rh-blue)', 'IGNYT AI', 'data-nav="ai"')}
         ${quickAction('scale', 'var(--rh-blue)', 'Log Weight', 'data-nav="body"')}
         ${quickAction('timer', '#7C3AED', 'Fasting', 'data-nav="fasting"')}
         ${quickAction('flask', '#2563EB', 'Supplements', 'data-nav="supplements"')}

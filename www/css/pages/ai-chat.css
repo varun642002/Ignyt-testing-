@@ -110,3 +110,13 @@
 .aic-locked__icon  { color:var(--rh-muted); margin-bottom:10px; }
 .aic-locked__title { font-size:var(--text-heading); font-weight:var(--weight-numeric); color:var(--rh-text); }
 .aic-locked__sub   { font-size:var(--text-body-sm); color:var(--rh-muted); margin:6px 0 16px; }
+
+/* "Ask IGNYT AI" on an exercise page. A row of questions rather than a text box: the useful
+   questions about a movement are the same five every time, and a chip is one tap where an
+   empty field is a sentence to compose. */
+.ex-ai { margin-top:14px; padding-top:12px; border-top:1px solid var(--rh-border); }
+.ex-ai__label { display:flex; align-items:center; gap:6px; color:var(--rh-blue);
+                font-size:var(--text-label); font-weight:var(--weight-bold);
+                text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px; }
+.ex-ai__row { display:flex; gap:7px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
+.ex-ai__row::-webkit-scrollbar { display:none; }
