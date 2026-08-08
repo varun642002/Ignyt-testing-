@@ -753,11 +753,13 @@ const RPE_OPTIONS = ["–","6","6.5","7","7.5","8","8.5","9","9.5","10"];
 
 const SET_TYPE_CYCLE = ["working","warmup","drop","failure"];
 
+/* `label` is what the picker shows. The badge alone is fine once you know the scheme and
+   useless before that — "D" is not a word, and guessing wrong costs a mislogged set. */
 const SET_TYPE_META = {
-  working: { badge:"", color:"var(--muted)" },
-  warmup:  { badge:"W", color:"var(--steel)" },
-  drop:    { badge:"D", color:"var(--accent)" },
-  failure: { badge:"F", color:"#ff6b6b" }
+  working: { badge:"", label:"Working set",  color:"var(--muted)" },
+  warmup:  { badge:"W", label:"Warm-up set", color:"var(--steel)" },
+  drop:    { badge:"D", label:"Drop set",    color:"var(--accent)" },
+  failure: { badge:"F", label:"To failure",  color:"#ff6b6b" }
 };
 
 const PLATE_SIZES = [25,20,15,10,5,2.5,1.25];
@@ -1793,6 +1795,10 @@ const state = {
   viewingPrivacyInfo: false,
   csvImportPreview: null,
   exerciseMenuOpen: null,
+  /* Transient — "exi|si" of the set whose type picker is open, or null. Cycling through four
+     types to reach the one you wanted meant up to three taps and a re-render each; this picks
+     directly. Not persisted: an open menu is not part of the workout. */
+  setTypeMenuFor: null,
   replacingExerciseIndex: null,
   exerciseDetailTab: "summary",
   exerciseSectionsOpen: null, // transient — {sectionKey: bool} for the collapsible guide sections
@@ -3850,10 +3856,11 @@ function prValueLabel(pr){
    EXERCISE PICKER — full-screen searchable "Add Exercise" flow
 ========================================================= */
 
-function nextSetType(t){
-  const i = SET_TYPE_CYCLE.indexOf(t||"working");
-  return SET_TYPE_CYCLE[(i+1) % SET_TYPE_CYCLE.length];
-}
+/* nextSetType() lived here and cycled working -> warmup -> drop -> failure on each tap. The
+   set number now opens a picker instead, so nothing advances a type one step any more and the
+   helper had no callers left. SET_TYPE_CYCLE is still the canonical ORDER — the picker lists
+   the types in it, and it is what validates an incoming pick. */
+
 /* Volume/PR-eligible sets exclude warm-ups (standard practice — warmups don't represent
    a working effort). Backward-compatible: sets logged before this feature have no `type`
    field and are treated as "working". */
@@ -15592,6 +15599,54 @@ function withFocusPreserved(fn){
   }catch(e){ /* a field that cannot take a caret is not worth failing a render over */ }
 }
 
+/* WHICH ELEMENT ACTUALLY SCROLLS. <main> is the scroller — it carries overflow-y:auto and a
+   fixed height between the header and the bottom nav, so the document itself never scrolls and
+   documentElement.scrollTop is permanently 0. Measured in the browser on a live session:
+   main.scrollHeight 4892 against clientHeight 642, while documentElement.scrollHeight equalled
+   its clientHeight exactly.
+
+   Worth stating plainly because the comment above restoreNutritionScroll() asserts the
+   opposite — "there is no <main> in this app" — and reading offsets off documentElement is a
+   silent no-op, not an error: it stores 0, restores 0, and looks like it works. */
+function pageScroller(){
+  return document.querySelector("main") || document.scrollingElement || document.documentElement;
+}
+
+/* A re-render that leaves the reader where they were standing.
+
+   render() rebuilds #app wholesale. For one frame the new DOM has no laid-out height, the
+   window scroll offset has nowhere to point, and the browser clamps it to 0 — so every
+   re-render silently scrolls to the top. On a short screen nobody notices. In a live session
+   it is the difference between marking a drop set on exercise nine and being thrown back to
+   exercise one, and it made the ⋮ menu look broken: the menu did open, just far above the
+   fold, with the page now showing the top of the workout instead.
+
+   Restored in requestAnimationFrame AND on a timeout, deliberately — the same pair
+   restoreNutritionScroll() already uses here, and for the same reason: rAF is the correct
+   moment (one frame later, when layout is real) but it does not fire at all while the page
+   is not compositing, which is exactly when a silent failure would be hardest to spot.
+
+   Not folded into render() itself. Plenty of renders SHOULD land at the top — changing tab,
+   opening a detail view — and a blanket restore would fight those. This is opt-in for the
+   handlers that mutate something the reader is looking at. */
+function renderInPlace(){
+  /* Resolve the scroller EVERY time rather than caching it: renderApp() rebuilds #app, and
+     <main> lives inside it, so the element holding the offset is destroyed by the very render
+     this is preserving across. The node read before is not the node written after. */
+  const before = (pageScroller() || {}).scrollTop || 0;
+  render();
+  if(!before) return;
+  const apply = ()=>{
+    const el = pageScroller();
+    if(!el) return;
+    // Clamp: a deletion makes the page shorter, and an offset past the new end would land at
+    // the bottom rather than where the content actually is.
+    el.scrollTop = Math.min(before, Math.max(0, el.scrollHeight - el.clientHeight));
+  };
+  requestAnimationFrame(apply);
+  setTimeout(apply, 0);
+}
+
 function render(){
   try{
     applyTheme();
@@ -17222,7 +17277,11 @@ function renderWorkoutTab(){
             const prevOneRM = (logType==="strength" && prev && prev.weight && prev.reps)
               ? Math.round(displayW(estimatedOneRM(parseFloat(prev.weight), parseFloat(prev.reps)))) : null;
             const typeMeta = SET_TYPE_META[set.type||"working"];
-            const numBtn = `<button class="mono set-num" data-cycle-set-type="${exi}|${si}" style="color:${typeMeta.color};background:none;border:none;cursor:pointer;font-weight:800;" title="Tap to mark warm-up / drop / failure set">${typeMeta.badge}${si+1}</button>`;
+            /* The set number opens a picker rather than cycling to the next type. Cycling made
+               the common case — "this one is a drop set" — cost up to three taps, each with a
+               full re-render, and gave no way to see what the options were. */
+            const typeMenuOpen = state.setTypeMenuFor === `${exi}|${si}`;
+            const numBtn = `<button class="mono set-num" data-set-type-menu="${exi}|${si}" aria-haspopup="true" aria-expanded="${typeMenuOpen?'true':'false'}" style="color:${typeMeta.color};background:none;border:none;cursor:pointer;font-weight:800;" title="Set type: ${typeMeta.label}">${typeMeta.badge}${si+1}</button>`;
             const doneBtn = `<button class="set-check ${set.done?'done':''}" data-set-done="${exi}|${si}" aria-label="${set.done?'Mark set incomplete':'Mark set complete'}">${set.done?svg('check',13):''}</button>`;
             // Locked once done: real inputs, not fake ones -- values stay exactly as logged
             // until the user explicitly un-checks the set (tap the check again, any time, no
@@ -17267,6 +17326,33 @@ function renderWorkoutTab(){
         </div>
       `;}).join("")}
     </div>
+    ${(()=>{
+      /* THE SET-TYPE PICKER LIVES OUT HERE, not in the set row that opened it.
+         .set-row-wrap is overflow:hidden so the swipe-to-delete buttons stay hidden until
+         they are swiped in, and .set-row is transformed to do the swiping. A menu rendered
+         inside the row would be clipped by the first and, if positioned fixed, would be
+         positioned against the second rather than the viewport. So it is a sheet at session
+         level, which neither of those can reach. */
+      const key = state.setTypeMenuFor;
+      if(!key) return "";
+      const [exi, si] = key.split("|").map(Number);
+      const ex = s.exercises && s.exercises[exi];
+      const set = ex && ex.sets && ex.sets[si];
+      if(!set) return "";
+      return `<div class="set-type-backdrop" data-close-set-type-menu></div>
+        <div class="set-type-sheet" role="dialog" aria-label="Set type">
+          <div class="set-type-sheet__title">Set ${si+1} · ${escHtml(ex.name)}</div>
+          ${SET_TYPE_CYCLE.map(t=>{
+            const m = SET_TYPE_META[t];
+            const on = (set.type||"working") === t;
+            return `<button class="set-type-item${on?' is-on':''}" data-set-type-pick="${exi}|${si}|${t}">
+              <span class="set-type-item__badge" style="color:${m.color};">${m.badge||'—'}</span>
+              <span class="set-type-item__label">${m.label}</span>
+              ${on?`<span class="set-type-item__tick">${svg('check',14)}</span>`:''}
+            </button>`;
+          }).join("")}
+        </div>`;
+    })()}
     <button class="wk-finish-fab" data-action="finish-session" aria-label="${isEditing?'Save workout':'Finish workout'}">${svg('check',22)}</button>
     ${renderMuscleDistributionSheet()}
     ${renderRestTimerSheet()}
@@ -19308,13 +19394,14 @@ function attachHandlers(){
       e.stopPropagation();
       const i = Number(el.dataset.toggleExMenu);
       state.exerciseMenuOpen = state.exerciseMenuOpen===i ? null : i;
-      render();
+      state.setTypeMenuFor = null;
+      renderInPlace();
     });
   });
   document.querySelectorAll("[data-close-ex-menu]").forEach(el=>{
     el.addEventListener("click", ()=>{
       state.exerciseMenuOpen = null;
-      render();
+      renderInPlace();
     });
   });
   document.querySelectorAll("[data-toggle-superset]").forEach(el=>{
@@ -19323,7 +19410,7 @@ function attachHandlers(){
       const ex = state.session.exercises[i];
       ex.supersetWithNext = !ex.supersetWithNext;
       state.exerciseMenuOpen = null;
-      render();
+      renderInPlace();
     });
   });
   document.querySelectorAll("[data-replace-exercise]").forEach(el=>{
@@ -19420,15 +19507,29 @@ function attachHandlers(){
       const list = state.collapsedExercises||[];
       state.collapsedExercises = list.includes(i) ? list.filter(x=>x!==i) : [...list, i];
       state.exerciseMenuOpen = null;
-      render();
+      renderInPlace();
     });
   });
-  document.querySelectorAll("[data-cycle-set-type]").forEach(el=>{
+  document.querySelectorAll("[data-set-type-menu]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const key = el.dataset.setTypeMenu;
+      state.setTypeMenuFor = state.setTypeMenuFor === key ? null : key;
+      state.exerciseMenuOpen = null;
+      renderInPlace();
+    });
+  });
+  document.querySelectorAll("[data-close-set-type-menu]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.setTypeMenuFor = null; renderInPlace(); });
+  });
+  document.querySelectorAll("[data-set-type-pick]").forEach(el=>{
     el.addEventListener("click", ()=>{
-      const [exi,si] = el.dataset.cycleSetType.split("|");
-      const set = state.session.exercises[Number(exi)].sets[Number(si)];
-      set.type = nextSetType(set.type);
-      render();
+      const [exi,si,type] = el.dataset.setTypePick.split("|");
+      const ex = state.session && state.session.exercises[Number(exi)];
+      const set = ex && ex.sets[Number(si)];
+      if(set && SET_TYPE_CYCLE.includes(type)) set.type = type;
+      state.setTypeMenuFor = null;
+      renderInPlace();
     });
   });
   const sessionTitleEl = document.getElementById("session-title");
@@ -19501,7 +19602,7 @@ function attachHandlers(){
       const ex = state.session.exercises[Number(el.dataset.addSet)];
       const last = ex.sets[ex.sets.length-1];
       ex.sets.push(newSet(ex.name, last));
-      render();
+      renderInPlace();
     });
   });
   document.querySelectorAll("[data-del-set]").forEach(el=>{
@@ -19515,7 +19616,7 @@ function attachHandlers(){
         return;
       }
       const [removed] = ex.sets.splice(si,1); // remaining sets renumber automatically -- their "Set N" label is just their array index+1
-      render();
+      renderInPlace();
       // Undo re-inserts at the same exercise+index if the exercise is still there and that
       // position still makes sense; if the workout moved on (exercise removed, fewer sets
       // than the original index) it falls back to appending, so Undo can never throw or
@@ -19539,7 +19640,7 @@ function attachHandlers(){
       // "duplicate this set's numbers to log another one", not "duplicate it as already done".
       const copy = Object.assign({}, src, { done:false });
       ex.sets.splice(si+1, 0, copy);
-      render();
+      renderInPlace();
     });
   });
   // Accessible non-swipe fallback (inside the existing ⋮ menu — no permanent delete button on rows).
@@ -19549,7 +19650,7 @@ function attachHandlers(){
       if(!ex || ex.sets.length<=1) return;
       ex.sets.pop();
       state.exerciseMenuOpen = null;
-      render();
+      renderInPlace();
     });
   });
   document.querySelectorAll("[data-set-field]").forEach(el=>{
