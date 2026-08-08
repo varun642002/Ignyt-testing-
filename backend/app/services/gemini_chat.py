@@ -127,13 +127,29 @@ TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "addFoodLog",
-        "description": "Log a food the user says they ate. Call once per distinct food. If the user did not "
-                       "say how much, omit grams — the app will ask them rather than guessing.",
+        "description": "Log a food the user says they ate. Call once per distinct food. If the user gave no "
+                       "amount at all, omit both grams and quantity — the app will ask rather than guessing.",
         "parameters": {
             "type": "object",
             "properties": {
-                "food": {"type": "string", "description": "The food name as the user said it."},
-                "grams": {"type": "number", "description": "Amount in GRAMS. Omit if the user did not say."},
+                # Split from the amount deliberately. Told only "the name as the user said it",
+                # the model sent food="2 eggs" and food="3 roti" — commonly in Hindi and
+                # Hinglish, where the count and the noun are one phrase — and the search then
+                # looked up a string containing a digit.
+                "food": {"type": "string",
+                         "description": "The food ONLY, with no number and no unit. "
+                                        "'2 eggs' -> 'egg'. '3 roti' -> 'roti'. 'half a banana' -> 'banana'."},
+                # Preferred over grams for anything countable. The app owns the per-food weights
+                # (egg 50 g, roti 40 g, banana 118 g) and converts, so the model never has to
+                # invent one — which it cannot do reliably for regional foods.
+                "quantity": {"type": "number",
+                             "description": "HOW MANY, when the user counted them: '2 eggs' -> 2, "
+                                            "'3 roti' -> 3, 'half a banana' -> 0.5. Prefer this over grams."},
+                "unit": {"type": "string",
+                         "description": "What is being counted: piece, egg, idli, dosa, slice, cup. "
+                                        "Defaults to piece."},
+                "grams": {"type": "number",
+                          "description": "Use ONLY when the user actually gave a weight, e.g. '200g of chicken'."},
                 "meal": {"type": "string", "description": "Breakfast, Lunch, Dinner or Snacks. Omit to use the time of day."},
                 "date": {"type": "string", "description": "YYYY-MM-DD. Omit for today."},
             },

@@ -242,9 +242,32 @@
   /* Food. Resolves against the real catalogue first and only uses model-supplied macros when
      the catalogue genuinely has nothing — inventing numbers for a food the app already knows
      is the failure mode the brief calls out, and it silently corrupts the day's totals. */
+  /* COUNTS ARE CONVERTED HERE, NOT GUESSED BY THE MODEL.
+     People say "2 eggs" and "3 roti", not "100 g of egg" — and in Hindi and Hinglish the model
+     was putting the count inside the food name ("2 eggs", "3 roti") because grams was the only
+     amount it could express. Asking a model how much a roti weighs is asking it to invent a
+     number that IgnytServingConverter already knows exactly: egg 50 g, roti 40 g, banana 118 g,
+     dosa 85 g, keyed per food. So the model now passes the count it heard and the app does the
+     arithmetic against its own table. */
+  function gramsFromCount(food, quantity, unit) {
+    var C = window.IgnytServingConverter;
+    if (!C || !C.toGrams) return null;
+    var want = unit ? String(unit).toLowerCase() : null;
+    /* Prefer the food's own named unit ("egg", "idli", "dosa") over the generic "piece" —
+       they are the same weight when both exist, but a food that only has one of them should
+       still work whichever the model named. */
+    var candidates = want ? [want, "piece"] : ["piece"];
+    for (var i = 0; i < candidates.length; i++) {
+      var g = C.toGrams(food, quantity, candidates[i]);
+      if (g != null && isFinite(g) && g > 0) return Math.round(g);
+    }
+    return null;
+  }
+
   async function addFoodLog(args) {
     var name = str(args && args.food, "Food", 80);
     var grams = args && args.grams != null ? num(args.grams, "Amount", 1, 5000) : null;
+    var quantity = args && args.quantity != null ? num(args.quantity, "Quantity", 0.1, 100) : null;
     var meal = args && args.meal ? String(args.meal).slice(0, 24) : (has("mealForNow") ? window.mealForNow() : "Lunch");
     var ds = dateKey(args && args.date);
 
@@ -258,9 +281,26 @@
       return { card: "error", code: "food_not_found", food: name,
                message: "I couldn't find \"" + name + "\" in the food database." };
     }
+    /* A count only becomes grams once the food is known — "3" means nothing until we know
+       whether it is 3 eggs or 3 dosa. That is why this runs after the search, not before. */
+    var countedAs = null;
+    if (grams == null && quantity != null) {
+      var g = gramsFromCount(found, quantity, args && args.unit);
+      if (g != null) {
+        grams = g;
+        countedAs = quantity + " × " + (args && args.unit ? String(args.unit) : "piece");
+      }
+    }
+
     if (grams == null) {
+      /* Still nothing usable. If the food has a countable unit, offer THAT rather than a
+         gram figure — someone who said "I had chicken" can answer "2 pieces" far more easily
+         than "180 grams", and offering grams to a person eating roti is asking them to weigh
+         their dinner. */
+      var oneUnit = gramsFromCount(found, 1, null);
       return { card: "clarify", code: "need_amount", food: found.name,
-               suggestGrams: found.per || 100,
+               suggestGrams: oneUnit || found.per || 100,
+               suggestUnit: oneUnit ? "piece" : "g",
                message: "How much " + found.name + "?" };
     }
 
@@ -278,7 +318,11 @@
     };
     S().foodLog.unshift(entry);
     window.persist();
-    return { card: "food", added: [{ name: entry.name, grams: grams, kcal: entry.calories, protein: entry.protein }],
+    return { card: "food",
+             added: [{ name: entry.name, grams: grams, kcal: entry.calories, protein: entry.protein,
+                       /* Carried so the card can say "2 × egg (100 g)" rather than just the
+                          gram figure — the user said two eggs and should see two eggs. */
+                       countedAs: countedAs }],
              kcal: entry.calories, protein: entry.protein, entryId: entry.id, date: ds, meal: meal };
   }
 
