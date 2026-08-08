@@ -1345,11 +1345,6 @@ window.IgnytExerciseInstructionsExtra = {
     "Pause briefly on comfortable tender spots and breathe steadily.",
     "Avoid direct pressure on bones or joints."
   ],
-  "Lat closed grip pull down": [
-    "Sit at the pulldown station and grip the bar with a close grip.",
-    "Pull it toward your upper chest while driving your elbows down.",
-    "Squeeze your lats, then slowly return the bar upward."
-  ],
   "Lateral Bound": [
     "Stand on one leg with your knee slightly bent.",
     "Push explosively sideways and land on the opposite leg.",
@@ -1378,7 +1373,7 @@ window.IgnytExerciseInstructionsExtra = {
     "Lift your knees slightly off the floor and shift your hips backward toward your heels while keeping your hands planted.",
     "Brace your shoulders and core and hold the position."
   ],
-  "Low row": [
+  "Low Row (Cable)": [
     "Sit at the cable row station and grip the handle.",
     "Pull it toward your lower abdomen while keeping your chest upright.",
     "Squeeze your shoulder blades together, then extend your arms slowly."

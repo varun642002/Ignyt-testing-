@@ -144,7 +144,7 @@ const LIBRARY = {
     ["Chest Supported T Bar Row","4x8","reps","Upper Back"],["Clean","4x8","reps","Full Body"],
     ["Clean and Jerk","4x8","reps","Full Body"],["Clean and Press","4x8","reps","Full Body"],
     ["Clean Pull","4x8","reps","Full Body"],["Clean to Overhead","4x6","reps","Full Body"],
-    ["Deadlift (Barbell)","4x8","reps","Glutes"],["Deadlift (Trap bar)","4x8","reps","Glutes"],
+    ["Deadlift (Barbell)","4x8","reps","Glutes"],["Deadlift (Trap Bar)","4x8","reps","Glutes"],
     ["Decline Bench Press (Barbell)","4x8","reps","Chest"],["Deficit Deadlift","4x4","reps","Glutes"],
     ["EZ Bar Biceps Curl","3x12","reps","Biceps"],["Fat Grip Hold","3x30s","time","Forearms"],
     ["Feet Up Bench Press (Barbell)","4x8","reps","Chest"],["Floor Press (Barbell)","4x8","reps","Chest"],
@@ -239,8 +239,8 @@ const LIBRARY = {
     ["Cable Fly Crossovers","4x8","reps","Chest"],["Cable Kickback","4x8","reps","Glutes"],
     ["Cable Pull Through","4x8","reps","Glutes"],["Cable Pullover","3x12","reps","Lats"],
     ["Cable Rear Delt Row","3x15","reps","Upper Back"],["Cable Reverse Woodchop","3x12","reps","Abdominals"],
-    ["Cable Rope Hammer Curl","3x15","reps","Biceps"],["Cable Twist (Down to up)","3x15","reps","Abdominals"],
-    ["Cable Twist (Up to down)","3x15","reps","Abdominals"],["Cable Woodchop","3x12","reps","Abdominals"],
+    ["Cable Rope Hammer Curl","3x15","reps","Biceps"],["Cable Twist (Down to Up)","3x15","reps","Abdominals"],
+    ["Cable Twist (Up to Down)","3x15","reps","Abdominals"],["Cable Woodchop","3x12","reps","Abdominals"],
     ["Calf Extension (Machine)","3x15","reps","Calves"],["Calf Press (Machine)","3x15","reps","Calves"],
     ["Chest Fly (Machine)","4x8","reps","Chest"],["Chest Press (Machine)","4x8","reps","Chest"],
     ["Crunch (Machine)","3x400m","distance","Abdominals"],["Deadlift (Smith Machine)","4x8","reps","Glutes"],
@@ -254,15 +254,16 @@ const LIBRARY = {
     ["Hip Thrust (Machine)","4x8","reps","Glutes"],["Hip Thrust (Smith Machine)","4x8","reps","Glutes"],
     ["Incline Bench Press (Smith Machine)","4x8","reps","Chest"],["Incline Chest Press (Machine)","4x8","reps","Chest"],
     ["Internal Rotation (Cable)","3x15","reps","Shoulders"],["Iso-Lateral Chest Press (Machine)","4x8","reps","Chest"],
-    ["Iso-Lateral High Row (Machine)","4x8","reps","Lats"],["Iso-Lateral Row (Machine)","4x8","reps","Upper Back"],
-    ["Kneeling Cable Crunch","3x15","reps","Abdominals"],["Lat closed grip pull down","4x8","reps","Lats"],
+    ["Iso-Lateral High Row (Machine)","4x8","reps","Lats"],["Iso-Lateral Low Row (Machine)","4x8","reps","Upper Back"],
+    ["Iso-Lateral Row (Machine)","4x8","reps","Upper Back"],
+    ["Kneeling Cable Crunch","3x15","reps","Abdominals"],
     ["Lat Pulldown - Close Grip (Cable)","4x8","reps","Lats"],
     ["Lat Pulldown (Cable)","4x8","reps","Lats"],["Lat Pulldown (Machine)","4x8","reps","Lats"],
     ["Lateral Raise (Cable)","3x12","reps","Shoulders"],["Lateral Raise (Machine)","3x12","reps","Shoulders"],
     ["Leaning Cable Lateral Raise","3x15","reps","Shoulders"],["Leg Extension (Machine)","4x8","reps","Quadriceps"],
     ["Leg Press (Machine)","4x8","reps","Quadriceps"],["Leg Press Calf Raise","4x15","reps","Calves"],
     ["Leg Press Horizontal (Machine)","4x8","reps","Quadriceps"],["Low Cable Fly Crossovers","4x8","reps","Chest"],
-    ["Low row","4x8","reps","Upper Back"],
+    ["Low Row (Cable)","4x8","reps","Upper Back"],
     ["Lying Leg Curl (Machine)","4x8","reps","Hamstrings"],["Nautilus Pullover","3x12","reps","Lats"],
     ["Neck Harness Extension","3x15","reps","Neck"],["Overhead Curl (Cable)","3x12","reps","Biceps"],
     ["Overhead Press (Smith Machine)","3x12","reps","Shoulders"],["Overhead Triceps Extension (Cable)","3x12","reps","Triceps"],
@@ -287,7 +288,7 @@ const LIBRARY = {
     ["Smith Machine Calf Raise","4x15","reps","Calves"],["Squat (Machine)","4x8","reps","Quadriceps"],
     ["Squat (Smith Machine)","4x8","reps","Quadriceps"],["Stair Machine (Floors)","3x400m","distance","Cardio"],
     ["Stair Machine (Steps)","3x400m","distance","Cardio"],["Standing Cable Glute Kickbacks","4x8","reps","Glutes"],
-    ["Standing Calf Raise (Machine)","3x15","reps","Calves"],["Standing Calf Raise (Smith)","3x15","reps","Calves"],["Standing Leg Curls","4x8","reps","Hamstrings"],
+    ["Standing Calf Raise (Machine)","3x15","reps","Calves"],["Standing Calf Raise (Smith)","3x15","reps","Calves"],["Standing Leg Curl (Machine)","4x8","reps","Hamstrings"],
     ["Standing Y Raise (Cable)","3x12","reps","Shoulders"],
     ["Straight Arm Lat Pulldown (Cable)","4x8","reps","Lats"],["Terminal Knee Extension","3x15","reps","Quadriceps"],
     ["Triceps Extension (Cable)","3x12","reps","Triceps"],["Triceps Extension (Machine)","3x12","reps","Triceps"],
@@ -417,8 +418,7 @@ const LIBRARY = {
     ["Human Flag Hold","4x10s","time","Abdominals"],["Hurdle Hop","4x6","reps","Calves"],
     ["Impossible Dip","3x5","reps","Chest"],["Inchworm","3x10","reps","Full Body"],
     ["Incline Push Ups","4x8","reps","Chest"],["Inverted Row","4x8","reps","Upper Back"],
-    ["Inverted Row Feet Elevated","3x12","reps","Upper Back"],["Iron Cross Hold","4x8s","time","Chest"],
-    ["Iso-Lateral Low Row","4x8","reps","Upper Back"],["Isometric Lunge Hold","3x45s","time","Quadriceps"],
+    ["Inverted Row Feet Elevated","3x12","reps","Upper Back"],["Iron Cross Hold","4x8s","time","Chest"],["Isometric Lunge Hold","3x45s","time","Quadriceps"],
     ["Isometric Push Up Hold","3x30s","time","Chest"],["Isometric Shoulder Abduction","3x20s","time","Shoulders"],
     ["Isometric Shoulder External Rotation","3x20s","time","Shoulders"],["Isometric Squat Hold","3x45s","time","Quadriceps"],
     ["Jack Knife (Suspension)","3x15","reps","Abdominals"],["Jackknife Sit Up","3x15","reps","Abdominals"],
@@ -428,7 +428,7 @@ const LIBRARY = {
     ["Kipping Pull Up","4x8","reps","Lats"],["Kipping Toes to Bar","4x10","reps","Abdominals"],
     ["Knee Hug Stretch","2x30s","time","Mobility"],["Knee Push Up","3x12","reps","Chest"],
     ["Knee Raise Parallel Bars","3x15","reps","Abdominals"],
-    ["Kneeling Pulldown (band)","4x8","reps","Lats"],["Kneeling Push Up","4x8","reps","Chest"],
+    ["Kneeling Pulldown (Band)","4x8","reps","Lats"],["Kneeling Push Up","4x8","reps","Chest"],
     ["Korean Dip","3x8","reps","Triceps"],["L-Sit Hold","3x45s","time","Abdominals"],
     ["Lacrosse Ball Foot Release Stretch","2x60s","time","Mobility"],["Lacrosse Ball Glute Release Stretch","2x60s","time","Mobility"],["Lat Pulldown (Band)","4x8","reps","Lats"],
     ["Lat Stretch on Rack","2x45s","time","Mobility"],["Lateral Band Walks","3x400m","distance","Glutes"],
@@ -2354,6 +2354,29 @@ const MERGED_EXERCISE_NAMES = {
   "Flutter Kick":                "Flutter Kicks"
 };
 
+/* Entries renamed onto the library's own naming convention, mapped old -> new.
+
+   Same machinery as the merge above and for the same reason: the name IS the key, so a
+   library rename without this would leave every logged set, PR and routine row pointing at a
+   name that no longer exists. Two of these also carry an equipment suffix the entry should
+   always have had, which changes its illustration slug — the image files were renamed to
+   match in the same change.
+
+   "Lat closed grip pull down" is a MERGE rather than a rename: the library already carried
+   "Lat Pulldown - Close Grip (Cable)" as a separate entry for the same movement, which is the
+   sixth duplicate pair and the one that was hardest to see, since the two names share almost
+   no words. */
+const RENAMED_EXERCISE_NAMES = {
+  "Low row":                   "Low Row (Cable)",
+  "Standing Leg Curls":        "Standing Leg Curl (Machine)",
+  "Iso-Lateral Low Row":       "Iso-Lateral Low Row (Machine)",
+  "Deadlift (Trap bar)":       "Deadlift (Trap Bar)",
+  "Cable Twist (Up to down)":  "Cable Twist (Up to Down)",
+  "Cable Twist (Down to up)":  "Cable Twist (Down to Up)",
+  "Kneeling Pulldown (band)":  "Kneeling Pulldown (Band)",
+  "Lat closed grip pull down": "Lat Pulldown - Close Grip (Cable)"
+};
+
 /* Rewrite every stored reference to a merged-away exercise name.
 
    EVERY PLACE A NAME IS STORED, because missing one leaves an orphan the user can see:
@@ -2367,8 +2390,8 @@ const MERGED_EXERCISE_NAMES = {
    Rewriting it would move their data onto a library exercise they never used.
 
    Flag-guarded and idempotent; wrapped so a failure can never stop the app booting. */
-function migrateExerciseNames(){
-  const map = MERGED_EXERCISE_NAMES;
+function migrateExerciseNames(map){
+  if(!map) return 0;
   const custom = new Set((state.customExercises || [])
     .map(function(c){ return c && c.name ? String(c.name).trim() : ""; }).filter(Boolean));
   // A name the user owns is not ours to move.
@@ -2430,10 +2453,20 @@ function runMigrations(){
      recomputed against the joined data rather than the halves. */
   if(!LS.get("hx_exercise_merge_v1", false)){
     try{
-      const n = migrateExerciseNames();
+      const n = migrateExerciseNames(MERGED_EXERCISE_NAMES);
       if(n > 0) console.warn("[IGNYT] Merged duplicate exercise names in " + n + " stored reference(s).");
     }catch(e){ /* a rename must never break boot */ }
     LS.set("hx_exercise_merge_v1", true);
+  }
+  /* Separate flag from v1, not an extension of it: v1 has already run and set its flag on any
+     install that opened the app between the two changes, and reusing the flag would skip these
+     renames entirely on exactly those devices. */
+  if(!LS.get("hx_exercise_rename_v2", false)){
+    try{
+      const n = migrateExerciseNames(RENAMED_EXERCISE_NAMES);
+      if(n > 0) console.warn("[IGNYT] Updated renamed exercise names in " + n + " stored reference(s).");
+    }catch(e){ /* a rename must never break boot */ }
+    LS.set("hx_exercise_rename_v2", true);
   }
   // One-time rest-timer default migration (independent of schema version so it also reaches
   // pre-versioning installs, which return early below). The app's default rest timer changed
