@@ -123,6 +123,33 @@
     var A = window.IgnytAIActions;
     var history = opts.history || [];
 
+    /* THE LOCAL CHATBOT GETS FIRST REFUSAL.
+       "what's my streak" and "log 200g chicken" are mechanical: the sentence names the action.
+       Sending those to Gemini costs a network round trip, one of fifteen daily messages, and
+       fails entirely on a train — for an answer that js/ai/local-chat.js produces offline in
+       about a millisecond from the same actions registry.
+
+       It is a strict filter, not a first guess: it returns null for anything it cannot prove
+       it understands, and null falls through to the model below with the message untouched.
+       That ordering is what makes it safe to put a pattern matcher in front of a language
+       model — the worst case is the behaviour we had before it existed.
+
+       Skipped when the caller is resuming a conversation, because a follow-up like "and the
+       day before?" only means something in the context of the previous turns, which patterns
+       cannot see and the model can. */
+    if (!history.length && window.IgnytLocalChat) {
+      var local = null;
+      try { local = await window.IgnytLocalChat.tryAnswer(message); } catch (e) { local = null; }
+      if (local) {
+        if (local.pending) {
+          onEvent({ type: "pending", action: local.pending.action, args: local.pending.args });
+          return { text: local.text || null, pending: local.pending, source: local.source };
+        }
+        onEvent({ type: "text", text: local.text });
+        return { text: local.text, source: local.source };
+      }
+    }
+
     var context = await pickContext(message);
     /* The device's own zone decides when the daily allowance rolls over. Sent rather than
        inferred server-side because the server's midnight is not the user's. */
