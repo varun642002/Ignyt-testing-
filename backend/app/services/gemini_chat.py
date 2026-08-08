@@ -354,7 +354,18 @@ async def chat(
 
     try:
         async with httpx.AsyncClient(timeout=settings.gemini_timeout_seconds) as client:
-            resp = await client.post(url, params={"key": settings.gemini_api_key}, json=body)
+            # THE KEY GOES IN A HEADER, NEVER THE QUERY STRING.
+            # Gemini accepts either. Passing it as ?key= leaks it into every place a URL gets
+            # written down, and httpx logs the full request line at INFO — so the first real
+            # call printed the live key into the server log in plaintext. Headers are not
+            # logged by httpx, are not captured by proxy access logs, and do not survive in an
+            # exception's repr. Observed, not theorised: it appeared in uvicorn's output the
+            # first time this route answered.
+            resp = await client.post(
+                url,
+                headers={"x-goog-api-key": settings.gemini_api_key},
+                json=body,
+            )
         if resp.status_code == 429:
             raise AiUnavailable("The AI is busy. Try again in a moment.")
         resp.raise_for_status()
