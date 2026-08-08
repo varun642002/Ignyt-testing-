@@ -38,7 +38,11 @@ def test_classification_follows_the_exception_chain():
 
 
 def test_unrecognised_failure_is_not_guessed_at():
-    assert _classify(Exception("something entirely new")) == "unknown"
+    """No category is invented for a failure that matches none of them — but it still names the
+    exception type, because "unknown" tells whoever is holding the outage nothing at all."""
+    out = _classify(Exception("something entirely new"))
+    assert out == "unclassified:Exception"
+    assert "something entirely new" not in out
 
 
 @pytest.mark.parametrize("message", [
@@ -79,3 +83,30 @@ async def test_ready_is_clean_when_the_database_works(client):
     body = r.json()
     assert body["checks"]["database"] is True
     assert body["checks"]["database_error"] is None
+
+
+def test_unclassified_failures_name_the_exception_chain_not_its_message():
+    """"unknown" is useless during an outage. Class names identify the fault precisely and
+    carry no host, user or database name."""
+    try:
+        try:
+            raise OSError("connect to 10.0.0.5 failed for user ignyt_admin")
+        except OSError as inner:
+            raise RuntimeError("wrapped") from inner
+    except RuntimeError as outer:
+        out = _classify(outer)
+    assert out.startswith("unclassified:")
+    assert "RuntimeError" in out and "OSError" in out
+    for leak in ["10.0.0.5", "ignyt_admin", "connect to", "failed for"]:
+        assert leak not in out
+
+
+def test_unclassified_chain_is_bounded():
+    exc = ValueError("innermost")
+    for i in range(12):
+        try:
+            raise RuntimeError(f"layer{i}") from exc
+        except RuntimeError as e:
+            exc = e
+    out = _classify(exc)
+    assert len(out) < 80, out

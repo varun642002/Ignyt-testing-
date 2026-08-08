@@ -45,7 +45,26 @@ def _classify(exc: BaseException) -> str:
         return "connection_refused"
     if "no such table" in blob or "undefinedtable" in blob or "relation" in blob and "does not exist" in blob:
         return "migrations_not_run"
-    return "unknown"
+
+    # Nothing matched. Fall back to the EXCEPTION CLASS NAMES — never their messages.
+    #
+    # "unknown" is useless to whoever is holding the outage, and the categories above can only
+    # cover failures somebody thought of in advance. A chain like
+    # "OperationalError<gaierror" names the fault precisely, while a message would carry the
+    # host, the user and often the database name, which is exactly what must not appear on a
+    # public endpoint.
+    #
+    # Class names are library identifiers, not infrastructure: they reveal that this is
+    # SQLAlchemy talking to Postgres, which anyone can already infer from the service. Sliced
+    # so a deep wrapper chain cannot turn into an unbounded response body.
+    names = []
+    cur = exc
+    while cur is not None and len(names) < 4:
+        n = type(cur).__name__
+        if n not in names:
+            names.append(n)
+        cur = cur.__cause__ or cur.__context__
+    return "unclassified:" + "<".join(names)
 
 
 @router.get("/health", response_model=HealthResponse)
