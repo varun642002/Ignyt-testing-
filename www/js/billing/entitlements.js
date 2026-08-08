@@ -25,16 +25,20 @@
 window.IgnytEntitlements = (function () {
   "use strict";
 
-  /* GATING IS OFF. Every feature is free.
+  /* GATING IS OFF. Every feature is free, including the AI Coach.
    *
    * `has()` returns true for anything not named in this map, so an empty map means every
    * premiumAllows() seam in app.js passes and no upgrade wall ever renders. Because the wall
    * is the only route to the paywall sheet, that also makes the paywall unreachable — there
-   * is no second switch to find.
+   * is no second switch to find, and no half-gated state where a user can reach a purchase
+   * screen for something they already have.
    *
-   * The whole billing stack below is intact and untouched: the Play query, the entitlement
-   * cache, the grace period, purchase and restore. Turning gating back on is restoring this
-   * map and nothing else, which is why it was emptied rather than deleted.
+   * THE BILLING STACK BELOW IS DELIBERATELY LEFT INTACT: the Play query, the entitlement
+   * cache, the grace period, purchase and restore, and the server-side verification they talk
+   * to. None of it runs while this map is empty. It was emptied rather than deleted because
+   * turning gating back on should be restoring this map and nothing else — deleting it would
+   * turn a one-line change into rebuilding a feature, and the Play product ID and the verified
+   * entitlement records would go with it.
    *
    *   var PREMIUM_FEATURES = {
    *     coach:      "AI Coach",
@@ -49,20 +53,15 @@ window.IgnytEntitlements = (function () {
    *     export:     "Data Export"
    *   };
    *
+   * The server has its own switch and it already agrees: AI_REQUIRES_PREMIUM is false on
+   * Render, so /v1/ai/chat serves any authenticated account. BOTH have to be on for gating to
+   * work, and only this one has to be off for it not to be — which is the safe asymmetry.
+   *
    * Free tier keeps everything the user creates and everything they log. When this does come
    * back, what is gated is new capability, never access to their own data — an app that holds
    * someone's workout history hostage earns the review it gets, and Play takes a dim view of
    * it too. */
-  /* GATING IS ON FOR THE AI COACH ONLY.
-   *
-   * Restoring a name to this map is the only switch, exactly as the note above describes.
-   * "coach" is listed and nothing else is, so every other feature stays free and the paywall
-   * becomes reachable again — the upgrade wall is its only route, which is a product
-   * consequence of turning this on, not a side effect worth hiding.
-   *
-   * Free tier still keeps everything the user creates and logs. What is gated is the new
-   * capability, never access to their own data. */
-  var PREMIUM_FEATURES = { coach: "AI Coach" };
+  var PREMIUM_FEATURES = {};
 
   var PRODUCT_ID = "ignyt_premium";
   var CACHE_KEY = "hx_entitlement";
