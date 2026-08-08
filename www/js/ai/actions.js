@@ -352,6 +352,38 @@
     return { card: "deleted", what: row.name, kcal: Math.round(Number(row.calories) || 0) };
   }
 
+  /* "Start my workout." Builds the session from buildTodaysPlan(), the same builder the
+     Start button on the plan screen uses — including its deliberate choice to seed reps but
+     NOT weight, because a template can prescribe repetitions and cannot prescribe a load for
+     a person it knows nothing about. Reimplementing the shape here would have quietly
+     dropped that. */
+  function startWorkout() {
+    var st = S();
+    if (st.session) {
+      return { card: "workoutStarted", already: true, title: st.session.title || null,
+               exercises: (st.session.exercises || []).length };
+    }
+    if (!has("buildTodaysPlan")) return { card: "error", code: "unavailable", message: "Couldn't open today's workout." };
+    var plan = window.buildTodaysPlan();
+    if (!plan || !plan.exercises || !plan.exercises.length) {
+      return { card: "error", code: "no_plan", message: "There's no session planned for today." };
+    }
+    st.session = {
+      startedAt: Date.now(), notes: "",
+      title: plan.template.name + (has("titleCaseDayKey") ? " — " + window.titleCaseDayKey(plan.dayKey) : ""),
+      exercises: plan.exercises.map(function (e) {
+        return { name: e.name, notes: "", restDuration: e.rest,
+                 sets: (e.sets || []).map(function (s) { return { reps: s.reps, weight: "", done: false }; }) };
+      })
+    };
+    window.persist();
+    /* The chat screen is the wrong place to run a session, so this hands over to the workout
+       tab — the answer to "start my workout" is the workout, not a card describing it. */
+    st.tab = "workout";
+    return { card: "workoutStarted", title: st.session.title,
+             exercises: st.session.exercises.length, navigated: true };
+  }
+
   /* Workout completion goes through commitFinishedWorkout(), which owns PR detection, XP,
      achievements, the streak and the duplicate-commit ledger. Re-implementing any of that
      here would produce a workout that counted for the history but not for the streak. */
@@ -368,24 +400,39 @@
              streak: has("computeStreak") ? window.computeStreak() : null };
   }
 
-  /* Steps. Health Connect is preferred when it has a reading for today — a manual number
-     would otherwise overwrite a measured one, and the brief is explicit that measured wins. */
+  /* Steps.
+
+     THIS ONE CANNOT FULLY DO WHAT THE BRIEF ASKS, and pretending otherwise is worse than
+     saying so. The app has no manual step store: the Home steps card renders only when
+     Health Connect is CONNECTED, reads d.steps.steps from the Health Connect cache, and that
+     cache is rewritten wholesale on every sync. A hand-written number there survives until
+     the next sync and then vanishes, and on a phone without Health Connect it was never
+     displayed at all.
+
+     The first version of this wrote to hx_manual_steps. Nothing in the app reads that key, so
+     "10,000 steps logged" showed a success card and changed precisely nothing — a hollow
+     confirmation, which is the one thing an action card must never be.
+
+     So: if Health Connect has today's figure, report THAT (measured beats typed, per the
+     brief). Otherwise say plainly that steps are not tracked manually yet, rather than
+     claiming a write that goes nowhere. A real manual-steps feature is its own piece of work
+     — a store, a Home surface, and a rule for what happens when a sync later disagrees. */
   function updateSteps(args) {
     var steps = num(args && args.steps, "Steps", 0, 200000);
     var ds = dateKey(args && args.date);
     var cache = null;
     try { cache = JSON.parse(localStorage.getItem("hx_hc_dashboard_cache") || "null"); } catch (e) {}
-    var measured = cache && cache.steps != null ? Number(cache.steps) : null;
+    /* d.steps is an OBJECT — {steps: n} — which is how renderHealthCards reads it. The first
+       version compared cache.steps to a number, so the guard never once fired. */
+    var measured = cache && cache.steps && cache.steps.steps != null ? Number(cache.steps.steps) : null;
+
     if (measured != null && measured > 0 && ds === dateKey()) {
-      return { card: "steps", steps: measured, source: "health-connect", ignoredManual: steps,
-               note: "Health Connect already has " + measured.toLocaleString() + " steps for today, so I kept that." };
+      return { card: "steps", steps: measured, source: "health-connect",
+               note: "Health Connect already has today's steps, so I kept its figure." };
     }
-    var key = "hx_manual_steps";
-    var map = {};
-    try { map = JSON.parse(localStorage.getItem(key) || "{}") || {}; } catch (e) {}
-    map[ds] = steps;
-    try { localStorage.setItem(key, JSON.stringify(map)); } catch (e) {}
-    return { card: "steps", steps: steps, source: "manual", date: ds };
+    return { card: "error", code: "steps_not_manual",
+             message: "IGNYT reads steps from Health Connect rather than storing typed ones. "
+                    + "Connect it and today's count appears automatically." };
   }
 
   /* ---------- the registry ------------------------------------------------------------- */
@@ -405,6 +452,7 @@
     updateWeight:     { risk: "write",   fn: logWeight },   // same operation, friendlier name
     addFoodLog:       { risk: "write",   fn: addFoodLog },
     updateFoodLog:    { risk: "write",   fn: updateFoodLog },
+    startWorkout:     { risk: "write",   fn: startWorkout },
     completeWorkout:  { risk: "write",   fn: completeWorkout },
     updateSteps:      { risk: "write",   fn: updateSteps },
 

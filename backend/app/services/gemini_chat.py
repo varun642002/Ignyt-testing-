@@ -190,13 +190,19 @@ TOOLS: List[Dict[str, Any]] = [
         },
     },
     {
+        "name": "startWorkout",
+        "description": "Open and begin today's planned workout. Use for 'start my workout' or "
+                       "'let's train'. Takes the user to the workout screen.",
+        "parameters": {"type": "object", "properties": {}},
+    },
+    {
         "name": "completeWorkout",
         "description": "Finish and save the workout currently in progress.",
         "parameters": {"type": "object", "properties": {}},
     },
     {
         "name": "updateSteps",
-        "description": "Record a step count the user reports. Health Connect data wins if it already has today's steps.",
+        "description": "Report the user's step count. IGNYT reads steps from Health Connect and does NOT store typed ones, so this returns today's measured figure when it exists and otherwise explains that. Do not promise the user their number was saved.",
         "parameters": {
             "type": "object",
             "properties": {
