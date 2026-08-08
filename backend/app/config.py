@@ -171,10 +171,40 @@ class Settings(BaseSettings):
                .replace("+asyncpg", "+psycopg2")
         )
 
+    @property
+    def firebase_keyless(self) -> bool:
+        """Whether tokens are verified against Google's public certs rather than via the SDK.
+
+        Not a preference — it is simply what happens when no service-account credential was
+        supplied. See auth/firebase.py for why that is a supported way to run.
+        """
+        return self.auth_mode == "firebase" and not self.firebase_credentials.strip()
+
+    @property
+    def auth_configured(self) -> bool:
+        """Whether authentication can actually verify anything.
+
+        Deliberately not `bool(firebase_credentials)`, which was only ever asking whether a
+        string was non-empty — a truncated paste passed it and then failed on the first real
+        sign-in, pointing at auth rather than at config.
+        """
+        if self.auth_mode != "firebase":
+            return True
+        if self.firebase_keyless:
+            return bool(self.firebase_project_id.strip())
+        return bool(self.firebase_credentials.strip())
+
     def assert_ready(self) -> None:
         missing: List[str] = []
-        if self.auth_mode == "firebase" and not self.firebase_credentials:
-            missing.append("FIREBASE_CREDENTIALS (required when AUTH_MODE=firebase)")
+        # Either credential route is fine, but keyless REQUIRES the project id: it is the
+        # audience every token is checked against, and Google signs all Firebase projects
+        # with one key. Without it every Firebase token on earth would verify, so this is a
+        # refusal to start rather than a warning.
+        if self.firebase_keyless and not self.firebase_project_id.strip():
+            missing.append(
+                "FIREBASE_PROJECT_ID (required when FIREBASE_CREDENTIALS is unset — it is the "
+                "audience tokens are verified against)"
+            )
         if self.auth_mode == "insecure-uid" and self.is_production:
             raise RuntimeError("AUTH_MODE=insecure-uid is forbidden in production.")
         if self.auth_mode not in ("firebase", "insecure-uid"):

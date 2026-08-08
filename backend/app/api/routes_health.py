@@ -27,6 +27,6 @@ async def ready(
         await db.execute(text("SELECT 1"))
     except Exception:
         db_ok = False
-    auth_ok = settings.auth_mode != "firebase" or bool(settings.firebase_credentials)
+    auth_ok = settings.auth_configured
     status = "ready" if (db_ok and auth_ok) else "degraded"
     return ReadyResponse(status=status, checks=ReadyCheck(database=db_ok, auth_configured=auth_ok))

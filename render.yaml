@@ -43,6 +43,12 @@ services:
         value: firebase
       - key: PLAY_PACKAGE_NAME
         value: com.varun.ignyt
+      # NOT a secret, and required. It is in google-services.json, which ships inside the APK.
+      # In keyless mode this is the audience every ID token is checked against, and the server
+      # refuses to start without it — without an audience, every Firebase project's tokens
+      # would verify, since Google signs them all with one key.
+      - key: FIREBASE_PROJECT_ID
+        value: ignyt-fitness2
       # Capacitor's WebView origins. An Android release serves the app from https://localhost,
       # iOS from capacitor://localhost — neither is a website, and neither will be sent by a
       # browser you control, which is why they are listed explicitly rather than using "*".
@@ -59,9 +65,12 @@ services:
       # first deploy and stores it encrypted.
       - key: GEMINI_API_KEY
         sync: false
-      - key: FIREBASE_CREDENTIALS      # the service-account JSON, as one line
-        sync: false
-      - key: FIREBASE_PROJECT_ID
+      # OPTIONAL. Leave it unset and the server verifies ID tokens against Google's public
+      # certificates instead, which needs no service account at all — the way to deploy when
+      # constraints/iam.disableServiceAccountKeyCreation is enforced on the org and a key
+      # simply cannot be created. Set it to the service-account JSON (one line) to use the
+      # Admin SDK path instead. See app/auth/firebase.py.
+      - key: FIREBASE_CREDENTIALS
         sync: false
       - key: PLAY_SERVICE_ACCOUNT_JSON # a DIFFERENT service account to the Firebase one
         sync: false

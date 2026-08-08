@@ -110,8 +110,8 @@ Set in the Render dashboard, never in the repo:
 | Variable | Required | What it is |
 |---|---|---|
 | `GEMINI_API_KEY` | **yes** | AI Coach and food scanning both stop without it |
-| `FIREBASE_CREDENTIALS` | **yes** | Firebase service-account JSON, as one line. Required whenever `AUTH_MODE=firebase`, and startup fails fast without it |
-| `FIREBASE_PROJECT_ID` | yes | From the Firebase console |
+| `FIREBASE_PROJECT_ID` | **yes** | `ignyt-fitness2`. Preset in the blueprint. Not a secret — it ships inside the APK — but startup fails without it, see §2.6 |
+| `FIREBASE_CREDENTIALS` | **no** | Service-account JSON, one line. Leave unset to verify tokens against Google's public certificates instead — §2.6 |
 | `DATABASE_URL` | auto | Wired from `ignyt-db` by the blueprint |
 | `PLAY_SERVICE_ACCOUNT_JSON` | for billing | A **different** service account to the Firebase one — see §3 |
 | `AI_REQUIRES_PREMIUM` | no | Leave `false` until a real purchase has been verified. See the warning in §3 |
@@ -153,6 +153,42 @@ alembic upgrade head
 Use the **External** URL from Render's database page — the internal one is only reachable from
 inside Render's network. `postgres://`, `postgresql://` and `postgresql+asyncpg://` are all
 accepted; the service normalises whichever you paste.
+
+### 2.6 Two ways to authenticate, and why
+
+Verifying a Firebase ID token is a signature check against Google's **public** certificates. It
+needs no secret of ours — the private half is Google's, and the certs are served to anyone,
+unauthenticated. The Admin SDK still demands a service-account credential before it will do
+that check, so the key is a requirement of the *library*, not of the *cryptography*.
+
+That matters because Google now enables
+`constraints/iam.disableServiceAccountKeyCreation` by default on new organizations. Key
+creation is refused outright — "Key creation is not allowed on this service account" — and a
+backend that can only authenticate with a key cannot be deployed at all.
+
+So the mode follows from what you set, with no switch to throw:
+
+| `FIREBASE_CREDENTIALS` | What happens |
+|---|---|
+| unset | **Keyless.** Tokens verified against Google's public certs. Needs only `FIREBASE_PROJECT_ID` |
+| set | The Admin SDK path, unchanged |
+
+Both return identical claims, so nothing downstream can tell them apart.
+
+**`FIREBASE_PROJECT_ID` is mandatory in keyless mode and the server refuses to boot without
+it.** Google signs the tokens of every Firebase project with the same key, so a valid signature
+only proves "Firebase issued this" — never "issued for us". The project ID is the audience each
+token is checked against; without it, every Firebase token in existence would verify. That is
+not a degraded mode, it is an open door, so it is a startup failure rather than a warning.
+
+Keyless mode additionally checks the issuer, `sub` and `auth_time` in our own code, because the
+underlying library validates signature, audience and expiry but ignores the issuer entirely.
+`tests/test_keyless_auth.py` proves each check by forging a token that violates it.
+
+**If you would rather use a service account**, lift the org policy: Google Cloud Console →
+[Organization Policies](https://console.cloud.google.com/iam-admin/orgpolicies) → select the
+**organization** in the resource picker, not the project → *Disable service account key
+creation* → Manage policy → Customize → Off. Needs `roles/orgpolicy.policyAdmin` at org level.
 
 ### 2.5 Verify
 
