@@ -334,9 +334,31 @@
         return null;
       }
       if (!out) return null;                          // handler declined on closer inspection
-      out.source = "local:" + it.name;
+      out.source = "BUILT_IN_ACTION:" + it.name;
       return out;
     }
+
+    /* NO ACTION MATCHED — try the knowledge base before giving up on this message.
+       Order matters and is not arbitrary: actions first because "log 200g chicken" is a
+       command, not a question, and the knowledge base would happily score it against a
+       nutrition entry. Only once nothing wants to DO something is it worth asking what the
+       question means. */
+    if (window.IgnytKnowledge) {
+      var kb = null;
+      try { kb = await window.IgnytKnowledge.ask(message); } catch (e) { kb = null; }
+
+      if (kb && kb.safety) {
+        /* A pain or medical question. The base has no vetted answer for these, so it declines
+           and so do we — returning null sends the FULL original text to Gemini, which is
+           equipped to handle it under its own safety instructions. Answering here from a
+           fitness entry is the exact failure the safety guard exists to prevent. */
+        return null;
+      }
+      if (kb && kb.answer) {
+        return { text: kb.answer, source: kb.source, confidence: kb.confidence };
+      }
+    }
+
     return null;
   }
 
