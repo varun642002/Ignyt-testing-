@@ -88,3 +88,43 @@
   flex: none; font-size: 12.5px; font-weight: 800; color: var(--rh-blue);
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
+
+/* =========================================================
+   RED-FLAG SAFETY CHECK
+
+   Deliberately plain. Safety copy that is styled like a promotion gets read like one, so this
+   uses the same card and type as the rest of the app and earns attention from what it says
+   rather than from colour. The one exception is the urgent stop, which does take colour —
+   there the point IS to interrupt.
+========================================================= */
+
+.rf-check { padding: 4px 14px; }
+.rf-item {
+  display: flex; align-items: flex-start; gap: 11px;
+  padding: 12px 0; cursor: pointer;
+  font-size: 13.5px; line-height: 1.45;
+}
+.rf-item + .rf-item { border-top: 1px solid var(--divider, var(--rh-border)); }
+/* 20px and a 44px tap target via the padding above — these are the checkboxes where a mis-tap
+   matters most, so they are the largest in the app rather than the smallest. */
+.rf-item__box { flex: none; width: 20px; height: 20px; margin-top: 1px; accent-color: var(--rh-blue); }
+
+.rf-actions { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
+.rf-actions .rh-btn { width: 100%; padding: 14px; font-size: 14.5px; }
+
+.rf-universal {
+  font-size: 12.5px; line-height: 1.55; color: var(--rh-muted);
+  padding: 13px 15px; margin-top: 6px;
+}
+
+/* ---- the stop screen ---- */
+.rf-stop { padding: 18px 16px; border-left: 3px solid var(--rh-blue); }
+.rf-stop--urgent { border-left-color: var(--rh-red, #DC2626); }
+.rf-stop__title { font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+.rf-stop--urgent .rf-stop__title { color: var(--rh-red, #DC2626); }
+.rf-stop__body { font-size: 13.5px; line-height: 1.55; color: var(--rh-text); margin-top: 8px; }
+.rf-stop__list {
+  margin: 12px 0 0; padding-left: 20px;
+  font-size: 13px; line-height: 1.6; color: var(--rh-muted);
+}
+.rf-stop__clear { width: 100%; margin-top: 16px; padding: 12px; font-size: 13.5px; }

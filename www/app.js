@@ -10,7 +10,13 @@ const SCHEMA_VERSION = 1; // bump when localStorage shape changes; add a migrate
 /* ---------- Storage ---------- */
 
 const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_profile","hx_nutrition","hx_bodylog","hx_custom_exercises",
-  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history","hx_deleted_workouts","hx_plan","hx_injuries"];
+  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history","hx_deleted_workouts","hx_plan","hx_injuries",
+  /* The red-flag acknowledgement. Listed so "Clear all data" and the sign-out wipe
+     actually remove it — an unregistered key would leave a record of reported symptoms
+     behind on a device the user believed they had cleared. It is included in backup for
+     the same consistency; restoring a stale one is harmless because it expires after
+     ACK_DAYS regardless of when it was written. */
+  "hx_red_flag_ack"];
 
 /* The subset of the above whose values are arrays of RECORD OBJECTS — the ones the UI reads
    fields off, and so the ones a null element inside can crash. Used by LS.records() on load
@@ -18013,6 +18019,28 @@ function attachHandlers(){
       }
       render();
       if (["home", "health", "nutrition", "insights"].includes(state.tab)) window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
+    });
+  });
+  /* The red-flag safety check. Submitting either answer records it and re-renders; the gate in
+     renderRecommendation decides what shows next. "None of these apply" stores an empty list,
+     which is what starts the acknowledgement clock. */
+  document.querySelectorAll("[data-rf-submit]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const mode = el.dataset.rfSubmit;
+      let ids = [];
+      if(mode === "checked"){
+        ids = [...document.querySelectorAll(".rf-item__box:checked")].map(b=>b.value);
+        /* Ticking nothing and pressing "report" is the same statement as "none apply", so it
+           is treated as one rather than storing an empty report that blocks nothing. */
+      }
+      if(window.IgnytRedFlags) IgnytRedFlags.report(ids);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-rf-clear]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(window.IgnytRedFlags) IgnytRedFlags.clear();
+      render();
     });
   });
   /* Recommended programs. Choosing a program opens its week view; the empty value on the back
