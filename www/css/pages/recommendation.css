@@ -128,3 +128,16 @@
   font-size: 13px; line-height: 1.6; color: var(--rh-muted);
 }
 .rf-stop__clear { width: 100%; margin-top: 16px; padding: 12px; font-size: 13.5px; }
+
+/* ---- saving a program into your own routines ---- */
+.rec-addweek { width:100%; margin-bottom:12px; padding:13px; font-size:14px; }
+.rec-day__add {
+  margin-left:auto; flex:none;
+  padding:5px 11px; border:1px solid var(--rh-blue); border-radius:999px;
+  background:transparent; color:var(--rh-blue);
+  font:inherit; font-size:11.5px; font-weight:700; cursor:pointer;
+}
+.rec-day__add:active { background:rgba(37,99,235,.12); }
+/* The head is a baseline row; the button needs to sit centred against the text rather than on
+   its baseline, which is why it gets its own alignment instead of inheriting. */
+.rec-day__head { align-items:center; }

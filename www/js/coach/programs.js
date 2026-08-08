@@ -732,6 +732,1004 @@
                          "Quality over volume — 90-120 sec rest between rounds")
   };
 
+  /* A compact day builder for the programs below.
+
+     The seven original programs were written out as literal objects because each phase reused the
+     same movements with only the reps changing, which the rep-override helpers expressed well.
+     These seven do not work that way — an Olympic phase swaps hang variations for full lifts, and
+     a yoga phase swaps poses outright — so there is nothing to override and a literal row per
+     exercise is both shorter and closer to the source. */
+  function mk(day, session, rows) {
+    return { day: day, session: session, exercises: rows.map(function (r) {
+      return { name: r[0], presc: r[1], note: r[2] || "" };
+    }) };
+  }
+  /* Every program below has at least one full rest day. It is carried in the data rather than
+     left as a gap so the week view shows a complete Monday-to-Saturday, and it uses the same
+     "Walk / Mobility" marker the other programs use — recommendation.js keys off that name to
+     keep rest days out of the "save as routine" buttons. */
+  function rest(day, presc, note) {
+    return mk(day, "Rest / Recovery", [["Walk / Mobility", presc || "20-30 min easy", note || ""]]);
+  }
+
+  /* ---------------------------------------------------------
+     16-WEEK OLYMPIC WEIGHTLIFTING
+
+     The most technical program in the set, and the one where loading ahead of technique does the
+     most damage. Every phase keeps a hang or power variation alongside the full lift for that
+     reason: the shortened range is where position is learned, and it stays in the program at week
+     16 rather than being graduated out of.
+  --------------------------------------------------------- */
+  var OLYMPIC = {
+    foundation: [
+      mk("Monday", "Snatch + Squat", [
+        ["Hang Power Snatch", "4x3", "From the hang — learn the second pull before the first"],
+        ["Overhead Squat", "3x5"],
+        ["Squat (Barbell)", "4x8"],
+        ["Snatch Pull", "3x5"],
+        ["Dead Bug", "3x10/side"]]),
+      mk("Tuesday", "Clean & Jerk + Pull", [
+        ["Hang Power Clean", "4x3"],
+        ["Push Jerk", "4x3"],
+        ["Clean Pull", "3x5"],
+        ["Front Squat", "4x6"],
+        ["Romanian Deadlift (Barbell)", "3x8"]]),
+      rest("Wednesday"),
+      mk("Thursday", "Snatch + Overhead", [
+        ["Muscle Snatch", "3x5", "Light — this is a positional drill, not a max"],
+        ["Hang Snatch", "4x3"],
+        ["Push Press", "4x5"],
+        ["Overhead Squat", "3x5"],
+        ["Bent Over Row (Barbell)", "3x10"]]),
+      mk("Friday", "Clean & Jerk + Squat", [
+        ["Hang Clean", "4x3"],
+        ["Split Jerk", "4x3"],
+        ["Front Squat", "4x6"],
+        ["Clean Pull", "3x5"],
+        ["Back Extension (Hyperextension)", "3x12"]]),
+      mk("Saturday", "Technique + Power", [
+        ["Power Snatch", "4x3"],
+        ["Power Clean", "4x3"],
+        ["Push Jerk", "3x3"],
+        ["Front Squat", "3x6"],
+        ["Farmers Walk", "3x30 sec"]])
+    ],
+    strength: [
+      mk("Monday", "Snatch + Squat", [
+        ["Power Snatch", "5x2"],
+        ["Snatch", "4x2", "First full snatches — drop the weight rather than save a bad position"],
+        ["Squat (Barbell)", "4x6"],
+        ["Snatch Pull", "4x4"]]),
+      mk("Tuesday", "Clean & Jerk + Pull", [
+        ["Power Clean", "5x2"],
+        ["Clean and Jerk", "4x2"],
+        ["Front Squat", "4x5"],
+        ["Clean Pull", "4x4"]]),
+      rest("Wednesday"),
+      mk("Thursday", "Snatch + Overhead", [
+        ["Hang Snatch", "4x2"],
+        ["Overhead Squat", "3x4"],
+        ["Push Press", "4x4"],
+        ["Snatch Pull", "3x4"]]),
+      mk("Friday", "Clean & Jerk + Squat", [
+        ["Clean and Jerk", "5x2"],
+        ["Front Squat", "4x5"],
+        ["Clean Pull", "4x4"],
+        ["Romanian Deadlift (Barbell)", "3x8"]]),
+      mk("Saturday", "Technique + Power", [
+        ["Power Snatch", "4x2"],
+        ["Power Clean", "4x2"],
+        ["Push Jerk", "4x2"],
+        ["Squat (Barbell)", "3x5"]])
+    ],
+    advanced: [
+      mk("Monday", "Snatch + Squat", [
+        ["Snatch", "5x2"],
+        ["Snatch Pull", "4x3"],
+        ["Squat (Barbell)", "5x4"],
+        ["Overhead Squat", "3x3"]]),
+      mk("Tuesday", "Clean & Jerk + Pull", [
+        ["Clean and Jerk", "5x2"],
+        ["Clean Pull", "4x3"],
+        ["Front Squat", "5x3"],
+        ["Romanian Deadlift (Barbell)", "3x6"]]),
+      rest("Wednesday"),
+      mk("Thursday", "Snatch + Overhead", [
+        ["Hang Snatch", "4x2"],
+        ["Snatch", "4x1"],
+        ["Push Press", "4x3"],
+        ["Overhead Squat", "3x3"]]),
+      mk("Friday", "Clean & Jerk + Squat", [
+        ["Clean", "5x2"],
+        ["Split Jerk", "5x2"],
+        ["Front Squat", "5x3"],
+        ["Clean Pull", "4x3"]]),
+      mk("Saturday", "Technique + Power", [
+        ["Power Snatch", "4x2"],
+        ["Power Clean", "4x2"],
+        ["Push Jerk", "4x2"],
+        ["Squat (Barbell)", "3x4"]])
+    ],
+    performance: [
+      mk("Monday", "Snatch + Squat", [
+        ["Snatch", "5x1-2", "Singles and doubles only — speed under the bar is the whole point"],
+        ["Snatch Pull", "3x3"],
+        ["Squat (Barbell)", "4x3"],
+        ["Overhead Squat", "3x2"]]),
+      mk("Tuesday", "Clean & Jerk + Pull", [
+        ["Clean and Jerk", "5x1"],
+        ["Clean Pull", "3x3"],
+        ["Front Squat", "4x2-3"]]),
+      rest("Wednesday"),
+      mk("Thursday", "Snatch + Overhead", [
+        ["Power Snatch", "4x1-2"],
+        ["Hang Snatch", "3x2"],
+        ["Push Press", "3x3"],
+        ["Overhead Squat", "3x2"]]),
+      mk("Friday", "Clean & Jerk + Squat", [
+        ["Clean and Jerk", "5x1"],
+        ["Front Squat", "4x2"],
+        ["Clean Pull", "3x3"]]),
+      mk("Saturday", "Technique / Performance", [
+        ["Snatch", "3x1"],
+        ["Clean and Jerk", "3x1"],
+        ["Power Clean", "3x2"],
+        ["Front Squat", "3x2"]])
+    ]
+  };
+
+  /* ---------------------------------------------------------
+     16-WEEK HIIT
+
+     The work:rest ratio is the progression, not the exercise list: 30/30, then 40/20, 45/15 and
+     50/10. That is why the same movements recur — the stimulus changes without the technique
+     having to.
+  --------------------------------------------------------- */
+  var HIIT = {
+    foundation: [
+      mk("Monday", "Full Body — 3 rounds, 30 sec on / 30 off", [
+        ["Squat (Bodyweight)", "3 rounds x 30 sec"],
+        ["Mountain Climber", "3 rounds x 30 sec"],
+        ["Reverse Lunge", "3 rounds x 30 sec", "Alternating"],
+        ["Push Up", "3 rounds x 30 sec"],
+        ["High Knees", "3 rounds x 30 sec"]]),
+      mk("Tuesday", "Lower Body — 3 rounds", [
+        ["Squat (Bodyweight)", "3 rounds x 30 sec"],
+        ["Reverse Lunge", "3 rounds x 30 sec"],
+        ["Step Up", "3 rounds x 30 sec"],
+        ["Glute Bridge", "3 rounds x 30 sec"],
+        ["Standing Calf Raise (Bodyweight)", "3 rounds x 30 sec"]]),
+      rest("Wednesday", "20-30 min easy", "Recovery and mobility — HIIT is not a daily maximal effort"),
+      mk("Thursday", "Upper Body — 3 rounds", [
+        ["Push Up", "3 rounds x 30 sec"],
+        ["Dumbbell Row", "3 rounds x 30 sec"],
+        ["Shoulder Press (Dumbbell)", "3 rounds x 30 sec"],
+        ["Mountain Climber", "3 rounds x 30 sec"],
+        ["Plank", "3 rounds x 30 sec"]]),
+      mk("Friday", "Cardio Intervals", [
+        ["Sprints", "8x30 sec", "5 min warm-up first. 90 sec easy between. Treadmill, bike, rower or outdoors"]]),
+      mk("Saturday", "Full Body — 4 rounds, 20 sec on / 40 off", [
+        ["Squat (Bodyweight)", "4 rounds x 20 sec"],
+        ["Push Up", "4 rounds x 20 sec"],
+        ["Mountain Climber", "4 rounds x 20 sec"],
+        ["Reverse Lunge", "4 rounds x 20 sec"],
+        ["High Knees", "4 rounds x 20 sec"]])
+    ],
+    strength: [
+      mk("Monday", "Full Body — 4 rounds, 40 sec on / 20 off", [
+        ["Jump Squat", "4 rounds x 40 sec"],
+        ["Push Up", "4 rounds x 40 sec"],
+        ["Mountain Climber", "4 rounds x 40 sec"],
+        ["Reverse Lunge", "4 rounds x 40 sec"],
+        ["High Knees", "4 rounds x 40 sec"],
+        ["Plank", "4 rounds x 40 sec"]]),
+      mk("Tuesday", "Lower Body — 4 rounds", [
+        ["Goblet Squat", "4 rounds x 40 sec"],
+        ["Romanian Deadlift (Dumbbell)", "4 rounds x 40 sec"],
+        ["Walking Lunge", "4 rounds x 40 sec"],
+        ["Kettlebell Swing", "4 rounds x 40 sec"],
+        ["Step Up", "4 rounds x 40 sec"]]),
+      rest("Wednesday", "20-30 min easy", "Recovery and mobility"),
+      mk("Thursday", "Upper Body — 4 rounds", [
+        ["Push Up", "4 rounds x 40 sec"],
+        ["Dumbbell Row", "4 rounds x 40 sec"],
+        ["Shoulder Press (Dumbbell)", "4 rounds x 40 sec"],
+        ["Renegade Row (Dumbbell)", "4 rounds x 40 sec"],
+        ["Mountain Climber", "4 rounds x 40 sec"]]),
+      mk("Friday", "Cardio Intervals", [
+        ["Sprints", "8x45 sec", "5 min warm-up first. 75 sec easy between"]]),
+      mk("Saturday", "20-minute AMRAP", [
+        ["Squat (Bodyweight)", "10", "20-minute AMRAP — as many rounds as possible, record the total"],
+        ["Push Up", "8"],
+        ["Reverse Lunge", "10"],
+        ["Dumbbell Row", "10"],
+        ["Mountain Climber", "20"]])
+    ],
+    advanced: [
+      mk("Monday", "Full Body — 5 rounds, 45 sec on / 15 off", [
+        ["Kettlebell Swing", "5 rounds x 45 sec"],
+        ["Burpee", "5 rounds x 45 sec"],
+        ["Goblet Squat", "5 rounds x 45 sec"],
+        ["Push Up", "5 rounds x 45 sec"],
+        ["Dumbbell Row", "5 rounds x 45 sec"],
+        ["High Knees", "5 rounds x 45 sec"]]),
+      mk("Tuesday", "Lower Body — 4 rounds", [
+        ["Jump Squat", "4 rounds x 10"],
+        ["Romanian Deadlift (Dumbbell)", "4 rounds x 12"],
+        ["Walking Lunge", "4 rounds x 10/leg"],
+        ["Kettlebell Swing", "4 rounds x 15"],
+        ["Step Up", "4 rounds x 10/leg"]]),
+      rest("Wednesday", "20-30 min easy", "Recovery and mobility"),
+      mk("Thursday", "Upper Body — 4 rounds", [
+        ["Push Up", "4 rounds x 10"],
+        ["Dumbbell Row", "4 rounds x 10/side"],
+        ["Shoulder Press (Dumbbell)", "4 rounds x 10"],
+        ["Renegade Row (Dumbbell)", "4 rounds x 8/side"],
+        ["Mountain Climber", "4 rounds x 20"]]),
+      mk("Friday", "Cardio Intervals", [
+        ["Sprints", "10x1 min", "5 min warm-up first. 1 min easy between. Treadmill, bike, rower or stepper"]]),
+      mk("Saturday", "HIIT Circuit — 5 rounds", [
+        ["Burpee", "5 rounds x 8", "90 sec rest between rounds"],
+        ["Kettlebell Swing", "5 rounds x 15"],
+        ["Goblet Squat", "5 rounds x 12"],
+        ["Push Up", "5 rounds x 10"],
+        ["Mountain Climber", "5 rounds x 20"],
+        ["Sprints", "5 rounds x 20 sec"]])
+    ],
+    performance: [
+      mk("Monday", "Full Body — 5 rounds, 50 sec on / 10 transition", [
+        ["Burpee", "5 rounds x 50 sec"],
+        ["Kettlebell Swing", "5 rounds x 50 sec"],
+        ["Goblet Squat", "5 rounds x 50 sec"],
+        ["Push Up", "5 rounds x 50 sec"],
+        ["Dumbbell Row", "5 rounds x 50 sec"],
+        ["High Knees", "5 rounds x 50 sec"]]),
+      mk("Tuesday", "Power HIIT — 5 rounds", [
+        ["Jump Squat", "5 rounds x 8"],
+        ["Kettlebell Swing", "5 rounds x 15"],
+        ["Dumbbell Thruster", "5 rounds x 10"],
+        ["Reverse Lunge", "5 rounds x 10/leg"],
+        ["Burpee", "5 rounds x 6"]]),
+      rest("Wednesday", "20-30 min easy", "Recovery and mobility"),
+      mk("Thursday", "Upper Body — 5 rounds", [
+        ["Push Up", "5 rounds x 10"],
+        ["Dumbbell Row", "5 rounds x 10/side"],
+        ["Shoulder Press (Dumbbell)", "5 rounds x 10"],
+        ["Renegade Row (Dumbbell)", "5 rounds x 8/side"],
+        ["Mountain Climber", "5 rounds x 20"]]),
+      mk("Friday", "Maximum Conditioning", [
+        ["Sprints", "10x1 min", "5 min warm-up first. 1 min easy between"]]),
+      mk("Saturday", "20-minute AMRAP", [
+        ["Burpee", "10", "Record rounds + reps and compare week 16 with week 1"],
+        ["Kettlebell Swing", "15"],
+        ["Goblet Squat", "10"],
+        ["Push Up", "10"],
+        ["Dumbbell Row", "10"],
+        ["Mountain Climber", "20"]])
+    ]
+  };
+
+  /* ---------------------------------------------------------
+     16-WEEK MOBILITY & FLEXIBILITY
+
+     Holds lengthen across the phases (30 sec to 60 sec) while the dynamic work gets more
+     demanding rather than longer. Dynamic drills belong before training, long holds after it or
+     in their own session — the day labels say which is which.
+  --------------------------------------------------------- */
+  var MOBILITY = {
+    foundation: [
+      mk("Monday", "Full-Body Mobility", [
+        ["Cat-Cow Stretch", "2x10"],
+        ["Thoracic Rotation Stretch", "2x8/side"],
+        ["World's Greatest Stretch", "2x6/side"],
+        ["90/90 Hip Switch", "2x10"],
+        ["Ankle Dorsiflexion Stretch", "2x10/side"],
+        ["Child's Pose Stretch", "2x30 sec"]]),
+      mk("Tuesday", "Lower-Body Mobility", [
+        ["Hip Flexor Stretch", "3x30 sec/side"],
+        ["Hamstring Stretch", "3x30 sec/side"],
+        ["90/90 Hip Switch", "3x30 sec/side"],
+        ["Adductor Rock Back Stretch", "3x10"],
+        ["Calf Wall Stretch", "3x30 sec/side"],
+        ["Deep Squat Hold Stretch", "3x20 sec"]]),
+      mk("Wednesday", "Upper-Body Mobility", [
+        ["Shoulder Circles Stretch", "2x10"],
+        ["Wall Slide Stretch", "3x10"],
+        ["Thread the Needle Stretch", "2x8/side"],
+        ["Doorway Chest Stretch", "3x30 sec"],
+        ["Lat Stretch on Rack", "3x30 sec/side"],
+        ["Thoracic Extension Stretch", "2x10"]]),
+      rest("Thursday", "Optional easy walk", "Rest or light movement only"),
+      mk("Friday", "Dynamic Mobility", [
+        ["Leg Swings Stretch", "2x10/side", "Dynamic work belongs before training"],
+        ["Arm Swings Stretch", "2x10"],
+        ["Walking Lunge", "2x10/leg"],
+        ["World's Greatest Stretch", "2x6/side"],
+        ["Inchworm", "2x8"],
+        ["Ankle Dorsiflexion Stretch", "2x10/side"]]),
+      mk("Saturday", "Full-Body Flexibility", [
+        ["Hamstring Stretch", "3x30-45 sec"],
+        ["Hip Flexor Stretch", "3x30-45 sec"],
+        ["Butterfly Groin Stretch", "3x30 sec"],
+        ["Calf Wall Stretch", "3x30 sec"],
+        ["Doorway Chest Stretch", "3x30 sec"],
+        ["Child's Pose Stretch", "3x30 sec"]])
+    ],
+    strength: [
+      mk("Monday", "Full-Body Mobility", [
+        ["Cat-Cow Stretch", "3x10"],
+        ["90/90 Hip Switch", "3x10"],
+        ["Thoracic Rotation Stretch", "3x10/side"],
+        ["World's Greatest Stretch", "3x8/side"],
+        ["Deep Squat Hold Stretch", "3x30 sec"]]),
+      mk("Tuesday", "Lower-Body Mobility", [
+        ["Couch Stretch", "3x40 sec/side"],
+        ["Hamstring Stretch", "3x40 sec"],
+        ["Adductor Rock Back Stretch", "3x12"],
+        ["90/90 Hip Switch", "3x40 sec"],
+        ["Calf Wall Stretch", "3x40 sec"]]),
+      mk("Wednesday", "Upper-Body Mobility", [
+        ["Wall Slide Stretch", "3x12"],
+        ["Thread the Needle Stretch", "3x10/side"],
+        ["Lat Stretch on Rack", "3x40 sec"],
+        ["Doorway Chest Stretch", "3x40 sec"],
+        ["Thoracic Extension Stretch", "3x10"]]),
+      rest("Thursday", "Optional easy walk", "Rest or light movement only"),
+      mk("Friday", "Dynamic Mobility — 3 rounds", [
+        ["Leg Swings Stretch", "3 rounds x 12/side"],
+        ["Walking Lunge", "3 rounds x 10/leg"],
+        ["Inchworm", "3 rounds x 8"],
+        ["World's Greatest Stretch", "3 rounds x 6/side"],
+        ["Ankle Dorsiflexion Stretch", "3 rounds x 12/side"]]),
+      mk("Saturday", "Full-Body Flexibility", [
+        ["Hamstring Stretch", "3x30-45 sec", "Full-body static work, 2-3 rounds"],
+        ["Hip Flexor Stretch", "3x30-45 sec"],
+        ["Butterfly Groin Stretch", "3x30-45 sec"],
+        ["Calf Wall Stretch", "3x30-45 sec"],
+        ["Doorway Chest Stretch", "3x30-45 sec"],
+        ["Lat Stretch on Rack", "3x30-45 sec"]])
+    ],
+    advanced: [
+      mk("Monday", "Full-Body Mobility", [
+        ["90/90 Hip Switch", "3x12"],
+        ["Cossack Squat", "3x8/side"],
+        ["World's Greatest Stretch", "3x8/side"],
+        ["Thoracic Rotation Stretch", "3x10/side"],
+        ["Deep Squat Hold Stretch", "3x45 sec"]]),
+      mk("Tuesday", "Lower-Body Mobility", [
+        ["Couch Stretch", "3x45 sec"],
+        ["Hamstring Stretch", "3x45 sec"],
+        ["90/90 Hip Switch", "3x45 sec"],
+        ["Cossack Squat", "3x8/side"],
+        ["Calf Wall Stretch", "3x45 sec"]]),
+      mk("Wednesday", "Upper-Body Mobility", [
+        ["Wall Slide Stretch", "3x15"],
+        ["Thread the Needle Stretch", "3x10"],
+        ["Lat Stretch on Rack", "3x45 sec"],
+        ["Doorway Chest Stretch", "3x45 sec"],
+        ["Thoracic Extension Stretch", "3x12"]]),
+      rest("Thursday", "Optional easy walk", "Rest or light movement only"),
+      mk("Friday", "Dynamic Mobility — 4 rounds", [
+        ["Leg Swings Stretch", "4 rounds x 15/side"],
+        ["Walking Lunge", "4 rounds x 12/leg"],
+        ["Cossack Squat", "4 rounds x 8/side"],
+        ["Inchworm", "4 rounds x 10"],
+        ["World's Greatest Stretch", "4 rounds x 6/side"]]),
+      mk("Saturday", "Full-Body Flexibility", [
+        ["Hamstring Stretch", "3x45-60 sec", "Hold the major stretches 45-60 sec, 2-3 rounds"],
+        ["Hip Flexor Stretch", "3x45-60 sec"],
+        ["Butterfly Groin Stretch", "3x45-60 sec"],
+        ["Calf Wall Stretch", "3x45-60 sec"],
+        ["Lat Stretch on Rack", "3x45-60 sec"],
+        ["Doorway Chest Stretch", "3x45-60 sec"]])
+    ],
+    performance: [
+      mk("Monday", "Athletic Mobility", [
+        ["90/90 Hip Switch", "3x15"],
+        ["Cossack Squat", "3x10/side"],
+        ["Deep Squat Hold Stretch", "3x60 sec"],
+        ["Thoracic Rotation Stretch", "3x12/side"],
+        ["Ankle Dorsiflexion Stretch", "3x15/side"]]),
+      mk("Tuesday", "Lower-Body Mobility", [
+        ["Couch Stretch", "3x60 sec"],
+        ["Hamstring Stretch", "3x60 sec"],
+        ["90/90 Hip Switch", "3x60 sec"],
+        ["Adductor Rock Back Stretch", "3x15"],
+        ["Calf Wall Stretch", "3x60 sec"]]),
+      mk("Wednesday", "Upper-Body Mobility", [
+        ["Wall Slide Stretch", "3x15"],
+        ["Thread the Needle Stretch", "3x12/side"],
+        ["Thoracic Extension Stretch", "3x12"],
+        ["Lat Stretch on Rack", "3x60 sec"],
+        ["Doorway Chest Stretch", "3x60 sec"]]),
+      rest("Thursday", "Optional easy walk", "Rest or light movement only"),
+      mk("Friday", "Athletic Mobility — 4 rounds", [
+        ["Leg Swings Stretch", "4 rounds x 15/side"],
+        ["Walking Lunge", "4 rounds x 12/leg"],
+        ["Cossack Squat", "4 rounds x 10/side"],
+        ["Inchworm", "4 rounds x 10"],
+        ["World's Greatest Stretch", "4 rounds x 8/side"],
+        ["Ankle Dorsiflexion Stretch", "4 rounds x 15/side"]]),
+      mk("Saturday", "Full Flexibility", [
+        ["Hip Flexor Stretch", "1x60 sec/side"],
+        ["Hamstring Stretch", "1x60 sec/side"],
+        ["90/90 Hip Switch", "1x60 sec/side"],
+        ["Butterfly Groin Stretch", "1x60 sec"],
+        ["Calf Wall Stretch", "1x60 sec/side"],
+        ["Doorway Chest Stretch", "1x60 sec"],
+        ["Lat Stretch on Rack", "1x60 sec/side"]])
+    ]
+  };
+
+  /* ---------------------------------------------------------
+     16-WEEK YOGA
+
+     Holds lengthen and the balance work gets harder, but no phase adds an inversion or an arm
+     balance. Range is built by holding a position under control, not by reaching a shape.
+  --------------------------------------------------------- */
+  var YOGA = {
+    foundation: [
+      mk("Monday", "Full-Body Yoga", [
+        ["Cat-Cow Stretch", "2x10"],
+        ["Child's Pose Stretch", "2x30 sec"],
+        ["Downward Dog", "3x30 sec"],
+        ["Low Lunge Stretch", "2x30 sec/side"],
+        ["Warrior I Pose", "2x30 sec/side"],
+        ["Warrior II Pose", "2x30 sec/side"],
+        ["Cobra Pose Stretch", "2x20 sec"],
+        ["Savasana", "1x3-5 min"]]),
+      mk("Tuesday", "Hips + Legs", [
+        ["Butterfly Groin Stretch", "3x30 sec"],
+        ["Low Lunge Stretch", "3x30 sec/side"],
+        ["Half Split Stretch", "3x30 sec/side"],
+        ["Pigeon Pose Stretch", "2x30 sec/side"],
+        ["Garland Pose", "3x20 sec"],
+        ["Seated Forward Fold Stretch", "2x30 sec"]]),
+      mk("Wednesday", "Upper Body + Spine", [
+        ["Cat-Cow Stretch", "2x10"],
+        ["Thread the Needle Stretch", "3x8/side"],
+        ["Sphinx Pose", "3x20 sec"],
+        ["Cobra Pose Stretch", "3x20 sec"],
+        ["Child's Pose Stretch", "3x30 sec"],
+        ["Seated Spinal Twist Stretch", "3x30 sec/side"],
+        ["Eagle Pose", "2x30 sec/side"]]),
+      rest("Thursday", "Optional easy walk", "Rest or light movement only"),
+      mk("Friday", "Strength Yoga — 3 rounds", [
+        ["Chair Pose", "3 rounds x 30 sec"],
+        ["Warrior II Pose", "3 rounds x 30 sec/side"],
+        ["Plank", "3 rounds x 20-30 sec"],
+        ["Downward Dog", "3 rounds x 30 sec"],
+        ["Boat Pose", "3 rounds x 20 sec"],
+        ["Bridge Pose", "3 rounds x 30 sec"]]),
+      mk("Saturday", "Recovery + Flexibility", [
+        ["Child's Pose Stretch", "1x60 sec"],
+        ["Cat-Cow Stretch", "1x10"],
+        ["Supine Twist Pose", "1x45 sec/side"],
+        ["Happy Baby Pose", "1x45 sec"],
+        ["Butterfly Groin Stretch", "1x60 sec"],
+        ["Legs Up the Wall", "1x2-3 min"],
+        ["Savasana", "1x5 min"]])
+    ],
+    strength: [
+      mk("Monday", "Full-Body Flow", [
+        ["Sun Salutation", "4x1", "Four rounds, moving with the breath"],
+        ["Warrior I Pose", "1x45 sec/side"],
+        ["Warrior II Pose", "1x45 sec/side"],
+        ["Triangle Pose", "1x45 sec/side"],
+        ["Downward Dog", "1x60 sec"],
+        ["Cobra Pose Stretch", "1x30 sec"],
+        ["Child's Pose Stretch", "1x60 sec"]]),
+      mk("Tuesday", "Hips", [
+        ["Low Lunge Stretch", "1x60 sec/side"],
+        ["Half Split Stretch", "1x45 sec/side"],
+        ["Pigeon Pose Stretch", "1x45 sec/side"],
+        ["Butterfly Groin Stretch", "1x60 sec"],
+        ["Garland Pose", "1x30-45 sec"],
+        ["Seated Forward Fold Stretch", "1x60 sec"]]),
+      mk("Wednesday", "Spine + Shoulders", [
+        ["Cat-Cow Stretch", "1x12"],
+        ["Thread the Needle Stretch", "1x10/side"],
+        ["Cobra Pose Stretch", "1x30 sec"],
+        ["Sphinx Pose", "1x45 sec"],
+        ["Seated Spinal Twist Stretch", "1x45 sec/side"],
+        ["Puppy Pose Stretch", "1x45 sec"]]),
+      rest("Thursday", "Optional easy walk", "Rest or light movement only"),
+      mk("Friday", "Strength Flow — 4 rounds", [
+        ["Chair Pose", "4 rounds x 45 sec"],
+        ["Warrior II Pose", "4 rounds x 45 sec/side"],
+        ["Plank", "4 rounds x 30-45 sec"],
+        ["Side Plank", "4 rounds x 20-30 sec/side"],
+        ["Boat Pose", "4 rounds x 30 sec"],
+        ["Bridge Pose", "4 rounds x 45 sec"]]),
+      mk("Saturday", "Recovery", [
+        ["Sun Salutation", "2x1", "Recovery-focused session, 30-40 minutes"],
+        ["Supine Twist Pose", "1x60 sec/side"],
+        ["Happy Baby Pose", "1x60 sec"],
+        ["Butterfly Groin Stretch", "1x60 sec"],
+        ["Legs Up the Wall", "1x3 min"],
+        ["Savasana", "1x5 min"]])
+    ],
+    advanced: [
+      mk("Monday", "Flow — 4-5 rounds", [
+        ["Sun Salutation", "4-5 rounds x 1"],
+        ["Chair Pose", "4-5 rounds x 45 sec"],
+        ["Warrior I Pose", "4-5 rounds x 45 sec/side"],
+        ["Warrior II Pose", "4-5 rounds x 45 sec/side"],
+        ["Triangle Pose", "4-5 rounds x 45 sec/side"],
+        ["Downward Dog", "4-5 rounds x 45 sec"],
+        ["Cobra Pose Stretch", "4-5 rounds x 30 sec"],
+        ["Child's Pose Stretch", "4-5 rounds x 45 sec"]]),
+      mk("Tuesday", "Mobility", [
+        ["Pigeon Pose Stretch", "1x60 sec/side"],
+        ["Low Lunge Stretch", "1x60 sec/side"],
+        ["Half Split Stretch", "1x60 sec/side"],
+        ["Garland Pose", "1x30-45 sec"],
+        ["Butterfly Groin Stretch", "1x60 sec"],
+        ["Seated Forward Fold Stretch", "1x60 sec"]]),
+      mk("Wednesday", "Upper + Core", [
+        ["Plank", "3x45 sec"],
+        ["Side Plank", "3x30 sec/side"],
+        ["Boat Pose", "3x30 sec"],
+        ["Cobra Pose Stretch", "3x30 sec"],
+        ["Puppy Pose Stretch", "3x45 sec"],
+        ["Thread the Needle Stretch", "3x10/side"]]),
+      rest("Thursday", "Optional easy walk", "Rest or light movement only"),
+      mk("Friday", "Strength Flow — 4 rounds", [
+        ["Chair Pose", "4 rounds x 60 sec"],
+        ["Warrior III Pose", "4 rounds x 30 sec/side"],
+        ["Plank", "4 rounds x 45 sec"],
+        ["Side Plank", "4 rounds x 30 sec/side"],
+        ["Boat Pose", "4 rounds x 30-45 sec"],
+        ["Bridge Pose", "4 rounds x 45 sec"]]),
+      mk("Saturday", "Recovery + Flexibility", [
+        ["Sun Salutation", "2x1", "40-50 minute recovery and flexibility session"],
+        ["Pigeon Pose Stretch", "1x60 sec/side"],
+        ["Supine Twist Pose", "1x60 sec/side"],
+        ["Happy Baby Pose", "1x60 sec"],
+        ["Legs Up the Wall", "1x3 min"],
+        ["Savasana", "1x5 min"]])
+    ],
+    performance: [
+      mk("Monday", "Full Flow — 5 rounds", [
+        ["Sun Salutation", "5 rounds x 1"],
+        ["Chair Pose", "5 rounds x 60 sec"],
+        ["Warrior I Pose", "5 rounds x 45 sec/side"],
+        ["Warrior II Pose", "5 rounds x 45 sec/side"],
+        ["Triangle Pose", "5 rounds x 45 sec/side"],
+        ["Warrior III Pose", "5 rounds x 30 sec/side"],
+        ["Downward Dog", "5 rounds x 45 sec"],
+        ["Cobra Pose Stretch", "5 rounds x 30 sec"]]),
+      mk("Tuesday", "Lower Body", [
+        ["Pigeon Pose Stretch", "1x60 sec/side"],
+        ["Low Lunge Stretch", "1x60 sec/side"],
+        ["Half Split Stretch", "1x60 sec/side"],
+        ["Garland Pose", "1x60 sec"],
+        ["Butterfly Groin Stretch", "1x60 sec"],
+        ["Seated Forward Fold Stretch", "1x60 sec"]]),
+      mk("Wednesday", "Upper + Core", [
+        ["Plank", "3x60 sec"],
+        ["Side Plank", "3x40 sec/side"],
+        ["Boat Pose", "3x45 sec"],
+        ["Cobra Pose Stretch", "3x30 sec"],
+        ["Puppy Pose Stretch", "3x60 sec"],
+        ["Seated Spinal Twist Stretch", "3x45 sec/side"]]),
+      rest("Thursday", "Optional easy walk", "Rest or light movement only"),
+      mk("Friday", "Performance Yoga — 5 rounds", [
+        ["Chair Pose", "5 rounds x 60 sec"],
+        ["Warrior III Pose", "5 rounds x 30 sec/side"],
+        ["Side Plank", "5 rounds x 30-40 sec/side"],
+        ["Boat Pose", "5 rounds x 45 sec"],
+        ["Bridge Pose", "5 rounds x 60 sec"],
+        ["Downward Dog", "5 rounds x 60 sec"]]),
+      mk("Saturday", "Deep Recovery", [
+        ["Pigeon Pose Stretch", "1x60 sec/side", "45-60 minutes, unhurried"],
+        ["Hamstring Stretch", "1x60 sec/side"],
+        ["Thread the Needle Stretch", "1x10/side"],
+        ["Lat Stretch on Rack", "1x60 sec/side"],
+        ["Cat-Cow Stretch", "1x10"],
+        ["Legs Up the Wall", "1x3-5 min"],
+        ["Savasana", "1x5-10 min"]])
+    ]
+  };
+
+  /* ---------------------------------------------------------
+     16-WEEK SPRINT TRAINING
+
+     Four training days, and the two rest days are load-bearing: sprinting is the highest-impact
+     work in this catalogue and the hamstring, calf and Achilles injuries it causes come from
+     sprinting tired, not from sprinting often. Every session opens with a real warm-up.
+  --------------------------------------------------------- */
+  var SPRINT = {
+    foundation: [
+      mk("Monday", "Acceleration", [
+        ["A March", "3x20 m", "10 min warm-up first — never sprint cold"],
+        ["A Skip", "3x20 m"],
+        ["Falling Start Sprint", "4x10 m"],
+        ["Sprints", "6x20 m", "Walk back, 60-90 sec between"]]),
+      mk("Tuesday", "Strength + Mobility", [
+        ["Squat (Barbell)", "3x8"],
+        ["Romanian Deadlift (Barbell)", "3x8"],
+        ["Reverse Lunge", "3x8/leg"],
+        ["Standing Calf Raise (Bodyweight)", "3x15"],
+        ["Plank", "3x30 sec"]]),
+      rest("Wednesday", "Full rest", "Sprinting needs recovery — this day is part of the program"),
+      mk("Thursday", "Max-Velocity Speed", [
+        ["Stride Out Run", "4x40 m", "10 min warm-up first"],
+        ["Sprints", "5x30 m"],
+        ["Flying Sprint", "3x20 m", "Full recovery between efforts"]]),
+      rest("Friday", "Easy walk or mobility", "Recovery day"),
+      mk("Saturday", "Sprint Conditioning", [
+        ["Sprints", "6x100 m", "About 70-80% effort. Walk 100 m between"]])
+    ],
+    strength: [
+      mk("Monday", "Acceleration", [
+        ["A Skip", "3x20 m"],
+        ["Sprints", "6x30 m"],
+        ["Sprints", "3x40 m", "2-3 min between the hard sprints"]]),
+      mk("Tuesday", "Strength", [
+        ["Squat (Barbell)", "4x6"],
+        ["Romanian Deadlift (Barbell)", "4x6"],
+        ["Bulgarian Split Squat (Dumbbell)", "3x8/leg"],
+        ["Standing Calf Raise (Bodyweight)", "4x12"],
+        ["Plank", "3x40 sec"]]),
+      rest("Wednesday", "Full rest", "Recovery day"),
+      mk("Thursday", "Max-Velocity Speed", [
+        ["Stride Out Run", "4x40 m"],
+        ["Flying Sprint", "5x30 m"],
+        ["Sprints", "3x60 m", "Full recovery"]]),
+      rest("Friday", "Easy walk or mobility", "Recovery day"),
+      mk("Saturday", "Sprint Conditioning", [
+        ["Sprints", "6x150 m", "About 75-85% effort. 2-3 min recovery"]])
+    ],
+    advanced: [
+      mk("Monday", "Acceleration", [
+        ["Sprints", "4x20 m"],
+        ["Sprints", "5x30 m"],
+        ["Sprints", "4x40 m", "2-3 min rest"]]),
+      mk("Tuesday", "Strength", [
+        ["Squat (Barbell)", "4x5"],
+        ["Romanian Deadlift (Barbell)", "4x6"],
+        ["Split Squat (Dumbbell)", "3x6/leg"],
+        ["Standing Calf Raise (Bodyweight)", "4x10"],
+        ["Plank", "3x45 sec"]]),
+      rest("Wednesday", "Full rest", "Recovery day"),
+      mk("Thursday", "Max Velocity", [
+        ["Stride Out Run", "4x30 m"],
+        ["Flying Sprint", "5x40 m"],
+        ["Sprints", "3x60 m", "3-5 min recovery"]]),
+      rest("Friday", "Easy walk or mobility", "Recovery day"),
+      mk("Saturday", "Sprint Endurance", [
+        ["Sprints", "5x200 m", "About 80-85% effort. 3 min recovery"]])
+    ],
+    performance: [
+      mk("Monday", "Acceleration", [
+        ["Sprints", "4x20 m"],
+        ["Sprints", "4x30 m"],
+        ["Sprints", "4x40 m", "Full recovery"]]),
+      mk("Tuesday", "Power", [
+        ["Squat (Barbell)", "4x4"],
+        ["Romanian Deadlift (Barbell)", "3x5"],
+        ["Bulgarian Split Squat (Dumbbell)", "3x6/leg"],
+        ["Standing Calf Raise (Bodyweight)", "3x10"],
+        ["Plank", "3x45 sec"]]),
+      rest("Wednesday", "Full rest", "Recovery day"),
+      mk("Thursday", "Maximum Speed", [
+        ["Stride Out Run", "3x30 m"],
+        ["Flying Sprint", "5x40 m"],
+        ["Sprints", "3x60 m", "3-5 min recovery"]]),
+      rest("Friday", "Easy walk or mobility", "Recovery day"),
+      mk("Saturday", "Performance", [
+        ["Sprints", "4x200 m", "Option A — sprint endurance at 85-90%"],
+        ["Sprints", "3x30 m", "Option B — speed test. Do one option, not both"],
+        ["Sprints", "3x60 m", "Option B"],
+        ["Sprints", "1x100 m", "Option B — record the time and compare with week 1"]])
+    ]
+  };
+
+  /* ---------------------------------------------------------
+     16-WEEK FUNCTIONAL TRAINING
+
+     Unilateral work and loaded carries are in every phase rather than being accessories at the
+     end. They are the point: the program is built around one leg at a time, one arm at a time,
+     and holding a load while walking.
+  --------------------------------------------------------- */
+  var FUNCTIONAL = {
+    foundation: [
+      mk("Monday", "Full-Body Strength", [
+        ["Goblet Squat", "3x10"],
+        ["Romanian Deadlift (Dumbbell)", "3x10"],
+        ["Push Up", "3x8-12"],
+        ["One Arm Row (Dumbbell)", "3x10/side"],
+        ["Farmers Walk", "3x30 sec"],
+        ["Plank", "3x30 sec"]]),
+      mk("Tuesday", "Unilateral + Stability", [
+        ["Reverse Lunge", "3x8/leg"],
+        ["Single Leg Romanian Deadlift (Dumbbell)", "3x8/leg"],
+        ["Step Up", "3x10/leg"],
+        ["Overhead Press (Dumbbell)", "3x8/side", "One arm at a time"],
+        ["Suitcase Carry (Dumbbell)", "3x30 sec/side"],
+        ["Dead Bug", "3x10/side"]]),
+      mk("Wednesday", "Conditioning — 3 rounds", [
+        ["Kettlebell Swing", "3 rounds x 15"],
+        ["Squat (Bodyweight)", "3 rounds x 12"],
+        ["Push Up", "3 rounds x 10"],
+        ["Walking Lunge", "3 rounds x 10/leg"],
+        ["Mountain Climber", "3 rounds x 20"],
+        ["Farmers Walk", "3 rounds x 30 sec"]]),
+      rest("Thursday", "20-30 min easy", "Rest or mobility"),
+      mk("Friday", "Functional Strength", [
+        ["Deadlift (Barbell)", "3x8"],
+        ["Goblet Squat", "3x10"],
+        ["Bench Press (Dumbbell)", "3x10"],
+        ["Dumbbell Row", "3x10"],
+        ["Reverse Lunge", "3x8/leg"],
+        ["Cable Core Pallof Press", "3x10/side"]]),
+      mk("Saturday", "Full-Body Circuit — 4 rounds", [
+        ["Kettlebell Swing", "4 rounds x 15"],
+        ["Goblet Squat", "4 rounds x 12"],
+        ["Push Up", "4 rounds x 10"],
+        ["Dumbbell Row", "4 rounds x 10/side"],
+        ["Step Up", "4 rounds x 10/leg"],
+        ["Farmers Walk", "4 rounds x 30 sec"]])
+    ],
+    strength: [
+      mk("Monday", "Full-Body Strength", [
+        ["Goblet Squat", "4x10"],
+        ["Romanian Deadlift (Dumbbell)", "4x8-10"],
+        ["Push Up", "4x10"],
+        ["One Arm Row (Dumbbell)", "4x10/side"],
+        ["Farmers Walk", "4x40 sec"],
+        ["Plank", "3x40 sec"]]),
+      mk("Tuesday", "Unilateral + Stability", [
+        ["Bulgarian Split Squat (Dumbbell)", "3x8/leg"],
+        ["Single Leg Romanian Deadlift (Dumbbell)", "3x10/leg"],
+        ["Step Up", "3x10/leg"],
+        ["Overhead Press (Dumbbell)", "3x10/side", "One arm at a time"],
+        ["Suitcase Carry (Dumbbell)", "3x40 sec/side"],
+        ["Dead Bug", "3x12/side"]]),
+      mk("Wednesday", "Conditioning — 4 rounds", [
+        ["Kettlebell Swing", "4 rounds x 15"],
+        ["Burpee", "4 rounds x 6"],
+        ["Goblet Squat", "4 rounds x 12"],
+        ["Push Up", "4 rounds x 12"],
+        ["Walking Lunge", "4 rounds x 10/leg"],
+        ["Farmers Walk", "4 rounds x 40 sec"]]),
+      rest("Thursday", "20-30 min easy", "Rest or mobility"),
+      mk("Friday", "Functional Strength", [
+        ["Deadlift (Barbell)", "4x6-8"],
+        ["Front Squat", "4x8"],
+        ["Bench Press (Dumbbell)", "4x8-10"],
+        ["Dumbbell Row", "4x8-10"],
+        ["Reverse Lunge", "3x10/leg"],
+        ["Cable Core Pallof Press", "3x12/side"]]),
+      mk("Saturday", "20-minute AMRAP", [
+        ["Goblet Squat", "10", "20-minute AMRAP — record rounds + reps"],
+        ["Push Up", "10"],
+        ["Dumbbell Row", "10"],
+        ["Reverse Lunge", "10"],
+        ["Kettlebell Swing", "15"],
+        ["Farmers Walk", "30 sec"]])
+    ],
+    advanced: [
+      mk("Monday", "Strength", [
+        ["Front Squat", "4x6"],
+        ["Romanian Deadlift (Dumbbell)", "4x8"],
+        ["Push Up", "4x12"],
+        ["One Arm Row (Dumbbell)", "4x8/side"],
+        ["Farmers Walk", "4x45 sec"]]),
+      mk("Tuesday", "Unilateral", [
+        ["Bulgarian Split Squat (Dumbbell)", "4x8/leg"],
+        ["Single Leg Romanian Deadlift (Dumbbell)", "3x8/leg"],
+        ["Overhead Press (Dumbbell)", "4x8/side", "One arm at a time"],
+        ["Step Up", "3x10/leg"],
+        ["Suitcase Carry (Dumbbell)", "4x40 sec/side"],
+        ["Cable Core Pallof Press", "3x12/side"]]),
+      mk("Wednesday", "Conditioning — 5 rounds", [
+        ["Kettlebell Swing", "5 rounds x 20"],
+        ["Burpee", "5 rounds x 8"],
+        ["Goblet Squat", "5 rounds x 15"],
+        ["Push Up", "5 rounds x 12"],
+        ["Walking Lunge", "5 rounds x 10/leg"],
+        ["Mountain Climber", "5 rounds x 30"]]),
+      rest("Thursday", "20-30 min easy", "Rest or mobility"),
+      mk("Friday", "Functional Strength", [
+        ["Deadlift (Barbell)", "5x5"],
+        ["Front Squat", "4x6"],
+        ["Bench Press (Dumbbell)", "4x8"],
+        ["Bent Over Row (Barbell)", "4x8"],
+        ["Walking Lunge", "3x10/leg"],
+        ["Cable Core Pallof Press", "3x12"]]),
+      mk("Saturday", "Full Body — 5 rounds", [
+        ["Kettlebell Swing", "5 rounds x 15"],
+        ["Goblet Squat", "5 rounds x 10"],
+        ["Push Up", "5 rounds x 10"],
+        ["Dumbbell Row", "5 rounds x 10/side"],
+        ["Reverse Lunge", "5 rounds x 10/leg"],
+        ["Farmers Walk", "5 rounds x 45 sec"]])
+    ],
+    performance: [
+      mk("Monday", "Strength", [
+        ["Front Squat", "5x5"],
+        ["Romanian Deadlift (Dumbbell)", "4x6"],
+        ["Push Up", "4x12"],
+        ["One Arm Row (Dumbbell)", "4x8/side"],
+        ["Farmers Walk", "4x45 sec", "Heavy"]]),
+      mk("Tuesday", "Unilateral", [
+        ["Bulgarian Split Squat (Dumbbell)", "4x6/leg"],
+        ["Single Leg Romanian Deadlift (Dumbbell)", "3x8/leg"],
+        ["Overhead Press (Dumbbell)", "4x6-8/side", "One arm at a time"],
+        ["Step Up", "3x8/leg"],
+        ["Suitcase Carry (Dumbbell)", "4x45 sec/side"],
+        ["Cable Core Pallof Press", "3x12/side"]]),
+      mk("Wednesday", "Performance Circuit — 5 rounds", [
+        ["Kettlebell Swing", "5 rounds x 20"],
+        ["Burpee", "5 rounds x 8"],
+        ["Goblet Squat", "5 rounds x 12"],
+        ["Push Up", "5 rounds x 12"],
+        ["Walking Lunge", "5 rounds x 10/leg"],
+        ["Farmers Walk", "5 rounds x 45 sec"]]),
+      rest("Thursday", "20-30 min easy", "Rest or mobility"),
+      mk("Friday", "Functional Strength", [
+        ["Deadlift (Barbell)", "5x3"],
+        ["Front Squat", "4x5"],
+        ["Bench Press (Dumbbell)", "4x8"],
+        ["Dumbbell Row", "4x8"],
+        ["Walking Lunge", "3x8/leg"],
+        ["Cable Core Pallof Press", "3x12/side"]]),
+      mk("Saturday", "20-minute AMRAP", [
+        ["Kettlebell Swing", "10", "Record rounds + reps and compare week 16 with week 1"],
+        ["Goblet Squat", "10"],
+        ["Push Up", "10"],
+        ["Dumbbell Row", "10"],
+        ["Reverse Lunge", "10"],
+        ["Farmers Walk", "40 sec"]])
+    ]
+  };
+
+  /* ---------------------------------------------------------
+     16-WEEK CORE TRAINING
+
+     Built around anti-extension, anti-rotation, anti-lateral-flexion and loaded carries rather
+     than around crunches. Flexion work is present but it is a minority of the volume, which is
+     the opposite of how most core programs are put together.
+  --------------------------------------------------------- */
+  var CORE = {
+    foundation: [
+      mk("Monday", "Core Strength", [
+        ["Dead Bug", "3x10/side"],
+        ["Plank", "3x30 sec"],
+        ["Bird Dog", "3x10/side"],
+        ["Glute Bridge", "3x12"],
+        ["Reverse Crunch", "3x10"]]),
+      mk("Tuesday", "Anti-Rotation + Stability", [
+        ["Cable Core Pallof Press", "3x10/side"],
+        ["Side Plank", "3x20 sec/side"],
+        ["Suitcase Carry (Dumbbell)", "3x30 sec/side"],
+        ["Bird Dog", "3x10/side"],
+        ["Dead Bug", "3x10/side"]]),
+      mk("Wednesday", "Core Conditioning — 3 rounds", [
+        ["Mountain Climber", "3 rounds x 20"],
+        ["Heel Taps", "3 rounds x 20"],
+        ["Shoulder Taps", "3 rounds x 16"],
+        ["Reverse Crunch", "3 rounds x 10"],
+        ["Plank", "3 rounds x 30 sec"]]),
+      rest("Thursday", "20-30 min easy", "Rest or mobility"),
+      mk("Friday", "Advanced Core Strength", [
+        ["Hanging Knee Raise", "3x8-10"],
+        ["Cable Crunch", "3x12"],
+        ["Side Plank", "3x20 sec/side"],
+        ["Cable Core Pallof Press", "3x10/side"],
+        ["Farmers Walk", "3x30 sec"]]),
+      mk("Saturday", "Core Circuit — 4 rounds", [
+        ["Dead Bug", "4 rounds x 10/side"],
+        ["Plank", "4 rounds x 30 sec"],
+        ["Mountain Climber", "4 rounds x 20"],
+        ["Reverse Crunch", "4 rounds x 10"],
+        ["Side Plank", "4 rounds x 20 sec/side"],
+        ["Farmers Walk", "4 rounds x 30 sec"]])
+    ],
+    strength: [
+      mk("Monday", "Core Strength", [
+        ["Dead Bug", "3x12/side"],
+        ["Plank", "3x40 sec"],
+        ["Bird Dog", "3x12/side"],
+        ["Reverse Crunch", "3x12"],
+        ["Ab Wheel", "3x6-8"]]),
+      mk("Tuesday", "Anti-Rotation + Stability", [
+        ["Cable Core Pallof Press", "3x12/side"],
+        ["Side Plank", "3x30 sec/side"],
+        ["Suitcase Carry (Dumbbell)", "3x40 sec/side"],
+        ["Cable Woodchop", "3x10/side"],
+        ["Bird Dog", "3x12/side"]]),
+      mk("Wednesday", "Core Conditioning — 4 rounds", [
+        ["Mountain Climber", "4 rounds x 30"],
+        ["Shoulder Taps", "4 rounds x 20"],
+        ["Reverse Crunch", "4 rounds x 12"],
+        ["Bicycle Crunch", "4 rounds x 20"],
+        ["Plank", "4 rounds x 40 sec"]]),
+      rest("Thursday", "20-30 min easy", "Rest or mobility"),
+      mk("Friday", "Advanced Core Strength", [
+        ["Hanging Knee Raise", "4x10"],
+        ["Cable Crunch", "4x12"],
+        ["Ab Wheel", "3x8"],
+        ["Cable Core Pallof Press", "3x12/side"],
+        ["Farmers Walk", "4x40 sec"]]),
+      mk("Saturday", "20-minute AMRAP", [
+        ["Reverse Crunch", "10", "20-minute AMRAP — record rounds + reps"],
+        ["Mountain Climber", "20"],
+        ["Dead Bug", "10"],
+        ["Plank", "30 sec"],
+        ["Farmers Walk", "30 sec"]])
+    ],
+    advanced: [
+      mk("Monday", "Core Strength", [
+        ["Ab Wheel", "4x8"],
+        ["Hanging Knee Raise", "4x10"],
+        ["Plank", "3x60 sec"],
+        ["Reverse Crunch", "3x15"],
+        ["Dead Bug", "3x12/side"]]),
+      mk("Tuesday", "Anti-Rotation + Stability", [
+        ["Cable Core Pallof Press", "4x12/side"],
+        ["Side Plank", "3x40 sec/side"],
+        ["Suitcase Carry (Dumbbell)", "4x45 sec/side"],
+        ["Cable Woodchop", "3x12/side"],
+        ["Bird Dog", "3x12/side"]]),
+      mk("Wednesday", "Core Conditioning — 5 rounds", [
+        ["Mountain Climber", "5 rounds x 30"],
+        ["Bicycle Crunch", "5 rounds x 20"],
+        ["Shoulder Taps", "5 rounds x 20"],
+        ["Reverse Crunch", "5 rounds x 15"],
+        ["Plank", "5 rounds x 45 sec"]]),
+      rest("Thursday", "20-30 min easy", "Rest or mobility"),
+      mk("Friday", "Advanced Core Strength", [
+        ["Hanging Leg Raise", "4x8"],
+        ["Cable Crunch", "4x10"],
+        ["Ab Wheel", "4x8"],
+        ["Side Plank", "3x45 sec/side"],
+        ["Farmers Walk", "4x45 sec"]]),
+      mk("Saturday", "Core Circuit — 5 rounds", [
+        ["Ab Wheel", "5 rounds x 8"],
+        ["Mountain Climber", "5 rounds x 20"],
+        ["Reverse Crunch", "5 rounds x 12"],
+        ["Side Plank", "5 rounds x 30 sec/side"],
+        ["Farmers Walk", "5 rounds x 40 sec"]])
+    ],
+    performance: [
+      mk("Monday", "Core Strength", [
+        ["Ab Wheel", "4x10"],
+        ["Hanging Leg Raise", "4x10"],
+        ["Plank", "3x60-75 sec"],
+        ["Reverse Crunch", "3x15"],
+        ["Dead Bug", "3x15/side"]]),
+      mk("Tuesday", "Anti-Rotation + Stability", [
+        ["Cable Core Pallof Press", "4x15/side"],
+        ["Side Plank", "3x60 sec/side"],
+        ["Suitcase Carry (Dumbbell)", "4x45 sec/side", "Heavy"],
+        ["Cable Woodchop", "4x10/side"],
+        ["Bird Dog", "3x15/side"]]),
+      mk("Wednesday", "Core HIIT — 5 rounds", [
+        ["Mountain Climber", "5 rounds x 30 sec", "45 sec rest between rounds"],
+        ["Bicycle Crunch", "5 rounds x 30 sec"],
+        ["Shoulder Taps", "5 rounds x 30 sec"],
+        ["Reverse Crunch", "5 rounds x 30 sec"],
+        ["Plank", "5 rounds x 45 sec"]]),
+      rest("Thursday", "20-30 min easy", "Rest or mobility"),
+      mk("Friday", "Core Strength", [
+        ["Hanging Leg Raise", "4x10"],
+        ["Cable Crunch", "4x12"],
+        ["Ab Wheel", "4x10"],
+        ["Cable Core Pallof Press", "3x15/side"],
+        ["Farmers Walk", "4x60 sec", "Heavy"]]),
+      mk("Saturday", "Core Challenge — 20-minute AMRAP", [
+        ["Ab Wheel", "10", "Record rounds + reps"],
+        ["Reverse Crunch", "15"],
+        ["Mountain Climber", "20"],
+        ["Hanging Knee Raise", "10"],
+        ["Side Plank", "30 sec"],
+        ["Farmers Walk", "40 sec"]])
+    ]
+  };
+
   var PROGRAMS = {
     bodyweight: {
       id: "bodyweight", label: "16-Week Bodyweight", equipment: "none",
@@ -767,8 +1765,90 @@
       id: "plyometric", label: "16-Week Plyometric", equipment: "none",
       blurb: "Power, speed and landing quality. Low volume by design, graded on quality not reps.",
       weeks: 16, phases: PLYO
+    },
+    olympic: {
+      id: "olympic", label: "16-Week Olympic Weightlifting", equipment: "barbell",
+      blurb: "Snatch and clean & jerk. Highly technical — hang and power variations stay in every phase.",
+      weeks: 16, phases: OLYMPIC
+    },
+    hiit: {
+      id: "hiit", label: "16-Week HIIT", equipment: "dumbbells",
+      blurb: "Fat loss and work capacity. The work:rest ratio progresses, not the exercise list.",
+      weeks: 16, phases: HIIT
+    },
+    mobility: {
+      id: "mobility", label: "16-Week Mobility & Flexibility", equipment: "none",
+      blurb: "Joint mobility and usable range. Dynamic work before training, long holds after.",
+      weeks: 16, phases: MOBILITY
+    },
+    yoga: {
+      id: "yoga", label: "16-Week Yoga", equipment: "none",
+      blurb: "Mobility, balance, breathing and control. No inversions or arm balances at any phase.",
+      weeks: 16, phases: YOGA
+    },
+    sprint: {
+      id: "sprint", label: "16-Week Sprint Training", equipment: "barbell",
+      blurb: "Acceleration and max velocity. Four training days — the two rest days are load-bearing.",
+      weeks: 16, phases: SPRINT
+    },
+    functional: {
+      id: "functional", label: "16-Week Functional Training", equipment: "home",
+      blurb: "Unilateral work and loaded carries in every phase, not as end-of-session accessories.",
+      weeks: 16, phases: FUNCTIONAL
+    },
+    core: {
+      id: "core", label: "16-Week Core Training", equipment: "gym",
+      blurb: "Anti-extension, anti-rotation and carries. Flexion work is deliberately the minority.",
+      weeks: 16, phases: CORE
     }
   };
+
+  /* A prescription string into something the routine builder can hold.
+
+     The programs store prescriptions as people read them — "4x8-12", "3x30-45 sec",
+     "3 rounds x 12", "3x10/side", "6x20 m". A routine stores a SET COUNT and a reps string per
+     set, so this reads the two numbers out and leaves everything it cannot parse alone rather
+     than guessing: an unparsed prescription becomes one set with the original text in the reps
+     field, which is still true and still useful, instead of a confident 1x1.
+
+     The reps value keeps the RANGE ("8-12") rather than picking a number from it. Double
+     progression works off the range, and choosing 8 or 12 here would be inventing a target the
+     program deliberately did not set. */
+  function parsePresc(presc) {
+    var p = String(presc || "").trim();
+    if (!p) return { sets: 1, reps: "" };
+
+    // "3 rounds x 12" and "4-5 rounds x 8/side"
+    var rounds = p.match(/^([\d]+)(?:-[\d]+)?\s*rounds?\s*x\s*(.+)$/i);
+    if (rounds) return { sets: parseInt(rounds[1], 10), reps: rounds[2].trim() };
+
+    // "4x8-12", "3x30-45 sec", "3x10/side", "6x20 m"
+    var std = p.match(/^([\d]+)\s*x\s*(.+)$/i);
+    if (std) return { sets: parseInt(std[1], 10), reps: std[2].trim() };
+
+    return { sets: 1, reps: p };
+  }
+
+  /** One day of a program as a routine record the app can save. */
+  function dayAsRoutine(programId, week, dayIndex) {
+    var p = PROGRAMS[programId] || PROGRAMS.bodyweight;
+    var w = buildWeek(programId, week);
+    var d = w.days[dayIndex];
+    if (!d) return null;
+    return {
+      name: p.label.replace(/^16-Week\s+/, "") + " W" + week + " · " + d.day,
+      description: d.session,
+      exercises: d.exercises.map(function (e) {
+        var q = parsePresc(e.presc);
+        return {
+          name: e.name,
+          sets: q.sets,
+          setDetails: Array.from({ length: q.sets }, function () { return { reps: q.reps }; }),
+          notes: e.note || ""
+        };
+      })
+    };
+  }
 
   function phaseFor(week) {
     for (var i = 0; i < PHASES.length; i++) {
@@ -798,6 +1878,8 @@
     list: function () { return Object.keys(PROGRAMS).map(function (k) { return PROGRAMS[k]; }); },
     get: function (id) { return PROGRAMS[id] || PROGRAMS.bodyweight; },
     phaseFor: phaseFor,
-    buildWeek: buildWeek
+    buildWeek: buildWeek,
+    parsePresc: parsePresc,
+    dayAsRoutine: dayAsRoutine
   });
 })();

@@ -150,6 +150,8 @@ const LIBRARY = {
     ["Feet Up Bench Press (Barbell)","4x8","reps","Chest"],["Floor Press (Barbell)","4x8","reps","Chest"],
     ["Front Raise (Barbell)","3x12","reps","Shoulders"],["Glute Bridge (Barbell)","4x8","reps","Glutes"],
     ["Good Morning (Barbell)","4x8","reps","Hamstrings"],["Hang Clean","4x8","reps","Full Body"],
+    ["Hang Power Clean","4x3","reps","Full Body"],
+    ["Hang Power Snatch","4x3","reps","Full Body"],
     ["Hang Snatch","4x8","reps","Full Body"],["Hip Thrust (Barbell)","4x8","reps","Glutes"],
     ["Incline Bench Press (Barbell)","4x8","reps","Chest"],["Jefferson Curl","3x8","reps","Lower Back"],
     ["Jefferson Deadlift","4x6","reps","Glutes"],["JM Press (Barbell)","3x12","reps","Triceps"],
@@ -357,7 +359,8 @@ const LIBRARY = {
     ["Cobra Pose Stretch","2x45s","time","Mobility"],["Codman Circle","3x20","reps","Shoulders"],
     ["Commando Pull Up","3x8","reps","Lats"],["Concentration Curl","3x12","reps","Biceps"],
     ["Continuous Box Jump","4x8","reps","Quadriceps"],["Copenhagen Adduction","3x10","reps","Adductors"],
-    ["Copenhagen Plank","3x30s","time","Adductors"],["Couch Stretch","2x60s","time","Mobility"],
+    ["Copenhagen Plank","3x30s","time","Adductors"],["Cossack Squat","3x8","reps","Adductors"],
+    ["Couch Stretch","2x60s","time","Mobility"],
     ["Countermovement Jump","3x6","reps","Quadriceps"],
     ["Cow Face Pose","2x45s","time","Mobility"],["Crab Reach","3x10","reps","Shoulders"],
     ["Cross Body Hammer Curl","3x12","reps","Biceps"],["Cross Body Mountain Climber","3x30","reps","Abdominals"],
@@ -407,7 +410,7 @@ const LIBRARY = {
     ["High Knees","3x45s","time","Full Body"],["Hindu Push Up","3x10","reps","Shoulders"],
     ["Hip Airplane","3x8","reps","Glutes"],["Hip Circles Stretch","2x30s","time","Mobility"],
     ["Hip Flexor Stretch","2x45s","time","Mobility"],["Hip Thrust","4x8","reps","Glutes"],
-    ["Hollow Body Hold","3x30","secs","Abdominals"],
+    ["Hollow Body Hold","3x30","time","Abdominals"],
     ["Hollow Rock","3x15","reps","Abdominals"],["Hub Lift","3x8","reps","Forearms"],
     ["Human Flag Hold","4x10s","time","Abdominals"],["Hurdle Hop","4x6","reps","Calves"],
     ["Impossible Dip","3x5","reps","Chest"],["Inchworm","3x10","reps","Full Body"],
@@ -546,7 +549,8 @@ const LIBRARY = {
     ["Wall Handstand Hold","4x30s","time","Shoulders"],["Wall Push Up","3x15","reps","Chest"],
     ["Wall Sit","3x45s","time","Quadriceps"],["Wall Sit Isometric","3x45s","time","Quadriceps"],
     ["Wall Slide Stretch","2x45s","time","Mobility"],["Wall Walk","4x5","reps","Shoulders"],
-    ["Warrior I Pose","2x45s","time","Mobility"],["Warrior II Pose","2x45s","time","Mobility"],
+    ["Warrior I Pose","2x45s","time","Mobility"],["Warrior III Pose","3x30","time","Full Body"],
+    ["Warrior II Pose","2x45s","time","Mobility"],
     ["Weighted Hollow Body Hold","3x30s","time","Abdominals"],["Wide Legged Forward Fold Stretch","2x45s","time","Mobility"],
     ["Wide Pull Up","4x8","reps","Lats"],["Wide Push Up","3x12","reps","Chest"],
     ["World's Greatest Stretch","2x45s","time","Mobility"],["Wrist Circles Stretch","2x30s","time","Mobility"],
@@ -554,6 +558,7 @@ const LIBRARY = {
     ["Wrist Roller","3x15","reps","Forearms"],["Zercher Squat","4x8","reps","Quadriceps"]
   ],
   "Conditioning":[
+    ["A March","3x20m","distance","Cardio"],
     ["Agility Ladder","4x30s","time","Cardio"],["Atlas Stone Lift","4x3","reps","Full Body"],
     ["Atlas Stone Over Bar","4x3","reps","Full Body"],["Ball Slams","4x8","reps","Full Body"],
     ["Battle Ropes Slams","4x30s","time","Full Body"],["Battle Ropes Waves","4x30s","time","Shoulders"],
@@ -561,7 +566,7 @@ const LIBRARY = {
     ["Burpee","4x8","reps","Full Body"],["Burpee Box Jump Over","4x10","reps","Full Body"],
     ["Burpee Broad Jumps","4x8","reps","Full Body"],["Burpee Over the Bar","4x8","reps","Full Body"],
     ["Carioca Drill","4x20m","distance","Cardio"],["Cone Drill","4x30s","time","Cardio"],
-    ["Farmers Walk","3x400m","distance","Full Body"],["Fast Feet","4x20","secs","Cardio"],
+    ["Farmers Walk","3x400m","distance","Full Body"],["Fast Feet","4x20","time","Cardio"],
     ["Jump Rope Crossover","3x60s","time","Cardio"],
     ["Jump Rope Double Under","4x40","reps","Cardio"],["Jump Rope Single Under","4x80","reps","Cardio"],
     ["Keg Carry","3x30m","distance","Full Body"],["Kneeling Med Ball Throw","4x8","reps","Chest"],
@@ -610,8 +615,17 @@ const LIBRARY = {
     ["Weighted Vest Walk","1x30min","time","Cardio"]
   ],
   "Mobility / Stretch":[
-    ["Downward Dog","4x8","reps","Full Body"],["Pilates","3x45s","time","Full Body"],
-    ["Stretching","3x45s","time","Full Body"],["Warm Up","3x45s","time","Full Body"],
+    ["Adductor Rock Back Stretch","3x10","reps","Adductors"],
+    ["Arm Swings Stretch","2x10","reps","Shoulders"],
+    ["Boat Pose","3x30","time","Abdominals"],
+    ["Downward Dog","4x8","reps","Full Body"],["Garland Pose","3x30","time","Adductors"],
+    ["Half Split Stretch","3x30","time","Hamstrings"],
+    ["Legs Up the Wall","1x3","time","Full Body"],
+    ["Pilates","3x45s","time","Full Body"],
+    ["Savasana","1x5","time","Full Body"],
+    ["Stretching","3x45s","time","Full Body"],["Sun Salutation","4x1","reps","Full Body"],
+    ["Thoracic Extension Stretch","2x10","reps","Upper Back"],
+    ["Warm Up","3x45s","time","Full Body"],
     ["Yoga","3x45s","time","Full Body"]
   ]
 };
@@ -18039,6 +18053,56 @@ function attachHandlers(){
       if (["home", "health", "nutrition", "insights"].includes(state.tab)) window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
     });
   });
+  /* ---- Recommended program -> routines --------------------------------------------------
+     Saving a day, or a whole week, into the user's own routines. Everything goes through
+     normalizeRoutine, the same function the routine builder uses, so a saved program day is
+     indistinguishable from a hand-built routine — it can be edited, duplicated, foldered and
+     started with no special cases anywhere downstream. */
+  function saveProgramDay(programId, week, dayIndex, folderId){
+    const P = window.IgnytPrograms;
+    if(!P || !P.dayAsRoutine) return null;
+    const draft = P.dayAsRoutine(programId, week, dayIndex);
+    if(!draft) return null;
+    /* A name already in use gets a suffix rather than overwriting. Saving week 3 twice should
+       produce two routines or a clear duplicate, never silently replace the edits someone made
+       to the first one. */
+    let name = draft.name, n = 2;
+    while(state.routines.some(r => r.name === name)) name = draft.name + " (" + (n++) + ")";
+    const rec = normalizeRoutine({ ...draft, name, id: nextId(), folderId: folderId || undefined });
+    state.routines.unshift(rec);
+    return rec;
+  }
+
+  document.querySelectorAll("[data-add-day]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const rec = saveProgramDay(el.dataset.addDay, Number(el.dataset.addDayW), Number(el.dataset.addDayI));
+      state.routines = enforceRoutineIntegrity(state.routines);
+      showToast(rec ? "Saved “" + rec.name + "” to your routines" : "Could not save that day", rec ? "success" : "error", render);
+    });
+  });
+
+  document.querySelectorAll("[data-add-week]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const P = window.IgnytPrograms;
+      const programId = el.dataset.addWeek, week = Number(el.dataset.addWeekN);
+      if(!P) return;
+      const prog = P.get(programId);
+      const w = P.buildWeek(programId, week);
+      /* The whole week lands in its OWN folder, so adding a second week does not merge into the
+         first and adding a week never scatters six routines through the ungrouped list. */
+      const folder = { id: nextId(), name: prog.label.replace(/^16-Week\s+/, "") + " · Week " + week, collapsed: false };
+      state.routineFolders.push(folder);
+      let saved = 0;
+      w.days.forEach((d, i)=>{
+        const trainable = d.exercises.length > 1 || (d.exercises[0] && d.exercises[0].name !== "Walk / Mobility");
+        if(!trainable) return;      // a rest day is not a routine
+        if(saveProgramDay(programId, week, i, folder.id)) saved++;
+      });
+      state.routines = enforceRoutineIntegrity(state.routines);
+      showToast(saved + " routine" + (saved===1?"":"s") + " saved to “" + folder.name + "”", "success", render);
+    });
+  });
+
   /* ---- Routine folders ----------------------------------------------------------------
      A folder is a label over the routine list. Nothing here ever touches state.routines except
      to set or clear folderId, which is what makes every one of these operations non-destructive

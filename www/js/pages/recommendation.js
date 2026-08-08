@@ -69,11 +69,22 @@
         '<div class="rec-head__phase">' + esc(w.phaseLabel) + '</div>' +
       '</div>' +
       '<div class="rec-weeks">' + strip + '</div>' +
-      w.days.map(function (d) {
+      /* One button for the whole week, because copying six days one at a time is the obvious
+         thing someone would do next and there is no reason to make them do it six times. It
+         creates a FOLDER named after the week, which is what the folders feature is for. */
+      '<button class="rh-btn rh-btn--primary rec-addweek" data-add-week="' + programId +
+        '" data-add-week-n="' + week + '">Add week ' + week + ' to my routines</button>' +
+      w.days.map(function (d, di) {
+        /* Rest days are not routines. Adding "Walk / Mobility" as a saveable routine would put
+           a row in the list that cannot be trained and would never be ticked off. */
+        var addable = d.exercises.length > 1 || (d.exercises[0] && d.exercises[0].name !== "Walk / Mobility");
         return '<div class="pg-card rec-day">' +
           '<div class="rec-day__head">' +
             '<span class="rec-day__day">' + esc(d.day) + '</span>' +
             '<span class="rec-day__session">' + esc(d.session) + '</span>' +
+            (addable ? '<button class="rec-day__add" data-add-day="' + programId +
+              '" data-add-day-w="' + week + '" data-add-day-i="' + di +
+              '" aria-label="Add ' + esc(d.day) + ' to routines">+ Save</button>' : '') +
           '</div>' +
           d.exercises.map(function (e) {
             var img = ctx.exerciseImageSrc ? ctx.exerciseImageSrc(e.name) : null;
