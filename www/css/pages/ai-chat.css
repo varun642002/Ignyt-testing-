@@ -131,3 +131,29 @@
              color:var(--rh-muted); font-variant-numeric:tabular-nums; }
 .aic-usage.is-low   { color:#D97706; }
 .aic-usage.is-spent { color:var(--rh-muted); opacity:.75; }
+
+/* THE SPEAKER, on assistant answers only.
+
+   Inline at the end of the text rather than floating in a corner: the answer bubble is a
+   variable height and an absolutely-positioned button would sit over the last line on a short
+   answer and miles from it on a long one. Sitting in the text flow, it lands after the full
+   stop wherever that falls.
+
+   Muted until used. It is a secondary affordance on a screen whose primary job is reading —
+   at full contrast on every answer it would compete with the text it belongs to. */
+.aic-speak{
+  display:inline-flex; align-items:center; justify-content:center;
+  vertical-align:middle; margin-left:8px;
+  width:26px; height:26px; padding:0;
+  border:none; border-radius:999px; cursor:pointer;
+  background:transparent; color:var(--muted);
+  transition:color .15s ease, background-color .15s ease;
+}
+.aic-speak:hover{ color:var(--text); background:var(--surface-alt); }
+
+/* Speaking: the one state that must be obvious, because the user needs to find the button
+   again to stop it. Colour rather than motion — a pulsing icon inside a block of text being
+   read is a distraction from the reading. */
+.aic-speak.is-speaking{ color:var(--primary); background:var(--primary-soft); }
+
+@media (prefers-reduced-motion:reduce){ .aic-speak{ transition:none; } }

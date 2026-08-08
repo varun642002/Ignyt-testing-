@@ -18598,6 +18598,30 @@ function attachHandlers(){
      of an utterance, and the transcript is sent as if it had been typed — so voice reaches
      exactly the same validation and confirmation path as text, with no second code path that
      could disagree about what needs confirming. */
+  /* Read an answer aloud. A TOGGLE, not a play button: tapping the speaker that is currently
+     talking stops it, which is the only control anyone reaches for when speech starts and they
+     did not want it. Tapping a DIFFERENT answer switches to that one — IgnytVoice.speak()
+     cancels whatever is queued before starting, so two answers can never overlap.
+
+     Failures are swallowed on purpose. The text is already on screen, so a device with no
+     voice for the language has cost the user nothing, and an error bubble explaining that
+     would be noise about a feature they can simply not use. */
+  document.querySelectorAll("[data-ai-speak]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const V = window.IgnytVoice;
+      if(!V || !V.canSpeak()) return;
+      const text = el.dataset.aiSpeak || "";
+      const wasThisOne = el.classList.contains("is-speaking");
+      document.querySelectorAll(".aic-speak.is-speaking").forEach(b=>b.classList.remove("is-speaking"));
+      V.stopSpeaking();
+      if(wasThisOne) return;                    // second tap on the live one = stop
+      el.classList.add("is-speaking");
+      V.speak(text, {
+        onState: (s)=>{ if(s === "idle") el.classList.remove("is-speaking"); }
+      }).catch(()=>{ el.classList.remove("is-speaking"); });
+    });
+  });
+
   document.querySelectorAll("[data-ai-mic]").forEach(el=>{
     el.addEventListener("click", ()=>{
       /* ONE SPEECH IMPLEMENTATION, not two. This drove SpeechRecognition directly and

@@ -77,7 +77,20 @@
 
   function bubble(e) {
     if (e.role === "user") return '<div class="aic-msg aic-msg--me">' + esc(e.text) + '</div>';
-    if (e.role === "assistant") return '<div class="aic-msg aic-msg--ai">' + esc(e.text) + '</div>';
+    if (e.role === "assistant") {
+      /* A speaker only on answers worth hearing. Below ~40 characters ("Logged.", "You're on a
+         3 day streak.") the button is slower to find and press than the sentence is to read,
+         so it would be decoration. It is also omitted entirely where the device has no
+         synthesiser rather than rendering a control that does nothing — the same rule the
+         microphone follows. */
+      var speakable = window.IgnytVoice && IgnytVoice.canSpeak() && String(e.text || "").length > 40;
+      return '<div class="aic-msg aic-msg--ai">' + esc(e.text) +
+        (speakable
+          ? '<button class="aic-speak" data-ai-speak="' + esc(e.text) + '" ' +
+              'aria-label="Read this answer aloud">' + ic("speaker", 15) + '</button>'
+          : '') +
+      '</div>';
+    }
     if (e.role === "card") return card(e);
     if (e.role === "clarify") {
       var r = e.result || {};
