@@ -17,7 +17,7 @@
 (function () {
   window.IgnytPages = window.IgnytPages || {};
 
-  const CATEGORY_COLOR = { Push:'#2563EB', Pull:'#16A34A', Legs:'#7C3AED', Upper:'#EA580C', Lower:'#0891B2' };
+  const CATEGORY_COLOR = { Push:'#2563EB', Pull:'#16A34A', Legs:'#7C3AED', Upper:'#EA580C', Lower:'#2563EB' };
 
   function daysAgoLabel(dateStr) {
     if (!dateStr) return null;

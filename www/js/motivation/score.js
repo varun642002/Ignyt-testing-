@@ -54,7 +54,7 @@ window.IgnytScore = (function () {
   var LEVELS = [
     { from: 0,   name: "Needs Improvement", color: "#94a3b8", line: "Plenty of the day left. One small thing moves this." },
     { from: 40,  name: "Good Start",        color: "#22c55e", line: "Good start. A couple more and this becomes a strong day." },
-    { from: 70,  name: "Great Progress",    color: "#0891b2", line: "Solid day. You're doing the things that add up." },
+    { from: 70,  name: "Great Progress",    color: "#2563EB", line: "Solid day. You're doing the things that add up." },
     { from: 100, name: "Excellent",         color: "#2563eb", line: "Excellent day. This is what a consistent week looks like." },
     { from: 130, name: "Elite",             color: "#7c3aed", line: "Outstanding. Almost everything you could log today is logged." },
     { from: 160, name: "Legendary",         color: "#f59e0b", line: "A near-perfect day. Rare, and entirely yours." }

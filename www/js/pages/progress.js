@@ -172,7 +172,7 @@
       ['history','file','#64748B', `${state.prs.length} record${state.prs.length!==1?'s':''}`],
       ['habits','check','#16A34A', `${state.habits.length} habit${state.habits.length!==1?'s':''} active`],
       ['analytics','progress','#2563EB', 'View insights'],
-      ['body','body','#0891B2', 'Track your body'],
+      ['body','body','#2563EB', 'Track your body'],
       ['calendar','calendar','#4F46E5', 'View your activity'],
       ['reports','file','#0D9488', 'Weekly · monthly · yearly'],
       ['photos','body','#DB2777', `${(state.bodyPhotos||[]).length} photo${(state.bodyPhotos||[]).length!==1?'s':''}`]

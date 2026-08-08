@@ -26,11 +26,11 @@
   --n-carbs:     var(--steel);
   --n-fat:       #FFB020;
   --n-fibre:     #A98BFF;
-  --n-water:     #4FC3F7;
+  --n-water:     #2563EB;
   --n-sugar:     #FF8FA3;
   --n-sodium:    #FFB020;
   --n-potassium: #7BD389;
-  --n-calcium:   #9AD5FF;
+  --n-calcium:   #2563EB;
   --n-iron:      #FF7A5C;
   --n-energy:    var(--accent);
 
@@ -43,11 +43,11 @@
      same identities re-mixed for contrast against a light surface. */
   --n-fat:       #B87400;
   --n-fibre:     #6B4FD8;
-  --n-water:     #0B7FA8;
+  --n-water:     #2563EB;
   --n-sugar:     #C2185B;
   --n-sodium:    #B87400;
   --n-potassium: #2E7D32;
-  --n-calcium:   #1565C0;
+  --n-calcium:   #2563EB;
   --n-iron:      #C0392B;
 }
 

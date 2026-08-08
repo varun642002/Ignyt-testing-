@@ -361,7 +361,7 @@
               away. These three are the ones with no other route from Home. */''}
         ${quickAction('scale', 'var(--rh-blue)', 'Log Weight', 'data-nav="body"')}
         ${quickAction('timer', '#7C3AED', 'Fasting', 'data-nav="fasting"')}
-        ${quickAction('flask', '#0891B2', 'Supplements', 'data-nav="supplements"')}
+        ${quickAction('flask', '#2563EB', 'Supplements', 'data-nav="supplements"')}
       </div>
     </div>`;
   };

@@ -469,7 +469,7 @@
 .bdg[data-tier="bronze"]   { --bdg-glow: rgba(200,122,60,.40); }
 .bdg[data-tier="silver"]   { --bdg-glow: rgba(135,152,168,.40); }
 .bdg[data-tier="gold"]     { --bdg-glow: rgba(240,192,32,.48); }
-.bdg[data-tier="diamond"]  { --bdg-glow: rgba(95,208,238,.48); }
+.bdg[data-tier="diamond"]  { --bdg-glow: rgba(37,99,235,.48); }
 .bdg[data-tier="platinum"] { --bdg-glow: rgba(155,126,232,.52); }
 
 /* ---------- Locked progress ----------

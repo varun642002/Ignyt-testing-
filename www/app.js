@@ -754,11 +754,11 @@ function loadExerciseInstructions(source, label, knownNames) {
 // Deterministic avatar colors per muscle bucket — used since no real exercise photos exist
 
 const MUSCLE_AVATAR_COLOR = {
-  Chest:"#FF5A1F", Lats:"#4FA8D8", Traps:"#4FA8D8", Shoulders:"#F2A93B",
+  Chest:"#FF5A1F", Lats:"#2563EB", Traps:"#2563EB", Shoulders:"#F2A93B",
   Biceps:"#3ECF8E", Triceps:"#3ECF8E", Forearms:"#3ECF8E",
   Quadriceps:"#E85D75", Hamstrings:"#E85D75", Glutes:"#E85D75", Calves:"#E85D75", Abductors:"#E85D75", Adductors:"#E85D75",
-  Abdominals:"#9B7EDE", Cardio:"#4FA8D8", Mobility:"#8B8B94",
-  "Upper Back":"#4FA8D8", "Lower Back":"#4FA8D8", Neck:"#F2A93B", "Full Body":"#FF5A1F"
+  Abdominals:"#9B7EDE", Cardio:"#2563EB", Mobility:"#8B8B94",
+  "Upper Back":"#2563EB", "Lower Back":"#2563EB", Neck:"#F2A93B", "Full Body":"#FF5A1F"
 };
 
 const MUSCLE_GROUP_COLOR = {
@@ -3566,7 +3566,7 @@ function weeklyBarChart(buckets, metric){
       const label = (showAllLabels || isLast) ? fmt(val) : "";
       return `<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;overflow:hidden;">
         <span class="mono" style="font-size:11px;font-weight:700;color:${isLast?'var(--accent)':'var(--steel)'};min-height:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</span>
-        <div style="width:${buckets.length>20?'85%':'65%'};border-radius:var(--radius-2xs) 4px 0 0;background:${isLast?'#FF5A1F':'#4FA8D8'};height:${bh}px;"></div>
+        <div style="width:${buckets.length>20?'85%':'65%'};border-radius:var(--radius-2xs) 4px 0 0;background:${isLast?'#FF5A1F':'#2563EB'};height:${bh}px;"></div>
       </div>`;
     }).join("")}
   </div>`;
@@ -6192,7 +6192,7 @@ function macroMiniCard(label, value, target, colorKey, unit, decimals){
 /* Distinct hues for the calories-by-meal ring. Kept separate from NUTRIENT_COLORS because
    these identify meals, not nutrients, and reusing the macro palette would imply a link
    between "Lunch" and "carbs" that does not exist. */
-const MEAL_DONUT_COLORS = ["var(--mint)", "var(--steel)", "#FFB020", "#A98BFF", "#FF7A5C", "#9AD5FF"];
+const MEAL_DONUT_COLORS = ["var(--mint)", "var(--steel)", "#FFB020", "#A98BFF", "#FF7A5C", "#2563EB"];
 
 /* Emoji per meal, matching the meal rows in the design. */
 /* Meal types deliberately carry NO glyph. The only two places they render are <option>
@@ -6263,7 +6263,7 @@ const INSIGHT_TONES = {
   good: { bg:"rgba(62,207,142,.10)",  fg:"var(--mint)" },
   warn: { bg:"rgba(255,176,32,.10)",  fg:"#FFB020" },
   bad:  { bg:"rgba(255,90,31,.10)",   fg:"var(--accent)" },
-  info: { bg:"rgba(79,168,216,.10)",  fg:"var(--steel)" }
+  info: { bg:"rgba(37,99,235,.10)",  fg:"var(--steel)" }
 };
 
 function macroTargets(){
@@ -12322,7 +12322,7 @@ const BADGE_TIERS = {
   bronze:   { hue: "#A85A29", ink: "#FFFFFF", lo: "#5E2F12", mid: "#C87A3C", hi: "#F0B27A" },
   silver:   { hue: "#5A6B7D", ink: "#FFFFFF", lo: "#33404D", mid: "#8798A8", hi: "#D9E4EC" },
   gold:     { hue: "#E0A800", ink: "#1A1205", lo: "#8A5E00", mid: "#F0C020", hi: "#FFF2B0" },
-  diamond:  { hue: "#3FBBE0", ink: "#052A3A", lo: "#0E5C77", mid: "#5FD0EE", hi: "#DFF7FF" },
+  diamond:  { hue: "#2563EB", ink: "#052A3A", lo: "#2563EB", mid: "#2563EB", hi: "#DFF7FF" },
   platinum: { hue: "#7C5CD6", ink: "#FFFFFF", lo: "#3D2A80", mid: "#9B7EE8", hi: "#E3D8FF" }
 };
 
@@ -15215,7 +15215,7 @@ function renderNutritionInsightsPage(){
   const microRows = MICROS.filter(([,,key]) => T[key] != null);
 
   // Calories by meal, for the donut. Only meals with food appear — an empty slice is a lie.
-  const mealColours = ["#F5BB45", "#2563EB", "#A855F7", "#45D294", "#FF8A5C", "#55D8FF"];
+  const mealColours = ["#F5BB45", "#2563EB", "#A855F7", "#45D294", "#FF8A5C", "#2563EB"];
   const byMeal = mealTypes()
     .map((m,i)=>({ meal:m, kcal: Math.round(allEntries.filter(f=>(f.meal||"Lunch")===m)
                                     .reduce((a,f)=>a+Number(f.calories||0),0)),
@@ -16272,7 +16272,7 @@ function renderAchievementCelebration(){
    ? key : "steel"`, so a stored key that no longer exists lands on the one that does instead
    of on undefined and a blank card. */
 const SHARE_THEMES = {
-  steel: { label:"Steel", bg0:"#0E1B26", bg1:"#121216", text:"#F2F1ED", muted:"#8FA7B5", accent:"#4FA8D8" }
+  steel: { label:"Steel", bg0:"#0E1B26", bg1:"#121216", text:"#F2F1ED", muted:"#8FA7B5", accent:"#2563EB" }
 };
 
 function workoutDurationLabel(s){

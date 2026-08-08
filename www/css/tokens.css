@@ -12,10 +12,10 @@
   --color-surface-pressed: #21262f;
   --color-primary: #ff5a1f;
   --color-primary-strong: #ff6a2b;
-  --color-accent-blue: #32b8f4;
-  --color-accent-cyan: #55d8ff;
+  --color-accent-blue: #2563EB;
+  --color-accent-cyan: #2563EB;
   --color-interactive: #2563EB;
-  --color-interactive-strong: #1D4ED8;
+  --color-interactive-strong: #2563EB;
   --color-interactive-soft: rgba(37,99,235,.14);
   --color-text-primary: #f7f4ef;
   --color-text-secondary: #aaa9b0;
@@ -146,7 +146,7 @@
   --color-text-secondary:#6B7280; --color-text-placeholder:#9CA3AF;
   --color-border:#E7EBF0; --color-divider:#E8ECF2;
   --shadow-card:0 6px 24px rgba(31,41,55,.07);
-  --color-interactive: #2563EB; --color-interactive-strong: #1D4ED8; --color-interactive-soft: rgba(37,99,235,.12);
+  --color-interactive: #2563EB; --color-interactive-strong: #2563EB; --color-interactive-soft: rgba(37,99,235,.12);
 }
 /* AMOLED theme -- Phase 1 ask ("future AMOLED theme"): true-black background/surfaces for
    OLED power savings and max contrast. Not wired to any theme switcher yet (Settings still

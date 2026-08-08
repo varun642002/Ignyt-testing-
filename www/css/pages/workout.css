@@ -33,7 +33,7 @@
 .swipe-dup-btn { position:absolute; top:0; left:0; bottom:0; width:84px; z-index:0; border:none; cursor:pointer;
   background:var(--rh-blue,#2563EB); color:#fff; display:flex; align-items:center; justify-content:center;
   border-radius:var(--radius-sm) 0 0 10px; }
-.swipe-dup-btn:active { background:#1D4ED8; }
+.swipe-dup-btn:active { background:#2563EB; }
 
 .set-num { width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:var(--radius-sm); font-size:15px; }
 .set-prev { text-align:center; font-size:11px; padding:0 2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

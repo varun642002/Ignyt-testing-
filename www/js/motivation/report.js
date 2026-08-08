@@ -34,7 +34,7 @@ window.IgnytReport = (function () {
      top-level const lives in the script's lexical scope and never becomes a window property.
      window.SHARE_THEMES is undefined even though SHARE_THEMES resolves fine. */
   var FALLBACK_THEME = {
-    steel: { label: "Steel", bg0: "#0E1B26", bg1: "#121216", text: "#F2F1ED", muted: "#8FA7B5", accent: "#4FA8D8" }
+    steel: { label: "Steel", bg0: "#0E1B26", bg1: "#121216", text: "#F2F1ED", muted: "#8FA7B5", accent: "#2563EB" }
   };
   function theme(key) {
     var themes = FALLBACK_THEME;
