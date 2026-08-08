@@ -50,7 +50,7 @@
     foundation: [
       { day: "Monday", session: "Upper + Core", exercises: [
         { name: "Incline Push Ups",  presc: "3x8-12" },
-        { name: "Incline Push Ups",  presc: "2x10-15", note: "The knee push-up slot — same regression, and this one has artwork" },
+        { name: "Knee Push Up",      presc: "2x10-15" },
         { name: "Pike Pushup",       presc: "3x6-10" },
         { name: "Plank",             presc: "3x30-45 sec" },
         { name: "Dead Bug",          presc: "3x10/side" } ] },
@@ -121,7 +121,7 @@
         { name: "Archer Push Up",    presc: "3x5-8/side", note: "Progression — go to the depth you can control" },
         { name: "Diamond Push Up",   presc: "3x10" },
         { name: "Pike Pushup",       presc: "4x8-12" },
-        { name: "Hollow Rock",       presc: "3x30-45 sec", note: "Hold static for the hollow-body hold if you prefer" } ] },
+        { name: "Hollow Body Hold",  presc: "3x30-45 sec" } ] },
       { day: "Tuesday", session: "Lower Strength", exercises: [
         { name: "Chair Bulgarian Split Squat", presc: "4x8-12/leg" },
         { name: "Pistol Squat",      presc: "3x5-8/leg", note: "Progression — box or assisted until the full range is there" },
@@ -158,7 +158,7 @@
         { name: "Diamond Push Up",   presc: "4x8-12" },
         { name: "Pike Pushup",       presc: "4x10" },
         { name: "Archer Push Up",    presc: "3x6/side" },
-        { name: "Hollow Rock",       presc: "3x45 sec", note: "Hold static if that is the version you are training" } ] },
+        { name: "Hollow Body Hold",  presc: "3x45 sec" } ] },
       { day: "Tuesday", session: "Lower Strength", exercises: [
         { name: "Chair Bulgarian Split Squat", presc: "4x10/leg" },
         { name: "Pistol Squat",      presc: "3x6/leg", note: "Progression" },
@@ -176,7 +176,7 @@
         { name: "Diamond Push Up",   presc: "4x10-12" },
         { name: "Pike Pushup",       presc: "4x12" },
         { name: "Archer Push Up",    presc: "3x8/side" },
-        { name: "Hollow Rock",       presc: "3x45 sec" } ] },
+        { name: "Hollow Body Hold",  presc: "3x45 sec" } ] },
       { day: "Friday", session: "Lower + Conditioning", exercises: [
         { name: "Chair Bulgarian Split Squat", presc: "4x10/leg" },
         { name: "Jump Squat",        presc: "4x12" },
@@ -205,7 +205,7 @@
         { name: "Chest Fly (Band)",    presc: "3x12-15" },
         { name: "Band Shoulder Press", presc: "3x10-15" },
         { name: "Lateral Raise (Band)", presc: "3x12-15" },
-        { name: "Band Tricep Extension", presc: "3x12-15", note: "The pushdown slot — anchor high and press down if you have a door anchor" } ] },
+        { name: "Band Triceps Pushdown", presc: "3x12-15" } ] },
       { day: "Tuesday", session: "Back + Biceps", exercises: [
         { name: "Lat Pulldown (Band)", presc: "3x12-15" },
         { name: "Bent Over Row (Band)", presc: "3x12-15" },
@@ -214,7 +214,7 @@
         { name: "Hammer Curl (Band)",  presc: "3x12-15" } ] },
       { day: "Wednesday", session: "Legs + Core", exercises: [
         { name: "Squat (Band)",        presc: "4x12-15" },
-        { name: "Band Good Morning",   presc: "3x12-15", note: "The band RDL — hinge at the hip, back flat" },
+        { name: "Band Romanian Deadlift", presc: "3x12-15" },
         { name: "Band Hip Thrust",     presc: "3x15" },
         { name: "Lateral Band Walks",  presc: "3x12/side" },
         { name: "Plank",               presc: "3x30-45 sec" } ] },
@@ -361,7 +361,7 @@
     { name: "Skullcrusher (Dumbbell)",        presc: "3x10-15", note: "The overhead extension slot — take it overhead if you prefer" },
     { name: "Skullcrusher (Dumbbell)",        presc: "3x10-12" } ];
   var DB_TUE = [
-    { name: "Bent Over Row (Dumbbell)",  presc: "3x10-12/side", note: "One arm at a time — the library has no separate single-arm entry" },
+    { name: "One Arm Row (Dumbbell)",    presc: "3x10-12/side" },
     { name: "Seal Row (Dumbbell)",       presc: "3x10-12" },
     { name: "Pullover (Dumbbell)",       presc: "3x10-12" },
     { name: "Rear Delt Reverse Fly (Dumbbell)", presc: "3x12-15" },
@@ -514,7 +514,7 @@
     { name: "Skullcrusher (Dumbbell)",           presc: "3x12", note: "Take it overhead if you prefer that version" } ];
   var HG_TUE = [
     { name: "Bent Over Row (Barbell)",  presc: "4x10" },
-    { name: "Bent Over Row (Dumbbell)", presc: "3x10/side", note: "One arm at a time" },
+    { name: "One Arm Row (Dumbbell)",   presc: "3x10/side" },
     { name: "Pullover (Dumbbell)",      presc: "3x12" },
     { name: "Bicep Curl (Barbell)",     presc: "3x10-12" },
     { name: "Hammer Curl (Dumbbell)",   presc: "3x12" } ];
@@ -662,7 +662,7 @@
      hurts people.
   --------------------------------------------------------- */
   var PLY_MON = [
-    { name: "Jump Squat",        presc: "3x6", note: "The countermovement jump — dip and drive, full reset between reps" },
+    { name: "Countermovement Jump", presc: "3x6", note: "Dip and drive, full reset between reps" },
     { name: "Squat Jump to Box", presc: "3x6" },
     { name: "Jump Lunge",        presc: "3x6/leg" },
     { name: "Skater Jump",       presc: "3x8/side" },
@@ -675,8 +675,8 @@
     { name: "Medicine Ball Slam",       presc: "3x8" } ];
   var PLY_WED = [
     { name: "Lateral Shuffle Drill", presc: "4x20 sec" },
-    { name: "High Knees",            presc: "4x20 sec", note: "The fast-feet drill — turnover, not height" },
-    { name: "Lateral Bound",         presc: "3x10/side" },
+    { name: "Fast Feet",             presc: "4x20 sec", note: "Turnover, not height" },
+    { name: "Lateral Hops",          presc: "3x10/side" },
     { name: "Shuttle Run",           presc: "4x20 m" } ];
   var PLY_FRI = [
     { name: "Broad Jump",    presc: "4x5" },
