@@ -1327,3 +1327,37 @@ About to commit the 8 Phase 2B files and push feature/firestore-profile-settings
   generated. Real-device sign-in test still pending on user.
 - Dark-mode HC card contrast fix: 5649d7b on feature/phase1-stabilization, pushed.
 - Phase 1 stabilization: f8a6d79, pushed.
+
+## 2026-08-08 — Recommendation engine: save-to-routines + 7 more programs
+
+Branch: feature/premium-subscription   Commit: 8867399   Pushed: yes
+Build: BUILD SUCCESSFUL (assembleDebug)
+
+Done:
+- "+ Save" per trainable day and one "Add week N" button that saves a week into its own
+  folder. programs.js gained parsePresc() and dayAsRoutine().
+- Seven new programs: olympic, hiit, mobility, yoga, sprint, functional, core. 14 total.
+- 14 exercises added to LIBRARY (hang power variations, Cossack squat, A March, yoga
+  poses, 3 mobility drills). ~40 other names mapped onto EXISTING library entries
+  rather than duplicated.
+- Fixed unit typo: Hollow Body Hold / Fast Feet were "secs", now "time".
+- sw.js CACHE v306 -> v307.
+
+Verified: executed programs.js and walked all 14 programs — 1,344 days, 6,044 exercise
+instances, 205 distinct names, ZERO unresolved against the library. 232/232 rest days
+carry the "Walk / Mobility" marker. parsePresc checked on 13 formats.
+
+NOT verified end-to-end through the live UI: the two click handlers. The dev-server tab
+sits behind the sign-in gate, so the buttons were verified at the render layer (correct
+data attributes, rest day excluded, CSS applied) and the save path was verified at the
+data layer, but no signed-in click-through was performed.
+
+BLOCKED / NEEDS USER:
+- 16-week KETTLEBELL and POWERLIFTING programs were sent before a context break and the
+  text is not recoverable from any transcript file. Both need re-sending. Every other
+  program the user sent has been added.
+- User signalled more to come: "Next: Boxing", "Next: Stair Climber", "Next: Cycling".
+
+Still open from earlier: calendar sync; 21 badges awaiting upload; 517 exercises with no
+image/instructions; 741 Indian foods with no licensed source.
+
