@@ -18,6 +18,9 @@ psycopg2-binary==2.9.10     # sync driver for Alembic migrations on Postgres
 
 # --- Identity ---
 firebase-admin==6.6.0       # verifies Firebase ID tokens
+# Signs the service-account JWT for Google Play purchase verification. Doing RS256 and
+# clock-skew by hand in a file whose failure mode is "anyone gets premium" is not worth it.
+google-auth==2.38.0
 
 # --- Logging ---
 python-json-logger==3.2.1

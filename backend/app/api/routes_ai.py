@@ -34,6 +34,7 @@ from ..core.errors import AppError
 from ..db.models import AiScanUsage, User
 from ..db.session import get_db
 from ..services import gemini_chat
+from .routes_billing import is_entitled
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["ai"])
@@ -47,6 +48,13 @@ ALLOWED_ACTIONS = {t["name"] for t in gemini_chat.TOOLS}
 class DailyLimitReached(AppError):
     status_code = 429
     code = "ai_daily_limit"
+
+
+class NotEntitled(AppError):
+    """AI Coach is a Pro feature and this account is not Pro."""
+
+    status_code = 402
+    code = "ai_requires_pro"
 
 
 # ---------------------------------------------------------------------------- schemas
@@ -204,6 +212,13 @@ async def ai_chat(
     again with toolResults, and THAT second call does not spend another unit of the daily
     allowance — it is the same user message. Only a request without toolResults counts.
     """
+    # ENTITLEMENT, SERVER-SIDE, BEFORE ANYTHING IS SPENT. is_entitled() reads what Google told
+    # us and when — never a client flag. Behind a setting because switching it on before any
+    # purchase has been verified would lock out every user, paying ones included, since
+    # is_premium defaults to false. See AI_REQUIRES_PREMIUM in config.py.
+    if settings.ai_requires_premium and not is_entitled(user):
+        raise NotEntitled("AI Coach is part of IGNYT Pro.")
+
     limit = settings.ai_chat_daily_limit
     day = _local_day(body.timezone)
     is_continuation = bool(body.toolResults)

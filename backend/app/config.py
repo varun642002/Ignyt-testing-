@@ -99,6 +99,23 @@ class Settings(BaseSettings):
     # how many round trips one turn may take before the server stops and answers with what it
     # has — the guard against a model that keeps asking for one more tool forever.
     ai_chat_max_tool_rounds: int = Field(default=3, alias="AI_CHAT_MAX_TOOL_ROUNDS")
+    # --- Google Play subscription verification ---
+    # The service-account JSON, as a single environment value. It contains a PRIVATE KEY: it is
+    # never logged, never returned by any route, and never sent to a client. Render holds it as
+    # a secret env var; it must not be committed.
+    play_service_account_json: str = Field(default="", alias="PLAY_SERVICE_ACCOUNT_JSON")
+    play_package_name: str = Field(default="com.varun.ignyt", alias="PLAY_PACKAGE_NAME")
+    play_timeout_seconds: float = Field(default=10.0, alias="PLAY_TIMEOUT_SECONDS")
+    # How long a verified entitlement is trusted before Google is asked again. Without
+    # Real-Time Developer Notifications a cancellation is invisible until the next check, so
+    # this is the window in which a cancelled user keeps access. Six hours is short enough to
+    # be defensible and long enough that Play is not called on every request.
+    play_recheck_hours: int = Field(default=6, alias="PLAY_RECHECK_HOURS")
+    # Gate AI on verified entitlement. OFF by default and deliberately so: switching it on
+    # before any purchase has been verified locks out every user, including paying ones,
+    # because is_premium defaults to false. Turn it on once verification is live.
+    ai_requires_premium: bool = Field(default=False, alias="AI_REQUIRES_PREMIUM")
+
     # Hard ceiling on an uploaded frame. The client compresses first; this is the backstop
     # that stops a hostile or broken client from streaming an unbounded body at us.
     max_upload_bytes: int = Field(default=6 * 1024 * 1024, alias="MAX_UPLOAD_BYTES")
