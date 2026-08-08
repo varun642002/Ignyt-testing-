@@ -116,9 +116,12 @@
         ${renderPlanCard ? renderPlanCard() : ''}
 
         <div class="rh-section-head"><span>Quick Actions</span></div>
+        ${/* Four cards in a four-column grid — the grid always expected four and had three, so
+              Recommendation fills the empty slot rather than forcing a reflow. */''}
         <div class="wk-quick-grid">
           <button class="rh-quick-card" data-action="toggle-routine-builder">${svg('plus',20)}<span>New Routine</span></button>
           <button class="rh-quick-card" data-nav="library">${svg('library',20)}<span>Library</span></button>
+          <button class="rh-quick-card" data-nav="recommendation">${svg('target',20)}<span>Recommendation</span></button>
           <button class="rh-quick-card" data-action="start-session">${svg('workout',20)}<span>Start Empty</span></button>
         </div>
 

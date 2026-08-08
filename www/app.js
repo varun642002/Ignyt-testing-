@@ -1685,7 +1685,11 @@ const state = {
   bodyCompareB: null,       // later session id
   bodyPhotoCategory: "Front Relaxed",
   viewingBodyPhotoId: null,
-  bodyView: null, // null = Log Weight page; 'calculators' = dedicated calculator view (transient, not persisted)
+  bodyView: null,
+  /* Recommended-programs screen: which program is open and which week is showing.
+     Deliberately NOT persisted — it is a browsing position, not user data. */
+  recProgram: null,
+  recWeek: 1, // null = Log Weight page; 'calculators' = dedicated calculator view (transient, not persisted)
   calc: LS.get("hx_calc", {
     activeCalc:"bmr", result:null,
     neck:38, waist:90, hip:95, restingHR:60,
@@ -7113,7 +7117,7 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","workouts","calendar"].includes(state.progressView)))
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="recommendation" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","workouts","calendar"].includes(state.progressView)))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || state.bodyView==="calculators" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
@@ -7155,6 +7159,10 @@ function renderApp(){
   if(state.tab==="plan") main.innerHTML = renderPlanTab();
   if(state.tab==="workout") main.innerHTML = renderWorkoutTab();
   if(state.tab==="library") main.innerHTML = renderLibraryTab();
+  /* Recommended programs — Workout > Quick Actions > Recommendation. Reads from
+     js/coach/programs.js and touches nothing the HYROX plan owns. */
+  if(state.tab==="recommendation") main.innerHTML = (window.IgnytPages && IgnytPages.renderRecommendation)
+    ? IgnytPages.renderRecommendation({ state, svg, escHtml, exerciseImageSrc }) : "";
   if(state.tab==="body") main.innerHTML = renderBodyTab();
   if(state.tab==="nutrition") main.innerHTML = renderNutritionTab();
   if(state.tab==="progress") main.innerHTML = renderProgressTab();
@@ -17997,6 +18005,22 @@ function attachHandlers(){
       }
       render();
       if (["home", "health", "nutrition", "insights"].includes(state.tab)) window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
+    });
+  });
+  /* Recommended programs. Choosing a program opens its week view; the empty value on the back
+     button returns to the list, so one attribute drives both directions. */
+  document.querySelectorAll("[data-rec-program]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.recProgram;
+      state.recProgram = id || null;
+      state.recWeek = 1;                 // a new program always opens at week 1
+      render();
+    });
+  });
+  document.querySelectorAll("[data-rec-week]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.recWeek = Number(el.dataset.recWeek) || 1;
+      render();
     });
   });
   const notifBtn = document.querySelector('[data-action="toggle-notifications"]');

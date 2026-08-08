@@ -1,0 +1,90 @@
+/* =========================================================
+   RECOMMENDED PROGRAMS — Workout > Quick Actions > Recommendation
+
+   Two screens: the program list, and one program's week. Built on the shared .pg-light /
+   .pg-card surfaces so it inherits the gloss layer and the light/dark themes rather than
+   defining a third look.
+========================================================= */
+
+.rec-intro { margin: 4px 0 14px; }
+.rec-intro__title { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.rec-intro__sub { font-size: 13px; color: var(--rh-muted); line-height: 1.5; margin-top: 6px; }
+
+/* ---- the program cards ---- */
+.rec-card {
+  display: block; width: 100%; text-align: left; margin-bottom: 10px;
+  padding: 14px 16px; cursor: pointer;
+  transition: transform .16s cubic-bezier(.32,.72,0,1);
+}
+.rec-card:active { transform: scale(.985); }
+.rec-card__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rec-card__equip {
+  font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--rh-blue); background: rgba(37,99,235,.12);
+  padding: 3px 8px; border-radius: 999px;
+}
+.rec-card__weeks { font-size: 11px; font-weight: 700; color: var(--rh-muted); }
+.rec-card__title { font-size: 16.5px; font-weight: 800; margin-top: 9px; letter-spacing: -.01em; }
+.rec-card__blurb { font-size: 12.5px; color: var(--rh-muted); line-height: 1.45; margin-top: 3px; }
+/* The four phase spans, as a row of week ranges with a hairline between them — it shows the
+   shape of the programme without needing a sentence to explain it. */
+.rec-card__phases {
+  display: flex; align-items: center; gap: 8px; margin-top: 11px;
+  font-size: 11px; font-weight: 700; color: var(--rh-muted);
+  font-variant-numeric: tabular-nums;
+}
+.rec-card__phases i { flex: 1; height: 1px; background: var(--rh-border); }
+
+/* ---- the week view ---- */
+.rec-back { flex: none; padding: 8px 14px; font-size: 13px; margin-bottom: 10px; }
+.rec-head { margin-bottom: 12px; }
+.rec-head__title { font-size: 21px; font-weight: 800; letter-spacing: -.02em; }
+.rec-head__phase {
+  font-size: 11px; font-weight: 800; letter-spacing: .05em;
+  color: var(--rh-blue); margin-top: 3px;
+}
+
+/* Sixteen weeks will not fit across a phone, so the strip scrolls. Each button carries its
+   phase so the four blocks are visible as colour rather than needing labels. */
+.rec-weeks {
+  display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.rec-weeks::-webkit-scrollbar { display: none; }
+.rec-week {
+  flex: none; width: 34px; height: 34px; border-radius: 10px;
+  border: 1px solid var(--rh-border); background: var(--rh-card); color: var(--rh-text);
+  font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.rec-week[data-phase="foundation"]  { border-color: rgba(37,99,235,.35); }
+.rec-week[data-phase="strength"]    { border-color: rgba(22,163,74,.35); }
+.rec-week[data-phase="advanced"]    { border-color: rgba(234,88,12,.35); }
+.rec-week[data-phase="performance"] { border-color: rgba(124,58,237,.40); }
+.rec-week.is-on { background: var(--rh-blue); border-color: var(--rh-blue); color: #fff; }
+
+/* ---- a day, and its exercises ---- */
+.rec-day { padding: 12px 14px; margin-bottom: 10px; }
+.rec-day__head {
+  display: flex; align-items: baseline; gap: 8px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--rh-border); margin-bottom: 4px;
+}
+.rec-day__day { font-size: 14px; font-weight: 800; }
+.rec-day__session { font-size: 11.5px; color: var(--rh-muted); font-weight: 600; }
+
+.rec-ex { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+.rec-ex + .rec-ex { border-top: 1px solid var(--divider, var(--rh-border)); }
+.rec-ex__img {
+  flex: none; width: 38px; height: 38px; border-radius: 9px; object-fit: cover;
+  background: var(--rh-bg);
+}
+.rec-ex__img--none {
+  display: grid; place-items: center; color: var(--rh-muted);
+  background: var(--rh-bg); border: 1px solid var(--rh-border);
+}
+.rec-ex__body { flex: 1; min-width: 0; }
+.rec-ex__name { font-size: 13.5px; font-weight: 700; }
+.rec-ex__note { font-size: 11px; color: var(--rh-muted); line-height: 1.4; margin-top: 2px; }
+.rec-ex__presc {
+  flex: none; font-size: 12.5px; font-weight: 800; color: var(--rh-blue);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
