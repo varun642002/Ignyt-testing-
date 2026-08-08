@@ -1838,5 +1838,111 @@ window.IgnytExerciseInstructionsExtra = {
     "Swing your arms and bend your hips and knees, then explosively jump forward as far as possible.",
     "Land on both feet with control.",
     "Measure from the starting line to the nearest landing point."
+  ],
+  "Standing Quad Stretch": [
+    "Stand tall and hold a stable support if needed.",
+    "Bend one knee and bring your heel toward your glutes.",
+    "Hold the ankle with the same-side hand and gently pull it closer while keeping your knees together.",
+    "Keep your pelvis neutral and switch sides."
+  ],
+  "Standing Side Bend Stretch": [
+    "Stand upright with your feet comfortable apart.",
+    "Raise one arm overhead and slowly bend your torso toward the opposite side.",
+    "Keep your hips facing forward and avoid twisting.",
+    "Hold the stretch, then switch sides."
+  ],
+  "Star Jump": [
+    "Stand with your feet together and arms at your sides.",
+    "Bend your knees slightly, then jump explosively while spreading your legs and arms outward into a star shape.",
+    "Jump back to the starting position and repeat."
+  ],
+  "Step Down Eccentric": [
+    "Stand on a sturdy step or platform with one foot near the edge.",
+    "Slowly lower the opposite heel toward the floor by bending the standing knee and hip.",
+    "Control the entire lowering phase, then return to the starting position and switch sides."
+  ],
+  "Step Up (Bodyweight)": [
+    "Stand facing a sturdy step.",
+    "Place one foot firmly on the platform and drive through that leg to step up.",
+    "Bring the other foot onto the platform, then step down carefully.",
+    "Alternate legs as prescribed."
+  ],
+  "Stir the Pot Hold": [
+    "Place your forearms on a stability ball and extend your legs behind you into a plank.",
+    "Brace your core and keep your body straight.",
+    "Maintain the plank position while making small controlled circular movements with your forearms, if performing the dynamic version."
+  ],
+  "Straddle Planche Hold": [
+    "Support yourself on your hands with your arms straight.",
+    "Lean your shoulders forward while lifting your legs off the floor and spreading them apart into a straddle position.",
+    "Keep your core tight and elbows locked as you hold the position."
+  ],
+  "Straight Bar Dip": [
+    "Grip a secure straight bar with both hands and support your body above it.",
+    "Lean slightly forward and lower your chest toward the bar by bending your elbows.",
+    "Press strongly through your hands to return to the top."
+  ],
+  "Straight Leg Raise": [
+    "Lie flat on your back with your legs extended.",
+    "Brace your core and slowly raise your legs upward while keeping your knees straight.",
+    "Lift only as high as you can without arching your lower back, then lower your legs slowly."
+  ],
+  "Superman Pull": [
+    "Lie face down with your arms extended overhead.",
+    "Lift your chest, arms, and legs slightly off the floor.",
+    "Pull your elbows toward your sides while squeezing your upper back, then extend your arms again and lower under control."
+  ],
+  "Superman Push Up": [
+    "Start in a push-up position.",
+    "Lower your chest toward the floor, then explosively extend your arms forward while lifting your chest and legs briefly from the floor.",
+    "Return your hands underneath you and push back into the starting position.",
+    "Use only if you can perform the movement safely."
+  ],
+  "Table Row": [
+    "Lie underneath a sturdy, stable table and grip its edge with both hands.",
+    "Keep your body straight and pull your chest toward the table by squeezing your shoulder blades.",
+    "Lower yourself slowly and repeat.",
+    "Never use a table that can move or tip."
+  ],
+  "Table Slide": [
+    "Place your hands or forearms on a smooth, stable surface such as a table.",
+    "Keep your core braced and slowly slide your arms forward while maintaining control through your shoulders.",
+    "Pull them back to the starting position."
+  ],
+  "Tempo Push Up": [
+    "Start in a standard push-up position.",
+    "Lower your body slowly for a predetermined count, such as 3-5 seconds.",
+    "Pause briefly near the bottom if desired, then push back up at a controlled speed.",
+    "Keep your body straight throughout."
+  ],
+  "Terminal Knee Extension Band": [
+    "Secure a resistance band behind your knee at approximately knee height.",
+    "Start with your knee slightly bent, then straighten it by contracting your quadriceps and pushing the knee backward.",
+    "Hold briefly, then return to the starting position."
+  ],
+  "Thread the Needle Pose": [
+    "Start on your hands and knees.",
+    "Slide one arm underneath the opposite arm while rotating your upper back and lowering your shoulder toward the floor.",
+    "Return to the starting position and repeat on the opposite side."
+  ],
+  "Tibialis Raise": [
+    "Stand with your back against a wall and your feet slightly forward.",
+    "Keep your heels on the floor and lift your toes and forefoot upward toward your shins.",
+    "Lower slowly and repeat."
+  ],
+  "Toe Touch Crunch": [
+    "Lie on your back with your legs raised toward the ceiling.",
+    "Extend your arms toward your feet and brace your core.",
+    "Lift your shoulders from the floor and reach toward your toes, then lower under control."
+  ],
+  "Toe Walk": [
+    "Stand tall and rise onto the balls of your feet.",
+    "Keep your heels elevated and walk forward using small controlled steps.",
+    "Maintain an upright posture and keep your calves engaged throughout."
+  ],
+  "Torso Twist Stretch": [
+    "Stand or sit upright with your feet stable.",
+    "Rotate your torso slowly toward one side while keeping your hips controlled.",
+    "Hold the comfortable range briefly, return to center, and rotate to the opposite side."
   ]
 };
