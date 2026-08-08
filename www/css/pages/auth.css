@@ -18,7 +18,7 @@
   /* Blue, matching the rest of the app. This screen keeps its own scoped palette — the app
      behind it is a light theme and this is deliberately dark — but the ACCENT is now the same
      IGNYT blue as every other surface, so the brand does not change colour at the door. */
-  --auth-primary:   #3B82F6;
+  --auth-primary:   #2563EB;
   --auth-primary-2: #2563EB;   /* gradient partner, kept close so the button reads as one hue */
   --auth-text:      #FFFFFF;
   --auth-muted:     #9CA3AF;
@@ -188,9 +188,9 @@
   display: grid;
   place-items: center;
   border-radius:15px;
-  border: 1px solid rgba(59,130,246,.28);
-  background: linear-gradient(150deg, rgba(59,130,246,.20), rgba(59,130,246,.05));
-  box-shadow: 0 8px 26px -10px rgba(59,130,246,.55);
+  border: 1px solid rgba(37,99,235,.28);
+  background: linear-gradient(150deg, rgba(37,99,235,.20), rgba(37,99,235,.05));
+  box-shadow: 0 8px 26px -10px rgba(37,99,235,.55);
 }
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)){
   .auth-brand__mark{ backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
@@ -222,8 +222,8 @@
   transition: border-color .18s ease, box-shadow .18s ease;
 }
 .auth-field:focus-within{
-  border-color: rgba(59,130,246,.55);
-  box-shadow: 0 0 0 3px rgba(59,130,246,.13);
+  border-color: rgba(37,99,235,.55);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.13);
 }
 .auth-field__cc{
   display: flex;
@@ -274,10 +274,10 @@
   cursor: pointer;
   /* Two shadows: a tight one for the edge, a wide tinted one for the glow. A single large
      black shadow on a saturated button reads as dirt around it. */
-  box-shadow: 0 2px 6px rgba(0,0,0,.34), 0 12px 30px -10px rgba(59,130,246,.52);
+  box-shadow: 0 2px 6px rgba(0,0,0,.34), 0 12px 30px -10px rgba(37,99,235,.52);
   transition: transform .14s cubic-bezier(.34,1.4,.64,1), box-shadow .18s ease, opacity .18s ease;
 }
-.auth-cta:active{ transform: translateY(1px) scale(.988); box-shadow: 0 1px 4px rgba(0,0,0,.34), 0 6px 18px -10px rgba(59,130,246,.42); }
+.auth-cta:active{ transform: translateY(1px) scale(.988); box-shadow: 0 1px 4px rgba(0,0,0,.34), 0 6px 18px -10px rgba(37,99,235,.42); }
 .auth-cta[disabled]{ opacity: .45; box-shadow: none; cursor: default; }
 
 /* ---- OTP step ----
@@ -546,8 +546,8 @@
 }
 .auth-email__field input::placeholder{ color: #6B7280; }
 .auth-email__field input:focus{
-  border-color: rgba(59,130,246,.55);
-  box-shadow: 0 0 0 3px rgba(59,130,246,.13);
+  border-color: rgba(37,99,235,.55);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.13);
 }
 
 /* Password field with a reveal toggle. The wrapper is the positioning context and the input
@@ -570,7 +570,7 @@
 .pwd-eye:hover{ color: var(--auth-text); }
 .pwd-eye:disabled{ opacity: .4; cursor: default; }
 .pwd-eye:active{ background: rgba(255,255,255,.06); }
-.pwd-eye:focus-visible{ outline: 2px solid rgba(59,130,246,.6); outline-offset: 1px; }
+.pwd-eye:focus-visible{ outline: 2px solid rgba(37,99,235,.6); outline-offset: 1px; }
 
 /* States the whole rule up front. It used to say "At least 6 characters" in the placeholder
    while validateEmailForm() required 8 plus a letter and a number, so the first thing a new

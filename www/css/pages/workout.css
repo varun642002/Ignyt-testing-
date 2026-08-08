@@ -736,7 +736,7 @@
   font-weight:800; font-size:15px; font-variant-numeric:tabular-nums;
 }
 .set-type-item__label { flex:1; min-width:0; }
-.set-type-item__tick { display:flex; color:var(--rh-blue, #3b82f6); }
+.set-type-item__tick { display:flex; color:var(--rh-blue, #2563EB); }
 
 /* The session shell runs the light "premium reference" look under .wk-light, same fork the
    ⋮ menu already makes. */

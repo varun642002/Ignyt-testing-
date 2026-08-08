@@ -14,9 +14,9 @@
   --color-primary-strong: #ff6a2b;
   --color-accent-blue: #32b8f4;
   --color-accent-cyan: #55d8ff;
-  --color-interactive: #3e82f7;
-  --color-interactive-strong: #5a94f9;
-  --color-interactive-soft: rgba(62,130,247,.14);
+  --color-interactive: #2563EB;
+  --color-interactive-strong: #1D4ED8;
+  --color-interactive-soft: rgba(37,99,235,.14);
   --color-text-primary: #f7f4ef;
   --color-text-secondary: #aaa9b0;
   --color-success: #45d294;
@@ -146,7 +146,7 @@
   --color-text-secondary:#6B7280; --color-text-placeholder:#9CA3AF;
   --color-border:#E7EBF0; --color-divider:#E8ECF2;
   --shadow-card:0 6px 24px rgba(31,41,55,.07);
-  --color-interactive: #2f6fed; --color-interactive-strong: #1f5adf; --color-interactive-soft: rgba(47,111,237,.12);
+  --color-interactive: #2563EB; --color-interactive-strong: #1D4ED8; --color-interactive-soft: rgba(37,99,235,.12);
 }
 /* AMOLED theme -- Phase 1 ask ("future AMOLED theme"): true-black background/surfaces for
    OLED power savings and max contrast. Not wired to any theme switcher yet (Settings still
@@ -167,8 +167,9 @@
    layout-only rules (background/margin/padding/font-family) and no longer redeclare --rh-*.
 
    This is deliberately NOT merged into --color-* by value, even though several pairs are
-   close (--rh-card #FFFFFF == --color-surface light #ffffff exactly; --rh-blue #2563EB vs
-   --color-interactive light #2f6fed is a few points of drift). Two pairs are NOT close at
+   now identical (--rh-card #FFFFFF == --color-surface light #ffffff; --rh-blue #2563EB ==
+   --color-interactive, which used to drift by a few points per theme and no longer does —
+   there is one interactive blue now, #2563EB, in both themes). Two pairs are NOT close at
    all (--rh-green #16A34A vs --color-success #45d294; --rh-red #EF4444 vs --color-error
    #ff6b6b) -- forcing those identical would visibly recolor Home/Workout/Progress/Tools/
    Settings/Profile/Library/Exercise Detail/Calculators/Insights/Goals (everything under

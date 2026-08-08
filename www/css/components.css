@@ -116,7 +116,7 @@
    (.set-check.done / .ex-check.done) stay green, and the orange brand highlights for streak/
    PR/achievement stay orange -- those aren't "selected/interactive" states. */
 .cat-chip.active { background: var(--color-interactive); color: #ffffff; }
-.week-chip.active { background: var(--color-interactive); color: #ffffff; box-shadow: 0 0 0 2px rgba(62,130,247,.35); }
+.week-chip.active { background: var(--color-interactive); color: #ffffff; box-shadow: 0 0 0 2px rgba(37,99,235,.35); }
 .week-chip.active .week-bar { background: rgba(0,0,0,.25); }
 .week-chip.active .week-bar-fill { background: #ffffff; }
 .day-tab.active { border-color: var(--color-interactive); }

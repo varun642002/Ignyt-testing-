@@ -1063,7 +1063,7 @@ main{ -webkit-overflow-scrolling: touch; }
 .nd-short__icon{
   width:36px; height:36px; border-radius:var(--radius-sm); display:grid; place-items:center; font-size:17px;
 }
-.nd-short__icon--blue{ background:rgba(59,130,246,.16); }
+.nd-short__icon--blue{ background:rgba(37,99,235,.16); }
 .nd-short__icon--purple{ background:rgba(168,85,247,.16); }
 .nd-short__icon--orange{ background:rgba(245,158,11,.16); }
 .nd-short__title{ display:block; font-size:13px; font-weight:800; }
@@ -1092,7 +1092,7 @@ main{ -webkit-overflow-scrolling: touch; }
   width:32px; height:32px; flex:0 0 32px; border-radius:50%;
   /* --color-interactive, which is the blue the rest of the app already wears: the bottom nav's
      selected tab, the settings toggles, the active chips. Not --primary, which is a near-
-     identical #3B82F6 against this token's #3e82f7 — close enough to look like a mistake rather
+     identical #2563EB against this token's #2563EB — close enough to look like a mistake rather
      than a choice, and there is no reason for the app to carry two blues three points apart.
      It was --accent (orange), which put the loudest colour on this screen on five buttons at
      once and made the meal headings compete with the calorie figures they sit beside. */

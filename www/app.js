@@ -10136,7 +10136,7 @@ function obBmiSummary(){
         BMI and healthy weight range here. You can also do it later from Log Weight.</div>`;
   }
 
-  const TONES = { blue:"#3B82F6", green:"#16A34A", amber:"#D97706", red:"#EF4444" };
+  const TONES = { blue:"#2563EB", green:"#16A34A", amber:"#D97706", red:"#EF4444" };
   const col = TONES[b.tone] || "var(--muted)";
   const r = b.healthyRange;
 
@@ -10215,8 +10215,8 @@ function obStepIndexOf(renderer){
    out fetching brand marks from a CDN.
 ========================================================= */
 const AUTH_ICONS = {
-  email: `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3.2" stroke="#3B82F6" stroke-width="1.7"/><path d="M3.4 6.8 12 12.9l8.6-6.1" stroke="#3B82F6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  bolt: `<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M13.6 1.5 4.2 13.2c-.4.5-.05 1.25.6 1.25h4.9l-1.5 7.9c-.13.7.76 1.1 1.19.54l9.4-11.7c.4-.5.05-1.25-.6-1.25h-4.9l1.5-7.9c.13-.7-.76-1.1-1.19-.54z" fill="#3B82F6"/></svg>`,
+  email: `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3.2" stroke="#2563EB" stroke-width="1.7"/><path d="M3.4 6.8 12 12.9l8.6-6.1" stroke="#2563EB" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  bolt: `<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M13.6 1.5 4.2 13.2c-.4.5-.05 1.25.6 1.25h4.9l-1.5 7.9c-.13.7.76 1.1 1.19.54l9.4-11.7c.4-.5.05-1.25-.6-1.25h-4.9l1.5-7.9c.13-.7-.76-1.1-1.19-.54z" fill="#2563EB"/></svg>`,
   /* Google's four-colour G, drawn to its published geometry rather than fetched from a CDN --
      the app has to work offline and under a strict CSP. */
   google: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.26-2.09 3.56-5.17 3.56-8.87z"/><path fill="#34A853" d="M12 24c3.24 0 5.96-1.08 7.94-2.91l-3.87-3a7.2 7.2 0 0 1-10.75-3.78H1.32v3.09A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.32 14.31a7.19 7.19 0 0 1 0-4.6V6.62H1.32a12 12 0 0 0 0 10.78l4-3.09z"/><path fill="#EA4335" d="M12 4.77c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.18 15.24 0 12 0A12 12 0 0 0 1.32 6.62l4 3.09A7.15 7.15 0 0 1 12 4.77z"/></svg>`
@@ -15215,7 +15215,7 @@ function renderNutritionInsightsPage(){
   const microRows = MICROS.filter(([,,key]) => T[key] != null);
 
   // Calories by meal, for the donut. Only meals with food appear — an empty slice is a lie.
-  const mealColours = ["#F5BB45", "#3B82F6", "#A855F7", "#45D294", "#FF8A5C", "#55D8FF"];
+  const mealColours = ["#F5BB45", "#2563EB", "#A855F7", "#45D294", "#FF8A5C", "#55D8FF"];
   const byMeal = mealTypes()
     .map((m,i)=>({ meal:m, kcal: Math.round(allEntries.filter(f=>(f.meal||"Lunch")===m)
                                     .reduce((a,f)=>a+Number(f.calories||0),0)),
