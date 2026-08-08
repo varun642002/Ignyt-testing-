@@ -1944,5 +1944,888 @@ window.IgnytExerciseInstructionsExtra = {
     "Stand or sit upright with your feet stable.",
     "Rotate your torso slowly toward one side while keeping your hips controlled.",
     "Hold the comfortable range briefly, return to center, and rotate to the opposite side."
+  ],
+  "Towel Pull Up Hold": [
+    "Loop a sturdy towel over a secure pull-up bar and grip both ends firmly.",
+    "Pull yourself upward until your chin is near bar height, then hold while keeping your shoulders engaged and core braced.",
+    "Lower under control."
+  ],
+  "Towel Row": [
+    "Secure a sturdy towel around a fixed anchor point.",
+    "Hold both ends and lean backward with your body straight.",
+    "Pull your chest toward the anchor by driving your elbows backward and squeezing your upper back.",
+    "Return slowly."
+  ],
+  "Towel Scrunch": [
+    "Place a towel flat on the floor and sit or stand with your foot over it.",
+    "Keep your heel planted and use your toes to scrunch the towel toward your foot.",
+    "Release and repeat, then switch sides."
+  ],
+  "Towel Stretch Shoulder": [
+    "Hold a towel behind your back with one hand overhead and the other hand lower behind your back.",
+    "Gently pull the towel with the upper hand to guide the lower arm upward.",
+    "Hold a comfortable shoulder stretch, then switch sides."
+  ],
+  "Tree Pose": [
+    "Stand tall and shift your weight onto one foot.",
+    "Place the sole of the opposite foot against your inner calf or thigh, avoiding direct pressure on the knee.",
+    "Bring your hands together or overhead and maintain balance while keeping your torso upright.",
+    "Switch sides."
+  ],
+  "Triceps Pressdown": [
+    "Stand facing a cable station and grip the attachment.",
+    "Keep your elbows close to your sides and press the handle downward until your arms are extended.",
+    "Slowly return to the starting position."
+  ],
+  "Triple Jump": [
+    "Stand on one leg and prepare in an athletic stance.",
+    "Perform three consecutive powerful jumps in the same direction, landing with control after each jump.",
+    "Use your arms to generate momentum and stabilize the final landing."
+  ],
+  "Tuck Front Lever Hold": [
+    "Hang from a secure pull-up bar with your arms straight.",
+    "Pull your knees toward your chest and lean your shoulders backward while lifting your hips until your torso is approximately horizontal.",
+    "Brace your core and hold the tucked position."
+  ],
+  "Tuck Planche Hold": [
+    "Place your hands firmly on the floor or parallettes.",
+    "Lock your elbows and lean your shoulders forward over your hands.",
+    "Lift your feet and tuck your knees toward your chest while keeping your hips elevated.",
+    "Brace your core and hold."
+  ],
+  "Two Finger Hang Hold": [
+    "Grip a secure hangboard or climbing hold using the prescribed two-finger grip.",
+    "Lift your feet and hang with your shoulders controlled.",
+    "Hold only for a duration appropriate to your finger strength, then carefully release."
+  ],
+  "Tyler Twist": [
+    "Hold a flexible resistance bar or similar tool with both hands.",
+    "Twist the bar using the prescribed wrist rotation, then slowly allow it to return while maintaining control.",
+    "Keep your elbows stable and focus on the forearm muscles."
+  ],
+  "Typewriter Pull Up": [
+    "Grip a secure pull-up bar slightly wider than shoulder-width.",
+    "Pull yourself up until your chin is above the bar.",
+    "While holding the top position, shift your chest toward one hand, move across toward the other hand, then return to center.",
+    "Lower under control."
+  ],
+  "Upper Trap Stretch Rehab": [
+    "Sit or stand upright and keep one shoulder relaxed.",
+    "Gently tilt your head toward the opposite side while keeping the shoulder down.",
+    "Hold the mild stretch without forcing the neck, then return to neutral and switch sides."
+  ],
+  "V Up": [
+    "Lie flat on your back with your arms extended overhead and legs straight.",
+    "Brace your core and simultaneously lift your torso and legs toward each other, reaching your hands toward your feet.",
+    "Lower slowly without losing control."
+  ],
+  "Vertical Jump Test": [
+    "Stand with your feet about hip-width apart near a wall or measurement device.",
+    "Bend your knees and swing your arms, then jump vertically as high as possible.",
+    "Record the highest point reached and compare it with your standing reach."
+  ],
+  "Victorian Cross Hold": [
+    "Support your body on gymnastics rings or suitable equipment with your arms extended and body held horizontally.",
+    "Keep your legs straight and core tight while maintaining the position.",
+    "This is an advanced gymnastics skill — use progressions before attempting the full hold."
+  ],
+  "VMO Squeeze": [
+    "Sit or lie with your leg extended and place a rolled towel or small cushion beneath the knee.",
+    "Tighten your quadriceps and gently press the back of your knee downward into the support.",
+    "Hold the contraction briefly, then relax."
+  ],
+  "Wall Angel": [
+    "Stand with your back against a wall and keep your head, upper back, and hips comfortably aligned.",
+    "Bend your elbows to about 90 degrees and place your arms against or near the wall.",
+    "Slowly slide your arms upward and back down while keeping your shoulders controlled."
+  ],
+  "Wall Handstand Hold": [
+    "Face away from a wall and place your hands on the floor.",
+    "Carefully kick your feet up against the wall into a handstand.",
+    "Keep your arms straight, core braced, and body aligned.",
+    "Hold for the prescribed duration, then come down under control."
+  ],
+  "Wall Push Up": [
+    "Stand facing a wall and place your hands against it around shoulder height.",
+    "Step your feet backward and keep your body straight.",
+    "Bend your elbows to bring your chest toward the wall, then push through your hands to return to the starting position."
+  ],
+  "Wall Sit Isometric": [
+    "Stand with your back against a wall and feet slightly forward.",
+    "Slide down until your thighs are roughly parallel to the floor or to a comfortable depth.",
+    "Keep your back against the wall and knees aligned with your feet.",
+    "Hold the position while breathing steadily."
+  ],
+  "Wall Walk": [
+    "Start in a high plank with your feet close to a wall.",
+    "Walk your feet upward while simultaneously walking your hands toward the wall.",
+    "Continue until you reach a controlled wall-supported handstand position, then reverse the movement slowly."
+  ],
+  "Weighted Hollow Body Hold": [
+    "Lie on your back and hold a light weight securely above or behind your head.",
+    "Lift your shoulders and legs slightly from the floor while keeping your lower back pressed down.",
+    "Brace your core and hold the position without allowing your back to arch."
+  ],
+  "Wide Legged Forward Fold Stretch": [
+    "Stand with your feet spread comfortably wide.",
+    "Keep your knees slightly soft and hinge forward from your hips.",
+    "Allow your torso to lower toward the floor while maintaining a comfortable stretch through your hamstrings and inner thighs."
+  ],
+  "Wide Push Up": [
+    "Start in a high plank with your hands positioned wider than shoulder-width.",
+    "Keep your body straight and brace your core.",
+    "Lower your chest toward the floor, then push through your hands to return to the starting position."
+  ],
+  "Wrist Circles Stretch": [
+    "Extend your arms comfortably in front of you.",
+    "Slowly rotate both wrists through controlled circles in one direction, then reverse the direction.",
+    "Keep the movements smooth and pain-free."
+  ],
+  "Wrist Extensor Stretch": [
+    "Extend one arm forward with the palm facing down.",
+    "Use the opposite hand to gently pull the fingers downward toward the floor.",
+    "Hold the stretch along the top of the forearm, then switch sides."
+  ],
+  "Wrist Flexor Stretch": [
+    "Extend one arm forward with the palm facing upward.",
+    "Use the opposite hand to gently pull the fingers downward and back.",
+    "Hold the comfortable stretch along the underside of the forearm, then switch sides."
+  ],
+  "Air Bike": [
+    "Sit on the air bike and adjust the seat so your legs can extend comfortably without locking the knees.",
+    "Place your feet on the pedals and grip the handles.",
+    "Push and pull the handles while pedaling continuously, increasing effort according to the workout interval."
+  ],
+  "Incline Treadmill Walk": [
+    "Set the treadmill to a comfortable walking speed and raise the incline.",
+    "Walk with an upright posture while keeping your hands off the rails whenever possible.",
+    "Maintain a steady pace for the prescribed duration."
+  ],
+  "Jacob's Ladder": [
+    "Climb onto the machine and secure your body according to the equipment instructions.",
+    "Begin climbing by alternating your hands and feet in a coordinated movement.",
+    "Maintain a steady rhythm or increase the pace for intervals while keeping your movements controlled."
+  ],
+  "Rowing Erg Sprint": [
+    "Sit on the rowing machine and secure your feet.",
+    "Start with your arms extended and knees bent.",
+    "Drive through your legs, then extend your hips and pull the handle toward your lower ribs.",
+    "Quickly return the handle and bend your knees to reset.",
+    "Perform powerful strokes for the prescribed sprint interval."
+  ],
+  "Versaclimber": [
+    "Stand on the machine with your feet secured and hands on the handles.",
+    "Push and pull the handles while stepping or climbing with your legs.",
+    "Maintain a consistent rhythm and upright posture, increasing intensity according to the workout."
+  ],
+  "Aerobics": [
+    "Start with a light warm-up and follow a series of rhythmic movements such as marching, stepping, jumping, and arm movements.",
+    "Maintain continuous movement at a moderate intensity while keeping good coordination and posture."
+  ],
+  "B Skip": [
+    "Begin with an A-skip rhythm by driving one knee upward.",
+    "Extend the lower leg forward briefly, then pull it back underneath you while landing on the ball of the foot.",
+    "Alternate legs while maintaining an upright posture and coordinated arm movement."
+  ],
+  "Boxing": [
+    "Start in a balanced boxing stance with your hands protecting your face.",
+    "Practice controlled punches such as jabs, crosses, hooks, and uppercuts while rotating your hips and shoulders.",
+    "Maintain footwork, guard position, and controlled breathing throughout."
+  ],
+  "Butt Kick Run": [
+    "Run forward while actively bringing each heel toward your glutes.",
+    "Keep your torso upright and use coordinated arm movement.",
+    "Maintain a quick rhythm while landing lightly on the balls of your feet."
+  ],
+  "Climbing": [
+    "Begin on a suitable climbing wall or climbing route with appropriate safety equipment.",
+    "Maintain three points of contact when possible and use your legs to drive upward rather than relying only on your arms.",
+    "Move deliberately between holds and descend safely."
+  ],
+  "Cycling": [
+    "Adjust the bike seat and handlebars to a comfortable position.",
+    "Start pedaling at an easy pace, then gradually increase intensity according to your workout.",
+    "Maintain smooth pedal strokes and a stable posture throughout."
+  ],
+  "Fartlek Run": [
+    "Begin with an easy running pace to warm up.",
+    "Alternate between periods of faster running and easier jogging or walking based on time, distance, landmarks, or feel.",
+    "Finish with an easy pace to cool down."
+  ],
+  "High Knee Run": [
+    "Run in place or move forward while driving each knee upward toward hip height.",
+    "Pump your arms naturally and maintain an upright posture.",
+    "Keep your steps quick and land softly."
+  ],
+  "HIIT": [
+    "Perform repeated intervals of high-intensity exercise followed by planned recovery periods.",
+    "Choose an appropriate movement, work hard during the effort interval, then reduce intensity or rest during recovery.",
+    "Repeat for the prescribed rounds."
+  ],
+  "Hiking": [
+    "Walk continuously on a natural trail or uneven terrain.",
+    "Maintain a comfortable pace and use controlled steps on inclines and declines.",
+    "Carry appropriate water and equipment for the route."
+  ],
+  "Hill Sprint": [
+    "Choose a stable hill with a safe running surface.",
+    "Start from the bottom and accelerate uphill with powerful, controlled strides.",
+    "Walk or slowly jog back down for recovery before repeating."
+  ],
+  "Jump Rope": [
+    "Stand upright while holding the rope handles.",
+    "Rotate the rope using your wrists and jump lightly as it passes beneath your feet.",
+    "Keep your jumps low and maintain a consistent rhythm."
+  ],
+  "Pro Agility Shuttle": [
+    "Set up three markers in a straight line, with the middle marker positioned between the two outer markers.",
+    "Start at the center, sprint to one side, change direction quickly, sprint across to the opposite marker, then return through the center.",
+    "Stay low during direction changes."
+  ],
+  "Ruck Walk": [
+    "Place a properly fitted weighted backpack or rucksack on your back.",
+    "Stand upright with your shoulders relaxed and walk at a steady pace.",
+    "Maintain controlled steps and gradually increase distance or load as conditioning improves."
+  ],
+  "Skating": [
+    "Use appropriate skates and protective equipment.",
+    "Maintain a slightly bent-knee athletic stance and push laterally from one leg to glide on the opposite side.",
+    "Alternate sides while keeping your balance and controlling your speed."
+  ],
+  "Skiing": [
+    "Wear properly fitted ski equipment and appropriate protective gear.",
+    "Maintain a balanced stance with knees slightly bent.",
+    "Control your direction and speed through turns while keeping your weight centered over the skis."
+  ],
+  "Snowboarding": [
+    "Secure your snowboard and protective equipment.",
+    "Stand with your knees slightly bent and maintain your balance over the board.",
+    "Shift your weight and use controlled edge movements to turn and manage speed."
+  ],
+  "Sprint Start": [
+    "Begin in a stable starting position with your body slightly forward.",
+    "Drive forcefully through the ground and accelerate over the first few steps.",
+    "Gradually transition from a forward-leaning acceleration position into your normal sprint posture."
+  ],
+  "Stair Sprints": [
+    "Use a stable staircase or suitable stadium steps.",
+    "Sprint upward with quick, controlled steps while driving your arms.",
+    "Walk back down carefully for recovery.",
+    "Avoid skipping steps if it compromises control."
+  ],
+  "Suicide Run": [
+    "Set up several markers at increasing distances.",
+    "Start at the first line, sprint to the nearest marker and return, then sprint to the next marker and return.",
+    "Continue through all markers while maintaining controlled direction changes."
+  ],
+  "Swim Breaststroke": [
+    "Begin in a streamlined position in the water.",
+    "Pull your arms outward and backward while bringing your legs into a frog-like position.",
+    "Recover your arms forward as you kick your legs backward and together.",
+    "Glide briefly before repeating."
+  ],
+  "Swim Butterfly": [
+    "Start in a streamlined position.",
+    "Perform a simultaneous arm pull while using a coordinated dolphin kick.",
+    "Recover both arms over the water and enter them together in front of you.",
+    "Maintain a smooth body-wave motion and controlled breathing."
+  ],
+  "Swim Freestyle": [
+    "Lie face down in the water with your body streamlined.",
+    "Alternate your arms through an overhead stroke while performing a continuous flutter kick.",
+    "Rotate your head to the side to breathe without lifting it excessively."
+  ],
+  "Swimming": [
+    "Choose a suitable swimming stroke and maintain a continuous, controlled pace.",
+    "Coordinate your breathing with your stroke and maintain efficient body positioning.",
+    "Adjust the intensity according to the workout."
+  ],
+  "Tempo Run": [
+    "Begin with an easy warm-up.",
+    "Run at a sustained, challenging but controlled pace that you can maintain without sprinting.",
+    "Keep your stride smooth and consistent for the prescribed duration, then cool down gradually."
+  ],
+  "Walking": [
+    "Stand upright and walk at a comfortable, natural pace.",
+    "Swing your arms naturally and maintain consistent steps.",
+    "Increase the pace or duration according to the workout goal."
+  ],
+  "Weighted Vest Walk": [
+    "Put on a properly fitted weighted vest and distribute the load evenly.",
+    "Walk at a steady pace while maintaining an upright posture and natural stride.",
+    "Start with a manageable load and increase gradually as conditioning improves."
+  ],
+  "Agility Ladder": [
+    "Place an agility ladder flat on the ground.",
+    "Perform the programmed footwork pattern by stepping quickly in and out of the ladder spaces.",
+    "Keep your knees slightly bent, stay light on your feet, and maintain controlled, quick movements."
+  ],
+  "Atlas Stone Lift": [
+    "Stand close to the stone with your feet about shoulder-width apart.",
+    "Squat down and wrap your arms around the stone, keeping your chest close to it.",
+    "Drive through your legs and extend your hips while pulling the stone upward.",
+    "Secure it against your torso and stand tall."
+  ],
+  "Atlas Stone Over Bar": [
+    "Lift the Atlas stone from the floor and bring it tightly against your chest.",
+    "Extend your hips and legs powerfully to raise the stone, then guide it over the bar.",
+    "Release it safely onto the opposite side."
+  ],
+  "Battle Ropes Slams": [
+    "Stand with your feet stable and hold one rope end in each hand.",
+    "Raise the ropes and forcefully slam them toward the ground using your arms, shoulders, and core.",
+    "Reset and repeat with controlled, powerful movements."
+  ],
+  "Battle Ropes Waves": [
+    "Hold one rope end in each hand with your knees slightly bent.",
+    "Alternate raising and lowering your hands rapidly to create continuous waves traveling toward the anchor.",
+    "Keep your core braced and maintain a stable stance."
+  ],
+  "Box Step Over": [
+    "Stand beside or facing a sturdy box.",
+    "Step onto the box with one foot and drive through that leg to bring your body up.",
+    "Step across and down the opposite side, then repeat in the other direction."
+  ],
+  "Boxing Heavy Bag": [
+    "Wear appropriate boxing gloves and stand in a balanced fighting stance in front of the heavy bag.",
+    "Practice combinations such as jabs, crosses, hooks, and uppercuts while moving around the bag.",
+    "Rotate your hips and shoulders and keep your hands protected between punches."
+  ],
+  "Burpee Box Jump Over": [
+    "Stand facing a sturdy box.",
+    "Perform a burpee by placing your hands down and jumping or stepping your feet backward.",
+    "Return your feet underneath you, then explosively jump onto the box and continue over the opposite side.",
+    "Land under control."
+  ],
+  "Carioca Drill": [
+    "Stand sideways and move laterally.",
+    "Cross your trailing foot in front of the lead foot, step laterally, then cross the trailing foot behind.",
+    "Continue moving sideways while maintaining rhythm, balance, and a slight knee bend."
+  ],
+  "Cone Drill": [
+    "Set up cones according to the required drill pattern.",
+    "Accelerate, decelerate, change direction, and sprint between the cones as programmed.",
+    "Stay low during direction changes and use controlled foot placement."
+  ],
+  "Jump Rope Crossover": [
+    "Begin with normal jump-rope skips.",
+    "As the rope passes overhead, cross your arms in front of your body and jump through the loop.",
+    "Uncross your arms on the next rotation and continue alternating smoothly."
+  ],
+  "Jump Rope Double Under": [
+    "Jump slightly higher than a normal rope skip.",
+    "Rotate the rope quickly so it passes underneath your feet twice during one jump.",
+    "Land softly and immediately prepare for the next repetition."
+  ],
+  "Jump Rope Single Under": [
+    "Hold the rope handles at your sides and rotate the rope using your wrists.",
+    "Perform small jumps as the rope passes underneath your feet once per jump.",
+    "Keep your elbows close to your body and maintain a consistent rhythm."
+  ],
+  "Keg Carry": [
+    "Lift a properly secured keg or training implement close to your torso.",
+    "Brace your core, keep your chest upright, and walk forward using controlled steps.",
+    "Maintain a secure grip and avoid excessive leaning."
+  ],
+  "Kneeling Med Ball Throw": [
+    "Kneel on a stable surface while holding a medicine ball at chest level.",
+    "Brace your core and explosively extend your arms to throw the ball forward toward a safe target or partner.",
+    "Retrieve it safely and repeat."
+  ],
+  "Med Ball Clean": [
+    "Stand over the medicine ball with your feet around shoulder-width apart.",
+    "Squat down and grip the ball securely.",
+    "Drive through your legs and extend your hips to bring the ball upward, then quickly bring it to the front of your shoulders.",
+    "Stand tall and reset."
+  ],
+  "Med Ball Overhead Slam": [
+    "Stand with your feet stable and hold the medicine ball overhead.",
+    "Brace your core and forcefully drive the ball toward the floor using your arms, shoulders, and hips.",
+    "Pick it up safely and repeat."
+  ],
+  "Med Ball Scoop Toss": [
+    "Hold the medicine ball with both hands near your hips.",
+    "Squat slightly and rotate or shift your body as you explosively extend your legs and hips.",
+    "Scoop the ball upward and forward, releasing it toward a safe target."
+  ],
+  "Med Ball Side Toss": [
+    "Stand sideways to a sturdy wall or safe target while holding a medicine ball with both hands.",
+    "Rotate your hips and torso away from the target, then explosively rotate toward it and release the ball.",
+    "Catch or retrieve it safely and repeat on both sides."
+  ],
+  "Overhead Carry": [
+    "Hold a suitable weight overhead with your arm or arms fully extended.",
+    "Keep your ribs controlled, core braced, and shoulders stable.",
+    "Walk forward with short, controlled steps while keeping the weight directly over your body."
+  ],
+  "Overhead Medicine Ball Throw": [
+    "Stand with your feet shoulder-width apart and hold the medicine ball overhead.",
+    "Brace your core, bend your knees slightly, then explosively extend your hips and arms to throw the ball forward or backward as programmed.",
+    "Retrieve it safely and reset."
+  ],
+  "Rotational Medicine Ball Throw": [
+    "Stand sideways to a sturdy wall or safe throwing area with the ball held near your hip.",
+    "Rotate your hips and torso away from the target, then explosively rotate toward it and release the ball.",
+    "Use your hips and core to generate power."
+  ],
+  "Sandbag Carry": [
+    "Lift the sandbag securely and hold it against your chest, shoulder, or in a suitable carry position.",
+    "Brace your core and walk forward with controlled steps.",
+    "Keep your posture stable and avoid excessive leaning."
+  ],
+  "Sandbag Clean": [
+    "Stand over the sandbag with your feet around shoulder-width apart.",
+    "Squat or hinge down and grip it securely.",
+    "Drive through your legs and extend your hips to bring the sandbag upward, then catch it against your chest or shoulders.",
+    "Reset under control."
+  ],
+  "Sandbag Over Shoulder": [
+    "Stand close to the sandbag and grip it securely.",
+    "Pull it toward your torso while driving through your legs and extending your hips.",
+    "Continue the movement until the sandbag passes over one shoulder, then release it safely.",
+    "Alternate sides."
+  ],
+  "Sandbag Squat": [
+    "Hold the sandbag securely against your chest or shoulders.",
+    "Stand with your feet around shoulder-width apart.",
+    "Brace your core and squat by bending your hips and knees while keeping your chest controlled.",
+    "Drive through your feet to return to standing."
+  ],
+  "Shadow Boxing": [
+    "Adopt a balanced boxing stance with your hands near your face.",
+    "Practice combinations of jabs, crosses, hooks, and uppercuts while moving your feet and rotating your hips.",
+    "Keep your movements controlled and maintain your guard."
+  ],
+  "Slam Ball Squat": [
+    "Hold a slam ball at chest height.",
+    "Squat down while maintaining a braced core, then stand and explosively raise the ball.",
+    "Depending on the variation, slam it into the floor as you finish the movement.",
+    "Pick it up safely and repeat."
+  ],
+  "Sled Drag": [
+    "Attach a strap or rope to a weighted sled.",
+    "Hold the strap or harness and walk backward or forward while maintaining a strong posture.",
+    "Drive through each step and keep consistent tension on the sled."
+  ],
+  "Sled Sprint": [
+    "Attach yourself to a weighted sled using an appropriate harness or strap.",
+    "Lean slightly forward and drive powerfully through the ground while sprinting.",
+    "Maintain short, forceful steps and keep the sled moving continuously."
+  ],
+  "Sledge Tire Strike": [
+    "Stand beside a large, stable tire while holding a sledgehammer with both hands.",
+    "Raise the hammer overhead and swing it down toward the tire using your hips, core, shoulders, and arms.",
+    "Allow the hammer to rebound safely and repeat."
+  ],
+  "Sledgehammer Strikes": [
+    "Stand in a stable stance while gripping a sledgehammer with both hands.",
+    "Raise the hammer overhead and drive it downward toward a safe striking surface.",
+    "Use your hips and torso to generate force rather than relying only on your arms."
+  ],
+  "Speed Bag Boxing": [
+    "Stand in front of a securely mounted speed bag with your hands raised.",
+    "Strike the bag with small, controlled alternating punches, allowing it to rebound rhythmically.",
+    "Maintain a consistent tempo and relaxed shoulders."
+  ],
+  "T Drill": [
+    "Set up four cones in a T formation.",
+    "Sprint forward to the center cone, shuffle laterally to one side, move across to the opposite side, return to the center, then sprint backward to the starting point.",
+    "Stay low during lateral movements and change direction under control."
+  ],
+  "Tire Flip": [
+    "Stand close to a suitable training tire with your feet stable.",
+    "Squat down and place your hands underneath the tire edge.",
+    "Keep your back controlled, drive through your legs, and extend your hips to lift and push the tire forward.",
+    "Step through and guide it over safely."
+  ],
+  "Wall Ball Over Shoulder": [
+    "Stand close to a sturdy wall with a medicine ball held securely.",
+    "Squat slightly and rotate your hips and torso while driving the ball upward and over your shoulder toward the wall or designated target area.",
+    "Retrieve it safely and alternate sides."
+  ],
+  "Wall Drill": [
+    "Stand facing a wall with your hands against it at approximately shoulder height.",
+    "Lean slightly forward while maintaining a straight body line.",
+    "Drive one knee upward toward the wall while keeping the opposite foot on the ground.",
+    "Alternate legs quickly while maintaining proper posture."
+  ],
+  "Yoke Carry": [
+    "Stand underneath the yoke with the frame positioned securely across your upper back.",
+    "Brace your core, stand tall, and lift the yoke from the supports.",
+    "Walk forward with short, controlled steps while keeping the frame stable."
+  ],
+  "Zercher Carry": [
+    "Lift the barbell into the crooks of your elbows and hold it close to your torso.",
+    "Keep your chest upright and brace your core.",
+    "Walk forward using controlled steps while keeping the bar secure.",
+    "Avoid letting your torso collapse forward."
+  ],
+  "Cuban Rotation": [
+    "Hold light dumbbells with your elbows bent around 90 degrees and upper arms roughly parallel to the floor.",
+    "Rotate your shoulders to bring your forearms upward while keeping your elbows relatively fixed.",
+    "Reverse the movement slowly and maintain light resistance throughout."
+  ],
+  "Devil Press": [
+    "Stand with a dumbbell in each hand.",
+    "Lower into a burpee position with the dumbbells on the floor, jump or step your feet back, then bring them forward.",
+    "Drive through your legs and hips while swinging the dumbbells upward into an overhead position.",
+    "Lower them under control and repeat."
+  ],
+  "Dumbbell Snatch Alternating": [
+    "Start with one dumbbell between your feet.",
+    "Hinge at your hips and grip it with one hand.",
+    "Drive through your legs and explosively extend your hips while pulling the dumbbell upward.",
+    "Catch it overhead with a slightly bent arm, lower it safely, and switch hands."
+  ],
+  "Empty Can Raise": [
+    "Hold very light dumbbells with your thumbs pointing downward.",
+    "Raise your arms diagonally forward until approximately shoulder height while keeping your elbows controlled.",
+    "Lower slowly.",
+    "Use very light resistance and avoid painful shoulder ranges."
+  ],
+  "Farmer Hold": [
+    "Stand upright with a dumbbell in each hand and your arms hanging naturally at your sides.",
+    "Brace your core, keep your shoulders level, and hold the weights without leaning or shrugging.",
+    "Maintain the position for the prescribed time."
+  ],
+  "Full Can Raise": [
+    "Hold light dumbbells with your thumbs pointing upward.",
+    "Raise your arms diagonally forward in the plane of the shoulder until approximately shoulder height.",
+    "Keep your shoulders relaxed and lower the weights slowly."
+  ],
+  "Half Kneeling Press": [
+    "Kneel with one knee on the floor and the opposite foot planted forward.",
+    "Hold a dumbbell at shoulder level on the kneeling-side or prescribed side.",
+    "Brace your core and press the dumbbell overhead without leaning backward.",
+    "Lower under control and repeat."
+  ],
+  "Jefferson Curl (Dumbbell)": [
+    "Stand upright while holding light dumbbells in front of your thighs.",
+    "Slowly round your upper back and progressively flex through your spine while lowering the weights toward the floor.",
+    "Reverse the movement gradually to stand tall.",
+    "Use very light resistance and only an appropriate range of motion."
+  ],
+  "Kroc Row": [
+    "Place one hand and knee on a sturdy bench and hold a heavy dumbbell with the opposite hand.",
+    "Let the weight hang below your shoulder.",
+    "Pull it toward your hip while allowing controlled torso movement, then lower it under control.",
+    "Keep the movement deliberate rather than jerking the weight."
+  ],
+  "Lunge to Press": [
+    "Hold dumbbells at shoulder height.",
+    "Step forward into a controlled lunge while keeping your torso upright.",
+    "Push through the front foot to return to standing and press the dumbbells overhead.",
+    "Lower them back to your shoulders and alternate legs."
+  ],
+  "Man Maker": [
+    "Hold dumbbells and begin in a plank position with your hands on the weights.",
+    "Perform a push-up if appropriate, then row one dumbbell and then the other.",
+    "Bring your feet forward, stand explosively, and perform a dumbbell clean into an overhead press.",
+    "Return the weights safely to the floor and repeat."
+  ],
+  "Pronation Supination": [
+    "Hold a light dumbbell in one hand with your elbow bent approximately 90 degrees.",
+    "Slowly rotate your forearm so your palm turns upward, then rotate it back so your palm faces downward.",
+    "Keep your elbow close to your body and control both directions."
+  ],
+  "Prone External Rotation": [
+    "Lie face down on a bench with a light dumbbell in one hand and your elbow bent approximately 90 degrees.",
+    "Keep your upper arm stable and rotate the forearm upward and outward.",
+    "Slowly return to the starting position."
+  ],
+  "Scaption Raise": [
+    "Hold light dumbbells with your palms facing inward.",
+    "Raise your arms approximately 30 to 45 degrees forward from your sides until around shoulder height.",
+    "Keep your elbows slightly soft and avoid shrugging.",
+    "Lower slowly."
+  ],
+  "Serratus Punch": [
+    "Lie on your back holding a light dumbbell with your arm extended toward the ceiling.",
+    "Without bending your elbow, reach the dumbbell upward by lifting your shoulder blade slightly from the floor.",
+    "Lower the shoulder blade back down while keeping the arm extended."
+  ],
+  "Side Lying External Rotation": [
+    "Lie on your side with the working arm on top and your elbow bent about 90 degrees.",
+    "Keep your elbow tucked against your side and hold a light dumbbell.",
+    "Rotate your forearm upward while keeping your upper arm still.",
+    "Lower slowly and repeat."
+  ],
+  "Stiff Leg Deadlift (Dumbbell)": [
+    "Stand holding dumbbells in front of your thighs.",
+    "Keep your knees slightly bent but relatively fixed.",
+    "Hinge at your hips and lower the dumbbells along your legs while keeping your spine controlled.",
+    "Feel the stretch in your hamstrings, then drive your hips forward to stand."
+  ],
+  "Suitcase Deadlift": [
+    "Place one dumbbell beside your foot.",
+    "Stand with your feet around hip-width apart and hinge down to grip the dumbbell with one hand.",
+    "Brace your core and stand by driving through your feet while keeping the weight close to your body.",
+    "Lower under control and switch sides."
+  ],
+  "Tate Press": [
+    "Lie on a bench holding dumbbells above your chest with your palms facing forward.",
+    "Bend your elbows and bring the dumbbells toward your chest while keeping your upper arms relatively stationary.",
+    "Extend your elbows to return the dumbbells to the starting position."
+  ],
+  "Tricep Kickback": [
+    "Hinge forward at your hips while holding dumbbells.",
+    "Keep your upper arms close to your torso with elbows bent.",
+    "Extend your elbows to drive the dumbbells backward until your arms are straight.",
+    "Squeeze your triceps, then return slowly."
+  ],
+  "Wrist Extension Eccentric": [
+    "Rest your forearm on a bench or thigh with your palm facing downward and hold a light dumbbell.",
+    "Use your other hand to help raise the wrist into extension if necessary.",
+    "Slowly lower the dumbbell through the wrist-extension range under control.",
+    "Switch sides."
+  ],
+  "Wrist Flexion Eccentric": [
+    "Rest your forearm on a bench or thigh with your palm facing upward and hold a light dumbbell.",
+    "Use your other hand to help lift the wrist into flexion.",
+    "Slowly lower the weight by extending the wrist under control.",
+    "Repeat and switch sides."
+  ],
+  "Bottoms Up Carry": [
+    "Hold a kettlebell by its handle with the bottom facing upward.",
+    "Keep your wrist straight and the kettlebell balanced.",
+    "Hold it near shoulder height or in a suitable carry position and walk slowly while maintaining control."
+  ],
+  "Double Kettlebell Front Squat": [
+    "Hold a kettlebell in each hand in the front-rack position.",
+    "Keep your elbows controlled and chest upright.",
+    "Brace your core and squat down while keeping your knees aligned with your toes.",
+    "Drive through your feet to return to standing."
+  ],
+  "Kettlebell Bottoms Up Press": [
+    "Hold a kettlebell in the bottoms-up position near your shoulder with the handle firmly secured.",
+    "Brace your core and press the kettlebell overhead while keeping your wrist neutral.",
+    "Lower it slowly back to shoulder height."
+  ],
+  "Kettlebell Clean and Press": [
+    "Start with the kettlebell between your feet.",
+    "Hinge at your hips and swing or pull the kettlebell upward, rotating it smoothly into the rack position.",
+    "Brace your core and press it overhead.",
+    "Lower it back to the rack and then to the starting position under control."
+  ],
+  "Kettlebell Figure 8": [
+    "Stand with your feet comfortably apart while holding a kettlebell.",
+    "Pass the kettlebell between your legs from one hand to the other in a controlled figure-eight pattern.",
+    "Keep your hips slightly hinged and maintain a stable core."
+  ],
+  "Kettlebell Swing American": [
+    "Hold the kettlebell with both hands.",
+    "Hinge your hips backward, then explosively extend your hips to swing the kettlebell upward.",
+    "Continue the movement until the kettlebell reaches overhead, keeping your arms controlled.",
+    "Let it swing back between your legs and repeat."
+  ],
+  "Kettlebell Turkish Get Up": [
+    "Lie on your back holding a kettlebell overhead with one arm.",
+    "Bend the same-side knee and keep the opposite leg extended.",
+    "Use your free arm to support yourself as you rise to a seated position, move into a half-kneeling position, and stand while keeping the kettlebell overhead.",
+    "Reverse the sequence slowly to return to the floor."
+  ],
+  "Kettlebell Windmill": [
+    "Hold a kettlebell overhead with one arm and stand with your feet wider than shoulder-width.",
+    "Keep the loaded arm extended and rotate your torso slightly.",
+    "Hinge your hips while lowering your free hand toward the opposite leg.",
+    "Return to standing while keeping the kettlebell stable overhead."
+  ],
+  "45 Degree Hyper": [
+    "Position yourself on a 45-degree hyperextension bench with your hips supported and feet secured.",
+    "Start with your torso controlled, hinge at the hips, and lower your upper body.",
+    "Contract your glutes and hamstrings to raise your torso until it aligns with your legs.",
+    "Avoid excessive lower-back extension."
+  ],
+  "Assisted Pull Up Machine": [
+    "Kneel or stand on the machine's assistance platform and grip the pull-up handles.",
+    "Keep your chest controlled and pull your body upward by driving your elbows toward your sides.",
+    "Lower yourself slowly until your arms are extended."
+  ],
+  "Bayesian Curl": [
+    "Stand facing away from a low cable pulley with the handle behind you.",
+    "Keep your upper arm slightly behind your torso and curl the handle toward your shoulder without moving the elbow forward.",
+    "Squeeze the biceps, then slowly extend the arm."
+  ],
+  "Bench Press (Smith Machine)": [
+    "Set the Smith machine bar at an appropriate height and lie on the bench with your eyes under the bar.",
+    "Grip the bar slightly wider than shoulder-width.",
+    "Unrack it and lower it toward the middle of your chest with your elbows controlled.",
+    "Press the bar upward until your arms are extended without aggressively locking the elbows."
+  ],
+  "Cable Crossover High": [
+    "Set both cable pulleys high and attach suitable handles.",
+    "Stand between the machines and grip the handles.",
+    "With a slight bend in your elbows, bring your hands downward and inward toward the front of your body.",
+    "Squeeze your chest, then return slowly."
+  ],
+  "Cable Crossover Low": [
+    "Set both cable pulleys low and grip the handles.",
+    "Stand between the pulleys with your arms starting low and slightly out to your sides.",
+    "Bring the handles upward and inward toward chest or shoulder height.",
+    "Squeeze your chest and return under control."
+  ],
+  "Cable Kickback": [
+    "Attach an ankle strap to a low cable pulley and secure it around one ankle.",
+    "Face the machine and hold the frame for stability.",
+    "Slightly bend your supporting knee and extend the working leg backward by squeezing your glute.",
+    "Return slowly without swinging the leg."
+  ],
+  "Cable Pullover": [
+    "Attach a straight bar or rope to a high cable pulley.",
+    "Stand facing the machine and hold the attachment with your arms extended.",
+    "Keeping your elbows slightly bent, pull the attachment downward toward your thighs using your lats.",
+    "Return slowly while maintaining control."
+  ],
+  "Cable Rear Delt Row": [
+    "Attach handles to a cable station around upper-chest height.",
+    "Pull the handles toward your upper chest while driving your elbows outward.",
+    "Squeeze your rear shoulders and upper back, then slowly extend your arms."
+  ],
+  "Cable Reverse Woodchop": [
+    "Set a cable pulley around a low position and stand sideways to the machine.",
+    "Hold the handle with both hands near your outside hip.",
+    "Rotate your torso diagonally upward and across your body while driving the movement with your hips and core.",
+    "Return slowly and switch sides."
+  ],
+  "Cable Rope Hammer Curl": [
+    "Attach a rope to a low cable pulley and grip the rope with your palms facing each other.",
+    "Keep your elbows close to your body and curl the rope toward your shoulders.",
+    "Squeeze your biceps, then lower the rope slowly."
+  ],
+  "External Rotation (Cable)": [
+    "Set the cable around elbow height and attach a single handle.",
+    "Stand sideways to the machine and hold the handle with the arm closest to the cable.",
+    "Keep your elbow tucked against your side at about 90 degrees.",
+    "Rotate your forearm away from your body, then slowly return."
+  ],
+  "Face Pull Rope": [
+    "Set a rope attachment around upper-chest or face height.",
+    "Hold the rope with both hands and step back to create tension.",
+    "Pull the rope toward your face while driving your elbows outward.",
+    "Rotate your hands slightly outward and squeeze your upper back and rear shoulders, then return slowly."
+  ],
+  "GHD Sit Up": [
+    "Position yourself securely on a GHD machine with your feet locked in.",
+    "Sit upright with your torso controlled, then lower backward through a comfortable range.",
+    "Brace your core and contract your abdominals to return to an upright position.",
+    "Avoid excessive spinal extension."
+  ],
+  "Hip Abduction (Machine)": [
+    "Sit on the machine with your back supported and legs positioned against the pads.",
+    "Start with your thighs together or close together.",
+    "Push your legs outward against the pads while keeping your torso stable.",
+    "Pause briefly, then return slowly."
+  ],
+  "Hip Adduction (Cable)": [
+    "Attach an ankle strap to a low cable pulley.",
+    "Stand sideways to the machine and hold a stable support.",
+    "Move the cable leg across your body using your inner thigh muscles.",
+    "Return slowly to the starting position and switch sides."
+  ],
+  "Internal Rotation (Cable)": [
+    "Set the cable around elbow height and attach a single handle.",
+    "Stand sideways with the working arm closest to the cable and keep your elbow bent about 90 degrees against your side.",
+    "Rotate your forearm inward toward your abdomen, then slowly return."
+  ],
+  "Iso-Lateral High Row (Machine)": [
+    "Adjust the seat and handles so they are comfortable.",
+    "Grip the handles and brace your torso against the support.",
+    "Pull the handles downward and backward toward your upper torso while driving your elbows down.",
+    "Squeeze your lats and upper back, then return slowly."
+  ],
+  "Kneeling Cable Crunch": [
+    "Attach a rope to a high cable pulley and kneel facing the machine.",
+    "Hold the rope near your head and keep your hips relatively stable.",
+    "Curl your torso downward by contracting your abdominals, bringing your ribs toward your pelvis.",
+    "Return slowly without simply pulling with your arms."
+  ],
+  "Lat Pulldown - Close Grip (Cable)": [
+    "Attach a close-grip handle to the high pulley.",
+    "Sit securely and grip the handle with your palms facing each other.",
+    "Pull the handle toward your upper chest by driving your elbows down and back.",
+    "Pause briefly, then slowly extend your arms."
+  ],
+  "Leaning Cable Lateral Raise": [
+    "Attach a single handle to a low cable pulley.",
+    "Hold the handle with the opposite hand and lean slightly away from the machine.",
+    "Raise your arm outward until approximately shoulder height while keeping your elbow slightly bent.",
+    "Lower slowly and repeat."
+  ],
+  "Leg Press Calf Raise": [
+    "Sit in the leg press machine and place the balls of your feet on the lower portion of the platform with your heels free.",
+    "Keep your knees slightly bent and push through your toes to raise your heels.",
+    "Pause at the top, then lower your heels into a comfortable stretch."
+  ],
+  "Nautilus Pullover": [
+    "Adjust the machine so your upper back and elbows are properly supported.",
+    "Grip the handles and start with your arms elevated.",
+    "Pull the handles downward and forward using your lats while keeping your torso stable.",
+    "Return slowly to the starting position."
+  ],
+  "Neck Harness Extension": [
+    "Secure a neck harness around your head and attach an appropriate light resistance.",
+    "Sit or stand upright.",
+    "Slowly extend your head backward against the resistance without moving your torso.",
+    "Return to neutral under control.",
+    "Use very light resistance and avoid jerking."
+  ],
+  "Overhead Press (Smith Machine)": [
+    "Set the Smith machine bar at an appropriate height.",
+    "Sit or stand beneath it with your hands slightly wider than shoulder-width.",
+    "Unrack the bar and press it upward while keeping your core braced.",
+    "Lower the bar under control to around chin or upper-chest level."
+  ],
+  "Single Arm Cable Kickback": [
+    "Attach a single handle to a cable pulley.",
+    "Hold the handle with one hand and hinge slightly forward.",
+    "Keep your upper arm close to your torso and extend your elbow backward until your arm is straight.",
+    "Squeeze your triceps and return slowly."
+  ],
+  "Smith Machine Calf Raise": [
+    "Position yourself under the Smith machine bar with the balls of your feet on a stable raised platform.",
+    "Keep the bar secure and knees slightly bent.",
+    "Raise your heels as high as possible, pause, then lower slowly into a controlled stretch."
+  ],
+  "Standing Leg Curl": [
+    "Position your working leg against the machine's curl pad and hold the support handles.",
+    "Bend your knee to bring your heel toward your glutes while keeping your thigh stable.",
+    "Squeeze your hamstring, then lower the leg slowly."
+  ],
+  "Terminal Knee Extension": [
+    "Attach a resistance strap or cable behind your knee.",
+    "Start with the knee slightly bent, then straighten it by contracting your quadriceps and moving the knee into full extension.",
+    "Hold briefly and return under control."
+  ],
+  "Triceps Extension (Cable)": [
+    "Attach a rope or suitable handle to a high cable pulley.",
+    "Keep your elbows close to your head or sides depending on the variation.",
+    "Extend your elbows to straighten your arms while keeping the upper arms relatively stable.",
+    "Return slowly."
+  ],
+  "Vertical Traction (Machine)": [
+    "Adjust the machine seat and handles to your height.",
+    "Grip the handles and brace your core.",
+    "Pull the handles downward by driving your elbows toward your sides and squeezing your lats.",
+    "Return slowly until your arms are extended."
+  ],
+  "Pilates": [
+    "Perform a controlled sequence of Pilates movements focusing on core engagement, posture, breathing, and controlled range of motion.",
+    "Keep movements slow and precise, maintain a neutral spine where appropriate, and coordinate breathing with each movement.",
+    "Choose exercises according to your level and goal."
+  ],
+  "Stretching": [
+    "Perform controlled stretches targeting the muscles and joints being prepared for activity or recovering afterward.",
+    "Move gradually into a comfortable range without bouncing or forcing the position.",
+    "Hold the stretch while breathing normally, then slowly return to the starting position."
+  ],
+  "Warm Up": [
+    "Begin with 5-10 minutes of progressively increasing activity such as walking, light jogging, cycling, or easy dynamic movements.",
+    "Follow with movement-specific drills and dynamic mobility exercises.",
+    "Gradually increase intensity before starting the main workout."
+  ],
+  "Yoga": [
+    "Perform a sequence of yoga poses using controlled movement, steady breathing, balance, and mindful positioning.",
+    "Move between poses smoothly and avoid forcing your range of motion.",
+    "Modify poses according to flexibility, experience, and physical limitations."
   ]
 };
