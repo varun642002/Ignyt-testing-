@@ -14,7 +14,9 @@ class Base(DeclarativeBase):
 _settings = get_settings()
 
 engine = create_async_engine(
-    _settings.database_url,
+    # async_database_url, not database_url: a managed Postgres URL arrives without a driver
+    #     and create_async_engine cannot open it. See Settings.async_database_url.
+    _settings.async_database_url,
     echo=_settings.db_echo,
     pool_pre_ping=True,
     future=True,

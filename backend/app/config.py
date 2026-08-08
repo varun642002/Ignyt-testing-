@@ -134,9 +134,38 @@ class Settings(BaseSettings):
         return self.environment.lower() == "production"
 
     @property
-    def sync_database_url(self) -> str:
-        """Sync SQLAlchemy URL for Alembic (migrations don't need async)."""
+    def async_database_url(self) -> str:
+        """The URL SQLAlchemy's ASYNC engine can actually open.
+
+        Managed Postgres providers hand out a URL with no driver in it — Render and Heroku
+        both give `postgresql://…`, and Heroku still gives the older `postgres://`. Neither
+        works with create_async_engine, which needs the driver named: passing one through raw
+        fails at import with "the asyncio extension requires an async driver", so the service
+        never starts and the logs blame SQLAlchemy rather than the connection string.
+
+        Normalising here rather than asking whoever deploys it to hand-edit an environment
+        variable into a shape SQLAlchemy likes — that instruction gets followed once and
+        forgotten at the next database rotation.
+        """
         url = self.database_url
+        if url.startswith("postgres://"):          # legacy Heroku-style
+            url = "postgresql://" + url[len("postgres://"):]
+        if url.startswith("postgresql://"):
+            url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+        return url
+
+    @property
+    def sync_database_url(self) -> str:
+        """Sync SQLAlchemy URL for Alembic (migrations don't need async).
+
+        `postgres://` is normalised here too. SQLAlchemy dropped that scheme in 1.4 and raises
+        rather than guessing, so a migration run against a Heroku-style URL fails before it
+        reads a single revision — and migrations run on deploy, which makes this the first
+        thing that would break rather than the last.
+        """
+        url = self.database_url
+        if url.startswith("postgres://"):
+            url = "postgresql://" + url[len("postgres://"):]
         return (
             url.replace("+aiosqlite", "")
                .replace("+asyncpg", "+psycopg2")

@@ -1,0 +1,80 @@
+# Render blueprint for the IGNYT Integration Service.
+#
+# Committing this means the service can be recreated from the repo rather than from somebody's
+# memory of which boxes were ticked in a dashboard. Render reads it on "New > Blueprint".
+#
+# NO SECRET APPEARS IN THIS FILE. Every value below is either public or marked sync:false,
+# which tells Render "this one is set by hand in the dashboard and must never be read from
+# git". The four that matter — the Gemini key, the Firebase service account, the Play service
+# account and the database URL — are all in that category.
+
+services:
+  - type: web
+    name: ignyt-backend
+    runtime: python
+    plan: free                  # upgrade to starter before launch; free instances sleep
+    # The FastAPI app lives in a subdirectory of a repo that also holds the Capacitor app,
+    # so Render has to be told where to run. Everything below is relative to this.
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # app.main:app, not main:app — create_app() builds it and `app = create_app()` publishes
+    # it at the bottom of app/main.py. $PORT is assigned by Render and must not be hardcoded.
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /v1/health
+    autoDeploy: true            # a push to the tracked branch redeploys
+
+    envVars:
+      # ---- public configuration -------------------------------------------------------
+      - key: ENVIRONMENT
+        value: production
+      - key: API_PREFIX
+        value: /v1
+      - key: LOG_LEVEL
+        value: info
+      # Firebase token verification. insecure-uid is refused outright when ENVIRONMENT is
+      # production (see assert_ready), so this cannot silently become a hole.
+      - key: AUTH_MODE
+        value: firebase
+      - key: PLAY_PACKAGE_NAME
+        value: com.varun.ignyt
+      # Capacitor's WebView origins. An Android release serves the app from https://localhost,
+      # iOS from capacitor://localhost — neither is a website, and neither will be sent by a
+      # browser you control, which is why they are listed explicitly rather than using "*".
+      - key: CORS_ORIGINS
+        value: https://localhost,capacitor://localhost,http://localhost
+      # Leave AI gating OFF until at least one real purchase has been verified in production.
+      # Turning it on while is_premium is false for everyone locks out every user, paying ones
+      # included.
+      - key: AI_REQUIRES_PREMIUM
+        value: "false"
+
+      # ---- secrets: set these in the Render dashboard, never here ---------------------
+      # sync:false means Render will NOT take a value from this file. It prompts once on
+      # first deploy and stores it encrypted.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FIREBASE_CREDENTIALS      # the service-account JSON, as one line
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: PLAY_SERVICE_ACCOUNT_JSON # a DIFFERENT service account to the Firebase one
+        sync: false
+      - key: TOKEN_ENCRYPTION_KEY
+        sync: false
+      - key: STATE_SIGNING_SECRET
+        sync: false
+
+      # Postgres, wired from the database below. Render injects the internal connection
+      # string; asyncpg is already in requirements.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ignyt-db
+          property: connectionString
+
+databases:
+  # SQLite is the local-dev default and is wrong on Render: the filesystem is ephemeral, so
+  # every deploy would silently reset the AI usage counters and every verified entitlement.
+  - name: ignyt-db
+    plan: free                  # free Postgres expires after 90 days — upgrade before launch
+    databaseName: ignyt
+    user: ignyt
