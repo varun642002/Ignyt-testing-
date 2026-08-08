@@ -18107,8 +18107,12 @@ function attachHandlers(){
      A folder is a label over the routine list. Nothing here ever touches state.routines except
      to set or clear folderId, which is what makes every one of these operations non-destructive
      — including delete. */
+  /* Ids come back out of dataset as STRINGS while nextId() issues NUMBERS, so every lookup below
+     normalises both sides. Comparing them raw is what made the caret, the ••• menu, rename and
+     delete do nothing at all: each found no folder and returned silently. */
+  const sameId = (a, b)=> a != null && b != null && String(a) === String(b);
   const folderMenu = (id)=>{
-    const f = (state.routineFolders||[]).find(x=>x.id===id);
+    const f = (state.routineFolders||[]).find(x=>sameId(x.id, id));
     return f ? f.name : "";
   };
   document.querySelectorAll('[data-action="new-routine-folder"]').forEach(el=>{
@@ -18124,13 +18128,13 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{
       const id = el.dataset.folderToggle;
       if(id === "__ungrouped"){ state.ungroupedCollapsed = !state.ungroupedCollapsed; render(); return; }
-      const f = state.routineFolders.find(x=>x.id===id);
+      const f = state.routineFolders.find(x=>sameId(x.id, id));
       if(f){ f.collapsed = !f.collapsed; render(); }
     });
   });
   document.querySelectorAll("[data-folder-menu]").forEach(el=>{
     el.addEventListener("click", ()=>{
-      state.folderMenuFor = state.folderMenuFor === el.dataset.folderMenu ? null : el.dataset.folderMenu;
+      state.folderMenuFor = sameId(state.folderMenuFor, el.dataset.folderMenu) ? null : el.dataset.folderMenu;
       render();
     });
   });
@@ -18140,7 +18144,7 @@ function attachHandlers(){
       const name = await confirmDialog("Rename this folder", render,
         { title: folderMenu(id), input:true, confirmLabel:"Rename" });
       if(!name || typeof name !== "string") return;
-      const f = state.routineFolders.find(x=>x.id===id);
+      const f = state.routineFolders.find(x=>sameId(x.id, id));
       if(f) f.name = name.slice(0,40);
       state.folderMenuFor = null;
       render();
@@ -18149,7 +18153,7 @@ function attachHandlers(){
   document.querySelectorAll("[data-folder-delete]").forEach(el=>{
     el.addEventListener("click", async ()=>{
       const id = el.dataset.folderDelete;
-      const n = state.routines.filter(r=>r.folderId===id).length;
+      const n = state.routines.filter(r=>sameId(r.folderId, id)).length;
       /* The count is in the question on purpose. "Delete folder?" invites a reflexive yes; the
          number is what makes someone check whether they meant it. */
       const ok = await confirmDialog(
@@ -18157,15 +18161,15 @@ function attachHandlers(){
           : "Delete this folder?",
         render, { title: folderMenu(id), confirmLabel:"Delete folder", danger:true });
       if(!ok) return;
-      state.routines.forEach(r=>{ if(r.folderId===id) delete r.folderId; });
-      state.routineFolders = state.routineFolders.filter(x=>x.id!==id);
+      state.routines.forEach(r=>{ if(sameId(r.folderId, id)) delete r.folderId; });
+      state.routineFolders = state.routineFolders.filter(x=>!sameId(x.id, id));
       state.folderMenuFor = null;
       render();
     });
   });
   document.querySelectorAll("[data-move-routine]").forEach(el=>{
     el.addEventListener("click", ()=>{
-      state.moveRoutineFor = state.moveRoutineFor === el.dataset.moveRoutine ? null : el.dataset.moveRoutine;
+      state.moveRoutineFor = sameId(state.moveRoutineFor, el.dataset.moveRoutine) ? null : el.dataset.moveRoutine;
       render();
     });
   });

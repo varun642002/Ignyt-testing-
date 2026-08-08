@@ -106,10 +106,18 @@
        delete routines, which is the one behaviour a folder feature must not get wrong.
 
        Sorting still applies WITHIN a group, so the sort control keeps meaning what it says. */
+    /* IDS ARE COMPARED AS STRINGS, ALWAYS.
+       nextId() returns a number, but the moment an id goes into markup as a data- attribute it
+       comes back out of dataset as a string, so `folder.id === el.dataset.folderToggle` is false
+       for every folder that ever existed. That mismatch silently killed the collapse caret, the
+       ••• menu, rename, delete and move-to-folder — each one looked up a numeric id with a string
+       and found nothing. Normalising both sides here and at every handler is the fix; comparing
+       raw is the bug. */
+    const sameId = (a, b) => a != null && b != null && String(a) === String(b);
     const folders = (state.routineFolders || []).slice();
-    const folderIds = new Set(folders.map(f => f.id));
-    const inFolder = id => routines.filter(r => r.folderId === id);
-    const ungrouped = routines.filter(r => !r.folderId || !folderIds.has(r.folderId));
+    const folderIds = new Set(folders.map(f => String(f.id)));
+    const inFolder = id => routines.filter(r => sameId(r.folderId, id));
+    const ungrouped = routines.filter(r => r.folderId == null || !folderIds.has(String(r.folderId)));
 
     const routineCard = r => {
             const last = lastSessionForRoutine(state, r.name);
@@ -162,9 +170,9 @@
                 <button class="del" data-move-routine="${r.id}" aria-label="Move to folder" title="Move to folder">${svg('plan',16)}</button>
                 <button class="del" data-del-routine="${r.id}" aria-label="Delete routine">${svg('x',16)}</button>
               </div>
-              ${state.moveRoutineFor === String(r.id) ? `<div class="wk-move">
+              ${sameId(state.moveRoutineFor, r.id) ? `<div class="wk-move">
                 <div class="wk-move__title">Move to</div>
-                ${(state.routineFolders||[]).map(f => `<button data-move-to="${f.id}"${r.folderId===f.id?' class="is-on"':''}>${escHtml(f.name)}</button>`).join('')}
+                ${(state.routineFolders||[]).map(f => `<button data-move-to="${f.id}"${sameId(r.folderId, f.id)?' class="is-on"':''}>${escHtml(f.name)}</button>`).join('')}
                 <button data-move-to="__none"${!r.folderId?' class="is-on"':''}>My Routines</button>
                 ${!(state.routineFolders||[]).length ? `<div class="wk-move__none">No folders yet — make one with + above.</div>` : ''}
               </div>` : ''}
@@ -174,7 +182,7 @@
 
     function groupBlock(key, label, list, isFolder) {
       const collapsed = isFolder
-        ? !!(folders.find(f => f.id === key) || {}).collapsed
+        ? !!(folders.find(f => sameId(f.id, key)) || {}).collapsed
         : !!state.ungroupedCollapsed;
       return `<div class="wk-folder" data-folder="${key}">
         <div class="wk-folder__head">
@@ -186,7 +194,7 @@
           </button>
           ${isFolder ? `<button class="wk-folder__menu" data-folder-menu="${key}" aria-label="Folder options">•••</button>` : ''}
         </div>
-        ${isFolder && state.folderMenuFor === key ? `<div class="wk-folder__actions">
+        ${isFolder && sameId(state.folderMenuFor, key) ? `<div class="wk-folder__actions">
           <button data-folder-rename="${key}">Rename</button>
           <button data-folder-delete="${key}" class="is-danger">Delete folder</button>
         </div>` : ''}
