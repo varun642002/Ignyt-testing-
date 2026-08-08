@@ -209,24 +209,59 @@
       name: "log food",
       needs: "addFoodLog",
       test: function (t) {
-        return /\b(log|ate|eat|had|add)\b/.test(t) && /\b(\d+)\s*(g|gram|grams|ml|kg|oz|piece|pieces|slice|slices|cup|cups|bowl|bowls|egg|eggs|roti|rotis)?\b/.test(t)
-            && !/\b(weight|weigh|steps?|workout|water)\b/.test(t);
+        /* No digit is required. "add a banana" is a perfectly ordinary thing to say and the
+           earlier version demanded a number, so it was handed to Gemini — which food logging
+           must never reach. Quantity defaults to one below. */
+        return /\b(log|ate|eat|had|add)\b/.test(t)
+            && !/\b(weight|weigh|steps?|workout|water|streak|score|progress)\b/.test(t);
       },
       run: function (A, t) {
-        /* Two shapes cover almost everything typed: "<n><unit> <food>" and "<n> <food>".
-           Anything with more structure than that — several foods, a time of day, a language
-           other than English — is exactly what the AI is better at, so it falls through. */
+        /* MEAL FIRST, and stripped out before the food is read. "log 2 eggs for breakfast"
+           otherwise parses the food as "eggs for breakfast", which matches nothing in the
+           library and produces a not-found for a food that is plainly there. */
+        var meal = null;
+        /* "to breakfast" as well as "for lunch". Missing "to" left the food parsed as
+           "eggs to breakfast", which matches nothing in the library — so a food that is
+           plainly there came back as not available. */
+        var mm = t.match(/\b(?:for|at|as|to|in)\s+(breakfast|lunch|dinner|snacks?)\b/);
+        if (mm) {
+          meal = mm[1].replace(/^snacks?$/, "Snack");
+          meal = meal.charAt(0).toUpperCase() + meal.slice(1);
+          t = t.replace(mm[0], "").replace(/\s+/g, " ").trim();
+        }
+
+        /* SEVERAL FOODS, CHECKED FIRST. This has to run before the parse rather than on the
+           parsed food name: "log 200g chicken and 100g rice" fails the strict pattern
+           outright — [a-z\s] cannot cover "100g" — so the guard placed after it never ran and
+           the whole thing fell through to Gemini, which food logging must never reach.
+
+           Logging only the first item would silently drop the rest of someone's meal, and
+           splitting on "and" reliably enough to trust ("rice and dal" is two, "chicken and
+           mushroom soup" is one) is not something a regex can do. So it asks. Local, honest,
+           and zero AI activities. */
+        if (/\b(and|plus)\b|,/.test(t.replace(/^\s*(log|ate|eat|had|add)\b/, ""))) {
+          return { text: "I can log one food at a time — send them separately and I'll get both." };
+        }
+
+        /* "<n><unit> <food>", "<n> <food>", and a bare "a banana" with no number at all. */
         var m = t.match(/(?:log|ate|eat|had|add)\s+(?:a\s+|an\s+)?(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?)?\s+(?:of\s+)?([a-z][a-z\s]{1,40})$/);
-        if (!m) return null;
+        if (!m) {
+          var m2 = t.match(/(?:log|ate|eat|had|add)\s+(?:a|an|some)?\s*([a-z][a-z\s]{1,40})$/);
+          if (!m2) return null;
+          m = [null, "1", null, m2[1]];
+        }
         var qty = parseFloat(m[1]);
         var unit = m[2] || null;
         var food = m[3].replace(/\s+/g, " ").trim();
         if (!food || !isFinite(qty) || qty <= 0) return null;
-        /* More than one food named ("chicken and rice") is a multi-item log, which the AI
-           handles properly and this would mangle into one nonsense entry. */
-        if (/\b(and|with|plus|,)\b/.test(food)) return null;
-        var args = { name: food, quantity: qty };
+
+        var args = { food: food, quantity: qty };
+        /* `food`, NOT `name`. actions.js reads args.food; passing `name` sent it undefined and
+           every chatbot food log failed before it ever reached the library. It failed quietly,
+           because the not-found path looks identical to a food genuinely missing. */
         if (unit) args.unit = unit.replace(/s$/, "").replace(/^gram$/, "g");
+        if (/^(g|kg|ml|oz)$/.test(args.unit || "")) { args.grams = args.unit === "kg" ? qty * 1000 : qty; }
+        if (meal) args.meal = meal;
         return { text: null, pending: { action: "addFoodLog", args: args } };
       }
     }

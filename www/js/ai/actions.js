@@ -278,8 +278,18 @@
       found = rows[0] || null;
     }
     if (!found) {
+      /* THE LIBRARY IS THE ONLY SOURCE OF NUTRITION, and a miss is a refusal rather than a
+         fallback. Nothing here estimates the macros, invents a food row, or asks Gemini what
+         a samosa contains — a logged calorie figure is data the user will make decisions from
+         for months, and a plausible guess is indistinguishable from a real measurement once
+         it is sitting in the log. Being told the food is missing is recoverable; a silently
+         invented 250 kcal is not.
+
+         This also keeps food logging at ZERO AI activities, which is the point: the miss
+         costs nothing and does not touch the daily allowance. */
       return { card: "error", code: "food_not_found", food: name,
-               message: "I couldn't find \"" + name + "\" in the food database." };
+               message: "Food not added.\n\n" + name + " isn't currently available in the " +
+                        "IGNYT Food Library.\n\nOur food database will be updated soon." };
     }
     /* A count only becomes grams once the food is known — "3" means nothing until we know
        whether it is 3 eggs or 3 dosa. That is why this runs after the search, not before. */
