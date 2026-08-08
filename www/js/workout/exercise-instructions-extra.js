@@ -1734,5 +1734,109 @@ window.IgnytExerciseInstructionsExtra = {
     "Stand on one leg and bend slightly at the hip and knee.",
     "Push explosively forward or diagonally and land on the same leg.",
     "Absorb the landing with your hip and knee, stabilize, then perform the next bound."
+  ],
+  "Single Leg Box Jump": [
+    "Stand on one leg facing a sturdy box.",
+    "Bend your hip and knee slightly, then explosively jump onto the box using the same leg.",
+    "Land softly with your knee controlled, stand tall, and step down carefully."
+  ],
+  "Single Leg Calf Raise (Bodyweight)": [
+    "Stand on one foot while holding a stable support for balance.",
+    "Rise onto the ball of your foot as high as comfortable, squeeze your calf, then lower your heel slowly.",
+    "Complete the repetitions and switch sides."
+  ],
+  "Single Leg Glute Bridge March": [
+    "Lie on your back with your knees bent.",
+    "Lift your hips into a bridge and extend one leg or maintain it elevated while keeping your pelvis stable.",
+    "Alternate controlled leg movements without allowing your hips to drop or rotate."
+  ],
+  "Skater Squat": [
+    "Stand on one leg with the other leg slightly behind you.",
+    "Bend your standing knee and lower your body while reaching the rear knee toward the floor.",
+    "Keep your torso controlled and drive through the standing foot to return upright."
+  ],
+  "Skin the Cat": [
+    "Hang securely from gymnastics rings or a suitable bar.",
+    "Raise your knees toward your chest and rotate your legs backward through your arms until your body moves into a controlled inverted position.",
+    "Reverse the movement slowly to return to the hang.",
+    "Use an appropriate progression and avoid forcing shoulder range."
+  ],
+  "Slant Board Squat": [
+    "Stand on a slant board with your heels elevated and feet around shoulder-width apart.",
+    "Brace your core and squat down while keeping your knees tracking over your toes.",
+    "Drive through your feet to return to standing."
+  ],
+  "Sleeper Stretch": [
+    "Lie on your side with the target shoulder underneath you and your arm extended in front with the elbow bent about 90 degrees.",
+    "Keep your elbow fixed and gently rotate your forearm toward the floor using the opposite hand.",
+    "Stop at a comfortable stretch and switch sides."
+  ],
+  "Spanish Squat Isometric": [
+    "Secure a strong resistance strap or band behind your knees.",
+    "Step back to create tension and sit your hips backward while keeping your torso upright.",
+    "Lower into a comfortable squat and hold while maintaining tension through the band and your quadriceps."
+  ],
+  "Speed Skater": [
+    "Stand with your feet hip-width apart.",
+    "Push off one leg and leap laterally to the opposite side, landing on the other leg.",
+    "Swing your arms naturally and allow your free leg to move behind you.",
+    "Alternate sides at a quick, controlled pace."
+  ],
+  "Spiderman Push Up": [
+    "Start in a high push-up position.",
+    "As you lower your chest, bring one knee toward the outside of the same-side elbow.",
+    "Push back up while returning the leg, then alternate sides."
+  ],
+  "Sprawl": [
+    "Start standing in an athletic stance.",
+    "Quickly drop your hands toward the floor and shoot your legs backward, lowering your hips toward the ground.",
+    "Immediately bring your feet back underneath you and return to standing."
+  ],
+  "Squat Pulse": [
+    "Stand with your feet around shoulder-width apart.",
+    "Lower into a squat and maintain the position.",
+    "Perform small controlled up-and-down pulses without fully standing between repetitions."
+  ],
+  "Squat Thrust": [
+    "Stand tall and squat down, placing your hands on the floor.",
+    "Jump or step both feet backward into a plank, then bring them forward again.",
+    "Stand upright and repeat without the push-up portion."
+  ],
+  "Staggered Push Up": [
+    "Start in a push-up position with one hand slightly forward and the other slightly behind.",
+    "Lower your chest while keeping your core braced, then push back up.",
+    "Switch hand positions between sets or repetitions."
+  ],
+  "Standing Ab Wheel": [
+    "Stand tall while holding an ab wheel with both hands.",
+    "Slowly roll the wheel forward while keeping your core tight and hips controlled.",
+    "Extend only as far as you can maintain good posture, then pull the wheel back toward your feet."
+  ],
+  "Standing Extension": [
+    "Stand upright with your feet about hip-width apart and hands on your hips or lower back.",
+    "Gently lean your upper body backward while keeping your hips stable.",
+    "Return to neutral without forcing the range."
+  ],
+  "Standing Forward Fold Stretch": [
+    "Stand tall with your feet comfortable apart.",
+    "Slowly hinge forward from your hips and allow your upper body to move toward the floor.",
+    "Keep your knees slightly bent if needed and relax into a comfortable stretch."
+  ],
+  "Standing Hip CAR": [
+    "Stand tall while holding a stable support.",
+    "Lift one knee and slowly move the hip through its largest comfortable controlled circle: forward, outward, backward, and down.",
+    "Keep your torso as still as possible, then switch sides."
+  ],
+  "Standing IT Band Stretch": [
+    "Stand upright and cross one leg behind the other.",
+    "Shift your hips toward the rear leg while gently leaning your torso away from that side.",
+    "Keep both feet grounded and hold the stretch along the outer hip and thigh.",
+    "Switch sides."
+  ],
+  "Standing Long Jump Test": [
+    "Stand behind a marked starting line with your feet around hip-width apart.",
+    "Swing your arms and bend your hips and knees, then explosively jump forward as far as possible.",
+    "Land on both feet with control.",
+    "Measure from the starting line to the nearest landing point."
   ]
 };
