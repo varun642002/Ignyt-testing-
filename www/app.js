@@ -7131,7 +7131,7 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="recommendation" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","workouts","calendar"].includes(state.progressView)))
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="recommendation" || state.tab==="safety" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","workouts","calendar"].includes(state.progressView)))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || state.bodyView==="calculators" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
@@ -7175,6 +7175,11 @@ function renderApp(){
   if(state.tab==="library") main.innerHTML = renderLibraryTab();
   /* Recommended programs — Workout > Quick Actions > Recommendation. Reads from
      js/coach/programs.js and touches nothing the HYROX plan owns. */
+  /* Reached when Start Empty is blocked: the check needs somewhere to render, and it carries a
+     way back to the workout screen so the user is not stranded on it. */
+  if(state.tab==="safety") main.innerHTML = window.IgnytRedFlags
+    ? IgnytRedFlags.screenHtml(escHtml, { title: "Before you start", backAction: 'data-nav="workout"', backLabel: "← Workout" })
+    : "";
   if(state.tab==="recommendation") main.innerHTML = (window.IgnytPages && IgnytPages.renderRecommendation)
     ? IgnytPages.renderRecommendation({ state, svg, escHtml, exerciseImageSrc }) : "";
   if(state.tab==="body") main.innerHTML = renderBodyTab();
@@ -15653,6 +15658,14 @@ function renderErrorScreen(err){
 }
 
 function renderPlanTab(){
+  /* THE SAFETY GATE, in front of the plan rather than inside it. The HYROX plan itself is
+     untouched — this returns before it is built, so nothing about WEEKS, buildWeek or the
+     completion state is involved. A red flag means no workout should be suggested, and the
+     structured plan is the app's strongest suggestion of all. */
+  if(window.IgnytRedFlags && IgnytRedFlags.needsCheck()){
+    return IgnytRedFlags.screenHtml(escHtml, { title: "Before your plan opens" });
+  }
+
   if(state.viewingHyroxSchedule) return renderHyroxSchedule();
   if(state.viewingRaceMode) return renderRaceMode();
   if(state.viewingHyroxInfo) return renderHyroxInfo();
@@ -18034,6 +18047,13 @@ function attachHandlers(){
            is treated as one rather than storing an empty report that blocks nothing. */
       }
       if(window.IgnytRedFlags) IgnytRedFlags.report(ids);
+      /* The safety TAB exists only to host the check when Start Empty was blocked, so once the
+         check passes there is nothing left for it to show — it would render the questions again.
+         Send the user back to where they were going. The recommendation and plan screens do not
+         need this: their gate sits in front of real content, which is what appears next. */
+      if(state.tab === "safety" && window.IgnytRedFlags && !IgnytRedFlags.needsCheck()){
+        state.tab = "workout";
+      }
       render();
     });
   });
@@ -18511,6 +18531,14 @@ function attachHandlers(){
   // left whichever one is second in the DOM dead.
   document.querySelectorAll('[data-action="start-session"]').forEach(startBtn=>{
     startBtn.addEventListener("click", ()=>{
+      /* An ad-hoc session is still the app helping someone train, so it takes the same gate as
+         the plan and the recommended programs. Sending them to the check rather than showing a
+         toast — a toast is dismissed in half a second and explains nothing. */
+      if(window.IgnytRedFlags && IgnytRedFlags.needsCheck()){
+        state.tab = "safety";
+        render();
+        return;
+      }
       state.session = { startedAt: Date.now(), exercises: [], notes:"", title:"" };
       state.editingSessionId = null;
       applyWakeLock();

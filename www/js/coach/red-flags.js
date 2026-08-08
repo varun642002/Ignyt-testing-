@@ -133,13 +133,68 @@ window.IgnytRedFlags = (function () {
     };
   }
 
+  /* THE SCREEN LIVES HERE, not in the page that first needed it.
+     It started as a private function inside recommendation.js, which was right while one
+     surface used it and wrong the moment the plan tab and the ad-hoc session needed the same
+     gate — three copies of a safety screen is three chances for one of them to drift into
+     saying something softer than the others. One renderer, one wording, every surface.
+
+     `esc` is passed in rather than imported because this module has no dependencies and is
+     worth keeping that way; the caller already has the app's escaper. */
+  function screenHtml(esc, opts) {
+    opts = opts || {};
+    var msg = message();
+    var back = opts.backAction
+      ? '<button class="rh-btn rh-btn--ghost rf-back" ' + opts.backAction + '>' +
+        esc(opts.backLabel || "Back") + '</button>'
+      : "";
+
+    if (msg) {
+      return '<div class="pg-light rec">' + back +
+        '<div class="pg-card rf-stop' + (msg.urgent ? ' rf-stop--urgent' : '') + '">' +
+          '<div class="rf-stop__title">' + esc(msg.title) + '</div>' +
+          '<div class="rf-stop__body">' + esc(msg.body) + '</div>' +
+          '<ul class="rf-stop__list">' +
+            msg.flags.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join("") +
+          '</ul>' +
+          '<button class="rh-btn rh-btn--ghost rf-stop__clear" data-rf-clear="1">' +
+            'This has resolved — ask me again</button>' +
+        '</div>' +
+        '<div class="pg-card rf-universal">' + esc(UNIVERSAL) + '</div>' +
+      '</div>';
+    }
+
+    return '<div class="pg-light rec">' + back +
+      '<div class="rec-intro">' +
+        '<div class="rec-intro__title">' + esc(opts.title || "Before you train") + '</div>' +
+        '<div class="rec-intro__sub">Tick anything that applies to you right now. If none of ' +
+        'them do, say so and this will open.</div>' +
+      '</div>' +
+      '<div class="pg-card rf-check">' +
+        FLAGS.map(function (f) {
+          return '<label class="rf-item">' +
+            '<input type="checkbox" class="rf-item__box" value="' + f.id + '">' +
+            '<span>' + esc(f.label) + '</span>' +
+          '</label>';
+        }).join("") +
+      '</div>' +
+      '<div class="rf-actions">' +
+        '<button class="rh-btn rh-btn--primary" data-rf-submit="none">None of these apply</button>' +
+        '<button class="rh-btn rh-btn--ghost" data-rf-submit="checked">Report what I ticked</button>' +
+      '</div>' +
+      '<div class="pg-card rf-universal">' + esc(UNIVERSAL) + '</div>' +
+    '</div>';
+  }
+
+  var UNIVERSAL = "Stop if an exercise causes sharp, severe or worsening pain. Do not train "
+                + "through injury pain. Mild symptoms can be acceptable under a clinician's "
+                + "protocol — if you have one, follow it over this.";
+
   return Object.freeze({
-    FLAGS: FLAGS, ACK_DAYS: ACK_DAYS,
+    FLAGS: FLAGS, ACK_DAYS: ACK_DAYS, screenHtml: screenHtml,
     needsCheck: needsCheck, active: active, blocked: blocked, isUrgent: isUrgent,
     report: report, clear: clear, message: message, ageDays: ageDays,
     /* The universal rule, in one place so every surface that shows it shows the same words. */
-    UNIVERSAL: "Stop if an exercise causes sharp, severe or worsening pain. Do not train through "
-             + "injury pain. Mild symptoms can be acceptable under a clinician's protocol — if "
-             + "you have one, follow it over this."
+    UNIVERSAL: UNIVERSAL
   });
 })();

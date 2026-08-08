@@ -92,51 +92,6 @@
     '</div>';
   }
 
-  /* THE SAFETY GATE, and it runs before anything else on this screen.
-     A red flag means the correct output is not a workout, so it cannot be a filter applied to
-     one — it has to stop the screen from offering programs at all. See js/coach/red-flags.js. */
-  function redFlagScreen(ctx) {
-    var RF = window.IgnytRedFlags;
-    var msg = RF.message();
-    var esc = ctx.escHtml;
-
-    if (msg) {
-      return '<div class="pg-light rec">' +
-        '<div class="pg-card rf-stop' + (msg.urgent ? ' rf-stop--urgent' : '') + '">' +
-          '<div class="rf-stop__title">' + esc(msg.title) + '</div>' +
-          '<div class="rf-stop__body">' + esc(msg.body) + '</div>' +
-          '<ul class="rf-stop__list">' +
-            msg.flags.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join("") +
-          '</ul>' +
-          '<button class="rh-btn rh-btn--ghost rf-stop__clear" data-rf-clear="1">' +
-            'This has resolved — ask me again</button>' +
-        '</div>' +
-        '<div class="pg-card rf-universal">' + esc(RF.UNIVERSAL) + '</div>' +
-      '</div>';
-    }
-
-    return '<div class="pg-light rec">' +
-      '<div class="rec-intro">' +
-        '<div class="rec-intro__title">Before a program is suggested</div>' +
-        '<div class="rec-intro__sub">Tick anything that applies to you right now. If none of ' +
-        'them do, say so and the programs will open.</div>' +
-      '</div>' +
-      '<div class="pg-card rf-check">' +
-        RF.FLAGS.map(function (f) {
-          return '<label class="rf-item">' +
-            '<input type="checkbox" class="rf-item__box" value="' + f.id + '">' +
-            '<span>' + esc(f.label) + '</span>' +
-          '</label>';
-        }).join("") +
-      '</div>' +
-      '<div class="rf-actions">' +
-        '<button class="rh-btn rh-btn--primary" data-rf-submit="none">None of these apply</button>' +
-        '<button class="rh-btn rh-btn--ghost" data-rf-submit="checked">Report what I ticked</button>' +
-      '</div>' +
-      '<div class="pg-card rf-universal">' + esc(RF.UNIVERSAL) + '</div>' +
-    '</div>';
-  }
-
   window.IgnytPages.renderRecommendation = function (ctx) {
     if (!window.IgnytPrograms) {
       return '<div class="pg-light"><div class="pg-card">Programs are still loading.</div></div>';
@@ -148,7 +103,7 @@
       return '<div class="pg-light"><div class="pg-card">The safety check could not load, so ' +
              'programs are not being shown. Restart the app and try again.</div></div>';
     }
-    if (RF.needsCheck()) return redFlagScreen(ctx);
+    if (RF.needsCheck()) return RF.screenHtml(ctx.escHtml, { title: "Before a program is suggested" });
 
     var st = ctx.state;
     if (st.recProgram) return weekView(ctx, st.recProgram, st.recWeek || 1);
