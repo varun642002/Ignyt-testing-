@@ -64,7 +64,48 @@ def _classify(exc: BaseException) -> str:
         if n not in names:
             names.append(n)
         cur = cur.__cause__ or cur.__context__
-    return "unclassified:" + "<".join(names)
+    return "unclassified:" + "<".join(names) + _redacted_detail(exc)
+
+
+def _redacted_detail(exc: BaseException) -> str:
+    """The driver's own message with every part of the connection string removed.
+
+    A class name alone was not enough — `unclassified:ValueError` says the parameters were
+    rejected but not which one, and each guess costs a deploy. The message names the problem
+    exactly; it also names the host, the user, the password and the database, which is why it
+    cannot be returned as-is from an endpoint that needs no authentication.
+
+    So the URL is taken apart and each of its parts is struck out of the text by value. That is
+    the safe direction to work in: rather than trying to recognise what a secret looks like, we
+    remove the specific strings we know are secret. Anything left is the driver's own vocabulary.
+    """
+    from urllib.parse import unquote, urlsplit
+
+    from ..config import get_settings
+
+    message = str(exc)
+    if not message:
+        return ""
+
+    secrets: list[str] = []
+    try:
+        parts = urlsplit(get_settings().database_url)
+        for value in (parts.password, parts.username, parts.hostname, (parts.path or "").lstrip("/")):
+            if value:
+                secrets.append(value)
+                decoded = unquote(value)
+                if decoded != value:
+                    secrets.append(decoded)
+    except Exception:      # noqa: BLE001 — an unparseable URL must not break the health check
+        return ""
+
+    # Longest first, so a hostname is removed before a username that is a substring of it.
+    for secret in sorted(set(secrets), key=len, reverse=True):
+        if len(secret) >= 3:
+            message = message.replace(secret, "[redacted]")
+
+    message = " ".join(message.split())[:160]
+    return " | " + message if message else ""
 
 
 @router.get("/health", response_model=HealthResponse)

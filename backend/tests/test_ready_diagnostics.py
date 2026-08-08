@@ -41,8 +41,10 @@ def test_unrecognised_failure_is_not_guessed_at():
     """No category is invented for a failure that matches none of them — but it still names the
     exception type, because "unknown" tells whoever is holding the outage nothing at all."""
     out = _classify(Exception("something entirely new"))
-    assert out == "unclassified:Exception"
-    assert "something entirely new" not in out
+    assert out.startswith("unclassified:Exception")
+    # The driver's own words are kept — with the connection string struck out of them — because
+    # a category nobody anticipated is exactly the case where the message is the only clue.
+    assert "something entirely new" in out
 
 
 @pytest.mark.parametrize("message", [
@@ -110,3 +112,36 @@ def test_unclassified_chain_is_bounded():
             exc = e
     out = _classify(exc)
     assert len(out) < 80, out
+
+
+def test_redacted_detail_removes_every_part_of_the_connection_string(monkeypatch):
+    """The message is the useful part and the dangerous part. Each component of the URL is
+    struck out by value — removing what we KNOW is secret, rather than guessing what a secret
+    looks like."""
+    import app.api.routes_health as rh
+    from app.config import Settings
+
+    url = "postgresql://ignytuser:sup3rSecret@dpg-xyz-a.oregon-postgres.render.com/ignytprod"
+    monkeypatch.setattr(rh, "get_settings", lambda: Settings(DATABASE_URL=url), raising=False)
+    monkeypatch.setattr("app.config.get_settings", lambda: Settings(DATABASE_URL=url))
+
+    # Deliberately worded so it matches none of the categories above and reaches the fallback —
+    # the earlier draft said "password authentication failed", which classified before it ever
+    # got there and tested nothing.
+    exc = ValueError(
+        "invalid dsn for dpg-xyz-a.oregon-postgres.render.com "
+        "given ignytuser / sup3rSecret / ignytprod"
+    )
+    out = rh._classify(exc)
+    for secret in ["sup3rSecret", "ignytuser", "dpg-xyz-a.oregon-postgres.render.com", "ignytprod"]:
+        assert secret not in out, f"leaked {secret!r}: {out}"
+    assert "invalid dsn" in out            # the diagnostic itself survives redaction
+    assert "[redacted]" in out
+
+
+def test_redacted_detail_is_bounded(monkeypatch):
+    import app.api.routes_health as rh
+    from app.config import Settings
+    monkeypatch.setattr("app.config.get_settings", lambda: Settings(DATABASE_URL="sqlite+aiosqlite:///./x.db"))
+    out = rh._classify(ValueError("x" * 5000))
+    assert len(out) < 220, len(out)
