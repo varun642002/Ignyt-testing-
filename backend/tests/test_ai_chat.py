@@ -209,3 +209,132 @@ def test_the_second_pass_always_uses_the_capable_model():
     s = get_settings()
     assert gemini_chat._pick_model(s, "I ate 200g of chicken",
                                    [{"action": "addFoodLog", "result": {}}]) == s.gemini_model
+
+
+# ================================================================== daily allowance, in depth
+
+
+async def test_failed_gemini_call_does_not_consume_a_slot(client, monkeypatch):
+    """The user must not pay for an answer they never received.
+
+    The first implementation incremented BEFORE calling Gemini, so a timeout burned a slot.
+    """
+    from app.config import get_settings
+
+    s = get_settings()
+    monkeypatch.setattr(s, "ai_chat_daily_limit", 5, raising=False)
+    await _register(client, "u-fail-slot")
+
+    async def boom(**kwargs):
+        raise gemini_chat.AiUnavailable("timeout")
+
+    monkeypatch.setattr(gemini_chat, "chat", boom)
+    for _ in range(3):
+        r = await client.post("/v1/ai/chat", headers={"X-Ignyt-Uid": "u-fail-slot"}, json={"message": "hi"})
+        assert r.status_code == 503
+
+    monkeypatch.setattr(gemini_chat, "chat", _ok_chat)
+    r = await client.post("/v1/ai/chat", headers={"X-Ignyt-Uid": "u-fail-slot"}, json={"message": "hi"})
+    assert r.status_code == 200
+    assert r.json()["usage"]["used_today"] == 1, "three failures should have cost nothing"
+
+
+async def _ok_chat(**kwargs):
+    return {"text": "ok", "toolCalls": []}
+
+
+async def test_limit_boundary_0_14_15_and_16(client, stub_model, monkeypatch):
+    from app.config import get_settings
+
+    s = get_settings()
+    monkeypatch.setattr(s, "ai_chat_daily_limit", 15, raising=False)
+    await _register(client, "u-boundary")
+
+    for i in range(15):
+        r = await client.post("/v1/ai/chat", headers={"X-Ignyt-Uid": "u-boundary"}, json={"message": f"m{i}"})
+        assert r.status_code == 200, f"request {i + 1} of 15 should be allowed"
+        assert r.json()["usage"]["used_today"] == i + 1
+
+    r16 = await client.post("/v1/ai/chat", headers={"X-Ignyt-Uid": "u-boundary"}, json={"message": "one too many"})
+    assert r16.status_code == 429
+    assert r16.json()["error"]["code"] == "ai_daily_limit"
+
+
+async def test_concurrent_requests_cannot_exceed_the_limit(client, stub_model, monkeypatch):
+    """Three requests with one slot left must yield exactly one success.
+
+    Read-then-write would let all three through; the guarded UPDATE is what stops it.
+    """
+    import asyncio
+
+    from app.config import get_settings
+
+    s = get_settings()
+    monkeypatch.setattr(s, "ai_chat_daily_limit", 3, raising=False)
+    await _register(client, "u-race")
+
+    for _ in range(2):
+        assert (await client.post("/v1/ai/chat", headers={"X-Ignyt-Uid": "u-race"},
+                                  json={"message": "x"})).status_code == 200
+
+    results = await asyncio.gather(*[
+        client.post("/v1/ai/chat", headers={"X-Ignyt-Uid": "u-race"}, json={"message": f"burst{i}"})
+        for i in range(3)
+    ])
+    codes = sorted(r.status_code for r in results)
+    assert codes.count(200) == 1, f"exactly one should win the last slot, got {codes}"
+    assert codes.count(429) == 2
+
+
+async def test_usage_endpoint_reports_without_spending(client, stub_model, monkeypatch):
+    from app.config import get_settings
+
+    s = get_settings()
+    monkeypatch.setattr(s, "ai_chat_daily_limit", 15, raising=False)
+    await _register(client, "u-usage")
+
+    await client.post("/v1/ai/chat", headers={"X-Ignyt-Uid": "u-usage"}, json={"message": "hi"})
+    first = await client.get("/v1/ai/usage", headers={"X-Ignyt-Uid": "u-usage"})
+    second = await client.get("/v1/ai/usage", headers={"X-Ignyt-Uid": "u-usage"})
+
+    assert first.status_code == 200
+    b = first.json()
+    assert (b["daily_limit"], b["used_today"], b["remaining_today"]) == (15, 1, 14)
+    assert b["reset_at"]
+    assert second.json()["used_today"] == 1, "reading usage must not consume a slot"
+
+
+async def test_usage_requires_auth(client):
+    assert (await client.get("/v1/ai/usage")).status_code == 401
+
+
+async def test_timezone_gives_each_user_their_own_day(client, stub_model, monkeypatch):
+    """Kolkata's day boundary is not UTC's. A user must not reset at 05:30 local."""
+    from app.config import get_settings
+
+    s = get_settings()
+    monkeypatch.setattr(s, "ai_chat_daily_limit", 15, raising=False)
+    await _register(client, "u-tz")
+
+    await client.post("/v1/ai/chat", headers={"X-Ignyt-Uid": "u-tz"},
+                      json={"message": "hi", "timezone": "Asia/Kolkata"})
+    kolkata = await client.get("/v1/ai/usage?tz=Asia/Kolkata", headers={"X-Ignyt-Uid": "u-tz"})
+    assert kolkata.json()["used_today"] == 1
+    # An unparseable zone must degrade to UTC, never 500.
+    junk = await client.get("/v1/ai/usage?tz=Not/AZone", headers={"X-Ignyt-Uid": "u-tz"})
+    assert junk.status_code == 200
+
+
+async def test_a_new_day_starts_at_zero(client, stub_model, monkeypatch):
+    """The reset is implicit — a new day simply has no row. Nothing runs at midnight."""
+    from datetime import date, timedelta
+
+    from app.api import routes_ai
+
+    await _register(client, "u-newday")
+    await client.post("/v1/ai/chat", headers={"X-Ignyt-Uid": "u-newday"}, json={"message": "hi"})
+
+    real = routes_ai._local_day
+    monkeypatch.setattr(routes_ai, "_local_day", lambda tz: real(tz) + timedelta(days=1))
+    tomorrow = await client.get("/v1/ai/usage", headers={"X-Ignyt-Uid": "u-newday"})
+    assert tomorrow.json()["used_today"] == 0

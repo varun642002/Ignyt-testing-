@@ -1914,6 +1914,9 @@ const state = {
   aiListening: false,
   aiPending: null,      // a destructive call waiting on the user's yes
   aiLastUser: null,     // what Retry re-sends
+  /* Server-reported allowance. DISPLAY ONLY — the count that matters lives in the
+     database, so clearing storage changes what is shown and nothing else. */
+  aiUsage: null,
   exerciseMenuOpen: null,
   /* Transient — "exi|si" of the set whose type picker is open, or null. Cycling through four
      types to reach the one you wanted meant up to three taps and a re-render each; this picks
@@ -18452,6 +18455,7 @@ function attachHandlers(){
         state.aiPending = { action:ev.action, args:ev.args };
         state.aiChat.push({ role:"confirm", text:"Delete this? It can't be undone." });
       }
+      else if(ev.type === "usage") state.aiUsage = ev.usage;
       else if(ev.type === "actionError") state.aiChat.push({ role:"assistant", text:ev.error });
     };
 

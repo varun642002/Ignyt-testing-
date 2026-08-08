@@ -124,7 +124,11 @@
     var history = opts.history || [];
 
     var context = await pickContext(message);
-    var reply = await post({ message: message, context: context, history: history });
+    /* The device's own zone decides when the daily allowance rolls over. Sent rather than
+       inferred server-side because the server's midnight is not the user's. */
+    var tz = null;
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch (e) {}
+    var reply = await post({ message: message, context: context, history: history, timezone: tz });
 
     var rounds = 0;
     while (reply.toolCalls && reply.toolCalls.length && rounds < MAX_TOOL_ROUNDS) {
@@ -155,11 +159,12 @@
 
       /* Second pass: the model reads what actually happened and writes the sentence. This is
          the same user turn, so the server does not charge it against the daily allowance. */
-      reply = await post({ message: message, context: null, history: history, toolResults: results });
+      reply = await post({ message: message, context: null, history: history, toolResults: results, timezone: tz });
     }
 
+    if (reply.usage) onEvent({ type: "usage", usage: reply.usage });
     if (reply.text) onEvent({ type: "text", text: reply.text });
-    return { text: reply.text || null, remaining: reply.remaining };
+    return { text: reply.text || null, remaining: reply.remaining, usage: reply.usage };
   }
 
   /** Run a previously-gated destructive action. Only reached after the user says yes. */

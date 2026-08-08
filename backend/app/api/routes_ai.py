@@ -18,12 +18,14 @@ WHAT IT DELIBERATELY DOES NOT DO
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth.deps import current_user
@@ -69,6 +71,9 @@ class ChatRequest(BaseModel):
     context: Optional[Dict[str, Any]] = None
     history: List[HistoryTurn] = Field(default_factory=list, max_length=10)
     toolResults: Optional[List[ToolResult]] = Field(default=None, max_length=6)
+    # IANA zone, e.g. "Asia/Kolkata". Client-asserted on purpose — see _local_day: a forged
+    # zone shifts WHEN the day rolls over, never how many requests a day holds.
+    timezone: Optional[str] = Field(default=None, max_length=64)
 
     @field_validator("context")
     @classmethod
@@ -82,43 +87,105 @@ class ChatRequest(BaseModel):
         return v
 
 
+class Usage(BaseModel):
+    daily_limit: int
+    used_today: int
+    remaining_today: int
+
+
 class ChatResponse(BaseModel):
     text: Optional[str] = None
     toolCalls: List[Dict[str, Any]] = Field(default_factory=list)
-    remaining: int
+    remaining: int          # kept for the existing client; same number as usage.remaining_today
+    usage: Usage
     dropped: List[str] = Field(default_factory=list)
+
+
+class UsageResponse(BaseModel):
+    daily_limit: int
+    used_today: int
+    remaining_today: int
+    reset_at: str
 
 
 # ---------------------------------------------------------------------------- usage
 
 
-async def _consume_allowance(db: AsyncSession, user: User, limit: int) -> int:
-    """Count one message against today's allowance and return what is left.
+def _local_day(tz_name: Optional[str]) -> date:
+    """The user's own calendar date.
 
-    Reuses ai_scan_usage rather than adding a table. One row per user per UTC day already
-    exists with exactly the semantics needed, and the reset stays implicit — a new day has no
-    row, so nothing has to run at midnight. Scans and chats share the row's counter only if
-    both are enabled; they are separate products today, and if that changes this wants its
-    own column rather than a second table.
+    The counter resets at THEIR midnight, not the server's. A user in Kolkata is 5.5 hours
+    ahead of UTC, so a UTC day boundary would have reset their allowance mid-afternoon and
+    again the following morning — visible as "my AI reset at 5:30am" or, worse, an allowance
+    that appeared to reset twice. The timezone is client-asserted, which is fine: the worst a
+    forged one buys is a reset at a different hour, not extra requests, because the count is
+    still per-day and the day still advances exactly once every 24 hours.
     """
-    today = date.today()
+    if tz_name:
+        try:
+            return datetime.now(ZoneInfo(str(tz_name)[:64])).date()
+        except Exception:
+            pass                      # unknown zone -> fall through to UTC rather than 500
+    return datetime.now(timezone.utc).date()
+
+
+async def _read_usage(db: AsyncSession, user: User, day: date) -> int:
     row = (
         await db.execute(
-            select(AiScanUsage).where(AiScanUsage.user_id == user.id, AiScanUsage.day == today)
+            select(AiScanUsage).where(AiScanUsage.user_id == user.id, AiScanUsage.day == day)
         )
     ).scalar_one_or_none()
+    return row.count if row else 0
 
-    used = row.count if row else 0
-    if used >= limit:
-        raise DailyLimitReached(f"You've used today's {limit} AI messages. It resets at midnight UTC.")
 
-    if row is None:
-        row = AiScanUsage(user_id=user.id, day=today, count=1)
-        db.add(row)
-    else:
-        row.count = used + 1
-    await db.commit()
-    return max(0, limit - (used + 1))
+async def _consume_slot(db: AsyncSession, user: User, day: date, limit: int) -> bool:
+    """Take one slot for `day`. True if taken, False if the limit was already reached.
+
+    CONCURRENCY IS THE WHOLE POINT OF THIS FUNCTION. Read-then-write loses the race: three
+    requests arriving together all read 14, all decide there is room, and all write 15 — the
+    user gets 17 for the price of 15. The fix is to let the DATABASE do the compare and the
+    increment in one statement and then believe its rowcount.
+
+        UPDATE ... SET count = count + 1 WHERE user_id=? AND day=? AND count < limit
+
+    Exactly one concurrent statement can move the row from 14 to 15; the others match zero
+    rows because the guard is evaluated under the row lock. rowcount is therefore the answer
+    to "did I get a slot", not a hint.
+
+    The INSERT path races too — two first-ever requests can both find no row — so a unique
+    violation on (user_id, day) is treated as "someone else created it" and retried as an
+    update rather than surfaced as an error. That uniqueness is already declared on the table.
+    """
+    upd = (
+        update(AiScanUsage)
+        .where(
+            AiScanUsage.user_id == user.id,
+            AiScanUsage.day == day,
+            AiScanUsage.count < limit,
+        )
+        .values(count=AiScanUsage.count + 1)
+    )
+    res = await db.execute(upd)
+    if res.rowcount:
+        await db.commit()
+        return True
+
+    # No row updated: either there is no row yet, or the limit is genuinely reached.
+    if await _read_usage(db, user, day) >= limit:
+        await db.rollback()
+        return False
+
+    try:
+        db.add(AiScanUsage(user_id=user.id, day=day, count=1))
+        await db.commit()
+        return True
+    except IntegrityError:
+        # Another request created the row between our read and our insert. Retry as an update,
+        # which re-applies the same guarded compare.
+        await db.rollback()
+        res = await db.execute(upd)
+        await db.commit()
+        return bool(res.rowcount)
 
 
 # ---------------------------------------------------------------------------- route
@@ -137,10 +204,19 @@ async def ai_chat(
     again with toolResults, and THAT second call does not spend another unit of the daily
     allowance — it is the same user message. Only a request without toolResults counts.
     """
+    limit = settings.ai_chat_daily_limit
+    day = _local_day(body.timezone)
     is_continuation = bool(body.toolResults)
-    remaining = settings.ai_chat_daily_limit
-    if not is_continuation:
-        remaining = await _consume_allowance(db, user, settings.ai_chat_daily_limit)
+
+    # CHECK BEFORE, COUNT AFTER. The first version incremented up front, which meant a Gemini
+    # timeout or a 503 still burned a slot — the user paid for an answer they never got. So
+    # the pre-flight only READS: it refuses at the limit without calling Gemini at all, which
+    # is the other half of the requirement (a rejected request must not cost anything either).
+    used = await _read_usage(db, user, day)
+    if not is_continuation and used >= limit:
+        raise DailyLimitReached(
+            f"You've used today's {limit} AI Coach activities. Your AI Coach resets tomorrow."
+        )
 
     out = await gemini_chat.chat(
         settings=settings,
@@ -149,6 +225,19 @@ async def ai_chat(
         history=[t.model_dump() for t in body.history],
         tool_results=[t.model_dump() for t in (body.toolResults or [])],
     )
+
+    # Gemini answered. NOW take the slot — and take it atomically, because between the read
+    # above and this line other requests from the same user may have used the remainder.
+    if not is_continuation:
+        if not await _consume_slot(db, user, day, limit):
+            # Lost the race: the allowance went while this call was in flight. The answer is
+            # discarded rather than served, because serving it would put the user at 16.
+            raise DailyLimitReached(
+                f"You've used today's {limit} AI Coach activities. Your AI Coach resets tomorrow."
+            )
+        used += 1
+
+    remaining = max(0, limit - used)
 
     # THE ALLOW-LIST. A model can name a function that does not exist — it is a language
     # model, not a compiler — and the device would refuse it anyway, but a refusal that
@@ -169,5 +258,31 @@ async def ai_chat(
         text=out.get("text"),
         toolCalls=kept,
         remaining=remaining,
+        usage=Usage(daily_limit=limit, used_today=used, remaining_today=remaining),
         dropped=dropped,
+    )
+
+
+@router.get("/ai/usage", response_model=UsageResponse)
+async def ai_usage(
+    tz: Optional[str] = None,
+    user: User = Depends(current_user),
+    settings: Settings = Depends(get_settings),
+    db: AsyncSession = Depends(get_db),
+) -> UsageResponse:
+    """Today's allowance, so the screen can show it without spending one to find out."""
+    limit = settings.ai_chat_daily_limit
+    day = _local_day(tz)
+    used = await _read_usage(db, user, day)
+    # Midnight at the START of the next local day, in that same zone.
+    try:
+        zone = ZoneInfo(str(tz)[:64]) if tz else timezone.utc
+    except Exception:
+        zone = timezone.utc
+    reset = datetime.combine(day + timedelta(days=1), datetime.min.time()).replace(tzinfo=zone)
+    return UsageResponse(
+        daily_limit=limit,
+        used_today=used,
+        remaining_today=max(0, limit - used),
+        reset_at=reset.isoformat(),
     )

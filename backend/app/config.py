@@ -93,7 +93,7 @@ class Settings(BaseSettings):
     # Messages per user per UTC day. Counted in the same ai_usage table as scans, so the reset
     # is implicit: a new day has no row. Generous enough that a real conversation never hits
     # it, low enough that a stuck client loop cannot run up a bill overnight.
-    ai_chat_daily_limit: int = Field(default=60, alias="AI_CHAT_DAILY_LIMIT")
+    ai_chat_daily_limit: int = Field(default=15, alias="AI_CHAT_DAILY_LIMIT")
     # A second-pass call (the model reading tool results and writing the reply) is part of the
     # same user turn, so it must not consume a second unit of the daily allowance. This caps
     # how many round trips one turn may take before the server stops and answers with what it

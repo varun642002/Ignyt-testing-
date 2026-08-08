@@ -151,14 +151,30 @@
         '</div></div>';
     }
 
+    var u = st.aiUsage;
     var empty = !chat.length;
     var hour = new Date().getHours();
     var greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
     var name = (st.profile && st.profile.name) ? st.profile.name : null;
 
     return '<div class="pg-light aic">' +
-      '<div class="aic-head"><div class="aic-head__title">IGNYT AI</div>' +
-        '<div class="aic-head__sub">Your coach. Ask, or just tell it what you did.</div></div>' +
+      '<div class="aic-head">' +
+        '<div class="aic-head__row">' +
+          '<div class="aic-head__title">IGNYT AI</div>' +
+          /* Quiet by default and only loud when it matters. A counter that shouts from the
+             first message trains people to feel metered; one that stays grey until three are
+             left is information rather than pressure. The number is SERVER-REPORTED and is
+             display only — the count that governs anything lives in the database, so clearing
+             storage changes what is shown here and nothing else. */
+          (u ? '<span class="aic-usage' + (u.remaining_today <= 0 ? ' is-spent'
+                                        : u.remaining_today <= 3 ? ' is-low' : '') + '">' +
+                 u.used_today + ' / ' + u.daily_limit + ' today</span>' : '') +
+        '</div>' +
+        '<div class="aic-head__sub">' +
+          (u && u.remaining_today <= 0
+            ? 'Your AI Coach resets tomorrow.'
+            : 'Your coach. Ask, or just tell it what you did.') +
+        '</div></div>' +
 
       '<div class="aic-scroll" id="ai-scroll">' +
         (empty

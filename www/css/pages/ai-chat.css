@@ -123,3 +123,11 @@
 
 .aic-hello__line { font-size:var(--text-body); color:var(--rh-text); margin:6px 0 12px;
                    font-weight:var(--weight-bold); }
+
+/* Daily allowance. Grey while there is plenty, amber near the end, muted once spent — the
+   colour is the whole message, so the number never needs to be large to be noticed. */
+.aic-head__row { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.aic-usage { flex:none; font-size:var(--text-caption); font-weight:var(--weight-bold);
+             color:var(--rh-muted); font-variant-numeric:tabular-nums; }
+.aic-usage.is-low   { color:#D97706; }
+.aic-usage.is-spent { color:var(--rh-muted); opacity:.75; }
