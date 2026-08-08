@@ -53,7 +53,16 @@ window.IgnytEntitlements = (function () {
    * back, what is gated is new capability, never access to their own data — an app that holds
    * someone's workout history hostage earns the review it gets, and Play takes a dim view of
    * it too. */
-  var PREMIUM_FEATURES = {};
+  /* GATING IS ON FOR THE AI COACH ONLY.
+   *
+   * Restoring a name to this map is the only switch, exactly as the note above describes.
+   * "coach" is listed and nothing else is, so every other feature stays free and the paywall
+   * becomes reachable again — the upgrade wall is its only route, which is a product
+   * consequence of turning this on, not a side effect worth hiding.
+   *
+   * Free tier still keeps everything the user creates and logs. What is gated is the new
+   * capability, never access to their own data. */
+  var PREMIUM_FEATURES = { coach: "AI Coach" };
 
   var PRODUCT_ID = "ignyt_premium";
   var CACHE_KEY = "hx_entitlement";

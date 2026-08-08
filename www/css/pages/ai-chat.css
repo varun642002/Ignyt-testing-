@@ -1,0 +1,112 @@
+/* IGNYT AI chat screen.
+
+   The transcript scrolls inside its own box rather than the page, so the input bar and the
+   quick actions stay put while the conversation grows — a chat where the send button walks
+   off the bottom is a chat you have to scroll to reply to. */
+
+.aic { display:flex; flex-direction:column; gap:10px; min-height:0; }
+
+.aic-head__title { font-size:var(--text-display); font-weight:var(--weight-numeric); color:var(--rh-text); }
+.aic-head__sub   { font-size:var(--text-body-sm); color:var(--rh-muted); margin-top:2px; }
+
+.aic-scroll {
+  flex:1; min-height:180px; max-height:52vh; overflow-y:auto;
+  display:flex; flex-direction:column; gap:8px; padding:2px;
+  scroll-behavior:smooth;
+}
+
+.aic-hello { padding:26px 4px; }
+.aic-hello__greet { font-size:var(--text-heading); font-weight:var(--weight-bold); color:var(--rh-text); }
+.aic-hello__sub   { font-size:var(--text-body); color:var(--rh-muted); margin-top:4px; }
+
+/* Bubbles. Capped at 88% so the two sides stay visually distinct even when both are short. */
+.aic-msg {
+  max-width:88%; padding:10px 13px; border-radius:var(--radius-md);
+  font-size:var(--text-body-sm); line-height:var(--leading-snug); white-space:pre-wrap;
+}
+.aic-msg--me { align-self:flex-end; background:var(--rh-blue); color:#fff; border-bottom-right-radius:6px; }
+.aic-msg--ai { align-self:flex-start; background:var(--rh-card); color:var(--rh-text);
+               border:1px solid var(--rh-border); border-bottom-left-radius:6px; }
+
+/* An action card states what the app DID. It leads with the number because that is the thing
+   worth reading; the model's sentence sits underneath and stays short. */
+.aic-card {
+  align-self:flex-start; min-width:170px; max-width:88%;
+  background:var(--rh-card); border:1px solid var(--rh-border);
+  border-left:3px solid var(--rh-blue);
+  border-radius:var(--radius-md); padding:11px 13px;
+}
+.aic-card__head { display:flex; align-items:center; gap:6px; color:var(--rh-blue);
+                  font-size:var(--text-label); font-weight:var(--weight-bold);
+                  text-transform:uppercase; letter-spacing:.04em; margin-bottom:5px; }
+.aic-card__big  { font-size:var(--text-heading); font-weight:var(--weight-numeric);
+                  color:var(--rh-text); font-variant-numeric:tabular-nums; line-height:1.15; }
+.aic-card__sub  { font-size:var(--text-body-sm); color:var(--rh-muted); margin-top:2px; }
+.aic-card__note { font-size:var(--text-caption); color:var(--rh-muted); margin-top:6px;
+                  padding-top:6px; border-top:1px solid var(--rh-border); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .aic-card, .aic-msg { animation:aic-in .18s ease-out; }
+}
+@keyframes aic-in { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+
+/* Destructive confirmation. Never auto-dismisses and has no default — the user has to pick. */
+.aic-confirm { align-self:flex-start; max-width:88%; background:var(--rh-card);
+               border:1px solid var(--rh-border); border-radius:var(--radius-md); padding:12px; }
+.aic-confirm__q   { font-size:var(--text-body-sm); color:var(--rh-text); margin-bottom:9px; }
+.aic-confirm__row { display:flex; gap:8px; }
+
+.aic-error { align-self:flex-start; display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+             background:var(--rh-card); border:1px solid var(--rh-border);
+             border-left:3px solid #EF4444; border-radius:var(--radius-md);
+             padding:10px 12px; font-size:var(--text-body-sm); color:var(--rh-text); }
+.aic-retry { background:none; border:none; color:var(--rh-blue); font:inherit;
+             font-weight:var(--weight-bold); cursor:pointer; padding:0; }
+
+/* Three dots. Deliberately not a spinner: a spinner reads as "loading a page", this reads as
+   "someone is composing a reply", which is what is actually happening. */
+.aic-typing { align-self:flex-start; display:flex; gap:4px; padding:11px 14px;
+              background:var(--rh-card); border:1px solid var(--rh-border);
+              border-radius:var(--radius-md); }
+.aic-typing i { width:6px; height:6px; border-radius:50%; background:var(--rh-muted); opacity:.4; }
+@media (prefers-reduced-motion: no-preference) {
+  .aic-typing i { animation:aic-blink 1.1s infinite; }
+  .aic-typing i:nth-child(2) { animation-delay:.15s; }
+  .aic-typing i:nth-child(3) { animation-delay:.3s; }
+}
+@keyframes aic-blink { 0%,60%,100% { opacity:.25; } 30% { opacity:1; } }
+
+.aic-quick { display:flex; gap:7px; overflow-x:auto; padding:2px 0 1px; scrollbar-width:none; }
+.aic-quick::-webkit-scrollbar { display:none; }
+.aic-quick--inline { margin-top:-2px; }
+.aic-chip { flex:none; display:inline-flex; align-items:center; gap:5px;
+            padding:8px 12px; border-radius:var(--radius-pill);
+            border:1px solid var(--rh-border); background:var(--rh-card); color:var(--rh-text);
+            font:inherit; font-size:var(--text-label); font-weight:var(--weight-bold); cursor:pointer; }
+.aic-chip:active { background:var(--rh-bg); }
+
+.aic-bar { display:flex; align-items:center; gap:8px; }
+.aic-input {
+  flex:1; min-width:0; padding:12px 14px; border-radius:var(--radius-pill);
+  border:1px solid var(--rh-border); background:var(--rh-card); color:var(--rh-text);
+  /* 16px floor: anything smaller makes iOS Safari zoom the whole page when the field
+     takes focus, which this app fixed everywhere else and must not reintroduce here. */
+  font:inherit; font-size:16px;
+}
+.aic-mic, .aic-send {
+  flex:none; width:44px; height:44px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  border:1px solid var(--rh-border); background:var(--rh-card); color:var(--rh-text); cursor:pointer;
+}
+.aic-send { background:var(--rh-blue); border-color:var(--rh-blue); color:#fff; }
+.aic-mic.is-live { background:var(--rh-blue); border-color:var(--rh-blue); color:#fff; }
+@media (prefers-reduced-motion: no-preference) {
+  .aic-mic.is-live { animation:aic-pulse 1.3s ease-in-out infinite; }
+}
+@keyframes aic-pulse { 0%,100% { box-shadow:0 0 0 0 rgba(37,99,235,.45); }
+                       50%     { box-shadow:0 0 0 7px rgba(37,99,235,0); } }
+
+.aic-locked { text-align:center; padding:30px 20px; }
+.aic-locked__icon  { color:var(--rh-muted); margin-bottom:10px; }
+.aic-locked__title { font-size:var(--text-heading); font-weight:var(--weight-numeric); color:var(--rh-text); }
+.aic-locked__sub   { font-size:var(--text-body-sm); color:var(--rh-muted); margin:6px 0 16px; }

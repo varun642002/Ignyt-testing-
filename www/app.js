@@ -1906,6 +1906,14 @@ const state = {
   viewingLegal: null, // "privacy" | "terms" | "disclaimer" | null -- see renderLegalViewer()
   viewingPrivacyInfo: false,
   csvImportPreview: null,
+  /* AI chat. Transient by design — the transcript is a conversation, not a record, and
+     persisting it would mean a stale "log my weight as 96.8" sitting on screen days later
+     next to a card claiming it just happened. */
+  aiChat: [],
+  aiBusy: false,
+  aiListening: false,
+  aiPending: null,      // a destructive call waiting on the user's yes
+  aiLastUser: null,     // what Retry re-sends
   exerciseMenuOpen: null,
   /* Transient — "exi|si" of the set whose type picker is open, or null. Cycling through four
      types to reach the one you wanted meant up to three taps and a re-render each; this picks
@@ -7403,7 +7411,7 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="recommendation" || state.tab==="safety" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","workouts","calendar"].includes(state.progressView)))
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="recommendation" || state.tab==="ai" || state.tab==="safety" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","workouts","calendar"].includes(state.progressView)))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || state.bodyView==="calculators" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
@@ -7458,6 +7466,8 @@ function renderApp(){
   if(state.tab==="nutrition") main.innerHTML = renderNutritionTab();
   if(state.tab==="progress") main.innerHTML = renderProgressTab();
   if(state.tab==="ai-coach") main.innerHTML = renderAiCoachTab();
+  if(state.tab==="ai") main.innerHTML = (window.IgnytPages && IgnytPages.renderAIChat)
+    ? IgnytPages.renderAIChat({ state, svg, escHtml }) : "";
   if(state.tab==="settings") main.innerHTML = renderSettingsTab();
   if(state.tab==="health") main.innerHTML = renderHealthDashboard();
   if(state.tab==="healthhub") main.innerHTML = window.IgnytHealthDashboard ? window.IgnytHealthDashboard.render() : "";
@@ -18405,6 +18415,131 @@ function attachHandlers(){
     state.routines.unshift(rec);
     return rec;
   }
+
+
+  /* ---- IGNYT AI chat ------------------------------------------------------------------
+     One send path. The quick chips, the Enter key and the send button all call it, so there
+     is one place where a turn begins and one place it can go wrong. */
+  async function aiSend(text){
+    const msg = String(text || "").trim();
+    if(!msg || state.aiBusy) return;
+    state.aiLastUser = msg;
+    state.aiChat.push({ role:"user", text:msg });
+    state.aiBusy = true;
+    renderInPlace();
+    aiScrollToEnd();
+
+    const push = ev => {
+      if(ev.type === "text")        state.aiChat.push({ role:"assistant", text:ev.text });
+      else if(ev.type === "card")   state.aiChat.push({ role:"card", result:ev.result });
+      else if(ev.type === "clarify")state.aiChat.push({ role:"clarify", result:ev.result });
+      else if(ev.type === "confirm"){
+        state.aiPending = { action:ev.action, args:ev.args };
+        state.aiChat.push({ role:"confirm", text:"Delete this? It can't be undone." });
+      }
+      else if(ev.type === "actionError") state.aiChat.push({ role:"assistant", text:ev.error });
+    };
+
+    try{
+      /* Only the last few turns are sent, and only the text — the cards are a local
+         rendering of what happened, not something the model needs read back to it. */
+      const history = state.aiChat.filter(e => e.role === "user" || e.role === "assistant")
+        .slice(-7, -1).map(e => ({ role: e.role === "user" ? "user" : "assistant", text: e.text }));
+      await IgnytAIService.ask(msg, { history, onEvent: push });
+    }catch(e){
+      state.aiChat.push({ role:"error", text: (e && e.message) || "AI is unavailable right now." });
+    }finally{
+      state.aiBusy = false;
+      renderInPlace();
+      aiScrollToEnd();
+    }
+  }
+
+  /* The transcript scrolls in its own box, so this cannot use the page scroller. rAF because
+     the new bubble has no height until the browser has laid it out. */
+  function aiScrollToEnd(){
+    requestAnimationFrame(()=>{
+      const el = document.getElementById("ai-scroll");
+      if(el) el.scrollTop = el.scrollHeight;
+    });
+  }
+
+  document.querySelectorAll("[data-ai-send]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const inp = document.getElementById("ai-input");
+      if(inp){ const v = inp.value; inp.value = ""; aiSend(v); }
+    });
+  });
+  const aiInput = document.getElementById("ai-input");
+  if(aiInput) aiInput.addEventListener("keydown", e=>{
+    if(e.key === "Enter"){ e.preventDefault(); const v = aiInput.value; aiInput.value = ""; aiSend(v); }
+  });
+  document.querySelectorAll("[data-ai-say]").forEach(el=>{
+    el.addEventListener("click", ()=> aiSend(el.dataset.aiSay));
+  });
+  document.querySelectorAll("[data-ai-retry]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      // Drop the error bubble first so a second failure does not stack two of them.
+      state.aiChat = state.aiChat.filter(e => e.role !== "error");
+      const last = state.aiLastUser;
+      // The failed user message is already in the transcript; re-sending would duplicate it.
+      const i = state.aiChat.map(e=>e.role).lastIndexOf("user");
+      if(i >= 0) state.aiChat.splice(i, 1);
+      aiSend(last);
+    });
+  });
+  document.querySelectorAll("[data-ai-confirm]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const yes = el.dataset.aiConfirm === "yes";
+      const pending = state.aiPending;
+      state.aiPending = null;
+      state.aiChat = state.aiChat.filter(e => e.role !== "confirm");
+      if(!yes || !pending){
+        state.aiChat.push({ role:"assistant", text:"Left it alone." });
+        return renderInPlace();
+      }
+      await IgnytAIService.confirm(pending, { onEvent: ev=>{
+        if(ev.type === "card") state.aiChat.push({ role:"card", result:ev.result });
+        else state.aiChat.push({ role:"assistant", text: ev.error || "Couldn't do that." });
+      }});
+      renderInPlace();
+    });
+  });
+
+  /* VOICE. Web Speech where it exists, which on Android WebView and desktop Chrome it does.
+     Recording is never continuous: one tap starts it, the recogniser stops itself at the end
+     of an utterance, and the transcript is sent as if it had been typed — so voice reaches
+     exactly the same validation and confirmation path as text, with no second code path that
+     could disagree about what needs confirming. */
+  document.querySelectorAll("[data-ai-mic]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if(!SR){
+        state.aiChat.push({ role:"error", text:"Voice isn't available on this device. Type instead." });
+        return renderInPlace();
+      }
+      if(state.aiListening && window._aiRec){ try{ window._aiRec.stop(); }catch(e){} return; }
+      const rec = new SR();
+      window._aiRec = rec;
+      rec.lang = navigator.language || "en-US";
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      rec.onresult = ev=>{
+        const said = ev.results && ev.results[0] && ev.results[0][0] && ev.results[0][0].transcript;
+        state.aiListening = false;
+        if(said) aiSend(said); else renderInPlace();
+      };
+      rec.onerror = ev=>{
+        state.aiListening = false;
+        state.aiChat.push({ role:"error",
+          text: ev.error === "not-allowed" ? "Microphone permission is off." : "Couldn't hear that." });
+        renderInPlace();
+      };
+      rec.onend = ()=>{ if(state.aiListening){ state.aiListening = false; renderInPlace(); } };
+      try{ rec.start(); state.aiListening = true; renderInPlace(); }
+      catch(e){ state.aiListening = false; renderInPlace(); }
+    });
+  });
 
   document.querySelectorAll("[data-add-day]").forEach(el=>{
     el.addEventListener("click", ()=>{
