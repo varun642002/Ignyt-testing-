@@ -488,9 +488,29 @@ body.kb-open nav.bottom-nav{transform:translate(-50%, 100%);}
 /* gap is 0 on the bar so each button is exactly 1/5 of the track and the indicator can be
    positioned with a plain percentage translate -- no measuring, no resize listener, and it
    stays correct through rotation and split screen. */
-.nav-ind{position:absolute; top:6px; bottom:6px; left:6px; z-index:0;
+/* THE SLIDING LENS. A flat 10%-white pill before, which read as a smudge once the bar itself
+   went transparent — there was nothing left for it to contrast against. It is a piece of glass
+   now: it takes what is behind it, blurs and brightens it, and carries a chromatic rim.
+
+   Four layers make glass read as glass, and it needs all four:
+     backdrop-filter   the refraction. blur so the content beneath softens, saturate+brightness
+                       so it looks lit from inside rather than fogged.
+     inset highlight   a bright top edge and a dimmer bottom one — the two edges every real
+                       lens has, and the cheapest cue that something is raised.
+     drop shadow       small and tight, so the lens sits ON the bar rather than floating.
+     chromatic rim     ::before, below. A lens splits light at its edge; without that the shape
+                       is just a lighter oval.
+
+   backdrop-filter is affordable HERE where it was not on the bar: this is one small element
+   that moves on the compositor, not a full-width surface over a scrolling list. */
+.nav-ind{position:absolute; top:5px; bottom:5px; left:6px; z-index:0;
     width:calc((100% - 12px) / var(--nav-count, 5));
-    border-radius:999px; background:rgba(255,255,255,.10);
+    border-radius:999px;
+    background:rgba(255,255,255,.13);
+    backdrop-filter:blur(3px) saturate(190%) brightness(1.18);
+    -webkit-backdrop-filter:blur(3px) saturate(190%) brightness(1.18);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.5), inset 0 -1px 0 rgba(255,255,255,.14),
+               0 2px 8px rgba(0,0,0,.28);
     transform:translateX(calc(var(--nav-i, 0) * 100%));
     opacity:0; pointer-events:none;
     /* Apple's own tab curve: a hard front-load then a long settle, so it reads as fast while
@@ -499,6 +519,19 @@ body.kb-open nav.bottom-nav{transform:translate(-50%, 100%);}
     transition:transform .38s cubic-bezier(.32,.72,0,1), opacity .2s ease;}
 nav.bottom-nav.has-active .nav-ind{opacity:1;}
 
+/* The chromatic rim. A gradient BORDER, which CSS has no property for — the two masks below
+   punch the middle out of a filled box and leave a 1px ring of the gradient, so the colour sits
+   only on the edge and never washes over the icon under it.
+   Low alphas on purpose: a lens edge catches colour, it is not a rainbow. */
+.nav-ind::before{content:""; position:absolute; inset:-1px; border-radius:inherit;
+    padding:1.2px; pointer-events:none;
+    background:conic-gradient(from 200deg,
+        rgba(255,88,132,.55), rgba(255,206,84,.45), rgba(84,255,205,.45),
+        rgba(96,150,255,.55), rgba(255,88,132,.55));
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;
+    mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite:exclude;}
 /* While a finger is on the bar the pill is being repositioned every frame, so a transition
    would only hold it behind the finger by its own duration. Off for the gesture, back on for
    the settle when the finger lifts — which is what makes the release feel like it lands. */
