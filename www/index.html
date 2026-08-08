@@ -819,6 +819,10 @@ main{overflow-x:hidden;}
 <script defer src="js/workout/exercise-images.js"></script>
 <script defer src="js/workout/muscle-map.js"></script>
 <script defer src="js/workout/exercise-instructions.js"></script>
+<!-- Hand-written steps. Loaded after the generated file and merged after it in app.js, so a
+     re-import replaces the imported entries and leaves these alone. Both are defer, so they
+     execute in document order and app.js (further down) sees both. -->
+<script defer src="js/workout/exercise-instructions-extra.js"></script>
 <script defer src="js/supplements/supplements.js"></script>
 <script defer src="js/pages/supplements.js"></script>
 <script defer src="js/config.js"></script>

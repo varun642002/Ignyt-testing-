@@ -712,13 +712,42 @@ const EXERCISE_DETAILS = {};
 
    Keys are exact library names. The importer matched on name alone and cross-checked every
    match against the muscle the library records; nothing was matched by similarity. */
-if (window.IgnytExerciseInstructions) {
-  Object.keys(window.IgnytExerciseInstructions).forEach(function (name) {
-    var steps = window.IgnytExerciseInstructions[name];
+/* Two sources, merged in this order: the generated import first, then the hand-written
+   additions in exercise-instructions-extra.js, which therefore WIN on a collision.
+
+   The order is the point. The generated file is regenerated wholesale by an importer and says
+   in its own header that hand edits to it are lost, so anything written by a person has to sit
+   outside it — and when a later import happens to ship steps for a movement someone already
+   wrote up, the reviewed version is the one to keep.
+
+   A key in either file that is not an exact LIBRARY name attaches to nothing and fails
+   silently: no error, just an exercise that still shows no How-To. That is the failure mode
+   worth a console warning, so unmatched keys are counted and named rather than ignored. */
+function loadExerciseInstructions(source, label, knownNames) {
+  if (!source) return;
+  var unmatched = [];
+  Object.keys(source).forEach(function (name) {
+    var steps = source[name];
     if (!steps || !steps.length) return;
+    if (knownNames && !knownNames.has(name)) unmatched.push(name);
     EXERCISE_DETAILS[name] = Object.assign({}, EXERCISE_DETAILS[name], { execution: steps });
   });
+  if (unmatched.length) {
+    console.warn("[instructions] " + unmatched.length + " key(s) in " + label +
+      " match no library exercise, so they show no How-To: " + unmatched.join(", "));
+  }
 }
+(function () {
+  var known = null;
+  try {
+    known = new Set();
+    Object.keys(LIBRARY).forEach(function (cat) {
+      LIBRARY[cat].forEach(function (row) { known.add(row[0]); });
+    });
+  } catch (e) { known = null; }   // never let a name check break instruction loading
+  loadExerciseInstructions(window.IgnytExerciseInstructions, "exercise-instructions.js", known);
+  loadExerciseInstructions(window.IgnytExerciseInstructionsExtra, "exercise-instructions-extra.js", known);
+})();
 
 
 // Deterministic avatar colors per muscle bucket — used since no real exercise photos exist
