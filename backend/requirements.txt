@@ -11,6 +11,20 @@ pydantic-settings==2.7.0
 
 # --- Database / migrations ---
 SQLAlchemy==2.0.36
+# REQUIRED BY SQLAlchemy's async engine, and not always installed with it. SQLAlchemy declares
+# greenlet conditionally on platform and Python version, so it arrives by luck on some build
+# machines and not others — it was present in the local venv and absent from the Render build,
+# which is the worst possible way for a dependency to differ.
+#
+# Without it every database call raises "ValueError: the greenlet library is required to use
+# this function", at CONNECT time rather than import. The service therefore starts cleanly,
+# /v1/health reports ok because it touches no database, and every real route returns 500. That
+# is exactly how this presented in production, and nothing in the error mentions a missing
+# package unless you read the message rather than the exception type.
+#
+# Pinned explicitly rather than relying on the SQLAlchemy[asyncio] extra, so it cannot quietly
+# stop being installed again.
+greenlet==3.1.1
 alembic==1.14.0
 aiosqlite==0.20.0            # async driver for local-dev SQLite
 asyncpg==0.30.0             # async driver for Postgres (production)
