@@ -153,6 +153,45 @@
         return { text: "Today: " + line + ".\nThat's about " + Math.round(kcal) + " kcal." };
       }
     },
+    /* THREE DIRECT ACTIONS THAT EXISTED BUT NOTHING ROUTED TO. getProgress, getWorkoutHistory
+       and completeWorkout were all in the registry and all unreachable from the chatbot, so
+       "show my progress" — named in the brief as a zero-AI action — was spending a Gemini
+       activity to reach a function already sitting on the device. Found by running the spoken
+       phrasings through the router rather than by reading the registry. */
+    {
+      name: "progress",
+      needs: "getProgress",
+      test: function (t) {
+        return /\b(show|whats|see|view|my)\b/.test(t) && /\bprogress\b/.test(t)
+            && !/\b(workout|history)\b/.test(t);
+      },
+      run: async function (A) {
+        var r = await A.run("getProgress", {});
+        return r ? { text: null, card: r } : null;
+      }
+    },
+    {
+      name: "workout history",
+      needs: "getWorkoutHistory",
+      test: function (t) { return /\b(workout|training)\s+history\b/.test(t) || /\bpast workouts\b/.test(t); },
+      run: async function (A) {
+        var r = await A.run("getWorkoutHistory", {});
+        return r ? { text: null, card: r } : null;
+      }
+    },
+    {
+      name: "complete workout",
+      needs: "completeWorkout",
+      /* A write, so it returns pending and the user confirms — marking a session done by
+         accident is annoying to undo and this is exactly the kind of phrase a speech engine
+         mishears. */
+      test: function (t) {
+        return /\b(mark|finish|complete|done|completed)\b/.test(t) && /\bworkout\b/.test(t);
+      },
+      run: function () {
+        return { text: null, pending: { action: "completeWorkout", args: {} } };
+      }
+    },
     {
       name: "today workout",
       needs: "getTodayWorkout",

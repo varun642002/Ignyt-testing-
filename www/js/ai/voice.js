@@ -1,0 +1,245 @@
+/* =========================================================
+   IGNYT VOICE — speech in, speech out. No AI involved.
+
+   VOICE IS NOT GEMINI, and this file is where that is enforced. Speech recognition and speech
+   synthesis are device capabilities; the transcript this produces goes into exactly the same
+   router a typed message does (js/ai/local-chat.js first, js/ai/service.js only if that
+   declines). Speaking a sentence therefore costs the same number of AI activities as typing
+   it — usually zero.
+
+   WHY THE WEB SPEECH API RATHER THAN A CAPACITOR PLUGIN
+   The Android WebView is Chrome, so SpeechRecognition and speechSynthesis are both present
+   without adding a dependency, a permission declaration, or a native build step — and this app
+   also runs as a PWA in a browser, where a Capacitor plugin would not exist at all. One code
+   path covers both. The trade-off is real and worth stating: Chrome's recognition is a network
+   service, so dictation needs connectivity even though nothing here calls our backend. TTS is
+   fully offline. If offline dictation becomes a requirement, @capacitor-community/speech-
+   recognition is the swap, and only start() below changes.
+
+   EVERYTHING DEGRADES RATHER THAN THROWS. A device with no microphone, a denied permission, a
+   language the synthesiser lacks — each returns a typed reason the UI can show, and the app
+   stays fully usable by typing. Voice is an input method, never a dependency.
+========================================================= */
+(function () {
+  "use strict";
+
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  var synth = window.speechSynthesis || null;
+
+  /* Indian locales first — this is the audience, and "en-IN" recognises Indian English names
+     and numbers far better than "en-US" does. The router itself is language-agnostic; this
+     only tells the DEVICE what to expect. */
+  var LANGS = {
+    en: "en-IN", ta: "ta-IN", hi: "hi-IN",
+    te: "te-IN", kn: "kn-IN", ml: "ml-IN"
+  };
+  var LANG_KEY = "hx_voice_lang";
+
+  var _rec = null;          // the live recognition object, if listening
+  var _speaking = false;
+
+  function lang() {
+    try { return localStorage.getItem(LANG_KEY) || LANGS.en; } catch (e) { return LANGS.en; }
+  }
+
+  function setLang(code) {
+    var v = LANGS[code] || code || LANGS.en;
+    try { localStorage.setItem(LANG_KEY, v); } catch (e) {}
+    return v;
+  }
+
+  /* ---------- capability -------------------------------------------------------------------
+     Asked rather than assumed, because the honest answer differs per platform and the UI needs
+     to know whether to render a microphone at all. A button that cannot work is worse than no
+     button. */
+  function canListen() { return !!SR; }
+  function canSpeak() { return !!(synth && typeof synth.speak === "function"); }
+
+  /* ---------- speech to text ----------------------------------------------------------------
+     Resolves with a transcript, or rejects with { code, message } — never a raw browser event,
+     because those differ between engines and say things like "not-allowed" that no user should
+     be shown.
+
+     onState fires idle -> listening -> processing so the caller can drive its own UI without
+     knowing anything about SpeechRecognition. */
+  function listen(opts) {
+    opts = opts || {};
+    var onState = opts.onState || function () {};
+    var onPartial = opts.onPartial || function () {};
+
+    return new Promise(function (resolve, reject) {
+      if (!SR) {
+        return reject({ code: "unsupported",
+                        message: "This device can't do voice input. You can still type." });
+      }
+      /* One session at a time. Starting a second recognition while one is live throws
+         InvalidStateError in Chrome, which surfaces as a dead microphone button rather than an
+         error anyone can act on. */
+      if (_rec) { try { _rec.abort(); } catch (e) {} _rec = null; }
+
+      var rec = new SR();
+      _rec = rec;
+      rec.lang = opts.lang || lang();
+      rec.interimResults = true;      // drives the live transcript while the user is talking
+      rec.maxAlternatives = 1;
+      /* continuous:false means it stops on its own at the end of an utterance, which is the
+         behaviour asked for: tap, speak, it stops itself. Nothing here ever holds the
+         microphone open waiting. */
+      rec.continuous = false;
+
+      var finalText = "";
+      var settled = false;
+
+      function done(fn, arg) {
+        if (settled) return;
+        settled = true;
+        _rec = null;
+        onState("idle");
+        fn(arg);
+      }
+
+      rec.onstart = function () { onState("listening"); };
+
+      rec.onresult = function (e) {
+        var interim = "";
+        for (var i = e.resultIndex; i < e.results.length; i++) {
+          var r = e.results[i];
+          if (r.isFinal) finalText += r[0].transcript;
+          else interim += r[0].transcript;
+        }
+        if (interim) onPartial(interim);
+      };
+
+      rec.onerror = function (e) {
+        var err = e && e.error;
+        /* Translated into something a person can act on. "not-allowed" and "audio-capture" are
+           the two that need INSTRUCTIONS rather than an apology — the user has to change a
+           setting, and telling them only that it failed leaves them tapping a dead button. */
+        var map = {
+          "not-allowed":   { code: "permission_denied",
+                             message: "Microphone access is off. Turn it on in Settings › Apps › IGNYT › Permissions, then try again." },
+          "service-not-allowed": { code: "permission_denied",
+                             message: "Microphone access is off. Turn it on in Settings › Apps › IGNYT › Permissions, then try again." },
+          "audio-capture": { code: "no_microphone",
+                             message: "No microphone found on this device." },
+          "no-speech":     { code: "no_speech",
+                             message: "Didn't catch that. Try again." },
+          "network":       { code: "network",
+                             message: "Voice input needs a connection. You can still type." },
+          "aborted":       { code: "aborted", message: "" }
+        };
+        done(reject, map[err] || { code: "failed", message: "Unable to hear you. Try again." });
+      };
+
+      rec.onend = function () {
+        if (settled) return;
+        var text = finalText.trim();
+        if (!text) return done(reject, { code: "no_speech", message: "Didn't catch that. Try again." });
+        onState("processing");
+        settled = true; _rec = null;
+        resolve(text);
+      };
+
+      try {
+        rec.start();
+      } catch (e) {
+        done(reject, { code: "failed", message: "Unable to start voice input. Try again." });
+      }
+    });
+  }
+
+  function stopListening() {
+    if (!_rec) return false;
+    try { _rec.stop(); } catch (e) { try { _rec.abort(); } catch (e2) {} }
+    return true;
+  }
+
+  /* ---------- text to speech ----------------------------------------------------------------
+     Never automatic. The caller decides when to speak, because an app that starts talking on
+     its own in a gym is a setting people turn off once and never turn back on. */
+
+  /* Long answers are TRUNCATED rather than read in full. A knowledge-base answer can run to
+     several paragraphs, and two minutes of unstoppable speech is not a feature — the full text
+     is on screen and can be read faster than it can be heard. */
+  var MAX_SPOKEN = 450;
+
+  function speakableText(text) {
+    var t = String(text || "")
+      .replace(/[•*_#`]/g, "")             // markdown that would be read out as punctuation
+      .replace(/\s*\n\s*/g, ". ")          // line breaks become sentence breaks, not pauses
+      .replace(/\.\s*\.+/g, ". ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (t.length <= MAX_SPOKEN) return t;
+    /* Cut at a sentence end so it does not stop mid-word. */
+    var cut = t.slice(0, MAX_SPOKEN);
+    var lastStop = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("? "), cut.lastIndexOf("! "));
+    return (lastStop > 120 ? cut.slice(0, lastStop + 1) : cut) + " The rest is on screen.";
+  }
+
+  function speak(text, opts) {
+    opts = opts || {};
+    var onState = opts.onState || function () {};
+    return new Promise(function (resolve, reject) {
+      if (!canSpeak()) {
+        /* Not an error the user should see. The answer is already on screen; TTS being absent
+           changes nothing about whether they got it. */
+        return reject({ code: "unsupported", message: "" });
+      }
+      var body = speakableText(text);
+      if (!body) return reject({ code: "empty", message: "" });
+
+      try { synth.cancel(); } catch (e) {}   // never queue on top of something already playing
+
+      var u = new SpeechSynthesisUtterance(body);
+      u.lang = opts.lang || lang();
+      u.rate = 1.0; u.pitch = 1.0;
+
+      /* A voice for the requested language if the device has one. If it does not, the utterance
+         is left on the default voice rather than refused — wrong accent is better than silence,
+         and getVoices() is empty on the first call in Chrome until they load. */
+      try {
+        var voices = synth.getVoices() || [];
+        var want = (u.lang || "").toLowerCase().slice(0, 2);
+        var match = voices.filter(function (v) { return (v.lang || "").toLowerCase().indexOf(want) === 0; })[0];
+        if (match) u.voice = match;
+      } catch (e) {}
+
+      u.onstart = function () { _speaking = true; onState("speaking"); };
+      u.onend = function () { _speaking = false; onState("idle"); resolve(true); };
+      u.onerror = function () {
+        _speaking = false; onState("idle");
+        reject({ code: "failed", message: "" });
+      };
+
+      try { synth.speak(u); }
+      catch (e) { _speaking = false; reject({ code: "failed", message: "" }); }
+    });
+  }
+
+  function stopSpeaking() {
+    if (!canSpeak()) return false;
+    try { synth.cancel(); } catch (e) {}
+    _speaking = false;
+    return true;
+  }
+
+  function isSpeaking() { return _speaking; }
+  function isListening() { return !!_rec; }
+
+  window.IgnytVoice = Object.freeze({
+    canListen: canListen,
+    canSpeak: canSpeak,
+    listen: listen,
+    stopListening: stopListening,
+    isListening: isListening,
+    speak: speak,
+    stopSpeaking: stopSpeaking,
+    isSpeaking: isSpeaking,
+    setLang: setLang,
+    lang: lang,
+    LANGS: LANGS,
+    /* Exposed for tests: what would actually be spoken for this answer. */
+    speakableText: speakableText
+  });
+}());
