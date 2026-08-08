@@ -117,7 +117,23 @@ Set in the Render dashboard, never in the repo:
 | `AI_REQUIRES_PREMIUM` | no | Leave `false` until a real purchase has been verified. See the warning in §3 |
 | `CORS_ORIGINS` | preset | Capacitor's WebView origins |
 
-To turn the JSON files into one line for pasting:
+`FIREBASE_CREDENTIALS` and `PLAY_SERVICE_ACCOUNT_JSON` are the **contents** of their JSON
+files, not paths — there is no file on Render to point at. Both must start with `{`; that first
+character is how `auth/firebase.py` tells JSON from a path.
+
+This validates the file and puts it on the clipboard as one line:
+
+```powershell
+python -c "import json;d=json.load(open(r'.\firebase-service-account.json'));assert d['type']=='service_account';assert d['private_key'].startswith('-----BEGIN PRIVATE KEY-----');print(json.dumps(d,separators=(',',':')))" | Set-Clipboard
+```
+
+Validate rather than just reformat, because **`/v1/health` will not catch a bad paste**: it
+reports `auth_ok` from `bool(firebase_credentials)`, which only asks whether the variable is
+non-empty. A truncated or mangled value passes the health check and then fails on the first
+real sign-in, where the error looks like an auth problem rather than a config one.
+
+Stripping newlines by hand also works — the line breaks in the file are pretty-printing, while
+the ones inside `private_key` are two-character `\n` escapes and survive:
 
 ```powershell
 (Get-Content .\firebase-service-account.json -Raw) -replace "`r`n","" | Set-Clipboard
