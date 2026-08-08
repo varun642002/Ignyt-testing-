@@ -98,45 +98,20 @@
     else if (sort === 'exercises') routines.sort((a, b) => b.exercises.length - a.exercises.length);
     // "recent" = existing stored order (newest-created/edited first) -- no change needed.
 
-    return `
-      <div class="wk-light">
-        ${renderPRCelebration && state.lastSessionPRs && state.lastSessionPRs.length ? renderPRCelebration() : ''}
 
+    /* ---- ROUTINE FOLDERS ----------------------------------------------------------------
+       Folders are a grouping over the SAME routine list, not a second store. A routine carries
+       folderId; anything without one — or pointing at a folder that has since been deleted —
+       lands in the ungrouped bucket. That fallback is the reason deleting a folder can never
+       delete routines, which is the one behaviour a folder feature must not get wrong.
 
-        ${/* The This Week stat grid -- workouts, total time, PRs, volume vs last week -- was
-              the first thing on this screen. It is a report, and this screen is for starting a
-              session: the four figures are all on Progress, which is where someone goes to
-              read them. Quick Actions leads now, then routines, then what was logged recently.
-              Order: do, then choose, then review. */''}
-        ${/* Today's plan leads. This screen is for starting a session, and the plan is the
-              answer to the question someone opens it with. Quick Actions still sits directly
-              under it for anyone who wants to do something else. Renders nothing at all when
-              there is no plan, rather than an empty-state card taking the best space on the
-              screen to say "no plan yet". */''}
-        ${renderPlanCard ? renderPlanCard() : ''}
+       Sorting still applies WITHIN a group, so the sort control keeps meaning what it says. */
+    const folders = (state.routineFolders || []).slice();
+    const folderIds = new Set(folders.map(f => f.id));
+    const inFolder = id => routines.filter(r => r.folderId === id);
+    const ungrouped = routines.filter(r => !r.folderId || !folderIds.has(r.folderId));
 
-        <div class="rh-section-head"><span>Quick Actions</span></div>
-        ${/* Four cards in a four-column grid — the grid always expected four and had three, so
-              Recommendation fills the empty slot rather than forcing a reflow. */''}
-        <div class="wk-quick-grid">
-          <button class="rh-quick-card" data-action="toggle-routine-builder">${svg('plus',20)}<span>New Routine</span></button>
-          <button class="rh-quick-card" data-nav="library">${svg('library',20)}<span>Library</span></button>
-          <button class="rh-quick-card" data-nav="recommendation">${svg('target',20)}<span>Recommendation</span></button>
-          <button class="rh-quick-card" data-action="start-session">${svg('workout',20)}<span>Start Empty</span></button>
-        </div>
-
-        ${state.routineBuilder ? renderRoutineBuilder() : ''}
-
-        <div class="rh-section-head">
-          <span>My Routines</span>
-          <select id="workout-routine-sort" class="wk-sort-select">
-            <option value="recent" ${sort==='recent'?'selected':''}>Sort: Recent</option>
-            <option value="name" ${sort==='name'?'selected':''}>Sort: Name</option>
-            <option value="exercises" ${sort==='exercises'?'selected':''}>Sort: Exercises</option>
-          </select>
-        </div>
-        ${routines.length === 0 ? `<div class="rh-card wk-empty">No routines saved yet — build one to start logging faster.</div>` :
-          `<div id="routine-card-list">` + routines.map(r => {
+    const routineCard = r => {
             const last = lastSessionForRoutine(state, r.name);
             const pct = last ? sessionCompletionPct(last) : null;
             const color = r.category ? CATEGORY_COLOR[r.category] : '#64748B';
@@ -184,11 +159,101 @@
                 <button class="del" data-toggle-favorite-routine="${r.id}" aria-label="${r.favorite?'Remove from favorites':'Add to favorites'}">${svg(r.favorite?'starFilled':'star',16)}</button>
                 <button class="del" data-edit-routine="${r.id}" aria-label="Edit routine">✎</button>
                 <button class="del" data-dup-routine="${r.id}" aria-label="Duplicate routine">${svg('copy',16)}</button>
+                <button class="del" data-move-routine="${r.id}" aria-label="Move to folder" title="Move to folder">${svg('plan',16)}</button>
                 <button class="del" data-del-routine="${r.id}" aria-label="Delete routine">${svg('x',16)}</button>
               </div>
+              ${state.moveRoutineFor === String(r.id) ? `<div class="wk-move">
+                <div class="wk-move__title">Move to</div>
+                ${(state.routineFolders||[]).map(f => `<button data-move-to="${f.id}"${r.folderId===f.id?' class="is-on"':''}>${escHtml(f.name)}</button>`).join('')}
+                <button data-move-to="__none"${!r.folderId?' class="is-on"':''}>My Routines</button>
+                ${!(state.routineFolders||[]).length ? `<div class="wk-move__none">No folders yet — make one with + above.</div>` : ''}
+              </div>` : ''}
               <button class="wk-routine-card__start" data-start-routine="${r.id}" aria-label="Start ${escHtml(r.name)}">▶</button>
             </div>`;
-          }).join('') + `</div>`}
+    };
+
+    function groupBlock(key, label, list, isFolder) {
+      const collapsed = isFolder
+        ? !!(folders.find(f => f.id === key) || {}).collapsed
+        : !!state.ungroupedCollapsed;
+      return `<div class="wk-folder" data-folder="${key}">
+        <div class="wk-folder__head">
+          <button class="wk-folder__toggle" data-folder-toggle="${key}"
+                  aria-expanded="${collapsed ? 'false' : 'true'}">
+            <span class="wk-folder__caret${collapsed ? '' : ' is-open'}">▶</span>
+            <span class="wk-folder__name">${escHtml(label)}</span>
+            <span class="wk-folder__count">(${list.length})</span>
+          </button>
+          ${isFolder ? `<button class="wk-folder__menu" data-folder-menu="${key}" aria-label="Folder options">•••</button>` : ''}
+        </div>
+        ${isFolder && state.folderMenuFor === key ? `<div class="wk-folder__actions">
+          <button data-folder-rename="${key}">Rename</button>
+          <button data-folder-delete="${key}" class="is-danger">Delete folder</button>
+        </div>` : ''}
+        ${collapsed ? '' : `<div class="wk-folder__body" id="${isFolder ? 'folder-' + key : 'routine-card-list'}">` +
+          (list.length ? list.map(routineCard).join('')
+                       : `<div class="rh-card wk-empty wk-folder__empty">Empty — move a routine in from its ••• menu.</div>`) +
+          `</div>`}
+      </div>`;
+    }
+
+    function renderRoutineGroups() {
+      if (!routines.length && !folders.length) {
+        return `<div class="rh-card wk-empty">No routines saved yet — build one to start logging faster.</div>`;
+      }
+      /* Folders first, then whatever is not in one. The ungrouped block only gets a header when
+         a folder exists — with no folders there is nothing to distinguish it from, and a lone
+         "My Routines" header over the whole list is noise. */
+      const blocks = folders.map(f => groupBlock(f.id, f.name, inFolder(f.id), true));
+      if (folders.length) {
+        blocks.push(groupBlock('__ungrouped', 'My Routines', ungrouped, false));
+      } else {
+        return `<div id="routine-card-list">` + ungrouped.map(routineCard).join('') + `</div>`;
+      }
+      return blocks.join('');
+    }
+
+    return `
+      <div class="wk-light">
+        ${renderPRCelebration && state.lastSessionPRs && state.lastSessionPRs.length ? renderPRCelebration() : ''}
+
+
+        ${/* The This Week stat grid -- workouts, total time, PRs, volume vs last week -- was
+              the first thing on this screen. It is a report, and this screen is for starting a
+              session: the four figures are all on Progress, which is where someone goes to
+              read them. Quick Actions leads now, then routines, then what was logged recently.
+              Order: do, then choose, then review. */''}
+        ${/* Today's plan leads. This screen is for starting a session, and the plan is the
+              answer to the question someone opens it with. Quick Actions still sits directly
+              under it for anyone who wants to do something else. Renders nothing at all when
+              there is no plan, rather than an empty-state card taking the best space on the
+              screen to say "no plan yet". */''}
+        ${renderPlanCard ? renderPlanCard() : ''}
+
+        <div class="rh-section-head"><span>Quick Actions</span></div>
+        ${/* Four cards in a four-column grid — the grid always expected four and had three, so
+              Recommendation fills the empty slot rather than forcing a reflow. */''}
+        <div class="wk-quick-grid">
+          <button class="rh-quick-card" data-action="toggle-routine-builder">${svg('plus',20)}<span>New Routine</span></button>
+          <button class="rh-quick-card" data-nav="library">${svg('library',20)}<span>Library</span></button>
+          <button class="rh-quick-card" data-nav="recommendation">${svg('target',20)}<span>Recommendation</span></button>
+          <button class="rh-quick-card" data-action="start-session">${svg('workout',20)}<span>Start Empty</span></button>
+        </div>
+
+        ${state.routineBuilder ? renderRoutineBuilder() : ''}
+
+        <div class="rh-section-head">
+          <span>Routines</span>
+          <div class="wk-routine-tools">
+            <select id="workout-routine-sort" class="wk-sort-select">
+              <option value="recent" ${sort==='recent'?'selected':''}>Sort: Recent</option>
+              <option value="name" ${sort==='name'?'selected':''}>Sort: Name</option>
+              <option value="exercises" ${sort==='exercises'?'selected':''}>Sort: Exercises</option>
+            </select>
+            <button class="wk-folder-add" data-action="new-routine-folder" aria-label="New folder" title="New folder">${svg('plus',16)}</button>
+          </div>
+        </div>
+        ${renderRoutineGroups()}
 
         <div class="section-heading">
           <span class="section-heading__label">Recent Sessions</span>

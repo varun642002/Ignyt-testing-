@@ -10,7 +10,7 @@ const SCHEMA_VERSION = 1; // bump when localStorage shape changes; add a migrate
 /* ---------- Storage ---------- */
 
 const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_profile","hx_nutrition","hx_bodylog","hx_custom_exercises",
-  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history","hx_deleted_workouts","hx_plan","hx_injuries",
+  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history","hx_deleted_workouts","hx_plan","hx_injuries","hx_routine_folders",
   /* The red-flag acknowledgement. Listed so "Clear all data" and the sign-out wipe
      actually remove it — an unregistered key would leave a record of reported symptoms
      behind on a device the user believed they had cleared. It is included in backup for
@@ -26,7 +26,7 @@ const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_pro
    (exercise names), and hx_completed is an object map, not an array. */
 const RECORD_ARRAY_KEYS = ["hx_bodylog","hx_custom_exercises","hx_workout_log","hx_food_log",
   "hx_routines","hx_prs","hx_achievements","hx_favorite_foods","hx_water_log","hx_race_log",
-  "hx_calc_history","hx_deleted_workouts"];
+  "hx_calc_history","hx_deleted_workouts","hx_routine_folders"];
 
 // Single source of truth for every trackable body measurement beyond weight -- the entry
 // form, CSV export/import, and the chart metric switcher all read this list instead of each
@@ -1759,6 +1759,10 @@ const state = {
   plan: LS.get("hx_plan", null),   // assigned training plan — see PROGRAM PROGRESSION
   /* [{id, severity, side, professionalAdvice}] — see js/coach/injury-catalogue.js */
   injuries: LS.get("hx_injuries", []),
+  /* Routine folders: [{id, name, collapsed}]. A routine carries folderId; anything without one,
+     or pointing at a folder that has since been deleted, falls into the implicit ungrouped
+     group. That fallback is why deleting a folder can never delete routines. */
+  routineFolders: LS.records("hx_routine_folders"),
   showExercisePicker: false,
   exercisePickerSearch: "",
   exercisePickerEquipment: "All",
@@ -1852,6 +1856,7 @@ function persist(){
   LS.set("hx_onboarding_wizard", state.onboarding);
   LS.set("hx_plan", state.plan);
   LS.set("hx_injuries", state.injuries);
+  LS.set("hx_routine_folders", state.routineFolders);
   /* Widgets mirror whatever was just saved. Hooked to persist() rather than to each
      feature so nothing new has to remember to do it; the call is debounced and returns
      immediately when the user has no widgets placed. */
@@ -18032,6 +18037,83 @@ function attachHandlers(){
       }
       render();
       if (["home", "health", "nutrition", "insights"].includes(state.tab)) window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
+    });
+  });
+  /* ---- Routine folders ----------------------------------------------------------------
+     A folder is a label over the routine list. Nothing here ever touches state.routines except
+     to set or clear folderId, which is what makes every one of these operations non-destructive
+     — including delete. */
+  const folderMenu = (id)=>{
+    const f = (state.routineFolders||[]).find(x=>x.id===id);
+    return f ? f.name : "";
+  };
+  document.querySelectorAll('[data-action="new-routine-folder"]').forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const name = await confirmDialog("Name this folder", render,
+        { title:"New folder", input:true, confirmLabel:"Create" });
+      if(!name || typeof name !== "string") return;
+      state.routineFolders.push({ id: nextId(), name: name.slice(0,40), collapsed:false });
+      render();
+    });
+  });
+  document.querySelectorAll("[data-folder-toggle]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.folderToggle;
+      if(id === "__ungrouped"){ state.ungroupedCollapsed = !state.ungroupedCollapsed; render(); return; }
+      const f = state.routineFolders.find(x=>x.id===id);
+      if(f){ f.collapsed = !f.collapsed; render(); }
+    });
+  });
+  document.querySelectorAll("[data-folder-menu]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.folderMenuFor = state.folderMenuFor === el.dataset.folderMenu ? null : el.dataset.folderMenu;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-folder-rename]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const id = el.dataset.folderRename;
+      const name = await confirmDialog("Rename this folder", render,
+        { title: folderMenu(id), input:true, confirmLabel:"Rename" });
+      if(!name || typeof name !== "string") return;
+      const f = state.routineFolders.find(x=>x.id===id);
+      if(f) f.name = name.slice(0,40);
+      state.folderMenuFor = null;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-folder-delete]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const id = el.dataset.folderDelete;
+      const n = state.routines.filter(r=>r.folderId===id).length;
+      /* The count is in the question on purpose. "Delete folder?" invites a reflexive yes; the
+         number is what makes someone check whether they meant it. */
+      const ok = await confirmDialog(
+        n ? "Delete this folder? The " + n + " routine" + (n===1?"":"s") + " inside will move back to My Routines — nothing is deleted."
+          : "Delete this folder?",
+        render, { title: folderMenu(id), confirmLabel:"Delete folder", danger:true });
+      if(!ok) return;
+      state.routines.forEach(r=>{ if(r.folderId===id) delete r.folderId; });
+      state.routineFolders = state.routineFolders.filter(x=>x.id!==id);
+      state.folderMenuFor = null;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-move-routine]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.moveRoutineFor = state.moveRoutineFor === el.dataset.moveRoutine ? null : el.dataset.moveRoutine;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-move-to]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const r = state.routines.find(x=>String(x.id)===String(state.moveRoutineFor));
+      if(r){
+        const to = el.dataset.moveTo;
+        if(to === "__none") delete r.folderId; else r.folderId = to;
+      }
+      state.moveRoutineFor = null;
+      render();
     });
   });
   /* The red-flag safety check. Submitting either answer records it and re-renders; the gate in
