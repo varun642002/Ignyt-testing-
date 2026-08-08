@@ -1018,6 +1018,16 @@ const MOBILITY_RATING_OPTIONS = ["Poor","Fair","Good","Excellent"];
 const FITNESS_LEVELS = ["Beginner","Novice","Intermediate","Advanced","Elite"];
 
 const ICONS = {
+  /* The four-point sparkle, which is what "AI" looks like everywhere now. A new glyph rather
+     than reusing one of the ~130 already here: `bolt` is energy and already appears twice,
+     `star` is a rating, `flask` is the lab. Any of them would have read as its existing
+     meaning first.
+
+     FILLED, not stroked, unlike most of this set. It renders at 22px inside the floating
+     button and a 2px outline on concave points closes up into a smudge at that size — the same
+     reason the barbell's plates are filled. The concave sides are quadratic curves rather than
+     straight lines, which is the difference between a sparkle and a four-pointed diamond. */
+  sparkle:'<path d="M10.5 4Q11.3 9.7 17 10.5Q11.3 11.3 10.5 17Q9.7 11.3 4 10.5Q9.7 9.7 10.5 4z" fill="currentColor"/><path d="M18 14.5Q18.35 16.65 20.5 17Q18.35 17.35 18 19.5Q17.65 17.35 15.5 17Q17.65 16.65 18 14.5z" fill="currentColor"/>',
   eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/>',
   'eye-off':'<path d="M9.9 5.8A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3.2 3.9M6.5 7.6A17 17 0 0 0 2.5 12S6 18.5 12 18.5c1.4 0 2.7-.35 3.8-.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.9 9.9a3.2 3.2 0 0 0 4.35 4.35" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3.5 3.5l17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   plan:'<path d="M6.5 6.5h11v11h-11z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 3v4M16 3v4M6.5 10h11" stroke="currentColor" stroke-width="2" fill="none"/>',
@@ -7451,6 +7461,7 @@ function renderApp(){
      outside #app precisely so this innerHTML does not destroy it, which is what lets the
      selection indicator slide instead of cutting. */
   syncBottomNav(isLightTab);
+  syncAIFab();
   const main = document.getElementById("main");
   if(state.tab==="home") main.innerHTML = renderHomeTab();
   if(state.tab==="plan") main.innerHTML = renderPlanTab();
@@ -8637,6 +8648,47 @@ function buildBottomNav(){
 function removeBottomNav(){
   const nav = document.querySelector("nav.bottom-nav");
   if(nav) nav.remove();
+}
+
+/* =========================================================
+   THE AI BUTTON
+
+   Lives on <body> beside the nav, for the same reason the nav does: #app is replaced wholesale
+   on every render, and an element inside it cannot survive one.
+
+   IT DELIBERATELY DOES NOT CARRY data-nav. attachHandlers() re-binds a click listener to every
+   [data-nav] on every render, which is harmless on markup that is rebuilt each time and a leak
+   on an element that is not — the listeners stack, and one tap fires render() once per
+   accumulated listener. The nav documents this same trap above and dodges it the same way:
+   bind once, on the element that outlives the renders.
+========================================================= */
+function buildAIFab(){
+  const fab = document.createElement("button");
+  fab.type = "button";
+  fab.className = "ai-fab";
+  fab.setAttribute("aria-label", "Open AI Coach");
+  fab.innerHTML = svg("sparkle", 26);
+
+  fab.addEventListener("click", ()=>{
+    if(state.tab === "ai") return;      // already there; nothing to do
+    state.notificationsOpen = false;    // any navigation closes the header panel
+    state.tab = "ai";
+    state.bodyView = null;              // land on the chat, not a stale calculator view
+    render();
+  });
+
+  document.body.appendChild(fab);
+  return fab;
+}
+
+function removeAIFab(){
+  const fab = document.querySelector(".ai-fab");
+  if(fab) fab.remove();
+}
+
+function syncAIFab(){
+  const fab = document.querySelector(".ai-fab") || buildAIFab();
+  fab.classList.toggle("is-hidden", state.tab === "ai");
 }
 
 function syncBottomNav(isLightTab){
@@ -15914,11 +15966,11 @@ function render(){
          new install: someone re-editing their answers is already in, and anyone who has
          signed in or chosen to skip has hx_auth_seen set and never sees it again. */
       if(!isSignedIn() && !state.editingOnboarding){
-        removeBottomNav();
+        removeBottomNav(); removeAIFab();
         renderSignInScreen();
         return;
       }
-      removeBottomNav();
+      removeBottomNav(); removeAIFab();
       withFocusPreserved(renderOnboardingWizard);
       return;
     }
@@ -15927,7 +15979,7 @@ function render(){
        to add to. hx_auth_seen is no longer consulted: "has seen the screen" and "has an
        account" were the same flag only while skipping existed. */
     if(!isSignedIn()){
-      removeBottomNav();
+      removeBottomNav(); removeAIFab();
       renderSignInScreen();
       return;
     }
