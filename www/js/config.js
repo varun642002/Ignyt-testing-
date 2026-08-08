@@ -34,8 +34,13 @@
 
      Set this once, at release, to the Render URL. It is not a secret — it is a public HTTPS
      endpoint that authenticates every request with a Firebase token. The thing that must
-     never appear in this file is the GEMINI_API_KEY, which lives only on the server. */
-  var PRODUCTION_BASE = "https://ignyt-backend.onrender.com";
+     never appear in this file is the GEMINI_API_KEY, which lives only on the server.
+
+     COPY THIS FROM THE RENDER DASHBOARD. Never infer it from the service name: Render appends
+     a random suffix when the name is already taken globally, and "ignyt-backend" was taken —
+     ignyt-backend.onrender.com is a live Flask app belonging to someone else. A guessed URL
+     here is not a 404, it is our users' Firebase ID tokens being posted to a stranger. */
+  var PRODUCTION_BASE = "https://ignyt-backend-oo80.onrender.com";
 
   /* HOW THE DEFAULT IS CHOSEN, in the order that keeps both workflows working:
 
