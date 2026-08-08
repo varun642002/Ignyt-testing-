@@ -25,6 +25,12 @@ services:
 
     envVars:
       # ---- public configuration -------------------------------------------------------
+      # Pin the interpreter. Unpinned, Render picks its own current default and moves it
+      # over time, so the build that works today can fail months later on a deploy that
+      # changed nothing — and the failure appears as a wheel that won't compile rather than
+      # as "Python changed". This matches the version the requirements were tested against.
+      - key: PYTHON_VERSION
+        value: "3.13.7"
       - key: ENVIRONMENT
         value: production
       - key: API_PREFIX
