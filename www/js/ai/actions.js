@@ -62,11 +62,30 @@
   }
 
   /* A date the app will accept. Defaults to today rather than throwing, because "log my
-     weight" with no date is the common case, not an error. */
+     weight" with no date is the common case, not an error.
+
+     THE WINDOW IS THE POINT, NOT THE FORMAT. A model has no clock. Asked to log something
+     "yesterday" it will confidently produce a well-formed date from whenever it thinks now is
+     — live testing returned 2025-04-09 for yesterday when today was 2026-08-08, sixteen
+     months out, and a format check waves that straight through. Food silently filed to last
+     April is worse than a refusal, because nothing on screen looks wrong.
+
+     So: never the future (you cannot have eaten tomorrow), and not more than a year back,
+     which is far wider than any real correction and narrow enough to catch a hallucinated
+     year. The model is separately TOLD today's date — see service.js — so a correct
+     "yesterday" still works; this is the backstop for when it ignores that. */
+  var MAX_BACKDATE_DAYS = 365;
+
   function dateKey(v) {
-    if (!v) return (has("todayStr") ? window.todayStr() : new Date().toISOString().slice(0, 10));
+    var today = has("todayStr") ? window.todayStr() : new Date().toISOString().slice(0, 10);
+    if (!v) return today;
     var s = String(v).slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) throw new Error("Date must look like 2026-08-08.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) throw new Error("Date must look like " + today + ".");
+    var t = Date.parse(s + "T00:00:00");
+    if (!isFinite(t)) throw new Error("That date isn't real.");
+    var now = Date.parse(today + "T00:00:00");
+    if (t > now) throw new Error("That date is in the future.");
+    if ((now - t) / 86400000 > MAX_BACKDATE_DAYS) throw new Error("That date is too far back — did you mean this year?");
     return s;
   }
 

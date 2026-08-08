@@ -53,7 +53,13 @@
     // needs no personal data at all, and sending some anyway is the habit this guards against.
     if (!Object.keys(wanted).length) wanted.profile = true;
 
-    var ctx = {};
+    /* TODAY'S DATE GOES ON EVERY REQUEST, and it comes from the DEVICE.
+       A model has no clock. Asked to log something "yesterday" it invents a plausible date
+       from whenever it believes now is — live testing produced 2025-04-09 for yesterday when
+       the real date was 2026-08-08. The server's own date would mostly work, but it is the
+       wrong clock: a user in Auckland logging breakfast is a day ahead of a server in
+       Virginia, and "today" has to mean their today. It is four extra tokens. */
+    var ctx = { today: (typeof todayStr === "function") ? todayStr() : new Date().toISOString().slice(0, 10) };
     if (wanted.profile) {
       var p = (await A.run("getUserProfile")).result || {};
       ctx.profile = { age: p.age, gender: p.gender, heightCm: p.heightCm,
