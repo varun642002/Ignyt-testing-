@@ -17,9 +17,23 @@ services:
     # so Render has to be told where to run. Everything below is relative to this.
     rootDir: backend
     buildCommand: pip install -r requirements.txt
+    # MIGRATIONS RUN HERE, not by hand. A managed database is created empty, so a deploy that
+    # only starts the server comes up connected to a schema that does not exist: /v1/health
+    # reports ok because it never touches the database, while every real route returns 500.
+    # Leaving that to a documented manual step means the step is skipped exactly once, in
+    # production, and the symptom points nowhere near the cause.
+    #
+    # `alembic upgrade head` is a no-op when the schema is current — it reads alembic_version
+    # and stops — so paying for it on every boot costs a query. It runs on Render's own
+    # DATABASE_URL because alembic/env.py reads it from the environment.
+    #
+    # Chained with && deliberately: if the migration fails the server must NOT start. Serving
+    # against a half-migrated schema corrupts data, and Render keeps the previous version
+    # running when a deploy fails, so the cost of stopping here is nothing.
+    #
     # app.main:app, not main:app — create_app() builds it and `app = create_app()` publishes
     # it at the bottom of app/main.py. $PORT is assigned by Render and must not be hardcoded.
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /v1/health
     autoDeploy: true            # a push to the tracked branch redeploys
 

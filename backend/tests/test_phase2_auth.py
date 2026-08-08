@@ -22,7 +22,9 @@ async def test_health_is_public(client):
 async def test_ready_reports_checks(client):
     r = await client.get("/v1/ready")
     assert r.status_code == 200
-    assert set(r.json()["checks"].keys()) == {"database", "auth_configured"}
+    # Exact set, not a subset: /ready is consumed by uptime checks, so a field appearing or
+    # vanishing should be a deliberate edit here rather than a silent change in what they see.
+    assert set(r.json()["checks"].keys()) == {"database", "auth_configured", "database_error"}
 
 
 async def test_me_requires_identity(client):
