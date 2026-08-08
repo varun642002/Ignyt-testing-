@@ -18600,31 +18600,43 @@ function attachHandlers(){
      could disagree about what needs confirming. */
   document.querySelectorAll("[data-ai-mic]").forEach(el=>{
     el.addEventListener("click", ()=>{
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if(!SR){
+      /* ONE SPEECH IMPLEMENTATION, not two. This drove SpeechRecognition directly and
+         js/ai/voice.js was then written alongside it, which is the duplicate-system trap: two
+         copies of the same browser API, drifting apart, and a language or error-message fix
+         landing in only one of them. The module is the survivor because it is the one that is
+         tested and the one text-to-speech shares state with — it must know whether the
+         microphone is live before it starts speaking, or the app talks over itself.
+         Behaviour here is unchanged except for being better: en-IN instead of navigator
+         .language, a live transcript while talking, and errors that say what to do. */
+      var V = window.IgnytVoice;
+      if(!V || !V.canListen()){
         state.aiChat.push({ role:"error", text:"Voice isn't available on this device. Type instead." });
         return renderInPlace();
       }
-      if(state.aiListening && window._aiRec){ try{ window._aiRec.stop(); }catch(e){} return; }
-      const rec = new SR();
-      window._aiRec = rec;
-      rec.lang = navigator.language || "en-US";
-      rec.interimResults = false;
-      rec.maxAlternatives = 1;
-      rec.onresult = ev=>{
-        const said = ev.results && ev.results[0] && ev.results[0][0] && ev.results[0][0].transcript;
+      if(state.aiListening){ V.stopListening(); return; }
+
+      V.listen({
+        onState: (s)=>{ state.aiListening = (s === "listening"); renderInPlace(); },
+        /* Interim results in the placeholder, so the user can see it is hearing them rather
+           than staring at a pulsing button wondering whether to keep talking. */
+        onPartial: (txt)=>{
+          const box = document.getElementById("ai-input");
+          if(box) box.placeholder = txt.slice(0, 60);
+        }
+      }).then(said=>{
         state.aiListening = false;
+        /* Straight into the SAME send path a typed message uses — which is what keeps a spoken
+           sentence costing the same number of AI activities as a typed one. */
         if(said) aiSend(said); else renderInPlace();
-      };
-      rec.onerror = ev=>{
+      }).catch(err=>{
         state.aiListening = false;
-        state.aiChat.push({ role:"error",
-          text: ev.error === "not-allowed" ? "Microphone permission is off." : "Couldn't hear that." });
+        /* An aborted session is the user tapping stop. That is not an error and must not
+           leave a red bubble in their chat history. */
+        if(err && err.code !== "aborted" && err.message){
+          state.aiChat.push({ role:"error", text: err.message });
+        }
         renderInPlace();
-      };
-      rec.onend = ()=>{ if(state.aiListening){ state.aiListening = false; renderInPlace(); } };
-      try{ rec.start(); state.aiListening = true; renderInPlace(); }
-      catch(e){ state.aiListening = false; renderInPlace(); }
+      });
     });
   });
 
