@@ -73,6 +73,32 @@ class Settings(BaseSettings):
     ai_estimate_concurrency: int = Field(default=5, alias="AI_ESTIMATE_CONCURRENCY")
     # Premium allowance. Free users get none, per the brief; the counter resets on UTC date.
     ai_scan_daily_limit: int = Field(default=15, alias="AI_SCAN_DAILY_LIMIT")
+
+    # --- AI Coach (chat) ---
+    # A short answer is both the product requirement and the cost ceiling — the brief asks for
+    # bullet points rather than paragraphs, and output tokens are the expensive half of a call.
+    # 400 is roughly 250 words, which is far more than any answer here should need; it is a
+    # backstop against a runaway generation, not a target.
+    ai_chat_max_output_tokens: int = Field(default=400, alias="AI_CHAT_MAX_OUTPUT_TOKENS")
+    # TWO TIERS. "I ate 200g of chicken" is extraction — pull three fields out of a sentence
+    # and call a tool — and the cheapest model does it as well as the expensive one. "Why did
+    # my weight go up?" needs the model to read a trend and reason about it. Routing the first
+    # kind to Flash-Lite is most of the cost saving available here, because logging is what
+    # people do many times a day and asking is what they do occasionally.
+    #
+    # An ALIAS, not a pinned version, for the reason gemini_model documents above: the
+    # previously pinned name was retired by Google mid-flight and gemini-2.5-flash is already
+    # refused for newly issued keys. Set these explicitly if you would rather own the upgrades.
+    gemini_model_light: str = Field(default="gemini-flash-lite-latest", alias="GEMINI_MODEL_LIGHT")
+    # Messages per user per UTC day. Counted in the same ai_usage table as scans, so the reset
+    # is implicit: a new day has no row. Generous enough that a real conversation never hits
+    # it, low enough that a stuck client loop cannot run up a bill overnight.
+    ai_chat_daily_limit: int = Field(default=60, alias="AI_CHAT_DAILY_LIMIT")
+    # A second-pass call (the model reading tool results and writing the reply) is part of the
+    # same user turn, so it must not consume a second unit of the daily allowance. This caps
+    # how many round trips one turn may take before the server stops and answers with what it
+    # has — the guard against a model that keeps asking for one more tool forever.
+    ai_chat_max_tool_rounds: int = Field(default=3, alias="AI_CHAT_MAX_TOOL_ROUNDS")
     # Hard ceiling on an uploaded frame. The client compresses first; this is the backstop
     # that stops a hostile or broken client from streaming an unbounded body at us.
     max_upload_bytes: int = Field(default=6 * 1024 * 1024, alias="MAX_UPLOAD_BYTES")
