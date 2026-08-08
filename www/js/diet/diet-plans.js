@@ -40,21 +40,21 @@
      assume and what existing plans already use; one-meal and two-meal schedules get neutral
      names because "Breakfast" is the wrong word for a meal eaten at 8pm. */
   var PRESETS = {
-    1: [{ name: "Main Meal",     time: "13:00", icon: "🍽️" }],
-    2: [{ name: "Meal 1",        time: "12:00", icon: "🍽️" },
-        { name: "Meal 2",        time: "19:30", icon: "🍽️" }],
-    3: [{ name: "Breakfast",     time: "08:00", icon: "☀️" },
-        { name: "Lunch",         time: "13:00", icon: "🍛" },
-        { name: "Dinner",        time: "19:30", icon: "🍜" }],
-    4: [{ name: "Breakfast",     time: "08:00", icon: "☀️" },
-        { name: "Lunch",         time: "13:00", icon: "🍛" },
-        { name: "Evening Snack", time: "17:00", icon: "🍪" },
-        { name: "Dinner",        time: "19:30", icon: "🍜" }],
-    5: [{ name: "Breakfast",     time: "08:00", icon: "☀️" },
-        { name: "Morning Snack", time: "10:30", icon: "🍎" },
-        { name: "Lunch",         time: "13:00", icon: "🍛" },
-        { name: "Evening Snack", time: "17:00", icon: "🍪" },
-        { name: "Dinner",        time: "19:30", icon: "🍜" }]
+    1: [{ name: "Main Meal",     time: "13:00", icon: "plate" }],
+    2: [{ name: "Meal 1",        time: "12:00", icon: "plate" },
+        { name: "Meal 2",        time: "19:30", icon: "plate" }],
+    3: [{ name: "Breakfast",     time: "08:00", icon: "sunrise" },
+        { name: "Lunch",         time: "13:00", icon: "curry" },
+        { name: "Dinner",        time: "19:30", icon: "bowl" }],
+    4: [{ name: "Breakfast",     time: "08:00", icon: "sunrise" },
+        { name: "Lunch",         time: "13:00", icon: "curry" },
+        { name: "Evening Snack", time: "17:00", icon: "cake" },
+        { name: "Dinner",        time: "19:30", icon: "bowl" }],
+    5: [{ name: "Breakfast",     time: "08:00", icon: "sunrise" },
+        { name: "Morning Snack", time: "10:30", icon: "apple" },
+        { name: "Lunch",         time: "13:00", icon: "curry" },
+        { name: "Evening Snack", time: "17:00", icon: "cake" },
+        { name: "Dinner",        time: "19:30", icon: "bowl" }]
   };
 
   /* Totalled and displayed per the brief. One list so a meal row, a day total and the
@@ -92,14 +92,14 @@
 
   function iconFor(name) {
     var n = String(name || "").toLowerCase();
-    if (/breakfast/.test(n)) return "☀️";
-    if (/lunch/.test(n)) return "🍛";
-    if (/dinner|supper/.test(n)) return "🍜";
-    if (/morning/.test(n)) return "🍎";
-    if (/evening|afternoon/.test(n)) return "🍪";
-    if (/bed|night/.test(n)) return "🌙";
-    if (/post|workout|shake/.test(n)) return "🥤";
-    return "🍽️";
+    if (/breakfast/.test(n)) return "sunrise";
+    if (/lunch/.test(n)) return "curry";
+    if (/dinner|supper/.test(n)) return "bowl";
+    if (/morning/.test(n)) return "apple";
+    if (/evening|afternoon/.test(n)) return "cake";
+    if (/bed|night/.test(n)) return "moon";
+    if (/post|workout|shake/.test(n)) return "cup";
+    return "plate";
   }
 
   function makeMeal(def) {

@@ -11,6 +11,10 @@
    drop focus, and rebuild the history list sixty times a minute for no reason.
 ========================================================= */
 (function () {
+  /* An icon by name, from app.js's set. Guarded so a missing svg() degrades to no
+     decoration rather than taking the page down. */
+  function ic(n, s){ return (typeof svg === "function") ? svg(n, s || 16) : ""; }
+
   "use strict";
 
   window.IgnytPages = window.IgnytPages || {};
@@ -97,7 +101,7 @@
             (p.complete ? "Complete fast" : "End fast early") + '</button>' +
         '</div>' +
         (p.complete
-          ? '<div class="ft-hit">🎉 You\'ve reached your ' + esc(fast.label) + ' goal.</div>'
+          ? '<div class="ft-hit">' + ic('check',15) + ' You\'ve reached your ' + esc(fast.label) + ' goal.</div>'
           : '') +
       '</div>';
   }

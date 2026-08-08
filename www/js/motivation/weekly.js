@@ -173,7 +173,7 @@ window.IgnytWeekly = (function () {
      different challenge than a made-up number. */
   var POOL = [
     {
-      id: "workouts", icon: "🔥", name: "Train more than usual",
+      id: "workouts", icon: "flame", name: "Train more than usual",
       describe: function (t) { return "Complete " + t + " workout" + (t !== 1 ? "s" : "") + " this week"; },
       target: function (b) {
         // One more than usual, but never fewer than 3 and never more than 6 — past six the
@@ -185,7 +185,7 @@ window.IgnytWeekly = (function () {
       unit: "workouts"
     },
     {
-      id: "volume", icon: "🏋️", name: "Beat your best week",
+      id: "volume", icon: "barbell", name: "Beat your best week",
       describe: function (t) { return "Lift " + Number(t).toLocaleString() + " kg in total this week"; },
       target: function (b) {
         if (!b || !(b.bestVolumeKg > 0)) return null;       // no lifting history to beat
@@ -197,7 +197,7 @@ window.IgnytWeekly = (function () {
       unit: "kg"
     },
     {
-      id: "activeDays", icon: "📅", name: "Show up all week",
+      id: "activeDays", icon: "calendar", name: "Show up all week",
       describe: function (t) { return "Log something on " + t + " different days"; },
       target: function (b) { return b ? Math.max(4, Math.min(7, Math.round(b.activeDays) + 1)) : 4; },
       progress: function (s, from, to) {
@@ -209,7 +209,7 @@ window.IgnytWeekly = (function () {
       unit: "days"
     },
     {
-      id: "minutes", icon: "⏱️", name: "Put the hours in",
+      id: "minutes", icon: "timer", name: "Put the hours in",
       describe: function (t) { return "Train for " + t + " minutes this week"; },
       target: function (b) {
         if (!b || !(b.minutes > 0)) return null;
@@ -221,7 +221,7 @@ window.IgnytWeekly = (function () {
       unit: "min"
     },
     {
-      id: "protein", icon: "🥩", name: "Hit protein all week",
+      id: "protein", icon: "meat", name: "Hit protein all week",
       describe: function (t) { return "Reach your protein target on " + t + " days"; },
       target: function (b, s) {
         // Needs a bodyweight to have a protein target at all.
@@ -239,7 +239,7 @@ window.IgnytWeekly = (function () {
       unit: "days"
     },
     {
-      id: "water", icon: "💧", name: "Stay hydrated",
+      id: "water", icon: "droplet", name: "Stay hydrated",
       describe: function (t) { return "Hit your water goal on " + t + " days"; },
       target: function () { return 5; },
       progress: function (s, from, to) {
@@ -251,7 +251,7 @@ window.IgnytWeekly = (function () {
       unit: "days"
     },
     {
-      id: "score", icon: "⭐", name: "Keep the score up",
+      id: "score", icon: "star", name: "Keep the score up",
       describe: function (t) { return "Score 70 or more on " + t + " days"; },
       target: function (b, s) {
         // Only offered once there is a week of scores to know it is reachable.

@@ -16,6 +16,10 @@
 ========================================================= */
 
 window.IgnytCelebrate = (function () {
+  /* An icon by name, from app.js's set. Guarded so a missing svg() degrades to no
+     decoration rather than taking the page down. */
+  function ic(n, s){ return (typeof svg === "function") ? svg(n, s || 16) : ""; }
+
   "use strict";
 
   var queue = [];
@@ -32,7 +36,8 @@ window.IgnytCelebrate = (function () {
    *   c.kind    "achievement" | "level" | "milestone" | "pr"
    *   c.title   the headline, e.g. "100 Workouts"
    *   c.body    a line of encouragement
-   *   c.icon    emoji or short string shown in the badge
+   *   c.icon    icon NAME from app.js's set, drawn in the badge (not in the notification,
+   *             whose title is plain text)
    *   c.stat    optional secondary line, e.g. "+150 XP"
    */
   /* An achievement earned while the app is on screen is celebrated on screen. One earned while
@@ -47,7 +52,7 @@ window.IgnytCelebrate = (function () {
       if (!window.IgnytReminders || !IgnytReminders.sendNow) return false;
       IgnytReminders.sendNow({
         id: "achv-" + Date.now(),
-        title: (c.icon ? c.icon + " " : "") + c.title,
+        title: c.title,
         body: c.body || c.stat || "",
         route: "progress"
       });
@@ -76,7 +81,7 @@ window.IgnytCelebrate = (function () {
     root.innerHTML =
       '<div class="celebrate__backdrop"></div>' +
       '<div class="celebrate__card">' +
-        '<div class="celebrate__icon">' + (c.icon || "⭐") + "</div>" +
+        '<div class="celebrate__icon">' + ic(c.icon || "star", 30) + "</div>" +
         '<div class="celebrate__title">' + esc(c.title) + "</div>" +
         (c.body ? '<div class="celebrate__body">' + esc(c.body) + "</div>" : "") +
         (c.stat ? '<div class="celebrate__stat">' + esc(c.stat) + "</div>" : "") +
@@ -145,7 +150,7 @@ window.IgnytCelebrate = (function () {
       var xp = window.IgnytXP ? window.IgnytXP.award("achievement", a.id) : null;
       celebrate({
         kind: "achievement",
-        icon: "🏅",
+        icon: "medal",
         title: a.name,
         body: a.desc || (window.IgnytMessages ? IgnytMessages.next("streak") : ""),
         stat: xp ? "+" + xp.xp + " XP" : null
@@ -159,7 +164,7 @@ window.IgnytCelebrate = (function () {
     var title = window.IgnytXP ? IgnytXP.title(result.levelAfter) : "";
     celebrate({
       kind: "level",
-      icon: "⬆️",
+      icon: "chevronUp",
       title: "Level " + result.levelAfter,
       body: title ? "You're now " + title + "." : "",
       stat: null

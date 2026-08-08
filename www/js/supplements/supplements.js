@@ -23,20 +23,20 @@
   var LOG_KEY  = "hx_supplement_log";
 
   var CATEGORIES = [
-    { id: "protein",      label: "Protein",       icon: "🥤" },
-    { id: "creatine",     label: "Creatine",      icon: "⚡" },
-    { id: "preworkout",   label: "Pre Workout",   icon: "🔥" },
-    { id: "postworkout",  label: "Post Workout",  icon: "🧊" },
-    { id: "multivitamin", label: "Multivitamin",  icon: "💊" },
-    { id: "fishoil",      label: "Fish Oil",      icon: "🐟" },
-    { id: "vitamind",     label: "Vitamin D",     icon: "☀️" },
-    { id: "vitaminc",     label: "Vitamin C",     icon: "🍊" },
-    { id: "magnesium",    label: "Magnesium",     icon: "🌙" },
-    { id: "zma",          label: "ZMA",           icon: "😴" },
-    { id: "electrolytes", label: "Electrolytes",  icon: "🧂" },
-    { id: "ashwagandha",  label: "Ashwagandha",   icon: "🌿" },
-    { id: "collagen",     label: "Collagen",      icon: "✨" },
-    { id: "other",        label: "Other",         icon: "🧴" }
+    { id: "protein",      label: "Protein",       icon: "cup" },
+    { id: "creatine",     label: "Creatine",      icon: "bolt" },
+    { id: "preworkout",   label: "Pre Workout",   icon: "flame" },
+    { id: "postworkout",  label: "Post Workout",  icon: "droplet" },
+    { id: "multivitamin", label: "Multivitamin",  icon: "pill" },
+    { id: "fishoil",      label: "Fish Oil",      icon: "fish" },
+    { id: "vitamind",     label: "Vitamin D",     icon: "sun" },
+    { id: "vitaminc",     label: "Vitamin C",     icon: "apple" },
+    { id: "magnesium",    label: "Magnesium",     icon: "moon" },
+    { id: "zma",          label: "ZMA",           icon: "moon" },
+    { id: "electrolytes", label: "Electrolytes",  icon: "spice" },
+    { id: "ashwagandha",  label: "Ashwagandha",   icon: "leaf" },
+    { id: "collagen",     label: "Collagen",      icon: "star" },
+    { id: "other",        label: "Other",         icon: "bottle" }
   ];
 
   var UNITS = ["g", "mg", "mcg", "IU", "ml", "scoop", "capsule", "tablet", "softgel", "sachet"];

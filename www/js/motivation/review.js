@@ -146,18 +146,18 @@ window.IgnytReview = (function () {
     var bodyweight = (s.profile && s.profile.weight) || 0;
 
     var pool = [
-      { id: "workout", icon: "💪", label: "Complete a workout", xp: 100,
+      { id: "workout", icon: "dumbbell", label: "Complete a workout", xp: 100,
         done: (s.workoutLog || []).some(function (w) {
           return dateKey(new Date(w.startedAt || w.date)) === today; }) },
-      { id: "water", icon: "💧", label: "Hit your water goal", xp: 20,
+      { id: "water", icon: "droplet", label: "Hit your water goal", xp: 20,
         done: (s.waterLog || []).filter(function (w) { return w.date === today; })
                 .reduce(function (a,w) { return a + (w.ml||0); }, 0) >= waterTarget },
-      { id: "meals", icon: "🍽️", label: "Log three meals", xp: 20,
+      { id: "meals", icon: "plate", label: "Log three meals", xp: 20,
         done: (s.foodLog || []).filter(function (f) { return f.date === today; }).length >= 3 },
-      { id: "protein", icon: "🥩", label: bodyweight ? "Reach " + Math.round(bodyweight * 1.6) + "g protein" : "Hit your protein target", xp: 30,
+      { id: "protein", icon: "meat", label: bodyweight ? "Reach " + Math.round(bodyweight * 1.6) + "g protein" : "Hit your protein target", xp: 30,
         done: bodyweight > 0 && (s.foodLog || []).filter(function (f) { return f.date === today; })
                 .reduce(function (a,f) { return a + (Number(f.protein)||0); }, 0) >= bodyweight * 1.6 },
-      { id: "weigh", icon: "⚖️", label: "Log your weight", xp: 10,
+      { id: "weigh", icon: "scale", label: "Log your weight", xp: 10,
         done: (s.bodylog || []).some(function (b) { return dateKey(new Date(b.date)) === today; }) }
     ];
 

@@ -165,7 +165,7 @@
               </div>
               <div class="wk-routine-card__actions">
                 <button class="del" data-toggle-favorite-routine="${r.id}" aria-label="${r.favorite?'Remove from favorites':'Add to favorites'}">${svg(r.favorite?'starFilled':'star',16)}</button>
-                <button class="del" data-edit-routine="${r.id}" aria-label="Edit routine">✎</button>
+                <button class="del" data-edit-routine="${r.id}" aria-label="Edit routine">${svg('pencil',16)}</button>
                 <button class="del" data-dup-routine="${r.id}" aria-label="Duplicate routine">${svg('copy',16)}</button>
                 <button class="del" data-move-routine="${r.id}" aria-label="Move to folder" title="Move to folder">${svg('plan',16)}</button>
                 <button class="del" data-del-routine="${r.id}" aria-label="Delete routine">${svg('x',16)}</button>
@@ -274,7 +274,7 @@
             return `<div class="wk-session-row" data-view-session="${s.id}">
             <div>
               <div class="wk-session-row__title">${sessionTitle(s)}</div>
-              <div class="wk-session-row__meta">${s.exercises.length} exercise${s.exercises.length!==1?'s':''}${s.durationMin?` · ${workoutDurationLabel(s)}`:''}${prCount?` · 🏆 ${prCount} PR${prCount>1?'s':''}`:''}</div>
+              <div class="wk-session-row__meta">${s.exercises.length} exercise${s.exercises.length!==1?'s':''}${s.durationMin?` · ${workoutDurationLabel(s)}`:''}${prCount?` · ${svg('trophy',12)} ${prCount} PR${prCount>1?'s':''}`:''}</div>
               <div class="wk-session-row__date">${s.date}${s.volume?` · ${displayW(s.volume,0).toLocaleString()} ${wUnit()} vol`:''}</div>
               <div style="margin-top:5px;">${muscles.map(m=>`<span class="muscle-chip">${m}</span>`).join("")}</div>
             </div>

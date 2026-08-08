@@ -12,6 +12,10 @@
    Where the reference shows something this app has no real source for, that element is
    honestly omitted rather than faked. */
 (function () {
+  /* An icon by name, from app.js's set. Guarded so a missing svg() degrades to no
+     decoration rather than taking the page down. */
+  function ic(n, s){ return (typeof svg === "function") ? svg(n, s || 16) : ""; }
+
   window.IgnytPages = window.IgnytPages || {};
 
   const DEFAULT_STEPS_GOAL = 10000; // no configurable step goal exists yet; display-only denominator, real numerator
@@ -126,10 +130,10 @@
         if (now - t < 28 * DAY) active.add(new Date(t).toDateString());
       }
       const pct = Math.round(active.size / 28 * 100);
-      if (pct >= 80) return { label: 'Exceptional', icon: '🏆', tone: 'gold', pct };
-      if (pct >= 60) return { label: 'Consistent', icon: '⭐', tone: 'good', pct };
-      if (pct >= 35) return { label: 'Building', icon: '📈', tone: 'ok', pct };
-      return { label: 'Getting started', icon: '🌱', tone: 'new', pct };
+      if (pct >= 80) return { label: 'Exceptional', icon: 'trophy', tone: 'gold', pct };
+      if (pct >= 60) return { label: 'Consistent', icon: 'star', tone: 'good', pct };
+      if (pct >= 35) return { label: 'Building', icon: 'trend', tone: 'ok', pct };
+      return { label: 'Getting started', icon: 'sprout', tone: 'new', pct };
     })();
 
 
@@ -161,7 +165,7 @@
 
       <div class="pg-card hm-greet">
         <div class="hm-greet__left">
-          <div class="hm-greet__hello">${greeting()}, ${state.profile.name || 'Athlete'} 👋</div>
+          <div class="hm-greet__hello">${greeting()}, ${state.profile.name || 'Athlete'}</div>
           <div class="hm-greet__quote">${quoteOfDay}</div>
           ${window.IgnytXP ? (()=>{ const x = IgnytXP.progress(); return `
           <div class="hm-xp">
@@ -172,8 +176,8 @@
             <div class="hm-xp__track"><div class="hm-xp__fill" style="--fill:${x.percent/100};"></div></div>
           </div>`; })() : ''}
           <div class="hm-greet__chips">
-            <span class="hm-chip hm-chip--streak">🔥 ${streak} day${streak === 1 ? '' : 's'}</span>
-            <span class="hm-chip hm-chip--${consistency.tone}">${consistency.icon} ${consistency.label}</span>
+            <span class="hm-chip hm-chip--streak">${ic("flame",13)} ${streak} day${streak === 1 ? '' : 's'}</span>
+            <span class="hm-chip hm-chip--${consistency.tone}">${ic(consistency.icon,13)} ${consistency.label}</span>
           </div>
         </div>
         <div class="hm-greet__right">
@@ -310,7 +314,7 @@
             ${bar('Fat', n.fat, targets.fat, '#D97706')}
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--rh-muted);border-top:1px solid rgba(128,128,128,.15);padding-top:9px;">
-            <span>💧 ${(water / 1000).toFixed(1)} / ${(waterTarget / 1000).toFixed(1)} L</span>
+            <span>${ic("droplet",13)} ${(water / 1000).toFixed(1)} / ${(waterTarget / 1000).toFixed(1)} L</span>
             <span>${n.mealCount} meal${n.mealCount === 1 ? '' : 's'} · ${n.entryCount} item${n.entryCount === 1 ? '' : 's'}</span>
           </div>
           ${n.latestName ? `<div style="font-size:11px;color:var(--rh-muted);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
@@ -337,7 +341,7 @@
           <div class="wch__top">
             <span class="wch__icon">${wc.icon}</span>
             <span class="wch__name">${escHtml(wc.name)}</span>
-            <span class="wch__xp">${wc.done ? 'Complete ✓' : '+'+wc.xp+' XP'}</span>
+            <span class="wch__xp">${wc.done ? 'Complete '+ic('check',12) : '+'+wc.xp+' XP'}</span>
           </div>
           <div class="wch__label">${escHtml(wc.label)}</div>
           <div class="wch__track"><div class="wch__fill" style="--fill:${wc.percent/100}"></div></div>

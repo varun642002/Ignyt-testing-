@@ -40,134 +40,134 @@
     /* Unambiguous product words that must outrank the dish rules below. USDA writes cooking
        oils as "Oil, Olive, Salad or Cooking" — the dish rule for /salad/ matched that and
        served a bowl of leaves for a bottle of olive oil. Nothing named "oil" is a dish. */
-    [/\boils?\b/, "🫒"],
+    [/\boils?\b/, "oil"],
 
     /* dishes next — these describe a prepared food, and the ingredient is incidental */
-    [/\b(soup|broth|bouillon|chowder|bisque|consomme)\b/, "🍲"],
-    [/\b(pizza)\b/, "🍕"],
-    [/\b(burger|hamburger|cheeseburger)\b/, "🍔"],
-    [/\b(sandwich|sub|wrap)\b/, "🥪"],
-    [/\b(taco|burrito|quesadilla|nacho)\b/, "🌮"],
-    [/\b(sushi|sashimi)\b/, "🍣"],
-    [/\b(curry|masala|tikka|korma|biryani|dal|daal)\b/, "🍛"],
-    [/\b(salad|slaw)\b/, "🥗"],
-    [/\b(stew|casserole|hotpot)\b/, "🍲"],
-    [/\b(pasta|spaghetti|macaroni|lasagna|noodle|ramen|linguine|penne)\b/, "🍝"],
-    [/\b(sausage|frankfurter|hot dog|hotdog|bratwurst)\b/, "🌭"],
-    [/\b(fries|french fried)\b/, "🍟"],
-    [/\b(popcorn)\b/, "🍿"],
-    [/\b(pancake|waffle)\b/, "🥞"],
-    [/\b(pie|tart|cobbler)\b/, "🥧"],
-    [/\b(cake|cheesecake|brownie|cupcake)\b/, "🍰"],
-    [/\b(cookie|biscuit(?!s?, refrigerated)|shortbread)\b/, "🍪"],
-    [/\b(doughnut|donut)\b/, "🍩"],
-    [/\b(chocolate|cocoa|candy|fudge|toffee|caramel)\b/, "🍫"],
-    [/\b(ice cream|gelato|sorbet|frozen dessert)\b/, "🍦"],
-    [/\b(honey)\b/, "🍯"],
-    [/\b(jam|jelly|preserve|marmalade)\b/, "🍓"],
+    [/\b(soup|broth|bouillon|chowder|bisque|consomme)\b/, "bowl"],
+    [/\b(pizza)\b/, "burger"],
+    [/\b(burger|hamburger|cheeseburger)\b/, "burger"],
+    [/\b(sandwich|sub|wrap)\b/, "bread"],
+    [/\b(taco|burrito|quesadilla|nacho)\b/, "burger"],
+    [/\b(sushi|sashimi)\b/, "rice"],
+    [/\b(curry|masala|tikka|korma|biryani|dal|daal)\b/, "curry"],
+    [/\b(salad|slaw)\b/, "leaf"],
+    [/\b(stew|casserole|hotpot)\b/, "bowl"],
+    [/\b(pasta|spaghetti|macaroni|lasagna|noodle|ramen|linguine|penne)\b/, "bowl"],
+    [/\b(sausage|frankfurter|hot dog|hotdog|bratwurst)\b/, "burger"],
+    [/\b(fries|french fried)\b/, "snack"],
+    [/\b(popcorn)\b/, "snack"],
+    [/\b(pancake|waffle)\b/, "bread"],
+    [/\b(pie|tart|cobbler)\b/, "cake"],
+    [/\b(cake|cheesecake|brownie|cupcake)\b/, "cake"],
+    [/\b(cookie|biscuit(?!s?, refrigerated)|shortbread)\b/, "cake"],
+    [/\b(doughnut|donut)\b/, "cake"],
+    [/\b(chocolate|cocoa|candy|fudge|toffee|caramel)\b/, "cake"],
+    [/\b(ice cream|gelato|sorbet|frozen dessert)\b/, "cake"],
+    [/\b(honey)\b/, "sauce"],
+    [/\b(jam|jelly|preserve|marmalade)\b/, "apple"],
 
     /* animal proteins */
-    [/\b(chicken|broilers or fryers|poultry)\b/, "🍗"],
-    [/\b(turkey)\b/, "🦃"],
-    [/\b(duck|goose|quail|pheasant)\b/, "🦆"],
-    [/\b(bacon)\b/, "🥓"],
-    [/\b(ham|pork|swine)\b/, "🍖"],
-    [/\b(beef|steak|veal|sirloin|brisket|ground beef)\b/, "🥩"],
-    [/\b(lamb|mutton|goat|venison|bison|elk)\b/, "🍖"],
-    [/\b(shrimp|prawn)\b/, "🍤"],
-    [/\b(crab|lobster|crayfish)\b/, "🦞"],
-    [/\b(oyster|clam|mussel|scallop)\b/, "🦪"],
-    [/\b(squid|octopus|calamari)\b/, "🦑"],
-    [/\b(salmon|tuna|cod|halibut|trout|herring|mackerel|sardine|anchovy|tilapia|bass|haddock|pollock|snapper|fish)\b/, "🐟"],
-    [/\b(egg|eggs)\b/, "🥚"],
+    [/\b(chicken|broilers or fryers|poultry)\b/, "meat"],
+    [/\b(turkey)\b/, "meat"],
+    [/\b(duck|goose|quail|pheasant)\b/, "meat"],
+    [/\b(bacon)\b/, "meat"],
+    [/\b(ham|pork|swine)\b/, "meat"],
+    [/\b(beef|steak|veal|sirloin|brisket|ground beef)\b/, "meat"],
+    [/\b(lamb|mutton|goat|venison|bison|elk)\b/, "meat"],
+    [/\b(shrimp|prawn)\b/, "shrimp"],
+    [/\b(crab|lobster|crayfish)\b/, "shrimp"],
+    [/\b(oyster|clam|mussel|scallop)\b/, "shrimp"],
+    [/\b(squid|octopus|calamari)\b/, "shrimp"],
+    [/\b(salmon|tuna|cod|halibut|trout|herring|mackerel|sardine|anchovy|tilapia|bass|haddock|pollock|snapper|fish)\b/, "fish"],
+    [/\b(egg|eggs)\b/, "egg"],
 
     /* dairy */
-    [/\b(cheese|cheddar|mozzarella|parmesan|paneer|feta|brie)\b/, "🧀"],
-    [/\b(butter|ghee)\b/, "🧈"],
-    [/\b(yogurt|yoghurt|curd)\b/, "🥛"],
-    [/\b(milk|cream|dairy)\b/, "🥛"],
+    [/\b(cheese|cheddar|mozzarella|parmesan|paneer|feta|brie)\b/, "milk"],
+    [/\b(butter|ghee)\b/, "oil"],
+    [/\b(yogurt|yoghurt|curd)\b/, "milk"],
+    [/\b(milk|cream|dairy)\b/, "milk"],
 
     /* fruit */
-    [/\b(apple|apples)\b/, "🍎"],
-    [/\b(banana|bananas|plantain)\b/, "🍌"],
-    [/\b(orange|tangerine|clementine|mandarin)\b/, "🍊"],
-    [/\b(lemon|lime)\b/, "🍋"],
-    [/\b(grapefruit)\b/, "🍊"],
-    [/\b(grape|grapes|raisin)\b/, "🍇"],
-    [/\b(strawberr|raspberr|blackberr|blueberr|cranberr|berry|berries)/, "🍓"],
-    [/\b(watermelon)\b/, "🍉"],
-    [/\b(melon|cantaloupe|honeydew)\b/, "🍈"],
-    [/\b(peach|nectarine|apricot)\b/, "🍑"],
-    [/\b(pear|pears)\b/, "🍐"],
-    [/\b(pineapple)\b/, "🍍"],
-    [/\b(mango|mangoes)\b/, "🥭"],
-    [/\b(avocado)\b/, "🥑"],
-    [/\b(cherry|cherries)\b/, "🍒"],
-    [/\b(coconut)\b/, "🥥"],
-    [/\b(kiwi)\b/, "🥝"],
-    [/\b(date|dates|fig|figs)\b/, "🌴"],
+    [/\b(apple|apples)\b/, "apple"],
+    [/\b(banana|bananas|plantain)\b/, "apple"],
+    [/\b(orange|tangerine|clementine|mandarin)\b/, "apple"],
+    [/\b(lemon|lime)\b/, "apple"],
+    [/\b(grapefruit)\b/, "apple"],
+    [/\b(grape|grapes|raisin)\b/, "apple"],
+    [/\b(strawberr|raspberr|blackberr|blueberr|cranberr|berry|berries)/, "apple"],
+    [/\b(watermelon)\b/, "apple"],
+    [/\b(melon|cantaloupe|honeydew)\b/, "apple"],
+    [/\b(peach|nectarine|apricot)\b/, "apple"],
+    [/\b(pear|pears)\b/, "apple"],
+    [/\b(pineapple)\b/, "apple"],
+    [/\b(mango|mangoes)\b/, "apple"],
+    [/\b(avocado)\b/, "carrot"],
+    [/\b(cherry|cherries)\b/, "apple"],
+    [/\b(coconut)\b/, "apple"],
+    [/\b(kiwi)\b/, "apple"],
+    [/\b(date|dates|fig|figs)\b/, "carrot"],
 
     /* vegetables */
-    [/\b(tomato|tomatoes)\b/, "🍅"],
-    [/\b(potato|potatoes)\b/, "🥔"],
-    [/\b(sweet potato|yam)\b/, "🍠"],
-    [/\b(carrot|carrots)\b/, "🥕"],
-    [/\b(broccoli|cauliflower)\b/, "🥦"],
-    [/\b(corn|maize|sweetcorn)\b/, "🌽"],
-    [/\b(pepper|peppers|capsicum|chili|chilli|jalapeno)\b/, "🌶️"],
-    [/\b(cucumber|gherkin|pickle)\b/, "🥒"],
-    [/\b(lettuce|spinach|kale|cabbage|greens|chard|arugula)\b/, "🥬"],
-    [/\b(onion|onions|shallot|leek)\b/, "🧅"],
-    [/\b(garlic)\b/, "🧄"],
-    [/\b(mushroom|mushrooms)\b/, "🍄"],
-    [/\b(eggplant|aubergine|brinjal)\b/, "🍆"],
-    [/\b(pumpkin|squash|courgette|zucchini|gourd)\b/, "🎃"],
-    [/\b(pea|peas|bean|beans|lentil|chickpea|soybean|tofu)\b/, "🫘"],
+    [/\b(tomato|tomatoes)\b/, "carrot"],
+    [/\b(potato|potatoes)\b/, "carrot"],
+    [/\b(sweet potato|yam)\b/, "carrot"],
+    [/\b(carrot|carrots)\b/, "carrot"],
+    [/\b(broccoli|cauliflower)\b/, "carrot"],
+    [/\b(corn|maize|sweetcorn)\b/, "carrot"],
+    [/\b(pepper|peppers|capsicum|chili|chilli|jalapeno)\b/, "spice"],
+    [/\b(cucumber|gherkin|pickle)\b/, "carrot"],
+    [/\b(lettuce|spinach|kale|cabbage|greens|chard|arugula)\b/, "leaf"],
+    [/\b(onion|onions|shallot|leek)\b/, "carrot"],
+    [/\b(garlic)\b/, "carrot"],
+    [/\b(mushroom|mushrooms)\b/, "carrot"],
+    [/\b(eggplant|aubergine|brinjal)\b/, "carrot"],
+    [/\b(pumpkin|squash|courgette|zucchini|gourd)\b/, "snack"],
+    [/\b(pea|peas|bean|beans|lentil|chickpea|soybean|tofu)\b/, "beans"],
 
     /* staples */
-    [/\b(rice)\b/, "🍚"],
-    [/\b(bread|toast|bagel|roll|bun|baguette|naan|pita)\b/, "🍞"],
-    [/\b(croissant)\b/, "🥐"],
-    [/\b(tortilla|chapati|roti|paratha)\b/, "🫓"],
-    [/\b(pretzel)\b/, "🥨"],
-    [/\b(oat|oats|oatmeal|porridge|granola|muesli|cereal)\b/, "🥣"],
-    [/\b(wheat|flour|barley|quinoa|millet|grain|couscous)\b/, "🌾"],
+    [/\b(rice)\b/, "rice"],
+    [/\b(bread|toast|bagel|roll|bun|baguette|naan|pita)\b/, "bread"],
+    [/\b(croissant)\b/, "bread"],
+    [/\b(tortilla|chapati|roti|paratha)\b/, "bread"],
+    [/\b(pretzel)\b/, "snack"],
+    [/\b(oat|oats|oatmeal|porridge|granola|muesli|cereal)\b/, "bowl"],
+    [/\b(wheat|flour|barley|quinoa|millet|grain|couscous)\b/, "grain"],
 
     /* nuts, seeds, fats */
-    [/\b(peanut|almond|cashew|walnut|pecan|pistachio|hazelnut|macadamia|nut|nuts)\b/, "🥜"],
-    [/\b(seed|seeds|sesame|sunflower|flax|chia)\b/, "🌻"],
-    [/\bolives?\b/, "🫒"],
+    [/\b(peanut|almond|cashew|walnut|pecan|pistachio|hazelnut|macadamia|nut|nuts)\b/, "nut"],
+    [/\b(seed|seeds|sesame|sunflower|flax|chia)\b/, "carrot"],
+    [/\bolives?\b/, "oil"],
 
     /* drinks */
-    [/\b(coffee|espresso|latte|cappuccino)\b/, "☕"],
-    [/\b(tea|chai)\b/, "🍵"],
-    [/\b(juice)\b/, "🧃"],
-    [/\b(beer|ale|lager)\b/, "🍺"],
-    [/\b(wine)\b/, "🍷"],
-    [/\b(water|beverages?, water)\b/, "💧"],
-    [/\b(soda|cola|soft drink|carbonated)\b/, "🥤"],
-    [/\b(smoothie|shake|protein powder|whey|casein)\b/, "🥤"],
+    [/\b(coffee|espresso|latte|cappuccino)\b/, "cup"],
+    [/\b(tea|chai)\b/, "cup"],
+    [/\b(juice)\b/, "cup"],
+    [/\b(beer|ale|lager)\b/, "cup"],
+    [/\b(wine)\b/, "cup"],
+    [/\b(water|beverages?, water)\b/, "droplet"],
+    [/\b(soda|cola|soft drink|carbonated)\b/, "cup"],
+    [/\b(smoothie|shake|protein powder|whey|casein)\b/, "cup"],
 
     /* seasoning */
-    [/\b(salt)\b/, "🧂"],
-    [/\b(sugar|syrup|molasses)\b/, "🍬"],
-    [/\b(spice|herb|basil|oregano|thyme|cinnamon|pepper, black)\b/, "🌿"],
-    [/\b(sauce|ketchup|mustard|mayonnaise|dressing|vinegar)\b/, "🥫"]
+    [/\b(salt)\b/, "spice"],
+    [/\b(sugar|syrup|molasses)\b/, "cake"],
+    [/\b(spice|herb|basil|oregano|thyme|cinnamon|pepper, black)\b/, "spice"],
+    [/\b(sauce|ketchup|mustard|mayonnaise|dressing|vinegar)\b/, "sauce"]
   ];
 
   /* Per-category floor, so a food that matches no keyword still gets something meaningful. */
   var CATEGORY_GLYPHS = {
-    "Vegetables":"🥦", "Fruits":"🍎", "Grains & Cereals":"🌾", "Bread & Bakery":"🍞",
-    "Rice":"🍚", "Pasta":"🍝", "Beans & Legumes":"🫘", "Nuts & Seeds":"🥜",
-    "Dairy":"🥛", "Eggs":"🥚", "Chicken":"🍗", "Turkey":"🦃", "Beef":"🥩", "Pork":"🥓",
-    "Game & Other Meats":"🍖", "Fish":"🐟", "Seafood":"🦐", "Oils & Fats":"🫒",
-    "Spices & Herbs":"🌿", "Sauces & Condiments":"🥫", "Beverages":"🥤", "Desserts":"🍰",
-    "Snacks":"🍿", "Fast Food":"🍔", "Soups":"🍲", "Meals & Entrees":"🍱",
-    "Restaurant Foods":"🍽️", "Protein Supplements":"💪", "Indian Foods":"🍛",
-    "Custom Foods":"✏️"
+    "Vegetables":"carrot", "Fruits":"apple", "Grains & Cereals":"grain", "Bread & Bakery":"bread",
+    "Rice":"rice", "Pasta":"bowl", "Beans & Legumes":"beans", "Nuts & Seeds":"nut",
+    "Dairy":"milk", "Eggs":"egg", "Chicken":"meat", "Turkey":"meat", "Beef":"meat", "Pork":"meat",
+    "Game & Other Meats":"meat", "Fish":"fish", "Seafood":"shrimp", "Oils & Fats":"oil",
+    "Spices & Herbs":"spice", "Sauces & Condiments":"sauce", "Beverages":"cup", "Desserts":"cake",
+    "Snacks":"snack", "Fast Food":"burger", "Soups":"bowl", "Meals & Entrees":"rice",
+    "Restaurant Foods":"plate", "Protein Supplements":"shaker", "Indian Foods":"curry",
+    "Custom Foods":"pencil"
   };
 
-  var GENERIC = "🍴";
+  var GENERIC = "cutlery";
 
   /* The tint behind a thumbnail, taken from the category's nutrient colour so a list of
      foods reads as varied without any of the colour being decorative. */
@@ -298,7 +298,11 @@
         '<img src="' + img.url + '" alt="" loading="lazy" decoding="async" ' +
         'style="width:100%;height:100%;object-fit:cover;border-radius:inherit;"></span>';
     }
-    return '<span class="food-thumb" style="' + tint + px + '" aria-hidden="true">' + img.glyph + '</span>';
+    /* svg() lives in app.js, which loads after this module — but thumbHtml only runs at
+       render time, long after both are parsed. Guarded anyway so a food list can never
+       throw just because something changed the load order. */
+    var icon = (typeof svg === "function") ? svg(img.glyph, size ? Math.round(size * 0.55) : 18) : "";
+    return '<span class="food-thumb" style="' + tint + px + '" aria-hidden="true">' + icon + '</span>';
   }
 
   window.IgnytFoodImages = Object.freeze({

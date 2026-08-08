@@ -970,44 +970,44 @@ const ONBOARDING_STEP_TITLES = ["Fair Use Policy","About You","Notifications","H
    ARE the GOAL_TO_CALORIE_DELTA keys, so the mapping lives in one place instead of becoming a
    second lookup that drifts. */
 const OB_GOAL_OPTIONS = [
-  {key:"Fat Loss",             label:"Lose Fat",             icon:"🔥"},
-  {key:"Build Muscle",         label:"Gain Muscle",          icon:"💪"},
-  {key:"Maintain Weight",      label:"Maintain Weight",      icon:"⚖️"},
-  {key:"Improve Fitness",      label:"Improve Fitness",      icon:"❤️"},
-  {key:"Body Recomposition",   label:"Body Recomposition",   icon:"🔄"},
-  {key:"Athletic Performance", label:"Athletic Performance", icon:"⭐"}
+  {key:"Fat Loss",             label:"Lose Fat",             icon:"flame"},
+  {key:"Build Muscle",         label:"Gain Muscle",          icon:"dumbbell"},
+  {key:"Maintain Weight",      label:"Maintain Weight",      icon:"scale"},
+  {key:"Improve Fitness",      label:"Improve Fitness",      icon:"heart"},
+  {key:"Body Recomposition",   label:"Body Recomposition",   icon:"repeat"},
+  {key:"Athletic Performance", label:"Athletic Performance", icon:"star"}
 ];
 
 const OB_DIET_OPTIONS = [
-  {key:"non-veg",    label:"Non Vegetarian", icon:"🍗"},
-  {key:"vegetarian", label:"Vegetarian",     icon:"🥦"},
-  {key:"vegan",      label:"Vegan",          icon:"🌱"},
-  {key:"eggetarian", label:"Eggetarian",     icon:"🥚"},
-  {key:"jain",       label:"Jain",           icon:"🙏"},
-  {key:"none",       label:"No Preference",  icon:"🍽️"}
+  {key:"non-veg",    label:"Non Vegetarian", icon:"meat"},
+  {key:"vegetarian", label:"Vegetarian",     icon:"leaf"},
+  {key:"vegan",      label:"Vegan",          icon:"sprout"},
+  {key:"eggetarian", label:"Eggetarian",     icon:"egg"},
+  {key:"jain",       label:"Jain",           icon:"hands"},
+  {key:"none",       label:"No Preference",  icon:"plate"}
 ];
 
 const OB_WORKOUT_OPTIONS = [
-  {key:"gym",        label:"Gym",          icon:"🏋️"},
-  {key:"home",       label:"Home Workout", icon:"🏠"},
-  {key:"running",    label:"Running",      icon:"🏃"},
-  {key:"cycling",    label:"Cycling",      icon:"🚴"},
-  {key:"swimming",   label:"Swimming",     icon:"🏊"},
-  {key:"strength",   label:"Strength",     icon:"💪"},
-  {key:"functional", label:"Functional",   icon:"🤸"},
-  {key:"crossfit",   label:"CrossFit",     icon:"🥊"},
-  {key:"hyrox",      label:"HYROX",        icon:"🏆"},
-  {key:"yoga",       label:"Yoga",         icon:"🧘"}
+  {key:"gym",        label:"Gym",          icon:"barbell"},
+  {key:"home",       label:"Home Workout", icon:"home"},
+  {key:"running",    label:"Running",      icon:"run"},
+  {key:"cycling",    label:"Cycling",      icon:"bike"},
+  {key:"swimming",   label:"Swimming",     icon:"swim"},
+  {key:"strength",   label:"Strength",     icon:"dumbbell"},
+  {key:"functional", label:"Functional",   icon:"rings"},
+  {key:"crossfit",   label:"CrossFit",     icon:"kettlebell"},
+  {key:"hyrox",      label:"HYROX",        icon:"trophy"},
+  {key:"yoga",       label:"Yoga",         icon:"yoga"}
 ];
 
 /* Activity levels carry the multiplier TDEE already uses, so the step writes a real number
    into the plan rather than a label something else then has to translate. */
 const OB_ACTIVITY_OPTIONS = [
-  {key:"Sedentary",         label:"Sedentary",         desc:"Little or no exercise", mult:1.2,   icon:"🛋️"},
-  {key:"Lightly Active",    label:"Lightly Active",    desc:"1–3 days per week",     mult:1.375, icon:"🚶"},
-  {key:"Moderately Active", label:"Moderately Active", desc:"3–5 days per week",     mult:1.465, icon:"🏃"},
-  {key:"Very Active",       label:"Very Active",       desc:"6–7 days per week",     mult:1.725, icon:"🏋️"},
-  {key:"Extremely Active",  label:"Athlete",           desc:"Very intense daily",    mult:1.9,   icon:"🥇"}
+  {key:"Sedentary",         label:"Sedentary",         desc:"Little or no exercise", mult:1.2,   icon:"chair"},
+  {key:"Lightly Active",    label:"Lightly Active",    desc:"1–3 days per week",     mult:1.375, icon:"footprints"},
+  {key:"Moderately Active", label:"Moderately Active", desc:"3–5 days per week",     mult:1.465, icon:"run"},
+  {key:"Very Active",       label:"Very Active",       desc:"6–7 days per week",     mult:1.725, icon:"barbell"},
+  {key:"Extremely Active",  label:"Athlete",           desc:"Very intense daily",    mult:1.9,   icon:"medal"}
 ];
 
 const OB_HEALTH_METRICS = [
@@ -1101,7 +1101,76 @@ const ICONS = {
   scale:'<path d="M12 3v18M7 21h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 6h14M5 6L2.5 11a2.5 2.5 0 0 0 5 0L5 6zM19 6l-2.5 5a2.5 2.5 0 0 0 5 0L19 6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
   drag:'<circle cx="9" cy="6" r="1.6" fill="currentColor"/><circle cx="15" cy="6" r="1.6" fill="currentColor"/><circle cx="9" cy="12" r="1.6" fill="currentColor"/><circle cx="15" cy="12" r="1.6" fill="currentColor"/><circle cx="9" cy="18" r="1.6" fill="currentColor"/><circle cx="15" cy="18" r="1.6" fill="currentColor"/>',
   copy:'<rect x="9" y="9" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 5.5A1.5 1.5 0 0013.5 4h-8A1.5 1.5 0 004 5.5v8A1.5 1.5 0 005.5 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
-  pencil:'<path d="M4 16.5V20h3.5L18 9.5 14.5 6 4 16.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13.2 7.3l3.5 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+  pencil:'<path d="M4 16.5V20h3.5L18 9.5 14.5 6 4 16.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13.2 7.3l3.5 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+
+  /* ---- ICONS THAT REPLACED EMOJI ------------------------------------------------------
+     Everything below exists because the surface it serves used to render a pictographic
+     emoji. Emoji are the platform's artwork, not this app's: they change shape between
+     Android versions and iOS, they carry their own colour so they cannot follow the accent
+     or dim in a disabled row, several render as a hollow box on older Android, and they sit
+     on a different optical baseline from the 77 icons above — which is why a diet chip and
+     the nav beside it never looked like they came from the same product.
+
+     Drawn to the same rules as the rest of the set: 24-unit grid, 2px strokes, currentColor
+     so the caller decides colour, round caps and joins, and fills only where an outline
+     would close into a blob at ~16px. */
+
+  /* Diet preference. A drumstick, leaf, sprout, egg, open hands and a plate — the same
+     distinctions the emoji drew, minus the colour that made them shout. */
+  meat:'<path d="M13.5 4.2a5 5 0 0 1 6.3 6.3 5 5 0 0 1-4.2 3.4l-1.4.2-3.4 3.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.8 17.5a3.2 3.2 0 1 1-4.3 4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6.5 21.8a3.2 3.2 0 1 1-4.3-4.3l2.4-2.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  leaf:'<path d="M20 4c0 9-5 14-12 14a6 6 0 0 1 0-12c5 0 8-1 12-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 20c3-6 7-9 12-11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  sprout:'<path d="M12 21v-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 13c0-3.3-2.7-6-6-6 0 3.3 2.7 6 6 6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 13c0-3.9 3.1-7 7-7 0 3.9-3.1 7-7 7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  egg:'<path d="M12 3c3.6 0 6.5 5.4 6.5 9.6A6.5 6.5 0 0 1 12 21a6.5 6.5 0 0 1-6.5-8.4C5.5 8.4 8.4 3 12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  hands:'<path d="M12 20c-2.4-1.8-5.5-4.1-5.5-7.4V6.2c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6v4.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 20c2.4-1.8 5.5-4.1 5.5-7.4V6.2c0-.9-.7-1.6-1.6-1.6s-1.6.7-1.6 1.6v4.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  plate:'<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+
+  /* Training mode. */
+  bike:'<circle cx="5.5" cy="16.5" r="3.8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18.5" cy="16.5" r="3.8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5.5 16.5l4-8h5l4 8M9 8.5h4.5M14.5 8.5l-3 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  swim:'<circle cx="16.5" cy="6.5" r="2" fill="currentColor"/><path d="M3.5 12.5l5-3 3.5 2.5 3-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 18c1.6 0 1.6 1.4 3.2 1.4S7.3 18 8.9 18s1.6 1.4 3.2 1.4S13.7 18 15.3 18s1.6 1.4 3.2 1.4S20.1 18 21.5 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  yoga:'<circle cx="12" cy="4.8" r="2.3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 13l-6 3.5M12 13l6 3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 20.5h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  kettlebell:'<path d="M9.2 8.2a3 3 0 1 1 5.6 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 8c4 0 6.5 3.4 6.5 7.2A5.3 5.3 0 0 1 13.2 20.5h-2.4A5.3 5.3 0 0 1 5.5 15.2C5.5 11.4 8 8 12 8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  rings:'<circle cx="7" cy="14.5" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="14.5" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 10V4.5M17 10V4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  chair:'<path d="M6 4v9h12V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4.5 13h15M7 13v7M17 13v7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+
+  /* Food groups. One glyph per shelf of the catalogue, not per food — a carrot standing for
+     every vegetable is honest at this size, where a distinct outline per food item would be
+     twenty near-identical blobs. */
+  carrot:'<path d="M13.5 8.5L6.2 18.4a2 2 0 0 0 2.6 2.9l10.3-6.6a4.5 4.5 0 0 0-5.6-6.2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M15 7l1.5-3M16.5 9l3.5-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  apple:'<path d="M12 8c-1-2-3.2-2.6-5-1.6C4.6 7.9 4 11.4 5.4 14.8c1.2 3 3.2 5.4 5 5.4.8 0 1.1-.5 1.6-.5s.8.5 1.6.5c1.8 0 3.8-2.4 5-5.4 1.4-3.4.8-6.9-1.6-8.4-1.8-1-4-.4-5 1.6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 8V5.2M12 5.2c1.4 0 2.6-1 2.8-2.2-1.4-.2-2.6.8-2.8 2.2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  grain:'<path d="M12 21V9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 9c0-2.8 2.2-5 5-5 0 2.8-2.2 5-5 5zM12 9c0-2.8-2.2-5-5-5 0 2.8 2.2 5 5 5zM12 15c0-2.5 2-4.5 4.5-4.5 0 2.5-2 4.5-4.5 4.5zM12 15c0-2.5-2-4.5-4.5-4.5 0 2.5 2 4.5 4.5 4.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
+  bread:'<path d="M4 11a4 4 0 0 1 4-4h8a4 4 0 0 1 0 8v5H6a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 11v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  rice:'<path d="M4 13h16a8 8 0 0 1-16 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M2.5 13h19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 9.5c0-1.4 1.3-2.5 3-2.5s3 1.1 3 2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  beans:'<ellipse cx="9" cy="10" rx="3.6" ry="2.6" transform="rotate(-30 9 10)" fill="none" stroke="currentColor" stroke-width="1.8"/><ellipse cx="15.5" cy="13.5" rx="3.6" ry="2.6" transform="rotate(-30 15.5 13.5)" fill="none" stroke="currentColor" stroke-width="1.8"/><ellipse cx="9.5" cy="17" rx="3.6" ry="2.6" transform="rotate(-30 9.5 17)" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  nut:'<path d="M12 3c3.6 2.4 5.5 5.5 5.5 9A5.5 5.5 0 0 1 12 21a5.5 5.5 0 0 1-5.5-9c0-3.5 1.9-6.6 5.5-9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 8v9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  milk:'<path d="M9 2.5h6v3l2.5 4.5V21h-11V10L9 5.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6.5 13h11" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  fish:'<path d="M2.5 12c3.5-4.5 8-6.5 12-6.5 2.6 0 5 1 7 2.8-2 1.5-3 2.5-3 3.7s1 2.2 3 3.7c-2 1.8-4.4 2.8-7 2.8-4 0-8.5-2-12-6.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="17" cy="10.5" r="1" fill="currentColor"/>',
+  shrimp:'<path d="M20 7c-5 0-8 2-9.5 4.5S8 17 4.5 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20 7a5 5 0 0 0-5-5 6 6 0 0 0-6 6c0 3.5 2.5 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16.5" cy="5.5" r="1" fill="currentColor"/>',
+  oil:'<path d="M9 3.5h4.5V7l3.5 3v11h-11V10l3-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6 14h11" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  spice:'<path d="M7 9.5h10l-1 11H8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.5 9.5V6a3.5 3.5 0 0 1 7 0v3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10.5 5v.1M13.5 5v.1M12 7v.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  sauce:'<path d="M9 2.5h6v4l2 2.5V21H7V9l2-2.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12.5h6v4H9z" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  cup:'<path d="M5 6h11v7a5.5 5.5 0 0 1-11 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M16 8.5h1.8a2.7 2.7 0 0 1 0 5.4H16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 21h13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  cake:'<path d="M4 14.5c1.6 0 1.6 1.4 3.2 1.4s1.6-1.4 3.2-1.4 1.6 1.4 3.2 1.4 1.6-1.4 3.2-1.4 1.6 1.4 3.2 1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 14.5V12a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v2.5M4 16.5V20h16v-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9V6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  snack:'<path d="M6.5 4h11l-1.5 16.5h-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.5 8.5h7M8.2 13h7.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  burger:'<path d="M3.5 9.5a8.5 6 0 0 1 17 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3.5 12.5h17M3.5 15.5h17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3.5 18.5a4 3 0 0 0 4 2h9a4 3 0 0 0 4-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  bowl:'<path d="M3 11h18a9 9 0 0 1-18 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7.5c0-1 1.3-2 3-2M13.5 4.5c.9.4 1.5 1.2 1.5 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  shaker:'<path d="M8 3.5h8l-1 3.5H9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7h6l1.5 10.5A3 3 0 0 1 13.5 21h-3A3 3 0 0 1 7.5 17.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.2 12.5h7.6" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  curry:'<path d="M2.5 12.5h19a9.5 8 0 0 1-19 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 8.5c0-1.2 1.8-2.2 4-2.2s4 1 4 2.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 6.3V3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  sunrise:'<circle cx="12" cy="14" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 6.5V4M5.6 8.6L4 7M18.4 8.6L20 7M2.5 18.5h19M6.5 14H4M20 14h-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  cutlery:'<path d="M7 3v8a2 2 0 0 0 4 0V3M9 11v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 3c-1.4 1-2 2.5-2 4.5 0 1.6.7 2.6 2 3v10.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+
+  /* Progress sections and misc surfaces. */
+  medal:'<circle cx="12" cy="15" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 10L6 3h4l2 4 2-4h4l-2.5 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 13v4M10 15h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  archive:'<rect x="3" y="4" width="18" height="5" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 13h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  camera:'<path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.7l1.3-2h6l1.3 2h2.7A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/>',
+  receipt:'<path d="M6 3h12v18l-2-1.5-2 1.5-2-1.5L10 21l-2-1.5L6 21z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 8h6M9 12h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  chart:'<path d="M4 20V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 20h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 17v-5M12.5 17V7M17 17v-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  microscope:'<path d="M9 3.5h4l1 8h-6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 11.5h6a5 5 0 0 1-2 9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 21h15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  mic:'<rect x="9" y="2.5" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  alert:'<path d="M12 3.5l9.5 16.5h-19z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4.5M12 17.5v.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  pill:'<rect x="2.8" y="8.5" width="18.4" height="7" rx="3.5" transform="rotate(-45 12 12)" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.7 8.7l6.6 6.6" stroke="currentColor" stroke-width="2"/>',
+  bottle:'<path d="M10 2.5h4v3a4 4 0 0 0 1.5 3.1A4 4 0 0 1 17 11.8V19a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-7.2a4 4 0 0 1 1.5-3.2A4 4 0 0 0 10 5.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M7 14h10" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  image:'<rect x="3.5" y="5" width="17" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8.8" cy="10" r="1.6" fill="currentColor"/><path d="M4.5 17l4.8-4.5 3.4 3 2.8-2.4L19.5 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  folder:'<path d="M3.5 7a2 2 0 0 1 2-2h3.2l2 2.5h7.8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>'
 };
 
 /* =========================================================
@@ -1522,7 +1591,20 @@ function dayKeyUTC(d){
 
 function todayStr(){ return dayKey(); }
 
-function svg(name, size=19){ return `<svg width="${size}" height="${size}" viewBox="0 0 24 24">${ICONS[name]}</svg>`; }
+/* An unknown name used to interpolate `undefined` INTO THE SVG, which renders as the literal
+   word on screen — the failure mode that matters now that ~100 call sites pass a name looked
+   up from a data table rather than typed at the call site. An unknown name now draws nothing
+   and says so once in the console, so a typo is visible to whoever can fix it and invisible
+   to the user. */
+function svg(name, size=19){
+  const d = ICONS[name];
+  if(!d){
+    if(name && !svg._warned.has(name)){ svg._warned.add(name); console.warn("[IGNYT] no icon named " + JSON.stringify(name)); }
+    return "";
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24">${d}</svg>`;
+}
+svg._warned = new Set();
 // Icon-size scale (Phase 1 design tokens): svg() takes a raw pixel number, not a CSS custom
 // property, so this is the JS-side equivalent of a token -- the 5 sizes that already cover
 // the vast majority of the ~300 existing svg() call sites (audited), named for new call
@@ -4173,7 +4255,7 @@ function getPreviousSet(exerciseName, setIndex){
 /* True only if the session getPreviousSet() would read from is itself the exact session a
    real weight/1RM PR was recorded on -- reuses the exact same "most recent session that
    logged this exercise" search rather than approximating from the set's raw numbers, so the
-   🏆 badge can never show for a coincidentally-matching weight that wasn't actually a PR. */
+   The PR badge can never show for a coincidentally-matching weight that wasn't actually a PR. */
 function isPreviousSetPR(exerciseName){
   const sess = state.workoutLog.find(s=> s.exercises.some(e=>e.name===exerciseName));
   if(!sess) return false;
@@ -5139,20 +5221,20 @@ const FOOD_PAGE_SIZE = 8;
 
 /* A glyph per category. Purely decorative — the name is always shown next to it. */
 const FOOD_CATEGORY_ICONS = {
-  "Vegetables":"🥦", "Fruits":"🍎", "Grains & Cereals":"🌾", "Bread & Bakery":"🍞",
-  "Rice":"🍚", "Pasta":"🍝", "Beans & Legumes":"🫘", "Nuts & Seeds":"🥜",
-  "Dairy":"🥛", "Eggs":"🥚", "Chicken":"🍗", "Turkey":"🦃", "Beef":"🥩", "Pork":"🥓",
-  "Game & Other Meats":"🍖", "Fish":"🐟", "Seafood":"🦐", "Oils & Fats":"🫒",
-  "Spices & Herbs":"🌿", "Sauces & Condiments":"🥫", "Beverages":"🥤", "Desserts":"🍰",
-  "Snacks":"🍿", "Fast Food":"🍔", "Soups":"🍲", "Meals & Entrees":"🍱",
-  "Restaurant Foods":"🍽️", "Protein Supplements":"💪", "Indian Foods":"🍛",
-  "Custom Foods":"✏️"
+  "Vegetables":"carrot", "Fruits":"apple", "Grains & Cereals":"grain", "Bread & Bakery":"bread",
+  "Rice":"rice", "Pasta":"bowl", "Beans & Legumes":"beans", "Nuts & Seeds":"nut",
+  "Dairy":"milk", "Eggs":"egg", "Chicken":"meat", "Turkey":"meat", "Beef":"meat", "Pork":"meat",
+  "Game & Other Meats":"meat", "Fish":"fish", "Seafood":"shrimp", "Oils & Fats":"oil",
+  "Spices & Herbs":"spice", "Sauces & Condiments":"sauce", "Beverages":"cup", "Desserts":"cake",
+  "Snacks":"snack", "Fast Food":"burger", "Soups":"bowl", "Meals & Entrees":"plate",
+  "Restaurant Foods":"cutlery", "Protein Supplements":"shaker", "Indian Foods":"curry",
+  "Custom Foods":"pencil"
 };
 /* Reads through the image service when it is loaded, so a category's glyph is defined in one
    place; falls back to the local table if that module failed to load. */
 function foodCategoryIcon(name){
   if(window.IgnytFoodImages) return IgnytFoodImages.categoryGlyph(name);
-  return FOOD_CATEGORY_ICONS[name] || "🍴";
+  return FOOD_CATEGORY_ICONS[name] || "cutlery";
 }
 
 /** One search/browse result.
@@ -5180,7 +5262,7 @@ function renderFoodResultCard(f, labelOverride){
            most on a fuzzy or synonym hit where the connection is not otherwise obvious. -->
       <div class="food-row__name">
         <span class="food-row__text">${highlightMatch(labelOverride || (window.IgnytFoodCuration ? IgnytFoodCuration.displayName(f) : f.name), state.foodSearchQuery)}</span>${
-        f.verified ? `<span class="food-row__verified" title="Measured values from a published source" aria-label="Verified">✓</span>` : ""}</div>
+        f.verified ? `<span class="food-row__verified" title="Measured values from a published source" aria-label="Verified">${svg('check',12)}</span>` : ""}</div>
     </div>
     ${/* The row still opens Food Details — that is where you go to change the serving. The +
           is the other half: log it at its default portion and stay on the results, because
@@ -5699,7 +5781,7 @@ function foodSearchResultsHtml(meal){
             ${freq.map(f=>`
               <div class="fs-row" data-quick-recent="${escHtml(String(f.entry.id))}">
                 <span class="fs-row__body">
-                  <span class="fs-row__title">${escHtml(f.entry.name)}${f.fav?' <span class="fs-star">★</span>':''}</span>
+                  <span class="fs-row__title">${escHtml(f.entry.name)}${f.fav?' <span class="fs-star">'+svg('starFilled',12)+'</span>':''}</span>
                   <span class="fs-row__sub">${f.entry.grams?`${Math.round(f.entry.grams)} ${escHtml(f.entry.servingUnit||'g')}`:'&mdash;'}${f.count>1?` · ${f.count}×`:''}</span>
                 </span>
                 <span class="fs-row__cal">${Math.round(f.entry.calories||0)} Cal</span>
@@ -5708,7 +5790,7 @@ function foodSearchResultsHtml(meal){
 
           ${!freq.length && !combos.length && !yday.length ? `
             <div class="fs-empty">
-              <div style="font-size:30px;line-height:1;margin-bottom:8px;">🔍</div>
+              <div class="pg-empty__icon">${svg('search',28)}</div>
               <div style="font-weight:700;font-size:14px;">Search ${(cat?cat.count():0).toLocaleString()} foods</div>
               <div style="font-size:12px;color:var(--muted);margin-top:4px;">
                 Anything you log shows up here for one-tap repeat logging.
@@ -6113,12 +6195,9 @@ function macroMiniCard(label, value, target, colorKey, unit, decimals){
 const MEAL_DONUT_COLORS = ["var(--mint)", "var(--steel)", "#FFB020", "#A98BFF", "#FF7A5C", "#9AD5FF"];
 
 /* Emoji per meal, matching the meal rows in the design. */
-const MEAL_ICONS = {
-  "Breakfast":"🍳", "Morning Snack":"🍌", "Lunch":"🥗", "Evening Snack":"🍎",
-  "Afternoon Snack":"🍪", "Dinner":"🍛",
-  /* legacy keys — entries logged under these still render and still count */
-  "Bedtime Snack":"🌙", "Post Workout":"🥤", "Snacks":"🍿"
-};
+/* Meal types deliberately carry NO glyph. The only two places they render are <option>
+   elements, which display text and nothing else — an inline <svg> in one is dropped or
+   printed as raw markup depending on the browser. The names stand on their own. */
 
 /** Short observations derived from the day's totals. Only facts, no advice. */
 function nutritionInsights(totals, coverage, targets, waterMl, waterTarget){
@@ -7134,11 +7213,11 @@ function renderLegacyHomeTab(){
     </div>
 
     <div class="grid2" style="margin-top:12px;">
-      <div class="stat-card"><div class="stat-label">Streak</div><div class="stat-value" style="color:var(--accent);">🔥 ${streak}<span class="stat-unit">days</span></div></div>
+      <div class="stat-card"><div class="stat-label">Streak</div><div class="stat-value" style="color:var(--accent);">${svg('flame',16)} ${streak}<span class="stat-unit">days</span></div></div>
       <div class="stat-card"><div class="stat-label">Weight</div><div class="stat-value" style="color:var(--steel);">${displayW(latestWeight?latestWeight.weight:state.profile.weight)}<span class="stat-unit">${wUnit()}</span></div></div>
       <div class="stat-card"><div class="stat-label">Calories Today</div><div class="stat-value" style="color:var(--text);">${eaten}<span class="stat-unit">/ ${targets.kcal}</span></div></div>
       <div class="stat-card"><div class="stat-label">Protein Today</div><div class="stat-value" style="color:var(--text);">${proteinToday}<span class="stat-unit">/ ${Math.round(targets.protein)}g</span></div></div>
-      ${state.prs.length ? `<div class="stat-card" style="grid-column:1/-1;"><div class="stat-label">Latest PR</div><div class="stat-value" style="color:var(--accent);font-size:16px;">🏆 ${state.prs[0].exerciseName||'Session Volume'} — ${prValueLabel(state.prs[0])}<span class="stat-unit" style="display:block;margin-top:2px;">${prTypeLabel(state.prs[0])}</span></div></div>` : ''}
+      ${state.prs.length ? `<div class="stat-card" style="grid-column:1/-1;"><div class="stat-label">Latest PR</div><div class="stat-value" style="color:var(--accent);font-size:16px;">${svg('trophy',15)} ${state.prs[0].exerciseName||'Session Volume'} — ${prValueLabel(state.prs[0])}<span class="stat-unit" style="display:block;margin-top:2px;">${prTypeLabel(state.prs[0])}</span></div></div>` : ''}
     </div>
 
     <div class="eyebrow-label">This Week</div>
@@ -7146,7 +7225,7 @@ function renderLegacyHomeTab(){
       ${week.days.map((d,i)=>{
         const pct = d.exercises.length ? Math.round(d.exercises.filter(ex=>state.completed[`${week.week}|${d.day}|${ex.name}`]).length/d.exercises.length*100) : 0;
         return `<button class="day-tab ${pct===100?'active':''}" data-home-day="${i}" style="opacity:${pct===100?1:.85};">
-          <div class="dtop">${d.day.toUpperCase()}</div><div class="dbot">${pct===100?'✓ Done':pct>0?pct+'%':d.session.split(' ')[0]}</div>
+          <div class="dtop">${d.day.toUpperCase()}</div><div class="dbot">${pct===100?svg('check',12)+' Done':pct>0?pct+'%':d.session.split(' ')[0]}</div>
         </button>`;
       }).join("")}
     </div>
@@ -7858,7 +7937,7 @@ function renderHomeHabits(){
           <span class="hb-icon" style="background:${meta.bg};color:${meta.color};" aria-hidden="true">${svg(meta.icon,15)}</span>
           <span class="hb-body">
             <span class="hb-name">${escHtml(h.name)}</span>
-            ${streak > 0 ? `<span class="hb-streak">🔥 ${streak} day${streak===1?"":"s"}</span>` : ""}
+            ${streak > 0 ? `<span class="hb-streak">${svg('flame',13)} ${streak} day${streak===1?"":"s"}</span>` : ""}
           </span>
         </button>`;
       }).join("")}
@@ -9641,12 +9720,12 @@ function obStepSummary(){
 function obOptionRow(fieldPath, opt, selected, multi){
   const attr = multi ? "data-ob-toggle" : "data-ob-pick";
   return `<button class="ob-opt ${selected?'is-on':''}" ${attr}="${obEsc(fieldPath)}|${obEsc(opt.key)}">
-    <span class="ob-opt__icon" aria-hidden="true">${opt.icon||''}</span>
+    <span class="ob-opt__icon" aria-hidden="true">${opt.icon?svg(opt.icon,20):''}</span>
     <span class="ob-opt__body">
       <span class="ob-opt__label">${obEsc(opt.label)}</span>
       ${opt.desc?`<span class="ob-opt__desc">${obEsc(opt.desc)}</span>`:''}
     </span>
-    <span class="ob-opt__tick" aria-hidden="true">${selected?'✓':''}</span>
+    <span class="ob-opt__tick" aria-hidden="true">${selected?svg('check',15):''}</span>
   </button>`;
 }
 
@@ -9680,7 +9759,7 @@ function obFairUse(){
       ${points.map(([i,t])=>`<div class="ob-policy__row"><span aria-hidden="true">${i}</span><span>${obEsc(t)}</span></div>`).join("")}
     </div>
     <button class="ob-check ${ok?'is-on':''}" data-ob-toggle-bool="onboarding.fairUseAccepted">
-      <span class="ob-check__box" aria-hidden="true">${ok?'✓':''}</span>
+      <span class="ob-check__box" aria-hidden="true">${ok?svg('check',13):''}</span>
       <span>I have read and agree to the <a href="legal/terms-and-conditions.html" data-legal-open="terms">Terms and Conditions</a> and <a href="legal/privacy-policy.html" data-legal-open="privacy">Privacy Policy</a>.</span>
     </button>`;
 }
@@ -9800,7 +9879,7 @@ function obNotifications(){
 
   const EXAMPLES = [
     ["\u{1F373}", "Meals", "A nudge at breakfast, lunch and dinner."],
-    ["\u{1F3CB}️", "Workouts", "When you have a session planned."],
+    ["barbell", "Workouts", "When you have a session planned."],
     ["\u{1F4A7}", "Hydration", "So the water target does not end the day at zero."],
     ["\u{1F4C8}", "Progress", "A weekly summary of what actually happened."]
   ];
@@ -9817,7 +9896,7 @@ function obNotifications(){
 
     ${st === "granted" ? `
       <div class="ob-hc-ok" role="status">
-        <span class="ob-hc-ok__tick" aria-hidden="true">✓</span>
+        <span class="ob-hc-ok__tick" aria-hidden="true">${svg('check',13)}</span>
         <span>Notifications are on. You can fine-tune each reminder in Settings.</span>
       </div>` : ""}
     ${st === "denied" ? `
@@ -9852,11 +9931,11 @@ function obHealthConnect(){
   return `
     ${obHero("\u{1F499}", `Connect <span class='ob-accent'>${hcName()}</span>`, "Sync your health data for better insights and accurate tracking.")}
     <div class="ob-policy">
-      ${OB_HEALTH_METRICS.map(m=>`<div class="ob-policy__row"><span aria-hidden="true" style="color:var(--mint);">✓</span><span>${obEsc(m)}</span></div>`).join("")}
+      ${OB_HEALTH_METRICS.map(m=>`<div class="ob-policy__row"><span aria-hidden="true" style="color:var(--mint);">${svg('check',13)}</span><span>${obEsc(m)}</span></div>`).join("")}
     </div>
     ${(state.onboarding.healthConnectState === "ok" || alreadyConnected) ? `
       <div class="ob-hc-ok" role="status">
-        <span class="ob-hc-ok__tick" aria-hidden="true">✓</span>
+        <span class="ob-hc-ok__tick" aria-hidden="true">${svg('check',13)}</span>
         <span>Connected. Your health data will sync automatically.</span>
       </div>` : ""}
     ${(state.onboarding.healthConnectState === "denied" || state.onboarding.healthConnectState === "skipped") ? `
@@ -11387,7 +11466,7 @@ function renderCalculators(){
 
   return `
     <div class="pg-card" style="display:flex;align-items:center;gap:10px;padding:12px 14px;">
-      <span style="flex:none;font-size:18px;">${{bmi:'🎯',bmr:'🔥',calorie:'🔥',protein:'🍗',carbs:'🍞',fat:'🥑',lbm:'⚖️',ideal:'⚖️',bodyfat:'💧',bodytype:'📐',hr:'❤️'}[active]||'🧮'}</span>
+      <span class="calc-pick__icon">${svg({bmi:'target',bmr:'flame',calorie:'flame',protein:'meat',carbs:'bread',fat:'droplet',lbm:'scale',ideal:'scale',bodyfat:'droplet',bodytype:'ruler',hr:'heart'}[active]||'calc',18)}</span>
       <select class="pi-input" id="calc-picker" style="flex:1;border:none;background:none;padding:0;font-weight:800;font-size:15px;">
         ${CALCULATORS.map(cc=>`<option value="${cc.key}" ${active===cc.key?'selected':''}>${cc.label}</option>`).join("")}
       </select>
@@ -11600,7 +11679,7 @@ function renderSessionDetail(s){
       <div class="stat-card"><div class="stat-label">Duration</div><div class="stat-value">${s.durationMin||'–'}<span class="stat-unit">min</span></div></div>
       <div class="stat-card"><div class="stat-label">Total Volume</div><div class="stat-value">${displayW(s.volume||0,0).toLocaleString()}<span class="stat-unit">${wUnit()}</span></div></div>
       <div class="stat-card"><div class="stat-label">Working Sets</div><div class="stat-value">${workingSets}</div></div>
-      <div class="stat-card"><div class="stat-label">Personal Records</div><div class="stat-value" style="color:${prs.length?'var(--accent)':'var(--text)'};">${prs.length?'🏆 ':''}${prs.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Personal Records</div><div class="stat-value" style="color:${prs.length?'var(--accent)':'var(--text)'};">${prs.length?svg('trophy',15)+' ':''}${prs.length}</div></div>
     </div>
 
     ${prs.length? `<div class="info-box" style="padding:10px 14px;margin-bottom:14px;">
@@ -11646,7 +11725,7 @@ function renderExerciseDetailHistory(history, exerciseName){
           <div style="font-weight:800;font-size:14px;">${h.title}</div>
           <div style="font-size:11px;color:var(--rh-muted);">${h.date}</div>
         </div>
-        ${h.prs.length ? `<span style="font-size:11px;font-weight:800;color:#D97706;">🏆 ${h.prs.length} PR${h.prs.length>1?'s':''}</span>` : ''}
+        ${h.prs.length ? `<span style="font-size:11px;font-weight:800;color:#D97706;">${svg('trophy',12)} ${h.prs.length} PR${h.prs.length>1?'s':''}</span>` : ''}
       </div>
       ${h.notes ? `<div style="font-size:12px;color:var(--rh-muted);font-style:italic;margin-bottom:6px;">"${h.notes}"</div>` : ''}
       ${h.sets.map((s,i)=>`<div class="row-between" style="padding:4px 0;${i>0?'border-top:1px solid var(--rh-border);':''}">
@@ -11756,7 +11835,7 @@ function renderProgressReports(){
 
     ${!now.hasData ? `
       <div class="pg-card" style="text-align:center;padding:28px 16px;">
-        <div style="font-size:32px;line-height:1;margin-bottom:8px;">🧾</div>
+        <div class="pg-empty__icon">${svg('receipt',28)}</div>
         <div style="font-weight:800;font-size:15px;">Nothing logged for ${escHtml(P.label.toLowerCase())}</div>
         <div style="font-size:12.5px;color:var(--rh-muted);margin-top:4px;">
           Log a workout, a meal or a weight and this report fills in.
@@ -11797,20 +11876,20 @@ function renderProgressReports(){
 }
 
 const PROGRESS_VIEWS = {
-  achievements: { icon:"🎖️", title:"Achievements & Records", sub:"Milestones, streaks and unlocked achievements." },
+  achievements: { icon:"medal", title:"Achievements & Records", sub:"Milestones, streaks and unlocked achievements." },
   // `history` has always rendered the PR list, despite its old "Workout History" title --
   // renamed to match what it actually shows. Real workout history is the `workouts` view.
-  history:      { icon:"📄", title:"Personal Records",  sub:"Every personal record you've ever set." },
-  workouts:     { icon:"🗂️", title:"Workout History",   sub:"Search, filter and review every workout you've logged." },
-  habits:       { icon:"🔁", title:"Habit Tracker",      sub:"Daily habits, streaks, and completion history." },
-  analytics:    { icon:"📊", title:"Workout Analytics",  sub:"Training frequency, volume, duration, and muscle distribution." },
-  body:         { icon:"⚖️", title:"Body Progress",      sub:"Body weight and measurement trends." },
-  calendar:     { icon:"📅", title:"Training Calendar",  sub:"See your workout activity by date." },
-  reports:      { icon:"🧾", title:"Reports",            sub:"Weekly, monthly and yearly summaries with period-on-period change." },
+  history:      { icon:"trophy", title:"Personal Records",  sub:"Every personal record you've ever set." },
+  workouts:     { icon:"archive", title:"Workout History",   sub:"Search, filter and review every workout you've logged." },
+  habits:       { icon:"repeat", title:"Habit Tracker",      sub:"Daily habits, streaks, and completion history." },
+  analytics:    { icon:"chart", title:"Workout Analytics",  sub:"Training frequency, volume, duration, and muscle distribution." },
+  body:         { icon:"scale", title:"Body Progress",      sub:"Body weight and measurement trends." },
+  calendar:     { icon:"calendar", title:"Training Calendar",  sub:"See your workout activity by date." },
+  reports:      { icon:"receipt", title:"Reports",            sub:"Weekly, monthly and yearly summaries with period-on-period change." },
   /* Photos already had a complete screen (renderBodyScanArchive) reachable from Body — it was
      simply not reachable from Progress, which is where the brief expects it. Routed rather
      than rebuilt: a second photo UI would mean two places to fix every future bug. */
-  photos:       { icon:"📷", title:"Progress Photos",    sub:"Your body-progress photo archive." }
+  photos:       { icon:"camera", title:"Progress Photos",    sub:"Your body-progress photo archive." }
 };
 
 function fmtMinutes(min){
@@ -11879,7 +11958,7 @@ function renderProgressTab(){
     }
     return `
       <button class="btn btn-ghost" data-action="progress-back" style="padding:8px 14px;font-size:14px;margin:4px 0 10px;">← Progress</button>
-      <div style="font-size:25px;font-weight:900;margin-bottom:12px;">${PROGRESS_VIEWS[view].icon} ${PROGRESS_VIEWS[view].title}</div>
+      <div style="font-size:25px;font-weight:900;margin-bottom:12px;">${svg(PROGRESS_VIEWS[view].icon,22)} ${PROGRESS_VIEWS[view].title}</div>
       ${body}
     `;
   }
@@ -11924,7 +12003,7 @@ function renderLegacyProgressHome(){
     <div class="eyebrow-label">Explore</div>
     ${Object.entries(PROGRESS_VIEWS).map(([key,v])=>`
       <button class="prog-cat-card" data-progress-view="${key}" aria-label="Open ${v.title}">
-        <span class="prog-cat-icon">${v.icon}</span>
+        <span class="prog-cat-icon">${svg(v.icon,18)}</span>
         <span style="flex:1;min-width:0;text-align:left;">
           <span style="display:block;font-size:18px;font-weight:800;color:var(--text);">${v.title}</span>
           <span style="display:block;font-size:13px;color:var(--muted);margin-top:2px;line-height:1.35;">${v.sub}</span>
@@ -11950,7 +12029,7 @@ const PR_TYPE_KEY = {Weight:"weight","1RM":"1rm",Reps:"reps",Volume:"volume"};
 /* One exercise, opened by tapping its record card: the progression chart, the numbers behind
    it, and a coaching line.
 
-   Everything shown is read from logged sets. The brief asked for an "AI Rating ★★★★★" per
+   Everything shown is read from logged sets. The brief asked for an "AI Rating" star score per
    exercise — that is not built, because a five-star score with no stated basis is decoration
    pretending to be assessment. What replaced it is consistency, which is a real number:
    sessions logged against weeks since the first one. */
@@ -12102,7 +12181,7 @@ function renderProgressPRs(){
   return `
     ${prsToday.length ? `
     <div class="pr-today">
-      <div class="pr-today__icon">🏆</div>
+      <div class="pr-today__icon">${svg('trophy',22)}</div>
       <div class="pr-today__body">
         <div class="pr-today__title">New personal record${prsToday.length>1?'s':''} today</div>
         <div class="pr-today__sub">${prsToday.map(p=>escHtml(p.exerciseName||'Session Volume')).slice(0,3).join(' · ')}</div>
@@ -12589,7 +12668,7 @@ function renderProgressHabits(){
             ` : `
               <div style="min-width:0;flex:1;cursor:pointer;" data-rename-habit="${h.id}">
                 <div style="font-weight:800;font-size:16px;">${escHtml(h.name)}</div>
-                <div style="font-size:12px;color:var(--rh-muted);margin-top:3px;">🔥 ${streak} day streak</div>
+                <div style="font-size:12px;color:var(--rh-muted);margin-top:3px;">${svg('flame',12)} ${streak} day streak</div>
                 <div style="font-size:11px;color:var(--rh-muted);margin-top:2px;"><b style="color:var(--rh-text);">Best:</b> ${best} · ${week}/7 this week · ${month} this month</div>
               </div>
             `}
@@ -13077,7 +13156,7 @@ function renderProgressCalendar(){
           <div style="font-size:13px;color:var(--rh-muted);margin-top:3px;">${workoutDurationLabel(s)} · ${displayW(s.volume||0,0).toLocaleString()} ${wUnit()} · ${s.exercises.length} exercise${s.exercises.length!==1?'s':''} · ${doneSets} set${doneSets!==1?'s':''}</div>
         </div>`;
       }).join("")}
-      ${planCount ? `<div class="pg-card" style="font-size:14px;">✅ ${planCount} plan exercise${planCount!==1?'s':''} checked off</div>`:""}`}
+      ${planCount ? `<div class="pg-card" style="font-size:14px;">${svg('check',14)} ${planCount} plan exercise${planCount!==1?'s':''} checked off</div>`:""}`}
     `;
   }
   return `
@@ -13383,7 +13462,7 @@ function renderBodyPhotoViewer(id, photoList){
         <button class="rh-btn rh-btn--ghost" style="flex:1;padding:8px;font-size:12px;" data-action="body-photo-slideshow-toggle">${svg(state.bodyPhotoSlideshow?'x':'plan',13)} ${state.bodyPhotoSlideshow?'Stop':'Slideshow'}</button>
       </div>
       <div style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.7;">
-        <div><b>${ph.date}</b> · ${escHtml(ph.category)}${ph.milestone?' · ★ Milestone':''}</div>
+        <div><b>${ph.date}</b> · ${escHtml(ph.category)}${ph.milestone?' · '+svg('star',12)+' Milestone':''}</div>
         ${ph.weight!=null?`<div>Weight: ${displayW(Number(ph.weight))} ${wUnit()}</div>`:''}
         ${ph.bodyfat!=null?`<div>Body Fat: ${ph.bodyfat}%</div>`:''}
         ${ph.goal?`<div>Goal: ${escHtml(ph.goal)}</div>`:''}
@@ -13494,7 +13573,7 @@ function renderBodyScanArchive(){
           <button class="bp-sess__head" data-bp-session="${escHtml(sess.id)}" aria-expanded="${open?'true':'false'}">
             <span class="bp-sess__dot" aria-hidden="true"></span>
             <span class="bp-sess__title">
-              <span class="bp-sess__date">${escHtml(dateLong(sess.date))}${sess.milestone?' <span class="bp-star">★</span>':''}</span>
+              <span class="bp-sess__date">${escHtml(dateLong(sess.date))}${sess.milestone?' <span class="bp-star">'+svg('starFilled',12)+'</span>':''}</span>
               <span class="bp-sess__meta">${sess.count} photo${sess.count===1?'':'s'}${
                 kg(sess.weight) ? ` · ${escHtml(kg(sess.weight))}` : ""}${
                 sess.takenAt ? ` · ${escHtml(timeShort(sess.takenAt))}` : ""}</span>
@@ -13617,8 +13696,8 @@ function renderWeighInCard(){
   // seeing red for a gain would be told the opposite of the truth.
   const good = ctx === "weightProgress" || ctx === "weightMilestone" || ctx === "weightGoalReached";
   const tone = ctx === "weightSteady" ? "var(--rh-muted)" : good ? "var(--rh-green)" : "var(--rh-blue)";
-  const icon = ctx === "weightGoalReached" ? "🎯" : ctx === "weightMilestone" ? "🏆"
-             : ctx === "weightSteady" ? "➖" : good ? "📈" : "〰️";
+  const icon = ctx === "weightGoalReached" ? svg("target",22) : ctx === "weightMilestone" ? svg("trophy",22)
+             : ctx === "weightSteady" ? svg("trend",22) : good ? svg("trend",22) : svg("trendDown",22);
 
   const delta = (v, invert) => {
     if(v == null) return `<span style="color:var(--rh-muted);">—</span>`;
@@ -14263,8 +14342,8 @@ function renderFoodSearchPage(){
       <span class="food-search-bar__icon" aria-hidden="true">⌕</span>
       <input type="text" id="food-search-input" autocomplete="off"
         placeholder="Search by Food Name/Dish" value="${escHtml(state.foodSearchQuery||"")}">
-      ${state.foodSearchQuery?`<button class="food-search-bar__clear" data-food-clear="1" aria-label="Clear search">✕</button>`:""}
-      <button class="food-search-bar__voice" data-food-voice="1" aria-label="Voice search">🎙</button>
+      ${state.foodSearchQuery?`<button class="food-search-bar__clear" data-food-clear="1" aria-label="Clear search">${svg('x',14)}</button>`:""}
+      <button class="food-search-bar__voice" data-food-voice="1" aria-label="Voice search">${svg('mic',16)}</button>
     </div>
 
     <div id="food-search-results">${foodSearchResultsHtml(meal)}</div>
@@ -14453,14 +14532,14 @@ function renderFoodDetailPage(){
   return `<div class="food-page">
     ${foodPageHeader("Food details", null,
       `<button class="food-page__icon${isFav?' is-on':''}" data-food-fav="${escHtml(food.id)}"
-        aria-label="${isFav?'Remove from favourites':'Save to favourites'}">${isFav?'★':'☆'}</button>`)}
+        aria-label="${isFav?'Remove from favourites':'Save to favourites'}">${isFav?svg('starFilled',15):svg('star',15)}</button>`)}
 
     <div class="food-hero">
       ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(food, 92) : ""}
       <div style="flex:1;min-width:0;">
         <div class="food-hero__name">${escHtml(food.name)}</div>
         <div class="food-hero__cat">${escHtml(food.category||"")}</div>
-        ${food.source==="usda"?`<div class="food-hero__verified">✓ USDA measured</div>`:""}
+        ${food.source==="usda"?`<div class="food-hero__verified">${svg('check',12)} USDA measured</div>`:""}
       </div>
       <div class="food-hero__kcal">
         <div class="nut-value nut-value--lg" id="fd-kcal" style="color:var(--accent);">${check.ok?N.format("calories", row("calories").serving).replace(" kcal",""):"—"}</div>
@@ -14555,7 +14634,7 @@ function renderFoodDetailPage(){
     <div class="nut-card nut-card--tight">
       <div class="nut-label" style="margin-bottom:var(--space-2xs);">Meal</div>
       <select id="food-flow-meal" class="food-select">
-        ${mealTypes().map(m=>`<option value="${escHtml(m)}" ${m===flow.meal?'selected':''}>${MEAL_ICONS[m]||"🍽️"} ${escHtml(m)}</option>`).join("")}
+        ${mealTypes().map(m=>`<option value="${escHtml(m)}" ${m===flow.meal?'selected':''}>${escHtml(m)}</option>`).join("")}
       </select>
       <div class="nut-label" style="margin:var(--space-sm) 0 var(--space-2xs);">Note (optional)</div>
       <input type="text" id="food-flow-notes" class="food-input" placeholder="Add a note…" value="${escHtml(flow.notes||"")}">
@@ -14644,7 +14723,7 @@ function renderLoggedEntryDetailPage(entry, flow){
     <div class="nut-card nut-card--tight">
       <div class="nut-label" style="margin-bottom:var(--space-2xs);">Meal</div>
       <select id="food-flow-meal" class="food-select">
-        ${mealTypes().map(m=>`<option value="${escHtml(m)}" ${m===flow.meal?'selected':''}>${MEAL_ICONS[m]||"🍽️"} ${escHtml(m)}</option>`).join("")}
+        ${mealTypes().map(m=>`<option value="${escHtml(m)}" ${m===flow.meal?'selected':''}>${escHtml(m)}</option>`).join("")}
       </select>
       <div class="nut-label" style="margin:var(--space-sm) 0 var(--space-2xs);">Note (optional)</div>
       <input type="text" id="food-flow-notes" class="food-input" placeholder="Add a note…" value="${escHtml(flow.notes||"")}">
@@ -15120,18 +15199,18 @@ function renderNutritionInsightsPage(){
   const pctOf = (v, t) => t > 0 ? Math.round((v/t)*100) : 0;
 
   const MACROS = [
-    ["💪", "Protein", T.protein, targets.protein, "g"],
-    ["🌾", "Carbs",   T.carbs,   targets.carbs,   "g"],
-    ["🧈", "Fat",     T.fat,     targets.fat,     "g"],
-    ["🌿", "Fibre",   T.fibre,   targets.fibre,   "g"]
+    ["dumbbell", "Protein", T.protein, targets.protein, "g"],
+    ["grain", "Carbs",   T.carbs,   targets.carbs,   "g"],
+    ["oil", "Fat",     T.fat,     targets.fat,     "g"],
+    ["leaf", "Fibre",   T.fibre,   targets.fibre,   "g"]
   ];
   const MICROS = [
-    ["🛡️", "Calcium",   "calcium",   1300, "mg"],
-    ["🩸", "Iron",      "iron",        18, "mg"],
-    ["🔮", "Magnesium", "magnesium",  420, "mg"],
-    ["🍌", "Potassium", "potassium", 4700, "mg"],
-    ["🍊", "Vitamin C", "vitaminC",    90, "mg"],
-    ["☀️", "Vitamin D", "vitaminD",    20, "µg"]
+    ["shield", "Calcium",   "calcium",   1300, "mg"],
+    ["droplet", "Iron",      "iron",        18, "mg"],
+    ["flask", "Magnesium", "magnesium",  420, "mg"],
+    ["apple", "Potassium", "potassium", 4700, "mg"],
+    ["apple", "Vitamin C", "vitaminC",    90, "mg"],
+    ["sun", "Vitamin D", "vitaminD",    20, "µg"]
   ];
   const microRows = MICROS.filter(([,,key]) => T[key] != null);
 
@@ -15174,7 +15253,7 @@ function renderNutritionInsightsPage(){
       <div class="ni-top">
         <button class="food-page__back" data-insights-back="1" aria-label="Back">←</button>
         <h2 class="ni-title">${tab === "All Meals" ? "Today's Insights" : escHtml(tab)}</h2>
-        <span class="ni-today">📅 ${escHtml(isToday ? "Today" : nutritionDateLabel(ds))}</span>
+        <span class="ni-today">${svg('calendar',13)} ${escHtml(isToday ? "Today" : nutritionDateLabel(ds))}</span>
       </div>
 
       <div class="ni-tabs">
@@ -15185,7 +15264,7 @@ function renderNutritionInsightsPage(){
 
       ${!entries.length ? `
         <div class="ni-card ni-empty">
-          <div style="font-size:34px;line-height:1;margin-bottom:8px;">🍽️</div>
+          <div class="ni-empty__icon">${svg('plate',30)}</div>
           <div style="font-weight:800;font-size:15px;">Nothing logged${tab==="All Meals"?"":" for "+escHtml(tab)}</div>
           <div style="font-size:12.5px;color:var(--muted);margin-top:4px;">
             Log a food and this page fills in with your real numbers.
@@ -15207,9 +15286,9 @@ function renderNutritionInsightsPage(){
           </div>
         </div>
         <div class="ni-score__stats">
-          <div><span class="ni-stat__icon">🔥</span><strong>${eaten.toLocaleString()}</strong><span>Consumed</span></div>
-          <div><span class="ni-stat__icon">🎯</span><strong>${targets.kcal.toLocaleString()}</strong><span>Goal</span></div>
-          <div><span class="ni-stat__icon">⚡</span><strong>${Math.abs(remaining).toLocaleString()}</strong><span>${remaining>=0?'Remaining':'Over'}</span></div>
+          <div><span class="ni-stat__icon">${svg('flame',15)}</span><strong>${eaten.toLocaleString()}</strong><span>Consumed</span></div>
+          <div><span class="ni-stat__icon">${svg('target',15)}</span><strong>${targets.kcal.toLocaleString()}</strong><span>Goal</span></div>
+          <div><span class="ni-stat__icon">${svg('bolt',15)}</span><strong>${Math.abs(remaining).toLocaleString()}</strong><span>${remaining>=0?'Remaining':'Over'}</span></div>
         </div>
         ${bar(eaten, targets.kcal, pctTone(pctGoal))}
         <div class="ni-score__pct">${pctGoal}% of daily goal</div>
@@ -15221,7 +15300,7 @@ function renderNutritionInsightsPage(){
         ${MACROS.map(([icon,label,v,t,unit])=>{
           const p = pctOf(v||0, t);
           return `<div class="ni-row">
-            <span class="ni-row__icon" aria-hidden="true">${icon}</span>
+            <span class="ni-row__icon" aria-hidden="true">${svg(icon,15)}</span>
             <span class="ni-row__label">${label}</span>
             <span class="ni-row__val"><strong>${Math.round(v||0)}</strong> / ${t} ${unit}</span>
             <span class="ni-row__pct ni-row__pct--${pctTone(p)}">${p}%</span>
@@ -15236,7 +15315,7 @@ function renderNutritionInsightsPage(){
         ${microRows.length ? microRows.map(([icon,label,key,t,unit])=>{
           const v = T[key] || 0, p = pctOf(v, t);
           return `<div class="ni-row">
-            <span class="ni-row__icon" aria-hidden="true">${icon}</span>
+            <span class="ni-row__icon" aria-hidden="true">${svg(icon,15)}</span>
             <span class="ni-row__label">${label}</span>
             <span class="ni-row__val"><strong>${Math.round(v)}</strong> / ${t} ${unit}</span>
             <span class="ni-row__pct ni-row__pct--${pctTone(p)}">${p}%</span>
@@ -15356,15 +15435,15 @@ function renderNutritionInsightsPage(){
       <!-- SUMMARY -->
       <div class="ni-card">
         <div class="ni-card__title">Insights Summary</div>
-        <div class="ni-sum"><span>📈 Goal Progress</span><strong>${pctGoal}%</strong></div>
-        <div class="ni-sum"><span>🎯 Nutrition Score</span><strong>${sc.score}/100</strong></div>
-        <div class="ni-sum"><span>🗓️ Meals Logged</span><strong>${mealsLogged}/${mealTypes().length}</strong></div>
-        <div class="ni-sum"><span>💧 Hydration</span><strong>${pctOf(waterMl, waterTarget)}%</strong></div>
-        ${streak != null ? `<div class="ni-sum"><span>🔥 Streak</span><strong>${streak} day${streak===1?'':'s'}</strong></div>` : ""}
+        <div class="ni-sum"><span>${svg('trend',13)} Goal Progress</span><strong>${pctGoal}%</strong></div>
+        <div class="ni-sum"><span>${svg('target',13)} Nutrition Score</span><strong>${sc.score}/100</strong></div>
+        <div class="ni-sum"><span>${svg('calendar',13)} Meals Logged</span><strong>${mealsLogged}/${mealTypes().length}</strong></div>
+        <div class="ni-sum"><span>${svg('droplet',13)} Hydration</span><strong>${pctOf(waterMl, waterTarget)}%</strong></div>
+        ${streak != null ? `<div class="ni-sum"><span>${svg('flame',13)} Streak</span><strong>${streak} day${streak===1?'':'s'}</strong></div>` : ""}
       </div>
 
       <div class="ni-banner">
-        <span aria-hidden="true">🛡️</span>
+        <span aria-hidden="true">${svg('shield',15)}</span>
         <span>${sc.score>=70 ? "Keep going! You're consistent and making great progress towards your goals."
                              : "Small changes add up — the coach notes above are the quickest wins."}</span>
       </div>`}
@@ -15492,7 +15571,7 @@ function renderNutritionTab(){
     <div class="nd-datebar">
       <button class="nd-date" data-nutrition-date="-1" aria-label="Previous day">‹</button>
       <div class="nd-date__pill">
-        <span aria-hidden="true">📅</span>
+        <span aria-hidden="true">${svg('calendar',15)}</span>
         <span class="nd-date__label">${escHtml(nutritionDateLabel(ds))}</span>
       </div>
       <button class="nd-date" data-nutrition-date="1" ${isToday?'disabled':''} aria-label="Next day">›</button>
@@ -15527,12 +15606,12 @@ function renderNutritionTab(){
          that will be wired up later. -->
     <div class="nd-shortcuts">
       <button class="nd-short" data-open-diet-plan="1">
-        <span class="nd-short__icon nd-short__icon--blue">📋</span>
+        <span class="nd-short__icon nd-short__icon--blue">${svg('receipt',16)}</span>
         <span class="nd-short__body"><span class="nd-short__title">Diet Plan</span><span class="nd-short__sub">Build your meal plan</span></span>
         <span class="nd-short__chev">›</span>
       </button>
       <button class="nd-short" data-nav-insights="1">
-        <span class="nd-short__icon nd-short__icon--purple">📊</span>
+        <span class="nd-short__icon nd-short__icon--purple">${svg('chart',16)}</span>
         <span class="nd-short__body"><span class="nd-short__title">Insights</span><span class="nd-short__sub">See your progress</span></span>
         <span class="nd-short__chev">›</span>
       </button>
@@ -15653,7 +15732,7 @@ function renderNutritionTab(){
           </div>` : ""}
 
         ${favs.length ? `
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">★ Favourites</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">${svg('starFilled',11)} Favourites</div>
           <div style="display:flex;gap:5px;flex-wrap:wrap;">
             ${favs.map(f=>`<button class="cat-chip active" data-quick-add-food="${escHtml(state.mealOpen||mealTypes()[0])}" data-food-name="${escHtml(f.name)}" data-food-cal="${f.calories||0}" data-food-protein="${f.protein||0}" data-food-carbs="${f.carbs||0}" data-food-fat="${f.fat||0}" data-food-fibre="${f.fibre||0}" style="margin:0;">${escHtml(f.name)} · ${f.calories||0}kcal</button>`).join("")}
           </div>` : ""}
@@ -15869,7 +15948,7 @@ function renderErrorScreen(err){
   try{ msg = (err && err.message) ? err.message : msg; }catch{}
   root.innerHTML = `
     <div style="padding:24px 20px;max-width:480px;margin:0 auto;">
-      <div style="font-size:38px;margin-bottom:8px;">⚠️</div>
+      <div class="ni-empty__icon">${svg('alert',32)}</div>
       <h1 style="font-size:20px;font-weight:900;margin-bottom:6px;">Ignyt hit a snag</h1>
       <p style="font-size:13px;color:var(--muted,#9a9aa4);margin-bottom:18px;">
         A screen failed to load. Your saved data is safe — it lives in this browser's storage, untouched.
@@ -16154,7 +16233,7 @@ function renderPRCelebration(){
   const prs = state.lastSessionPRs;
   return `<div class="info-box" style="padding:16px;margin-bottom:14px;background:rgba(255,90,31,.1);border:1px solid rgba(255,90,31,.35);">
     <div class="row-between" style="margin-bottom:10px;">
-      <span style="font-weight:900;font-size:15px;color:var(--accent);">🏆 New Personal Record${prs.length>1?'s':''}!</span>
+      <span style="font-weight:900;font-size:15px;color:var(--accent);">${svg('trophy',14)} New Personal Record${prs.length>1?'s':''}!</span>
       <button class="del" data-action="dismiss-prs" aria-label="Dismiss">${svg('x',15)}</button>
     </div>
     ${prs.map(pr=>`<div class="row-between" style="padding:6px 0;border-top:1px solid rgba(255,90,31,.15);">
@@ -16168,7 +16247,7 @@ function renderAchievementCelebration(){
   const list = state.lastUnlockedAchievements;
   return `<div class="info-box" style="padding:16px;margin-bottom:14px;background:rgba(62,207,142,.1);border:1px solid rgba(62,207,142,.35);">
     <div class="row-between" style="margin-bottom:10px;">
-      <span style="font-weight:900;font-size:15px;color:var(--mint);">🎖️ Achievement Unlocked${list.length>1?'s':''}!</span>
+      <span style="font-weight:900;font-size:15px;color:var(--mint);">${svg('medal',14)} Achievement Unlocked${list.length>1?'s':''}!</span>
       <button class="del" data-action="dismiss-achievements" aria-label="Dismiss">${svg('x',15)}</button>
     </div>
     ${list.map(a=>`<div style="padding:6px 0;border-top:1px solid rgba(62,207,142,.15);">
@@ -16239,7 +16318,7 @@ function buildWorkoutSummaryText(s){
   ];
   if(b.length) lines.push("", ...b.map(x=>`${x.sets}× ${x.name}`));
   const prs = state.prs.filter(p=>p.workoutId===s.id);
-  if(prs.length) lines.push("", `🏆 ${prs.length} PR${prs.length>1?'s':''}`);
+  if(prs.length) lines.push("", `${prs.length} PR${prs.length>1?'s':''}`);
   return lines.join("\n");
 }
 
@@ -16388,7 +16467,7 @@ function renderWorkoutComplete(s){
   return `
     <div class="pg-light">
       <div style="text-align:center;margin:8px 0 4px;">
-        <div style="font-size:24px;font-weight:800;">Workout Complete 🎉</div>
+        <div style="font-size:24px;font-weight:800;">Workout Complete</div>
       </div>
 
       <!-- When the workout happened, editable here rather than only from history.
@@ -17477,7 +17556,7 @@ function renderWorkoutTab(){
               <div class="set-row ${set.done?'done':''}" style="grid-template-columns:${gridCols};">
                 ${numBtn}
                 <span class="set-prev-stack">
-                  <span class="mono set-prev">${prevLabel}${prevIsPR?' <span class="pr-badge" title="Personal record">🏆</span>':''}</span>
+                  <span class="mono set-prev">${prevLabel}${prevIsPR?' <span class="pr-badge" title="Personal record">'+svg('trophy',12)+'</span>':''}</span>
                   ${prevOneRM?`<span class="mono set-prev-1rm">1RM: ${prevOneRM}${wUnit()}</span>`:''}
                 </span>
                 ${fields}
@@ -17631,7 +17710,8 @@ function exDetailBadge(label, value, color){
     <span class="ex-badge__k">${escHtml(label)}</span>${escHtml(value)}</span>`;
 }
 
-/* Bulleted list block with a leading glyph (✓ tips, ✕ mistakes, ! safety). */
+/* Bulleted list block with a leading glyph. The caller passes icon markup, not a
+   character, so the tick and cross match the rest of the icon set. */
 function exDetailList(items, glyph, color){
   return items.map(t=>`<div class="ex-li"><span class="ex-li__g" style="color:${color};">${glyph}</span><span>${escHtml(t)}</span></div>`).join("");
 }
@@ -17817,8 +17897,8 @@ function renderExerciseDetailHowTo(name, nd, libEntry){
 
   /* ---- Technique: form tips, mistakes, safety ---- */
   const tech = [];
-  if(nd.formTips.length) tech.push(sub("Form Tips") + exDetailList(nd.formTips, "✓", "var(--rh-green)"));
-  if(nd.commonMistakes.length) tech.push(sub("Common Mistakes") + exDetailList(nd.commonMistakes, "✕", "var(--rh-red)"));
+  if(nd.formTips.length) tech.push(sub("Form Tips") + exDetailList(nd.formTips, svg("check",13), "var(--rh-green)"));
+  if(nd.commonMistakes.length) tech.push(sub("Common Mistakes") + exDetailList(nd.commonMistakes, svg("x",13), "var(--rh-red)"));
   if(nd.safety.length) tech.push(sub("Safety") + exDetailList(nd.safety, "!", "var(--rh-amber, #d97706)"));
   if(tech.length) out.push(exDetailSection("technique","Technique","shield", tech.join(""), isOpen("technique", false)));
 

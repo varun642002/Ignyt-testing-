@@ -158,7 +158,7 @@
 
     const weeklyGoalPct = weekStats.workoutsGoal ? Math.min(100, Math.round(weekStats.workoutsCompleted/weekStats.workoutsGoal*100)) : null;
     const goalMsg = weeklyGoalPct==null ? "Set weekly training days in your Profile to track this."
-      : weeklyGoalPct>=100 ? "Goal complete! 🎉"
+      : weeklyGoalPct>=100 ? "Goal complete!"
       : weeklyGoalPct>=75 ? "Great progress! Keep going."
       : weeklyGoalPct>=50 ? "Halfway there — keep it up."
       : weeklyGoalPct>0 ? "Let's get moving this week."

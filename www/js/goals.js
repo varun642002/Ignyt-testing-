@@ -16,6 +16,10 @@
    calendar don't exist in this app, so the engine doesn't pretend to drive them.
 ========================================================= */
 (function () {
+  /* An icon by name, from app.js's set. Guarded so a missing svg() degrades to no
+     decoration rather than taking the page down. */
+  function ic(n, s){ return (typeof svg === "function") ? svg(n, s || 16) : ""; }
+
   "use strict";
   var GOALS = "hx_goals", ACTIVE = "hx_active_goal";
   var KCAL_PER_KG = 7700;
@@ -169,7 +173,7 @@
 
   function head(title, back) {
     return (back ? '<button class="btn btn-ghost" data-goal="home" style="padding:8px 14px;font-size:14px;margin:4px 0 10px;">← Back</button>' : "") +
-      '<div style="font-size:25px;font-weight:900;margin-bottom:4px;">🎯 ' + esc(title) + "</div>";
+      '<div style="font-size:25px;font-weight:900;margin-bottom:4px;">' + ic("target",22) + " " + esc(title) + "</div>";
   }
 
   function renderIntro() {
@@ -271,7 +275,7 @@
           '<div style="flex:1;display:flex;align-items:center;gap:8px;"><span style="flex:none;color:' + paceColor + ';">' + svg("check", 16) + '</span><div><div style="font-size:11px;color:var(--rh-muted);font-weight:600;">Goal pace</div><div style="font-size:13px;font-weight:800;color:' + paceColor + ';">' + pace + '</div></div></div>' +
           '</div>' +
           '<div style="margin-top:14px;background:' + (pace === "Healthy" ? "rgba(22,163,74,.08)" : "rgba(217,119,6,.08)") + ';border-radius:10px;padding:12px;display:flex;gap:10px;align-items:flex-start;">' +
-          '<span style="flex:none;font-size:18px;">' + (pace === "Healthy" ? "🚀" : "⚠️") + '</span>' +
+          '<span style="flex:none;font-size:18px;">' + (pace === "Healthy" ? ic("bolt",18) : ic("alert",18)) + '</span>' +
           '<div><div style="font-weight:800;font-size:13px;color:' + (pace === "Healthy" ? "var(--rh-green)" : "#D97706") + ';">' + (pace === "Healthy" ? "Great!" : "Heads up") + '</div>' +
           '<div style="font-size:12px;color:var(--rh-text);margin-top:2px;line-height:1.4;">' + tip + '</div></div></div>' +
           '</div>';
@@ -565,7 +569,7 @@
 
     // Milestones (existing feature, kept, restyled to match)
     h += '<div class="rh-section-head"><span>Milestones</span></div><div class="pg-card">' +
-      (ms.length ? ms.map(function (m) { return '<div class="row-between" style="padding:8px 0;border-top:1px solid var(--rh-border);font-size:13px;"><span>' + (m.done ? "✅ " : "⬜ ") + esc(m.label) + '</span></div>'; }).join("") : '<div style="color:var(--rh-muted);font-size:13px;">Set a target weight to generate milestones.</div>') +
+      (ms.length ? ms.map(function (m) { return '<div class="row-between" style="padding:8px 0;border-top:1px solid var(--rh-border);font-size:13px;"><span>' + (m.done ? ic("check",13) + " " : ic("box",13) + " ") + esc(m.label) + '</span></div>'; }).join("") : '<div style="color:var(--rh-muted);font-size:13px;">Set a target weight to generate milestones.</div>') +
       (next ? '<div style="font-size:12px;color:var(--rh-muted);margin-top:8px;">Next: ' + esc(next.label) + '</div>' : "") + '</div>';
 
     // Manage (existing actions, kept, restyled)
@@ -712,7 +716,7 @@
       if (a === "history") { view.screen = "history"; return repaint(); }
       if (a === "timeline") { view.screen = "timeline"; return repaint(); }
       if (a === "pause") { updateActive(function (g) { g.status = "paused"; hist(g, "Paused"); }); setActiveId(null); resetView(); return repaint(); }
-      if (a === "complete") { updateActive(function (g) { g.status = "completed"; g.completedAt = Date.now(); hist(g, "Completed"); }); setActiveId(null); resetView(); if (window.showToast) window.showToast("Goal completed 🎉", "info", window.render); return repaint(); }
+      if (a === "complete") { updateActive(function (g) { g.status = "completed"; g.completedAt = Date.now(); hist(g, "Completed"); }); setActiveId(null); resetView(); if (window.showToast) window.showToast("Goal completed", "info", window.render); return repaint(); }
       if (a === "cancel") {
         var go = function (ok) { if (!ok) return; updateActive(function (g) { g.status = "cancelled"; hist(g, "Cancelled"); }); setActiveId(null); resetView(); repaint(); };
         if (window.confirmDialog) window.confirmDialog("Cancel this goal? Your history is kept.", window.render).then(go); else go(true);
