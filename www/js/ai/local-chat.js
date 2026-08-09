@@ -89,6 +89,14 @@
        So the preamble is stripped and what remains is treated as the real question. Only from
        the START of the message, and only these fixed openers: a mid-sentence "I asked" is part
        of what somebody is telling you, not a frame around it. */
+    /* POLITE AND INTENTIONAL PREAMBLES. "I want to log chicken biryani" is the same command as
+       "log chicken biryani" with three words of throat-clearing in front, and it came back as
+       "I don't have a reliable answer" — because the intent tests look for the verb near the
+       start and the preamble pushed it out of reach.
+       Stripped from the START only, and "i want to know" is deliberately absent from this list:
+       that one introduces a QUESTION, and it is handled by the rephrase group below. */
+    text = text.replace(/^(please\s+)?(i (want|need|would like|wanna|d like) to|can you|could you|help me|let me|i'm going to|im going to)\s+/, "").trim();
+
     var STRIP = /^(no |nope |actually |sorry )*(i (asked|said|meant|want to know)|my question (was|is)|the question (was|is)|what i (asked|meant) (was|is))\s+/;
     var stripped = text.replace(STRIP, "").trim();
     /* Only if something substantial survives. "I asked" alone is not a question, and reducing

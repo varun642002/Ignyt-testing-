@@ -192,8 +192,31 @@
       try { local = await window.IgnytLocalChat.tryAnswer(message); } catch (e) { local = null; }
       if (local) {
         if (local.pending) {
-          onEvent({ type: "pending", action: local.pending.action, args: local.pending.args });
-          return { text: local.text || null, pending: local.pending, source: local.source };
+          /* THE ACTION HAS TO ACTUALLY RUN. This emitted { type:"pending" }, and nothing in
+             app.js handles that event — its push() knows text, card, clarify, confirm, usage
+             and actionError. So the event was dropped on the floor: no execution, no card, no
+             error, just silence. Every local write has been a no-op since external AI was
+             switched off — logging food, logging weight, steps, all four deletes. Reported as
+             answering "97." to "What weight should I log?" and getting nothing back.
+
+             It went unseen because every test asserted on the PENDING PAYLOAD — the right
+             action with the right arguments — which was correct the whole time. Fifth bug in
+             this codebase from checking that a message routed rather than that data changed.
+
+             Destroy-tier still stops for confirmation, using the "confirm" event the UI already
+             understands; the destroy gate is unchanged. Everything else executes here and
+             reports what came back. */
+          var risk = A && A.risk ? A.risk(local.pending.action) : null;
+          if (risk === "destroy") {
+            onEvent({ type: "confirm", action: local.pending.action, args: local.pending.args });
+            return { text: local.text || null, pending: local.pending, source: local.source };
+          }
+          var res = await A.run(local.pending.action, local.pending.args || {});
+          if (res && res.ok) onEvent({ type: "card", result: res.result });
+          else onEvent({ type: "actionError", action: local.pending.action,
+                         error: (res && res.error) || "That didn't work." });
+          return { text: local.text || null, action: local.pending.action,
+                   result: res && res.result, ok: !!(res && res.ok), source: local.source };
         }
         /* CONFIDENCE IS CARRIED THROUGH, not re-derived. It was being dropped here, and the
            caller then had to invent a value — which defaulted to 1.0, so a weak match was
