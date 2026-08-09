@@ -169,6 +169,23 @@
     return dot / (qNorm * entry._norm);
   }
 
+  /* Are these two entries the same question wearing different ids?
+     Jaccard over their content words — symmetric, cheap, and it does not care about word order,
+     which is the whole reason "How many sets should I do for chest?" and a reworded copy of it
+     have to count as one. 0.8 rather than 1.0 because the duplicates in this base are not
+     byte-identical: several differ by a word or by punctuation. */
+  function sameQuestion(a, b) {
+    var A = {}, n = 0, shared = 0;
+    a._t.forEach(function (w) { if (!A[w]) { A[w] = 1; n++; } });
+    var B = {}, m = 0;
+    b._t.forEach(function (w) {
+      if (B[w]) return; B[w] = 1; m++;
+      if (A[w]) shared++;
+    });
+    var union = n + m - shared;
+    return union > 0 && (shared / union) >= 0.8;
+  }
+
   /**
    * Look up a question.
    * @returns {Promise<null|{answer,question,category,confidence,id,source}|{safety}>}
@@ -191,20 +208,31 @@
     var qt = tokens(text);
     if (!qt.length) return null;
 
-    var best = null, bestScore = 0, runnerUp = 0;
+    var best = null, bestScore = 0, second = null, runnerUp = 0;
     for (var i = 0; i < entries.length; i++) {
       var s = score(qt, entries[i]);
-      if (s > bestScore) { runnerUp = bestScore; bestScore = s; best = entries[i]; }
-      else if (s > runnerUp) { runnerUp = s; }
+      if (s > bestScore) { runnerUp = bestScore; second = best; bestScore = s; best = entries[i]; }
+      else if (s > runnerUp) { runnerUp = s; second = entries[i]; }
     }
 
     if (!best || bestScore < threshold()) return null;
 
-    /* AMBIGUITY CHECK. Two entries scoring nearly the same means the question did not pick one
-       of them — "how many sets for chest" against both the chest and back volume answers would
-       be a coin toss, and picking the wrong one returns a confident answer about the wrong
-       muscle. Close enough to a tie, and it goes to Gemini instead. */
-    if (runnerUp > 0 && bestScore - runnerUp < 0.06) return null;
+    /* AMBIGUITY CHECK, and the reason it is not simply a score gap.
+       Two entries scoring nearly the same USUALLY means the question chose neither — "how many
+       sets" against the chest and the back volume answers is a coin toss, and picking one
+       returns a confident answer about the wrong muscle.
+
+       But a tie also happens when the base contains the SAME QUESTION TWICE, which it does:
+       merging the second batch brought six exact duplicates, and identical entries score
+       identically. Treating those as ambiguous rejected five questions that had been answering
+       correctly — so growing the knowledge base made it worse, which is precisely backwards.
+
+       So the tie-break asks what the two entries are, not just what they scored. Near-identical
+       questions are a duplicate and either answer will do; genuinely different questions at the
+       same score are a real coin toss and go to Gemini. */
+    if (second && runnerUp > 0 && bestScore - runnerUp < 0.06 && !sameQuestion(best, second)) {
+      return null;
+    }
 
     return {
       answer: best.a,
