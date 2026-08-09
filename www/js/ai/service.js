@@ -214,9 +214,13 @@
        reads as a product; one that reports an outage reads as broken. Nothing failed here —
        the question was simply outside what the knowledge base covers. */
     if (!EXTERNAL_AI) {
-      var msg = "I don't have a reliable answer for that yet.\n\n" +
-                "Try asking about workouts, exercises, nutrition, recovery or progress — " +
-                "or tell me what you did, like \"log 200g chicken\" or \"weight 82\".";
+      /* In the user's own language. This is the single string they are most likely to see when
+         the assistant does not know something, so getting it in English after asking in Tamil
+         is exactly the point where a multilingual assistant stops feeling multilingual. */
+      var lang = (window.IgnytLang && IgnytLang.languageFor) ? IgnytLang.languageFor(message) : "en";
+      var msg = (window.IgnytLang && IgnytLang.t)
+        ? IgnytLang.t("unknown", lang)
+        : "I don't have a reliable answer for that yet.";
       onEvent({ type: "text", text: msg });
       return { text: msg, source: "BUILT_IN_UNKNOWN", confidence: 0 };
     }
@@ -312,7 +316,10 @@
             : src === "BUILT_IN_KNOWLEDGE" ? "KNOWLEDGE"
             : src === "BUILT_IN_UNKNOWN" ? "UNKNOWN"
             : "ANSWER",
-      language: "en",              // Phase 3 replaces this with real detection
+      /* The real detected language, not a placeholder. Read from the router, which set it
+         from the ORIGINAL text before canonicalisation erased the script. */
+      language: (window.IgnytLocalChat && IgnytLocalChat.lastLanguage)
+                  ? IgnytLocalChat.lastLanguage() : "en",
       /* null, not 1, when the layer did not report one. An action match is a parse, not a
          similarity score, and claiming 1.0 for it would put a number on something that was
          never measured. */

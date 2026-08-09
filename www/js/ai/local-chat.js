@@ -91,6 +91,16 @@
   var AWAIT_TTL_MS = 3 * 60 * 1000;
   var _awaiting = null;
 
+  /* The language of the message being handled right now. Set once per turn from the
+     ORIGINAL text — norm() has already canonicalised the words to English by the time an
+     intent runs, so by then there is nothing left to detect from. A module variable rather
+     than a parameter because the intent table is a list of plain functions and threading a
+     locale through every one of them would be a lot of noise for one string each. */
+  var _lang = "en";
+  function say(id) {
+    return (window.IgnytLang && IgnytLang.t) ? IgnytLang.t(id, _lang) : "";
+  }
+
   /* ---------- weight ---------------------------------------------------------------------- */
 
   /* POUNDS ARE CONVERTED HERE, not left for the action to guess. logWeight stores kilograms;
@@ -279,7 +289,7 @@
             return { pending: { action: "logWeight", args: { weight: kg } } };
           }
         };
-        return { text: "What weight should I log?" };
+        return { text: say("ask_weight") };
       }
     },
     {
@@ -343,7 +353,7 @@
            mushroom soup" is one) is not something a regex can do. So it asks. Local, honest,
            and zero AI activities. */
         if (/\b(and|plus)\b|,/.test(t.replace(/^\s*(log|ate|eat|had|add)\b/, ""))) {
-          return { text: "I can log one food at a time — send them separately and I'll get both." };
+          return { text: say("one_food") };
         }
 
         /* "<n><unit> <food>", "<n> <food>", and a bare "a banana" with no number at all. */
@@ -378,6 +388,8 @@
    *          null means "I don't understand this well enough" — the caller must fall back.
    */
   async function tryAnswer(message) {
+    /* Before norm(), which converts the words to English and erases the evidence. */
+    _lang = (window.IgnytLang && IgnytLang.languageFor) ? IgnytLang.languageFor(message) : "en";
     var t = norm(message);
     if (!t) return null;
 
@@ -461,6 +473,8 @@
        when the transcript is cleared — an answer to a question that is no longer on screen is
        not an answer to anything. */
     awaiting: function () { return _awaiting ? _awaiting.name : null; },
+    /* The language of the last message handled. processChatMessage reports it. */
+    lastLanguage: function () { return _lang; },
     clearAwaiting: function () { _awaiting = null; },
     /* Exposed for tests: which intent claims this sentence, without running it. */
     match: function (message) {

@@ -173,8 +173,54 @@
   /* A manual choice overrides detection; auto falls back to what the script says. */
   function languageFor(text) { return preference() || detect(text); }
 
+  /* ---------- responses ---------------------------------------------------------------------
+     THE STRINGS THE ASSISTANT ITSELF WRITES, and only those. The knowledge base answers stay in
+     English — 2,300 entries is not a translation project, and machine-translating fitness
+     guidance is exactly how "train close to failure" becomes advice nobody vetted.
+
+     What IS translated is the small closed set of things the chatbot says in its own voice: the
+     question it asks when a value is missing, and what it says when it does not know. Those are
+     the moments the assistant is talking rather than quoting, and hearing them in your own
+     language is most of what "responds in Tamil" means in practice.
+
+     English is the fallback for any id or language not covered, so a missing translation shows
+     the English string rather than an empty bubble or the key itself. */
+  var STRINGS = {
+    ask_weight: {
+      en: "What weight should I log?",
+      ta: "எவ்வளவு எடை பதிவு செய்யட்டும்?",
+      hi: "मैं कितना वज़न लॉग करूँ?",
+      kn: "ಎಷ್ಟು ತೂಕ ಲಾಗ್ ಮಾಡಲಿ?",
+      ml: "എത്ര ഭാരം ലോഗ് ചെയ്യണം?",
+      te: "ఎంత బరువు లాగ్ చేయాలి?"
+    },
+    unknown: {
+      en: "I don't have a reliable answer for that yet.\n\nTry asking about workouts, exercises, nutrition, recovery or progress — or tell me what you did, like \"log 200g chicken\" or \"weight 82\".",
+      ta: "அதற்கு இப்போதைக்கு என்னிடம் சரியான பதில் இல்லை.\n\nபயிற்சி, உடற்பயிற்சிகள், ஊட்டச்சத்து, ஓய்வு அல்லது முன்னேற்றம் பற்றி கேளுங்கள் — அல்லது \"log 200g chicken\", \"weight 82\" போல் நீங்கள் செய்ததைச் சொல்லுங்கள்.",
+      hi: "इसका भरोसेमंद जवाब अभी मेरे पास नहीं है।\n\nवर्कआउट, एक्सरसाइज़, न्यूट्रिशन, रिकवरी या प्रोग्रेस के बारे में पूछें — या बताएं आपने क्या किया, जैसे \"log 200g chicken\" या \"weight 82\"।",
+      kn: "ಅದಕ್ಕೆ ಸರಿಯಾದ ಉತ್ತರ ಸದ್ಯಕ್ಕೆ ನನ್ನ ಬಳಿ ಇಲ್ಲ.\n\nವ್ಯಾಯಾಮ, ಆಹಾರ, ವಿಶ್ರಾಂತಿ ಅಥವಾ ಪ್ರಗತಿಯ ಬಗ್ಗೆ ಕೇಳಿ — ಅಥವಾ ನೀವು ಏನು ಮಾಡಿದಿರಿ ಎಂದು ಹೇಳಿ, ಉದಾಹರಣೆಗೆ \"log 200g chicken\" ಅಥವಾ \"weight 82\".",
+      ml: "അതിന് വിശ്വസനീയമായ ഉത്തരം ഇപ്പോൾ എന്റെ പക്കലില്ല.\n\nവ്യായാമം, ഭക്ഷണം, വിശ്രമം അല്ലെങ്കിൽ പുരോഗതി എന്നിവയെക്കുറിച്ച് ചോദിക്കൂ — അല്ലെങ്കിൽ നിങ്ങൾ ചെയ്തത് പറയൂ, ഉദാഹരണത്തിന് \"log 200g chicken\" അല്ലെങ്കിൽ \"weight 82\".",
+      te: "దానికి నమ్మదగిన సమాధానం ప్రస్తుతం నా దగ్గర లేదు.\n\nవ్యాయామం, ఆహారం, విశ్రాంతి లేదా పురోగతి గురించి అడగండి — లేదా మీరు ఏమి చేశారో చెప్పండి, ఉదాహరణకు \"log 200g chicken\" లేదా \"weight 82\"."
+    },
+    one_food: {
+      en: "I can log one food at a time — send them separately and I'll get both.",
+      ta: "ஒரு நேரத்தில் ஒரு உணவை மட்டுமே பதிவு செய்ய முடியும் — தனித்தனியாக அனுப்புங்கள்.",
+      hi: "मैं एक बार में एक ही खाना लॉग कर सकता हूँ — उन्हें अलग-अलग भेजें।",
+      kn: "ಒಂದು ಬಾರಿಗೆ ಒಂದೇ ಆಹಾರವನ್ನು ಲಾಗ್ ಮಾಡಬಲ್ಲೆ — ಪ್ರತ್ಯೇಕವಾಗಿ ಕಳುಹಿಸಿ.",
+      ml: "ഒരു സമയത്ത് ഒരു ഭക്ഷണം മാത്രമേ ലോഗ് ചെയ്യാനാകൂ — വെവ്വേറെ അയയ്ക്കൂ.",
+      te: "ఒకసారి ఒక ఆహారం మాత్రమే లాగ్ చేయగలను — విడిగా పంపండి."
+    }
+  };
+
+  function t(id, lang) {
+    var row = STRINGS[id];
+    if (!row) return "";
+    return row[lang] || row.en;
+  }
+
   window.IgnytLang = Object.freeze({
     canonical: canonical,
+    t: t,
     detect: detect,
     languageFor: languageFor,
     preference: preference,
