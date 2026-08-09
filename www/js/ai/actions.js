@@ -212,6 +212,151 @@
      "delete today's weight" says the reading should not exist — usually because it was logged
      by mistake and is dragging the trend. Returns affectedRecords so nothing can claim a
      deletion that did not happen. */
+  /* ---------- routines -----------------------------------------------------------------------
+     THESE REUSE THE BUILDER'S OWN SHAPERS AND NOTHING ELSE. normalizeRoutine and
+     enforceRoutineIntegrity are what the routine editor calls on every save, and going around
+     them is how a chatbot-written routine ends up subtly different from a hand-written one.
+
+     Three constraints the builder's save path documents, and which matter more here than
+     anywhere else in this file, because routines are mirrored to the cloud PER RECORD
+     (users/{uid}/routines/{id}) — a malformed one travels to the user's other devices and is
+     read by installs on older app versions:
+
+       1. spread the existing record FIRST, so fields this code does not own — sync metadata
+          among them — survive an edit
+       2. `sets` is a legacy COUNT kept in lockstep with setDetails.length; normalizeRoutine
+          maintains that, which is exactly why it must not be bypassed
+       3. run enforceRoutineIntegrity after every mutation, as all four existing paths do
+
+     An edit patches IN PLACE at the same index rather than removing and re-adding, so the
+     routine keeps its position in the user's list. */
+
+  function routineDeps() {
+    return (typeof window.normalizeRoutine === "function" &&
+            typeof window.enforceRoutineIntegrity === "function");
+  }
+
+  function findRoutine(name) {
+    var want = String(name || "").toLowerCase().trim();
+    if (!want) return null;
+    var list = S().routines || [];
+    return list.find(function (r) { return String(r.name || "").toLowerCase() === want; }) ||
+           list.find(function (r) { return String(r.name || "").toLowerCase().indexOf(want) !== -1; }) || null;
+  }
+
+  function createWorkout(args) {
+    if (!routineDeps()) return { card: "error", code: "unavailable", message: "Routines aren't available on this build." };
+    var name = str(args && args.name, "Routine name", 60);
+    var names = Array.isArray(args && args.exercises) ? args.exercises : [];
+    if (!names.length) {
+      return { card: "clarify", code: "need_exercises", message: "Which exercises should \"" + name + "\" include?" };
+    }
+    if (findRoutine(name)) {
+      return { card: "error", code: "duplicate_name",
+               message: "You already have a routine called \"" + name + "\"." };
+    }
+    var record = window.normalizeRoutine({
+      id: window.nextId(),
+      name: name, description: "", notes: "",
+      exercises: names.slice(0, 30).map(function (n) { return { name: String(n).slice(0, 60) }; })
+    });
+    if (!record || !record.exercises.length) {
+      return { card: "error", code: "invalid", message: "I couldn't build that routine." };
+    }
+    var st = S();
+    st.routines.unshift(record);
+    st.routines = window.enforceRoutineIntegrity(st.routines);
+    window.persist();
+    /* Read back rather than trusting the write — the record only counts if it is in the list. */
+    var saved = (S().routines || []).find(function (r) { return String(r.id) === String(record.id); });
+    if (!saved) return { card: "error", code: "not_saved", message: "The routine didn't save. Nothing was changed." };
+    return { card: "routine", scope: "created", name: saved.name, id: saved.id,
+             exercises: saved.exercises.length, affectedRecords: 1,
+             message: "Created \"" + saved.name + "\" with " + saved.exercises.length + " exercises." };
+  }
+
+  function addExerciseToRoutine(args) {
+    if (!routineDeps()) return { card: "error", code: "unavailable", message: "Routines aren't available on this build." };
+    var rName = str(args && args.routine, "Routine", 60);
+    var exName = str(args && args.exercise, "Exercise", 60);
+    var target = findRoutine(rName);
+    if (!target) return { card: "error", code: "not_found", message: "I couldn't find a routine called \"" + rName + "\"." };
+    if ((target.exercises || []).some(function (e) {
+      return String(e.name || "").toLowerCase() === exName.toLowerCase(); })) {
+      return { card: "error", code: "already_there", affectedRecords: 0,
+               message: exName + " is already in \"" + target.name + "\"." };
+    }
+    var st = S();
+    var i = st.routines.indexOf(target);
+    var record = window.normalizeRoutine({
+      ...target,                                  // sync metadata and every unowned field
+      exercises: (target.exercises || []).concat([{ name: exName }])
+    });
+    st.routines[i] = record;                      // in place: same id, same slot
+    st.routines = window.enforceRoutineIntegrity(st.routines);
+    window.persist();
+    var saved = (S().routines || []).find(function (r) { return String(r.id) === String(target.id); });
+    var ok = saved && (saved.exercises || []).some(function (e) {
+      return String(e.name || "").toLowerCase() === exName.toLowerCase(); });
+    if (!ok) return { card: "error", code: "not_saved", message: "That didn't save. Nothing was changed." };
+    return { card: "routine", scope: "exerciseAdded", name: saved.name, what: exName,
+             exercises: saved.exercises.length, affectedRecords: 1,
+             message: "Added " + exName + " to \"" + saved.name + "\"." };
+  }
+
+  function removeExerciseFromRoutine(args) {
+    if (!routineDeps()) return { card: "error", code: "unavailable", message: "Routines aren't available on this build." };
+    var rName = str(args && args.routine, "Routine", 60);
+    var exName = str(args && args.exercise, "Exercise", 60);
+    var target = findRoutine(rName);
+    if (!target) return { card: "error", code: "not_found", message: "I couldn't find a routine called \"" + rName + "\"." };
+    var before = (target.exercises || []).length;
+    var kept = (target.exercises || []).filter(function (e) {
+      return String(e.name || "").toLowerCase().indexOf(exName.toLowerCase()) === -1; });
+    if (kept.length === before) {
+      return { card: "error", code: "not_found", affectedRecords: 0,
+               message: "\"" + target.name + "\" doesn't contain " + exName + "." };
+    }
+    /* A routine with no exercises cannot be rendered or started, which is why the builder
+       refuses to save one. Removing the last exercise is a delete wearing different words, and
+       it should be asked for as one rather than happening as a side effect. */
+    if (!kept.length) {
+      return { card: "error", code: "would_empty", affectedRecords: 0,
+               message: "That's the only exercise in \"" + target.name + "\". Delete the routine instead?" };
+    }
+    var st = S();
+    var i = st.routines.indexOf(target);
+    st.routines[i] = window.normalizeRoutine({ ...target, exercises: kept });
+    st.routines = window.enforceRoutineIntegrity(st.routines);
+    window.persist();
+    var saved = (S().routines || []).find(function (r) { return String(r.id) === String(target.id); });
+    var removed = before - ((saved && saved.exercises) || []).length;
+    if (removed <= 0) return { card: "error", code: "not_saved", message: "That didn't save. Nothing was changed." };
+    return { card: "routine", scope: "exerciseRemoved", name: saved.name, what: exName,
+             exercises: saved.exercises.length, affectedRecords: removed,
+             message: "Removed " + exName + " from \"" + saved.name + "\"." };
+  }
+
+  function deleteRoutine(args) {
+    var rName = str(args && args.routine, "Routine", 60);
+    var target = findRoutine(rName);
+    if (!target) return { card: "error", code: "not_found", affectedRecords: 0,
+                          message: "I couldn't find a routine called \"" + rName + "\"." };
+    var st = S();
+    var before = st.routines.length;
+    var id = target.id, name = target.name;
+    st.routines = st.routines.filter(function (r) { return String(r.id) !== String(id); });
+    var removed = before - st.routines.length;
+    if (!removed) return { card: "error", code: "not_saved", affectedRecords: 0,
+                           message: "Nothing was deleted." };
+    window.persist();
+    if ((S().routines || []).some(function (r) { return String(r.id) === String(id); })) {
+      return { card: "error", code: "not_saved", message: "The delete didn't stick. Nothing was changed." };
+    }
+    return { card: "deleted", scope: "routine", what: name, affectedRecords: removed,
+             message: "Deleted \"" + name + "\"." };
+  }
+
   function deleteWeightEntry(args) {
     var ds = dateKey(args && args.date);
     var st = S();
@@ -561,7 +706,15 @@
     deleteFoodForDate: { risk: "destroy", fn: deleteFoodLogForDate },
     deleteAllFoodLogs: { risk: "destroy", fn: deleteAllFoodLogs },
     deleteFoodByName:  { risk: "destroy", fn: deleteFoodByName },
-    deleteWeightEntry: { risk: "destroy", fn: deleteWeightEntry }
+    deleteWeightEntry: { risk: "destroy", fn: deleteWeightEntry },
+    /* Routine writes. Adding and removing an exercise are "write" — reversible by doing the
+       opposite. Creating and deleting a whole routine are "destroy": a routine is a structure
+       the user built by hand, and it is mirrored per-record to the cloud, so getting one wrong
+       travels to their other devices. */
+    createWorkout:            { risk: "destroy", fn: createWorkout },
+    addExerciseToRoutine:     { risk: "write",   fn: addExerciseToRoutine },
+    removeExerciseFromRoutine:{ risk: "write",   fn: removeExerciseFromRoutine },
+    deleteRoutine:            { risk: "destroy", fn: deleteRoutine }
   };
 
   /* The single entry point. Anything the model asks for arrives here as a name and a plain

@@ -500,6 +500,48 @@
        Returns a pending action rather than deleting, so the existing confirmation card stands
        between the sentence and the data. That matters most for exactly this phrasing: "delete
        the last food" is what a misheard voice command produces. */
+    /* ---- routines. Ordered before the pronoun guard so a named routine is not mistaken for
+       an ambiguous one, and before the food/weight deletes so "delete my push day" is not
+       read as a food scope. ---- */
+    {
+      name: "add exercise to routine",
+      needs: "addExerciseToRoutine",
+      test: function (t) { return /\b(add|put)\b/.test(t) && /\bto (my |the )?[a-z]/.test(t) && !/\b(food|meal|weight|steps?)\b/.test(t); },
+      run: function (A, t) {
+        var m = t.match(/\b(?:add|put)\s+(.+?)\s+to\s+(?:my\s+|the\s+)?(.+?)$/);
+        if (!m) return null;
+        var ex = m[1].trim(), rt = m[2].replace(/\b(routine|workout|day)\b\s*$/, "").trim() || m[2].trim();
+        if (!ex || !rt) return null;
+        return { text: null, pending: { action: "addExerciseToRoutine", args: { exercise: ex, routine: rt } } };
+      }
+    },
+    {
+      name: "remove exercise from routine",
+      needs: "removeExerciseFromRoutine",
+      test: function (t) { return /\b(remove|delete|take)\b/.test(t) && /\bfrom (my |the )?[a-z]/.test(t) && !/\b(food|meal|weight)\b/.test(t); },
+      run: function (A, t) {
+        var m = t.match(/\b(?:remove|delete|take)\s+(.+?)\s+from\s+(?:my\s+|the\s+)?(.+?)$/);
+        if (!m) return null;
+        var ex = m[1].trim(), rt = m[2].replace(/\b(routine|workout|day)\b\s*$/, "").trim() || m[2].trim();
+        if (!ex || !rt) return null;
+        return { text: null, pending: { action: "removeExerciseFromRoutine", args: { exercise: ex, routine: rt } } };
+      }
+    },
+    {
+      name: "delete routine",
+      needs: "deleteRoutine",
+      test: function (t) {
+        return /\b(delete|remove)\b/.test(t) && /\b(routine|program)\b/.test(t) && !/\bfrom\b/.test(t);
+      },
+      run: function (A, t) {
+        var m = t.match(/\b(?:delete|remove)\s+(?:my\s+|the\s+)?(.+?)\s*(?:routine|program)\b/);
+        var rt = m && m[1] ? m[1].trim() : null;
+        /* No name means no target. Deleting "a routine" is not a request that can be honoured
+           safely when the user has several. */
+        if (!rt) return { text: "Which routine should I delete?" };
+        return { text: null, pending: { action: "deleteRoutine", args: { routine: rt } } };
+      }
+    },
     /* A BARE PRONOUN NAMES NOTHING. "delete it", "change it", "delete that" — the verb is
        clear and the object is not, and this must be first in the whole delete family because
        everything below it is happy to assume the object is food. "delete that" was reaching
