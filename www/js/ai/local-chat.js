@@ -45,12 +45,29 @@
       try { text = IgnytLang.canonical(text).text; } catch (e) { /* fall through untouched */ }
     }
 
-    return text
+    text = text
       .toLowerCase()
       .replace(/[’']/g, "")            // "what's" -> "whats", so one pattern covers both
       .replace(/[^\w\s.+-]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
+
+    /* REPHRASING AFTER A BAD ANSWER. Seen on a real device: the assistant answered "how to do
+       bench press" with the anatomy entry, and the reply — "I asked how to do bench press" —
+       came back as "I don't have a reliable answer for that yet." Being corrected and
+       responding with a second failure is the worst moment in the conversation, and the
+       question inside the correction is one the base answers perfectly well.
+
+       So the preamble is stripped and what remains is treated as the real question. Only from
+       the START of the message, and only these fixed openers: a mid-sentence "I asked" is part
+       of what somebody is telling you, not a frame around it. */
+    var STRIP = /^(no |nope |actually |sorry )*(i (asked|said|meant|want to know)|my question (was|is)|the question (was|is)|what i (asked|meant) (was|is))\s+/;
+    var stripped = text.replace(STRIP, "").trim();
+    /* Only if something substantial survives. "I asked" alone is not a question, and reducing
+       it to an empty string would match the first intent with a loose pattern. */
+    if (stripped && stripped.length >= 3 && stripped !== text) text = stripped;
+
+    return text;
   }
 
   /* actions.js exposes the registry as REGISTRY, and `risk(name)` as the lookup. Checked via
@@ -382,6 +399,36 @@
         return { text: null, pending: { action: "updateSteps", args: { steps: Math.round(n) } } };
       }
     },
+    /* DELETE THE LAST FOOD ENTRY. deleteFoodLog needs a specific entryId, so "delete the last
+       food" has to be resolved to one here — the action deliberately will not guess, and a
+       delete that picks the wrong row is not recoverable by the user.
+
+       Returns a pending action rather than deleting, so the existing confirmation card stands
+       between the sentence and the data. That matters most for exactly this phrasing: "delete
+       the last food" is what a misheard voice command produces. */
+    {
+      name: "delete food",
+      needs: "deleteFoodLog",
+      test: function (t) {
+        return /\b(delete|remove|undo|clear)\b/.test(t)
+            && /\b(food|meal|entry|log|last|that)\b/.test(t)
+            && !/\b(weight|workout|steps?|history|all|everything)\b/.test(t);
+      },
+      run: async function (A) {
+        var r = await A.run("getFoodLog", {});
+        var d = (r && r.result) || {};
+        var items = d.entries || d.items || d.foods;
+        if (!Array.isArray(items) || !items.length) {
+          return { text: "There's nothing in today's food log to delete." };
+        }
+        /* Newest first, which is how addFoodLog unshifts them. "The last food" means the one
+           most recently added, not the last chronologically in the day. */
+        var row = items[0];
+        var id = row.id != null ? row.id : row.entryId;
+        if (id == null) return null;          // shape not as expected: decline rather than guess
+        return { text: null, pending: { action: "deleteFoodLog", args: { entryId: id } } };
+      }
+    },
     {
       name: "log food",
       needs: "addFoodLog",
@@ -514,7 +561,14 @@
        question means. */
     if (window.IgnytKnowledge) {
       var kb = null;
-      try { kb = await window.IgnytKnowledge.ask(message); } catch (e) { kb = null; }
+      /* THE NORMALISED TEXT, NOT THE RAW MESSAGE. This was passing `message`, so everything
+         norm() had just done was thrown away at the door: the language canonicalisation that
+         turns "என் எடை" into "weight", and the rephrase strip that removes "actually I said".
+         "actually I said what is progressive overload" therefore reached the base with the
+         preamble still attached and failed to match a question it contains verbatim, while
+         the intent table above — which does use the normalised text — would have matched.
+         One argument, and it silently halved the value of two features. */
+      try { kb = await window.IgnytKnowledge.ask(t); } catch (e) { kb = null; }
 
       if (kb && kb.safety) {
         /* A pain or medical question. The base has no vetted answer for these, so it declines
