@@ -94,13 +94,49 @@
       if (tok) headers.Authorization = "Bearer " + tok;
     } catch (e) { /* fall through: the server will answer 401 and the UI says to sign in */ }
 
+    /* COLD STARTS, WHICH ARE NOT THE USER BEING OFFLINE.
+       The backend runs on a free Render instance: it sleeps after ~15 minutes idle and takes
+       30-60s to wake. The first message after any quiet spell therefore hits a stalled socket,
+       and this used to report "You're offline." — blaming the user's connection for the
+       server's nap, which is both wrong and unactionable. It is the single most likely reason
+       the AI appears to fail intermittently.
+
+       So: a real timeout rather than the WebView's default, and ONE retry. A cold instance
+       answers the second attempt because the first is what woke it, which is why the retry is
+       worth more here than the usual "retries paper over bugs" objection allows. Only one, and
+       only for a genuine connection failure — never for an HTTP error, which is the server
+       answering and must not be sent twice, and never for a timeout on the retry itself. */
+    var COLD_START_MS = 75000;
+    async function attempt(ms) {
+      var ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
+      var timer = ctl ? setTimeout(function () { ctl.abort(); }, ms) : null;
+      try {
+        return await fetch(base + "/v1/ai/chat", {
+          method: "POST", headers: headers, body: JSON.stringify(body),
+          signal: ctl ? ctl.signal : undefined
+        });
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    }
+
     var res;
     try {
-      res = await fetch(base + "/v1/ai/chat", { method: "POST", headers: headers, body: JSON.stringify(body) });
-    } catch (e) {
-      var ne = new Error("You're offline.");
-      ne.code = "offline";
-      throw ne;
+      res = await attempt(COLD_START_MS);
+    } catch (e1) {
+      try {
+        res = await attempt(COLD_START_MS);
+      } catch (e2) {
+        /* Now say which it actually was. navigator.onLine is only trustworthy when it says
+           FALSE — a true reading means a network interface exists, not that anything is
+           reachable — so it is used only to confirm the offline case, never to rule it out. */
+        var offline = (typeof navigator !== "undefined" && navigator.onLine === false);
+        var ne = new Error(offline
+          ? "You're offline. The chatbot still works without a connection."
+          : "The AI server didn't respond. It may be waking up — try again in a moment.");
+        ne.code = offline ? "offline" : "unreachable";
+        throw ne;
+      }
     }
     var json = null;
     try { json = await res.json(); } catch (e) { json = null; }
