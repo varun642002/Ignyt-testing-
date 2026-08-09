@@ -221,8 +221,30 @@
     {
       name: "food log today",
       needs: "getFoodLog",
+      /* LOG FOOD vs LOGGED FOOD — two different intents that share a word.
+         "log 2 eggs" ADDS an entry. "show my logged food" READS what is already there. The
+         verb is the same stem; only the tense and the surrounding words separate them, and
+         with only the phrasings above listed, "show my logged food" matched neither intent and
+         fell through to "I don't have a reliable answer" — for a question about the user's own
+         data, which is the least excusable place to say that.
+
+         Two signals, either of which is enough:
+           - the PAST tense: logged, ate, eaten, recorded — describing what already happened
+           - a VIEW verb next to a food word: show / see / view / what is in my food
+         The logging intent below is guarded against the same words, so exactly one of them
+         claims any given sentence. */
       test: function (t) {
-        return /\b(what did i eat|what have i eaten|my food log|calories today|how many calories|food today)\b/.test(t);
+        if (/\b(what did i eat|what have i eaten|my food log|calories today|how many calories|food today)\b/.test(t)) return true;
+        /* A QUANTITY MEANS IT IS A LOG, NOT A VIEW. "I ate 2 eggs" shares its past tense with
+           "what did I eat" and would otherwise be claimed here — and this intent is ordered
+           first, so it would win and silently stop food logging working. Nobody views their
+           food log by naming an amount; they name an amount to record one. The calorie
+           questions are the exception, since "how many calories today" is a genuine read. */
+        if (/\d/.test(t) && !/\b(how many calories|calories today|how much protein)\b/.test(t)) return false;
+        var past = /\b(logged|recorded|eaten|ate)\b/.test(t);
+        var view = /\b(show|see|view|list|display|whats|what is|check)\b/.test(t);
+        var food = /\b(food|meal|meals|eat|eaten|ate|calories|macros|nutrition)\b/.test(t);
+        return food && (past || view);
       },
       run: async function (A) {
         var r = await A.run("getFoodLog", {});
