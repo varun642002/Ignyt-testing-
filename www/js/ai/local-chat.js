@@ -63,6 +63,21 @@
 
   function round1(n) { return Math.round(n * 10) / 10; }
 
+  /* ---------- short-term conversation state --------------------------------------------
+     ONE SLOT, IN MEMORY, THAT EXPIRES. Deliberately not persisted and deliberately not a
+     transcript: the brief asks for short-term context, not AI-style memory, and the only
+     thing that has to survive between two messages is "I just asked for a weight".
+
+     A module variable rather than app state because it is genuinely ephemeral — a reload
+     should forget it. Persisting it would mean a user who closed the app mid-question comes
+     back tomorrow, types something unrelated, and has it logged as their weight.
+
+     Three minutes. Long enough to look away and answer, short enough that a stray number typed
+     much later is treated as a new message rather than the answer to a question nobody
+     remembers being asked. */
+  var AWAIT_TTL_MS = 3 * 60 * 1000;
+  var _awaiting = null;
+
   /* ---------- weight ---------------------------------------------------------------------- */
 
   /* POUNDS ARE CONVERTED HERE, not left for the action to guess. logWeight stores kilograms;
@@ -218,6 +233,42 @@
     /* ---- writes: these return a pending action, so the chat screen shows the same
            confirmation card the AI path produces. Nothing is written on a pattern match
            alone. ---- */
+    /* ASK FOR THE WEIGHT rather than guessing it. "Log my weight" is a complete instruction
+       with a missing value; the old behaviour was to match no intent at all and answer "I
+       don't have a reliable answer for that", which is both wrong and slightly insulting for
+       a command the app fully understands.
+       Ordered BEFORE "log weight" so the no-number case is claimed here; that intent still
+       handles "weight 82" in one shot, which stays a single message and should. */
+    {
+      name: "ask weight",
+      needs: "logWeight",
+      test: function (t) {
+        if (firstNumber(t) !== null) return false;              // has a value: not our case
+        if (!/\b(log|record|update|save|add|enter)\b/.test(t)) return false;
+        if (!/\b(weigh|weight)\b/.test(t)) return false;
+        return !/\b(chart|graph|history|progress|goal|target|trend)\b/.test(t);
+      },
+      run: function () {
+        _awaiting = {
+          name: "log weight",
+          at: Date.now(),
+          /* Given the next message, is it a weight? Reuses the same parsing and the same
+             plausibility gate as the one-shot path, so "85", "85 kg" and "172 lbs" all behave
+             identically whether typed together or across two messages. */
+          fill: function (t2) {
+            var n = firstNumber(t2);
+            if (n == null) return null;
+            /* A reply that is mostly words with a number in it is a new sentence, not an
+               answer — "I did 3 sets of bench" should not be logged as 3 kg. */
+            if (t2.split(/\s+/).length > 4) return null;
+            var kg = parseWeight(n, t2);
+            if (kg < 20 || kg > 400) return null;
+            return { pending: { action: "logWeight", args: { weight: kg } } };
+          }
+        };
+        return { text: "What weight should I log?" };
+      }
+    },
     {
       name: "log weight",
       needs: "logWeight",
@@ -318,6 +369,35 @@
     if (!t) return null;
 
     var A = window.IgnytAIActions;
+
+    /* ---------- the follow-up slot -------------------------------------------------------
+       If the assistant just asked a question, this message is probably the answer to it.
+       "85" means nothing on its own; after "What weight should I log?" it means 85 kg.
+
+       Checked BEFORE the intent table, because that is the whole point — "85" matches no
+       intent and would otherwise fall through to the knowledge base and come back as "I don't
+       have a reliable answer for that", which is a terrible reply to a question we just asked.
+
+       IT FAILS OPEN, NOT CLOSED. If the reply does not parse as the value we wanted, the slot
+       is cleared and the message continues to normal routing — because a user who answers
+       "actually, what is progressive overload?" has changed the subject, and swallowing that
+       to insist on a number would trap them in a prompt they cannot leave. */
+    if (_awaiting) {
+      if (Date.now() - _awaiting.at > AWAIT_TTL_MS) {
+        _awaiting = null;                       // stale: they moved on minutes ago
+      } else {
+        var slot = _awaiting;
+        var filled = null;
+        try { filled = slot.fill(t, message); } catch (e) { filled = null; }
+        if (filled) {
+          _awaiting = null;
+          return { text: filled.text || null, pending: filled.pending,
+                   source: "BUILT_IN_ACTION:" + slot.name + " (follow-up)" };
+        }
+        /* Not an answer to the question. Drop the slot and treat this as a fresh message. */
+        _awaiting = null;
+      }
+    }
     for (var i = 0; i < INTENTS.length; i++) {
       var it = INTENTS[i];
       if (it.needs && !has(A, it.needs)) continue;   // action unavailable; not our problem to fake
@@ -364,6 +444,11 @@
 
   window.IgnytLocalChat = Object.freeze({
     tryAnswer: tryAnswer,
+    /* Whether a question is currently open, and dropping it. The chat screen clears the slot
+       when the transcript is cleared — an answer to a question that is no longer on screen is
+       not an answer to anything. */
+    awaiting: function () { return _awaiting ? _awaiting.name : null; },
+    clearAwaiting: function () { _awaiting = null; },
     /* Exposed for tests: which intent claims this sentence, without running it. */
     match: function (message) {
       var t = norm(message);

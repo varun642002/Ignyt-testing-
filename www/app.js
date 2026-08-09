@@ -18614,6 +18614,10 @@ function attachHandlers(){
       state.aiChat = [];
       state.aiPending = null;
       state.aiLastUser = null;
+      /* Drop any open follow-up too. The assistant may have just asked "What weight should I
+         log?"; clearing the transcript takes that question off the screen, and a slot waiting
+         for its answer would then capture the next unrelated number the user types. */
+      if (window.IgnytLocalChat && IgnytLocalChat.clearAwaiting) IgnytLocalChat.clearAwaiting();
       if(window.persist) window.persist();
       renderInPlace();
     });
