@@ -632,6 +632,49 @@
         var food = m[3].replace(/\s+/g, " ").trim();
         if (!food || !isFinite(qty) || qty <= 0) return null;
 
+        /* "LOG FOOD" NAMES NO FOOD. It is a request to start logging, and the Quick Action
+           button sends exactly that string — so this was creating an entry for a food called
+           "food", searching the library for it, and reporting it missing. The user asked to
+           log something and was told their something does not exist.
+           Ask instead, and hold the slot open for the answer, which is the same mechanism
+           "log my weight" already uses. */
+        if (/^(my |the |a |an |some )?(food|foods|meal|meals|something|thing|it|this|that|entry|item)$/.test(food)) {
+          _awaiting = {
+            name: "log food",
+            at: Date.now(),
+            fill: function (t2) {
+              /* FAIL OPEN. A reply that is not a food must release the slot, not be logged as
+                 one. Without this, answering "what is progressive overload" after "log food"
+                 created a food entry named "progressive overload" — the slot swallowed a
+                 change of subject and wrote nonsense into the food log, which is worse than
+                 any wrong answer because it silently corrupts real data.
+                 A question word or a long phrase is a new message; a food is short and is not
+                 phrased as a question. The weight slot has the same guard for the same reason. */
+              if (/^(what|how|why|when|where|which|who|is|are|can|should|do|does|tell|show|explain)\b/.test(t2)) return null;
+              if (t2.split(/\s+/).length > 5) return null;
+
+              /* Re-parse the reply as though it had been said with the verb attached, so
+                 "200g chicken breast" behaves exactly like "log 200g chicken breast" — one
+                 parser, not a second one that drifts. */
+              var m2 = ("log " + t2).match(/log\s+(?:a\s+|an\s+)?(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?)?\s+(?:of\s+)?([a-z][a-z\s]{1,40})$/)
+                    || ("log " + t2).match(/log\s+(?:a|an|some)?\s*([a-z][a-z\s]{1,40})$/);
+              if (!m2) return null;
+              var hasQty = /^\d/.test(m2[1] || "");
+              var q2 = hasQty ? parseFloat(m2[1]) : 1;
+              var u2 = hasQty ? (m2[2] || null) : null;
+              var f2 = (hasQty ? m2[3] : m2[1]).replace(/\s+/g, " ").trim();
+              if (!f2 || /^(food|meal|it|this|that)s?$/.test(f2)) return null;
+              var a2 = { food: f2, quantity: q2 };
+              if (u2) {
+                a2.unit = u2.replace(/s$/, "").replace(/^gram$/, "g");
+                if (/^(g|kg|ml|oz)$/.test(a2.unit)) a2.grams = a2.unit === "kg" ? q2 * 1000 : q2;
+              }
+              return { pending: { action: "addFoodLog", args: a2 } };
+            }
+          };
+          return { text: "What would you like to log?" };
+        }
+
         var args = { food: food, quantity: qty };
         /* `food`, NOT `name`. actions.js reads args.food; passing `name` sent it undefined and
            every chatbot food log failed before it ever reached the library. It failed quietly,
