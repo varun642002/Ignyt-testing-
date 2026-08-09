@@ -400,11 +400,31 @@
       run: async function (A) {
         var r = await A.run("getTodayWorkout", {});
         var d = (r && r.result) || {};
-        if (d.rest || d.isRest) return { text: "Today's a rest day. Take it." };
-        var name = d.name || d.title || d.workout;
-        if (!name) return null;
-        var n = (d.exercises && d.exercises.length) || d.exerciseCount;
-        return { text: "Today: " + name + (n ? " — " + n + " exercises." : ".") };
+
+        /* THREE SHAPES, and the old code only understood one. getTodayWorkout returns
+           { inProgress:true, title, exercises } for a LIVE session, but
+           { inProgress:false, planned:{ day, session, exercises } } for a planned day — and
+           it read d.title, which exists only in the live case. So "what's my workout" declined
+           whenever a plan existed and no session was running, which is the ordinary state of
+           the app most of the day. Fourth bug of this exact shape in this codebase: a caller
+           guessing at a return contract rather than reading it. */
+        if (d.inProgress) {
+          var live = (d.exercises || []).length;
+          return { text: "You're mid-session: " + (d.title || "today's workout") +
+                         (live ? " — " + live + " exercises." : ".") };
+        }
+
+        var p = d.planned;
+        if (!p) return { text: "Nothing is planned for today. It's a rest day unless you start one." };
+
+        var name = p.session || p.day;
+        if (!name) return null;                       // shape still unfamiliar: decline, do not invent
+        var ex = (p.exercises || []);
+        var lines = ["Today: " + name + (ex.length ? " — " + ex.length + " exercises" : "")];
+        /* Naming the first few is the difference between an answer and a label. Capped, because
+           a twelve-item list in a chat bubble is a wall rather than information. */
+        if (ex.length) lines.push(ex.slice(0, 5).join(", ") + (ex.length > 5 ? ", and more" : ""));
+        return { text: lines.join(BR) };
       }
     },
 
