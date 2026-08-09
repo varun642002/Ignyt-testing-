@@ -78,6 +78,12 @@
   function tokens(text) {
     var raw = String(text || "").toLowerCase()
       .replace(/[’']/g, "")
+      /* Digit group separators, BEFORE punctuation is blanked. The entries say "10,000 steps"
+         and people type "10000 steps"; stripping the comma to a space first turns one into
+         "10" + "000" and the other into "10000", which share nothing — so the base failed to
+         match a question it contains twice over. A thousands separator is notation, not a word
+         boundary. */
+      .replace(/(\d)[, ](\d)/g, "$1$2")
       .replace(/[^a-z0-9\s]/g, " ")
       .split(/\s+/);
     var out = [];
@@ -96,7 +102,14 @@
   /* Written out on one line each. JavaScript has no /x flag — the readable multi-line form
      these started as is a Perl/Python feature, and here it would have been a syntax error that
      took the whole module out on load, taking the safety guard with it. */
-  var PAIN = /\b(pain|painful|hurts?|hurting|aches?|aching|sore|soreness|injur(y|ed|ies)|strain(ed)?|sprain(ed)?|torn|swollen|swelling|numb|numbness|tingling|dizzy|dizziness|faint|stiff|pinch(ed|ing)?|clicking|locking)\b/;
+  /* "sore" and "soreness" are NOT here, deliberately. Delayed-onset soreness is ordinary
+     training vocabulary — the base has vetted answers for "Does stretching prevent soreness?"
+     and "Should I train when very sore?" — and flagging the word sent those to Gemini instead
+     of using the answer we already had. Found by testing the base against its own questions:
+     recall was 47/50 and two of the three misses were the word "sore".
+     Genuine injury language (pain, hurt, torn, swollen) still triggers, and "sore" alongside
+     any of those still trips on the other word. The guard is for injury, not for DOMS. */
+  var PAIN = /\b(pain|painful|hurts?|hurting|aches?|aching|injur(y|ed|ies)|strain(ed)?|sprain(ed)?|torn|swollen|swelling|numb|numbness|tingling|dizzy|dizziness|faint|pinch(ed|ing)?|clicking|locking)\b/;
   var MEDICAL = /\b(doctor|physio|physiotherapy|physiotherapist|surgery|surgical|rehab|rehabilitation|medication|medicine|tablet|prescribed|diagnosis|diagnosed|diabetes|diabetic|blood pressure|hypertension|pregnant|pregnancy|asthma|hernia|arthritis|sciatica|fracture|slipped disc)\b/;
 
   function safetyFlag(text) {
@@ -115,6 +128,14 @@
     var df = {}, n = entries.length;
     entries.forEach(function (e) {
       e._t = tokens(e.q + " " + e.c);
+      /* Question-only tokens, kept SEPARATELY from the scoring set above. The duplicate
+         check must not see the category: "What is progressive overload?" is filed under
+         Muscle Building in one batch and Training Fundamentals in another, and comparing
+         the category along with the question made two identical questions look different
+         enough to be treated as a genuine ambiguity — so both were rejected and the
+         question went to Gemini. The category belongs in scoring, where it adds useful
+         signal, and nowhere near the "are these the same question?" test. */
+      e._q = tokens(e.q);
       var seen = {};
       e._t.forEach(function (w) { if (!seen[w]) { seen[w] = 1; df[w] = (df[w] || 0) + 1; } });
     });
@@ -176,9 +197,9 @@
      byte-identical: several differ by a word or by punctuation. */
   function sameQuestion(a, b) {
     var A = {}, n = 0, shared = 0;
-    a._t.forEach(function (w) { if (!A[w]) { A[w] = 1; n++; } });
+    (a._q || a._t).forEach(function (w) { if (!A[w]) { A[w] = 1; n++; } });
     var B = {}, m = 0;
-    b._t.forEach(function (w) {
+    (b._q || b._t).forEach(function (w) {
       if (B[w]) return; B[w] = 1; m++;
       if (A[w]) shared++;
     });
