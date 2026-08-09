@@ -422,7 +422,7 @@
             if (t2.split(/\s+/).length > 4) return null;
             var kg = parseWeight(n, t2);
             if (kg < 20 || kg > 400) return null;
-            return { pending: { action: "logWeight", args: { weight: kg } } };
+            return { pending: { action: "logWeight", args: { weightKg: kg } } };
           }
         };
         return { text: say("ask_weight") };
@@ -441,7 +441,7 @@
            3 kg. Outside human range, hand it to the AI rather than confirm something absurd. */
         var kg = parseWeight(n, t);
         if (kg < 20 || kg > 400) return null;
-        return { text: null, pending: { action: "logWeight", args: { weight: kg } } };
+        return { text: null, pending: { action: "logWeight", args: { weightKg: kg } } };
       }
     },
     {
@@ -461,6 +461,51 @@
        Returns a pending action rather than deleting, so the existing confirmation card stands
        between the sentence and the data. That matters most for exactly this phrasing: "delete
        the last food" is what a misheard voice command produces. */
+    /* Weight deletion, before the food delete family so "delete today's weight" is not caught
+       by a food scope that also matches "today". */
+    {
+      name: "delete weight",
+      needs: "deleteWeightEntry",
+      test: function (t) {
+        return /\b(delete|remove|undo|clear)\b/.test(t)
+            && /\b(weight|weigh in|weighin)\b/.test(t)
+            && !/\b(food|meal|workout|history|all|everything)\b/.test(t);
+      },
+      run: function () {
+        return { text: null, pending: { action: "deleteWeightEntry", args: {} } };
+      }
+    },
+    /* Reading the weight trend. getProgress already returns the entries and the change, so
+       this is a formatting job rather than a new query — and it declines when there is nothing
+       to show instead of drawing an empty trend. */
+    {
+      name: "weight history",
+      needs: "getProgress",
+      test: function (t) {
+        if (/\b(delete|remove|log|record|update)\b/.test(t)) return false;   // those are writes
+        return /\b(weight)\b/.test(t)
+            && /\b(history|trend|progress|chart|graph|last week|last month|over time|changed?|losing|lost|gained?)\b/.test(t);
+      },
+      run: async function (A) {
+        var r = await A.run("getProgress", { days: 30 });
+        var d = (r && r.result) || {};
+        var rows = d.entries || [];
+        if (!rows.length) {
+          return { text: "You haven't logged a weight yet. Tell me one, like \"weight 82\"." };
+        }
+        if (rows.length === 1) {
+          return { text: "One entry so far: " + rows[0].weightKg + " kg on " + rows[0].date +
+                         ". Log another and I can show the trend." };
+        }
+        var latest = rows[0], oldest = rows[rows.length - 1];
+        var delta = Math.round((latest.weightKg - oldest.weightKg) * 10) / 10;
+        return { text: "Weight over the last " + (d.days || 30) + " days" + BR + BR +
+                       oldest.weightKg + " kg (" + oldest.date + ")" + BR +
+                       latest.weightKg + " kg (" + latest.date + ")" + BR +
+                       "Change: " + (delta > 0 ? "+" : "") + delta + " kg across " +
+                       rows.length + " entries" };
+      }
+    },
     /* SCOPED DELETION, ORDERED MOST SPECIFIC FIRST. The four scopes share almost all their
        vocabulary — "delete chicken from today's food" contains the words that mean today, all
        and food — so the only thing keeping them apart is that the narrowest test runs first.

@@ -207,8 +207,37 @@
 
   /* Weight. Bounds match what the manual entry screen accepts; a voice command that produces
      "968" from "96.8" is caught here rather than becoming a body-log entry nobody typed. */
+  /* Deletes the weight entry for a date. Separate from logWeight because overwriting and
+     removing are different intentions: "change today's weight to 81" replaces a number,
+     "delete today's weight" says the reading should not exist — usually because it was logged
+     by mistake and is dragging the trend. Returns affectedRecords so nothing can claim a
+     deletion that did not happen. */
+  function deleteWeightEntry(args) {
+    var ds = dateKey(args && args.date);
+    var st = S();
+    var before = (st.bodylog || []).length;
+    st.bodylog = (st.bodylog || []).filter(function (e) { return !e || e.date !== ds; });
+    var removed = before - st.bodylog.length;
+    if (!removed) {
+      return { card: "error", code: "not_found", affectedRecords: 0,
+               message: "There's no weight logged on " + ds + "." };
+    }
+    /* The profile weight follows the log. Leaving it pointing at a value that no longer exists
+       would keep the deleted reading driving every calorie and macro target on the nutrition
+       screen — the same coupling logWeight maintains, in the other direction. */
+    var latest = (st.bodylog || []).filter(function (e) { return e && e.weight != null; })[0];
+    if (latest) st.profile.weight = Number(latest.weight);
+    window.persist();
+    return { card: "deleted", scope: "weight", date: ds, affectedRecords: removed,
+             message: "Deleted the weight entry for " + ds + "." };
+  }
+
   function logWeight(args) {
-    var kg = num(args && args.weightKg, "Weight", 20, 400);
+    /* weightKg is the contract, but `weight` is what every caller reaches for first — the
+       chatbot did, and every weight it logged failed with "Weight must be a number" while the
+       routing tests all passed, because they asserted on the pending args and never ran the
+       action. Accepting both costs one line and removes a whole class of silent failure. */
+    var kg = num(args && (args.weightKg != null ? args.weightKg : args.weight), "Weight", 20, 400);
     var ds = dateKey(args && args.date);
     var st = S();
     var rounded = Math.round(kg * 10) / 10;
@@ -531,7 +560,8 @@
        registry and the one a misheard sentence must never reach unchallenged. */
     deleteFoodForDate: { risk: "destroy", fn: deleteFoodLogForDate },
     deleteAllFoodLogs: { risk: "destroy", fn: deleteAllFoodLogs },
-    deleteFoodByName:  { risk: "destroy", fn: deleteFoodByName }
+    deleteFoodByName:  { risk: "destroy", fn: deleteFoodByName },
+    deleteWeightEntry: { risk: "destroy", fn: deleteWeightEntry }
   };
 
   /* The single entry point. Anything the model asks for arrives here as a name and a plain
