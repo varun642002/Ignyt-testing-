@@ -215,13 +215,6 @@
    */
   async function ask(text) {
     var flag = safetyFlag(text);
-    if (flag) {
-      /* Deliberately no answer. The base has no vetted response for pain or medical questions
-         — every row in it is safety_level general_fitness — so the honest result is to decline
-         and let the caller route it. Returning the nearest fitness answer is the specific
-         failure this guard exists to prevent. */
-      return { safety: flag, answer: null, confidence: 0, source: "safety" };
-    }
 
     var entries = await load();
     if (!entries.length) return null;
@@ -236,7 +229,25 @@
       else if (s > runnerUp) { runnerUp = s; second = entries[i]; }
     }
 
-    if (!best || bestScore < threshold()) return null;
+    if (!best || bestScore < threshold()) {
+      return flag ? { safety: flag, answer: null, confidence: 0, source: "safety" } : null;
+    }
+
+    /* SAFETY GATE, now that vetted safety answers exist.
+       It used to refuse every pain or medical question outright, because nothing in the base
+       was written for one — the honest move when the only alternative is a fitness answer
+       dressed up as medical advice. The Exercise Safety entries change that: there are now
+       real answers to "what should I do if an exercise causes sharp pain".
+
+       So a flagged question may be answered ONLY by an entry that is itself about pain or
+       injury — tested by running the same detector over the matched entry's own question. A
+       vetted safety answer serves it; anything else declines and the full text goes to Gemini.
+       That keeps the original protection exactly as strong: "why does my shoulder hurt when I
+       bench" still cannot be answered by the bench press technique entry, because that entry's
+       question contains no injury language. */
+    if (flag && !safetyFlag(best.q)) {
+      return { safety: flag, answer: null, confidence: 0, source: "safety" };
+    }
 
     /* AMBIGUITY CHECK, and the reason it is not simply a score gap.
        Two entries scoring nearly the same USUALLY means the question chose neither — "how many
