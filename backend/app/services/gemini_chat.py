@@ -256,11 +256,41 @@ def _payload(
     """
     contents: List[Dict[str, Any]] = []
 
+    # HISTORY MUST START WITH A USER TURN AND ALTERNATE. Gemini requires it, and violating it
+    # does not raise — it returns a candidate with no parts and finishReason STOP, which is
+    # indistinguishable from the model simply having nothing to say. That was reaching the user
+    # as "The AI returned an empty answer. (STOP)".
+    #
+    # The client cannot help with this: it filters its transcript down to user and assistant
+    # text, dropping the action cards and clarify prompts in between, so a perfectly ordinary
+    # conversation — log food, card, "how much chicken?", card — leaves a history that opens on
+    # a model turn or carries two model turns in a row.
+    #
+    # Repaired here rather than in the app, because the API's requirement belongs to whoever
+    # calls the API. Leading model turns are dropped, since a reply with nothing before it is
+    # not answerable anyway; consecutive same-role turns are merged rather than discarded, so
+    # nothing the user actually said is lost.
     for turn in history:
         role = "model" if turn.get("role") == "assistant" else "user"
         text = str(turn.get("text") or "")[:600]
-        if text:
+        if not text:
+            continue
+        if not contents:
+            if role == "model":
+                continue                      # nothing can precede the first user turn
             contents.append({"role": role, "parts": [{"text": text}]})
+        elif contents[-1]["role"] == role:
+            contents[-1]["parts"][0]["text"] = (
+                contents[-1]["parts"][0]["text"] + "\n" + text
+            )[:1200]
+        else:
+            contents.append({"role": role, "parts": [{"text": text}]})
+
+    # The live message is appended as a user turn below, so a history ending on one would put
+    # two user turns back to back. Merging is wrong here — the trailing history turn is an
+    # earlier message, not part of this one — so the stale tail is dropped instead.
+    if contents and contents[-1]["role"] == "user":
+        contents.pop()
 
     user_parts: List[Dict[str, Any]] = []
     if context:
