@@ -352,6 +352,65 @@
   }
 
   /* Destructive. Reached only after the confirmation layer has a yes — see RISK below. */
+  /* ---------- scoped deletion ---------------------------------------------------------------
+     THE COUNT IS THE PROOF. Each of these measures the log before and after and reports how
+     many rows actually went, so the chat layer can never claim a deletion that did not happen —
+     the brief's rule, and the one that matters most for a destructive action. "Deleted" with
+     nothing removed is worse than an error, because the user stops looking.
+
+     All three write through the same S().foodLog and window.persist() the manual UI uses, so
+     the Food Log screen and the day's calorie and macro totals reflect it immediately. There is
+     no second store to keep in step. */
+
+  function deleteFoodLogForDate(args) {
+    var ds = dateKey(args && args.date);
+    var st = S();
+    var before = (st.foodLog || []).length;
+    st.foodLog = (st.foodLog || []).filter(function (f) { return String(f.date) !== ds; });
+    var removed = before - st.foodLog.length;
+    if (!removed) {
+      return { card: "error", code: "nothing_to_delete", affectedRecords: 0,
+               message: "There's nothing logged on " + ds + " to delete." };
+    }
+    window.persist();
+    return { card: "deleted", scope: "date", date: ds, affectedRecords: removed,
+             message: "Deleted " + removed + (removed === 1 ? " entry" : " entries") + " from " + ds + "." };
+  }
+
+  function deleteAllFoodLogs() {
+    var st = S();
+    var removed = (st.foodLog || []).length;
+    if (!removed) {
+      return { card: "error", code: "nothing_to_delete", affectedRecords: 0,
+               message: "Your food log is already empty." };
+    }
+    st.foodLog = [];
+    window.persist();
+    return { card: "deleted", scope: "all", affectedRecords: removed,
+             message: "Deleted all " + removed + " food log entries." };
+  }
+
+  function deleteFoodByName(args) {
+    var name = str(args && args.food, "Food", 80).toLowerCase();
+    var ds = dateKey(args && args.date);
+    var st = S();
+    var before = (st.foodLog || []).length;
+    /* Substring rather than exact: the user says "chicken", the library row is "Chicken
+       Breast". Scoped to one day so a name match cannot reach back through the whole history. */
+    st.foodLog = (st.foodLog || []).filter(function (f) {
+      var hit = String(f.date) === ds && String(f.name || "").toLowerCase().indexOf(name) !== -1;
+      return !hit;
+    });
+    var removed = before - st.foodLog.length;
+    if (!removed) {
+      return { card: "error", code: "not_found", affectedRecords: 0,
+               message: "I couldn't find \"" + name + "\" in " + ds + "'s food log." };
+    }
+    window.persist();
+    return { card: "deleted", scope: "name", what: name, affectedRecords: removed,
+             message: "Deleted " + removed + " " + name + (removed === 1 ? " entry" : " entries") + "." };
+  }
+
   function deleteFoodLog(args) {
     var id = args && args.entryId;
     var st = S();
@@ -466,7 +525,13 @@
     completeWorkout:  { risk: "write",   fn: completeWorkout },
     updateSteps:      { risk: "write",   fn: updateSteps },
 
-    deleteFoodLog:    { risk: "destroy", fn: deleteFoodLog }
+    deleteFoodLog:    { risk: "destroy", fn: deleteFoodLog },
+    /* All destroy-tier, so every one of them stops at the confirmation gate in service.js
+       before anything is removed. deleteAllFoodLogs especially: it is the widest action in the
+       registry and the one a misheard sentence must never reach unchallenged. */
+    deleteFoodForDate: { risk: "destroy", fn: deleteFoodLogForDate },
+    deleteAllFoodLogs: { risk: "destroy", fn: deleteAllFoodLogs },
+    deleteFoodByName:  { risk: "destroy", fn: deleteFoodByName }
   };
 
   /* The single entry point. Anything the model asks for arrives here as a name and a plain

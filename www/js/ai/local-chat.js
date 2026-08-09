@@ -234,6 +234,11 @@
          The logging intent below is guarded against the same words, so exactly one of them
          claims any given sentence. */
       test: function (t) {
+        /* FIRST, BEFORE THE LITERAL PHRASES. "clear my food log today" contains "my food log"
+           verbatim, so an early return on that list handed a delete command to the reader —
+           and the guard below never ran. A veto has to be the first thing tested, or the
+           shortcut above it decides the case. */
+        if (/\b(delete|remove|clear|wipe|erase|undo)\b/.test(t)) return false;
         if (/\b(what did i eat|what have i eaten|my food log|calories today|how many calories|food today)\b/.test(t)) return true;
         /* A QUANTITY MEANS IT IS A LOG, NOT A VIEW. "I ate 2 eggs" shares its past tense with
            "what did I eat" and would otherwise be claimed here — and this intent is ordered
@@ -456,6 +461,59 @@
        Returns a pending action rather than deleting, so the existing confirmation card stands
        between the sentence and the data. That matters most for exactly this phrasing: "delete
        the last food" is what a misheard voice command produces. */
+    /* SCOPED DELETION, ORDERED MOST SPECIFIC FIRST. The four scopes share almost all their
+       vocabulary — "delete chicken from today's food" contains the words that mean today, all
+       and food — so the only thing keeping them apart is that the narrowest test runs first.
+       Reordering this list changes what gets deleted, which is worth saying out loud. */
+    {
+      name: "delete all food",
+      needs: "deleteAllFoodLogs",
+      test: function (t) {
+        /* "logged" and "logs" as well as "log" — "delete everything I logged today" names no
+           food at all, and requiring the bare noun sent it to UNKNOWN. The past tense is the
+           food reference in that sentence. */
+        return /\b(delete|remove|clear|wipe|erase)\b/.test(t)
+            && /\b(all|every|everything|entire|whole)\b/.test(t)
+            && /\b(food|meal|meals|log|logs|logged|diet|nutrition|ate|eaten)\b/.test(t);
+      },
+      run: function () {
+        return { text: null, pending: { action: "deleteAllFoodLogs", args: {} } };
+      }
+    },
+    {
+      name: "delete food by name",
+      needs: "deleteFoodByName",
+      test: function (t) {
+        if (!/\b(delete|remove)\b/.test(t)) return false;
+        if (/\b(all|every|everything)\b/.test(t)) return false;   // that is the wider scope above
+        /* A named food is the words between the verb and any "from/in ..." tail. Requires an
+           actual name, so "delete my food" falls through to the day scope rather than trying
+           to match a food called "my". */
+        return /\b(delete|remove)\s+(the\s+|my\s+)?[a-z][a-z\s]{1,28}?(\s+(from|in|out of)\b|\s+i\s+logged\b)/.test(t);
+      },
+      run: function (A, t) {
+        var m = t.match(/\b(?:delete|remove)\s+(?:the\s+|my\s+)?([a-z][a-z\s]{1,28}?)(?:\s+(?:from|in|out of)\b|\s+i\s+logged\b)/);
+        if (!m) return null;
+        var food = m[1].replace(/\s+/g, " ").trim();
+        /* Words that are scopes, not foods. Without this, "delete food from today" would try
+           to delete a food literally called "food". */
+        if (/^(food|meal|entry|log|item|thing)s?$/.test(food)) return null;
+        return { text: null, pending: { action: "deleteFoodByName", args: { food: food } } };
+      }
+    },
+    {
+      name: "delete todays food",
+      needs: "deleteFoodForDate",
+      test: function (t) {
+        return /\b(delete|remove|clear|wipe)\b/.test(t)
+            && /\b(today|todays|this day)\b/.test(t)
+            && /\b(food|meal|meals|log|diet|nutrition)\b/.test(t)
+            && !/\b(all|every|everything)\b/.test(t);
+      },
+      run: function () {
+        return { text: null, pending: { action: "deleteFoodForDate", args: {} } };
+      }
+    },
     {
       name: "delete food",
       needs: "deleteFoodLog",
