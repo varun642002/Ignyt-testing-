@@ -461,6 +461,26 @@
        Returns a pending action rather than deleting, so the existing confirmation card stands
        between the sentence and the data. That matters most for exactly this phrasing: "delete
        the last food" is what a misheard voice command produces. */
+    /* A BARE PRONOUN NAMES NOTHING. "delete it", "change it", "delete that" — the verb is
+       clear and the object is not, and this must be first in the whole delete family because
+       everything below it is happy to assume the object is food. "delete that" was reaching
+       the single-entry food delete and offering to remove a real row on the strength of the
+       word "that".
+
+       Asking is the only safe reading. The alternative is deleting the wrong thing on a
+       coin toss, and a deletion is not something a user can undo by rephrasing. */
+    {
+      name: "ambiguous target",
+      test: function (t) {
+        return /^(please\s+)?(delete|remove|clear|change|update|edit|add|log|start)\s+(it|that|this|them|these|those|mine)$/.test(t);
+      },
+      run: function (A, t) {
+        var destructive = /^(please\s+)?(delete|remove|clear)/.test(t);
+        return { text: destructive
+          ? "What should I delete — a food entry, today's food log, or a weight entry?"
+          : "What would you like me to do that to — your food log, your weight, or your workout?" };
+      }
+    },
     /* Weight deletion, before the food delete family so "delete today's weight" is not caught
        by a food scope that also matches "today". */
     {
