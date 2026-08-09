@@ -290,6 +290,25 @@
         return r ? { text: null, card: r } : null;
       }
     },
+    /* STARTING a session, which is a different thing from asking what it is. "what's my
+       workout" reads the plan; "start my workout" opens it and begins recording. Both were
+       reachable in the registry, but only the read had an intent — so the one command that
+       actually begins training fell through to "I don't have a reliable answer".
+
+       A write, so it returns pending and the user confirms: startWorkout creates a live
+       session, and a mis-tapped voice command should not put someone mid-workout. */
+    {
+      name: "start workout",
+      needs: "startWorkout",
+      test: function (t) {
+        return /\b(start|begin|open|lets do|do)\b/.test(t)
+            && /\b(workout|session|training|todays workout|my workout)\b/.test(t)
+            && !/\b(history|delete|remove|complete|finish|done|how|what)\b/.test(t);
+      },
+      run: function () {
+        return { text: null, pending: { action: "startWorkout", args: {} } };
+      }
+    },
     {
       name: "complete workout",
       needs: "completeWorkout",
