@@ -65,10 +65,17 @@
       /* A determiner may sit between the verb and its object — "lock my weight", "lock the
          food" — and a quantity counts as proof too: "lock 200g chicken" is a logging command
          in every reading, because "lock" takes no measurement. */
-      [/\block(?=\s+(my\s+|the\s+|a\s+|an\s+)?(food|weight|workout|meal|steps?|water))/g, "log"],
+      [/\block(?=\s+(my\s+|the\s+|a\s+|an\s+)?(foods?|weight|workout|meals?|steps?|water))/g, "log"],
       [/\block(?=\s+\d)/g, "log"],
-      [/\blocked(?=\s+(food|weight|workout|meal))/g, "logged"],
-      [/\blog\s+in(?=\s+(food|weight|my))/g, "log"],
+      [/\blocked(?=\s+(foods?|weight|workout|meals?))/g, "logged"],
+      [/\blog\s+in(?=\s+(foods?|weight|my))/g, "log"],
+      /* "love foot 2 and grams chicken" was a real transcript of "log food 200 grams chicken".
+         Both substitutions are gated the same way as lock/log: "love" only becomes "log" before
+         a loggable noun, "foot" only becomes "food" after a logging verb. Ungated, they would
+         wreck "I love squats" and "my foot hurts" — the second especially, since that is an
+         injury report the safety guard needs to see intact. */
+      [/\blove(?=\s+(my\s+|the\s+)?(foods?|weight|meals?|workout))/g, "log"],
+      [/(?<=\b(?:log|add|record)\s+)foot\b/g, "food"],
       [/\bwalk\s*out\b/g, "workout"],
       [/\bwork\s+out\b/g, "workout"],
       [/\bwait(?=\s+\d)/g, "weight"],
@@ -323,7 +330,7 @@
         if (/\d/.test(t) && !/\b(how many calories|calories today|how much protein)\b/.test(t)) return false;
         var past = /\b(logged|recorded|eaten|ate)\b/.test(t);
         var view = /\b(show|see|view|list|display|whats|what is|check)\b/.test(t);
-        var food = /\b(food|meal|meals|eat|eaten|ate|calories|macros|nutrition)\b/.test(t);
+        var food = /\b(foods?|meals?|meals|eat|eaten|ate|calories|macros|nutrition)\b/.test(t);
         return food && (past || view);
       },
       run: async function (A) {
@@ -581,7 +588,7 @@
     {
       name: "add exercise to routine",
       needs: "addExerciseToRoutine",
-      test: function (t) { return /\b(add|put)\b/.test(t) && /\bto (my |the )?[a-z]/.test(t) && !/\b(food|meal|weight|steps?)\b/.test(t); },
+      test: function (t) { return /\b(add|put)\b/.test(t) && /\bto (my |the )?[a-z]/.test(t) && !/\b(foods?|meals?|weight|steps?)\b/.test(t); },
       run: function (A, t) {
         var m = t.match(/\b(?:add|put)\s+(.+?)\s+to\s+(?:my\s+|the\s+)?(.+?)$/);
         if (!m) return null;
@@ -593,7 +600,7 @@
     {
       name: "remove exercise from routine",
       needs: "removeExerciseFromRoutine",
-      test: function (t) { return /\b(remove|delete|take)\b/.test(t) && /\bfrom (my |the )?[a-z]/.test(t) && !/\b(food|meal|weight)\b/.test(t); },
+      test: function (t) { return /\b(remove|delete|take)\b/.test(t) && /\bfrom (my |the )?[a-z]/.test(t) && !/\b(foods?|meals?|weight)\b/.test(t); },
       run: function (A, t) {
         var m = t.match(/\b(?:remove|delete|take)\s+(.+?)\s+from\s+(?:my\s+|the\s+)?(.+?)$/);
         if (!m) return null;
@@ -645,7 +652,7 @@
       test: function (t) {
         return /\b(delete|remove|undo|clear)\b/.test(t)
             && /\b(weight|weigh in|weighin)\b/.test(t)
-            && !/\b(food|meal|workout|history|all|everything)\b/.test(t);
+            && !/\b(foods?|meals?|workout|history|all|everything)\b/.test(t);
       },
       run: function () {
         return { text: null, pending: { action: "deleteWeightEntry", args: {} } };
@@ -695,7 +702,7 @@
            food reference in that sentence. */
         return /\b(delete|remove|clear|wipe|erase)\b/.test(t)
             && /\b(all|every|everything|entire|whole)\b/.test(t)
-            && /\b(food|meal|meals|log|logs|logged|diet|nutrition|ate|eaten)\b/.test(t);
+            && /\b(foods?|meals?|meals|log|logs|logged|diet|nutrition|ate|eaten)\b/.test(t);
       },
       run: function () {
         return { text: null, pending: { action: "deleteAllFoodLogs", args: {} } };
@@ -718,7 +725,7 @@
         var food = m[1].replace(/\s+/g, " ").trim();
         /* Words that are scopes, not foods. Without this, "delete food from today" would try
            to delete a food literally called "food". */
-        if (/^(food|meal|entry|log|item|thing)s?$/.test(food)) return null;
+        if (/^(foods?|meals?|entry|log|item|thing)s?$/.test(food)) return null;
         return { text: null, pending: { action: "deleteFoodByName", args: { food: food } } };
       }
     },
@@ -728,7 +735,7 @@
       test: function (t) {
         return /\b(delete|remove|clear|wipe)\b/.test(t)
             && /\b(today|todays|this day)\b/.test(t)
-            && /\b(food|meal|meals|log|diet|nutrition)\b/.test(t)
+            && /\b(foods?|meals?|meals|log|diet|nutrition)\b/.test(t)
             && !/\b(all|every|everything)\b/.test(t);
       },
       run: function () {
@@ -740,7 +747,7 @@
       needs: "deleteFoodLog",
       test: function (t) {
         return /\b(delete|remove|undo|clear)\b/.test(t)
-            && /\b(food|meal|entry|log|last|that)\b/.test(t)
+            && /\b(foods?|meals?|entry|log|last|that)\b/.test(t)
             && !/\b(weight|workout|steps?|history|all|everything)\b/.test(t);
       },
       run: async function (A) {
@@ -814,7 +821,7 @@
            log something and was told their something does not exist.
            Ask instead, and hold the slot open for the answer, which is the same mechanism
            "log my weight" already uses. */
-        if (/^(my |the |a |an |some )?(food|foods|meal|meals|something|thing|it|this|that|entry|item)$/.test(food)) {
+        if (/^(my |the |a |an |some )?(foods?|foods|meals?|meals|something|thing|it|this|that|entry|item)$/.test(food)) {
           _awaiting = {
             name: "log food",
             at: Date.now(),
@@ -839,7 +846,7 @@
               var q2 = hasQty ? parseFloat(m2[1]) : 1;
               var u2 = hasQty ? (m2[2] || null) : null;
               var f2 = (hasQty ? m2[3] : m2[1]).replace(/\s+/g, " ").trim();
-              if (!f2 || /^(food|meal|it|this|that)s?$/.test(f2)) return null;
+              if (!f2 || /^(foods?|meals?|it|this|that)s?$/.test(f2)) return null;
               var a2 = { food: f2, quantity: q2 };
               if (u2) {
                 a2.unit = u2.replace(/s$/, "").replace(/^gram$/, "g");

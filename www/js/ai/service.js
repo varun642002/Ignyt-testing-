@@ -331,10 +331,16 @@
     /* A pending action is the follow-up case: nothing has been written yet and the turn is
        waiting on the user to confirm. Naming it here means a caller does not have to infer
        it from the presence of a field. */
+    /* An EXECUTED write returns { action, result, ok } and no pending — pending now means only
+       "waiting on a confirmation". Reading pending alone left `action` null on every write that
+       actually ran, so the one field a caller checks to see what happened was empty precisely
+       when something had. */
     var pending = out.pending || null;
+    var ran = !pending && out.action ? out.action : null;
 
     return {
       intent: pending ? pending.action
+            : ran ? ran
             : src.indexOf("BUILT_IN_ACTION") === 0 ? src.split(":")[1] || "ACTION"
             : src === "BUILT_IN_KNOWLEDGE" ? "KNOWLEDGE"
             : src === "BUILT_IN_UNKNOWN" ? "UNKNOWN"
@@ -348,10 +354,13 @@
          never measured. */
       confidence: out.confidence != null ? out.confidence : null,
       entities: pending ? (pending.args || {}) : {},
+      /* True only when the action ran AND reported success — never inferred from the
+         absence of an error, which is how a failed write gets reported as a done one. */
+      ok: pending ? null : (out.ok === true),
       requiresFollowUp: !!pending,
       response: out.text || null,
-      action: pending ? pending.action : null,
-      data: out.card || null,
+      action: pending ? pending.action : ran,
+      data: out.result || out.card || null,
       source: src || "UNKNOWN"
     };
   }
