@@ -212,11 +212,26 @@
             return { text: local.text || null, pending: local.pending, source: local.source };
           }
           var res = await A.run(local.pending.action, local.pending.args || {});
-          if (res && res.ok) onEvent({ type: "card", result: res.result });
+          /* run() reports ok:true whenever the action DID NOT THROW — including when its own
+             result is an error card: food not found, nothing to delete, a clarification needed.
+             So ok has never meant "the thing happened", and anything built on it inherits that:
+             a test asserting ok:true passed while no food was logged, and the UI would happily
+             render a success for a refusal.
+             The action's own verdict is in the card. That is what decides success here. */
+          var card = (res && res.result && res.result.card) || null;
+          var refused = card === "error" || card === "clarify";
+          var succeeded = !!(res && res.ok) && !refused;
+
+          if (succeeded) onEvent({ type: "card", result: res.result });
+          else if (card === "clarify") onEvent({ type: "clarify", result: res.result });
           else onEvent({ type: "actionError", action: local.pending.action,
-                         error: (res && res.error) || "That didn't work." });
-          return { text: local.text || null, action: local.pending.action,
-                   result: res && res.result, ok: !!(res && res.ok), source: local.source };
+                         error: (res && res.error) || (res && res.result && res.result.message)
+                                || "That didn't work." });
+
+          return { text: local.text || (refused ? (res.result && res.result.message) : null),
+                   action: local.pending.action, result: res && res.result,
+                   ok: succeeded, code: (res && res.result && res.result.code) || null,
+                   source: local.source };
         }
         /* CONFIDENCE IS CARRIED THROUGH, not re-derived. It was being dropped here, and the
            caller then had to invent a value — which defaulted to 1.0, so a weak match was

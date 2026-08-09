@@ -101,7 +101,10 @@
     if (after !== before + 1) throw new Error("food log went " + before + " -> " + after);
     var row = (await foodRows())[0];
     if (!/chicken/i.test((row && row.name) || "")) throw new Error("wrong row stored: " + row.name);
-    if (!(Number(row.calories) > 0)) throw new Error("stored with no calories");
+    /* getFoodLog returns `kcal`, not `calories` — the sixth time in this codebase that a
+       caller has read a field name it assumed rather than checked, and the first time the
+       harness itself did it. Reading the shape is the habit; asserting on it is the point. */
+    if (!(Number(row.kcal) > 0)) throw new Error("stored with no calories: " + JSON.stringify(row));
   });
 
   test("view today's food READS and does not write", "action", async function () {
