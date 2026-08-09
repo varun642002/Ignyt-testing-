@@ -75,8 +75,41 @@
     return w;
   }
 
+  /* QUESTION-TYPE MARKERS, applied before stopwords remove them.
+
+     "how to do bench press", "what muscles does bench press train" and "how many sets for
+     bench press" are three different questions. After stopwording they are all {bench, press},
+     because how / to / do / what / does are every one of them scaffolding — so the matcher had
+     no way to tell them apart and answered a technique question with the anatomy entry. Seen on
+     a real device: "how to do bench press" returned "Bench pressing primarily trains the chest,
+     triceps and front shoulders."
+
+     The fix is to collapse the question STEM into one distinctive token that survives. It is
+     applied identically to entries and to queries — that symmetry is the whole mechanism, since
+     an entry phrased "How should I perform bench press correctly?" has to reduce to the same
+     marker the user's "how to do" produces.
+
+     Deliberately small. These are the stems that actually separate the fitness questions people
+     ask; a general question-classification layer is a different project. */
+  var STEMS = [
+    [/\b(how (to|do i|do you|should i) (do|perform|execute)|correct (form|technique) for|proper form for|technique for)\b/g, " qtechnique "],
+    [/\b(what|which) muscles?\b/g, " qmuscles "],
+    [/\bhow many\b/g, " qhowmany "],
+    [/\bhow much\b/g, " qhowmuch "],
+    [/\bhow often\b/g, " qhowoften "],
+    [/\bhow long\b/g, " qhowlong "],
+    [/\b(is|are) .{0,18} (better|good) (than|for)\b/g, " qcompare "],
+    [/\bcan i\b/g, " qcan "],
+    [/\bwhat is\b/g, " qwhatis "]
+  ];
+
+  function markStems(s) {
+    for (var i = 0; i < STEMS.length; i++) s = s.replace(STEMS[i][0], STEMS[i][1]);
+    return s;
+  }
+
   function tokens(text) {
-    var raw = String(text || "").toLowerCase()
+    var raw = markStems(String(text || "").toLowerCase())
       .replace(/[’']/g, "")
       /* Digit group separators, BEFORE punctuation is blanked. The entries say "10,000 steps"
          and people type "10000 steps"; stripping the comma to a space first turns one into
