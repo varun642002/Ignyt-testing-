@@ -285,19 +285,25 @@ def _payload(
         "generationConfig": {
             "maxOutputTokens": max_tokens,
             "temperature": 0.4,          # a coach should not be inventive about numbers
-            # THINKING OFF, and this is the fix for "The AI returned an empty answer."
+            # NO thinkingConfig HERE, and that is deliberate rather than an oversight.
             #
-            # Gemini 2.5 Flash spends THINKING tokens before it writes anything, and those
-            # count against maxOutputTokens. At a 400-token budget it could spend the whole
-            # allowance reasoning and return a candidate with no parts at all — no text, no
-            # function call — which _parse correctly refuses to render and which reached the
-            # user as an empty-answer error on a question the model had actually understood.
-            # Nothing in the response says "I ran out of room to speak"; it just looks broken.
+            # The empty-answer bug is real: Gemini 2.5 Flash spends THINKING tokens before it
+            # writes anything and they count against maxOutputTokens, so a small budget can be
+            # consumed entirely by reasoning, returning a candidate with no parts at all — no
+            # text, no function call — which reaches the user as an error on a question the
+            # model understood perfectly well.
             #
-            # Zero rather than a small budget: this is short-form fitness Q&A over a tool
-            # schema, which is extraction and recall rather than multi-step reasoning, so the
-            # thinking phase buys little and costs both the token budget and the latency.
-            "thinkingConfig": {"thinkingBudget": 0},
+            # The obvious fix is thinkingConfig.thinkingBudget = 0. It was shipped, and it
+            # broke EVERY request: gemini-flash-latest rejects the field on this endpoint with
+            # 400 "Request contains an invalid argument". Verified against the live API both
+            # ways — without it 200, with it 400 — which turned an intermittent empty answer
+            # into a total outage. The alias is the reason: it resolves to whatever Google
+            # currently points it at, and that model does not accept the parameter.
+            #
+            # So the budget is raised instead. Thinking is left on and simply given room to
+            # finish and still have tokens left to answer with, which needs no field the model
+            # might reject. If thinkingConfig is ever wanted, verify it against the resolved
+            # model first — an alias makes that a runtime property, not a code one.
         },
     }
 

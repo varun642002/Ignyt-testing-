@@ -111,7 +111,14 @@ class Settings(BaseSettings):
     # bullet points rather than paragraphs, and output tokens are the expensive half of a call.
     # 400 is roughly 250 words, which is far more than any answer here should need; it is a
     # backstop against a runaway generation, not a target.
-    ai_chat_max_output_tokens: int = Field(default=400, alias="AI_CHAT_MAX_OUTPUT_TOKENS")
+    # 1200, not 400. This is NOT a longer-answer setting — the system instruction still asks
+    # for bullet points, and answers have not got longer. It is headroom for the THINKING
+    # tokens Gemini 2.5 Flash spends before writing, which count against this same budget: at
+    # 400 the model could use the entire allowance reasoning and return a candidate with no
+    # text and no function call, which reached the user as "The AI returned an empty answer"
+    # on a question it had understood. Capping thinking directly via thinkingConfig would be
+    # the tidier fix and is refused by this model with a 400, so the room is given here.
+    ai_chat_max_output_tokens: int = Field(default=1200, alias="AI_CHAT_MAX_OUTPUT_TOKENS")
     # TWO TIERS. "I ate 200g of chicken" is extraction — pull three fields out of a sentence
     # and call a tool — and the cheapest model does it as well as the expensive one. "Why did
     # my weight go up?" needs the model to read a trend and reason about it. Routing the first
