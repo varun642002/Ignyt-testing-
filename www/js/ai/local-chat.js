@@ -196,6 +196,73 @@
       }
     },
 
+    /* HOW TO PERFORM AN EXERCISE — from the app's own 409-exercise instruction set, not from
+       the knowledge base. The base answers "how to do bench press" with a paraphrase about
+       chest and triceps; IgnytExerciseInstructions has the actual numbered steps the workout
+       screen shows, which is what the question asked for.
+
+       EQUIPMENT VARIANTS ARE NOT INTERCHANGEABLE, and that file says so in its own header: the
+       library separates "Standing Calf Raise (Dumbbell)" from "(Machine)" from "(Barbell)",
+       and attaching barbell setup cues to a machine movement is worse than having no
+       instructions. So the match is exact first, then on the base name before the bracket —
+       and when a base name has several variants, the answer NAMES the one it picked. Being
+       shown "Bench Press (Barbell)" tells the user immediately whether they got the movement
+       they meant; silently choosing would not. */
+    {
+      name: "exercise how to",
+      test: function (t) {
+        if (!window.IgnytExerciseInstructions) return false;
+        /* A technique question, not an anatomy or programming one — those have their own
+           answers and must not be captured here. */
+        if (/\b(muscles?|sets|reps|how many|how much|alternative|instead of|good for|benefit)\b/.test(t)) return false;
+        /* "bench press form" and "squat technique" put the noun LAST, with no question stem at
+           all — the commonest way people actually type this, and the pattern below only caught
+           the "form for X" ordering. */
+        if (/^[a-z][a-z\s]{2,40}\s(form|technique)$/.test(t)) return true;
+        return /\b(how (to|do i|do you|should i) (do|perform|execute)|how do i|technique|form for|form of|proper form|teach me|show me how|steps for)\b/.test(t);
+      },
+      run: function (A, t) {
+        var DB = window.IgnytExerciseInstructions;
+        /* Whatever is left after the question stem is the exercise. */
+        /* The trailing noun goes first, or "bench press form" keeps the word "form" and matches
+           no exercise in the library. */
+        var q = t.replace(/\s+(form|technique)$/, "")
+                 .replace(/^.*?\b(?:how (?:to|do i|do you|should i) (?:do|perform|execute)|how do i|proper form for|form for|form of|technique for|technique of|teach me|show me how to|steps for)\b/, "")
+                 .replace(/\b(a|an|the|correctly|properly|exercise|movement|please)\b/g, "")
+                 .replace(/[?.!]/g, "").replace(/\s+/g, " ").trim();
+        if (q.length < 3) return null;
+
+        var keys = Object.keys(DB);
+        var lower = q.toLowerCase();
+        var base = function (k) { return k.replace(/\s*\(.*?\)\s*$/, "").toLowerCase().trim(); };
+
+        var exact = keys.filter(function (k) { return k.toLowerCase() === lower; });
+        var byBase = exact.length ? exact : keys.filter(function (k) { return base(k) === lower; });
+        /* Last resort: the query is contained in the base name ("bench press" inside "Incline
+           Bench Press"). Only when nothing better matched, and still only whole-name
+           containment rather than word soup. */
+        if (!byBase.length) byBase = keys.filter(function (k) { return base(k).indexOf(lower) === 0; });
+        if (!byBase.length) return null;                   // unknown exercise: let the KB try
+
+        /* Several variants: prefer the plainest — barbell, then bodyweight, then whatever is
+           first — and say which one this is. */
+        var pick = byBase.filter(function (k) { return /\(barbell\)/i.test(k); })[0]
+                || byBase.filter(function (k) { return !/\(/.test(k); })[0]
+                || byBase[0];
+        var steps = DB[pick];
+        if (!Array.isArray(steps) || !steps.length) return null;
+
+        var lines = [pick, ""];
+        steps.forEach(function (s, i) { lines.push((i + 1) + ". " + s); });
+        if (byBase.length > 1) {
+          var others = byBase.filter(function (k) { return k !== pick; }).slice(0, 3);
+          lines.push("");
+          lines.push("Also available: " + others.join(", ") + ".");
+        }
+        return { text: lines.join(BR) };
+      }
+    },
+
     /* ---- reads ---- */
     {
       name: "streak",
