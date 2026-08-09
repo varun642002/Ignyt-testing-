@@ -32,7 +32,20 @@
   /* ---------- small helpers -------------------------------------------------------------- */
 
   function norm(s) {
-    return String(s || "")
+    var text = String(s || "");
+
+    /* LANGUAGE FIRST, AND IT HAS TO BE FIRST. The strip below is /[^\w\s.+-]/, and \w in
+       JavaScript is ASCII — no /u flag, no Unicode property escapes — so every Tamil,
+       Devanagari, Kannada, Malayalam and Telugu character becomes a space. Run in the other
+       order, "என் எடை 85 கிலோ" arrives here as bare "85" and the language work is undone by
+       the next line before anything can use it.
+       Converting to the canonical English form first means the intent table, the knowledge
+       matcher and the follow-up slot all keep working unchanged on one representation. */
+    if (window.IgnytLang && IgnytLang.canonical) {
+      try { text = IgnytLang.canonical(text).text; } catch (e) { /* fall through untouched */ }
+    }
+
+    return text
       .toLowerCase()
       .replace(/[’']/g, "")            // "what's" -> "whats", so one pattern covers both
       .replace(/[^\w\s.+-]/g, " ")
