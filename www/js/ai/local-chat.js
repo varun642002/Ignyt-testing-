@@ -52,6 +52,34 @@
       .replace(/\s+/g, " ")
       .trim();
 
+    /* SPEECH-TO-TEXT MISHEARINGS, corrected only where context proves it.
+       Seen on a real device: "delete the lock food" — the recogniser heard "lock" for "log".
+       The transcript is not a fact, it is a guess, and this is the one place that can tell.
+
+       EVERY RULE IS CONTEXT-GATED, which is the whole reason this is safe. "lock" only becomes
+       "log" when a loggable noun follows it; "wait" only becomes "weight" when a number does.
+       An ungated /lock/ to /log/ would break "lock the screen", and an ungated "wait" would
+       break "wait a moment" — a corrector that fires on ambiguous words is worse than none,
+       because it makes correct input wrong and gives the user nothing to push back on. */
+    var HEARD = [
+      /* A determiner may sit between the verb and its object — "lock my weight", "lock the
+         food" — and a quantity counts as proof too: "lock 200g chicken" is a logging command
+         in every reading, because "lock" takes no measurement. */
+      [/\block(?=\s+(my\s+|the\s+|a\s+|an\s+)?(food|weight|workout|meal|steps?|water))/g, "log"],
+      [/\block(?=\s+\d)/g, "log"],
+      [/\blocked(?=\s+(food|weight|workout|meal))/g, "logged"],
+      [/\blog\s+in(?=\s+(food|weight|my))/g, "log"],
+      [/\bwalk\s*out\b/g, "workout"],
+      [/\bwork\s+out\b/g, "workout"],
+      [/\bwait(?=\s+\d)/g, "weight"],
+      [/\bway\s*to(?=\s+\d)/g, "weight"],
+      [/\bweigh\s+in(?=\s+\d)/g, "weight"],
+      [/\bbench\s+breast\b/g, "bench press"],
+      [/\bdead\s+left\b/g, "deadlift"],
+      [/\bsquad(?=s?\b)/g, "squat"]
+    ];
+    for (var h = 0; h < HEARD.length; h++) text = text.replace(HEARD[h][0], HEARD[h][1]);
+
     /* REPHRASING AFTER A BAD ANSWER. Seen on a real device: the assistant answered "how to do
        bench press" with the anatomy entry, and the reply — "I asked how to do bench press" —
        came back as "I don't have a reliable answer for that yet." Being corrected and
