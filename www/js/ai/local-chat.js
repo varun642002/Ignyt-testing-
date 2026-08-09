@@ -96,6 +96,7 @@
      intent runs, so by then there is nothing left to detect from. A module variable rather
      than a parameter because the intent table is a list of plain functions and threading a
      locale through every one of them would be a lot of noise for one string each. */
+  var BR = String.fromCharCode(10);   // newline, written this way so it survives tooling
   var _lang = "en";
   function say(id) {
     return (window.IgnytLang && IgnytLang.t) ? IgnytLang.t(id, _lang) : "";
@@ -149,7 +150,7 @@
       test: function (t) { return /\bstreak\b/.test(t); },
       run: async function (A) {
         var r = await A.run("getStreak", {});
-        var d = (r && r.data) || {};
+        var d = (r && r.result) || {};
         var cur = d.current != null ? d.current : d.streak;
         if (cur == null) return null;                    // shape not as expected — let the AI try
         var best = d.best != null ? d.best : d.longest;
@@ -166,7 +167,7 @@
       test: function (t) { return /\b(ignyt score|my score|score today|whats my score)\b/.test(t); },
       run: async function (A) {
         var r = await A.run("getIGNYTScore", {});
-        var d = (r && r.data) || {};
+        var d = (r && r.result) || {};
         var s = d.score != null ? d.score : d.total;
         if (s == null) return null;
         return { text: "Your IGNYT score today is " + Math.round(s) + "." };
@@ -180,7 +181,7 @@
       },
       run: async function (A) {
         var r = await A.run("getFoodLog", {});
-        var d = (r && r.data) || {};
+        var d = (r && r.result) || {};
         var items = d.entries || d.items || d.foods;
         if (!Array.isArray(items)) return null;
         if (!items.length) return { text: "Nothing logged yet today." };
@@ -230,6 +231,69 @@
         return { text: null, pending: { action: "completeWorkout", args: {} } };
       }
     },
+    /* ---- weekly summary, built ONLY from what is actually logged ----
+       The rule the brief states twice and that matters more than the formatting: never
+       fabricate. Each section below is emitted only if its data exists, so a user who logs
+       weight but not workouts gets a weight line and no mention of workouts — rather than
+       "0 workouts completed", which reads as a judgement about a week they may have trained
+       hard in without recording it.
+       If nothing at all is logged, it says so plainly instead of rendering an empty report. */
+    {
+      name: "weekly summary",
+      needs: "getWorkoutHistory",
+      test: function (t) {
+        return /\b(week|weekly|7 day|last week|this week)\b/.test(t)
+            && /\b(summary|progress|performance|report|how was|how did|recap|doing)\b/.test(t);
+      },
+      run: async function (A) {
+        var since = Date.now() - 7 * 86400000;
+        var lines = [], any = false;
+
+        /* Workouts in the last seven days. getWorkoutHistory returns newest-first with a
+           date on each row, so the window is a filter rather than a separate query. */
+        try {
+          var wh = (await A.run("getWorkoutHistory", { limit: 30 })).result || {};
+          var recent = (wh.workouts || []).filter(function (w) {
+            var d = Date.parse(w.date); return isFinite(d) && d >= since;
+          });
+          if (recent.length) {
+            any = true;
+            var vol = recent.reduce(function (a, w) { return a + (w.volumeKg || 0); }, 0);
+            lines.push("Workouts: " + recent.length + " in the last 7 days");
+            /* Volume only when it was actually recorded — a bodyweight week legitimately has
+               none, and printing "0 kg" would look like a failure rather than a choice. */
+            if (vol > 0) lines.push("Total volume: " + Math.round(vol).toLocaleString() + " kg");
+          }
+        } catch (e) {}
+
+        try {
+          var pr = (await A.run("getProgress", { days: 7 })).result || {};
+          var rows = pr.entries || [];
+          if (rows.length >= 2) {
+            any = true;
+            var latest = rows[0].weightKg, oldest = rows[rows.length - 1].weightKg;
+            var delta = Math.round((latest - oldest) * 10) / 10;
+            lines.push("Weight: " + oldest + " kg to " + latest + " kg (" +
+                       (delta > 0 ? "+" : "") + delta + " kg)");
+          } else if (rows.length === 1) {
+            any = true;
+            lines.push("Weight: " + rows[0].weightKg + " kg (one entry — log again to see a trend)");
+          }
+        } catch (e) {}
+
+        try {
+          var st = (await A.run("getStreak", {})).result || {};
+          var cur = st.current != null ? st.current : st.streak;
+          if (cur != null && cur > 0) { any = true; lines.push("Streak: " + cur + " days"); }
+        } catch (e) {}
+
+        if (!any) {
+          return { text: "I don't have enough logged data for a weekly summary yet. " +
+                         "Log a workout or your weight and it'll start filling in." };
+        }
+        return { text: "Your last 7 days" + BR + BR + lines.join(BR) };
+      }
+    },
     {
       name: "today workout",
       needs: "getTodayWorkout",
@@ -244,7 +308,7 @@
       },
       run: async function (A) {
         var r = await A.run("getTodayWorkout", {});
-        var d = (r && r.data) || {};
+        var d = (r && r.result) || {};
         if (d.rest || d.isRest) return { text: "Today's a rest day. Take it." };
         var name = d.name || d.title || d.workout;
         if (!name) return null;
