@@ -285,6 +285,19 @@ def _payload(
         "generationConfig": {
             "maxOutputTokens": max_tokens,
             "temperature": 0.4,          # a coach should not be inventive about numbers
+            # THINKING OFF, and this is the fix for "The AI returned an empty answer."
+            #
+            # Gemini 2.5 Flash spends THINKING tokens before it writes anything, and those
+            # count against maxOutputTokens. At a 400-token budget it could spend the whole
+            # allowance reasoning and return a candidate with no parts at all — no text, no
+            # function call — which _parse correctly refuses to render and which reached the
+            # user as an empty-answer error on a question the model had actually understood.
+            # Nothing in the response says "I ran out of room to speak"; it just looks broken.
+            #
+            # Zero rather than a small budget: this is short-form fitness Q&A over a tool
+            # schema, which is extraction and recall rather than multi-step reasoning, so the
+            # thinking phase buys little and costs both the token budget and the latency.
+            "thinkingConfig": {"thinkingBudget": 0},
         },
     }
 
@@ -300,6 +313,7 @@ def _parse(payload: Dict[str, Any]) -> Dict[str, Any]:
         if not candidates:
             raise AiUnavailable("The AI returned no answer.")
         parts = (candidates[0].get("content") or {}).get("parts") or []
+        finish = str(candidates[0].get("finishReason") or "").upper()
     except (AttributeError, TypeError, IndexError) as exc:
         raise AiUnavailable("The AI returned something unreadable.") from exc
 
@@ -314,7 +328,20 @@ def _parse(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     text = "\n".join(text_bits).strip() or None
     if not text and not calls:
-        raise AiUnavailable("The AI returned an empty answer.")
+        # SAY WHY IT WAS EMPTY. "The AI returned an empty answer" is true and useless — it
+        # names the symptom and hides the cause, which is why this took a screenshot from a
+        # real device to diagnose. finishReason is in every response and says it exactly.
+        if finish == "MAX_TOKENS":
+            raise AiUnavailable(
+                "That answer was too long to finish. Try asking for something more specific."
+            )
+        if finish in ("SAFETY", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII"):
+            raise AiUnavailable("I can't answer that one. Try rephrasing it.")
+        if finish == "RECITATION":
+            raise AiUnavailable("I couldn't answer that in my own words. Try rephrasing it.")
+        raise AiUnavailable(
+            "The AI returned an empty answer." + (f" ({finish})" if finish else "")
+        )
     return {"text": text, "toolCalls": calls}
 
 
