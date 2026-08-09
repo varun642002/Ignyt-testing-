@@ -131,6 +131,16 @@ async def ready(settings: Settings = Depends(get_settings)) -> ReadyResponse:
     try:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
+            # SELECT 1 PROVES A CONNECTION, NOT A USABLE DATABASE. It passes against a
+            # perfectly empty database, which is exactly what a managed Postgres is until
+            # migrations run — so readiness was reporting "ready" while every authenticated
+            # route was about to fail on a missing table, and there was no way to tell the two
+            # states apart from outside.
+            #
+            # Readiness means "can serve traffic", and that requires the schema. `users` is the
+            # right table to probe because every authenticated request touches it: if it is
+            # there, the migration chain ran.
+            await conn.execute(text("SELECT 1 FROM users LIMIT 1"))
     except Exception as exc:      # noqa: BLE001 — every failure is reportable, none is fatal
         db_ok = False
         db_error = _classify(exc)
