@@ -179,7 +179,15 @@
              left is information rather than pressure. The number is SERVER-REPORTED and is
              display only — the count that governs anything lives in the database, so clearing
              storage changes what is shown here and nothing else. */
-          (u ? '<span class="aic-usage' + (u.remaining_today <= 0 ? ' is-spent'
+          /* THE DAILY COUNTER IS HIDDEN WHILE EXTERNAL AI IS OFF, because there is no longer
+             anything to count. Every answer now comes from the device — the knowledge base,
+             the intent router, the action registry — and none of it costs anything or has a
+             cap. Showing "3 / 15 today" would advertise a limit the user cannot reach and
+             would make a free assistant feel rationed.
+             It returns automatically with the API: the counter is driven by the same usage
+             object the server sends, so nothing here needs changing when that is switched on. */
+          ((u && window.IgnytAIService && IgnytAIService.usesExternalAI && IgnytAIService.usesExternalAI())
+            ? '<span class="aic-usage' + (u.remaining_today <= 0 ? ' is-spent'
                                         : u.remaining_today <= 3 ? ' is-low' : '') + '">' +
                  u.used_today + ' / ' + u.daily_limit + ' today</span>' : '') +
           /* CLEAR THE TRANSCRIPT. There was no way to, and errors live in it permanently —

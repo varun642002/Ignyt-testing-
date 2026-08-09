@@ -26,6 +26,17 @@
 
   var MAX_TOOL_ROUNDS = 2;   // one fetch pass, then the answer. More is a loop, not a coach.
 
+  /* EXTERNAL AI IS OFF. Version one ships as a purely on-device assistant: the knowledge base,
+     the intent router and the action registry, with no Gemini, no network call, and no daily
+     limit — because nothing here costs anything to answer.
+     ONE SWITCH, and the whole Gemini stack below it is intact and untouched: the two-pass tool
+     loop, the cold-start retry, the usage accounting, the server that holds the key. Flipping
+     this back to true restores all of it, which is why it was gated rather than deleted —
+     "add the API later" should be one line, not a rebuild.
+     The server agrees independently: AI_REQUIRES_PREMIUM is false and the route still enforces
+     its own limit, so turning this on does not bypass anything. */
+  var EXTERNAL_AI = false;
+
   function apiBase() {
     return (window.IgnytConfig && IgnytConfig.apiBase && IgnytConfig.apiBase()) || window.IGNYT_API_BASE || "";
   }
@@ -173,7 +184,10 @@
        Skipped when the caller is resuming a conversation, because a follow-up like "and the
        day before?" only means something in the context of the previous turns, which patterns
        cannot see and the model can. */
-    if (!history.length && window.IgnytLocalChat) {
+    /* The history guard applies ONLY when there is somewhere to fall through to. With external
+       AI off there is not, so local has to answer every message including follow-ups —
+       skipping it would send a mid-conversation reply nowhere at all. */
+    if ((EXTERNAL_AI ? !history.length : true) && window.IgnytLocalChat) {
       var local = null;
       try { local = await window.IgnytLocalChat.tryAnswer(message); } catch (e) { local = null; }
       if (local) {
@@ -181,9 +195,30 @@
           onEvent({ type: "pending", action: local.pending.action, args: local.pending.args });
           return { text: local.text || null, pending: local.pending, source: local.source };
         }
+        /* CONFIDENCE IS CARRIED THROUGH, not re-derived. It was being dropped here, and the
+           caller then had to invent a value — which defaulted to 1.0, so a weak match was
+           reported as certain. In a router whose every decision is a confidence threshold,
+           a fabricated confidence is worse than no confidence at all. */
         onEvent({ type: "text", text: local.text });
-        return { text: local.text, source: local.source };
+        return { text: local.text, source: local.source, confidence: local.confidence };
       }
+    }
+
+    /* NOTHING LOCAL MATCHED, AND THERE IS NO FALLBACK. Say so plainly and point at what this
+       assistant can actually do.
+
+       This replaces a much worse ending. The unmatched path used to continue into the network
+       call below, which with no backend configured throws — so a perfectly reasonable question
+       produced "AI is unavailable right now", an ERROR, in red, for something the user asked in
+       good faith. A chatbot that says "I don't know that one yet, but here's what I can do"
+       reads as a product; one that reports an outage reads as broken. Nothing failed here —
+       the question was simply outside what the knowledge base covers. */
+    if (!EXTERNAL_AI) {
+      var msg = "I don't have a reliable answer for that yet.\n\n" +
+                "Try asking about workouts, exercises, nutrition, recovery or progress — " +
+                "or tell me what you did, like \"log 200g chicken\" or \"weight 82\".";
+      onEvent({ type: "text", text: msg });
+      return { text: msg, source: "BUILT_IN_UNKNOWN", confidence: 0 };
     }
 
     var context = await pickContext(message);
@@ -240,11 +275,65 @@
     return out;
   }
 
+  /* ---------- the one entry point -------------------------------------------------------
+     processChatMessage() is the shape the chatbot brief specifies: one call in, one described
+     result out, with WHY it answered as it did rather than only the text.
+
+     It wraps ask() rather than replacing it. ask() is event-driven because the chat screen
+     renders action cards as they happen; this is the flat, inspectable view of the same turn —
+     what a test asserts on, what analytics record, and what a future caller (voice, a widget,
+     a shortcut) can use without knowing anything about onEvent.
+
+     `source` is the honest field: BUILT_IN_ACTION, BUILT_IN_KNOWLEDGE, BUILT_IN_UNKNOWN or
+     GEMINI_FALLBACK. It is deliberately not shown to users — it is how you tell a knowledge
+     answer from a guess when something looks wrong. */
+  async function processChatMessage(message, opts) {
+    opts = opts || {};
+    var out;
+    try {
+      out = await ask(message, opts);
+    } catch (e) {
+      return {
+        intent: "ERROR", language: "en", confidence: 0, entities: {},
+        requiresFollowUp: false, response: (e && e.message) || "Something went wrong.",
+        action: null, data: null, source: "ERROR", error: (e && e.code) || "unknown"
+      };
+    }
+
+    var src = out.source || "";
+    /* A pending action is the follow-up case: nothing has been written yet and the turn is
+       waiting on the user to confirm. Naming it here means a caller does not have to infer
+       it from the presence of a field. */
+    var pending = out.pending || null;
+
+    return {
+      intent: pending ? pending.action
+            : src.indexOf("BUILT_IN_ACTION") === 0 ? src.split(":")[1] || "ACTION"
+            : src === "BUILT_IN_KNOWLEDGE" ? "KNOWLEDGE"
+            : src === "BUILT_IN_UNKNOWN" ? "UNKNOWN"
+            : "ANSWER",
+      language: "en",              // Phase 3 replaces this with real detection
+      /* null, not 1, when the layer did not report one. An action match is a parse, not a
+         similarity score, and claiming 1.0 for it would put a number on something that was
+         never measured. */
+      confidence: out.confidence != null ? out.confidence : null,
+      entities: pending ? (pending.args || {}) : {},
+      requiresFollowUp: !!pending,
+      response: out.text || null,
+      action: pending ? pending.action : null,
+      data: out.card || null,
+      source: src || "UNKNOWN"
+    };
+  }
+
   window.IgnytAIService = Object.freeze({
     ask: ask,
     confirm: confirm,
+    processChatMessage: processChatMessage,
+    /* Whether anything would leave the device. False in version one. */
+    usesExternalAI: function () { return EXTERNAL_AI; },
     /* Exposed for tests: what would be sent for this sentence, without sending it. */
     pickContext: pickContext,
-    configured: function () { return !!apiBase(); }
+    configured: function () { return !EXTERNAL_AI || !!apiBase(); }
   });
 })();

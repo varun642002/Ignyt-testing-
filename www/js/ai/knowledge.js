@@ -122,7 +122,7 @@
   /* ---------- the index ---------------------------------------------------------------------
      Built once on first use. IDF comes from the corpus, so adding entries re-weights everything
      automatically and no term list needs maintaining by hand. */
-  var _entries = null, _idf = null, _loading = null;
+  var _entries = null, _idf = null, _maxIdf = 1, _loading = null;
 
   function buildIndex(entries) {
     var df = {}, n = entries.length;
@@ -166,6 +166,10 @@
       });
       e._norm = Math.sqrt(sum) || 1;
     });
+    /* The weight given to a word the corpus has never seen. Derived from the data rather than
+       picked: it is what IDF would be for a term appearing in a single entry, i.e. the rarest
+       thing the corpus actually contains. */
+    _maxIdf = Math.log(1 + n);
     _idf = idf;
     return entries;
   }
@@ -189,10 +193,22 @@
      everything by accident. */
   function score(qTokens, entry) {
     if (!qTokens.length || !entry._t.length) return 0;
+    /* AN UNKNOWN WORD IS EVIDENCE, NOT SILENCE. A term the corpus has never seen used to score
+       0 and vanish from the query vector entirely — so "design me a 12 week powerlifting
+       peaking block" collapsed to the single word "week" and matched "How many days a week
+       should I exercise?" at 0.70, comfortably over threshold. A confidently wrong answer to a
+       question the base cannot possibly cover, which is the one failure this file exists to
+       prevent.
+
+       Unseen terms are the RAREST possible, so they get the maximum weight the corpus supports.
+       They cannot contribute to the overlap — no entry contains them — but they do enlarge the
+       query's own norm, which drags the cosine down exactly in proportion to how much of the
+       question is unfamiliar. A question made mostly of words we know still scores well; one
+       made mostly of words we do not cannot reach the threshold on its single familiar word. */
     var qSeen = {}, dot = 0, qSum = 0;
     qTokens.forEach(function (w) {
       if (qSeen[w]) return; qSeen[w] = 1;
-      var v = _idf[w] || 0;
+      var v = (_idf[w] != null) ? _idf[w] : _maxIdf;
       qSum += v * v;
     });
     var eSeen = {};
