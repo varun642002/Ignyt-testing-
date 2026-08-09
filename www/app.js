@@ -18606,6 +18606,19 @@ function attachHandlers(){
      Failures are swallowed on purpose. The text is already on screen, so a device with no
      voice for the language has cost the user nothing, and an error bubble explaining that
      would be noise about a feature they can simply not use. */
+  /* Clear the transcript. No confirmation: the chat is a log of things that already happened,
+     not the data itself — every weight, food and workout the AI logged lives in its own store
+     and is untouched by this. Losing a conversation is cheap; a confirm dialog for it is not. */
+  document.querySelectorAll("[data-ai-clear]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.aiChat = [];
+      state.aiPending = null;
+      state.aiLastUser = null;
+      if(window.persist) window.persist();
+      renderInPlace();
+    });
+  });
+
   document.querySelectorAll("[data-ai-speak]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const V = window.IgnytVoice;

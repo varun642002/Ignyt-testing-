@@ -157,3 +157,16 @@
 .aic-speak.is-speaking{ color:var(--primary); background:var(--primary-soft); }
 
 @media (prefers-reduced-motion:reduce){ .aic-speak{ transition:none; } }
+
+/* Clear-transcript button. Sits with the usage counter in the header rather than beside the
+   input: it is housekeeping, not a thing you reach for mid-conversation, and next to Send it
+   would be one mis-tap from deleting the thread you are reading. */
+.aic-clear{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:28px; height:28px; margin-left:10px; padding:0;
+  border:none; border-radius:999px; cursor:pointer;
+  background:transparent; color:var(--muted);
+  transition:color .15s ease, background-color .15s ease;
+}
+.aic-clear:hover{ color:var(--text); background:var(--surface-alt); }
+@media (prefers-reduced-motion:reduce){ .aic-clear{ transition:none; } }

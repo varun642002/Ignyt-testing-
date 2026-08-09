@@ -182,6 +182,14 @@
           (u ? '<span class="aic-usage' + (u.remaining_today <= 0 ? ' is-spent'
                                         : u.remaining_today <= 3 ? ' is-low' : '') + '">' +
                  u.used_today + ' / ' + u.daily_limit + ' today</span>' : '') +
+          /* CLEAR THE TRANSCRIPT. There was no way to, and errors live in it permanently —
+             so a failure from days ago sits on screen looking like a live one, and a fixed
+             app still reads as broken. That is not a cosmetic problem: it is the difference
+             between "the AI is down" and "the AI was down once", which is exactly the
+             question a support conversation turns on.
+             Only shown when there is something to clear. */
+          (chat.length ? '<button class="aic-clear" data-ai-clear="1" ' +
+             'aria-label="Clear chat history">' + ic("trash", 15) + '</button>' : '') +
         '</div>' +
         '<div class="aic-head__sub">' +
           (u && u.remaining_today <= 0
