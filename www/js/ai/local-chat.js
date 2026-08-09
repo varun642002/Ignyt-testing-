@@ -48,7 +48,13 @@
     text = text
       .toLowerCase()
       .replace(/[’']/g, "")            // "what's" -> "whats", so one pattern covers both
-      .replace(/[^\w\s.+-]/g, " ")
+      /* THE COMMA SURVIVES. It was being blanked with the rest of the punctuation, which is
+         fine for a question and wrong for a list: "bench press, incline press, cable fly"
+         arrived as one run-on string with no boundaries left, so the routine builder could not
+         tell three exercises from one long name. A comma is a separator, not decoration.
+         Safe alongside the intent patterns because it is still a non-word character, so every
+         \b boundary behaves exactly as before. */
+      .replace(/[^\w\s.,+-]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
 
@@ -585,6 +591,46 @@
     /* ---- routines. Ordered before the pronoun guard so a named routine is not mistaken for
        an ambiguous one, and before the food/weight deletes so "delete my push day" is not
        read as a food scope. ---- */
+    /* CREATE A ROUTINE. createWorkout needs a name and at least one exercise and will not
+       invent either, so "create a routine" and "create a chest workout" have to ask — and
+       asking is the point: both previously fell through to the generic no-answer line, which
+       the brief names as unacceptable for a command the app plainly supports.
+       The name is taken from the sentence when there is one ("chest workout" -> "Chest"), so
+       the follow-up only has to supply what is genuinely missing. */
+    {
+      name: "create routine",
+      needs: "createWorkout",
+      test: function (t) {
+        return /\b(create|make|build|add|new)\b/.test(t)
+            && /\b(routine|program|workout|split|day)\b/.test(t)
+            && !/\b(to my|to the|from|delete|remove|start|show|whats|what is)\b/.test(t);
+      },
+      run: function (A, t) {
+        var m = t.match(/\b(?:create|make|build|new)\s+(?:a\s+|an\s+|my\s+)?(.+?)\s*(?:routine|program|workout|split|day)\b/);
+        var raw = m && m[1] ? m[1].trim() : "";
+        /* "a" and "me" are leftovers from the phrasing, not names. */
+        if (/^(a|an|me|my|new|the)?$/.test(raw)) raw = "";
+        var name = raw ? raw.replace(/\b\w/g, function (c) { return c.toUpperCase(); }) + " Day" : null;
+
+        _awaiting = {
+          name: "create routine",
+          at: Date.now(),
+          fill: function (t2) {
+            /* A question is a change of subject, not a list of exercises. */
+            if (/^(what|how|why|when|which|who|is|are|can|should)\b/.test(t2)) return null;
+            var list = t2.split(/,| and /).map(function (x) {
+              return x.replace(/\b(and|with|plus)\b/g, "").replace(/\s+/g, " ").trim();
+            }).filter(function (x) { return x.length > 2 && x.length < 40; });
+            if (!list.length) return null;
+            return { pending: { action: "createWorkout",
+                               args: { name: name || "New Routine", exercises: list } } };
+          }
+        };
+        return { text: name
+          ? "Which exercises should \"" + name + "\" include?"
+          : "What should I call it, and which exercises should it include?" };
+      }
+    },
     {
       name: "add exercise to routine",
       needs: "addExerciseToRoutine",
@@ -700,9 +746,12 @@
         /* "logged" and "logs" as well as "log" — "delete everything I logged today" names no
            food at all, and requiring the bare noun sent it to UNKNOWN. The past tense is the
            food reference in that sentence. */
-        return /\b(delete|remove|clear|wipe|erase)\b/.test(t)
-            && /\b(all|every|everything|entire|whole)\b/.test(t)
-            && /\b(foods?|meals?|meals|log|logs|logged|diet|nutrition|ate|eaten)\b/.test(t);
+        if (!/\b(delete|remove|clear|wipe|erase)\b/.test(t)) return false;
+        if (!/\b(foods?|meals?|log|logs|logged|diet|nutrition|ate|eaten)\b/.test(t)) return false;
+        /* "wipe my food log" and "erase my meals" carry no quantifier at all, and requiring one
+           left them unrecognised. Those two verbs are wholesale by meaning — nobody wipes a
+           single entry — so the verb supplies the scope that "all" would otherwise have. */
+        return /\b(all|every|everything|entire|whole)\b/.test(t) || /\b(wipe|erase)\b/.test(t);
       },
       run: function () {
         return { text: null, pending: { action: "deleteAllFoodLogs", args: {} } };

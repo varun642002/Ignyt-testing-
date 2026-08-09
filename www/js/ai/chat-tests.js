@@ -242,6 +242,55 @@
     if ((await foodRows()).length !== before) throw new Error("invented a food entry");
   });
 
+
+  /* ---------- 8. THE BRIEF'S "THESE MUST WORK" LIST (section 19) ------------------------
+     Written as one table because the point is coverage, not prose: each row is a phrasing a
+     user will actually type, and the expectation is the intent it must reach. A row that fails
+     names a real gap rather than a missing keyword — which is the whole argument for replacing
+     the regex table with a classifier. */
+  var MUST_WORK = [
+    ["delete all my foods today",        "deleteAllFoodLogs"],
+    ["delete today's food",              "deleteFoodForDate"],
+    ["remove everything I ate today",    "deleteAllFoodLogs"],
+    ["log food",                         "log food"],
+    ["add 200g chicken",                 "addFoodLog"],
+    ["log my weight",                    "ask weight"],
+    ["my weight is 82kg",                "logWeight"],
+    ["what should I train today?",       "today workout"],
+    ["how is my progress?",              "progress"],
+    ["create a routine",                 "*ask"],
+    ["create a chest workout",           "*ask"],
+    ["how do I do bench press?",         "exercise how to"],
+    ["what did I eat today?",            "food log today"],
+    ["how many calories did I eat today?","food log today"]
+  ];
+  MUST_WORK.forEach(function (row) {
+    test("s19: " + row[0], "brief", async function () {
+      var r = await say(row[0]);
+      var got = r.action || r.intent || "";
+      if (row[1] === "*ask") {
+        /* Not yet built as an action. It must at minimum ASK rather than return the generic
+           no-answer line, which the brief calls out by name as unacceptable. */
+        if (r.source === "BUILT_IN_UNKNOWN") throw new Error("generic fallback: " + (r.response||"").slice(0,44));
+        return;
+      }
+      if (got !== row[1]) throw new Error("got " + got + " (" + r.source + ")");
+    });
+  });
+
+  /* Natural-language variations the brief lists for one intent. If these fail, the regex table
+     is the reason and the classifier is the fix. */
+  ["remove today's food", "clear my food for today", "get rid of everything I ate today",
+   "wipe my food log", "I messed up my food log today, clear it"].forEach(function (phrase) {
+    test("variation: " + phrase, "brief", async function () {
+      var r = await say(phrase);
+      var got = r.action || r.intent || "";
+      if (!/delete|clear/i.test(got) && r.source === "BUILT_IN_UNKNOWN") {
+        throw new Error("not understood: " + got + " / " + r.source);
+      }
+    });
+  });
+
   /* ---------- runner ------------------------------------------------------------------------ */
 
   async function run(filter) {
