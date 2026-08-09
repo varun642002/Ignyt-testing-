@@ -858,12 +858,23 @@
           return { text: "What would you like to log?" };
         }
 
-        var args = { food: food, quantity: qty };
+        /* QUANTITY IS A COUNT, NOT A MASS. addFoodLog validates it in the range 0.1-100 —
+           "2 eggs", "3 rotis" — and a weight in grams goes in `grams`. Sending both meant
+           "log 200g chicken" arrived as quantity:200, which fails that check and threw
+           "Quantity must be between 0.1 and 100"; the food never reached the library and the
+           user saw an error for a perfectly ordinary command.
+           So the two are now exclusive: a gram/ml/kg amount sets grams alone, and quantity is
+           reserved for the countable case it was built for. */
+        var args = { food: food };
         /* `food`, NOT `name`. actions.js reads args.food; passing `name` sent it undefined and
            every chatbot food log failed before it ever reached the library. It failed quietly,
            because the not-found path looks identical to a food genuinely missing. */
         if (unit) args.unit = unit.replace(/s$/, "").replace(/^gram$/, "g");
-        if (/^(g|kg|ml|oz)$/.test(args.unit || "")) { args.grams = args.unit === "kg" ? qty * 1000 : qty; }
+        if (/^(g|kg|ml|oz)$/.test(args.unit || "")) {
+          args.grams = args.unit === "kg" ? qty * 1000 : qty;   // a mass: grams only
+        } else {
+          args.quantity = qty;                                  // a count: "2 eggs", "3 rotis"
+        }
         if (meal) args.meal = meal;
         return { text: null, pending: { action: "addFoodLog", args: args } };
       }
