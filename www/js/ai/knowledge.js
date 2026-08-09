@@ -127,7 +127,16 @@
   function buildIndex(entries) {
     var df = {}, n = entries.length;
     entries.forEach(function (e) {
-      e._t = tokens(e.q + " " + e.c);
+      /* SCORED ON THE QUESTION ALONE. The category used to be folded in here, on the
+         theory that it added topical signal. It does — to the wrong entries. A short
+         question reduces to one or two content words, and a category name is made of
+         exactly those words, so "what is a repetition" scored 0.78 against the entry
+         that answers it AND 0.78 against "What is a set?", which merely lives in the
+         category "Sets & Repetitions". An exact tie between the right answer and a
+         neighbour, which the ambiguity guard then correctly refused — so the base
+         declined to answer a question it contains verbatim.
+         The question is what the user typed; it is what they should be matched against. */
+      e._t = tokens(e.q);
       /* Question-only tokens, kept SEPARATELY from the scoring set above. The duplicate
          check must not see the category: "What is progressive overload?" is filed under
          Muscle Building in one batch and Training Fundamentals in another, and comparing
@@ -136,6 +145,11 @@
          question went to Gemini. The category belongs in scoring, where it adds useful
          signal, and nowhere near the "are these the same question?" test. */
       e._q = tokens(e.q);
+      /* Answer tokens, for the interchangeability test only — never for scoring. A
+         question is matched against QUESTIONS; letting answer text into the score
+         would let a long answer that happens to mention "chest" outrank the entry
+         actually asking about chest. */
+      e._a = tokens(e.a);
       var seen = {};
       e._t.forEach(function (w) { if (!seen[w]) { seen[w] = 1; df[w] = (df[w] || 0) + 1; } });
     });
@@ -195,16 +209,37 @@
      which is the whole reason "How many sets should I do for chest?" and a reworded copy of it
      have to count as one. 0.8 rather than 1.0 because the duplicates in this base are not
      byte-identical: several differ by a word or by punctuation. */
-  function sameQuestion(a, b) {
+  function jaccard(aTokens, bTokens) {
     var A = {}, n = 0, shared = 0;
-    (a._q || a._t).forEach(function (w) { if (!A[w]) { A[w] = 1; n++; } });
+    (aTokens || []).forEach(function (w) { if (!A[w]) { A[w] = 1; n++; } });
     var B = {}, m = 0;
-    (b._q || b._t).forEach(function (w) {
+    (bTokens || []).forEach(function (w) {
       if (B[w]) return; B[w] = 1; m++;
       if (A[w]) shared++;
     });
     var union = n + m - shared;
-    return union > 0 && (shared / union) >= 0.8;
+    return union > 0 ? shared / union : 0;
+  }
+
+  /* Are these two entries interchangeable — is it harmless to serve either one?
+     Two ways they can be, and both are needed.
+
+     SAME QUESTION. The base holds 244 exact duplicates across the batches, filed under
+     different categories and ids. Comparing the questions catches those.
+
+     SAME ANSWER, which the question test cannot see and which is the more common case at this
+     size. Two differently-worded entries — "Should every set go to failure?" and "Do I need to
+     train to failure?" — give the same advice, and a tie between them is a coin toss whose
+     outcome does not matter. Rejecting it sent questions to Gemini that the base answers
+     twice over; that is what dropped recall from 96% to 88% when the last 300 entries landed.
+
+     Answers get the lower bar because they are much longer than questions: ten to twenty
+     content words rather than two or three, so their overlap is a far more stable signal and
+     an accidental 0.7 between genuinely different advice is unlikely. A short question can hit
+     0.7 by sharing two words, which is why that side stays at 0.8. */
+  function sameQuestion(a, b) {
+    if (jaccard(a._q || a._t, b._q || b._t) >= 0.8) return true;
+    return jaccard(a._a, b._a) >= 0.7;
   }
 
   /**
