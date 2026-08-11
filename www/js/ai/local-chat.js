@@ -370,6 +370,39 @@
         return { text: d.message, card: d.card || null };
       }
     },
+    {
+      name: "food nutrition",
+      needs: "getFoodNutrition",
+      /* "how many calories in oats" is a question about a FOOD, not about the user's log and not
+         about their target. Three things now share the word calories:
+           "how many calories did i eat today"   -> the food log      (past tense, dated)
+           "how many calories should i eat"      -> their target      (should/target/goal)
+           "how many calories in oats"           -> the library       (in/of + a food name)
+         The separator is the preposition: "in", "of" or "per" followed by a name. Written with
+         indexOf and a regex literal, never a pattern built from a string -- that is how the last
+         two escapes were eaten. */
+      test: function (t) {
+        var pad = " " + t + " ";
+        var asksNutrition = false;
+        var WORDS = [" calories ", " calorie ", " protein ", " carbs ", " carbohydrates ",
+                     " fat ", " fats ", " fibre ", " fiber ", " nutrition ", " macros ", " kcal "];
+        for (var i = 0; i < WORDS.length; i++) if (pad.indexOf(WORDS[i]) !== -1) { asksNutrition = true; break; }
+        if (!asksNutrition) return false;
+        var mine = [" did i ", " i ate ", " my ", " should i ", " target ", " goal ", " today ", " yesterday "];
+        for (var j = 0; j < mine.length; j++) if (pad.indexOf(mine[j]) !== -1) return false;
+        return /(?:in|of|per|for)\s+(?:a|an|one|1)?\s*[a-z]/.test(t);
+      },
+      run: async function (A, t) {
+        var m = t.match(/(?:in|of|per|for)\s+(?:a\s+|an\s+|one\s+|1\s+)?([a-z][a-z\s]{1,40})$/);
+        if (!m) return null;
+        var food = m[1].replace(/\s+/g, " ").trim();
+        if (!food || food.length < 2) return null;
+        var r = await A.run("getFoodNutrition", { food: food });
+        var d = (r && r.result) || {};
+        if (!d.message) return null;
+        return { text: d.message, card: d.card || null };
+      }
+    },
 {
       name: "food log today",
       needs: "getFoodLog",

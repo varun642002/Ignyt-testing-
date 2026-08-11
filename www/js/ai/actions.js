@@ -857,6 +857,72 @@
              protein: c.protein, carbs: c.carbs, fat: c.fat, goal: label, message: msg };
   }
 
+
+  /* NUTRITION FOR A NAMED FOOD, READ LIVE FROM THE LIBRARY.
+     The knowledge base briefly held 2,717 generated "How much protein is in X?" entries. That
+     was the wrong shape: it duplicated the food library, went stale the moment a food was edited,
+     and answered only the one question it was generated for. This reads the same records the
+     food log uses, so it cannot disagree with what logging that food would store, and it answers
+     calories, protein, carbs, fat and fibre together because that is what people want when they
+     ask about any one of them.
+     NOTHING IS ESTIMATED. Fields the library does not carry are omitted from the reply rather
+     than filled in -- a missing fibre value is reported as absent, never as zero. */
+  async function getFoodNutrition(args) {
+    var name = str(args && (args.food || args.name), "Food", 60);
+    await ensureCatalogue();
+    var hits = [];
+    try {
+      var S2 = window.IgnytFoodSearch;
+      if (S2 && S2.search) hits = S2.search(name) || [];
+    } catch (e) { hits = []; }
+    if (!hits.length) {
+      return { card: "not_found", query: name,
+               message: "“" + name + "” isn't in the IGNYT food library yet, so I don't have its nutrition." };
+    }
+
+    /* EXACT NAME WINS. The search ranks by its own relevance, which put "Mint Rice" ahead of
+       "Rice" for the query "rice" -- a correct row and the wrong answer. When the library holds
+       a food named exactly what was asked for, that is the one meant; otherwise the shortest
+       name containing the query, which prefers "Oats" over "Oats Bhel". */
+    var want = name.toLowerCase().trim();
+    var exact = hits.filter(function (x) { return String(x.name || "").toLowerCase().trim() === want; });
+    if (!exact.length) {
+      var contains = hits.filter(function (x) { return String(x.name || "").toLowerCase().indexOf(want) !== -1; });
+      if (contains.length) {
+        contains.sort(function (a, b) { return String(a.name).length - String(b.name).length; });
+        exact = contains;
+      }
+    }
+    if (exact.length) hits = exact.concat(hits.filter(function (x) { return exact.indexOf(x) === -1; }));
+
+    var f = hits[0];
+    var per = Number(f.per || f.servingSize) || 100;
+    var unit = f.servingUnit || "g";
+    var num = function (v) { return (v == null || v === "" || !isFinite(Number(v))) ? null : Math.round(Number(v) * 10) / 10; };
+    var out = {
+      card: "nutrition", name: f.name, per: per, unit: unit,
+      calories: num(f.calories), protein: num(f.protein), carbs: num(f.carbs),
+      fat: num(f.fat), fibre: num(f.fibre != null ? f.fibre : f.fiber)
+    };
+
+    var parts = [];
+    if (out.calories != null) parts.push(out.calories + " kcal");
+    if (out.protein != null) parts.push("protein " + out.protein + " g");
+    if (out.carbs != null) parts.push("carbs " + out.carbs + " g");
+    if (out.fat != null) parts.push("fat " + out.fat + " g");
+    if (out.fibre != null) parts.push("fibre " + out.fibre + " g");
+    if (!parts.length) {
+      return { card: "not_found", query: name,
+               message: "I have " + f.name + " in the library but no nutrition values for it." };
+    }
+    out.message = f.name + ", per " + per + unit + ": " + parts.join(", ") + ".";
+    if (hits.length > 1) {
+      var others = hits.slice(1, 4).map(function (x) { return x.name; }).filter(Boolean);
+      if (others.length) out.message += " Also in the library: " + others.join(", ") + ".";
+    }
+    return out;
+  }
+
   var ACTIONS = {
     getUserProfile:   { risk: "read",    fn: getUserProfile },
     getGoals:         { risk: "read",    fn: getGoals },
@@ -870,6 +936,7 @@
     getTodayWorkout:  { risk: "read",    fn: getTodayWorkout },
     getWorkoutHistory:{ risk: "read",    fn: getWorkoutHistory },
     searchFood:       { risk: "read",    fn: searchFood },
+    getFoodNutrition: { risk: "read",    fn: getFoodNutrition },
 
     logWeight:        { risk: "write",   fn: logWeight },
     updateWeight:     { risk: "write",   fn: logWeight },   // same operation, friendlier name
