@@ -49003,42 +49003,42 @@
   "id": 7001,
   "c": "Using IGNYT",
   "q": "How do I log a workout?",
-  "a": "Start it from the Workout tab and finish the session when you are done, or tell the assistant: \"start my workout\" and \"finish my workout\".",
+  "a": "Start and finish it in the Workout tab. The assistant does not log for you, but ask it anything about what you have done - \"how was my week\" gives sets, reps, volume and PRs.",
   "s": "general_fitness"
  },
  {
   "id": 7002,
   "c": "Using IGNYT",
   "q": "How do I log food?",
-  "a": "Say what you ate: \"log 200g chicken\", \"i ate 2 eggs\", \"add a banana\". You can name several at once - \"chicken and chapati\" or \"3 eggs, 2 slices of bread and a banana\".",
+  "a": "Add it in the Food Log tab. The assistant does not add entries, but it will tell you what any food contains and read back what you have logged.",
   "s": "general_fitness"
  },
  {
   "id": 7003,
   "c": "Using IGNYT",
   "q": "How do I log food quickly?",
-  "a": "Type or say it in one line. \"log 100g paneer\" and \"paneer 100g\" both work, and so does the microphone if your hands are busy.",
+  "a": "Use the plus button on the meal you want in the Food Log tab. Ask the assistant for a food's calories first if you want to check before adding it.",
   "s": "general_fitness"
  },
  {
   "id": 7004,
   "c": "Using IGNYT",
   "q": "How do I log my weight?",
-  "a": "Say \"log my weight\" and give the number when asked, or say it in one go: \"my weight is 78\".",
+  "a": "Add it in the Progress tab. Ask the assistant \"how much weight have I lost\" or \"what is my weight history\" once it is in.",
   "s": "general_fitness"
  },
  {
   "id": 7005,
   "c": "Using IGNYT",
   "q": "How do I log food for a specific meal?",
-  "a": "Name the meal: \"log 3 eggs for breakfast\", or \"breakfast eggs and bread\". Without a meal it goes to whichever one fits the time of day.",
+  "a": "Open the Food Log tab and use the plus button beside Breakfast, Lunch, Dinner or Snack.",
   "s": "general_fitness"
  },
  {
   "id": 7006,
   "c": "Using IGNYT",
   "q": "How do I log food for yesterday?",
-  "a": "Add the day: \"log 2 eggs yesterday\". Today, yesterday, last night and this morning all work.",
+  "a": "Change the date at the top of the Food Log tab, then add the food to that day.",
   "s": "general_fitness"
  },
  {
@@ -49059,28 +49059,28 @@
   "id": 7009,
   "c": "Using IGNYT",
   "q": "How do I delete a food I logged by mistake?",
-  "a": "Be specific about what should go: \"delete the chicken\", \"delete breakfast\", \"delete today's food\" or \"delete yesterday's food\". Anything that deletes asks you to confirm first.",
+  "a": "Remove it in the Food Log tab. The assistant does not delete anything.",
   "s": "general_fitness"
  },
  {
   "id": 7010,
   "c": "Using IGNYT",
   "q": "How do I delete everything I logged today?",
-  "a": "Say \"delete today's food\". It asks you to confirm, and it only touches today - yesterday's log is left alone.",
+  "a": "Clear the entries in the Food Log tab. Deleting is always done on the screen, never by chat.",
   "s": "general_fitness"
  },
  {
   "id": 7011,
   "c": "Using IGNYT",
   "q": "Why does IGNYT ask me to confirm before deleting?",
-  "a": "Because deleting cannot be undone. Anything that only reads or adds happens straight away; anything that removes asks first.",
+  "a": "Deleting cannot be undone, so the screens ask first. The assistant does not delete at all.",
   "s": "general_fitness"
  },
  {
   "id": 7012,
   "c": "Using IGNYT",
   "q": "Can I talk to IGNYT instead of typing?",
-  "a": "Yes, tap the microphone and speak normally. It waits through pauses rather than cutting you off mid-sentence.",
+  "a": "Yes, tap the microphone and ask your question out loud. It waits through pauses rather than cutting you off.",
   "s": "general_fitness"
  },
  {
@@ -49129,7 +49129,7 @@
   "id": 7019,
   "c": "Using IGNYT",
   "q": "What can I ask IGNYT?",
-  "a": "Anything about your own data - food, weight, workouts, progress - and general fitness or nutrition questions. You can also just tell it what you did and it will log it.",
+  "a": "Anything about fitness and nutrition, what any food contains, and your own data - what you ate today, how your week went, your protein and calorie targets. Logging itself is done on the screens.",
   "s": "general_fitness"
  },
  {
@@ -49157,21 +49157,21 @@
   "id": 7023,
   "c": "Using IGNYT",
   "q": "What happens if a food is not in the library?",
-  "a": "IGNYT tells you it is missing instead of inventing values for it. Nothing is logged, so your totals stay honest.",
+  "a": "The assistant says it is missing rather than inventing values for it.",
   "s": "general_fitness"
  },
  {
   "id": 7024,
   "c": "Using IGNYT",
   "q": "How do I log a drink?",
-  "a": "The same way as food: \"log 200ml milk\", \"i drank a protein shake\". Drinks are measured in millilitres where the library has them that way.",
+  "a": "Add it in the Food Log tab like any other item. Ask the assistant for its calories first if you want to compare.",
   "s": "general_fitness"
  },
  {
   "id": 7025,
   "c": "Using IGNYT",
   "q": "Can I log more than one food at once?",
-  "a": "Yes. \"chicken and chapati\", \"200g chicken and 100g rice\", or a full list like \"3 eggs, 2 slices of bread and a banana\". If you do not give amounts it asks how much of each.",
+  "a": "Add each one in the Food Log tab. The assistant can tell you what any of them contain before you do.",
   "s": "general_fitness"
  }
 ]

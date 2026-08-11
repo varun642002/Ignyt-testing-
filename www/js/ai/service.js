@@ -54,6 +54,35 @@
      Flip to true to evaluate the model alone, knowing what it costs. */
   var AI_FIRST = false;
 
+  /* THE CHAT ANSWERS; IT DOES NOT ACT.
+     Set so the assistant explains and looks things up, and the screens do the logging. Reading is
+     still allowed -- "what did I eat today" and "how was my week" report what is already stored,
+     which is answering a question, not taking an action.
+     ONE GATE, NOT A DELETED FEATURE. The handlers, the actions and their risk tiers are untouched;
+     this refuses at the single point where the chat would execute, so nothing can slip through by
+     another route -- the local patterns, the classifier and the AI rung all pass through here.
+     Set to true to give the chat its hands back. */
+  var CHAT_CAN_ACT = false;
+
+  /* Reads are answers. Writes and deletes are actions, and the chat no longer performs them. */
+  function chatMayRun(action) {
+    if (CHAT_CAN_ACT) return true;
+    try {
+      var r = window.IgnytAIActions && window.IgnytAIActions.risk
+        ? window.IgnytAIActions.risk(action) : null;
+      return r === "read";
+    } catch (e) { return false; }
+  }
+
+  function cannotActReply(action) {
+    var a = String(action || "");
+    if (/^addFoodLog/i.test(a))  return "I can't add food from here — use the Food Log tab and I'll answer anything about it.";
+    if (/^delete/i.test(a))      return "I can't delete anything from here — you can remove entries in the Food Log or Progress tab.";
+    if (/^logWeight|^updateWeight/i.test(a)) return "I can't log your weight from here — add it in Progress and ask me about it any time.";
+    if (/^start|^complete/i.test(a))        return "I can't start or finish a workout from here — use the Workout tab.";
+    return "I can't change your data from here — but ask me anything about it.";
+  }
+
   function apiBase() {
     return (window.IgnytConfig && IgnytConfig.apiBase && IgnytConfig.apiBase()) || window.IGNYT_API_BASE || "";
   }
@@ -233,6 +262,11 @@
        intent becomes a pending confirmation exactly as a typed "delete todays food" does. */
     var risk = window.IgnytAIIntent.riskOf(v.action);
     if (!risk) return null;
+    /* The same gate. The model may understand "log 200g chicken" perfectly and still not be
+       allowed to act on it. */
+    if (!chatMayRun(v.action)) {
+      return { text: cannotActReply(v.action), source: "AI_REFUSED:" + v.intent };
+    }
     /* ONLY DESTRUCTIVE INTENTS ARE HELD. Holding writes too was my own addition, meant as extra
        caution for a model-inferred action, and it produced the worst reply of the day: "I smashed
        a plate of briyani" was understood correctly as a food log, held for confirmation, and shown
@@ -294,6 +328,13 @@
       var local = null;
       try { local = await window.IgnytLocalChat.tryAnswer(message); } catch (e) { local = null; }
       if (local) {
+        if (local.pending && !chatMayRun(local.pending.action)) {
+          /* Refused before anything runs, and said plainly rather than pretending not to
+             understand -- the user's sentence was understood perfectly. */
+          var refuse = cannotActReply(local.pending.action);
+          onEvent({ type: "text", text: refuse });
+          return { text: refuse, source: "BUILT_IN_REFUSED:" + local.pending.action };
+        }
         if (local.pending) {
           /* THE ACTION HAS TO ACTUALLY RUN. This emitted { type:"pending" }, and nothing in
              app.js handles that event — its push() knows text, card, clarify, confirm, usage
