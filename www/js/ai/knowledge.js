@@ -407,8 +407,26 @@
     return { question: best.q, id: best.id, score: bestScore };
   }
 
+  /* DIAGNOSTIC SURFACE. Exposed because a scorer you cannot read is a scorer you argue with:
+     two fixes were reasoned out and shipped against a guess at what tokens() returns, and
+     neither moved the number because the guess was wrong. Read-only, no behaviour attached. */
+  function explain(text, entryId) {
+    var qt = tokens(text);
+    var e = _entries && _entries.filter(function (x) { return x.id === entryId; })[0];
+    return {
+      queryTokens: qt,
+      queryIdf: qt.map(function (w) { return [w, _idf[w] != null ? +_idf[w].toFixed(2) : 'OOV->' + (+_maxIdf.toFixed(2))]; }),
+      entryTokens: e ? e._t : null,
+      entryNorm: e ? +e._norm.toFixed(3) : null,
+      score: e ? +score(qt, e).toFixed(3) : null,
+      threshold: threshold()
+    };
+  }
+
   window.IgnytKnowledge = Object.freeze({
     ask: ask,
+    tokens: tokens,
+    explain: explain,
     suggest: suggest,
     load: load,
     threshold: threshold,
