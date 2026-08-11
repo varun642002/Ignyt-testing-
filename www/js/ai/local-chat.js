@@ -1019,7 +1019,17 @@
            log something and was told their something does not exist.
            Ask instead, and hold the slot open for the answer, which is the same mechanism
            "log my weight" already uses. */
-        if (/^(my |the |a |an |some )?(foods?|foods|meals?|meals|something|thing|it|this|that|entry|item)$/.test(food)) {
+        /* A MEAL NAME WITH NO FOOD IS THE SAME REQUEST. "log my breakfast" named no food, so it
+           searched the library for "breakfast" and reported it missing -- the failure "log food"
+           used to have. It now opens the slot and remembers WHICH meal, so the answer lands on
+           breakfast without the user saying it twice. */
+        var mealOnly = food.match(/^(?:my |the |a |an |some )?(breakfast|lunch|dinner|snacks?)$/);
+        if (mealOnly) {
+          meal = mealOnly[1].replace(/^snacks?$/, "snack");
+          meal = meal.charAt(0).toUpperCase() + meal.slice(1);
+        }
+        if (mealOnly || /^(my |the |a |an |some )?(foods?|foods|meals?|meals|something|thing|it|this|that|entry|item)$/.test(food)) {
+          var slotMeal = meal || null;   // remembered, so the meal is not asked twice
           _awaiting = {
             name: "log food",
             at: Date.now(),
@@ -1032,6 +1042,30 @@
                  A question word or a long phrase is a new message; a food is short and is not
                  phrased as a question. The weight slot has the same guard for the same reason. */
               if (/^(what|how|why|when|where|which|who|is|are|can|should|do|does|tell|show|explain)\b/.test(t2)) return null;
+
+              /* THE ANSWER TO "WHAT DID YOU EAT?" IS USUALLY A LIST, AND IT ARRIVES WITH NO VERB.
+                 "3 eggs, 2 slices of bread and a banana" is nine words and the length guard below --
+                 which exists to stop a change of subject being logged as food -- would reject it. A
+                 list where every item carries its own quantity is not a change of subject, so it is
+                 tried first and the guard applies only to what is left. Same split rule as the direct
+                 path, reusing the same two helpers rather than a second copy that drifts. */
+              var segs2 = String(t2).split(/\s*,\s*|\s+and\s+|\s+plus\s+/)
+                            .map(function (x) { return x.trim(); })
+                            .filter(function (x) { return x.length; });
+              if (segs2.length > 1 && segs2.every(hasQuantitySignal)) {
+                var parsed2 = segs2.map(parseFoodPhrase);
+                if (!parsed2.some(function (x) { return !x; })) {
+                  var items2 = parsed2.map(function (it) {
+                    var a3 = { food: it.food };
+                    if (it.unit && /^(g|grams?|ml|kg|oz)$/.test(it.unit)) {
+                      a3.grams = it.unit === "kg" ? it.qty * 1000 : it.qty;
+                    } else { a3.quantity = it.qty; }
+                    if (slotMeal) a3.meal = slotMeal;
+                    return a3;
+                  });
+                  return { pending: { action: "addFoodLogBatch", args: { items: items2 } } };
+                }
+              }
               if (t2.split(/\s+/).length > 5) return null;
 
               /* Re-parse the reply as though it had been said with the verb attached, so
@@ -1053,7 +1087,7 @@
               return { pending: { action: "addFoodLog", args: a2 } };
             }
           };
-          return { text: "What would you like to log?" };
+          return { text: slotMeal ? "What did you eat for " + slotMeal.toLowerCase() + "?" : "What would you like to log?" };
         }
 
         /* QUANTITY IS A COUNT, NOT A MASS. addFoodLog validates it in the range 0.1-100 —
