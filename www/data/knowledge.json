@@ -38547,5 +38547,327 @@
   "q": "How often should I run as a beginner?",
   "a": "Three times a week with rest days between. Running frequency is where most beginner injuries come from, not distance.",
   "s": "general_fitness"
+ },
+ {
+  "id": 6852,
+  "c": "General Fitness",
+  "q": "How do I log a workout?",
+  "a": "Start it from the Workout tab, add your sets as you go, and finish the session - or just tell the assistant, for example \"start my workout\" and \"finish my workout\".",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6853,
+  "c": "General Fitness",
+  "q": "How do I log food quickly?",
+  "a": "Say or type what you ate: \"log 200g chicken\", \"I ate 2 eggs\", \"add a banana\". Quantity defaults to one serving if you do not give one.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6854,
+  "c": "General Fitness",
+  "q": "How do I log my weight?",
+  "a": "Say \"log my weight\" and give the number, or \"my weight is 78\". It goes into Progress and drives the weight chart.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6855,
+  "c": "General Fitness",
+  "q": "How do I see what I ate today?",
+  "a": "Ask \"what did I eat today\" or open the Food Log tab. The assistant reads the same log the tab shows.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6856,
+  "c": "General Fitness",
+  "q": "Can I log food for yesterday?",
+  "a": "Yes - include the day, for example \"log 2 eggs yesterday\". Without a date it goes to today.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6857,
+  "c": "General Fitness",
+  "q": "How do I delete something I logged by mistake?",
+  "a": "Ask to delete it and be specific: \"delete today's food\" or \"delete my weight\". Anything destructive asks you to confirm first.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6858,
+  "c": "General Fitness",
+  "q": "Why does the assistant ask me to confirm?",
+  "a": "Because deleting data cannot be undone. Anything that only reads or adds happens straight away; anything that removes asks first.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6859,
+  "c": "General Fitness",
+  "q": "Can I talk to the app instead of typing?",
+  "a": "Yes, tap the microphone and speak normally. It waits for you to finish rather than cutting off at a pause.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6860,
+  "c": "General Fitness",
+  "q": "Why did the assistant not understand me?",
+  "a": "Either the phrasing is outside what it knows, or the question needs data it does not have. Rephrasing more plainly usually works, and it will suggest a nearby question when it can.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6861,
+  "c": "Training",
+  "q": "How do I do a proper plank?",
+  "a": "Elbows under shoulders, body in one line, ribs down and glutes squeezed. Thirty controlled seconds beats two loose minutes.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6862,
+  "c": "Training",
+  "q": "How do I do a proper lunge?",
+  "a": "Step out, drop the back knee towards the floor, keep the front shin fairly vertical and the torso tall. Push through the front foot to return.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6863,
+  "c": "Training",
+  "q": "How do I do a hip hinge?",
+  "a": "Push the hips back with a soft knee, keep the spine neutral, and feel the hamstrings load. It is a hips-back movement, not a squat down.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6864,
+  "c": "Training",
+  "q": "How do I do a proper row?",
+  "a": "Brace the trunk, pull the elbows back rather than the hands, and stop when the elbows pass the ribs. Do not swing the torso to move the weight.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6865,
+  "c": "Training",
+  "q": "What is a good squat warm-up set scheme?",
+  "a": "Empty bar for ten, then roughly forty, sixty and eighty percent of your working weight for five, three and two reps.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6866,
+  "c": "Training",
+  "q": "How do I know if my form is wrong?",
+  "a": "Film a set from the side. Most form problems are obvious on video and invisible from the inside.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6867,
+  "c": "Training",
+  "q": "Should I use a mirror to check form?",
+  "a": "For side-on lifts a mirror distorts more than it helps. Video is better because you can watch it after, without turning your head mid-rep.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6868,
+  "c": "Training",
+  "q": "What is a spotter for?",
+  "a": "Safety on pressing movements near failure. A spotter should be ready to help but silent otherwise - the set is yours until it stalls.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6869,
+  "c": "Training",
+  "q": "How do I bail out of a failed squat?",
+  "a": "Sit the weight back onto the safety bars, or drop it behind you and step forward. Practise it light before you ever need it heavy.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6870,
+  "c": "Training",
+  "q": "What is a good beginner full body workout?",
+  "a": "Squat or leg press, a hinge, a press, a row and a carry. Three sets each, three times a week, adding a little weight when all sets feel controlled.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6871,
+  "c": "Training",
+  "q": "How much should I be able to squat?",
+  "a": "After a year of consistent training, bodyweight for reps is a reasonable marker for many people. It varies enormously with build, height and starting point.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6872,
+  "c": "Training",
+  "q": "How much should I be able to bench?",
+  "a": "Bodyweight for a single is a common milestone for men after a year or two. Leverages matter more here than almost any other lift.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6873,
+  "c": "Training",
+  "q": "How much should I be able to deadlift?",
+  "a": "One and a half times bodyweight after a year or so is a fair marker. Deadlifts usually progress fastest of the big three early on.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6874,
+  "c": "Training",
+  "q": "How many push-ups should I be able to do?",
+  "a": "Twenty to thirty clean reps is a solid general standard. If you are under ten, train them three times a week and it moves quickly.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6875,
+  "c": "Training",
+  "q": "How many pull-ups is good?",
+  "a": "Five to ten strict reps is a strong general standard, and one is a real milestone in itself for many people.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6876,
+  "c": "Cardio",
+  "q": "What is a good 5k time?",
+  "a": "Thirty minutes is a solid recreational time, twenty-five is good, and under twenty is genuinely quick. Finishing is the only one that matters at first.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6877,
+  "c": "General Fitness",
+  "q": "What is a good resting heart rate for someone who trains?",
+  "a": "Often 50 to 65. What matters more is your own trend - a sustained rise usually means poor recovery, illness or stress.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6878,
+  "c": "Nutrition",
+  "q": "What should I eat to gain muscle on a vegetarian diet?",
+  "a": "Build meals on dal, rajma, chana, paneer, curd and soya, add milk and eggs if you take them, and keep total calories slightly above maintenance.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6879,
+  "c": "Nutrition",
+  "q": "Is peanut butter good for bulking?",
+  "a": "Yes - calorie-dense, cheap and easy to add to milk or roti. Watch the quantity, since a heaped spoon is close to 100 calories.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6880,
+  "c": "Nutrition",
+  "q": "Are nuts good or bad for weight loss?",
+  "a": "Good in small measured portions - filling and nutritious - but very calorie-dense, so they are easy to overeat straight from the packet.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6881,
+  "c": "Nutrition",
+  "q": "Is oats good for breakfast?",
+  "a": "Yes. Slow-digesting carbohydrate with some fibre and protein, and it takes milk, curd or protein powder well.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6882,
+  "c": "Nutrition",
+  "q": "Is poha or upma healthier?",
+  "a": "Both are fine carbohydrate breakfasts. Neither has much protein, so add curd, eggs or peanuts to either.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6883,
+  "c": "Nutrition",
+  "q": "Is chapati or bread better?",
+  "a": "Chapati, usually - fewer additives and a little more fibre and protein. Portion size matters more than the choice.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6884,
+  "c": "Nutrition",
+  "q": "How much rice should I eat in a day?",
+  "a": "Whatever fits your calorie and protein targets. There is no fixed limit; a cup of cooked rice is roughly 200 calories.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6885,
+  "c": "Nutrition",
+  "q": "Is curd good at night?",
+  "a": "Yes for most people. It provides slow protein before sleep, and the belief that it must be avoided at night has no basis for general health.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6886,
+  "c": "Nutrition",
+  "q": "Should I drink milk before bed?",
+  "a": "It is a good source of slow protein and helps many people sleep. If it disturbs your digestion, move it earlier.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6887,
+  "c": "Nutrition",
+  "q": "How do I get 100g of protein a day vegetarian?",
+  "a": "Roughly: 500ml milk, 200g curd, 100g paneer, a bowl of dal and 50g soya chunks gets you there without powder.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6888,
+  "c": "Nutrition",
+  "q": "Is sprouts good for protein?",
+  "a": "Useful but modest - around 7 to 9 g per 100 g. Treat them as a healthy addition rather than a protein source on their own.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6889,
+  "c": "Nutrition",
+  "q": "Are protein shakes bad for the liver?",
+  "a": "No, not in healthy people at normal intakes. Protein powder is food, and it is treated like any other protein.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6890,
+  "c": "Fat Loss",
+  "q": "How do I know if my deficit is too aggressive?",
+  "a": "Constant hunger, falling strength, poor sleep, low mood and losing more than about one percent of bodyweight a week. Any two of those together means eat more.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6891,
+  "c": "Fat Loss",
+  "q": "Should I lose fat before building muscle?",
+  "a": "If you are above roughly 20 percent body fat as a man or 30 as a woman, cutting first usually makes the later build cleaner. Below that, build first.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6892,
+  "c": "Fat Loss",
+  "q": "How long should a fat loss phase last?",
+  "a": "Eight to sixteen weeks, then a spell at maintenance. Long uninterrupted deficits wear down adherence faster than they burn fat.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6893,
+  "c": "Fat Loss",
+  "q": "What do I do after reaching my goal weight?",
+  "a": "Move to maintenance deliberately - add a few hundred calories, hold it for a month, and keep weighing weekly. Most weight regain happens because nobody planned this part.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6894,
+  "c": "Muscle Gain",
+  "q": "How do I keep muscle while losing fat?",
+  "a": "Keep protein high, keep lifting heavy, and lose slowly. Cutting training volume is what usually costs people muscle, not the deficit itself.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6895,
+  "c": "Muscle Gain",
+  "q": "Why did I lose strength while cutting?",
+  "a": "Less food means less fuel and less recovery. Some strength loss late in a cut is normal; losing it early means the deficit is too steep.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6896,
+  "c": "General Fitness",
+  "q": "How do I plan a year of training?",
+  "a": "Alternate building and maintaining phases, with a lighter week every couple of months. Most people do better with two or three focused blocks a year than one continuous push.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6897,
+  "c": "General Fitness",
+  "q": "Should I set a goal weight or a goal look?",
+  "a": "A look, tracked with photographs and measurements. Scale weight is a poor proxy once you are training, since muscle and fat move in opposite directions.",
+  "s": "general_fitness"
  }
 ]
