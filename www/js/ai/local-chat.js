@@ -393,7 +393,11 @@
         return /(?:in|of|per|for)\s+(?:a|an|one|1)?\s*[a-z]/.test(t);
       },
       run: async function (A, t) {
-        var m = t.match(/(?:in|of|per|for)\s+(?:a\s+|an\s+|one\s+|1\s+)?([a-z][a-z\s]{1,40})$/);
+        /* THE PREPOSITION MUST BE ITS OWN WORD. Without the boundary the alternation matched
+           the "in" INSIDE "protein": "how much protein in curd" captured "in curd", which
+           searched to High Protein Curd while a direct search for "curd" returned Curd. The
+           search was right the whole time and the handler was feeding it two words. */
+        var m = t.match(/(?:^|\s)(?:in|of|per|for)\s+(?:a\s+|an\s+|one\s+|1\s+)?([a-z][a-z\s]{1,40})$/);
         if (!m) return null;
         var food = m[1].replace(/\s+/g, " ").trim();
         if (!food || food.length < 2) return null;
