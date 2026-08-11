@@ -1118,8 +1118,38 @@
               known.push({ food: nm, quantity: 1 });
             }
             if (known.length > 1) {
-              if (meal) known.forEach(function (a) { a.meal = meal; });
-              return { text: null, pending: { action: "addFoodLogBatch", args: { items: known } } };
+              /* ASK, DO NOT ASSUME. "chicken and banana" names two foods and no amounts, and
+                 logging them at one default serving each put 174 g of chicken breast and a 118 g
+                 banana into the log without the user ever saying a number. Defaults are fine when
+                 someone says "a banana"; they are a guess when someone says "chicken".
+                 The slot is held open, and the answer is parsed by the same quantified-list path
+                 the guided flow uses -- so "200g chicken and 1 banana" completes it in one reply. */
+              var askFor = known.map(function (a) { return a.food; });
+              var slotMeal2 = meal || null;
+              _awaiting = {
+                name: "log food",
+                at: Date.now(),
+                fill: function (t2) {
+                  if (/^(what|how|why|when|where|which|who|is|are|can|should|do|does|tell|show|explain)/.test(t2)) return null;
+                  var segs3 = String(t2).split(/\s*,\s*|\s+and\s+|\s+plus\s+/)
+                                .map(function (x) { return x.trim(); })
+                                .filter(function (x) { return x.length; });
+                  if (!segs3.length) return null;
+                  var parsed3 = segs3.map(parseFoodPhrase);
+                  if (parsed3.some(function (x) { return !x; })) return null;
+                  var items3 = parsed3.map(function (it) {
+                    var a4 = { food: it.food };
+                    if (it.unit && /^(g|grams?|ml|kg|oz)$/.test(it.unit)) {
+                      a4.grams = it.unit === "kg" ? it.qty * 1000 : it.qty;
+                    } else { a4.quantity = it.qty; }
+                    if (slotMeal2) a4.meal = slotMeal2;
+                    return a4;
+                  });
+                  return { pending: { action: "addFoodLogBatch", args: { items: items3 } } };
+                }
+              };
+              return { text: "How much of each? For example “200g " + askFor[0] + " and 1 " +
+                             askFor[askFor.length - 1] + "”." };
             }
           }
 

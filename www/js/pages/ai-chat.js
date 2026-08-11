@@ -66,7 +66,35 @@
         icon = "trash"; title = "Removed";
         body = '<div class="aic-card__big">' + esc(r.what || "") + '</div>';
         break;
+      case "food_batch":
+        /* SEVERAL FOODS AT ONCE. Without this the batch fell to the default below and rendered
+           NOTHING: the entries went into the log, the daily total updated, and the chat said not
+           a word -- reported from a device as "it cannot log multiple foods" when in fact it had
+           logged them and simply not admitted to it. */
+        icon = "plate"; title = "Food added";
+        body = '<div class="aic-card__big">' + Math.round(r.kcal || 0) + ' kcal</div>' +
+               '<div class="aic-card__sub">' + esc((r.logged || []).join(", ")) + '</div>' +
+               (r.dayTotals ? '<div class="aic-card__note">Today: ' +
+                  Number(r.dayTotals.kcal || 0).toLocaleString() + ' kcal, ' +
+                  (r.dayTotals.protein || 0) + 'g protein</div>' : '') +
+               ((r.failed && r.failed.length)
+                  ? '<div class="aic-card__note">Not found: ' + esc(r.failed.join(", ")) + '</div>' : '');
+        break;
       default:
+        /* A CARD THIS SCREEN DOES NOT KNOW STILL HAS SOMETHING TO SAY. Returning "" meant every
+           card type added since this switch was written -- the batch log, the protein and calorie
+           targets, the weekly summary, the nutrition lookup, the "I need your weight first" reply
+           -- displayed as complete silence. The action ran, the answer existed, and the user saw
+           nothing. Any card carrying a message now renders it as plain text rather than vanishing;
+           only a card with nothing to say returns nothing. */
+        if (r && r.message) {
+          /* Rendered through the card shell this file already owns -- an earlier draft of this
+             invented two class names that exist in no stylesheet, which would have shipped as
+             unstyled text. */
+          icon = "info"; title = "IGNYT";
+          body = '<div class="aic-card__sub">' + esc(r.message) + '</div>';
+          break;
+        }
         return "";
     }
     return '<div class="aic-card"><div class="aic-card__head">' + ic(icon, 15) +
