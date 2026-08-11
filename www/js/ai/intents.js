@@ -66,6 +66,10 @@
       "how many calories did i eat today", "whats my calorie total", "todays macros",
       "how much protein did i eat", "show my nutrition today", "what have i logged",
       "read my food log", "display my meals", "my food for today"
+    ,
+      "whats my food today", "did i log anything today", "show me what ive eaten",
+      "open my food log", "food i logged", "my meals so far", "whats my intake today",
+      "how much have i eaten", "todays calories", "calories so far today"
     ],
 
     LOG_WEIGHT: [
@@ -75,6 +79,9 @@
       "i weighed myself 82", "put my weight in", "save my weight", "note my weight",
       "track my weight today", "my weight today is 81.5", "update weight to 80",
       "change my weight to 81", "i am 82 kg now", "log 172 lbs", "weigh in 82"
+    ,
+      "add weight 82", "put in my weight", "record 82 kilos", "log todays weight",
+      "im 82 kilos today", "weighed in at 82", "set my weight to 82", "write my weight down"
     ],
 
     VIEW_WEIGHT_HISTORY: [
@@ -82,6 +89,11 @@
       "weight over time", "am i losing weight", "have i lost weight",
       "show my weight chart", "weight progress", "what was my weight last week",
       "how much weight have i lost", "my weight graph", "weight last month"
+    ,
+      "whats my weight doing", "weight this month", "am i getting lighter", "show weight changes",
+      "how much have i lost", "my weight so far", "weight since last month",
+      "did my weight go down", "weight comparison", "track my weight progress",
+      "whats happened to my weight", "weight numbers"
     ],
 
     VIEW_TODAY_WORKOUT: [
@@ -89,12 +101,23 @@
       "what should i train today", "what am i training today", "show todays plan",
       "what do i have today", "which workout is today", "my plan for today",
       "what is on today", "whats the session today", "todays training"
+    ,
+      "what am i doing today", "todays session", "what workout is scheduled",
+      "whats planned for today", "do i train today", "what do i train", "which muscles today",
+      "todays exercises", "show me todays workout", "am i training today", "whats my session",
+      "what have i got today", "workout for today", "todays routine",
+      "what should i do in the gym today"
     ],
 
     START_WORKOUT: [
       "start todays workout", "start my workout", "begin my workout", "start training",
       "lets train", "open todays workout", "start the session", "begin training",
       "start workout now", "im ready to train", "lets get started with my workout"
+    ,
+      "lets go", "start it", "begin the workout", "start my session now", "kick off my workout",
+      "im at the gym lets start", "fire up todays workout", "get my workout going",
+      "open my session", "start training now", "lets start training", "begin todays session",
+      "im starting my workout", "take me into my workout", "launch my workout"
     ],
 
     VIEW_PROGRESS: [
@@ -102,6 +125,11 @@
       "my stats", "show my stats", "hows it going", "am i making progress",
       "how was my week", "how did i do this week", "weekly progress", "my week summary",
       "how did i perform this week", "show my weekly progress", "last week recap"
+    ,
+      "how am i tracking", "give me my numbers", "show my results", "hows my training going",
+      "whats my progress like", "summarise my week", "how did the week go", "recap my week",
+      "my performance", "how have i done", "show my summary", "progress report",
+      "how is training going", "whats my streak like"
     ],
 
     CREATE_ROUTINE: [
@@ -109,6 +137,11 @@
       "create a chest workout", "make a push day", "build a leg day",
       "create a push pull legs routine", "i want a new routine", "set up a workout for me",
       "make me a chest day", "create a program"
+    ,
+      "set up a new routine", "start a new program", "make me a workout plan", "i need a routine",
+      "build a push day", "create a pull day", "make a leg routine", "design a workout for me",
+      "add a new split", "put together a routine", "create a back workout",
+      "make an upper body day", "i want to build a routine", "new workout plan"
     ],
 
     EXERCISE_HOW_TO: [
@@ -116,6 +149,12 @@
       "bench press form", "squat technique", "teach me deadlift", "show me how to squat",
       "proper form for overhead press", "whats the correct form for rows",
       "how should i do lunges", "explain bench press", "steps for a hip thrust"
+    ,
+      "how do i squat", "how to bench", "show me deadlift form", "whats the technique for rows",
+      "how should i perform a lunge", "correct form for pull ups", "walk me through a hip thrust",
+      "explain how to do a plank", "how do you do lateral raises", "demonstrate bench press",
+      "how is a romanian deadlift done", "form check bench press", "how to do overhead press",
+      "the right way to squat", "instructions for deadlift", "how do i perform bicep curls"
     ]
   };
 
