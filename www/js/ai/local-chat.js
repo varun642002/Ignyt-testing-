@@ -972,8 +972,21 @@
      against a guess at which ladder stage it reached, and all five were wrong, so the stages
      now say so themselves. */
   var _trace = [];
+  /* A RING OF RECENT TRACES, not just the last one. lastTrace() is useless during a test run:
+     the suite sends dozens of messages after the one being investigated, so by the time the run
+     ends its trace is long gone. Three wrong diagnoses came from tracing the message in
+     isolation instead, where the app state is not the state the test had -- an empty food log
+     against a seeded one, which routes differently and answers differently.
+     Keyed by the normalised message, capped, and only recorded when hx_trace is set. */
+  var _traceRing = [];
+  var TRACE_RING_MAX = 60;
   function trace(stage, detail) {
     try { if (localStorage.getItem("hx_trace")) _trace.push(stage + (detail ? ": " + detail : "")); } catch (e) {}
+  }
+  function traceCommit(message) {
+    try { if (!localStorage.getItem("hx_trace") || !_trace.length) return; } catch (e) { return; }
+    _traceRing.push({ message: String(message), stages: _trace.slice(), at: Date.now() });
+    if (_traceRing.length > TRACE_RING_MAX) _traceRing.shift();
   }
 
   async function tryAnswer(message) {
@@ -1177,9 +1190,26 @@
     return null;
   }
 
+  /* Wrapped so every return path files its trace -- there are eight of them and remembering to
+     call traceCommit at each is exactly the kind of thing that gets missed at the ninth. */
+  async function tracedTryAnswer(message) {
+    var out = await tryAnswer(message);
+    traceCommit(message);
+    return out;
+  }
+
   window.IgnytLocalChat = Object.freeze({
-    tryAnswer: tryAnswer,
+    tryAnswer: tracedTryAnswer,
     lastTrace: function () { return _trace.slice(); },
+    /* The trace for a message sent earlier in the session -- substring match, most recent first. */
+    traceFor: function (needle) {
+      var n = String(needle).toLowerCase();
+      for (var i = _traceRing.length - 1; i >= 0; i--) {
+        if (_traceRing[i].message.toLowerCase().indexOf(n) !== -1) return _traceRing[i];
+      }
+      return null;
+    },
+    traceRing: function () { return _traceRing.slice(); },
     /* The intent -> handler map, exposed read-only so the test suite can assert that a
        message reached the RIGHT HANDLER without caring which route carried it there.
        Promoting an intent changes the reported label from the handler name to
