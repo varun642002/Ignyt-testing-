@@ -74,7 +74,7 @@
     ],
 
     LOG_WEIGHT: [
-      "log my weight", "log weight", "record my weight", "add my weight",
+      "log my weight", "my weight is 78", "im 78 kg today", "weighed in at 78", "log weight", "record my weight", "add my weight",
       "update my weight", "my weight is 82", "my weight is 82 kg", "i weigh 82 kilos",
       "log my weight as 82", "weight 82", "82 kg today", "todays weight is 82",
       "i weighed myself 82", "put my weight in", "save my weight", "note my weight",
@@ -146,6 +146,30 @@
       "build a push day", "create a pull day", "make a leg routine", "design a workout for me",
       "add a new split", "put together a routine", "create a back workout",
       "make an upper body day", "i want to build a routine", "new workout plan"
+    ],
+
+
+    /* TWO REAL ACTIONS THAT HAD WORKING HANDLERS AND NO INTENT AT ALL. Both were reachable only
+       by regex, so the classifier had nothing to fall back to and, worse, claimed them for the
+       nearest intent it did know: "delete my weight" scored DELETE_TODAY_FOOD at 0.76 -- the
+       wrong record entirely, held back only by being under the promotion bar. An intent missing
+       from the corpus is not neutral; its phrases get absorbed by whatever is closest. */
+    COMPLETE_WORKOUT: [
+      "finish my workout", "complete my workout", "end my workout", "im done training",
+      "workout done", "finish training", "im finished with my workout", "end this session",
+      "done with my workout", "mark my workout complete", "stop my workout", "wrap up my workout",
+      "that's my workout done", "finish this session", "complete todays workout",
+      "im done with the gym", "end workout", "finish session", "log this workout as done",
+      "save my workout", "im done lifting", "call it a day", "thats it for today",
+      "workout finished", "close out my workout", "finish up"
+    ],
+
+    DELETE_WEIGHT: [
+      "delete my weight", "remove my weight entry", "delete my weight entry",
+      "remove todays weight", "delete todays weight", "remove my last weight",
+      "delete my last weigh in", "get rid of my weight entry", "erase my weight",
+      "remove that weight", "remove my weigh in", "delete my weigh in", "clear my weight entry",
+      "scrap my weight entry", "remove my weight for today", "delete weight entry"
     ],
 
     EXERCISE_HOW_TO: [

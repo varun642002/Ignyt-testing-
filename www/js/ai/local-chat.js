@@ -915,7 +915,9 @@
     START_WORKOUT: "start workout",
     VIEW_PROGRESS: "progress",
     CREATE_ROUTINE: "create routine",
-    EXERCISE_HOW_TO: "exercise how to"
+    EXERCISE_HOW_TO: "exercise how to",
+    COMPLETE_WORKOUT: "complete workout",
+    DELETE_WEIGHT: "delete weight"
   };
   async function runClassified(A, t, guess) {
     var wanted = HANDLER[guess.intent];
