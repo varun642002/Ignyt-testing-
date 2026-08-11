@@ -404,6 +404,21 @@
         if (!m) return null;
         var food = m[1].replace(/\s+/g, " ").trim();
         if (!food || food.length < 2) return null;
+        /* THE WORD AFTER "of" MUST BE A FOOD. This matched any noun, so "how do I get rid of
+           belly fat" was read as a lookup for "belly fat" and "how do I measure progress" as one
+           for "progress". Both answered confidently about the wrong thing, which is worse than
+           not answering: a miss reaches the AI, a wrong answer never does.
+           The library decides. If it holds nothing by that name, this is not a nutrition
+           question and the handler declines. */
+        var known = await A.run("searchFood", { query: food });
+        var knownRows = ((known && known.result) || {}).results || ((known && known.result) || {}).foods || [];
+        var f0 = food.toLowerCase();
+        var isFood = knownRows.some(function (x) {
+          var n0 = String(x.name || "").toLowerCase();
+          return n0 === f0 || n0.indexOf(f0 + " ") === 0 || n0.indexOf(f0 + " (") === 0;
+        });
+        if (!isFood) return null;
+
         var r = await A.run("getFoodNutrition", { food: food });
         var d = (r && r.result) || {};
         if (!d.message) return null;
@@ -1373,6 +1388,23 @@
      action to drift. */
   /* The handlers that report the user's own records. Named once, used by both places that
      have to let the knowledge base outrank them. */
+  /* A GENERAL QUESTION IS NOT A REQUEST FOR YOUR DATA. "whats the best time to workout" opened
+     today's workout; "how do i get stronger legs" opened progress; "what should i eat after gym"
+     read the food log. Each contains a word the intent owns -- workout, progress, eat -- and none
+     of them asks about the user at all.
+     A records read needs a possessive or a date. "my workout", "today", "this week" mean the
+     question is about them; "how do I" and "what should I" mean it is about the subject, and
+     belong to the knowledge base or the model. */
+  var RECORD_MINE = ["my ", " my ", "i ate", "i had", "did i", "have i", "am i"];
+  function aboutTheirRecords(t) {
+    var pad = " " + String(t || "") + " ";
+    if (recordScoped(t)) return true;
+    for (var i = 0; i < RECORD_MINE.length; i++) {
+      if (pad.indexOf(RECORD_MINE[i]) !== -1) return true;
+    }
+    return false;
+  }
+
   var RECORD_READS = { "food log today": 1, "progress": 1, "weight history": 1, "today workout": 1 };
 
   /* Openers that make a sentence a question rather than an instruction. Anchored at the
@@ -1517,6 +1549,11 @@
        loop the corpus cannot reach: with the batch applied "how many calories did i eat today"
        returned null here, silently, before the handler was ever looked up. It was the only exit
        in this function with no trace on it, so the message appeared to fall out of the loop. */
+    /* Refuse outright when the message is not about their records: no possessive, no date. */
+    if (RECORD_READS[wanted] && !aboutTheirRecords(t)) {
+      trace("rc-exit", "not a question about their records: " + wanted);
+      return null;
+    }
     if (RECORD_READS[wanted] && window.IgnytKnowledge && !recordScoped(t)) {
       var kbWins = null;
       try { kbWins = await IgnytKnowledge.ask(t); } catch (e) { kbWins = null; }
