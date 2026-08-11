@@ -923,6 +923,45 @@
     return out;
   }
 
+
+  /* SEVERAL FOODS, ONE ACTION. The first attempt at multi-item logging ran addFoodLog in a loop
+     inside the chat handler, which meant that handler both returned a pending for the service to
+     execute AND executed writes itself -- two mechanisms for one job, and it did not work.
+     The loop belongs here, where every other write lives: the handler parses and hands over one
+     pending, the service executes it once, and the confirmation is built from what was actually
+     stored. */
+  async function addFoodLogBatch(args) {
+    var items = (args && args.items) || [];
+    if (!Array.isArray(items) || !items.length) {
+      return { card: "error", code: "invalid_args", message: "Nothing to log." };
+    }
+    if (items.length > 12) {
+      return { card: "error", code: "too_many", message: "That is a lot at once - tell me up to a dozen items." };
+    }
+    var logged = [], failed = [], kcal = 0;
+    for (var i = 0; i < items.length; i++) {
+      var one = items[i] || {};
+      var res = null;
+      try { res = await addFoodLog(one); } catch (e) { res = null; }
+      if (res && res.card !== "error" && res.card !== "clarify") {
+        logged.push(res.name || one.food);
+        kcal += Number(res.kcal || res.calories || 0) || 0;
+      } else {
+        failed.push(one.food);
+      }
+    }
+    /* BOTH SIDES ARE NAMED. A total alone would hide a food that was not found, and silent
+       partial success is the failure this area has produced three times already. */
+    if (!logged.length) {
+      return { card: "error", code: "none_found",
+               message: "I couldn't find any of those in the food library: " + failed.join(", ") + "." };
+    }
+    var msg = "Logged " + logged.join(", ") + (kcal ? " — " + Math.round(kcal) + " kcal" : "") + ".";
+    if (failed.length) msg += " I couldn't find " + failed.join(", ") + " in the library.";
+    return { card: "food_batch", logged: logged, failed: failed,
+             kcal: Math.round(kcal), affectedRecords: logged.length, message: msg };
+  }
+
   var ACTIONS = {
     getUserProfile:   { risk: "read",    fn: getUserProfile },
     getGoals:         { risk: "read",    fn: getGoals },
@@ -941,6 +980,7 @@
     logWeight:        { risk: "write",   fn: logWeight },
     updateWeight:     { risk: "write",   fn: logWeight },   // same operation, friendlier name
     addFoodLog:       { risk: "write",   fn: addFoodLog },
+    addFoodLogBatch:  { risk: "write",   fn: addFoodLogBatch },
     updateFoodLog:    { risk: "write",   fn: updateFoodLog },
     startWorkout:     { risk: "write",   fn: startWorkout },
     completeWorkout:  { risk: "write",   fn: completeWorkout },

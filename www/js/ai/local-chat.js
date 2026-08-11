@@ -951,8 +951,39 @@
            splitting on "and" reliably enough to trust ("rice and dal" is two, "chicken and
            mushroom soup" is one) is not something a regex can do. So it asks. Local, honest,
            and zero AI activities. */
-        if (/\b(and|plus)\b|,/.test(t.replace(/^\s*(log|ate|eat|had|add)\b/, ""))) {
-          return { text: say("one_food") };
+        /* The pronoun goes too. "i ate 2 eggs and a banana" left "i ate 2 eggs" as the first
+           segment, which does not begin with a quantity, so the list looked unquantified and
+           the whole thing was refused. */
+        var rest = t.replace(/^\s*(?:i|ive|i have)\s+/, "")
+                    .replace(/^\s*(log|ate|eat|had|add|drank|drink|drinking|having|consumed|finished)\b/, "")
+                    .replace(/^\s*(just)\b/, "").trim();
+        if (/\b(and|plus)\b|,/.test(rest)) {
+          /* SPLIT ONLY WHEN IT IS UNAMBIGUOUS. The refusal that stood here was right about the
+             hard case: "rice and dal" is two foods, "chicken and mushroom soup" is one, and the
+             words alone do not separate them. A quantity does. When EVERY segment carries its own
+             number or article the sentence is a list, and splitting is safe; otherwise it still
+             asks, exactly as before.
+             One pending for the whole list, not one per item -- the handler parses, the action
+             layer writes. Mixing the two is what broke the first attempt at this. */
+          var segs = rest.split(/\s*,\s*|\s+and\s+|\s+plus\s+/)
+                         .map(function (x) { return x.trim(); })
+                         .filter(function (x) { return x.length; });
+          var listed = segs.length > 1 && segs.every(hasQuantitySignal);
+          var parsed = listed ? segs.map(parseFoodPhrase) : [];
+          if (!listed || parsed.some(function (x) { return !x; })) {
+            return { text: say("one_food") };
+          }
+          var items = parsed.map(function (it) {
+            var a = { food: it.food };
+            if (it.unit && /^(g|grams?|ml|kg|oz)$/.test(it.unit)) {
+              a.grams = it.unit === "kg" ? it.qty * 1000 : it.qty;
+            } else {
+              a.quantity = it.qty;
+            }
+            if (meal) a.meal = meal;
+            return a;
+          });
+          return { text: null, pending: { action: "addFoodLogBatch", args: { items: items } } };
         }
 
         /* "<n><unit> <food>", "<n> <food>", and a bare "a banana" with no number at all. */
@@ -1122,6 +1153,25 @@
     }
     if (!hasNumber && !hasUnit) return null;
     return { text: "I couldn't work out what to log from that. Try it as \"log 100g paneer\" — the food and how much." };
+  }
+
+  /* One phrase, one food -- both word orders and a bare "a banana". Used by the multi-item path.
+     The single-item parser below still has its own copy; migrating it to this is a separate
+     change with the fifteen-phrase probe as the gate, and not worth risking in the same commit. */
+  function parseFoodPhrase(seg) {
+    seg = String(seg || "").replace(/^(?:of|a|an|some)\s+/, "").replace(/\s+/g, " ").trim();
+    if (!seg) return null;
+    var m = seg.match(/^(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?|tbsp|tsp)?\s+(?:of\s+)?([a-z][a-z\s]{1,40})$/);
+    if (m) return { qty: parseFloat(m[1]), unit: m[2] || null, food: m[3].trim() };
+    m = seg.match(/^([a-z][a-z\s]{1,40}?)\s+(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?|tbsp|tsp)?$/);
+    if (m) return { qty: parseFloat(m[2]), unit: m[3] || null, food: m[1].trim() };
+    if (/^[a-z][a-z ]{1,40}$/.test(seg)) return { qty: 1, unit: null, food: seg };
+    return null;
+  }
+
+  /* Does the segment carry its own quantity? That is what makes a split safe. */
+  function hasQuantitySignal(seg) {
+    return /^\s*(?:\d|a\s|an\s|some\s|half\s)/.test(String(seg || ""));
   }
 
   var HANDLER = {
