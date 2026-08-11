@@ -37385,5 +37385,446 @@
   "q": "How much protein is in Yuba Curry?",
   "a": "Yuba Curry has about 3.5 g of protein and 75 calories per 100g, carbs 6.4 g, fat 4.0 g, fibre 1.5 g. Values are from the IGNYT food library.",
   "s": "general_fitness"
+ },
+ {
+  "id": 6686,
+  "c": "Training",
+  "q": "What can I do instead of squats?",
+  "a": "Leg press, hack squat, split squats or goblet squats. If the issue is back or knee comfort rather than equipment, split squats are usually the kindest swap.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6687,
+  "c": "Training",
+  "q": "What can I do instead of deadlifts?",
+  "a": "Romanian deadlifts, hip thrusts, back extensions or a trap bar pull. You keep most of the hamstring and glute work with far less spinal fatigue.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6688,
+  "c": "Training",
+  "q": "What can I do instead of bench press if my shoulder hurts?",
+  "a": "Try a slight incline, a neutral-grip dumbbell press, or floor press. Reducing the range at the bottom is often enough to remove the pinch.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6689,
+  "c": "Training",
+  "q": "What can I do instead of pull-ups?",
+  "a": "Lat pulldowns, band-assisted pull-ups or inverted rows. Negatives from the top build the strength for real ones fastest.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6690,
+  "c": "Training",
+  "q": "What can I do instead of overhead press?",
+  "a": "Landmine press, incline press or seated dumbbell press. All keep the shoulders working when a strict overhead position is uncomfortable.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6691,
+  "c": "Training",
+  "q": "Why do I stall at the same weight?",
+  "a": "Usually recovery or effort rather than the programme. Check sleep and food first, then reduce the weight ten percent and build back with smaller jumps.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6692,
+  "c": "Training",
+  "q": "What is a sticking point?",
+  "a": "The part of a lift where the bar slows most. Pause work and partial reps at that height are the usual fix, along with strengthening the muscles that own that range.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6693,
+  "c": "Training",
+  "q": "Why does the bar drift forward on squats?",
+  "a": "Usually the hips rising faster than the shoulders, or limited ankle mobility. Slow the descent, brace harder, and try a slightly wider stance or raised heel.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6694,
+  "c": "Training",
+  "q": "How do I stop my knees caving in?",
+  "a": "Push them out against the floor as you drive up, strengthen the glutes with band work and hip thrusts, and lighten the load until the pattern holds.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6695,
+  "c": "Training",
+  "q": "Why can't I feel my chest on bench press?",
+  "a": "Often the shoulders taking over. Set the shoulder blades back and down, keep a small arch, and slow the lowering phase so the chest has to work.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6696,
+  "c": "Training",
+  "q": "How do I progress if I have no heavier weights?",
+  "a": "Add reps, add sets, slow the tempo, shorten the rest, or move to a harder variation. Load is one lever of several.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6697,
+  "c": "Cardio",
+  "q": "Treadmill or elliptical - which is better?",
+  "a": "The treadmill burns more for the same effort and builds bone density; the elliptical is easier on the joints. Pick by what your knees prefer.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6698,
+  "c": "Cardio",
+  "q": "Is the rowing machine a good workout?",
+  "a": "Very - it works legs, back and arms together and is easy on the joints. Technique matters: it is a leg drive first, then body, then arms.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6699,
+  "c": "Cardio",
+  "q": "Is the stairmaster good for fat loss?",
+  "a": "It burns well and hits the glutes and calves hard. Like all cardio, it helps by widening the deficit rather than by anything special about the machine.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6700,
+  "c": "Cardio",
+  "q": "Is swimming good for weight loss?",
+  "a": "Yes, it is excellent full-body conditioning and very joint-friendly. Appetite often rises afterwards, so watch what happens at the next meal.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6701,
+  "c": "Cardio",
+  "q": "Is cycling or running better?",
+  "a": "Running burns more per minute and builds bone; cycling is gentler and easier to do for long stretches. Both work - the one you keep doing is better.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6702,
+  "c": "Cardio",
+  "q": "Does yoga build strength?",
+  "a": "Some, especially in the trunk and shoulders, and it helps mobility and stress. It does not replace resistance training for building muscle.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6703,
+  "c": "Cardio",
+  "q": "Is pilates good for the core?",
+  "a": "Yes, particularly for control and endurance of the deep trunk muscles. Pair it with loaded work if you want the abs to grow as well.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6704,
+  "c": "Cardio",
+  "q": "How many calories does an hour of walking burn?",
+  "a": "Roughly 200 to 350 for most adults, depending on bodyweight and pace. Treat any machine or watch figure as an estimate, usually a generous one.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6705,
+  "c": "Nutrition",
+  "q": "How do I meal prep?",
+  "a": "Cook one protein, one carbohydrate and one vegetable in bulk, portion them, and vary the seasoning. Two hours on a weekend covers most of a week.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6706,
+  "c": "Nutrition",
+  "q": "How do I eat well on a budget?",
+  "a": "Eggs, milk, curd, dal, chana, soya chunks, seasonal vegetables, rice, atta and frozen produce. Protein per rupee is highest in the simplest foods.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6707,
+  "c": "Nutrition",
+  "q": "What are cheap sources of protein?",
+  "a": "Eggs, milk, curd, soya chunks, dal, chana and peanuts. Soya chunks are the cheapest by a distance for the protein they deliver.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6708,
+  "c": "Nutrition",
+  "q": "How do I hit my protein target if I have no appetite?",
+  "a": "Use liquids - milk, curd, shakes - which are far easier to get down than another plate of solid food, and spread protein across more meals.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6709,
+  "c": "Nutrition",
+  "q": "Does alcohol affect muscle growth?",
+  "a": "Yes. It disturbs sleep, blunts recovery and adds calories with no nutrition. Occasional drinking will not undo your training; regular heavy drinking will slow it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6710,
+  "c": "Nutrition",
+  "q": "Can I drink alcohol and still lose fat?",
+  "a": "Yes, if it fits your calories - but it is calorie-dense, lowers inhibition around food, and worsens sleep, so it makes the whole thing harder.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6711,
+  "c": "Nutrition",
+  "q": "Does smoking affect training?",
+  "a": "Yes, mainly through reduced oxygen delivery and worse recovery. Endurance suffers most noticeably.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6712,
+  "c": "Nutrition",
+  "q": "Is it bad to eat the same food every day?",
+  "a": "Not for results, but variety covers micronutrients better and is easier to sustain. Repeating a couple of reliable meals is a legitimate strategy.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6713,
+  "c": "Nutrition",
+  "q": "How do I stop overeating at night?",
+  "a": "Eat more protein and fibre earlier, do not leave too few calories for the evening, and sleep enough - night eating is often a tiredness problem.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6714,
+  "c": "Nutrition",
+  "q": "Are cheat meals a good idea?",
+  "a": "A planned meal you enjoy helps adherence. An unplanned day off the rails usually costs more than the meal was worth, so plan it rather than earn it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6715,
+  "c": "Nutrition",
+  "q": "Should I count calories on the weekend?",
+  "a": "Yes, or at least stay aware. Two loose days can undo five careful ones, and that is the most common reason a deficit shows no result.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6716,
+  "c": "General Fitness",
+  "q": "How do I train on a night shift?",
+  "a": "Train before your shift if you can, keep meal times consistent relative to your sleep, and protect the sleep block itself - that matters more than session timing.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6717,
+  "c": "General Fitness",
+  "q": "How do I train with young children?",
+  "a": "Short home sessions, three or four times a week, and count active play as movement. Twenty focused minutes beats a gym trip that never happens.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6718,
+  "c": "General Fitness",
+  "q": "How do I train in hot weather?",
+  "a": "Train earlier or later, drink more, salt your food normally, and expect lower performance. Heat is a load in itself.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6719,
+  "c": "General Fitness",
+  "q": "Should I train when I have not slept?",
+  "a": "Do a lighter session. Strength drops and injury risk rises on very short sleep, but gentle training usually still helps how you feel.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6720,
+  "c": "General Fitness",
+  "q": "Does an accountability partner help?",
+  "a": "For most people, yes - a fixed time with someone else is the single most effective adherence tool there is.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6721,
+  "c": "General Fitness",
+  "q": "How do I get back to the gym after months away?",
+  "a": "Halve your old weights, do two or three full-body sessions a week, and expect strength to return within weeks. The soreness is worst if you go straight back to old numbers.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6722,
+  "c": "General Fitness",
+  "q": "Is it worth using a fitness tracker?",
+  "a": "For steps and consistency, yes. Treat its calorie figures as rough - they can be out by a third in either direction.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6723,
+  "c": "General Fitness",
+  "q": "Are calories burned on my watch accurate?",
+  "a": "Not very. Step counts and heart rate are reasonable; calorie estimates are the least reliable number a watch produces.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6724,
+  "c": "General Fitness",
+  "q": "What are body types like ectomorph and mesomorph?",
+  "a": "A discredited classification from the 1940s. People differ in build and response to training, but these three categories do not predict anything useful.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6725,
+  "c": "General Fitness",
+  "q": "How much do genetics matter?",
+  "a": "They set the pace and the ceiling, not the direction. Everyone improves with training; how fast and how far varies.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6726,
+  "c": "General Fitness",
+  "q": "Why do some people build muscle faster?",
+  "a": "Training age, hormones, sleep, diet, recovery and genetics. Most large differences between two committed people come down to consistency over years.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6727,
+  "c": "General Fitness",
+  "q": "What is muscle memory?",
+  "a": "Muscle keeps extra nuclei from previous training, so regaining lost size is much faster than building it the first time. It is real and it is one reason breaks are not a disaster.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6728,
+  "c": "General Fitness",
+  "q": "Does lifting stunt growth in teenagers?",
+  "a": "No. That idea has no support in the evidence. Supervised strength training is safe for teenagers with sensible loads and good technique.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6729,
+  "c": "General Fitness",
+  "q": "Do I need to confuse my muscles?",
+  "a": "No. Muscles respond to load and effort, not novelty. Changing exercises constantly mainly stops you tracking progress.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6730,
+  "c": "General Fitness",
+  "q": "Is there a fat burning zone?",
+  "a": "Low intensity burns a higher fraction of calories from fat but fewer calories overall. Total energy is what matters, so the zone is a distraction.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6731,
+  "c": "General Fitness",
+  "q": "Does sweating mean a better workout?",
+  "a": "No. Sweat reflects temperature and humidity, not effort or results.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6732,
+  "c": "General Fitness",
+  "q": "Can I turn fat into muscle?",
+  "a": "No, they are different tissues. You lose one and build the other, which over time looks like a swap but is two separate processes.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6733,
+  "c": "General Fitness",
+  "q": "Are supplements necessary to build muscle?",
+  "a": "No. Food, training and sleep do the work. Creatine and protein powder are convenient, and nothing else is close to essential.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6734,
+  "c": "General Fitness",
+  "q": "What do steroids actually do?",
+  "a": "They raise muscle-building capacity well beyond natural limits, and carry real cardiovascular, hormonal and psychological risks. If you are considering them, that is a conversation for a doctor, not a fitness app.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6735,
+  "c": "General Fitness",
+  "q": "Can I get big naturally?",
+  "a": "Yes, though it takes years rather than months. Most physiques that look impossible naturally either are, or belong to people ten years into training.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6736,
+  "c": "Recovery",
+  "q": "Are cold showers or ice baths useful?",
+  "a": "They feel refreshing and may help perceived recovery, but cold immediately after lifting can blunt muscle growth. Keep them away from your training sessions.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6737,
+  "c": "Recovery",
+  "q": "Do compression garments help recovery?",
+  "a": "Mildly, mostly for perceived soreness. Comfortable to wear, but not a meaningful driver of recovery.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6738,
+  "c": "Recovery",
+  "q": "How long does a muscle strain take to heal?",
+  "a": "A mild strain often settles in one to three weeks, a moderate one in four to eight. Returning to load gradually matters more than the calendar.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6739,
+  "c": "Recovery",
+  "q": "When can I train after an injury?",
+  "a": "When the movement is pain-free at light load and you can control it. Return at a fraction of the old weight and build up over two to four weeks.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6740,
+  "c": "Recovery",
+  "q": "Should I take painkillers to train?",
+  "a": "No. Masking pain to keep loading an injured area is how a small problem becomes a long one.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6741,
+  "c": "Recovery",
+  "q": "Does stretching prevent injury?",
+  "a": "Not on its own. Warming up, progressing sensibly and having enough strength through a full range does more.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6742,
+  "c": "Recovery",
+  "q": "How do I know I have recovered enough?",
+  "a": "Your performance in the next session. If the weights feel normal and your form holds, you recovered; if they feel heavy for two sessions running, you did not.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6743,
+  "c": "Fat Loss",
+  "q": "How do I lose weight for a wedding in three months?",
+  "a": "Aim for half a kilo a week with a modest deficit, keep protein high and lift to hold muscle, and walk daily. Crash dieting close to an event usually shows in your face and energy.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6744,
+  "c": "Fat Loss",
+  "q": "Can I lose 10 kg in a month?",
+  "a": "Not as fat, safely. That rate would mean an extreme deficit and would cost muscle, strength and most of the weight would return. Two to four kilos a month is realistic.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6745,
+  "c": "Fat Loss",
+  "q": "How do I look leaner in two weeks?",
+  "a": "Keep training, hold your protein, reduce very salty food slightly, sleep, and do not crash diet. Most short-term change is water and posture rather than fat.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6746,
+  "c": "Muscle Gain",
+  "q": "How do I bulk without gaining fat?",
+  "a": "Keep the surplus small - two to three hundred calories - track weekly weight, and slow down if you are gaining more than about half a percent of bodyweight a week.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6747,
+  "c": "Muscle Gain",
+  "q": "Should I bulk or cut first?",
+  "a": "If you are carrying enough fat that you would not want to add more, cut first. If you are lean and weak, build first. Beginners can often do both at once.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6748,
+  "c": "Muscle Gain",
+  "q": "How long should a bulk last?",
+  "a": "Three to six months, then a period at maintenance or a short cut. Longer bulks tend to add fat faster than muscle after the first few months.",
+  "s": "general_fitness"
  }
 ]
