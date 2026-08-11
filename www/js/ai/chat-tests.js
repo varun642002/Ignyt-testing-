@@ -110,7 +110,11 @@
   test("view today's food READS and does not write", "action", async function () {
     var before = (await foodRows()).length;
     var r = await say("show my logged food");
-    if (!/food log today/.test(r.source || "")) throw new Error("source was " + r.source);
+    /* Either route is correct: this asserts the food log was READ, not which internal handler
+       did the reading. Pinning the handler name would make every promotion look like a
+       regression — and a test that fails when nothing behavioural changed teaches people to
+       ignore it. */
+    if (!/food log today|VIEW_FOOD_LOG/.test(r.source || "")) throw new Error("source was " + r.source);
     if ((await foodRows()).length !== before) throw new Error("a read changed the data");
   });
 
@@ -261,13 +265,20 @@
     ["create a routine",                 "*ask"],
     ["create a chest workout",           "*ask"],
     ["how do I do bench press?",         "exercise how to"],
-    ["what did I eat today?",            "food log today"],
-    ["how many calories did I eat today?","food log today"]
+    ["what did I eat today?",            "*read food"],
+    ["how many calories did I eat today?","*read food"]
   ];
   MUST_WORK.forEach(function (row) {
     test("s19: " + row[0], "brief", async function () {
       var r = await say(row[0]);
       var got = r.action || r.intent || "";
+      if (row[1] === "*read food") {
+        /* The food log was read — by whichever route currently owns it. */
+        if (!/food log today|VIEW_FOOD_LOG/.test(got + " " + r.source)) {
+          throw new Error("did not read the food log: " + got + " / " + r.source);
+        }
+        return;
+      }
       if (row[1] === "*ask") {
         /* Not yet built as an action. It must at minimum ASK rather than return the generic
            no-answer line, which the brief calls out by name as unacceptable. */

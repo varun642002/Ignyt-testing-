@@ -1007,18 +1007,32 @@
         _awaiting = null;
       }
     }
-    /* THE CLASSIFIER DOES NOT LEAD YET, and the suite is why.
+    /* PROMOTION, ONE INTENT AT A TIME. The classifier leads for the intents named here and
+       nowhere else; everything absent stays with the patterns.
 
-       Promoting it above the pattern table was tried and reverted in the same sitting: 43 tests
-       went to 31. Most of those were a reporting gap rather than a routing one, but one was
-       real and disqualifying — "delete it" stopped asking which record was meant, because the
-       classifier confidently claimed a bare pronoun that names nothing. A classifier is
-       comfortable being confident about a sentence with no object; a pattern that requires an
-       object is not, and for destructive verbs that timidity is the feature.
+       Promoting all ten at once was tried and reverted — 43 tests went to 31, and one failure
+       was disqualifying: "delete it" stopped asking which record was meant, because a
+       classifier will confidently claim a bare pronoun that names nothing while a pattern
+       requiring an object refuses. For destructive verbs that refusal is the feature.
 
-       So it stays BELOW: patterns first for what they already cover, the classifier for what
-       falls through. Promoting it is still the right destination, and the route there is per
-       intent rather than wholesale — move one, run the suite, keep it only if the count holds. */
+       VIEW_FOOD_LOG goes first because the patterns demonstrably get it wrong: "did i log
+       anything today" is a question ABOUT the food log, and the table answers it by trying to
+       WRITE to one, on the strength of the word "log". It is also the safest possible first
+       move — the intent only reads.
+
+       The bar is 0.8. Below that a pattern that matches is the better bet, because it is
+       certain about a sentence it was written for while the classifier is choosing between
+       neighbours. Add the next intent to this list, run the suite, and keep it only if the
+       count holds. */
+    var PROMOTED = { VIEW_FOOD_LOG: 1 };
+    if (window.IgnytIntents) {
+      var lead = null;
+      try { lead = IgnytIntents.classify(t); } catch (e) { lead = null; }
+      if (lead && PROMOTED[lead.intent] && lead.confidence >= 0.8) {
+        var led = await runClassified(A, t, lead);
+        if (led) return led;
+      }
+    }
 
     for (var i = 0; i < INTENTS.length; i++) {
       var it = INTENTS[i];
