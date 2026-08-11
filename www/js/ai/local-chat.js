@@ -905,6 +905,10 @@
      the handler that intent already has decides what to do — so a classified message and a
      pattern-matched one execute identical code, and there is no second implementation of any
      action to drift. */
+  /* The handlers that report the user's own records. Named once, used by both places that
+     have to let the knowledge base outrank them. */
+  var RECORD_READS = { "food log today": 1, "progress": 1, "weight history": 1, "today workout": 1 };
+
   var HANDLER = {
     DELETE_TODAY_FOOD: "delete todays food",
     LOG_FOOD: "log food",
@@ -922,6 +926,19 @@
   async function runClassified(A, t, guess) {
     var wanted = HANDLER[guess.intent];
     if (!wanted) return null;
+    /* ONE PLACE, NOT THREE. The knowledge-base-outranks-records rule was added at the promoted
+       call site and then at the pattern loop, and the hijacks survived both because these
+       messages arrive by the third route -- the late classifier fallback. Putting it here covers
+       every path that can reach a records handler through the classifier, which is all of them.
+       "is soya good for muscle" scored VIEW_TODAY_WORKOUT and answered with today's workout;
+       "how much protein should i eat" scored VIEW_FOOD_LOG and answered with the food log. Both
+       have real answers in the base. A read of the user's records only wins when the base has
+       nothing, which is exactly the case for "did i log anything today". */
+    if (RECORD_READS[wanted] && window.IgnytKnowledge) {
+      var kbWins = null;
+      try { kbWins = await IgnytKnowledge.ask(t); } catch (e) { kbWins = null; }
+      if (kbWins && kbWins.answer) return null;
+    }
     for (var k = 0; k < INTENTS.length; k++) {
       if (INTENTS[k].name !== wanted) continue;
       if (INTENTS[k].needs && !has(A, INTENTS[k].needs)) return null;
@@ -1049,6 +1066,22 @@
          Declining means THIS handler has nothing; the next one, or the knowledge base, still
          might. */
       if (!out) continue;
+
+      /* THE SAME RULE THE PROMOTED PATH ALREADY HAS, APPLIED HERE TOO. A read handler that
+         succeeds is not proof the message was a request for records: "is soya good for muscle"
+         matched the workout read and returned today's workout, "what should i eat before a
+         workout" returned the food log. Those handlers do not decline -- they have data -- so
+         the continue above never fires and the answer below is never reached.
+         Records handlers answer questions ABOUT THE USER; the knowledge base answers questions
+         about fitness. When the base has a confident answer, the message was the second kind.
+         Reads that genuinely address records -- "did i log anything today" -- are not in the
+         base at all, so they still win here. */
+      if (RECORD_READS[it.name] && window.IgnytKnowledge) {
+        var kbFirst = null;
+        try { kbFirst = await IgnytKnowledge.ask(t); } catch (e) { kbFirst = null; }
+        if (kbFirst && kbFirst.answer) continue;
+      }
+
       out.source = "BUILT_IN_ACTION:" + it.name;
       return out;
     }
