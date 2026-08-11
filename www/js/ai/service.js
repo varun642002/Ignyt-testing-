@@ -164,6 +164,61 @@
      onEvent is how the UI stays live rather than waiting for the whole thing: it fires for
      each action card as it happens, then once for the final text. */
 
+
+  /* ---------- the last rung: ask the model what was meant --------------------------------
+     Reached only when the patterns, the classifier and the knowledge base have all declined.
+     Everything before this point is local, instant and free; this costs a request, so it runs
+     for the messages that would otherwise have been answered with "I don't know that one".
+
+     THE MODEL RETURNS AN INTENT, NOT AN ANSWER. Its reply goes through IgnytAIIntent.validate
+     before anything happens, and what comes out is executed by the same action layer a typed
+     message uses -- same risk tiers, same confirmation gate for anything destructive.
+
+     IT FAILS SILENTLY, WHICH IS THE POINT. No backend, no token, a timeout, a malformed reply,
+     an intent that fails validation: every one returns null and the caller says exactly what it
+     would have said without any of this. A fallback that turns "I don't know" into an error
+     message is worse than no fallback. */
+  var AI_TIMEOUT_MS = 6000;
+
+  async function aiIntentFallback(message) {
+    if (!window.IgnytAIIntent || !window.IgnytAIActions) return null;
+    if (!apiBase()) return null;
+
+    var raw = null;
+    try {
+      /* A short timeout on purpose. The backend sleeps on a free instance and takes up to a
+         minute to wake, and a chat that hangs for a minute is broken however good the answer.
+         A cold first message loses this rung and answers locally; the next one, seconds later,
+         has a warm server. */
+      raw = await Promise.race([
+        post({ message: message, system: window.IgnytAIIntent.contract(), mode: "intent" }),
+        new Promise(function (resolve) { setTimeout(function () { resolve(null); }, AI_TIMEOUT_MS); })
+      ]);
+    } catch (e) { return null; }
+    if (!raw) return null;
+
+    var text = raw.reply || raw.text || raw.message || raw.content || null;
+    if (typeof text !== "string") return null;
+
+    var v = null;
+    try { v = window.IgnytAIIntent.validate(text); } catch (e) { v = null; }
+    if (!v) return null;
+
+    /* The tier is read from the action registry, never from the model's reply. A destructive
+       intent becomes a pending confirmation exactly as a typed "delete todays food" does. */
+    var risk = window.IgnytAIIntent.riskOf(v.action);
+    if (!risk) return null;
+    if (risk !== "read") {
+      return { text: null, pending: { action: v.action, args: v.args }, source: "AI_INTENT:" + v.intent };
+    }
+
+    var res = null;
+    try { res = await window.IgnytAIActions.run(v.action, v.args); } catch (e) { return null; }
+    var card = res && res.result;
+    if (!res || !res.ok || !card || card.card === "error") return null;
+    return { text: card.message || null, card: card, source: "AI_INTENT:" + v.intent };
+  }
+
   async function ask(message, opts) {
     opts = opts || {};
     var onEvent = opts.onEvent || function () {};
@@ -263,6 +318,20 @@
          sub-threshold match that is still well above noise, and returns nothing at all for
          safety-flagged messages, so this cannot answer a pain question sideways. It is phrased
          as a question the user can say yes to, never as an answer. */
+      /* Before giving up, ask the model what was meant. Null from here means it could not help,
+         and the reply below is unchanged from what it has always been. */
+      var viaAI = null;
+      try { viaAI = await aiIntentFallback(message); } catch (e) { viaAI = null; }
+      if (viaAI) {
+        if (viaAI.pending) {
+          onEvent({ type: "confirm", action: viaAI.pending.action, args: viaAI.pending.args });
+          return { text: null, pending: viaAI.pending, source: viaAI.source };
+        }
+        if (viaAI.card) onEvent({ type: "card", result: viaAI.card });
+        else if (viaAI.text) onEvent({ type: "text", text: viaAI.text });
+        return { text: viaAI.text, result: viaAI.card, ok: true, source: viaAI.source };
+      }
+
       var near = null;
       try { if (window.IgnytKnowledge && IgnytKnowledge.suggest) near = await IgnytKnowledge.suggest(message); } catch (e) { near = null; }
       if (near && near.question) msg = msg + "\n\nDid you mean: \u201c" + near.question + "\u201d";
@@ -373,6 +442,8 @@
             : ran ? ran
             : src.indexOf("BUILT_IN_ACTION") === 0 ? src.split(":")[1] || "ACTION"
             : src.indexOf("BUILT_IN_INTENT") === 0 ? src.split(":")[1] || "INTENT"
+            /* The rule this comment states, applied to the rung added in the same commit. */
+            : src.indexOf("AI_INTENT") === 0 ? src.split(":")[1] || "AI_INTENT"
             : src === "BUILT_IN_KNOWLEDGE" ? "KNOWLEDGE"
             : src === "BUILT_IN_UNKNOWN" ? "UNKNOWN"
             : "ANSWER",
