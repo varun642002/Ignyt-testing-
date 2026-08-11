@@ -404,6 +404,22 @@
         var r = await A.run("getFoodNutrition", { food: food });
         var d = (r && r.result) || {};
         if (!d.message) return null;
+        /* THE CONVERSATION CONTINUES. After "how many calories in banana", the next message is
+           usually "in chicken" or just "and rice" -- three words that carry no question, no verb
+           and no context except what was just asked. Holding the slot open lets the follow-up
+           mean what it plainly means. Reported from a device: "In chicken" answered nothing at
+           all, immediately after the same question about a banana. */
+        _awaiting = {
+          name: "food nutrition",
+          at: Date.now(),
+          fill: function (t2) {
+            var m2 = String(t2).match(/^(?:and|in|of|what about|how about|for)?\s*([a-z][a-z\s]{1,40})$/);
+            if (!m2) return null;
+            var f2 = m2[1].replace(/\s+/g, " ").trim();
+            if (!f2 || f2.length < 2) return null;
+            return { pending: { action: "getFoodNutrition", args: { food: f2 } } };
+          }
+        };
         return { text: d.message, card: d.card || null };
       }
     },
@@ -971,6 +987,14 @@
            segment is a food the library actually holds, so a sentence about anything else falls
            through untouched. */
         if (/\b(weight|weigh|steps?|workout|water|streak|score|progress|delete|remove|sets?|reps?)\b/.test(t)) return false;
+        /* A MEAL OR A DAY, THEN A FOOD, AND NOTHING ELSE. "dinner bbq chicken" and "breakfast
+           idli" never reached run() at all -- this gate wanted a verb or a separator, and they
+           have neither. The meal word IS the instruction; run() still refuses unless what is left
+           is a food the library holds. */
+        if (/^(?:today|todays|yesterday|yesterdays|tonight|this morning|last night)?\s*(?:breakfast|lunch|dinner|snacks?)\s+[a-z][a-z ]{1,40}$/.test(t)
+            || /^(?:today|todays|yesterday|yesterdays)\s+[a-z][a-z ]{1,40}$/.test(t)) {
+          return true;
+        }
         /* A bare list of plain words: "chicken and chapati". */
         if (/^[a-z][a-z ,]*(?:\band\b|,)[a-z ,]*[a-z]$/.test(t)) return true;
         /* THE SAME LIST WITH QUANTITIES, WHICH IS THE COMMONER SHAPE. "3 eggs, 2 slices of bread
@@ -1055,6 +1079,31 @@
         /* The pronoun goes too. "i ate 2 eggs and a banana" left "i ate 2 eggs" as the first
            segment, which does not begin with a quantity, so the list looked unquantified and
            the whole thing was refused. */
+        /* ONE FOOD, NO VERB, BUT A MEAL OR A DAY SAID WHAT WAS MEANT. "dinner bbq chicken" is a
+           log request: the meal word has already been stripped above, leaving a bare food that no
+           pattern claims, so it came back as no answer. A meal or day word is the signal -- a
+           lone "chicken" with nothing around it stays unhandled, because it is as likely to be a
+           question. The food still has to exist in the library. */
+        if ((meal || dayOffset != null) && !/\b(log|ate|eat|had|add|drank|drink|having|consumed|finished)\b/.test(t)) {
+          var solo = t.replace(/\s+/g, " ").trim();
+          if (/^[a-z][a-z ]{1,40}$/.test(solo) && !/\b(and|plus)\b|,/.test(solo)) {
+            var soloHit = await A.run("searchFood", { query: solo });
+            var soloRows = ((soloHit && soloHit.result) || {}).results || ((soloHit && soloHit.result) || {}).foods || [];
+            var soloExact = soloRows.filter(function (x) {
+              return String(x.name || "").toLowerCase() === solo.toLowerCase();
+            });
+            if (soloExact.length) {
+              var soloArgs = { food: solo, quantity: 1 };
+              if (meal) soloArgs.meal = meal;
+              if (dayOffset != null && dayOffset > 0) {
+                var sb = new Date(); sb.setDate(sb.getDate() - dayOffset);
+                soloArgs.date = new Date(sb.getTime() - sb.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+              }
+              return { text: null, pending: { action: "addFoodLog", args: soloArgs } };
+            }
+          }
+        }
+
         var rest = t.replace(/^\s*(?:i|ive|i have)\s+/, "")
                     .replace(/^\s*(log|ate|eat|had|add|drank|drink|drinking|having|consumed|finished)\b/, "")
                     .replace(/^\s*(just)\b/, "").trim();
