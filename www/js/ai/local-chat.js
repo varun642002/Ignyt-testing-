@@ -308,6 +308,7 @@
     },
         {
       name: "protein target",
+      strict: true,   // its matcher excludes past tense and food lookups; that must hold on both routes
       needs: "getProteinTarget",
       /* THE CLASSIFIER CANNOT SPLIT THIS PAIR, so a matcher does.
            "how much protein SHOULD i eat"  -> the target, computed from weight and goal
@@ -348,6 +349,7 @@
     },
     {
       name: "calorie target",
+      strict: true,   // its matcher excludes past tense and food lookups; that must hold on both routes
       needs: "getCalorieTarget",
       /* Same split as the protein target: "how many calories SHOULD i eat" is the target,
          "how many calories DID i eat today" is the food log. Past tense and dated forms are
@@ -372,6 +374,7 @@
     },
     {
       name: "food nutrition",
+      strict: true,   // its matcher excludes past tense and food lookups; that must hold on both routes
       needs: "getFoodNutrition",
       /* "how many calories in oats" is a question about a FOOD, not about the user's log and not
          about their target. Three things now share the word calories:
@@ -1522,6 +1525,22 @@
     for (var k = 0; k < INTENTS.length; k++) {
       if (INTENTS[k].name !== wanted) continue;
       if (INTENTS[k].needs && !has(A, INTENTS[k].needs)) { trace("rc-exit", "needs unavailable: " + INTENTS[k].needs); return null; }
+
+      /* STRICT ENTRIES KEEP THEIR MATCHER ON THIS ROUTE TOO.
+         runClassified calls run() directly, so a guard written into test() applies on the pattern
+         route and not here. Making that universal was tried and reverted: "get rid of everything
+         I ate today" reaches the delete handler BECAUSE the classifier rescues phrasings the
+         regex misses, and that rescue is what this route is for.
+         So it is a per-intent choice rather than a rule. An entry whose test() encodes a real
+         exclusion -- "not a past-tense question", "not a food lookup" -- sets strict and is
+         checked here as well; an entry that wants the rescue leaves it unset.
+         First piece of the routing rebuild: the choice the old shape could not express, which is
+         why fixing one case kept breaking the other. */
+      if (INTENTS[k].strict && typeof INTENTS[k].test === "function") {
+        var strictOk = false;
+        try { strictOk = !!INTENTS[k].test(t); } catch (e) { strictOk = false; }
+        if (!strictOk) { trace("rc-exit", "strict matcher declined: " + INTENTS[k].name); return null; }
+      }
       /* THE SAME QUESTION GUARD THE PATTERN LOOP HAS, AND THIS IS THE COPY THAT MATTERED.
          Guarding only the patterns left the classifier route wide open: "should i delete my food
          log" reached DELETE_TODAY_FOOD and DELETED THE LOG, and "how do i start a workout"
