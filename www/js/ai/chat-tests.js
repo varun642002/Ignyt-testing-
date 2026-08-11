@@ -285,7 +285,13 @@
         if (r.source === "BUILT_IN_UNKNOWN") throw new Error("generic fallback: " + (r.response||"").slice(0,44));
         return;
       }
-      if (got !== row[1]) throw new Error("got " + got + " (" + r.source + ")");
+      /* Either the handler name directly, or the classifier route that runs that exact
+         same handler -- resolved through local-chat's own map rather than a list kept
+         in step by hand. */
+      if (got === row[1]) return;
+      var m = /^BUILT_IN_INTENT:(.+)$/.exec(r.source || "");
+      if (m && chat().handlerFor && chat().handlerFor(m[1]) === row[1]) return;
+      throw new Error("got " + got + " (" + r.source + ")");
     });
   });
 

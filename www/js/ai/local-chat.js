@@ -1024,7 +1024,7 @@
        certain about a sentence it was written for while the classifier is choosing between
        neighbours. Add the next intent to this list, run the suite, and keep it only if the
        count holds. */
-    var PROMOTED = { VIEW_FOOD_LOG: 1 };
+    var PROMOTED = { VIEW_FOOD_LOG: 1, VIEW_PROGRESS: 1 };
     if (window.IgnytIntents) {
       var lead = null;
       try { lead = IgnytIntents.classify(t); } catch (e) { lead = null; }
@@ -1111,6 +1111,13 @@
 
   window.IgnytLocalChat = Object.freeze({
     tryAnswer: tryAnswer,
+    /* The intent -> handler map, exposed read-only so the test suite can assert that a
+       message reached the RIGHT HANDLER without caring which route carried it there.
+       Promoting an intent changes the reported label from the handler name to
+       BUILT_IN_INTENT:NAME while running the identical function; a test pinned to the
+       label alone fails on a change that altered no behaviour, which is how a suite
+       teaches people to ignore it. Reading the real map means this cannot drift. */
+    handlerFor: function (intent) { return HANDLER[intent] || null; },
     /* Whether a question is currently open, and dropping it. The chat screen clears the slot
        when the transcript is cleared — an answer to a question that is no longer on screen is
        not an answer to anything. */
