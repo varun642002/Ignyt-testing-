@@ -111,7 +111,35 @@
          at every restart. */
       var carry = "";
       var sessionFinal = "";
-      function transcript() { return (carry + " " + sessionFinal).replace(/\s+/g, " ").trim(); }
+    
+  /* LAST LINE OF DEFENCE AGAINST A REPEATING TRANSCRIPT. Two fixes have been made to how results
+     are accumulated, and the device still produced "delete delete delete all delete all the..."
+     -- so the engine is doing something neither model predicted. Rather than guess a third time,
+     this collapses a phrase that repeats its own prefix, which is the exact shape of the damage
+     regardless of what caused it.
+     It removes a run of words identical to the run just emitted. "today today lunch today lunch
+     chicken" becomes "today lunch chicken"; "log 200g chicken and 100g rice" is untouched,
+     because nothing in it repeats the tail. A deliberate "very very" loses one "very" -- the
+     price, and a small one against a sentence glued to itself five times. */
+  function collapseRepeats(t) {
+    var w = String(t || "").trim().split(/\s+/);
+    if (w.length < 2) return String(t || "").trim();
+    var out = [];
+    for (var i = 0; i < w.length; i++) {
+      var matched = 0;
+      var max = Math.min(out.length, w.length - i);
+      for (var n = max; n >= 1; n--) {
+        var a = out.slice(out.length - n).join(" ").toLowerCase();
+        var b = w.slice(i, i + n).join(" ").toLowerCase();
+        if (a === b) { matched = n; break; }
+      }
+      if (matched) { i += matched - 1; continue; }
+      out.push(w[i]);
+    }
+    return out.join(" ");
+  }
+
+  function transcript() { return (carry + " " + sessionFinal).replace(/\s+/g, " ").trim(); }
       var settled = false;
       var stopping = false;              // stop() was called deliberately; do not restart
       var lastVoiceAt = Date.now();
@@ -215,7 +243,7 @@
           } catch (e) { /* fall through and settle below */ }
         }
         clearSilence();
-        var text = transcript();
+        var text = collapseRepeats(transcript());
         if (!text) return done(reject, { code: "no_speech", message: "Didn't catch that. Try again." });
         onState("processing");
         settled = true; _rec = null;
