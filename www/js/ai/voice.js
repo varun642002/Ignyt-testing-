@@ -38,6 +38,12 @@
   var _rec = null;          // the live recognition object, if listening
   var _speaking = false;
 
+  /* How long a silence ends the turn, and the hard cap on holding the microphone. 1.8s is long
+     enough to think mid-sentence without the turn ending, short enough that finishing does not
+     feel like waiting. */
+  var SILENCE_MS = 1800;
+  var MAX_LISTEN_MS = 60000;
+
   function lang() {
     try { return localStorage.getItem(LANG_KEY) || LANGS.en; } catch (e) { return LANGS.en; }
   }
@@ -79,20 +85,47 @@
 
       var rec = new SR();
       _rec = rec;
-      rec.lang = opts.lang || lang();
+      /* ENGLISH ONLY FOR NOW. The multilingual plumbing below is intact -- lang(), setLang() and
+         LANGS still work and the router still detects the language of typed text -- but speech
+         recognition is pinned to English until the other languages are picked up again. Passing
+         opts.lang still overrides, so nothing is lost, only defaulted. */
+      rec.lang = opts.lang || LANGS.en;
       rec.interimResults = true;      // drives the live transcript while the user is talking
       rec.maxAlternatives = 1;
-      /* continuous:false means it stops on its own at the end of an utterance, which is the
-         behaviour asked for: tap, speak, it stops itself. Nothing here ever holds the
-         microphone open waiting. */
-      rec.continuous = false;
+      /* LISTEN UNTIL THE PERSON HAS ACTUALLY FINISHED. continuous:false ends recognition at the
+         first pause in speech, which cuts people off mid-sentence -- anyone who pauses to think,
+         or says "log two eggs ... and a banana", loses the second half. Continuous keeps the
+         stream open, and a silence timer decides when the sentence is over.
+         The engine still fires onend on its own at a pause on some platforms; when that happens
+         and the user has not gone quiet long enough, recognition is restarted rather than
+         resolved. MAX_LISTEN_MS is the backstop so a live microphone can never be left open. */
+      rec.continuous = true;
 
       var finalText = "";
       var settled = false;
+      var stopping = false;              // stop() was called deliberately; do not restart
+      var lastVoiceAt = Date.now();
+      var startedAt = Date.now();
+      var silenceTimer = null;
+
+      function clearSilence() {
+        if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+      }
+
+      /* Restarted on every scrap of speech, interim included -- interim results arrive while the
+         person is still talking, so they are the signal that the sentence is not over. */
+      function armSilence() {
+        clearSilence();
+        silenceTimer = setTimeout(function () {
+          stopping = true;
+          try { rec.stop(); } catch (e) { try { rec.abort(); } catch (e2) {} }
+        }, SILENCE_MS);
+      }
 
       function done(fn, arg) {
         if (settled) return;
         settled = true;
+        clearSilence();
         _rec = null;
         onState("idle");
         fn(arg);
@@ -108,6 +141,8 @@
           else interim += r[0].transcript;
         }
         if (interim) onPartial(interim);
+        /* Any speech at all, final or interim, means they are still going. */
+        if (interim || finalText) { lastVoiceAt = Date.now(); armSilence(); }
       };
 
       rec.onerror = function (e) {
@@ -133,6 +168,17 @@
 
       rec.onend = function () {
         if (settled) return;
+        var quietFor = Date.now() - lastVoiceAt;
+        var openFor = Date.now() - startedAt;
+        /* The engine gave up at a pause, but the person has not finished: keep listening. Only
+           a deliberate stop, a long enough silence, or the backstop ends the turn. */
+        /* Both flags matter: `stopping` is the silence timer's own stop, `_ignytStopping` is the
+           user tapping the mic off from outside this closure. Checking only one restarts the
+           microphone on a deliberate stop, which is the opposite of what the tap meant. */
+        if (!stopping && !rec._ignytStopping && quietFor < SILENCE_MS && openFor < MAX_LISTEN_MS) {
+          try { rec.start(); return; } catch (e) { /* fall through and settle below */ }
+        }
+        clearSilence();
         var text = finalText.trim();
         if (!text) return done(reject, { code: "no_speech", message: "Didn't catch that. Try again." });
         onState("processing");
@@ -148,8 +194,11 @@
     });
   }
 
+  /* The user tapping the mic off is a deliberate stop: resolve with whatever was said rather
+     than restarting on the onend that follows. */
   function stopListening() {
     if (!_rec) return false;
+    try { _rec._ignytStopping = true; } catch (e) {}
     try { _rec.stop(); } catch (e) { try { _rec.abort(); } catch (e2) {} }
     return true;
   }
