@@ -138,6 +138,15 @@
 
     CREATE_ROUTINE: [
       "create a routine", "make a routine", "build me a routine", "new routine",
+      /* "give me a ..." was missing entirely, so every sentence using that frame scored
+         null while "make me a ..." and "build me a ..." scored 0.82 and 1.00. Reported
+         from a device as "give me a chest worked plan" -- the typo was incidental, the
+         correctly spelled version failed the same way. */
+      "give me a chest workout plan", "give me a workout plan", "give me a routine",
+      "give me a chest plan", "give me a leg workout plan", "give me a push day",
+      "give me a training plan", "give me a chest workout", "gimme a workout plan",
+      "can you give me a workout plan", "chest workout plan", "leg workout plan",
+      "a plan for chest", "plan for legs", "i need a chest routine", "i need a workout plan",
       "create a chest workout", "make a push day", "build a leg day",
       "create a push pull legs routine", "i want a new routine", "set up a workout for me",
       "make me a chest day", "create a program"

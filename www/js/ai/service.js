@@ -259,8 +259,15 @@
       var msg = (window.IgnytLang && IgnytLang.t)
         ? IgnytLang.t("unknown", lang)
         : "I don't have a reliable answer for that yet.";
+      /* Name the nearest question we know before giving up. suggest() returns only a
+         sub-threshold match that is still well above noise, and returns nothing at all for
+         safety-flagged messages, so this cannot answer a pain question sideways. It is phrased
+         as a question the user can say yes to, never as an answer. */
+      var near = null;
+      try { if (window.IgnytKnowledge && IgnytKnowledge.suggest) near = await IgnytKnowledge.suggest(message); } catch (e) { near = null; }
+      if (near && near.question) msg = msg + "\n\nDid you mean: \u201c" + near.question + "\u201d";
       onEvent({ type: "text", text: msg });
-      return { text: msg, source: "BUILT_IN_UNKNOWN", confidence: 0 };
+      return { text: msg, source: "BUILT_IN_UNKNOWN", confidence: 0, suggested: (near && near.question) || null };
     }
 
     var context = await pickContext(message);

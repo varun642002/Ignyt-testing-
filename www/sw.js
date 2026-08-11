@@ -2,7 +2,7 @@
    against contents that are no longer what v145 held. A device holding v146 would still
    refresh, since the names differ — but reusing an old version number for new content is a
    trap for whoever debugs the next cache issue. Versions only go up. */
-const CACHE = "ignyt-v383";
+const CACHE = "ignyt-v384";
 /* Generated from the <script> and <link> tags in index.html. Hand-maintaining this
    drifted: it still listed js/health/health-security.js after that stopped being
    loaded, and named none of the diet-plan, fasting, reminders, supplements or

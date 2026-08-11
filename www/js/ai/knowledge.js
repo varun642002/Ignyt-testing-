@@ -360,8 +360,39 @@
     };
   }
 
+  /* THE BEST MATCH WE REFUSED TO GIVE, offered as a question rather than an answer.
+     ask() drops the top entry on the floor when it lands under the threshold, which is right --
+     a 0.45 match presented as fact is a confidently wrong answer. But the same 0.45 is often a
+     perfectly good GUESS AT WHAT WAS MEANT, and throwing it away is why two device messages in
+     a row got the identical dead end.
+
+     Reported from a device: "why my weight is structured in daily". Nothing maps "structured"
+     to "fluctuating" and nothing should; the honest move is to name the nearest question and
+     let the user say yes.
+
+     NEVER around the safety gate. A flagged question returns nothing here, so a pain or injury
+     message cannot be answered sideways by a suggestion the gate would have blocked. And the
+     band has a floor: below SUGGEST_MIN the nearest question is noise, and "did you mean"
+     followed by something unrelated is worse than admitting we do not know. */
+  var SUGGEST_MIN = 0.35;
+  async function suggest(text) {
+    if (safetyFlag(text)) return null;
+    var entries = await load();
+    if (!entries.length) return null;
+    var qt = tokens(text);
+    if (!qt.length) return null;
+    var best = null, bestScore = 0;
+    for (var i = 0; i < entries.length; i++) {
+      var sc = score(qt, entries[i]);
+      if (sc > bestScore) { bestScore = sc; best = entries[i]; }
+    }
+    if (!best || bestScore >= threshold() || bestScore < SUGGEST_MIN) return null;
+    return { question: best.q, id: best.id, score: bestScore };
+  }
+
   window.IgnytKnowledge = Object.freeze({
     ask: ask,
+    suggest: suggest,
     load: load,
     threshold: threshold,
     setThreshold: function (v) {
