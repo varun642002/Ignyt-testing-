@@ -191,7 +191,15 @@
          A cold first message loses this rung and answers locally; the next one, seconds later,
          has a warm server. */
       raw = await Promise.race([
-        post({ message: message, system: window.IgnytAIIntent.contract(), mode: "intent" }),
+        /* THE CONTRACT GOES IN THE MESSAGE, because there is nowhere else to put it. I sent it
+           as {system, mode} first -- fields the API does not have. ChatRequest accepts message,
+           context, history, toolResults and timezone, so an invented field is either rejected or
+           ignored, and either way the model never saw the instruction: it replied as a chatbot
+           and the validator correctly threw the prose away. Checked against the live OpenAPI
+           schema rather than assumed a second time.
+           No history and no context: this rung asks one question about one sentence, and a
+           conversation would only give the model room to answer in prose. */
+        post({ message: window.IgnytAIIntent.contract() + "\n\nMessage: " + message, history: [] }),
         new Promise(function (resolve) { setTimeout(function () { resolve(null); }, AI_TIMEOUT_MS); })
       ]);
     } catch (e) { return null; }

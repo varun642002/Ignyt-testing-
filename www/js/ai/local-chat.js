@@ -1015,6 +1015,12 @@
         /* MEAL FIRST, and stripped out before the food is read. "log 2 eggs for breakfast"
            otherwise parses the food as "eggs for breakfast", which matches nothing in the
            library and produces a not-found for a food that is plainly there. */
+        /* "A PLATE OF" IS ONE PLATE. The parsers want a number before a unit, so an article
+           left "plate of biryani" as the food name and the library was searched for a container.
+           Rewritten to "1 plate of ..." before anything else reads it, which keeps one parser
+           rather than teaching every regex about articles. */
+        t = t.replace(/\b(?:a|an|one)\s+(plates?|bowls?|glass|glasses|cups?|servings?|scoops?|packets?|pieces?|slices?)\s+of\b/, "1 $1 of");
+
         var meal = null;
         /* "to breakfast" as well as "for lunch". Missing "to" left the food parsed as
            "eggs to breakfast", which matches nothing in the library — so a food that is
@@ -1219,7 +1225,7 @@
         }
 
         /* "<n><unit> <food>", "<n> <food>", and a bare "a banana" with no number at all. */
-        var m = t.match(/(?:log|ate|eat|had|add|drank|drink|drinking|having|consumed|finished)\s+(?:a\s+|an\s+)?(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?)?\s+(?:of\s+)?([a-z][a-z\s]{1,40})$/);
+        var m = t.match(/(?:log|ate|eat|had|add|drank|drink|drinking|having|consumed|finished)\s+(?:a\s+|an\s+)?(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?|plates?|glass|glasses|servings?|scoops?|packets?)?\s+(?:of\s+)?([a-z][a-z\s]{1,40})$/);
         if (!m) {
           var m2 = t.match(/(?:log|ate|eat|had|add|drank|drink|drinking|having|consumed|finished)\s+(?:a|an|some)?\s*([a-z][a-z\s]{1,40})$/);
           /* Fall through rather than giving up: the reverse word order below has not been
@@ -1236,7 +1242,7 @@
              bare "s" -- JavaScript drops unknown escapes in string literals silently, so the
              pattern compiled from nonsense and matched nothing. Second time today an escape
              has been eaten between here and the editor. */
-          var mRev = t.match(/(?:log|ate|eat|had|add|drank|drink|drinking|having|consumed|finished)\s+(?:a\s+|an\s+|some\s+)?([a-z][a-z\s]{1,40}?)\s+(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?|tbsp|tsp)?$/);
+          var mRev = t.match(/(?:log|ate|eat|had|add|drank|drink|drinking|having|consumed|finished)\s+(?:a\s+|an\s+|some\s+)?([a-z][a-z\s]{1,40}?)\s+(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?|plates?|glass|glasses|servings?|scoops?|packets?|tbsp|tsp)?$/);
           if (mRev) m = [null, mRev[2], mRev[3] || null, mRev[1]];
         }
         if (!m) return unparsedFood(t);
@@ -1303,7 +1309,7 @@
               /* Re-parse the reply as though it had been said with the verb attached, so
                  "200g chicken breast" behaves exactly like "log 200g chicken breast" — one
                  parser, not a second one that drifts. */
-              var m2 = ("log " + t2).match(/log\s+(?:a\s+|an\s+)?(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?)?\s+(?:of\s+)?([a-z][a-z\s]{1,40})$/)
+              var m2 = ("log " + t2).match(/log\s+(?:a\s+|an\s+)?(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?|plates?|glass|glasses|servings?|scoops?|packets?)?\s+(?:of\s+)?([a-z][a-z\s]{1,40})$/)
                     || ("log " + t2).match(/log\s+(?:a|an|some)?\s*([a-z][a-z\s]{1,40})$/);
               if (!m2) return null;
               var hasQty = /^\d/.test(m2[1] || "");
@@ -1427,9 +1433,9 @@
   function parseFoodPhrase(seg) {
     seg = String(seg || "").replace(/^(?:of|a|an|some)\s+/, "").replace(/\s+/g, " ").trim();
     if (!seg) return null;
-    var m = seg.match(/^(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?|tbsp|tsp)?\s+(?:of\s+)?([a-z][a-z\s]{1,40})$/);
+    var m = seg.match(/^(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?|plates?|glass|glasses|servings?|scoops?|packets?|tbsp|tsp)?\s+(?:of\s+)?([a-z][a-z\s]{1,40})$/);
     if (m) return { qty: parseFloat(m[1]), unit: m[2] || null, food: m[3].trim() };
-    m = seg.match(/^([a-z][a-z\s]{1,40}?)\s+(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?|tbsp|tsp)?$/);
+    m = seg.match(/^([a-z][a-z\s]{1,40}?)\s+(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?|plates?|glass|glasses|servings?|scoops?|packets?|tbsp|tsp)?$/);
     if (m) return { qty: parseFloat(m[2]), unit: m[3] || null, food: m[1].trim() };
     if (/^[a-z][a-z ]{1,40}$/.test(seg)) return { qty: 1, unit: null, food: seg };
     return null;
