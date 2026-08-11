@@ -859,7 +859,7 @@
            the knowledge base, and if neither can answer, saying so is correct -- inventing
            a food entry is not. */
         if (QUESTION_OPENER.test(t)) return false;
-        return /\b(log|ate|eat|had|add)\b/.test(t)
+        return /\b(log|ate|eat|had|add|drank|drink|drinking|having|consumed|finished)\b/.test(t)
             && !/\b(weight|weigh|steps?|workout|water|streak|score|progress)\b/.test(t);
       },
       run: function (A, t) {
@@ -891,16 +891,31 @@
         }
 
         /* "<n><unit> <food>", "<n> <food>", and a bare "a banana" with no number at all. */
-        var m = t.match(/(?:log|ate|eat|had|add)\s+(?:a\s+|an\s+)?(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?)?\s+(?:of\s+)?([a-z][a-z\s]{1,40})$/);
+        var m = t.match(/(?:log|ate|eat|had|add|drank|drink|drinking|having|consumed|finished)\s+(?:a\s+|an\s+)?(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?)?\s+(?:of\s+)?([a-z][a-z\s]{1,40})$/);
         if (!m) {
-          var m2 = t.match(/(?:log|ate|eat|had|add)\s+(?:a|an|some)?\s*([a-z][a-z\s]{1,40})$/);
-          if (!m2) return null;
-          m = [null, "1", null, m2[1]];
+          var m2 = t.match(/(?:log|ate|eat|had|add|drank|drink|drinking|having|consumed|finished)\s+(?:a|an|some)?\s*([a-z][a-z\s]{1,40})$/);
+          /* Fall through rather than giving up: the reverse word order below has not been
+             tried yet, and "log paneer 100g" fails the bare-food match precisely because it
+             ends in a quantity. */
+          m = m2 ? [null, "1", null, m2[1]] : null;
         }
+        /* THE OTHER WORD ORDER. "log 200g chicken" parsed and "log paneer 100g" did not, though
+           it is at least as natural -- people say the food first when the food is what they
+           thought of first. Same units, same capture, reversed. Tried only after the
+           quantity-first form so nothing that already worked changes route. */
+        if (!m) {
+          /* A REGEX LITERAL, NOT A STRING. Built as a string first, where every \\s became a
+             bare "s" -- JavaScript drops unknown escapes in string literals silently, so the
+             pattern compiled from nonsense and matched nothing. Second time today an escape
+             has been eaten between here and the editor. */
+          var mRev = t.match(/(?:log|ate|eat|had|add|drank|drink|drinking|having|consumed|finished)\s+(?:a\s+|an\s+|some\s+)?([a-z][a-z\s]{1,40}?)\s+(\d+(?:\.\d+)?)\s*(g|grams?|ml|kg|oz|cups?|bowls?|pieces?|slices?|tbsp|tsp)?$/);
+          if (mRev) m = [null, mRev[2], mRev[3] || null, mRev[1]];
+        }
+        if (!m) return unparsedFood(t);
         var qty = parseFloat(m[1]);
         var unit = m[2] || null;
         var food = m[3].replace(/\s+/g, " ").trim();
-        if (!food || !isFinite(qty) || qty <= 0) return null;
+        if (!food || !isFinite(qty) || qty <= 0) return unparsedFood(t);
 
         /* "LOG FOOD" NAMES NO FOOD. It is a request to start logging, and the Quick Action
            button sends exactly that string — so this was creating an entry for a food called
@@ -1013,6 +1028,30 @@
      same verbs. "should i eat", "can i eat", "is it ok to eat", "why do i eat" are all
      questions, and none of them is an instruction to log anything. */
   var QUESTION_OPENER = /^(how many|how much|how do|how often|what|whats|which|when|where|why|did i|do i|does|have i|am i|is my|is it|are my|can i|should i|could i|would i|will i|show|tell me)\b/;
+
+  /* A FOOD COMMAND THAT WILL NOT PARSE MUST SAY SO, NOT VANISH.
+     Both failure paths in the log-food handler used to return null, which handed the message
+     back to the ladder; with nothing else willing to take it, the user got "I don't have a
+     reliable answer for that yet". Measured on fifteen ordinary phrasings, four failed this way
+     -- "log paneer 100g", "log oats 50g", "add peanut butter 2 tbsp", "i drank a protein shake"
+     -- and every one of them looked identical to the assistant simply not understanding the
+     words. A parser bug that disguises itself as a comprehension failure is why those four sat
+     there unnoticed.
+
+     IT ONLY CLAIMS THE MESSAGE WHEN A QUANTITY IS PRESENT. "add a new routine" and "add an
+     exercise" carry the same verb and no number, and they belong to other handlers; taking them
+     here would trade four silent food bugs for a louder routine one. With a digit or a unit in
+     the sentence, a food verb is about food. */
+  var FOOD_UNITS = ["g", "gram", "grams", "kg", "ml", "l", "oz", "cup", "cups", "bowl", "bowls", "tbsp", "tsp", "spoon", "spoons", "slice", "slices", "piece", "pieces", "plate", "plates"];
+  function unparsedFood(t) {
+    var hasNumber = /[0-9]/.test(t);
+    var pad = " " + t + " ", hasUnit = false;
+    for (var u = 0; u < FOOD_UNITS.length; u++) {
+      if (pad.indexOf(" " + FOOD_UNITS[u] + " ") !== -1) { hasUnit = true; break; }
+    }
+    if (!hasNumber && !hasUnit) return null;
+    return { text: "I couldn't work out what to log from that. Try it as \"log 100g paneer\" — the food and how much." };
+  }
 
   var HANDLER = {
     DELETE_TODAY_FOOD: "delete todays food",
