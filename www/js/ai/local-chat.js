@@ -921,6 +921,16 @@
 
   /* Openers that make a sentence a question rather than an instruction. Anchored at the
      start: "add what i ate" is still a command, while "what did i eat" is not. */
+  /* Words that pin a question to the user's own records rather than to fitness in general. */
+  var SCOPE_WORDS = ["today", "todays", "yesterday", "this week", "last week", "this month", "so far"];
+  function recordScoped(t) {
+    var pad = " " + String(t || "") + " ";
+    for (var i = 0; i < SCOPE_WORDS.length; i++) {
+      if (pad.indexOf(" " + SCOPE_WORDS[i] + " ") !== -1) return true;
+    }
+    return false;
+  }
+
   var QUESTION_OPENER = /^(how many|how much|what|whats|which|did i|do i|have i|am i|is my|are my|show|tell me)\b/;
 
   var HANDLER = {
@@ -939,7 +949,7 @@
   };
   async function runClassified(A, t, guess) {
     var wanted = HANDLER[guess.intent];
-    if (!wanted) return null;
+    if (!wanted) { trace("rc-exit", "no handler mapped for " + guess.intent); return null; }
     /* ONE PLACE, NOT THREE. The knowledge-base-outranks-records rule was added at the promoted
        call site and then at the pattern loop, and the hijacks survived both because these
        messages arrive by the third route -- the late classifier fallback. Putting it here covers
@@ -955,12 +965,12 @@
     }
     for (var k = 0; k < INTENTS.length; k++) {
       if (INTENTS[k].name !== wanted) continue;
-      if (INTENTS[k].needs && !has(A, INTENTS[k].needs)) return null;
+      if (INTENTS[k].needs && !has(A, INTENTS[k].needs)) { trace("rc-exit", "needs unavailable: " + INTENTS[k].needs); return null; }
       var out = null;
-      try { out = await INTENTS[k].run(A, t); } catch (e) { return null; }
+      try { out = await INTENTS[k].run(A, t); } catch (e) { trace("rc-exit", "handler threw: " + (e && e.message)); return null; }
       /* A handler that declines on closer inspection still declines: the classifier is
          confident about the sentence, not about whether the data supports an answer. */
-      if (!out) return null;
+      if (!out) { trace("rc-exit", "handler declined (returned nothing)"); return null; }
       out.source = "BUILT_IN_INTENT:" + guess.intent;
       out.confidence = guess.confidence;
       return out;
@@ -1063,9 +1073,16 @@
          on the dated question too, the guard stood the read down, and a question about today was
          answered with a general calorie target. Word list, not a regex -- a word-boundary escape
          written here as a literal control character silently disabled this guard once already. */
-      if (lead && PROMOTED[lead.intent] && lead.confidence >= 0.8 && window.IgnytKnowledge) {
+      /* A DATED QUESTION IS ABOUT THE USER, AND THE BASE CANNOT KNOW IT. Traced in-suite with
+         the corpus batch applied: the base answered "How many calories should I eat?" and that
+         dropped the lead for a read of TODAY'S log. Two different questions; the time word is
+         the whole difference, so it decides which one wins.
+         Word list rather than a regex: a word-boundary escape written here as a literal control
+         character silently disabled this guard once already, and node --check did not care. */
+      if (lead && PROMOTED[lead.intent] && lead.confidence >= 0.8 && window.IgnytKnowledge && !recordScoped(t)) {
         var kb = null;
         try { kb = await IgnytKnowledge.ask(t); } catch (e) { kb = null; }
+        trace("kb-guard", kb && kb.answer ? "base answered, lead dropped: " + kb.question : "base had nothing, lead kept");
         if (kb && kb.answer) lead = null;
       }
       trace("classify", lead ? lead.intent + " " + lead.confidence.toFixed(2) : "null");
