@@ -722,6 +722,92 @@
     };
   }
 
+
+  /* THE WEEK, COUNTED FROM THE ACTUAL RECORDS. Every number here is derived from workoutLog and
+     state.prs -- nothing is estimated and nothing is filled in from a typical week.
+     WHAT IS ABSENT IS ABSENT ON PURPOSE. The brief asks for planned-against-completed, missed
+     sessions and calories burned. IGNYT does not store a per-day plan against which a session
+     can be called missed, and it does not estimate workout calories. Reporting those would mean
+     inventing them, so they are left out and the caller can see they were not measured. */
+  function weekWindow(weeksAgo) {
+    var today = has("todayStr") ? window.todayStr() : new Date().toISOString().slice(0, 10);
+    var end = Date.parse(today + "T12:00:00") - (weeksAgo * 7 * 86400000);
+    var start = end - 6 * 86400000;
+    return { start: start, end: end };
+  }
+
+  function summariseWorkouts(rows) {
+    var sets = 0, reps = 0, volume = 0, minutes = 0, names = {}, heaviest = null;
+    rows.forEach(function (w) {
+      volume += Number(w.volume) || 0;
+      minutes += Number(w.durationMin) || 0;
+      (w.exercises || []).forEach(function (ex) {
+        if (ex && ex.name) names[ex.name] = 1;
+        (ex.sets || []).forEach(function (st) {
+          var kg = parseFloat(st.weight), rp = parseFloat(st.reps);
+          if (!isFinite(kg) && !isFinite(rp)) return;
+          sets += 1;
+          if (isFinite(rp)) reps += rp;
+          if (isFinite(kg) && (!heaviest || kg > heaviest.kg)) {
+            heaviest = { kg: kg, reps: isFinite(rp) ? rp : null, exercise: ex.name || null };
+          }
+        });
+      });
+    });
+    return { workouts: rows.length, sets: sets, reps: reps, volume: Math.round(volume),
+             minutes: Math.round(minutes), exercises: Object.keys(names), heaviest: heaviest };
+  }
+
+  function getWeeklyProgress(args) {
+    var st = S();
+    var back = Math.max(0, Math.min(52, Number((args && args.weeksAgo) || 0)));
+    var win = weekWindow(back), prev = weekWindow(back + 1);
+    var inWin = function (w, r) {
+      var t = Date.parse(String(w.date || "").slice(0, 10) + "T12:00:00");
+      return isFinite(t) && t >= r.start && t <= r.end;
+    };
+    var log = st.workoutLog || [];
+    var now = summariseWorkouts(log.filter(function (w) { return inWin(w, win); }));
+    var before = summariseWorkouts(log.filter(function (w) { return inWin(w, prev); }));
+
+    var prs = (st.prs || []).filter(function (p) {
+      var t = Number(p.at || p.finishedAt) || Date.parse(String(p.date || "") + "T12:00:00");
+      return isFinite(t) && t >= win.start && t <= win.end + 86400000;
+    });
+
+    var volumeChange = null;
+    if (before.volume > 0) volumeChange = Math.round(((now.volume - before.volume) / before.volume) * 100);
+
+    if (!now.workouts) {
+      return { card: "week", empty: true, workouts: 0,
+               message: back ? "No workouts recorded that week." : "No workouts recorded this week yet." };
+    }
+
+    var bits = [];
+    bits.push("You completed " + now.workouts + (now.workouts === 1 ? " workout" : " workouts"));
+    if (now.sets) bits.push(now.sets + " sets");
+    if (now.reps) bits.push(now.reps + " reps");
+    var line = bits.join(", ") + ".";
+    if (now.volume) line += " Total volume " + now.volume.toLocaleString() + " kg";
+    if (volumeChange != null) {
+      line += ", " + (volumeChange >= 0 ? "up " : "down ") + Math.abs(volumeChange) + "% on last week.";
+    } else if (now.volume) { line += "."; }
+    if (now.heaviest && now.heaviest.kg) {
+      line += " Heaviest set " + now.heaviest.kg + " kg" + (now.heaviest.exercise ? " on " + now.heaviest.exercise : "") + ".";
+    }
+    if (prs.length) line += " " + prs.length + (prs.length === 1 ? " new PR." : " new PRs.");
+    if (now.minutes) line += " " + now.minutes + " minutes training.";
+
+    return {
+      card: "week", empty: false,
+      workouts: now.workouts, sets: now.sets, reps: now.reps, volume: now.volume,
+      minutes: now.minutes, exercises: now.exercises, heaviest: now.heaviest,
+      prs: prs.length, volumeChangePct: volumeChange,
+      previous: { workouts: before.workouts, volume: before.volume },
+      message: line
+    };
+  }
+
   var ACTIONS = {
     getUserProfile:   { risk: "read",    fn: getUserProfile },
     getGoals:         { risk: "read",    fn: getGoals },
@@ -730,6 +816,7 @@
     getProgress:      { risk: "read",    fn: getProgress },
     getFoodLog:       { risk: "read",    fn: getFoodLog },
     getProteinTarget: { risk: "read",    fn: getProteinTarget },
+    getWeeklyProgress:{ risk: "read",    fn: getWeeklyProgress },
     getTodayWorkout:  { risk: "read",    fn: getTodayWorkout },
     getWorkoutHistory:{ risk: "read",    fn: getWorkoutHistory },
     searchFood:       { risk: "read",    fn: searchFood },

@@ -328,6 +328,24 @@
         return { text: d.message, card: d.card || null };
       }
     },
+    {
+      name: "weekly progress",
+      needs: "getWeeklyProgress",
+      test: function (t) {
+        if (!/week|weekly/.test(t)) return false;
+        if (/(plan|routine|create|make|build)/.test(t)) return false;   // planning, not reporting
+        return true;
+      },
+      run: async function (A, t) {
+        /* "last week" is one week back. Anything else is the current week. */
+        var back = (" " + t + " ").indexOf(" last week ") !== -1
+                || (" " + t + " ").indexOf(" previous week ") !== -1 ? 1 : 0;   // no escapes to corrupt
+        var r = await A.run("getWeeklyProgress", { weeksAgo: back });
+        var d = (r && r.result) || {};
+        if (!d.message) return null;
+        return { text: d.message, card: d.card || null };
+      }
+    },
 {
       name: "food log today",
       needs: "getFoodLog",
@@ -977,6 +995,7 @@
     LOG_FOOD: "log food",
     VIEW_FOOD_LOG: "food log today",
     GET_PROTEIN_TARGET: "protein target",
+    GET_WEEKLY_PROGRESS: "weekly progress",
     LOG_WEIGHT: "ask weight",
     VIEW_WEIGHT_HISTORY: "weight history",
     VIEW_TODAY_WORKOUT: "today workout",
@@ -1112,7 +1131,7 @@
        certain about a sentence it was written for while the classifier is choosing between
        neighbours. Add the next intent to this list, run the suite, and keep it only if the
        count holds. */
-    var PROMOTED = { GET_PROTEIN_TARGET: 1, VIEW_FOOD_LOG: 1, VIEW_PROGRESS: 1, VIEW_WEIGHT_HISTORY: 1, VIEW_TODAY_WORKOUT: 1 };
+    var PROMOTED = { GET_PROTEIN_TARGET: 1, GET_WEEKLY_PROGRESS: 1, VIEW_FOOD_LOG: 1, VIEW_PROGRESS: 1, VIEW_WEIGHT_HISTORY: 1, VIEW_TODAY_WORKOUT: 1 };
     if (window.IgnytIntents) {
       var lead = null;
       try { lead = IgnytIntents.classify(t); } catch (e) { lead = null; }
@@ -1138,7 +1157,16 @@
          the whole difference, so it decides which one wins.
          Word list rather than a regex: a word-boundary escape written here as a literal control
          character silently disabled this guard once already, and node --check did not care. */
-      if (lead && PROMOTED[lead.intent] && lead.confidence >= 0.8 && window.IgnytKnowledge && !recordScoped(t)) {
+      /* ONLY A RECORDS READ YIELDS TO THE BASE. This guard applied to EVERY promoted intent,
+         which was wrong the moment intents began computing answers from the user's own data:
+         "how was my week" was dropped here because the base holds "Should I take a week off
+         training?", and the reply became general advice instead of the user's actual week.
+         The distinction is what the intent DOES. A records read can sensibly stand down when the
+         base has a better general answer. An intent that computes from the user's weight, goal or
+         training history has no general equivalent -- the base cannot know those numbers, so
+         there is nothing for it to outrank. */
+      if (lead && PROMOTED[lead.intent] && lead.confidence >= 0.8 && window.IgnytKnowledge
+          && RECORD_READS[HANDLER[lead.intent]] && !recordScoped(t)) {
         var kb = null;
         try { kb = await IgnytKnowledge.ask(t); } catch (e) { kb = null; }
         trace("kb-guard", kb && kb.answer ? "base answered, lead dropped: " + kb.question : "base had nothing, lead kept");

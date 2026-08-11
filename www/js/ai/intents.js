@@ -127,12 +127,10 @@
       "how is my progress", "view my progress", "check my progress", "see my progress",
       "look at my progress", "view progress", "open my progress", "pull up my progress", "show my progress", "am i improving", "how am i doing",
       "my stats", "show my stats", "hows it going", "am i making progress",
-      "how was my week", "how did i do this week", "weekly progress", "my week summary",
-      "how did i perform this week", "show my weekly progress", "last week recap"
+      
     ,
       "how am i tracking", "give me my numbers", "show my results", "hows my training going",
-      "whats my progress like", "summarise my week", "how did the week go", "recap my week",
-      "my performance", "how have i done", "show my summary", "progress report",
+      "whats my progress like", "my performance", "how have i done", "show my summary", "progress report",
       "how is training going", "whats my streak like"
     ],
 
@@ -195,6 +193,16 @@
       "how much protein based on my weight", "protein goal", "my daily protein",
       "how much protein should i be eating", "what is my protein requirement",
       "how many grams of protein do i need"
+    ],
+
+    GET_WEEKLY_PROGRESS: [
+      "how was my week", "show my weekly progress", "weekly progress", "my week summary",
+      "how did i do this week", "how did i train this week", "this week summary",
+      "what did i do this week", "my training this week", "weekly summary",
+      "how many workouts this week", "my week in the gym", "show me this week",
+      "week overview", "how was my training week", "recap my week",
+      "how much did i lift this week", "my weekly workout summary",
+      "how did last week go", "show last week", "last week summary", "how was last week"
     ],
 
     EXERCISE_HOW_TO: [
