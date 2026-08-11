@@ -1130,7 +1130,7 @@
                 name: "log food",
                 at: Date.now(),
                 fill: function (t2) {
-                  if (/^(what|how|why|when|where|which|who|is|are|can|should|do|does|tell|show|explain)/.test(t2)) return null;
+                  if (/^(what|how|why|when|where|which|who|is|are|can|should|do|does|tell|show|explain)\b/.test(t2)) return null;
                   var segs3 = String(t2).split(/\s*,\s*|\s+and\s+|\s+plus\s+/)
                                 .map(function (x) { return x.trim(); })
                                 .filter(function (x) { return x.length; });
