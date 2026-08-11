@@ -1024,7 +1024,7 @@
        certain about a sentence it was written for while the classifier is choosing between
        neighbours. Add the next intent to this list, run the suite, and keep it only if the
        count holds. */
-    var PROMOTED = { VIEW_FOOD_LOG: 1, VIEW_PROGRESS: 1 };
+    var PROMOTED = { VIEW_FOOD_LOG: 1, VIEW_PROGRESS: 1, VIEW_WEIGHT_HISTORY: 1, VIEW_TODAY_WORKOUT: 1 };
     if (window.IgnytIntents) {
       var lead = null;
       try { lead = IgnytIntents.classify(t); } catch (e) { lead = null; }
