@@ -181,6 +181,22 @@
       "scrap my weight entry", "remove my weight for today", "delete weight entry"
     ],
 
+    /* A QUESTION ABOUT THE USER, WEARING THE CLOTHES OF A GENERAL ONE. "how much protein should
+       i eat" carries no "my" and no date, so every records rule built so far reads it as a
+       fitness question and answers with the textbook range. It is not: IGNYT knows the weight
+       and the goal. This intent is what tells the difference. */
+    GET_PROTEIN_TARGET: [
+      "how much protein should i eat", "how much protein do i need", "whats my protein target",
+      "my protein target", "how much protein per day", "protein target",
+      "how many grams of protein should i eat", "how much protein for my weight",
+      "what should my protein intake be", "how much protein do i need a day",
+      "daily protein target", "how much protein should i have",
+      "how much protein to build muscle for me", "whats my daily protein goal",
+      "how much protein based on my weight", "protein goal", "my daily protein",
+      "how much protein should i be eating", "what is my protein requirement",
+      "how many grams of protein do i need"
+    ],
+
     EXERCISE_HOW_TO: [
       "how do i do bench press", "how to do squats", "how do i perform a deadlift",
       "bench press form", "squat technique", "teach me deadlift", "show me how to squat",

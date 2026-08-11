@@ -680,6 +680,48 @@
 
   /* ---------- the registry ------------------------------------------------------------- */
 
+
+  /* THE USER'S OWN PROTEIN TARGET, COMPUTED -- NOT THE GENERAL RANGE.
+     "How much protein should I eat" was answering with 1.6-2.2 g per kg, which is true and
+     useless: IGNYT knows the weight and the goal, so it can finish the sentence. The arithmetic
+     is deterministic and lives here, never in a model's head.
+     THE MULTIPLIER IS THE APP'S OWN. GOAL_TYPES already carries one per goal -- fat loss 2.2,
+     strength 1.8, marathon 1.6 -- and those are what the goal screens already promise the user.
+     Inventing a second set here would mean the assistant and the app disagreed about the same
+     number, which is worse than not answering.
+     WITH NO WEIGHT LOGGED IT ASKS. It does not guess a weight, use a population average, or
+     answer the general question instead and hope that passes. */
+  function getProteinTarget() {
+    var st = S();
+    var rows = (st.bodylog || []).filter(function (e) { return e && e.weight != null; });
+    var weightKg = rows.length ? Number(rows[0].weight) : null;
+    if (!weightKg || !isFinite(weightKg) || weightKg <= 0) {
+      return { card: "need_data", need: "weight", askedFor: "protein target",
+               message: "I need your weight first. Tell me \"log my weight\" and the number, and I can work out your protein target." };
+    }
+
+    var goal = null, gPerKg = null, goalLabel = null;
+    try { goal = window.IgnytGoals && IgnytGoals.activeGoal ? IgnytGoals.activeGoal() : null; } catch (e) { goal = null; }
+    if (goal && window.IgnytGoals && IgnytGoals.GOAL_TYPES) {
+      var t = IgnytGoals.GOAL_TYPES.filter(function (x) { return x.id === (goal.type || goal.goalType); })[0];
+      if (t) { gPerKg = t.protein; goalLabel = t.label; }
+    }
+    /* No goal set is not missing data -- it is a user who has not chosen one. 1.8 is the middle
+       of the app's own range, and the reply says plainly that it is a default. */
+    var assumed = false;
+    if (!gPerKg) { gPerKg = 1.8; assumed = true; }
+
+    var grams = Math.round(weightKg * gPerKg);
+    return {
+      card: "target", kind: "protein",
+      weightKg: weightKg, gPerKg: gPerKg, goal: goalLabel, assumedGoal: assumed,
+      targetG: grams,
+      message: "Your protein target is about " + grams + " g a day"
+             + " — " + gPerKg + " g per kg at your current " + weightKg + " kg"
+             + (goalLabel ? ", for " + goalLabel.toLowerCase() + "." : ", using a general 1.8 g per kg because no goal is set.")
+    };
+  }
+
   var ACTIONS = {
     getUserProfile:   { risk: "read",    fn: getUserProfile },
     getGoals:         { risk: "read",    fn: getGoals },
@@ -687,6 +729,7 @@
     getIGNYTScore:    { risk: "read",    fn: getIGNYTScore },
     getProgress:      { risk: "read",    fn: getProgress },
     getFoodLog:       { risk: "read",    fn: getFoodLog },
+    getProteinTarget: { risk: "read",    fn: getProteinTarget },
     getTodayWorkout:  { risk: "read",    fn: getTodayWorkout },
     getWorkoutHistory:{ risk: "read",    fn: getWorkoutHistory },
     searchFood:       { risk: "read",    fn: searchFood },

@@ -306,7 +306,29 @@
         return { text: "Your IGNYT score today is " + Math.round(s) + "." };
       }
     },
-    {
+        {
+      name: "protein target",
+      needs: "getProteinTarget",
+      /* THE CLASSIFIER CANNOT SPLIT THIS PAIR, so a matcher does.
+           "how much protein SHOULD i eat"  -> the target, computed from weight and goal
+           "how much protein DID i eat"     -> today's food log
+         The tokeniser drops should and did as common words, so both reduce to the same tokens
+         and classify() returns null on the tie -- correctly, since by then the only evidence
+         that separated them is gone. Past-tense and dated forms are excluded here and left to
+         the food-log read, which is what they actually mean. */
+      test: function (t) {
+        if (!/\bprotein\b/.test(t)) return false;
+        if (/\b(did|ate|had|eaten|yesterday|today|so far)\b/.test(t)) return false;
+        return /\b(should|target|need|needs|goal|require|requirement|intake|per day|a day|daily)\b/.test(t);
+      },
+      run: async function (A) {
+        var r = await A.run("getProteinTarget", {});
+        var d = (r && r.result) || {};
+        if (!d.message) return null;
+        return { text: d.message, card: d.card || null };
+      }
+    },
+{
       name: "food log today",
       needs: "getFoodLog",
       /* LOG FOOD vs LOGGED FOOD — two different intents that share a word.
@@ -954,6 +976,7 @@
     DELETE_TODAY_FOOD: "delete todays food",
     LOG_FOOD: "log food",
     VIEW_FOOD_LOG: "food log today",
+    GET_PROTEIN_TARGET: "protein target",
     LOG_WEIGHT: "ask weight",
     VIEW_WEIGHT_HISTORY: "weight history",
     VIEW_TODAY_WORKOUT: "today workout",
@@ -1089,7 +1112,7 @@
        certain about a sentence it was written for while the classifier is choosing between
        neighbours. Add the next intent to this list, run the suite, and keep it only if the
        count holds. */
-    var PROMOTED = { VIEW_FOOD_LOG: 1, VIEW_PROGRESS: 1, VIEW_WEIGHT_HISTORY: 1, VIEW_TODAY_WORKOUT: 1 };
+    var PROMOTED = { GET_PROTEIN_TARGET: 1, VIEW_FOOD_LOG: 1, VIEW_PROGRESS: 1, VIEW_WEIGHT_HISTORY: 1, VIEW_TODAY_WORKOUT: 1 };
     if (window.IgnytIntents) {
       var lead = null;
       try { lead = IgnytIntents.classify(t); } catch (e) { lead = null; }

@@ -308,6 +308,38 @@
     });
   });
 
+
+  /* ---------- personalised targets ---------------------------------------------------------
+     The assistant must answer from the user's own record, not from the textbook range, and must
+     refuse to answer at all when the record is missing. Both halves are tested, because a
+     personalised answer that quietly falls back to a population average is the failure that
+     looks most like success. */
+  test("protein target uses the stored weight, not a general range", "action", async function () {
+    await clearAllData();
+    await acts().run("logWeight", { weightKg: 80 });
+    var r = await say("how much protein should i eat");
+    var text = String(r.response || "");
+    if (!/144\s*g/.test(text)) throw new Error("expected 144 g from 80 kg x 1.8, got: " + text.slice(0, 90));
+    if (!/80\s*kg/.test(text)) throw new Error("did not cite the stored weight: " + text.slice(0, 90));
+  });
+
+  test("protein target tracks a changed weight", "action", async function () {
+    await clearAllData();
+    await acts().run("logWeight", { weightKg: 60 });
+    var r = await say("whats my protein target");
+    if (!/108\s*g/.test(String(r.response || ""))) {
+      throw new Error("expected 108 g from 60 kg, got: " + String(r.response || "").slice(0, 90));
+    }
+  });
+
+  test("protein target asks rather than inventing a weight", "safety", async function () {
+    await clearAllData();
+    var r = await say("how much protein should i eat");
+    var text = String(r.response || "");
+    if (/\d+\s*g a day/.test(text)) throw new Error("invented a target with no weight logged: " + text.slice(0, 90));
+    if (!/weight/i.test(text)) throw new Error("did not ask for a weight: " + text.slice(0, 90));
+  });
+
   /* ---------- runner ------------------------------------------------------------------------ */
 
   async function run(filter) {
