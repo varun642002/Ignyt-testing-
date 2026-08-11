@@ -60,7 +60,10 @@
     ],
 
     VIEW_FOOD_LOG: [
-      "what did i eat today", "show my food log", "view my food log", "view my food", "open my food log",
+      "what did i eat today", "how much protein did i eat today", "how much protein have i had today",
+      "how many carbs did i eat today", "how much fat did i eat today",
+      "how much protein so far today", "how many calories have i had today",
+      "how much have i eaten today", "what protein have i had", "show my food log", "view my food log", "view my food", "open my food log",
       "view todays food", "pull up my food log", "show my logged food", "show my food",
       "view my meals", "what have i eaten", "list my food", "whats in my food log",
       "check my food log", "show todays meals", "what did i log today",
