@@ -1,5 +1,48 @@
 # CLAUDE_PROGRESS.md
 
+### Diagnostics screen — read-only app/test health, hidden in Settings
+
+**Branch** `feature/diagnostics-screen` (branched from the tip of `feature/premium-subscription`,
+not from `main` — main is ~40 commits behind and does not have most of the AI knowledge-base and
+bug-fix work this branch depends on) · **Commit** `ec18faa` · pushed
+**Build** BUILD SUCCESSFUL · `android/app/build/outputs/apk/debug/app-debug.apk`
+
+**What it is.** Requested as "an insight page to monitor the Ignyt testing project." The app
+already has a user-facing "Insights" tab (Health Connect Day/Week/Month/Year analytics) and a
+full Progress page — neither is what was needed. There's also no coach/admin/multi-user role
+system anywhere in the codebase; this is a single-user, local-storage app. So this is instead a
+developer/QA diagnostics screen: real, computed-on-demand state for monitoring the app itself
+while testing, not a second user analytics screen.
+
+**Reachable by tapping "App Version" in Settings → About seven times within three seconds.**
+No visible menu entry — none of this means anything to a real user. Unlock persists via a
+`hx_diag_unlocked` localStorage flag kept outside the app's own schema key list (`ALL_KEYS`), so
+Reset All App Data and the backup export/import round-trip both leave it alone.
+
+Shows six sections, all read from real app state: App (version/platform/user agent), Data on
+this device (workout/food/weight/routine/achievement counts), Connections (Health Connect,
+Cloud Sync, account, notification permission), Billing/entitlements (paywall applies, premium
+status, which features are gated — currently none), Storage (key count, `hx_*` key count,
+estimated size), and the AI chat test harness (test count via `IgnytChatTests.count()`).
+
+**Deliberately not wired: a "Run Tests" button.** `chat-tests.js`'s own tests call
+`clearAllData()`, which deletes real food-log and weight entries as part of setup — its own
+comment says "RUN THIS ON A TEST ACCOUNT." A one-tap button reachable on a real device would
+violate "never delete existing localStorage data." The screen only points at the console
+command (`IgnytChatTests.run()`) with an explicit warning inline.
+
+**Verified in a browser preview** (not signed in via real Firebase — `IgnytAuth.getAccount` was
+monkey-patched in that disposable tab only, to get past the sign-in gate and confirm rendering):
+the 7-tap unlock, the entry appearing in Settings, the screen rendering all 6 real sections,
+Copy Diagnostics not throwing, and Back returning to Settings without leaving the tab.
+**Not verified**: on-device behavior on a real signed-in Android install — Varun should tap
+through it once after installing the APK.
+
+**Pending**
+- None outstanding for this feature. Optional follow-up if wanted later: surface the same
+  diagnostics as a titled section instead of a hidden gesture, if Varun decides he wants it
+  discoverable rather than hidden.
+
 ### Equipment filtering, smart notifications, settings alignment
 
 **Branch** `feature/premium-subscription` · **Commits** `a6a427a`, `7113d9a` · both pushed
