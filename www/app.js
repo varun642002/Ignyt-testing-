@@ -1915,6 +1915,7 @@ const state = {
   viewingHyroxInfo: false,
   viewingLegal: null, // "privacy" | "terms" | "disclaimer" | null -- see renderLegalViewer()
   viewingPrivacyInfo: false,
+  viewingDiagnostics: false, // transient -- Settings > (hidden) Diagnostics, read-only
   csvImportPreview: null,
   /* AI chat. Transient by design — the transcript is a conversation, not a record, and
      persisting it would mean a stale "log my weight as 96.8" sitting on screen days later
@@ -6588,6 +6589,125 @@ function renderCloudSyncRow(){
 /* Real, honest facts about how this app actually handles data -- no dedicated "Privacy &
    Security" screen existed before; this one only states what's genuinely true (local-only
    storage, real notification/Health Connect permission status), nothing invented. */
+/* =========================================================
+   DIAGNOSTICS — hidden dev/QA screen, strictly read-only.
+
+   Reached only by tapping "App Version" in Settings > About seven times within three
+   seconds -- there is no visible menu entry, because none of this (storage byte counts,
+   entitlement cache state, connection status) means anything to a real user. The AI chat
+   test harness (chat-tests.js) is deliberately NOT wired to a button here: its own tests
+   call clearAllData(), which deletes real food-log and weight entries as part of setup --
+   fine on a throwaway test account, not fine as a one-tap button on a real device. This
+   screen only ever points at the console command.
+
+   The unlock persists in localStorage under a key that is not part of the app's own schema
+   list (see ALL_KEYS at the top of this file), so "Reset All App Data" and the backup
+   export/import round-trip both leave it alone -- it is a device preference, not app data.
+========================================================= */
+const DIAG_UNLOCK_KEY = "hx_diag_unlocked";
+let _diagTapCount = 0;
+let _diagTapTimer = null;
+function diagUnlocked(){ try{ return localStorage.getItem(DIAG_UNLOCK_KEY) === "1"; }catch(e){ return false; } }
+function diagRegisterVersionTap(){
+  clearTimeout(_diagTapTimer);
+  _diagTapCount++;
+  _diagTapTimer = setTimeout(()=>{ _diagTapCount = 0; }, 3000);
+  if(_diagTapCount >= 7){
+    _diagTapCount = 0;
+    try{ localStorage.setItem(DIAG_UNLOCK_KEY, "1"); }catch(e){}
+    return true;
+  }
+  return false;
+}
+
+/** Real, computed-on-demand values only -- shared by the screen and the copy-to-clipboard
+ *  button so there is one source of truth for what "diagnostics" means. */
+function diagnosticsRows(){
+  let hcConnected = false;
+  try { hcConnected = !!(window.HealthConnectIntegration && window.HealthConnectIntegration.loadState().connected); } catch(e){}
+  const notifPerm = nativeNotify() ? (state.nativeNotifPermissionGranted===null ? 'unknown' : (state.nativeNotifPermissionGranted?'granted':'denied'))
+    : (typeof Notification!=='undefined' ? Notification.permission : 'unsupported');
+  const cs = window.IgnytCloudSync;
+  const signedIn = window.IgnytAuth && window.IgnytAuth.isNativeAndroid() && !!window.IgnytAuth.getAccount();
+  const ent = window.IgnytEntitlements;
+  const gatedFeatures = ent ? Object.keys(ent.FEATURES || {}) : [];
+  const platformName = document.documentElement.getAttribute("data-platform") || "web";
+  const chatTests = window.IgnytChatTests;
+
+  let storageBytes = 0, storageKeys = 0, ignytKeys = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      const v = localStorage.getItem(k) || "";
+      storageBytes += (k.length + v.length) * 2; // UTF-16 code units -- an estimate, not exact bytes on disk
+      storageKeys++;
+      if (k.indexOf("hx_") === 0) ignytKeys++;
+    }
+  } catch(e){}
+
+  return [
+    ["App", [
+      ["Version", "IGNYT v1.0"],
+      ["Platform", platformName],
+      ["User agent", String(navigator.userAgent || "unknown").slice(0, 70)]
+    ]],
+    ["Data on this device", [
+      ["Workouts logged", state.workoutLog.length],
+      ["Food log entries", state.foodLog.length],
+      ["Weight / body entries", state.bodylog.length],
+      ["Routines", state.routines.length],
+      ["Achievements unlocked", state.achievements.length]
+    ]],
+    ["Connections", [
+      [hcName(), hcConnected ? "Connected" : "Not connected"],
+      ["Cloud Sync", cs ? cs.getStatus().status : "Not available"],
+      ["Account", signedIn ? "Signed in" : "Not signed in"],
+      ["Notifications", notifPerm]
+    ]],
+    ["Billing / entitlements", [
+      ["Paywall applies", ent ? (ent.paywallApplies() ? "Yes (Android)" : "No") : "Module not loaded"],
+      ["Premium (this device)", ent ? (ent.isPremium() ? "Yes" : "No") : "—"],
+      ["Gated features", gatedFeatures.length ? gatedFeatures.join(", ") : "None — everything free"]
+    ]],
+    ["Storage", [
+      ["Total keys", storageKeys],
+      ["IGNYT keys (hx_*)", ignytKeys],
+      ["Estimated size", (storageBytes / 1024).toFixed(1) + " KB"]
+    ]],
+    ["AI chat test harness", [
+      ["Tests defined", chatTests ? chatTests.count() : "Not loaded"],
+      ["How to run", chatTests ? "Console only: IgnytChatTests.run() — it deletes real food/weight entries as part of setup, so use a test account" : "—"]
+    ]]
+  ];
+}
+function diagnosticsText(){
+  return diagnosticsRows().map(([title, items]) =>
+    title + "\n" + items.map(([k,v])=>"  " + k + ": " + v).join("\n")
+  ).join("\n\n");
+}
+
+function renderDiagnosticsScreen(){
+  const rows = diagnosticsRows();
+  return `
+    <div class="pg-light">
+      <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:10px;" data-action="close-diagnostics">← Back</button>
+      <div style="font-size:22px;font-weight:800;margin-bottom:2px;">Diagnostics</div>
+      <div style="font-size:13px;color:var(--rh-muted);margin-bottom:14px;">Read-only snapshot for testing. Nothing on this screen changes or deletes anything.</div>
+
+      ${rows.map(([title, items]) => `
+        <div class="pg-card" style="margin-bottom:12px;">
+          <div style="font-size:15px;font-weight:800;margin-bottom:6px;">${escHtml(title)}</div>
+          ${items.map(([k,v])=>`
+            <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);">
+              <div class="pi-row__body"><div class="pi-row__label">${escHtml(String(k))}</div><div class="pi-row__value" style="white-space:normal;">${escHtml(String(v))}</div></div>
+            </div>`).join("")}
+        </div>`).join("")}
+
+      <button class="btn btn-steel btn-block" data-action="copy-diagnostics">Copy Diagnostics</button>
+    </div>
+  `;
+}
+
 function renderPrivacySecurityInfo(){
   let hcConnected = false;
   try { hcConnected = !!(window.HealthConnectIntegration && window.HealthConnectIntegration.loadState().connected); } catch(e){}
@@ -6715,6 +6835,7 @@ function renderRemindersScreen(){
 
 function renderSettingsTab(){
   if(state.reminderScreen) return renderRemindersScreen();
+  if(state.viewingDiagnostics) return renderDiagnosticsScreen();
   if(state.viewingPrivacyInfo) return renderPrivacySecurityInfo();
   const s = state.settings;
   return `
@@ -6826,7 +6947,8 @@ function renderSettingsTab(){
 
       <div class="rh-section-head"><span>${svg('info',13)} About</span></div>
       <div class="tl-grid" style="grid-template-columns:1fr;">
-        <div class="tl-card" style="cursor:default;"><span class="tl-card__icon">${svg('info',20)}</span><div class="tl-card__body"><div class="tl-card__label">App Version</div><div class="tl-card__desc">IGNYT v1.0</div></div></div>
+        <button class="tl-card" style="cursor:default;text-align:left;" data-action="diag-version-tap"><span class="tl-card__icon">${svg('info',20)}</span><div class="tl-card__body"><div class="tl-card__label">App Version</div><div class="tl-card__desc">IGNYT v1.0</div></div></button>
+        ${diagUnlocked() ? `<button class="tl-card" data-action="open-diagnostics"><span class="tl-card__icon">${svg('bolt',20)}</span><div class="tl-card__body"><div class="tl-card__label">Diagnostics</div><div class="tl-card__desc">Read-only app &amp; test status</div></div><span class="tl-card__chev">›</span></button>` : ''}
         <button class="tl-card" data-action="open-legal-privacy"><span class="tl-card__icon">${svg('shield',20)}</span><div class="tl-card__body"><div class="tl-card__label">Privacy Policy</div><div class="tl-card__desc">How your data is stored and shared</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-action="open-legal-terms"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Terms and Conditions</div><div class="tl-card__desc">The terms you agreed to on sign-up</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-action="open-legal-disclaimer"><span class="tl-card__icon">${svg('health',20)}</span><div class="tl-card__body"><div class="tl-card__label">Medical &amp; Fitness Disclaimer</div><div class="tl-card__desc">Read before starting a program</div></div><span class="tl-card__chev">›</span></button>
@@ -19050,11 +19172,27 @@ function attachHandlers(){
   const cloudSyncNowBtn = document.querySelector('[data-action="cloud-sync-now"]');
   if(cloudSyncNowBtn) cloudSyncNowBtn.addEventListener("click", ()=>{ if(window.IgnytCloudSync) IgnytCloudSync.syncNow(); });
   const closeSettingsBtn = document.querySelector('[data-action="close-settings"]');
-  if(closeSettingsBtn) closeSettingsBtn.addEventListener("click", ()=>{ state.tab = "tools"; state.viewingPrivacyInfo = false; render(); });
+  if(closeSettingsBtn) closeSettingsBtn.addEventListener("click", ()=>{ state.tab = "tools"; state.viewingPrivacyInfo = false; state.viewingDiagnostics = false; render(); });
   const openPrivacyBtn = document.querySelector('[data-action="open-privacy-info"]');
   if(openPrivacyBtn) openPrivacyBtn.addEventListener("click", ()=>{ state.viewingPrivacyInfo = true; render(); });
   const closePrivacyBtn = document.querySelector('[data-action="close-privacy-info"]');
   if(closePrivacyBtn) closePrivacyBtn.addEventListener("click", ()=>{ state.viewingPrivacyInfo = false; render(); });
+  const diagVersionBtn = document.querySelector('[data-action="diag-version-tap"]');
+  if(diagVersionBtn) diagVersionBtn.addEventListener("click", ()=>{
+    if(diagRegisterVersionTap()) showToast("Diagnostics unlocked.", "success", render);
+  });
+  const openDiagBtn = document.querySelector('[data-action="open-diagnostics"]');
+  if(openDiagBtn) openDiagBtn.addEventListener("click", ()=>{ state.viewingDiagnostics = true; render(); });
+  const closeDiagBtn = document.querySelector('[data-action="close-diagnostics"]');
+  if(closeDiagBtn) closeDiagBtn.addEventListener("click", ()=>{ state.viewingDiagnostics = false; render(); });
+  const copyDiagBtn = document.querySelector('[data-action="copy-diagnostics"]');
+  if(copyDiagBtn) copyDiagBtn.addEventListener("click", ()=>{
+    const text = diagnosticsText();
+    const done = ()=> showToast("Diagnostics copied.", "success", render);
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done).catch(()=>legacyCopy(text, done));
+    } else legacyCopy(text, done);
+  });
   const openLegalPrivacyBtn = document.querySelector('[data-action="open-legal-privacy"]');
   if(openLegalPrivacyBtn) openLegalPrivacyBtn.addEventListener("click", ()=>{ state.viewingLegal = "privacy"; render(); });
   const openLegalTermsBtn = document.querySelector('[data-action="open-legal-terms"]');
@@ -22778,6 +22916,7 @@ function handleHardwareBack(){
   if(state.exerciseMenuOpen!=null){ state.exerciseMenuOpen = null; render(); return true; }
   if(state.notificationsOpen){ state.notificationsOpen = false; render(); return true; }
   if(state.viewingPrivacyInfo){ state.viewingPrivacyInfo = false; render(); return true; }
+  if(state.viewingDiagnostics){ state.viewingDiagnostics = false; render(); return true; }
   if(state.editingWorkout){ state.editingWorkout = null; render(); return true; }
   if(state.viewingWorkoutAuditId!=null){ state.viewingWorkoutAuditId = null; render(); return true; }
   if(state.viewingSessionId!=null){ state.viewingSessionId = null; render(); return true; }
