@@ -94,17 +94,9 @@
   });
 
   test("log 200g chicken -> entry actually in the food log", "action", async function () {
-    var before = (await foodRows()).length;
-    var r = await say("log 200g chicken");
-    var after = (await foodRows()).length;
-    if (r.ok === false) throw new Error("action failed: " + (r.response || "") + " (food library may be empty in this session)");
-    if (after !== before + 1) throw new Error("food log went " + before + " -> " + after);
-    var row = (await foodRows())[0];
-    if (!/chicken/i.test((row && row.name) || "")) throw new Error("wrong row stored: " + row.name);
-    /* getFoodLog returns `kcal`, not `calories` — the sixth time in this codebase that a
-       caller has read a field name it assumed rather than checked, and the first time the
-       harness itself did it. Reading the shape is the habit; asserting on it is the point. */
-    if (!(Number(row.kcal) > 0)) throw new Error("stored with no calories: " + JSON.stringify(row));
+    /* Was: asserts the row is stored. Now: asserts it is refused and nothing is stored. */
+    await clearAllData();
+    await expectRefused("log 200g chicken", "food log");
   });
 
   test("view today's food READS and does not write", "action", async function () {
@@ -122,9 +114,8 @@
     await clearAllData();
     await acts().run("addFoodLog", { food: "chicken", grams: 100 });
     var seeded = (await foodRows()).length;
-    var r = await say("delete all my foods today");
-    if (!r.requiresFollowUp) throw new Error("destructive action did not ask for confirmation");
-    if ((await foodRows()).length !== seeded) throw new Error("deleted before confirmation");
+    await expectRefused("delete all my foods today", "food log");
+    if ((await foodRows()).length !== seeded) throw new Error("deleted despite refusing");
   });
 
   test("deleteAllFoodLogs actually empties the log and reports the count", "action", async function () {
@@ -158,24 +149,22 @@
     await clearAllData();
     await say("log my weight");
     var r = await reply("82");
-    if (r.ok !== true) throw new Error("action did not report success");
-    var row = (await weightRows())[0];
-    if (!row || Number(row.weightKg) !== 82) throw new Error("stored: " + JSON.stringify(row));
+    /* The slot may still open -- the refusal happens when the action would run. What must not
+       happen is a stored weight. */
+    if ((await weightRows()).length !== 0) throw new Error("weight stored while the chat cannot act");
+    if (r.ok === true) throw new Error("reported success for an action it cannot perform");
   });
 
   test("'my weight is 81.5 kg' stores in one message", "action", async function () {
     await clearAllData();
-    var r = await say("my weight is 81.5 kg");
-    var row = (await weightRows())[0];
-    if (!row || Number(row.weightKg) !== 81.5) throw new Error("stored: " + JSON.stringify(row));
+    await expectRefused("my weight is 81.5 kg", "progress");
   });
 
   test("pounds convert on the way in", "action", async function () {
     await clearAllData();
     await say("log my weight");
     await reply("172 lbs");
-    var row = (await weightRows())[0];
-    if (!row || Math.abs(Number(row.weightKg) - 78) > 0.2) throw new Error("stored: " + JSON.stringify(row));
+    if ((await weightRows()).length !== 0) throw new Error("weight stored while the chat cannot act");
   });
 
   test("changing the subject mid-follow-up does not log a weight", "action", async function () {
@@ -220,16 +209,15 @@
   /* ---------- 6. multilingual -------------------------------------------------------------- */
 
   test("Tamil weight command reaches logWeight", "lang", async function () {
+    /* The point of this test survives the change: the Tamil sentence must still be UNDERSTOOD as
+       a weight command. It is now refused rather than executed, and being refused proves it was
+       recognised -- an unrecognised sentence returns the unknown reply instead. */
     await clearAllData();
-    var r = await say("என் எடை 82 kg என்று பதிவு செய்");
-    if (r.action !== "logWeight" && r.intent !== "logWeight") throw new Error("intent was " + r.intent);
-    if (r.language !== "ta") throw new Error("language detected as " + r.language);
+    await expectRefused("என் எடை 82", "progress");
   });
   test("Hindi weight command reaches logWeight", "lang", async function () {
     await clearAllData();
-    var r = await say("मेरा वजन 82 किलो लॉग करो");
-    if (r.action !== "logWeight" && r.intent !== "logWeight") throw new Error("intent was " + r.intent);
-    if (r.language !== "hi") throw new Error("language detected as " + r.language);
+    await expectRefused("मेरा वजन 82", "progress");
   });
 
   /* ---------- 7. edges ---------------------------------------------------------------------- */
@@ -253,13 +241,13 @@
      names a real gap rather than a missing keyword — which is the whole argument for replacing
      the regex table with a classifier. */
   var MUST_WORK = [
-    ["delete all my foods today",        "deleteAllFoodLogs"],
-    ["delete today's food",              "deleteFoodForDate"],
-    ["remove everything I ate today",    "deleteAllFoodLogs"],
+    ["delete all my foods today",        "*refused"],
+    ["delete today's food",              "*refused"],
+    ["remove everything I ate today",    "*refused"],
     ["log food",                         "log food"],
-    ["add 200g chicken",                 "addFoodLog"],
+    ["add 200g chicken",                 "*refused"],
     ["log my weight",                    "ask weight"],
-    ["my weight is 82kg",                "logWeight"],
+    ["my weight is 82kg",                "*refused"],
     ["what should I train today?",       "today workout"],
     ["how is my progress?",              "progress"],
     ["create a routine",                 "*ask"],
@@ -291,6 +279,17 @@
       if (got === row[1]) return;
       var m = /^BUILT_IN_INTENT:(.+)$/.exec(r.source || "");
       if (m && chat().handlerFor && chat().handlerFor(m[1]) === row[1]) return;
+      if (row[1] === "*refused") {
+        /* The chat no longer acts. These five must still be UNDERSTOOD -- refused by name rather
+           than met with the unknown reply -- and must write nothing. That distinction is the
+           whole point: "I can't add food from here" means the sentence landed; "I don't have a
+           reliable answer" would mean it did not. */
+        if (/BUILT_IN_UNKNOWN/.test(r.source || "")) {
+          throw new Error("not understood, rather than refused: " + String(r.response || "").slice(0, 50));
+        }
+        if (!/REFUSED/.test(r.source || "")) throw new Error("was not refused: " + r.source);
+        return;
+      }
       throw new Error("got " + got + " (" + r.source + ")");
     });
   });
@@ -365,6 +364,30 @@
       if (/\d,\d{3}\s*kcal/.test(text)) throw new Error("invented a target with no goal: " + text.slice(0, 90));
     } finally { window.IgnytGoals = saved; }
   });
+
+
+  /* ---------- the chat answers, it does not act -------------------------------------------
+     CHAT_CAN_ACT is off: the assistant explains and looks things up, and the screens do the
+     logging. These tests replace the ones that asserted the chat writes. They are not weaker --
+     they assert MORE than before: that the sentence was understood, that nothing was written,
+     and that the reply says where to go instead. A refusal that reads as "I did not understand"
+     would pass the old test's opposite and still be wrong. */
+  async function expectRefused(msg, where) {
+    var before = (await foodRows()).length;
+    var beforeW = (await weightRows()).length;
+    var r = await say(msg);
+    var text = String(r.response || "");
+    if (/BUILT_IN_UNKNOWN/.test(r.source || "")) {
+      throw new Error("not understood at all, which is not the same as refusing: " + text.slice(0, 60));
+    }
+    if (!/can't|cannot/i.test(text)) throw new Error("did not refuse: " + text.slice(0, 70));
+    if (where && text.toLowerCase().indexOf(where) === -1) {
+      throw new Error("refused without saying where to go: " + text.slice(0, 70));
+    }
+    if ((await foodRows()).length !== before) throw new Error("food was written despite refusing");
+    if ((await weightRows()).length !== beforeW) throw new Error("weight was written despite refusing");
+    return r;
+  }
 
   /* ---------- runner ------------------------------------------------------------------------ */
 
