@@ -18632,7 +18632,21 @@ function attachHandlers(){
       else if(ev.type === "clarify")state.aiChat.push({ role:"clarify", result:ev.result });
       else if(ev.type === "confirm"){
         state.aiPending = { action:ev.action, args:ev.args };
-        state.aiChat.push({ role:"confirm", text:"Delete this? It can't be undone." });
+        /* THE PROMPT DESCRIBES THE ACTION IT IS GUARDING. This said "Delete this? It can't be
+           undone." for every confirm, which was true while only destructive actions ever asked --
+           and became a lie the moment anything else did. A food log briefly asked the user whether
+           to delete their data. The wording now follows the action's own name. */
+        const _act = String(ev.action || "");
+        const _destructive = /^delete/i.test(_act);
+        state.aiChat.push({
+          role: "confirm",
+          text: _destructive ? "Delete this? It can't be undone."
+              : /^addFoodLog/i.test(_act) ? "Add this to your food log?"
+              : /^logWeight/i.test(_act)   ? "Log this weight?"
+              : /^start/i.test(_act)       ? "Start this workout?"
+              : /^complete/i.test(_act)    ? "Finish this workout?"
+              : "Go ahead with this?"
+        });
       }
       else if(ev.type === "usage") state.aiUsage = ev.usage;
       else if(ev.type === "actionError") state.aiChat.push({ role:"assistant", text:ev.error });

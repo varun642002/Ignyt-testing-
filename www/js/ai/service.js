@@ -216,7 +216,13 @@
        intent becomes a pending confirmation exactly as a typed "delete todays food" does. */
     var risk = window.IgnytAIIntent.riskOf(v.action);
     if (!risk) return null;
-    if (risk !== "read") {
+    /* ONLY DESTRUCTIVE INTENTS ARE HELD. Holding writes too was my own addition, meant as extra
+       caution for a model-inferred action, and it produced the worst reply of the day: "I smashed
+       a plate of briyani" was understood correctly as a food log, held for confirmation, and shown
+       to the user as "Delete this? It can't be undone." Caution that reads as data loss is not
+       caution. A write from this rung now executes exactly as a typed one does, and destructive
+       intents keep the gate they always had. */
+    if (risk === "destroy") {
       return { text: null, pending: { action: v.action, args: v.args }, source: "AI_INTENT:" + v.intent };
     }
 
