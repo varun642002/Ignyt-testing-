@@ -507,7 +507,8 @@
                        /* Carried so the card can say "2 × egg (100 g)" rather than just the
                           gram figure — the user said two eggs and should see two eggs. */
                        countedAs: countedAs }],
-             kcal: entry.calories, protein: entry.protein, entryId: entry.id, date: ds, meal: meal };
+             kcal: entry.calories, protein: entry.protein, entryId: entry.id, date: ds, meal: meal,
+             dayTotals: dayTotals(ds) };
   }
 
   function updateFoodLog(args) {
@@ -956,10 +957,34 @@
       return { card: "error", code: "none_found",
                message: "I couldn't find any of those in the food library: " + failed.join(", ") + "." };
     }
+    var ds2 = dateKey(items[0] && items[0].date);
+    var tot = dayTotals(ds2);
     var msg = "Logged " + logged.join(", ") + (kcal ? " — " + Math.round(kcal) + " kcal" : "") + ".";
     if (failed.length) msg += " I couldn't find " + failed.join(", ") + " in the library.";
+    /* Where that leaves them for the day, which is the point of logging it. */
+    if (tot.kcal) msg += " Today: " + tot.kcal.toLocaleString() + " kcal, " + tot.protein + " g protein.";
     return { card: "food_batch", logged: logged, failed: failed,
-             kcal: Math.round(kcal), affectedRecords: logged.length, message: msg };
+             kcal: Math.round(kcal), dayTotals: tot, affectedRecords: logged.length, message: msg };
+  }
+
+
+  /* THE DAY'S RUNNING TOTAL, READ BACK AFTER THE WRITE. The brief asks for totals to update on
+     every log, and the card carried only what was just added -- so "logged 2 eggs, 156 kcal" told
+     the user nothing about where that leaves them, which is the number they actually want.
+     Read from the stored rows rather than accumulated in memory: if a write partly failed, the
+     total shown is what is really in the log, not what was expected to be. */
+  function dayTotals(ds) {
+    var rows = (S().foodLog || []).filter(function (f) { return f && f.date === ds; });
+    var t = { kcal: 0, protein: 0, carbs: 0, fat: 0, items: rows.length };
+    rows.forEach(function (f) {
+      t.kcal += Number(f.calories) || 0;
+      t.protein += Number(f.protein) || 0;
+      t.carbs += Number(f.carbs) || 0;
+      t.fat += Number(f.fat) || 0;
+    });
+    t.kcal = Math.round(t.kcal); t.protein = Math.round(t.protein);
+    t.carbs = Math.round(t.carbs); t.fat = Math.round(t.fat);
+    return t;
   }
 
   var ACTIONS = {
