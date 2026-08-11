@@ -17939,5 +17939,467 @@
   "q": "What is the difference between weight loss and fat loss?",
   "a": "Weight loss is any drop on the scale, including water and muscle. Fat loss is the part you actually want, which is why strength and measurements matter more than the number.",
   "s": "general_fitness"
+ },
+ {
+  "id": 2564,
+  "c": "Training",
+  "q": "What is a 5x5 programme?",
+  "a": "Five sets of five reps on a few compound lifts, adding a little weight each session. Simple, effective for beginners, and it stops working once the jumps get too big to recover from.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2565,
+  "c": "Training",
+  "q": "What is a bro split?",
+  "a": "One muscle group per day - chest Monday, back Tuesday and so on. It trains each muscle once a week, which is usually less effective than twice for the same total sets.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2566,
+  "c": "Training",
+  "q": "What is periodisation?",
+  "a": "Planning training in blocks so volume and intensity change over time rather than staying flat. It stops progress stalling and manages fatigue across months.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2567,
+  "c": "Training",
+  "q": "What is a deload week?",
+  "a": "A planned lighter week - roughly half the usual volume, or the same sets at a lower weight - used to shed fatigue so the next block starts fresh.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2568,
+  "c": "Training",
+  "q": "How do I plan a training week?",
+  "a": "Decide how many days you can genuinely attend, then split so each muscle is hit about twice. Three days suits full body, four suits upper lower, five or six suits push pull legs.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2569,
+  "c": "Training",
+  "q": "Should I train to a plan or how I feel?",
+  "a": "Follow the plan for what you do, adjust the load for how you feel. Autoregulating weight is sensible; changing the whole session on a whim is how programmes fall apart.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2570,
+  "c": "Training",
+  "q": "How many sets per muscle per week?",
+  "a": "Ten to twenty working sets a week suits most people. Start at the lower end and add sets only when progress stalls, not because more sounds better.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2571,
+  "c": "Training",
+  "q": "What is volume in training?",
+  "a": "Total work done, usually counted as hard sets per muscle per week. It is the main lever for muscle growth once technique and effort are in place.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2572,
+  "c": "Training",
+  "q": "What is intensity in training?",
+  "a": "How heavy the weight is relative to your maximum, or how close a set is taken to failure. Both meanings are in common use, which is why people talk past each other about it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2573,
+  "c": "Training",
+  "q": "What is a one rep max?",
+  "a": "The heaviest weight you can lift once with good form. Useful as a reference for setting working weights; not something to test often.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2574,
+  "c": "Training",
+  "q": "How do I test my one rep max safely?",
+  "a": "Warm up thoroughly, make small jumps, use a spotter or safety bars, and stop the moment form breaks. Estimating from a heavy set of three to five is safer and usually enough.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2575,
+  "c": "Training",
+  "q": "How do I get my first pull-up?",
+  "a": "Train the movement three times a week: negatives from the top, band-assisted reps, and heavy lat pulldowns. Most people get there in six to twelve weeks.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2576,
+  "c": "Training",
+  "q": "How do I get my first push-up?",
+  "a": "Start with hands elevated on a bench or wall, lower the surface as you get stronger, and train it most days. Elevation is far better than dropping to the knees.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2577,
+  "c": "Training",
+  "q": "How do I run my first 5k?",
+  "a": "Follow a walk-run build over eight weeks, three sessions a week, adding a minute of running at a time. Pace matters less than finishing the sessions.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2578,
+  "c": "Training",
+  "q": "How long until I can bench my bodyweight?",
+  "a": "For most men starting untrained, six months to two years depending on size, consistency and diet. It is a milestone, not a schedule.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2579,
+  "c": "Training",
+  "q": "Is the Smith machine bad?",
+  "a": "No, just different. The fixed path removes balance work, which makes it easier to push hard alone but less transferable to free weights. Useful as an accessory.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2580,
+  "c": "Training",
+  "q": "Are kettlebells good for fat loss?",
+  "a": "They are good conditioning, and swings in particular raise heart rate quickly. Fat loss still comes from the calorie deficit; kettlebells make it easier to earn.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2581,
+  "c": "Training",
+  "q": "What equipment do I need for a home gym?",
+  "a": "Adjustable dumbbells, a bench and a pull-up bar cover most training. Add a barbell and rack later if you want to press and squat heavy.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2582,
+  "c": "Training",
+  "q": "Are cable machines good for building muscle?",
+  "a": "Yes. Constant tension through the range makes them excellent for isolation work and easy on joints. Most back and arm work benefits from them.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2583,
+  "c": "Training",
+  "q": "Do I need weightlifting shoes?",
+  "a": "No, but a firm flat sole helps for squats and deadlifts. Running shoes with soft foam are the worst choice for heavy lifting.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2584,
+  "c": "Training",
+  "q": "Are knee sleeves useful?",
+  "a": "They add warmth and a little support, which many people find helps squat comfort. They do not prevent injury by themselves.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2585,
+  "c": "Training",
+  "q": "What is chalk for?",
+  "a": "Keeping the hands dry so the bar does not slip on heavy pulls. It is the cheapest grip improvement there is.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2586,
+  "c": "Muscle Gain",
+  "q": "How do I build bigger forearms?",
+  "a": "Heavy carries, dead hangs, and direct wrist work. Forearms also grow from all the pulling you already do once you stop relying on straps for everything.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2587,
+  "c": "Muscle Gain",
+  "q": "How do I build my traps?",
+  "a": "Shrugs with real weight, heavy deadlifts and carries, plus upright rows or face pulls for the middle traps.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2588,
+  "c": "Muscle Gain",
+  "q": "How do I get visible abs?",
+  "a": "Lower body fat until they show - roughly the low teens for men and low twenties for women - while training abs with load so there is something to see.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2589,
+  "c": "Muscle Gain",
+  "q": "How do I lose love handles?",
+  "a": "There is no way to target them. Lower overall body fat and they go; for many people that area is among the last to change.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2590,
+  "c": "Muscle Gain",
+  "q": "Why is one arm bigger than the other?",
+  "a": "Almost everyone has a difference. Use dumbbells so the strong side cannot compensate, start sets with the weaker arm, and match its reps.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2591,
+  "c": "Muscle Gain",
+  "q": "How do I build a bigger neck?",
+  "a": "Neck harness work or careful isometric holds, twice a week, starting very light. This is one area where slow progression genuinely matters.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2592,
+  "c": "Muscle Gain",
+  "q": "Why are my calves not growing?",
+  "a": "Calves are used all day, so they need heavier loads, a full stretch and more frequency than other muscles. Three or four sessions a week with a pause at the bottom.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2593,
+  "c": "Muscle Gain",
+  "q": "Do I need to train forearms directly?",
+  "a": "Only if grip limits your pulling or you want the size. Otherwise heavy rows, deadlifts and carries do enough.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2594,
+  "c": "Training",
+  "q": "Will weight training make women bulky?",
+  "a": "No. Without the hormonal profile and the years of specific eating and training required, resistance work makes women stronger and firmer, not larger.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2595,
+  "c": "Training",
+  "q": "Should women train differently from men?",
+  "a": "No, the principles are identical. Programme differences come from individual goals, strengths and preferences, not from sex.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2596,
+  "c": "Training",
+  "q": "Can I train during my period?",
+  "a": "Yes, if you feel able. Many people find training helps symptoms. Lower the intensity on hard days rather than skipping the week.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2597,
+  "c": "Training",
+  "q": "Does the menstrual cycle affect training?",
+  "a": "Strength varies for some people across the cycle, though less than often claimed. Train as normal and adjust load by feel rather than by calendar.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2598,
+  "c": "Nutrition",
+  "q": "What is a good diet for PCOS?",
+  "a": "Generally one supporting a healthy weight, with adequate protein, fibre and resistance training, which improves insulin sensitivity. Specific plans belong with your doctor or dietitian.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2599,
+  "c": "General Fitness",
+  "q": "Can I exercise with thyroid problems?",
+  "a": "Usually yes, and exercise often helps, but the dose and the medication interact. Get your treatment settled with a doctor and build up gradually.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2600,
+  "c": "General Fitness",
+  "q": "Is exercise safe with diabetes?",
+  "a": "Generally yes and usually beneficial, but it changes blood sugar and may change medication needs. Plan it with the doctor managing your treatment.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2601,
+  "c": "General Fitness",
+  "q": "Does exercise lower cholesterol?",
+  "a": "Regular activity tends to raise HDL and lower triglycerides. Diet and medication matter too, so treat exercise as part of the answer rather than all of it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2602,
+  "c": "General Fitness",
+  "q": "Can exercise help back pain?",
+  "a": "Often yes. Strengthening the trunk and hips and staying active usually beats rest for ordinary low back pain, but sudden or severe pain needs assessment first.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2603,
+  "c": "General Fitness",
+  "q": "Is walking enough exercise?",
+  "a": "It is genuinely good for health and for fat loss. It will not build much muscle or strength, so pair it with resistance work if that matters to you.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2604,
+  "c": "General Fitness",
+  "q": "How much exercise do I need to be healthy?",
+  "a": "Around 150 minutes of moderate activity a week plus two strength sessions is the common public health target. That is a floor, not a ceiling.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2605,
+  "c": "Nutrition",
+  "q": "Does creatine make you gain weight?",
+  "a": "It draws water into muscle, so the scale often rises one to two kilos in the first weeks. That is not fat, and it is part of how it works.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2606,
+  "c": "Nutrition",
+  "q": "Should I cycle creatine?",
+  "a": "No need. Continuous daily use is well studied and safe for healthy people.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2607,
+  "c": "Nutrition",
+  "q": "Is fish oil worth taking?",
+  "a": "Useful if you eat little oily fish - it supports heart health and may help joint comfort. It is not a training supplement.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2608,
+  "c": "Nutrition",
+  "q": "Does ashwagandha help with training?",
+  "a": "Some evidence suggests modest benefits to stress and sleep, which can help recovery indirectly. Treat the strength claims with caution.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2609,
+  "c": "Nutrition",
+  "q": "Why do I get cramps during exercise?",
+  "a": "Usually fatigue in the muscle, sometimes fluid or salt loss in heat. Build up volume gradually, hydrate, and salt your food normally.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2610,
+  "c": "Nutrition",
+  "q": "Are mass gainers worth it?",
+  "a": "They are mostly sugar and calories at a high price. Milk, oats, peanut butter and bananas do the same job cheaper if you struggle to eat enough.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2611,
+  "c": "Nutrition",
+  "q": "How much caffeine is safe?",
+  "a": "Up to about 400 mg a day for most adults. Keep the last dose at least six hours before bed, since it is what usually damages sleep.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2612,
+  "c": "Nutrition",
+  "q": "Does pre-workout cause the tingling?",
+  "a": "Yes, that is beta-alanine and it is harmless. It has nothing to do with how well the product works.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2613,
+  "c": "Nutrition",
+  "q": "Should I take glutamine?",
+  "a": "There is little evidence it helps healthy trainees. Your protein intake already provides it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2614,
+  "c": "Nutrition",
+  "q": "Are testosterone boosters effective?",
+  "a": "Almost none show meaningful effects in healthy men. Sleep, bodyweight, training and stress do far more for testosterone than any supplement on that shelf.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2615,
+  "c": "Nutrition",
+  "q": "Do collagen supplements help joints?",
+  "a": "Evidence is mixed but there is some support for tendon comfort alongside training. It is not a substitute for managing load.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2616,
+  "c": "General Fitness",
+  "q": "How do I work out in a hotel room?",
+  "a": "Push-up variations, split squats, hip hinges, planks and a long walk. Twenty minutes of bodyweight work keeps the habit intact while travelling.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2617,
+  "c": "General Fitness",
+  "q": "What do I do if the gym is crowded?",
+  "a": "Change the order of your exercises rather than skipping them, or substitute a machine for a free weight. The plan is a guide, not a queue ticket.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2618,
+  "c": "General Fitness",
+  "q": "What is gym etiquette?",
+  "a": "Re-rack your weights, wipe equipment, do not sit on a machine between sets on your phone, and let people work in. That is most of it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2619,
+  "c": "General Fitness",
+  "q": "Should I use headphones at the gym?",
+  "a": "If it helps you focus, yes. Keep the volume low enough to hear someone asking to work in or warning you about a bar.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2620,
+  "c": "General Fitness",
+  "q": "How do I choose a gym?",
+  "a": "Pick the one you will actually go to - proximity beats equipment. Check it has the basics: barbells, a rack, dumbbells to a decent weight, and space at your usual hour.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2621,
+  "c": "General Fitness",
+  "q": "Is morning cardio better than evening?",
+  "a": "Not meaningfully. Do it when you will do it consistently and when it does not compromise your lifting.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2622,
+  "c": "General Fitness",
+  "q": "What are common beginner mistakes?",
+  "a": "Programme hopping, chasing weight before form, skipping legs, ignoring protein, and expecting three-month results in three weeks.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2623,
+  "c": "General Fitness",
+  "q": "Should I take progress photos?",
+  "a": "Yes. Same lighting, same time of day, same clothes, every four weeks. They show change the scale hides.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2624,
+  "c": "General Fitness",
+  "q": "Why do I feel weaker some days?",
+  "a": "Sleep, food, stress and accumulated fatigue all move day to day. One bad session means nothing; three in a row suggests you need a lighter week.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2625,
+  "c": "General Fitness",
+  "q": "Is it normal to feel sick after hard training?",
+  "a": "Occasionally, after very intense work. If it happens regularly, you are going too hard for your current fitness or training too soon after eating.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2626,
+  "c": "General Fitness",
+  "q": "How do I warm up before cardio?",
+  "a": "Five minutes at an easy pace, gradually raising intensity. That is enough for most sessions; a hard interval workout deserves a little more.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2627,
+  "c": "General Fitness",
+  "q": "Do I need to cool down after training?",
+  "a": "A few minutes of easy movement is pleasant and helps you settle, but it does not prevent soreness or speed recovery.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2628,
+  "c": "General Fitness",
+  "q": "Can I train fasted in the morning?",
+  "a": "Yes, if you feel fine doing it. Performance on heavy work may dip a little; for easy cardio it makes almost no difference.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2629,
+  "c": "General Fitness",
+  "q": "How do I know if my programme is working?",
+  "a": "The weights or reps are going up over a month, and measurements or photographs are moving in the intended direction. If neither is true after six weeks, change something.",
+  "s": "general_fitness"
  }
 ]
