@@ -354,9 +354,18 @@
     var ran = !pending && out.action ? out.action : null;
 
     return {
+      /* BUILT_IN_INTENT is a source like any other, and leaving it out of this ladder cost more
+         than a wrong label. When the classifier was briefly promoted, twelve tests failed and
+         eleven of them were only this: correctly routed messages reported as "ANSWER" because
+         the prefix was unrecognised. The one genuine regression was buried among them, and I
+         nearly read the whole batch as the classifier misrouting.
+         A diagnostic that misreports is worse than one that says nothing, because it is
+         believed. The rule now: any new source prefix belongs here in the same commit that
+         introduces it. */
       intent: pending ? pending.action
             : ran ? ran
             : src.indexOf("BUILT_IN_ACTION") === 0 ? src.split(":")[1] || "ACTION"
+            : src.indexOf("BUILT_IN_INTENT") === 0 ? src.split(":")[1] || "INTENT"
             : src === "BUILT_IN_KNOWLEDGE" ? "KNOWLEDGE"
             : src === "BUILT_IN_UNKNOWN" ? "UNKNOWN"
             : "ANSWER",
