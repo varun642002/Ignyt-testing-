@@ -994,6 +994,21 @@
     if (window.IgnytIntents) {
       var lead = null;
       try { lead = IgnytIntents.classify(t); } catch (e) { lead = null; }
+      /* THE KNOWLEDGE BASE OUTRANKS A PROMOTED INTENT. Promoting the read intents put the
+         classifier above the knowledge base in this ladder, and general questions started being
+         answered with the user's own data: "how much protein should i eat" opened the food log,
+         "is soya good for muscle" showed today's workout, "why am i not losing weight" showed
+         the weight history. All scored over 0.8, because a question about food really does look
+         like a request to see food.
+         The intents are about the user's records; the knowledge base is about fitness. When the
+         knowledge base has a confident answer the message was a QUESTION, so it wins. Reads that
+         genuinely address the records -- "did i log anything today" -- are not in the knowledge
+         base at all, so they are untouched. */
+      if (lead && PROMOTED[lead.intent] && lead.confidence >= 0.8 && window.IgnytKnowledge) {
+        var kb = null;
+        try { kb = await IgnytKnowledge.ask(t); } catch (e) { kb = null; }
+        if (kb && kb.answer) lead = null;
+      }
       if (lead && PROMOTED[lead.intent] && lead.confidence >= 0.8) {
         var led = await runClassified(A, t, lead);
         if (led) return led;
