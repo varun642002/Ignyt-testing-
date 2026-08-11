@@ -877,6 +877,34 @@
           t = t.replace(mm[0], "").replace(/\s+/g, " ").trim();
         }
 
+        /* THE DAY, STRIPPED THE SAME WAY THE MEAL IS. addFoodLog has always accepted a date and
+           dateKey() has always allowed backdating -- nothing here ever extracted one, so "log 2
+           eggs yesterday" left "yesterday" glued to the food name, matched nothing in the
+           library, and stored NOTHING while reporting no problem. Measured: every dated phrasing
+           failed, every meal phrasing passed.
+           Stripped before the food is read, for the same reason the meal is: whatever is left
+           has to be the food and the quantity and nothing else. */
+        var dayOffset = null;
+        var DAY_WORDS = [
+          ["day before yesterday", 2],
+          ["yesterday", 1],
+          ["last night", 1],
+          ["today", 0],
+          ["this morning", 0],
+          ["tonight", 0]
+        ];
+        for (var dw = 0; dw < DAY_WORDS.length; dw++) {
+          var phrase = DAY_WORDS[dw][0];
+          var pad = " " + t + " ";
+          var at = pad.indexOf(" " + phrase + " ");
+          if (at === -1) continue;
+          dayOffset = DAY_WORDS[dw][1];
+          t = (pad.slice(0, at) + " " + pad.slice(at + phrase.length + 2)).replace(/\s+/g, " ").trim();
+          /* "on" and "from" are left dangling by the removal: "log 2 eggs on yesterday". */
+          t = t.replace(/\s+(on|from)\s*$/, "").replace(/\s+/g, " ").trim();
+          break;
+        }
+
         /* SEVERAL FOODS, CHECKED FIRST. This has to run before the parse rather than on the
            parsed food name: "log 200g chicken and 100g rice" fails the strict pattern
            outright — [a-z\s] cannot cover "100g" — so the guard placed after it never ran and
@@ -978,6 +1006,12 @@
           args.quantity = qty;                                  // a count: "2 eggs", "3 rotis"
         }
         if (meal) args.meal = meal;
+        if (dayOffset != null && dayOffset > 0) {
+          var back = new Date();
+          back.setDate(back.getDate() - dayOffset);
+          args.date = new Date(back.getTime() - back.getTimezoneOffset() * 60000)
+                        .toISOString().slice(0, 10);   // local day, matching dayKey()
+        }
         return { text: null, pending: { action: "addFoodLog", args: args } };
       }
     }
