@@ -37,6 +37,17 @@
      its own limit, so turning this on does not bypass anything. */
   var EXTERNAL_AI = false;
 
+  /* AI FIRST, LOCAL AS THE SAFETY NET. Set while evaluating how well the model alone handles real
+     messages: every message goes to the model, and the local patterns, classifier and knowledge
+     base only answer when it cannot.
+     THE FALLBACK IS DELIBERATELY KEPT. "Only AI" with nothing behind it means the app stops
+     understanding anything the moment the backend sleeps, the phone is offline or the daily quota
+     runs out -- and the backend does sleep, every quarter of an hour. Losing food logging on a
+     train is a worse outcome than an evaluation that occasionally reads a local answer, and the
+     source field says which answered: AI_INTENT for the model, BUILT_IN_ for local.
+     Set to false to restore local-first, which costs nothing and answers instantly. */
+  var AI_FIRST = true;
+
   function apiBase() {
     return (window.IgnytConfig && IgnytConfig.apiBase && IgnytConfig.apiBase()) || window.IGNYT_API_BASE || "";
   }
@@ -238,6 +249,23 @@
     var onEvent = opts.onEvent || function () {};
     var A = window.IgnytAIActions;
     var history = opts.history || [];
+
+    /* When AI_FIRST is set this runs before the local layer rather than after it. The rung
+       itself is unchanged -- same contract, same validation, same action registry, same gate on
+       destructive intents -- only its position moves. */
+    if (AI_FIRST) {
+      var aiFirst = null;
+      try { aiFirst = await aiIntentFallback(message); } catch (e) { aiFirst = null; }
+      if (aiFirst) {
+        if (aiFirst.pending) {
+          onEvent({ type: "confirm", action: aiFirst.pending.action, args: aiFirst.pending.args });
+          return { text: null, pending: aiFirst.pending, source: aiFirst.source };
+        }
+        if (aiFirst.card) onEvent({ type: "card", result: aiFirst.card });
+        else if (aiFirst.text) onEvent({ type: "text", text: aiFirst.text });
+        return { text: aiFirst.text, result: aiFirst.card, ok: true, source: aiFirst.source };
+      }
+    }
 
     /* THE LOCAL CHATBOT GETS FIRST REFUSAL.
        "what's my streak" and "log 200g chicken" are mechanical: the sentence names the action.
