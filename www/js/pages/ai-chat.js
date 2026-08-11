@@ -64,7 +64,12 @@
         break;
       case "deleted":
         icon = "trash"; title = "Removed";
-        body = '<div class="aic-card__big">' + esc(r.what || "") + '</div>';
+        /* FIVE OF THE SEVEN DELETE ACTIONS NEVER SET `what`. Only deleting a routine or a named
+           food does; deleting a day, a meal, a weight entry or the whole log returns a message
+           and no `what`, so this rendered the word "Removed" above an empty box -- which is
+           exactly what the device showed after "delete all the logged foods today". The message
+           already says what went, and it is the only field every one of them sets. */
+        body = '<div class="aic-card__big">' + esc(r.what || r.message || "Done") + '</div>';
         break;
       case "food_batch":
         /* SEVERAL FOODS AT ONCE. Without this the batch fell to the default below and rendered
