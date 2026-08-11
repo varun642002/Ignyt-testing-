@@ -937,6 +937,40 @@
    * @returns {Promise<{text:string|null, pending?:object, source:string}|null>}
    *          null means "I don't understand this well enough" — the caller must fall back.
    */
+  /* Run whichever handler a classified intent maps to. The classifier decides WHICH intent;
+     the handler that intent already has decides what to do — so a classified message and a
+     pattern-matched one execute identical code, and there is no second implementation of any
+     action to drift. */
+  var HANDLER = {
+    DELETE_TODAY_FOOD: "delete todays food",
+    LOG_FOOD: "log food",
+    VIEW_FOOD_LOG: "food log today",
+    LOG_WEIGHT: "ask weight",
+    VIEW_WEIGHT_HISTORY: "weight history",
+    VIEW_TODAY_WORKOUT: "today workout",
+    START_WORKOUT: "start workout",
+    VIEW_PROGRESS: "progress",
+    CREATE_ROUTINE: "create routine",
+    EXERCISE_HOW_TO: "exercise how to"
+  };
+  async function runClassified(A, t, guess) {
+    var wanted = HANDLER[guess.intent];
+    if (!wanted) return null;
+    for (var k = 0; k < INTENTS.length; k++) {
+      if (INTENTS[k].name !== wanted) continue;
+      if (INTENTS[k].needs && !has(A, INTENTS[k].needs)) return null;
+      var out = null;
+      try { out = await INTENTS[k].run(A, t); } catch (e) { return null; }
+      /* A handler that declines on closer inspection still declines: the classifier is
+         confident about the sentence, not about whether the data supports an answer. */
+      if (!out) return null;
+      out.source = "BUILT_IN_INTENT:" + guess.intent;
+      out.confidence = guess.confidence;
+      return out;
+    }
+    return null;
+  }
+
   async function tryAnswer(message) {
     /* Before norm(), which converts the words to English and erases the evidence. */
     _lang = (window.IgnytLang && IgnytLang.languageFor) ? IgnytLang.languageFor(message) : "en";
@@ -973,6 +1007,19 @@
         _awaiting = null;
       }
     }
+    /* THE CLASSIFIER DOES NOT LEAD YET, and the suite is why.
+
+       Promoting it above the pattern table was tried and reverted in the same sitting: 43 tests
+       went to 31. Most of those were a reporting gap rather than a routing one, but one was
+       real and disqualifying — "delete it" stopped asking which record was meant, because the
+       classifier confidently claimed a bare pronoun that names nothing. A classifier is
+       comfortable being confident about a sentence with no object; a pattern that requires an
+       object is not, and for destructive verbs that timidity is the feature.
+
+       So it stays BELOW: patterns first for what they already cover, the classifier for what
+       falls through. Promoting it is still the right destination, and the route there is per
+       intent rather than wholesale — move one, run the suite, keep it only if the count holds. */
+
     for (var i = 0; i < INTENTS.length; i++) {
       var it = INTENTS[i];
       if (it.needs && !has(A, it.needs)) continue;   // action unavailable; not our problem to fake
@@ -991,6 +1038,30 @@
       if (!out) return null;                          // handler declined on closer inspection
       out.source = "BUILT_IN_ACTION:" + it.name;
       return out;
+    }
+
+    /* NO PATTERN MATCHED — ask the classifier before the knowledge base.
+
+       This is the second half of the intent engine. The table above is fast and exact for the
+       phrasings it already covers, and the suite proves it does; this catches everything else,
+       by similarity to how people actually say things rather than by a pattern the sentence has
+       to satisfy. "wipe my food log" and "get rid of everything I ate today" are the same
+       request as "delete today's food" and share almost no words with it.
+
+       It runs BELOW the table on purpose. A classifier is a probability and a pattern is a
+       certainty, so anything already proven stays exact — and every regex retired later has to
+       leave the test count unchanged, which is the only honest way to hand coverage over.
+
+       The classifier decides WHICH intent; the handler that intent already has decides what to
+       do. There is no second implementation of any action, so a classified message and a
+       matched one execute the identical code. */
+    if (window.IgnytIntents) {
+      var guess = null;
+      try { guess = IgnytIntents.classify(t); } catch (e) { guess = null; }
+      if (guess) {
+        var late = await runClassified(A, t, guess);
+        if (late) return late;
+      }
     }
 
     /* NO ACTION MATCHED — try the knowledge base before giving up on this message.
