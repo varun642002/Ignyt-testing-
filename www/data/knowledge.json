@@ -38197,5 +38197,355 @@
   "q": "Is it ok to eat eggs daily?",
   "a": "Yes, for most healthy people. Two or three a day is fine, and dietary cholesterol affects blood cholesterol far less than was once believed.",
   "s": "general_fitness"
+ },
+ {
+  "id": 6802,
+  "c": "General Fitness",
+  "q": "How do I start exercising if I am very overweight?",
+  "a": "Walking, and resistance work sitting or lying rather than standing. Build the walking first - it is the most sustainable calorie burn and the least punishing on joints.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6803,
+  "c": "General Fitness",
+  "q": "How do I start if I get out of breath easily?",
+  "a": "Walk at a pace where you can still talk, for as long as is comfortable, most days. Add a minute or two each week. Breathlessness improves faster than almost anything else.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6804,
+  "c": "Muscle Gain",
+  "q": "How do I gain weight if I am very skinny?",
+  "a": "Eat more often rather than more per meal, use calorie-dense foods like milk, peanut butter, ghee, nuts and bananas, and lift three times a week. Liquid calories are the easiest lever.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6805,
+  "c": "Muscle Gain",
+  "q": "Why can't I gain weight no matter what I eat?",
+  "a": "Almost always a lower intake than you think, plus a high level of unconscious movement. Track everything for a week honestly before concluding your metabolism is unusual.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6806,
+  "c": "Nutrition",
+  "q": "How do I increase my appetite?",
+  "a": "Eat calorie-dense foods, drink some of your calories, eat before you feel hungry rather than after, and keep meal times regular. Very high fibre volume makes this harder.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6807,
+  "c": "General Fitness",
+  "q": "Can I exercise during menopause?",
+  "a": "Yes, and resistance training becomes more valuable then - it protects bone density and muscle mass, both of which decline faster around that time.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6808,
+  "c": "General Fitness",
+  "q": "When can I train after having a baby?",
+  "a": "That is a medical question, and the answer depends on the birth and recovery. Get clearance first, then restart gently with core and pelvic floor work before load.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6809,
+  "c": "Exercise Safety",
+  "q": "What are shin splints and how do I fix them?",
+  "a": "Pain along the shin from doing too much running too soon, often on hard surfaces. Reduce volume, build back gradually, check your shoes, and strengthen the calves.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6810,
+  "c": "Exercise Safety",
+  "q": "What is plantar fasciitis?",
+  "a": "Heel and arch pain, usually worst on the first steps of the morning. It responds to calf and foot strengthening, load management and supportive shoes.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6811,
+  "c": "Exercise Safety",
+  "q": "What is IT band pain?",
+  "a": "Pain on the outside of the knee, common in runners and cyclists. Usually a load and hip strength issue rather than a tight band that needs rolling.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6812,
+  "c": "Exercise Safety",
+  "q": "How do I look after my rotator cuff?",
+  "a": "Warm up the shoulder, include face pulls and external rotation work, and avoid pushing through pinching pain on overhead or bench work.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6813,
+  "c": "Exercise Safety",
+  "q": "Why does my knee hurt going down stairs?",
+  "a": "Often the quadriceps tendon or kneecap taking load it is not conditioned for. Strengthening quads and glutes usually helps; persistent pain needs assessment.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6814,
+  "c": "Exercise Safety",
+  "q": "What should I do about a lower back spasm?",
+  "a": "Keep moving gently within comfort, avoid heavy loading for a few days, and return gradually. Most settle in a week or two; sudden severe pain or numbness needs a doctor.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6815,
+  "c": "Exercise Safety",
+  "q": "Is cracking my back or neck harmful?",
+  "a": "Occasional self-cracking is usually harmless. Needing it constantly suggests a stiffness or strength issue worth addressing rather than repeating.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6816,
+  "c": "Exercise Safety",
+  "q": "Why do my joints ache after training?",
+  "a": "Usually load added faster than the tendons adapted. Tendons strengthen more slowly than muscle, so the fix is smaller jumps and more patience.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6817,
+  "c": "Nutrition",
+  "q": "Why am I bloated after eating more protein?",
+  "a": "Often the accompanying fibre change, dairy, or eating faster than usual. Spread protein across meals and increase fibre and water gradually.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6818,
+  "c": "Nutrition",
+  "q": "Why am I constipated on a diet?",
+  "a": "Usually less food overall means less fibre and fluid. Add vegetables, fruit, whole grains and water before considering anything else.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6819,
+  "c": "Nutrition",
+  "q": "Does protein powder cause gas?",
+  "a": "It can, particularly whey concentrate for those sensitive to lactose. Isolate or a plant blend usually solves it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6820,
+  "c": "Nutrition",
+  "q": "Why do I feel bloated after a big carb meal?",
+  "a": "Carbohydrate stores water alongside it, and larger meals stretch the stomach. It is water and volume, not fat, and it settles.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6821,
+  "c": "Fat Loss",
+  "q": "Why does my weight go up overnight?",
+  "a": "Salt, carbohydrate, food volume and hormones all move water. Overnight swings of a kilo or more are normal and are not fat.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6822,
+  "c": "Fat Loss",
+  "q": "What causes water retention?",
+  "a": "Sodium, carbohydrate intake, heat, stress, poor sleep, the menstrual cycle, and hard training. It masks fat loss for days at a time, which is why weekly averages matter.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6823,
+  "c": "General Fitness",
+  "q": "Why do I get out of breath climbing stairs?",
+  "a": "Aerobic fitness, and it is one of the fastest things to improve. Regular walking and a few weeks of stairs make a noticeable difference.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6824,
+  "c": "Nutrition",
+  "q": "How do I read a food label?",
+  "a": "Check the serving size first - everything else on the panel refers to it. Then calories, protein, and whether sugar and oil appear high in the ingredient list.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6825,
+  "c": "Nutrition",
+  "q": "How do I estimate portions without a scale?",
+  "a": "A palm of protein, a cupped hand of carbohydrate, a thumb of fat and a fist of vegetables per meal. Rough, but far better than guessing blind.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6826,
+  "c": "Nutrition",
+  "q": "What does per 100g mean on a label?",
+  "a": "The values shown are for 100 grams of the product, not for the packet or a serving. Multiply by what you actually eat.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6827,
+  "c": "Nutrition",
+  "q": "Are protein bars healthy?",
+  "a": "They are convenient, not magic - often close to a chocolate bar with extra protein. Fine occasionally, poor value as a staple.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6828,
+  "c": "Nutrition",
+  "q": "Is brown bread better than white?",
+  "a": "Slightly, for fibre, if it is genuinely wholemeal rather than coloured. Check the ingredient list rather than the packet colour.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6829,
+  "c": "Nutrition",
+  "q": "Are smoothies good for weight loss?",
+  "a": "They can be, if they are built from whole fruit, protein and not much else. Liquid calories are easy to drink and easy to underestimate.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6830,
+  "c": "Nutrition",
+  "q": "Is fruit juice as good as fruit?",
+  "a": "No. Juice removes the fibre and most of the fullness, leaving the sugar. Whole fruit is the better choice nearly always.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6831,
+  "c": "Nutrition",
+  "q": "How much oil should I use for cooking?",
+  "a": "Measure it - one to two teaspoons per person per dish is plenty. Oil is the single most underestimated calorie source in home cooking.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6832,
+  "c": "Nutrition",
+  "q": "Does cooking destroy protein?",
+  "a": "No. Cooking changes the structure but the protein remains available, and often becomes easier to digest.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6833,
+  "c": "Nutrition",
+  "q": "Is microwaving food unhealthy?",
+  "a": "No. It cooks with heat like any other method and often preserves nutrients better because cooking times are shorter.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6834,
+  "c": "Nutrition",
+  "q": "What is 16:8 fasting?",
+  "a": "Eating within an eight-hour window and fasting for sixteen. It helps some people eat less overall; it has no special fat loss property beyond that.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6835,
+  "c": "Nutrition",
+  "q": "What is OMAD?",
+  "a": "One meal a day. It works for a few people and is very hard to get enough protein on. Most find it unsustainable and unnecessary.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6836,
+  "c": "Nutrition",
+  "q": "Does fasting burn muscle?",
+  "a": "Not over short daily fasts, especially with adequate protein and resistance training. Prolonged fasting without either is a different matter.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6837,
+  "c": "Nutrition",
+  "q": "Can I train while fasting?",
+  "a": "Yes. Performance on heavy work may dip slightly; easy cardio is largely unaffected. Judge it by how your sessions actually go.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6838,
+  "c": "Nutrition",
+  "q": "Should I break my fast with protein?",
+  "a": "It is a sensible way to start, since protein is the nutrient people fall short on when eating windows are compressed.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6839,
+  "c": "General Fitness",
+  "q": "How do I counter sitting all day?",
+  "a": "Stand and move every half hour, walk at lunch, and train the upper back and hips. Frequency of movement matters more than any single stretch.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6840,
+  "c": "General Fitness",
+  "q": "What is the best desk posture?",
+  "a": "The one you change often. Screen at eye level, feet supported, and get up regularly - no fixed position is good for eight hours.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6841,
+  "c": "General Fitness",
+  "q": "How do I fix neck pain from my desk?",
+  "a": "Raise the screen, move hourly, and strengthen the upper back. Most desk neck pain is a load-over-time problem rather than an injury.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6842,
+  "c": "General Fitness",
+  "q": "Does exercise improve immunity?",
+  "a": "Moderate regular exercise supports it. Very hard training with poor sleep and low food temporarily does the opposite, which is why illness clusters around hard blocks.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6843,
+  "c": "General Fitness",
+  "q": "Does exercise help bone density?",
+  "a": "Yes, especially resistance training and impact activity. It is one of the strongest reasons to lift as you get older.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6844,
+  "c": "General Fitness",
+  "q": "Does training help sleep?",
+  "a": "Usually yes, and the effect is one of the most reliable benefits of regular exercise. Very late intense sessions can delay sleep for some people.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6845,
+  "c": "General Fitness",
+  "q": "Can exercise help anxiety?",
+  "a": "Regular activity reliably helps mood and anxiety for many people. It is a genuine part of treatment, not a replacement for it when symptoms are serious.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6846,
+  "c": "General Fitness",
+  "q": "Does exercise affect hair or skin?",
+  "a": "Indirectly - better sleep, circulation and stress help both. Crash dieting and very low fat intake are what usually harm them.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6847,
+  "c": "Cardio",
+  "q": "How do I choose running shoes?",
+  "a": "Comfort on your foot beats any theory about pronation. Replace them every 600 to 800 kilometres, or when the cushioning feels flat.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6848,
+  "c": "Cardio",
+  "q": "What is running cadence and does it matter?",
+  "a": "Steps per minute. Raising a very low cadence slightly can reduce impact per step, but chasing a specific number matters far less than building distance gradually.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6849,
+  "c": "Cardio",
+  "q": "Should I run on a treadmill or outside?",
+  "a": "Outside is more varied and slightly harder for the same pace; the treadmill is controlled and kinder in bad weather. Both build the same fitness.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6850,
+  "c": "Cardio",
+  "q": "How do I run up hills?",
+  "a": "Shorten your stride, keep the effort even rather than the pace, and lean slightly from the ankles. Hills are strength work disguised as running.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6851,
+  "c": "Cardio",
+  "q": "How often should I run as a beginner?",
+  "a": "Three times a week with rest days between. Running frequency is where most beginner injuries come from, not distance.",
+  "s": "general_fitness"
  }
 ]

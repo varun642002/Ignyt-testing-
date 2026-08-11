@@ -989,6 +989,19 @@
     for (var k = 0; k < INTENTS.length; k++) {
       if (INTENTS[k].name !== wanted) continue;
       if (INTENTS[k].needs && !has(A, INTENTS[k].needs)) { trace("rc-exit", "needs unavailable: " + INTENTS[k].needs); return null; }
+      /* THE SAME QUESTION GUARD THE PATTERN LOOP HAS, AND THIS IS THE COPY THAT MATTERED.
+         Guarding only the patterns left the classifier route wide open: "should i delete my food
+         log" reached DELETE_TODAY_FOOD and DELETED THE LOG, and "how do i start a workout"
+         started one. Asking whether you should do a thing is not asking for it to be done, and
+         for a destructive verb that distinction is the whole ballgame.
+         Found by the batch-7 probe, one batch after the same bug was fixed in the pattern loop
+         alone -- the third time in this file that a rule has existed in one place and not its
+         twin. Reads still answer normally. */
+      if (QUESTION_OPENER.test(t) && INTENTS[k].needs && window.IgnytAIActions
+          && IgnytAIActions.risk(INTENTS[k].needs) !== "read") {
+        trace("rc-exit", "question, not a command: " + INTENTS[k].name);
+        return null;
+      }
       var out = null;
       try { out = await INTENTS[k].run(A, t); } catch (e) { trace("rc-exit", "handler threw: " + (e && e.message)); return null; }
       /* A handler that declines on closer inspection still declines: the classifier is
@@ -1128,6 +1141,16 @@
          depends on and drop the intent on the floor. Skipping it explicitly beats letting
          it.test throw into the catch below -- that worked, but as control flow by accident. */
       if (typeof it.test !== "function") continue;
+      /* A QUESTION NEVER TRIGGERS A WRITE -- ANY WRITE, not just food logging. The interrogative
+         guard started life inside the LOG FOOD test, which protected exactly one pattern: "why do
+         my joints ache after training" then matched START WORKOUT and began a session. Same
+         mistake, different verb, found by the batch-7 probe.
+         Risk comes from the action registry. Only an action that actually writes is blocked --
+         LOG FOOD declares addFoodLog, START WORKOUT declares startWorkout. An entry declaring no
+         action cannot write anything, so it is left alone: blocking those broke "how do i do
+         bench press", which is a question whose whole job is to answer. */
+      if (QUESTION_OPENER.test(t) && it.needs && window.IgnytAIActions
+          && IgnytAIActions.risk(it.needs) !== "read") continue;
       var matched = false;
       try { matched = it.test(t); } catch (e) { matched = false; }
       if (!matched) continue;
