@@ -16896,5 +16896,579 @@
   "q": "What is a realistic first goal?",
   "a": "Training consistently three times a week for a month. Get that habit in place before worrying about programmes, splits or supplements.",
   "s": "general_fitness"
+ },
+ {
+  "id": 2415,
+  "c": "Training",
+  "q": "How do I breathe while lifting?",
+  "a": "Breathe in on the way down, out on the way up. For heavy sets, take a breath at the top, brace, and hold it through the rep - that stiffens the trunk and protects the spine.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2416,
+  "c": "Training",
+  "q": "What is tempo in lifting?",
+  "a": "How long each part of a rep takes. A common tempo is two seconds down, no pause, one second up. Slowing the lowering phase adds difficulty without adding weight.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2417,
+  "c": "Training",
+  "q": "Should I lock out my joints?",
+  "a": "Straighten the joint but stop short of forcing it. Full lockout is fine on presses and pulls; snapping into it under heavy load is what causes trouble.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2418,
+  "c": "Training",
+  "q": "Why do my heels lift when I squat?",
+  "a": "Usually limited ankle mobility. Raising the heels slightly with lifting shoes or a small plate fixes it immediately while you work on ankle range separately.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2419,
+  "c": "Training",
+  "q": "How wide should my grip be on bench press?",
+  "a": "About one and a half times shoulder width, with forearms roughly vertical at the bottom. Wider stresses the shoulder more; narrower shifts work to the triceps.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2420,
+  "c": "Training",
+  "q": "Why does my lower back hurt after deadlifts?",
+  "a": "Usually the back rounding under load, or the bar drifting away from the body. Lighten the weight, keep the bar against your legs, and brace before the pull rather than during it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2421,
+  "c": "Training",
+  "q": "Should I deadlift with a rounded back?",
+  "a": "No. A neutral spine under load is what keeps the discs happy. If your back rounds before the bar leaves the floor, the weight is too heavy or the setup is wrong.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2422,
+  "c": "Training",
+  "q": "What is a mixed grip?",
+  "a": "One palm facing forward and one back, used to stop heavy deadlifts rolling out of the hands. Alternate which hand is which, or use straps, so you do not develop an imbalance.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2423,
+  "c": "Training",
+  "q": "Why can't I feel my lats?",
+  "a": "Usually the arms are doing the pulling. Think of driving the elbows down and back rather than pulling with the hands, and slow the lowering phase down.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2424,
+  "c": "Training",
+  "q": "How do I stop my forearms failing before my back?",
+  "a": "Use straps on your heaviest pulling sets, and train grip separately at the end of the session so it is not the limiting factor in the work that matters.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2425,
+  "c": "Training",
+  "q": "What are RIR and RPE?",
+  "a": "Reps in reserve and rate of perceived exertion - two ways of describing how close a set was to failure. Two RIR means you could have done two more reps.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2426,
+  "c": "Training",
+  "q": "Should I train abs every day?",
+  "a": "No. Abs are muscle like any other and grow with two or three sessions a week, with load added over time rather than endless reps.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2427,
+  "c": "Training",
+  "q": "How do I train my core properly?",
+  "a": "Braced holds like planks, anti-rotation work, and heavy compound lifts, which train the trunk hard already. Add weighted crunches or leg raises for direct growth.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2428,
+  "c": "Training",
+  "q": "Are machines as good as free weights?",
+  "a": "For building muscle, close to it. Free weights train balance and coordination alongside; machines are easier to learn and safer to push near failure alone.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2429,
+  "c": "Training",
+  "q": "Are dumbbells better than barbells?",
+  "a": "Neither is better. Barbells allow more total load, dumbbells allow a longer range and fix side-to-side imbalances. Most good programmes use both.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2430,
+  "c": "Training",
+  "q": "What is the best exercise for chest?",
+  "a": "There is no single best. Barbell or dumbbell pressing at flat and incline angles covers most of it, with flyes or cable work for the stretch.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2431,
+  "c": "Training",
+  "q": "What is the best exercise for back?",
+  "a": "Pull-ups or lat pulldowns for width and a barbell or dumbbell row for thickness. Almost any complete back plan is built from those two patterns.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2432,
+  "c": "Training",
+  "q": "What is the best exercise for legs?",
+  "a": "Squats, or leg press if squats do not suit you, plus a hip hinge such as a Romanian deadlift for hamstrings and glutes.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2433,
+  "c": "Training",
+  "q": "How do I train glutes?",
+  "a": "Hip thrusts, Romanian deadlifts and squats, with weight added over time. Glutes respond to load through a full range, not to high reps alone.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2434,
+  "c": "Training",
+  "q": "How do I fix muscle imbalance?",
+  "a": "Train the weaker side first with dumbbells or single-leg work, match the reps to what that side can do, and give it an extra set for a few weeks.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2435,
+  "c": "Cardio",
+  "q": "How do I start running?",
+  "a": "Alternate walking and jogging - one minute running, two walking - for twenty minutes, three times a week, and shift the ratio as it gets easier.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2436,
+  "c": "Cardio",
+  "q": "Why do I get a stitch when running?",
+  "a": "Usually shallow breathing, running too soon after eating, or going out too fast. Slow down, breathe deeper, and leave a couple of hours after a meal.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2437,
+  "c": "Cardio",
+  "q": "Is running bad for the knees?",
+  "a": "No, for healthy knees it is generally protective. Problems come from sudden jumps in distance, worn shoes, or ignoring pain rather than from running itself.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2438,
+  "c": "Cardio",
+  "q": "How many steps burn a calorie?",
+  "a": "Very roughly twenty steps per calorie for an average adult, so a thousand steps is about forty to fifty calories. Treat it as an estimate, not a measurement.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2439,
+  "c": "Cardio",
+  "q": "Should I do cardio on an empty stomach?",
+  "a": "It is optional. Fasted cardio burns slightly more fat during the session but no more over the day. Do whichever lets you train harder.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2440,
+  "c": "Cardio",
+  "q": "Is skipping a good workout?",
+  "a": "Yes. Skipping is efficient conditioning that also builds calf and ankle strength. Build up slowly, as it is harder on the lower legs than it looks.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2441,
+  "c": "Cardio",
+  "q": "Does cardio kill gains?",
+  "a": "Not at sensible volumes. Problems appear with long, frequent, hard cardio on top of hard lifting - it competes for the same recovery.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2442,
+  "c": "Recovery",
+  "q": "How do I improve my mobility?",
+  "a": "Train through a full range of motion under load, and add specific stretching for the joints that limit you. Loaded stretching beats passive stretching for lasting change.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2443,
+  "c": "Recovery",
+  "q": "How do I fix rounded shoulders?",
+  "a": "Strengthen the upper back with rows and face pulls, stretch the chest, and change position often through the day. It responds to strength more than to stretching alone.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2444,
+  "c": "Recovery",
+  "q": "How do I fix anterior pelvic tilt?",
+  "a": "Strengthen glutes and abs, stretch hip flexors, and stand differently through the day. Some pelvic tilt is normal and does not need fixing.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2445,
+  "c": "Recovery",
+  "q": "Why do my shoulders click?",
+  "a": "Painless clicking is usually harmless - tendons moving over bone. Clicking with pain, weakness or swelling is worth having looked at.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2446,
+  "c": "Recovery",
+  "q": "What is DOMS?",
+  "a": "Delayed onset muscle soreness - the ache that peaks a day or two after training. It reflects unfamiliar work, not workout quality, and fades as you adapt.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2447,
+  "c": "Recovery",
+  "q": "How do I reduce soreness?",
+  "a": "Light movement, sleep and enough food. Nothing removes it quickly; the reliable fix is building up gradually so it stops happening.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2448,
+  "c": "Recovery",
+  "q": "Should I train with a cold?",
+  "a": "Light training is usually fine with mild above-the-neck symptoms. With fever, aches or a chest cough, rest - training will not help and recovery takes longer.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2449,
+  "c": "Nutrition",
+  "q": "How do I get enough protein on a vegetarian diet?",
+  "a": "Combine dal, rajma, chana, paneer, curd, milk, soya chunks and tofu across the day, and consider a whey or plant protein if you are still short.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2450,
+  "c": "Nutrition",
+  "q": "Is soya chunks good for protein?",
+  "a": "Yes, one of the best vegetarian sources - roughly 50 g of protein per 100 g dry. Soak and cook them properly and treat the dry weight as the measure.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2451,
+  "c": "Nutrition",
+  "q": "How much protein is in dal?",
+  "a": "Roughly 7 to 9 g per 100 g cooked, depending on the dal and how thick it is. A normal bowl provides useful but not large protein.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2452,
+  "c": "Nutrition",
+  "q": "How much protein is in paneer?",
+  "a": "About 18 to 20 g per 100 g. It is also high in fat, so count the calories if you are in a deficit.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2453,
+  "c": "Nutrition",
+  "q": "How much protein is in curd?",
+  "a": "Around 3 to 4 g per 100 g for regular dahi, and considerably more for Greek-style or hung curd.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2454,
+  "c": "Nutrition",
+  "q": "Is roti or rice better?",
+  "a": "Neither is better. Roti brings a little more protein and fibre, rice is easier to digest around training. Choose by portion size and preference.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2455,
+  "c": "Nutrition",
+  "q": "Is ghee healthy?",
+  "a": "In moderation, yes. It is almost entirely fat, so it is calorie-dense - a teaspoon or two a day fits most diets, several tablespoons does not.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2456,
+  "c": "Nutrition",
+  "q": "Can I eat street food while cutting?",
+  "a": "Occasionally, if it fits your calories. The difficulty is that portions and oil are unmeasured, so it is easy to spend a large part of the day in one meal.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2457,
+  "c": "Nutrition",
+  "q": "How do I eat healthy at a restaurant?",
+  "a": "Pick grilled or tandoori over fried, ask for gravies on the side, start with a salad or soup, and treat one course as the indulgence rather than all three.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2458,
+  "c": "Nutrition",
+  "q": "What should I eat during festivals?",
+  "a": "Enjoy the food, but keep protein and steps up around it. A few high days do not undo a month; abandoning the routine for a fortnight does.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2459,
+  "c": "Nutrition",
+  "q": "Is idli or dosa better for weight loss?",
+  "a": "Idli, mostly, because it is steamed rather than cooked in oil. Both are largely carbohydrate, so add sambar, curd or eggs for protein.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2460,
+  "c": "Nutrition",
+  "q": "Are bananas fattening?",
+  "a": "No. A banana is around 90 to 110 calories and is a convenient pre-workout carbohydrate. No single food causes fat gain.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2461,
+  "c": "Nutrition",
+  "q": "Is coconut water good after a workout?",
+  "a": "It rehydrates well and provides some potassium, but very little protein or carbohydrate. Treat it as a drink, not as a recovery meal.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2462,
+  "c": "Nutrition",
+  "q": "How much salt should I eat?",
+  "a": "Most adults do fine under about 5 g a day. Athletes losing a lot of sweat need more, not less, so do not cut it aggressively while training hard.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2463,
+  "c": "Nutrition",
+  "q": "Do I need multivitamins?",
+  "a": "Only if your diet is genuinely restricted. A varied diet covers most needs; a multivitamin is cheap insurance, not a performance supplement.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2464,
+  "c": "Nutrition",
+  "q": "Should I take vitamin D?",
+  "a": "Many people are low, especially with little sun exposure. It is worth testing rather than guessing, and supplementing on the result.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2465,
+  "c": "Nutrition",
+  "q": "Is BCAA worth taking?",
+  "a": "Not if your total protein is adequate - whole protein already contains them. It is one of the easiest supplements to skip.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2466,
+  "c": "Nutrition",
+  "q": "Does creatine cause hair loss?",
+  "a": "The evidence does not support it. One small study suggested a hormonal change; it has not been shown to cause hair loss in follow-up work.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2467,
+  "c": "Nutrition",
+  "q": "Do I need to load creatine?",
+  "a": "No. Five grams a day reaches the same saturation in three to four weeks. Loading just gets there faster and upsets some stomachs.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2468,
+  "c": "Nutrition",
+  "q": "Is whey protein safe?",
+  "a": "Yes for healthy people. It is milk protein, nothing more. Those with lactose trouble usually do better with isolate or a plant blend.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2469,
+  "c": "Nutrition",
+  "q": "What is the difference between whey concentrate and isolate?",
+  "a": "Isolate is filtered further - slightly more protein per scoop and less lactose and fat. Concentrate is cheaper and fine for most people.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2470,
+  "c": "Nutrition",
+  "q": "How do I know if I am dehydrated?",
+  "a": "Dark urine, headache, unusual fatigue and poor performance. Pale yellow urine through the day is the simple check.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2471,
+  "c": "Fat Loss",
+  "q": "What is body recomposition?",
+  "a": "Losing fat and gaining muscle at the same time. It works best for beginners, people returning after a break, and those with higher body fat.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2472,
+  "c": "Fat Loss",
+  "q": "Why do I look fatter after starting the gym?",
+  "a": "Usually temporary water retention in newly trained muscle, plus the muscle itself filling out. It settles within a few weeks.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2473,
+  "c": "Fat Loss",
+  "q": "How do I break a fat loss plateau?",
+  "a": "Check intake honestly for two weeks, add steps rather than cutting calories further, and make sure sleep and protein have not slipped.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2474,
+  "c": "Fat Loss",
+  "q": "Should I do a diet break?",
+  "a": "Yes, if a deficit has run for eight to twelve weeks. A week or two at maintenance restores energy and adherence, and often the scale moves again afterwards.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2475,
+  "c": "Fat Loss",
+  "q": "What is a refeed?",
+  "a": "A planned day or two of higher carbohydrate within a diet, used to restore training quality and make the deficit easier to hold.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2476,
+  "c": "Fat Loss",
+  "q": "How do I measure body fat?",
+  "a": "Skinfold calipers and smart scales are both rough. Photographs, waist measurement and how clothes fit track change more reliably than any single number.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2477,
+  "c": "Fat Loss",
+  "q": "How often should I take measurements?",
+  "a": "Every two to four weeks, in the same conditions. More often than that and you are reading noise rather than progress.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2478,
+  "c": "Fat Loss",
+  "q": "Why is my weight up after a cheat meal?",
+  "a": "Extra food, salt and carbohydrate hold water. A kilo or two overnight is water and gut contents, not fat, and it clears in a few days.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2479,
+  "c": "Fat Loss",
+  "q": "Does skipping dinner help lose weight?",
+  "a": "Only if it lowers your daily total. It often backfires by making the next day harder, and it removes a chance to hit your protein target.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2480,
+  "c": "Fat Loss",
+  "q": "Does green tea burn fat?",
+  "a": "The effect is very small - a few calories a day. It is a pleasant drink, not a fat loss strategy.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2481,
+  "c": "Fat Loss",
+  "q": "Do fat burner supplements work?",
+  "a": "Mostly no. Most are caffeine with additions. Nothing in that category compares to a calorie deficit and daily steps.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2482,
+  "c": "General Fitness",
+  "q": "How long should I stay on one programme?",
+  "a": "Eight to twelve weeks, provided you are still adding weight or reps. Changing programmes more often than that hides whether anything is working.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2483,
+  "c": "General Fitness",
+  "q": "When should I change my workout routine?",
+  "a": "When progress has stalled for three or four weeks despite good sleep and food, or when it no longer fits your schedule. Boredom alone is a weak reason.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2484,
+  "c": "General Fitness",
+  "q": "Do I need a personal trainer?",
+  "a": "Not necessarily, but a few sessions early on to learn the main lifts is money well spent and shortens the learning curve considerably.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2485,
+  "c": "General Fitness",
+  "q": "I feel intimidated at the gym. What do I do?",
+  "a": "Go at quieter hours to start, have your session written down before you arrive, and stick to a few machines and lifts you know. It fades quickly with familiarity.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2486,
+  "c": "General Fitness",
+  "q": "How do I build a workout habit?",
+  "a": "Fix the days and time in advance, keep sessions short enough that you never dread them, and never miss twice in a row.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2487,
+  "c": "General Fitness",
+  "q": "Is it okay to work out at night?",
+  "a": "Yes. If it disturbs your sleep, move the harder sessions earlier or lower the intensity of late ones, but for most people it is fine.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2488,
+  "c": "General Fitness",
+  "q": "How much water should I drink on training days?",
+  "a": "Around half a litre to a litre more than usual, spread through the day and around the session rather than all at once.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2489,
+  "c": "General Fitness",
+  "q": "Can I train during Ramadan or a fast?",
+  "a": "Yes, with adjustments. Train close to the breaking of the fast where possible, keep volume moderate, and prioritise protein and fluids in the eating window.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2490,
+  "c": "General Fitness",
+  "q": "Is it safe to train while pregnant?",
+  "a": "Often yes, with a doctor's clearance and modifications. This is a case for individual medical advice rather than general guidance.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2491,
+  "c": "General Fitness",
+  "q": "Should teenagers lift weights?",
+  "a": "Yes, with good coaching and sensible loads. Supervised strength training is safe for teenagers and does not stunt growth.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2492,
+  "c": "General Fitness",
+  "q": "How do I train around a busy schedule?",
+  "a": "Two or three full-body sessions a week of forty minutes will hold and build muscle. Consistency at low volume beats an ambitious plan you cannot keep.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2493,
+  "c": "Training",
+  "q": "Whats a good rest time between sets?",
+  "a": "Around 1-2 minutes for smaller isolation work and 2-3 minutes for heavy compound lifts. Rest long enough that the next set is limited by the muscle, not by being out of breath.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2494,
+  "c": "Recovery",
+  "q": "Is it ok to train sore muscles?",
+  "a": "Mild soreness is fine to train through, and light work often helps. If the muscle feels weak, sharp, or painful rather than tender, give it more time.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2495,
+  "c": "Recovery",
+  "q": "Can I train if I am still sore?",
+  "a": "Mild soreness is fine to train through, and light work often helps. If the muscle feels weak, sharp, or painful rather than tender, give it more time.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2496,
+  "c": "Training",
+  "q": "How much rest between sets?",
+  "a": "Around 1-2 minutes for smaller isolation work and 2-3 minutes for heavy compound lifts. Rest long enough that the next set is limited by the muscle, not by being out of breath.",
+  "s": "general_fitness"
  }
 ]
