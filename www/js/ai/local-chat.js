@@ -864,7 +864,24 @@
             && /\b(foods?|meals?|entry|log|last|that)\b/.test(t)
             && !/\b(weight|workout|steps?|history|all|everything)\b/.test(t);
       },
-      run: async function (A) {
+      run: async function (A, t) {
+        /* A NAMED DAY SCOPES THE DELETE TO THAT DAY. Without this the handler fell straight
+           through to "newest entry of today", so "delete yesterday's food" confirmed a deletion
+           of a record the user had not mentioned -- today's most recent -- while appearing to do
+           what was asked. The confirmation gate was the only thing standing between that and
+           real data loss, and a prompt naming the wrong food is not much of a gate. */
+        var off = dayOffsetFrom(t);
+        if (off != null) {
+          var ds = localDayString(off);
+          var day = await A.run("getFoodLog", { date: ds });
+          var dayItems = ((day && day.result) || {}).items || [];
+          if (!dayItems.length) {
+            return { text: off === 0 ? "There's nothing in today's food log to delete."
+                                     : "There's nothing logged on " + ds + " to delete." };
+          }
+          return { text: null, pending: { action: "deleteFoodForDate", args: { date: ds } } };
+        }
+
         var r = await A.run("getFoodLog", {});
         var d = (r && r.result) || {};
         var items = d.entries || d.items || d.foods;
@@ -1206,6 +1223,40 @@
   /* Does the segment carry its own quantity? That is what makes a split safe. */
   function hasQuantitySignal(seg) {
     return /^\s*(?:\d|a\s|an\s|some\s|half\s)/.test(String(seg || ""));
+  }
+
+  /* WHICH DAY DID THEY MEAN? Shared, because the logging path already answers this question and
+     the delete path answered it not at all -- "delete yesterday's food" deleted TODAY'S newest
+     entry, having never looked for a date. A word list rather than a regex, for the same reason
+     as everywhere else in this file. */
+  var DAY_OFFSETS = [
+    ["day before yesterday", 2],
+    /* THE POSSESSIVE IS THE FORM PEOPLE USE WHEN DELETING. "delete yesterday's food" normalises
+       to "yesterdays" with the apostrophe stripped, so a list holding only "yesterday" missed it
+       and the delete fell through to today's newest entry -- the exact bug this helper was added
+       to fix, still live after the fix, because the fix matched the wrong word. Longest forms
+       first, so "yesterdays" is not shadowed by a shorter match. */
+    ["yesterdays", 1],
+    ["yesterday", 1],
+    ["last night", 1],
+    ["todays", 0],
+    ["today", 0],
+    ["tonight", 0],
+    ["this morning", 0]
+  ];
+  function dayOffsetFrom(t) {
+    var pad = " " + String(t || "") + " ";
+    for (var i = 0; i < DAY_OFFSETS.length; i++) {
+      if (pad.indexOf(" " + DAY_OFFSETS[i][0] + " ") !== -1) return DAY_OFFSETS[i][1];
+    }
+    return null;
+  }
+  function localDayString(offset) {
+    var d = new Date();
+    d.setDate(d.getDate() - (offset || 0));
+    /* Local day, matching dayKey() in app.js. A UTC slice here would put an evening log on the
+       wrong date, which is the bug fixed in 66c7b68. */
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   }
 
   var HANDLER = {
