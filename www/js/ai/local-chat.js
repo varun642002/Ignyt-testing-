@@ -1032,11 +1032,23 @@
       try {
         out = await it.run(A, t);
       } catch (e) {
-        /* A local handler that throws must not take the turn down with it. Falling through to
-           the AI is strictly better than showing an error for something it could have answered. */
-        return null;
+        /* A local handler that throws must not take the turn down with it, and must not take
+           the REST OF THE LADDER down either. */
+        continue;
       }
-      if (!out) return null;                          // handler declined on closer inspection
+      /* A HANDLER DECLINING IS NOT THE MESSAGE BEING UNANSWERABLE. This was `return null`, which
+         ended tryAnswer outright -- so a matched pattern whose handler then declined skipped the
+         classifier and the knowledge base and went straight to the generic no-answer reply.
+
+         That is why "how much protein should i eat" returned nothing while the knowledge base
+         held that exact question at a score of 1.000. The food-log pattern matched on "eat",
+         its handler declined because nothing was logged, and the answer sitting one step further
+         down was never reached. Every question shaped like a command about food, weight or
+         training was losing its answer this way.
+
+         Declining means THIS handler has nothing; the next one, or the knowledge base, still
+         might. */
+      if (!out) continue;
       out.source = "BUILT_IN_ACTION:" + it.name;
       return out;
     }
