@@ -7610,7 +7610,7 @@ function renderProfileTab(){
 
   function fieldDelta30d(field){
     const cutoff = Date.now() - 30*86400000;
-    const inWindow = state.bodylog.filter(e=>e[field]!=null && e[field]!=="" && new Date(e.date).getTime()>=cutoff)
+    const inWindow = state.bodylog.filter(e=>e[field]!=null && e[field]!=="" && new Date(e.date+"T12:00:00").getTime()>=cutoff)
       .slice().reverse(); // bodylog is newest-first; reverse to chronological
     const latest = state.bodylog.find(e=>e[field]!=null && e[field]!=="");
     if(!latest) return null;
@@ -11836,7 +11836,12 @@ function progressReportFor(days, endMs){
   const start = end - days*86400000;
   const inRange = (t) => t > start && t <= end;
 
-  const workouts = state.workoutLog.filter(w=>inRange(new Date(w.date).getTime()));
+  /* NOON, NOT MIDNIGHT. new Date("2026-08-11") parses as UTC midnight, which in IST is 5:30am
+     the same day and in the other direction lands on the previous day -- so a workout could
+     fall outside a range it belongs in, or inside one it does not. The rest of this file
+     already parses stored day keys at local noon for exactly this reason; these three call
+     sites were missed. Noon is far enough from either boundary that no offset can move it. */
+  const workouts = state.workoutLog.filter(w=>inRange(new Date(w.date+"T12:00:00").getTime()));
   const volume = workouts.reduce((a,w)=>a+Number(w.volume||0), 0);
   const minutes = workouts.reduce((a,w)=>a+Number(w.durationMin||0), 0);
   const sets = workouts.reduce((a,w)=>a+(w.exercises||[]).reduce(
@@ -12110,7 +12115,7 @@ function renderPrExerciseSheet(){
     let best = 0;
     (w.exercises||[]).forEach(e=>{ if(e.name===name) (e.sets||[]).forEach(st=>{
       const kg = Number(st.weight)||0; if(kg>best) best = kg; }); });
-    if(best>0) points.push({ date: new Date(w.startedAt||w.date), value: best });
+    if(best>0) points.push({ date: new Date(w.startedAt || (w.date+"T12:00:00")), value: best });
   });
 
   const weeks = points.length ? Math.max(1, Math.round((Date.now() - points[0].date.getTime())/(7*86400000))) : 1;
