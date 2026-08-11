@@ -967,7 +967,7 @@
         return /\b(log|ate|eat|had|add|drank|drink|drinking|having|consumed|finished)\b/.test(t)
             && !/\b(weight|weigh|steps?|workout|water|streak|score|progress)\b/.test(t);
       },
-      run: function (A, t) {
+      run: async function (A, t) {
         /* MEAL FIRST, and stripped out before the food is read. "log 2 eggs for breakfast"
            otherwise parses the food as "eggs for breakfast", which matches nothing in the
            library and produces a not-found for a food that is plainly there. */
@@ -1038,6 +1038,36 @@
                          .filter(function (x) { return x.length; });
           var listed = segs.length > 1 && segs.every(hasQuantitySignal);
           var parsed = listed ? segs.map(parseFoodPhrase) : [];
+
+          /* NO QUANTITIES IS STILL A LIST. "chicken and chapati" is two foods and one serving
+             each, and refusing it because neither carries a number was the wrong call -- that is
+             how people speak. When every segment is a food the library actually holds, treat it
+             as a list at one serving apiece.
+             THE HONEST LIMIT: this cannot separate "chicken and mushroom soup" from "chicken and
+             chapati". Both "chicken" and "mushroom soup" are real foods, so no test on the
+             segments tells the two sentences apart, and the whole phrase is in the library in
+             neither case. The soup will be logged as two items. That is the wrong answer to a
+             rare phrasing, traded for the right answer to a common one, and the reply names
+             exactly what went in so it can be seen and undone. */
+          if (!listed && segs.length > 1 && segs.length <= 6) {
+            var known = [];
+            for (var qi = 0; qi < segs.length; qi++) {
+              var nm = segs[qi].replace(/^(?:a|an|some|the)\s+/, "").replace(/\s+/g, " ").trim();
+              if (!nm || !/^[a-z][a-z ]{1,40}$/.test(nm)) { known = []; break; }
+              var look = await A.run("searchFood", { query: nm });
+              var rows = ((look && look.result) || {}).results || ((look && look.result) || {}).foods || [];
+              var exact = rows.filter(function (x) {
+                return String(x.name || "").toLowerCase() === nm.toLowerCase();
+              });
+              if (!exact.length) { known = []; break; }
+              known.push({ food: nm, quantity: 1 });
+            }
+            if (known.length > 1) {
+              if (meal) known.forEach(function (a) { a.meal = meal; });
+              return { text: null, pending: { action: "addFoodLogBatch", args: { items: known } } };
+            }
+          }
+
           if (!listed || parsed.some(function (x) { return !x; })) {
             return { text: say("one_food") };
           }
