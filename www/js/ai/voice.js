@@ -188,11 +188,27 @@
            user tapping the mic off from outside this closure. Checking only one restarts the
            microphone on a deliberate stop, which is the opposite of what the tap meant. */
         if (!stopping && !rec._ignytStopping && quietFor < SILENCE_MS && openFor < MAX_LISTEN_MS) {
-          /* Bank this instance's words before restarting -- the next instance starts with an
-             empty e.results, so anything not moved into carry here is lost, and anything left
-             in sessionFinal would be counted twice. */
+          /* BANK ONLY WHAT THE NEXT INSTANCE WILL NOT REPEAT. The assumption here was that a
+             restarted recogniser begins with an empty e.results. On the device it does not --
+             Android re-delivers the whole utterance to the new instance, so banking the text and
+             then receiving it again doubled it on every pause. Reported twice from a device:
+             "delete delete delete all delete all the..." and "today today lunch today lunch
+             chicken", each phrase glued to itself once per restart.
+             So carry is only extended by the part of this instance's text that is not already
+             the tail of what is banked. If the engine repeats itself, the repeat is dropped; if
+             it genuinely starts fresh, nothing is lost. */
           try {
-            carry = transcript();
+            var here = sessionFinal.trim();
+            if (here) {
+              /* CONTAINMENT BOTH WAYS, because Android re-delivers the whole utterance AND adds
+                 to it. "delete all the logged foods" came back as "delete all the logged foods
+                 today" -- longer than what was banked, so a plain "have I seen this?" check
+                 missed and appended the lot. If either string contains the other, the longer one
+                 IS the transcript; only genuinely new text is appended. */
+              if (!carry) carry = here;
+              else if (here.indexOf(carry) !== -1) carry = here;
+              else if (carry.indexOf(here) === -1) carry = (carry + " " + here).replace(/\s+/g, " ").trim();
+            }
             sessionFinal = "";
             rec.start();
             return;
