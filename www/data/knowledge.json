@@ -48998,5 +48998,180 @@
   "q": "How do I audit my current supplement stack?",
   "a": "List each product, its purpose, and the evidence behind it. Anything you cannot justify should be stopped and the money redirected to food.",
   "s": "general_fitness"
+ },
+ {
+  "id": 7001,
+  "c": "Using IGNYT",
+  "q": "How do I log a workout?",
+  "a": "Start it from the Workout tab and finish the session when you are done, or tell the assistant: \"start my workout\" and \"finish my workout\".",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7002,
+  "c": "Using IGNYT",
+  "q": "How do I log food?",
+  "a": "Say what you ate: \"log 200g chicken\", \"i ate 2 eggs\", \"add a banana\". You can name several at once - \"chicken and chapati\" or \"3 eggs, 2 slices of bread and a banana\".",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7003,
+  "c": "Using IGNYT",
+  "q": "How do I log food quickly?",
+  "a": "Type or say it in one line. \"log 100g paneer\" and \"paneer 100g\" both work, and so does the microphone if your hands are busy.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7004,
+  "c": "Using IGNYT",
+  "q": "How do I log my weight?",
+  "a": "Say \"log my weight\" and give the number when asked, or say it in one go: \"my weight is 78\".",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7005,
+  "c": "Using IGNYT",
+  "q": "How do I log food for a specific meal?",
+  "a": "Name the meal: \"log 3 eggs for breakfast\", or \"breakfast eggs and bread\". Without a meal it goes to whichever one fits the time of day.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7006,
+  "c": "Using IGNYT",
+  "q": "How do I log food for yesterday?",
+  "a": "Add the day: \"log 2 eggs yesterday\". Today, yesterday, last night and this morning all work.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7007,
+  "c": "Using IGNYT",
+  "q": "How do I see what I ate today?",
+  "a": "Ask \"what did I eat today\", or open the Food Log tab. The assistant reads the same log the tab shows, so the two can never disagree.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7008,
+  "c": "Using IGNYT",
+  "q": "How do I check my calories for today?",
+  "a": "Ask \"how many calories did I eat today\". Every time you log something the reply also tells you the running total for the day.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7009,
+  "c": "Using IGNYT",
+  "q": "How do I delete a food I logged by mistake?",
+  "a": "Be specific about what should go: \"delete the chicken\", \"delete breakfast\", \"delete today's food\" or \"delete yesterday's food\". Anything that deletes asks you to confirm first.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7010,
+  "c": "Using IGNYT",
+  "q": "How do I delete everything I logged today?",
+  "a": "Say \"delete today's food\". It asks you to confirm, and it only touches today - yesterday's log is left alone.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7011,
+  "c": "Using IGNYT",
+  "q": "Why does IGNYT ask me to confirm before deleting?",
+  "a": "Because deleting cannot be undone. Anything that only reads or adds happens straight away; anything that removes asks first.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7012,
+  "c": "Using IGNYT",
+  "q": "Can I talk to IGNYT instead of typing?",
+  "a": "Yes, tap the microphone and speak normally. It waits through pauses rather than cutting you off mid-sentence.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7013,
+  "c": "Using IGNYT",
+  "q": "How do I ask about a food's nutrition?",
+  "a": "Ask \"how many calories in oats\" or \"how much protein in paneer\". You get calories, protein, carbs, fat and fibre together, read from the food library.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7014,
+  "c": "Using IGNYT",
+  "q": "How do I find my protein target?",
+  "a": "Ask \"how much protein should I eat\". IGNYT works it out from your logged weight and your goal rather than quoting a general range, so log a weight first.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7015,
+  "c": "Using IGNYT",
+  "q": "How do I find my calorie target?",
+  "a": "Ask \"how many calories should I eat\". It comes from your goal's height, age, activity level and target rate, so it needs a goal set up in the Goals screen.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7016,
+  "c": "Using IGNYT",
+  "q": "How do I see my weekly training summary?",
+  "a": "Ask \"how was my week\". You get workouts completed, sets, reps, total volume, your heaviest set, any PRs and the change against last week. \"How was last week\" works too.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7017,
+  "c": "Using IGNYT",
+  "q": "How do I check my progress?",
+  "a": "Ask \"how is my progress\", or open the Progress tab. For a week at a time, ask \"how was my week\".",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7018,
+  "c": "Using IGNYT",
+  "q": "How do I create a workout routine?",
+  "a": "Ask for one: \"create a chest workout\", \"give me a push day\", \"build me a routine\". IGNYT asks what to call it and which exercises to include.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7019,
+  "c": "Using IGNYT",
+  "q": "What can I ask IGNYT?",
+  "a": "Anything about your own data - food, weight, workouts, progress - and general fitness or nutrition questions. You can also just tell it what you did and it will log it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7020,
+  "c": "Using IGNYT",
+  "q": "Why did IGNYT not understand me?",
+  "a": "Either the phrasing is outside what it knows, or the question needs data it does not have yet. Rephrasing more plainly usually works, and it will suggest a nearby question when it can.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7021,
+  "c": "Using IGNYT",
+  "q": "Does IGNYT work offline?",
+  "a": "Yes for logging, reading your data and most questions - all of that runs on your phone. Only the unusual phrasings need a connection.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7022,
+  "c": "Using IGNYT",
+  "q": "Where does IGNYT get its nutrition numbers?",
+  "a": "From its own food library, which is the same source the Food Log uses. It never estimates a food's values; if something is not in the library it says so rather than guessing.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7023,
+  "c": "Using IGNYT",
+  "q": "What happens if a food is not in the library?",
+  "a": "IGNYT tells you it is missing instead of inventing values for it. Nothing is logged, so your totals stay honest.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7024,
+  "c": "Using IGNYT",
+  "q": "How do I log a drink?",
+  "a": "The same way as food: \"log 200ml milk\", \"i drank a protein shake\". Drinks are measured in millilitres where the library has them that way.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 7025,
+  "c": "Using IGNYT",
+  "q": "Can I log more than one food at once?",
+  "a": "Yes. \"chicken and chapati\", \"200g chicken and 100g rice\", or a full list like \"3 eggs, 2 slices of bread and a banana\". If you do not give amounts it asks how much of each.",
+  "s": "general_fitness"
  }
 ]
