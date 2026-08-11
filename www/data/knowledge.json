@@ -17470,5 +17470,474 @@
   "q": "How much rest between sets?",
   "a": "Around 1-2 minutes for smaller isolation work and 2-3 minutes for heavy compound lifts. Rest long enough that the next set is limited by the muscle, not by being out of breath.",
   "s": "general_fitness"
+ },
+ {
+  "id": 2497,
+  "c": "Training",
+  "q": "What muscles does the bench press work?",
+  "a": "Chest primarily, with the front shoulders and triceps assisting. Incline shifts more to the upper chest and shoulders.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2498,
+  "c": "Training",
+  "q": "What muscles does the deadlift work?",
+  "a": "Nearly everything on the back side - hamstrings, glutes, spinal erectors, lats and grip - which is why it is so fatiguing.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2499,
+  "c": "Training",
+  "q": "What muscles does the squat work?",
+  "a": "Quads and glutes mainly, with hamstrings, adductors and the whole trunk working to keep you upright.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2500,
+  "c": "Training",
+  "q": "What muscles do pull-ups work?",
+  "a": "Lats, upper back and biceps, with the trunk bracing. The wider the grip, the more the lats do relative to the arms.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2501,
+  "c": "Training",
+  "q": "What muscles does the overhead press work?",
+  "a": "Front and side shoulders with the triceps, and the trunk working hard to stop you leaning back.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2502,
+  "c": "Training",
+  "q": "What is the difference between a row and a pulldown?",
+  "a": "Rows pull horizontally and build back thickness; pulldowns and pull-ups pull vertically and build width. A complete back needs both.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2503,
+  "c": "Training",
+  "q": "What is the difference between a squat and a leg press?",
+  "a": "The squat loads the whole body and trunk; the leg press isolates the legs with the back supported. The press is easier to push hard alone.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2504,
+  "c": "Training",
+  "q": "Should I do barbell or dumbbell bench press?",
+  "a": "Barbell for total load and easier progression, dumbbells for range of motion and fixing side differences. Rotating between them works well.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2505,
+  "c": "Training",
+  "q": "What is a Romanian deadlift?",
+  "a": "A hip hinge from standing, lowering the bar down the thighs with soft knees until you feel the hamstrings stretch. It trains hamstrings and glutes without the floor pull.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2506,
+  "c": "Training",
+  "q": "What is the difference between a conventional and sumo deadlift?",
+  "a": "Sumo uses a wide stance and more upright torso, favouring quads and hips; conventional is narrower and asks more of the lower back and hamstrings.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2507,
+  "c": "Training",
+  "q": "What is a face pull?",
+  "a": "A cable pull to the face with elbows high, training rear delts and upper back. One of the most useful exercises for shoulder health.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2508,
+  "c": "Training",
+  "q": "What is a hip thrust?",
+  "a": "A glute exercise with the upper back on a bench, driving the hips up against a loaded bar. It loads the glutes at full contraction better than squats do.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2509,
+  "c": "Training",
+  "q": "Are lunges better than squats?",
+  "a": "Not better, different. Lunges train one leg at a time and expose imbalances; squats allow more load. Most plans use squats as the main lift and lunges as an accessory.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2510,
+  "c": "Training",
+  "q": "What is a farmer's walk?",
+  "a": "Walking while carrying heavy weights at your sides. It builds grip, trunk stability and general work capacity, and needs almost no technique.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2511,
+  "c": "Training",
+  "q": "Should I do cable or dumbbell flyes?",
+  "a": "Cables keep tension through the whole range and are easier on the shoulder. Dumbbells give a stronger stretch at the bottom. Either builds chest.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2512,
+  "c": "Training",
+  "q": "What is a good warm-up for squats?",
+  "a": "Five minutes easy cardio, then the empty bar, then two or three sets rising towards your working weight. The last warm-up set should feel comfortably fast.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2513,
+  "c": "Training",
+  "q": "Should I train legs and back on the same day?",
+  "a": "You can, but both are demanding. If you do, put the one that matters most first, while you are fresh.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2514,
+  "c": "Training",
+  "q": "What order should I do exercises in?",
+  "a": "Hardest and most technical first - compound lifts before isolation, heavy before light. Fatigue costs you most on the movements that need the most skill.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2515,
+  "c": "Training",
+  "q": "Is it bad to work out twice a day?",
+  "a": "Not inherently, if total volume is sensible. Splitting a session into two can even improve quality, but two hard sessions daily is more than most people recover from.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2516,
+  "c": "Exercise Safety",
+  "q": "What is the difference between soreness and injury?",
+  "a": "Soreness is dull, spread across a muscle, and eases with movement. Injury is sharp, specific, often one-sided, and usually worse with movement.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2517,
+  "c": "Exercise Safety",
+  "q": "Should I use pain as a guide?",
+  "a": "Yes. Muscular burn during a set is fine. Joint pain, nerve pain, or pain that lingers into the next day is a signal to change something.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2518,
+  "c": "Exercise Safety",
+  "q": "How do I avoid injury in the gym?",
+  "a": "Warm up, add weight gradually, keep form when tired, and do not train through joint pain. Most gym injuries come from doing too much too soon.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2519,
+  "c": "Exercise Safety",
+  "q": "What should I do about a muscle strain?",
+  "a": "Rest it from loading, keep moving gently within a painless range, and return gradually. If it does not improve in a week or two, have it looked at.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2520,
+  "c": "Exercise Safety",
+  "q": "Can I train other muscles with an injury?",
+  "a": "Almost always, yes. An injured shoulder does not stop you training legs. Keeping the rest of the routine going preserves most of your progress.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2521,
+  "c": "Exercise Safety",
+  "q": "What is tennis elbow?",
+  "a": "Pain on the outer elbow from overused forearm tendons, common with heavy gripping and pulling. It responds to reduced load and gradual strengthening, not rest alone.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2522,
+  "c": "Exercise Safety",
+  "q": "Why do my wrists hurt when pressing?",
+  "a": "Usually the wrist bending back under load. Keep the bar over the forearm rather than in the fingers, and consider wrist wraps for heavy sets.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2523,
+  "c": "Exercise Safety",
+  "q": "Should I train with a hernia?",
+  "a": "That needs medical advice before anything else. Do not take general fitness guidance as an answer to a diagnosed hernia.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2524,
+  "c": "Exercise Safety",
+  "q": "Is it safe to lift with high blood pressure?",
+  "a": "Often yes with medical clearance, favouring moderate loads and avoiding long breath-holding. Ask your doctor before starting.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2525,
+  "c": "Exercise Safety",
+  "q": "Should I exercise if I feel dizzy?",
+  "a": "No. Stop, sit down, and take fluids. Dizziness during training is worth investigating rather than pushing through.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2526,
+  "c": "Recovery",
+  "q": "How does sleep affect fat loss?",
+  "a": "Short sleep raises appetite and lowers training quality, so the same diet becomes harder to hold. It also shifts some of the weight lost from fat towards muscle.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2527,
+  "c": "Recovery",
+  "q": "Why can't I sleep after a late workout?",
+  "a": "Adrenaline and body temperature stay raised for a while. Leave an hour or two before bed, and keep the last session lighter if it persists.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2528,
+  "c": "Recovery",
+  "q": "Does stress affect muscle growth?",
+  "a": "Yes, indirectly. Chronic stress worsens sleep, appetite and motivation, and those are what actually drive progress.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2529,
+  "c": "Recovery",
+  "q": "How much rest do I need between heavy sessions?",
+  "a": "At least a day for the same muscle group, and often two after very heavy work. Judge by whether your performance recovered, not by the calendar.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2530,
+  "c": "Recovery",
+  "q": "Is a sauna good after training?",
+  "a": "It feels good and may help relaxation, but it does not speed muscle repair. Rehydrate afterwards, and do not use it as a substitute for sleep.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2531,
+  "c": "Recovery",
+  "q": "Should I take a week off training?",
+  "a": "Every eight to sixteen weeks is reasonable, or whenever performance and motivation have been falling for a fortnight. You lose very little and often come back stronger.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2532,
+  "c": "Recovery",
+  "q": "How long does it take to lose fitness?",
+  "a": "Strength holds for two to three weeks off, and returns quickly after longer breaks. Cardio fitness fades a little faster than strength.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2533,
+  "c": "Recovery",
+  "q": "Will I lose muscle if I stop training for two weeks?",
+  "a": "Very little. Two weeks off produces mostly a loss of fullness and water, and it comes back within a couple of sessions.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2534,
+  "c": "Nutrition",
+  "q": "How do I eat more protein without meat?",
+  "a": "Build meals around dal, rajma, chana, paneer, curd, soya and eggs if you eat them, and add a scoop of protein powder where a meal falls short.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2535,
+  "c": "Nutrition",
+  "q": "Is protein bad for the kidneys?",
+  "a": "Not in healthy people. Higher protein has not been shown to harm normal kidneys. Existing kidney disease is a different matter and needs medical advice.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2536,
+  "c": "Nutrition",
+  "q": "Can I eat too much protein?",
+  "a": "Beyond about 2.2 g per kg there is no extra muscle benefit, and the calories are better spent on carbohydrate for training.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2537,
+  "c": "Nutrition",
+  "q": "What are good carbs before training?",
+  "a": "Rice, roti, oats, bananas, potatoes - anything easily digested. Keep fat and heavy fibre lower in that meal so it settles.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2538,
+  "c": "Nutrition",
+  "q": "Should I eat carbs at night?",
+  "a": "It makes no difference to fat loss, and for many people an evening carbohydrate meal improves sleep. Total intake is what matters.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2539,
+  "c": "Nutrition",
+  "q": "How do I stop sugar cravings?",
+  "a": "Eat enough protein and fibre, do not run an extreme deficit, sleep properly, and keep a small planned treat rather than banning it outright.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2540,
+  "c": "Nutrition",
+  "q": "Is diet soda okay?",
+  "a": "For fat loss, yes. It has no meaningful calories. If it helps you stay in a deficit without feeling deprived, it is a useful tool.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2541,
+  "c": "Nutrition",
+  "q": "How many eggs a day is safe?",
+  "a": "Two or three daily is fine for most healthy people, and dietary cholesterol has far less effect on blood cholesterol than once thought.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2542,
+  "c": "Nutrition",
+  "q": "Is fruit bad when cutting?",
+  "a": "No. Fruit is filling, high in fibre and micronutrients, and hard to overeat. It fits any sensible deficit.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2543,
+  "c": "Nutrition",
+  "q": "Should I avoid oil completely?",
+  "a": "No, some fat is essential. Measure it rather than pouring - oil is the easiest thing in Indian cooking to underestimate, at around 120 calories a tablespoon.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2544,
+  "c": "Nutrition",
+  "q": "How do I track home cooked food?",
+  "a": "Weigh the main ingredients raw, log the whole dish once as a recipe, and reuse it. Trying to log each serving from scratch is what makes people stop tracking.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2545,
+  "c": "Nutrition",
+  "q": "Should I weigh food raw or cooked?",
+  "a": "Raw, wherever possible, since cooking changes water content. If you log cooked, stay consistent with the same method.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2546,
+  "c": "Nutrition",
+  "q": "What is the difference between calories in and calories out?",
+  "a": "Calories in is what you eat. Calories out is your basal rate plus movement, exercise and digestion. Fat loss happens when the second exceeds the first over time.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2547,
+  "c": "Nutrition",
+  "q": "Does metabolism slow with dieting?",
+  "a": "Somewhat. Some of the drop is a smaller body needing less, and some is reduced spontaneous movement. It recovers when you return to maintenance.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2548,
+  "c": "Nutrition",
+  "q": "Do I need to eat every three hours?",
+  "a": "No. That idea came from a misreading of meal frequency research. Eat in the pattern you can hold consistently.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2549,
+  "c": "Nutrition",
+  "q": "Is late night snacking bad?",
+  "a": "Only if it puts you over your calories. If your day is planned around it, it is not a problem in itself.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2550,
+  "c": "General Fitness",
+  "q": "How do I set a realistic fitness goal?",
+  "a": "Pick something you control and can measure weekly - three sessions a week, ten thousand steps, an extra rep on a lift. Outcomes follow behaviours.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2551,
+  "c": "General Fitness",
+  "q": "How long does it take to get fit?",
+  "a": "Noticeable improvement in four to six weeks, clear change in three months, and a genuine transformation in a year or more of consistency.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2552,
+  "c": "General Fitness",
+  "q": "Why is my progress so slow?",
+  "a": "Often it is not. Strength and body change move slowly enough that week-to-week comparisons mislead. Compare against three months ago.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2553,
+  "c": "General Fitness",
+  "q": "Should I compare myself to others?",
+  "a": "No, and especially not to edited images. The useful comparison is against your own numbers from a few months back.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2554,
+  "c": "General Fitness",
+  "q": "What should I track?",
+  "a": "Bodyweight as a weekly average, the weights and reps you lift, and a photograph every month. Those three cover almost everything.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2555,
+  "c": "General Fitness",
+  "q": "Do I need to track everything?",
+  "a": "No. Track what you are actively trying to change. Tracking everything is how people burn out on tracking.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2556,
+  "c": "General Fitness",
+  "q": "How do I get back on track after a bad week?",
+  "a": "Do the next session as planned. One week does not undo a month; deciding to restart on Monday usually costs more than the week did.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2557,
+  "c": "General Fitness",
+  "q": "Is it worth training if I can only go twice a week?",
+  "a": "Very much. Two full-body sessions a week build and maintain muscle well, and are far better than an ideal plan you cannot attend.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2558,
+  "c": "General Fitness",
+  "q": "What is the minimum effective workout?",
+  "a": "Two sessions a week covering a squat, a hinge, a push and a pull, taken close to failure. That is enough to build strength for most beginners.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2559,
+  "c": "General Fitness",
+  "q": "Should I work out when I am tired?",
+  "a": "Try a lighter version rather than skipping. Often the session improves how you feel; if it does not after ten minutes, stop without guilt.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2560,
+  "c": "General Fitness",
+  "q": "How do I stay consistent while travelling?",
+  "a": "Plan two short bodyweight sessions, walk more than usual, and prioritise protein at meals. Maintaining is the goal on the road, not progress.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2561,
+  "c": "General Fitness",
+  "q": "Does muscle turn into fat?",
+  "a": "No. They are different tissues. Muscle shrinks when you stop training and fat grows if you keep eating as though you had not - which looks like a swap but is not one.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2562,
+  "c": "General Fitness",
+  "q": "Can I lose weight without exercise?",
+  "a": "Yes, diet drives fat loss. Exercise makes it easier and protects muscle, so the result is better with it, but it is not required to lose weight.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2563,
+  "c": "General Fitness",
+  "q": "What is the difference between weight loss and fat loss?",
+  "a": "Weight loss is any drop on the scale, including water and muscle. Fat loss is the part you actually want, which is why strength and measurements matter more than the number.",
+  "s": "general_fitness"
  }
 ]
