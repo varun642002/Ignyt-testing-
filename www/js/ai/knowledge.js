@@ -214,6 +214,14 @@
       .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (rows) {
         _entries = buildIndex(Array.isArray(rows) ? rows : []);
+        /* One index, built from the same rows, as soon as they are here. */
+        try {
+          if (window.IgnytSearch) {
+            window.IgnytSearch.build((Array.isArray(rows) ? rows : []).map(function (e) {
+              return { id: e.id, category: e.c, question: e.q, answer: e.a, keywords: e.k || [] };
+            }));
+          }
+        } catch (e) { /* the cosine scorer below still works */ }
         return _entries;
       })
       .catch(function () { _entries = []; return _entries; });
@@ -305,6 +313,32 @@
 
     var qt = tokens(text);
     if (!qt.length) return null;
+
+    /* BM25 FIRST WHERE IT IS AVAILABLE. The cosine scorer below missed "how do i lose weight"
+       and "best way to lose weight" while nineteen entries discussed it -- a common phrasing
+       scoring just under a fixed threshold. BM25 weights rare terms, normalises for length,
+       weights the question field over the answer, and expands synonyms before scoring.
+       The safety gate above still runs first, so a pain or injury question cannot be answered
+       sideways by a better retriever. Everything below stays as the fallback for the case where
+       the index has not been built. */
+    if (window.IgnytSearch && window.IgnytSearch.ready()) {
+      var hit = null;
+      try { hit = window.IgnytSearch.answer(text); } catch (e) { hit = null; }
+      if (hit && hit.answer) {
+        if (flag && !safetyFlag(hit.question)) {
+          return { safety: flag, answer: null, confidence: 0, source: "safety" };
+        }
+        return {
+          answer: hit.answer, question: hit.question, category: hit.category,
+          id: hit.id, confidence: Math.min(1, hit.score / 40),
+          source: "BUILT_IN_KNOWLEDGE"
+        };
+      }
+      /* Nothing cleared BM25's own minimum: that is a real "I do not know", and returning it
+         here rather than falling through stops the weaker scorer from supplying the confidently
+         wrong match this change exists to prevent. */
+      return flag ? { safety: flag, answer: null, confidence: 0, source: "safety" } : null;
+    }
 
     var best = null, bestScore = 0, second = null, runnerUp = 0;
     for (var i = 0; i < entries.length; i++) {

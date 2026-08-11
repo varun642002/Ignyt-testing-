@@ -1571,7 +1571,7 @@
       trace("rc-exit", "not a question about their records: " + wanted);
       return null;
     }
-    if (RECORD_READS[wanted] && window.IgnytKnowledge && !recordScoped(t)) {
+    if (RECORD_READS[wanted] && window.IgnytKnowledge && !aboutTheirRecords(t)) {
       var kbWins = null;
       try { kbWins = await IgnytKnowledge.ask(t); } catch (e) { kbWins = null; }
       if (kbWins && kbWins.answer) { trace("rc-exit", "base outranked the read: " + kbWins.question); return null; }
@@ -1730,7 +1730,7 @@
          training history has no general equivalent -- the base cannot know those numbers, so
          there is nothing for it to outrank. */
       if (lead && PROMOTED[lead.intent] && lead.confidence >= 0.8 && window.IgnytKnowledge
-          && RECORD_READS[HANDLER[lead.intent]] && !recordScoped(t)) {
+          && RECORD_READS[HANDLER[lead.intent]] && !aboutTheirRecords(t)) {
         var kb = null;
         try { kb = await IgnytKnowledge.ask(t); } catch (e) { kb = null; }
         trace("kb-guard", kb && kb.answer ? "base answered, lead dropped: " + kb.question : "base had nothing, lead kept");
