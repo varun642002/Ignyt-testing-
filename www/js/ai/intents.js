@@ -60,7 +60,8 @@
     ],
 
     VIEW_FOOD_LOG: [
-      "what did i eat today", "show my food log", "show my logged food", "show my food",
+      "what did i eat today", "show my food log", "view my food log", "view my food", "open my food log",
+      "view todays food", "pull up my food log", "show my logged food", "show my food",
       "view my meals", "what have i eaten", "list my food", "whats in my food log",
       "check my food log", "show todays meals", "what did i log today",
       "how many calories did i eat today", "whats my calorie total", "todays macros",
@@ -85,7 +86,8 @@
     ],
 
     VIEW_WEIGHT_HISTORY: [
-      "show my weight history", "my weight trend", "how has my weight changed",
+      "show my weight history", "view my weight history", "view my weight", "see my weight",
+      "open my weight history", "pull up my weight", "my weight trend", "how has my weight changed",
       "weight over time", "am i losing weight", "have i lost weight",
       "show my weight chart", "weight progress", "what was my weight last week",
       "how much weight have i lost", "my weight graph", "weight last month"
@@ -97,7 +99,8 @@
     ],
 
     VIEW_TODAY_WORKOUT: [
-      "whats my workout", "whats my workout today", "todays workout", "todays plan",
+      "whats my workout", "view my workout", "view todays workout", "see my workout",
+      "open my workout", "pull up my workout", "whats my workout today", "todays workout", "todays plan",
       "what should i train today", "what am i training today", "show todays plan",
       "what do i have today", "which workout is today", "my plan for today",
       "what is on today", "whats the session today", "todays training"
@@ -121,7 +124,8 @@
     ],
 
     VIEW_PROGRESS: [
-      "how is my progress", "show my progress", "am i improving", "how am i doing",
+      "how is my progress", "view my progress", "check my progress", "see my progress",
+      "look at my progress", "view progress", "open my progress", "pull up my progress", "show my progress", "am i improving", "how am i doing",
       "my stats", "show my stats", "hows it going", "am i making progress",
       "how was my week", "how did i do this week", "weekly progress", "my week summary",
       "how did i perform this week", "show my weekly progress", "last week recap"

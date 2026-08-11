@@ -321,24 +321,6 @@
            - a VIEW verb next to a food word: show / see / view / what is in my food
          The logging intent below is guarded against the same words, so exactly one of them
          claims any given sentence. */
-      test: function (t) {
-        /* FIRST, BEFORE THE LITERAL PHRASES. "clear my food log today" contains "my food log"
-           verbatim, so an early return on that list handed a delete command to the reader —
-           and the guard below never ran. A veto has to be the first thing tested, or the
-           shortcut above it decides the case. */
-        if (/\b(delete|remove|clear|wipe|erase|undo)\b/.test(t)) return false;
-        if (/\b(what did i eat|what have i eaten|my food log|calories today|how many calories|food today)\b/.test(t)) return true;
-        /* A QUANTITY MEANS IT IS A LOG, NOT A VIEW. "I ate 2 eggs" shares its past tense with
-           "what did I eat" and would otherwise be claimed here — and this intent is ordered
-           first, so it would win and silently stop food logging working. Nobody views their
-           food log by naming an amount; they name an amount to record one. The calorie
-           questions are the exception, since "how many calories today" is a genuine read. */
-        if (/\d/.test(t) && !/\b(how many calories|calories today|how much protein)\b/.test(t)) return false;
-        var past = /\b(logged|recorded|eaten|ate)\b/.test(t);
-        var view = /\b(show|see|view|list|display|whats|what is|check)\b/.test(t);
-        var food = /\b(foods?|meals?|meals|eat|eaten|ate|calories|macros|nutrition)\b/.test(t);
-        return food && (past || view);
-      },
       run: async function (A) {
         var r = await A.run("getFoodLog", {});
         var d = (r && r.result) || {};
@@ -360,10 +342,6 @@
     {
       name: "progress",
       needs: "getProgress",
-      test: function (t) {
-        return /\b(show|whats|see|view|my)\b/.test(t) && /\bprogress\b/.test(t)
-            && !/\b(workout|history)\b/.test(t);
-      },
       run: async function (A) {
         var r = await A.run("getProgress", {});
         return r ? { text: null, card: r } : null;
@@ -476,15 +454,6 @@
     {
       name: "today workout",
       needs: "getTodayWorkout",
-      test: function (t) {
-        if (!/\b(my workout|todays workout|whats my workout|what should i train|train today|workout today)\b/.test(t)) return false;
-        /* ASKING about today's workout is a read. Asking to CHANGE it is not, and "make
-           today's workout easier" contains the same words as "what's today's workout".
-           Without this it answered the question the user did not ask — the one failure mode
-           that is worse than falling through, because it looks like an answer. Rewriting a
-           session is the AI's job; this hands it over. */
-        return !/\b(easier|harder|lighter|heavier|shorter|longer|change|swap|replace|modify|adjust|make|skip|move|reschedule)\b/.test(t);
-      },
       run: async function (A) {
         var r = await A.run("getTodayWorkout", {});
         var d = (r && r.result) || {};
@@ -710,11 +679,6 @@
     {
       name: "weight history",
       needs: "getProgress",
-      test: function (t) {
-        if (/\b(delete|remove|log|record|update)\b/.test(t)) return false;   // those are writes
-        return /\b(weight)\b/.test(t)
-            && /\b(history|trend|progress|chart|graph|last week|last month|over time|changed?|losing|lost|gained?)\b/.test(t);
-      },
       run: async function (A) {
         var r = await A.run("getProgress", { days: 30 });
         var d = (r && r.result) || {};
@@ -1037,6 +1001,12 @@
     for (var i = 0; i < INTENTS.length; i++) {
       var it = INTENTS[i];
       if (it.needs && !has(A, it.needs)) continue;   // action unavailable; not our problem to fake
+      /* NO MATCHER MEANS RETIRED, NOT BROKEN. An entry with a run() and no test() is one
+         the classifier now owns: it stays here because runClassified dispatches by calling
+         this very run(), so deleting the entry would delete the handler the classifier
+         depends on and drop the intent on the floor. Skipping it explicitly beats letting
+         it.test throw into the catch below -- that worked, but as control flow by accident. */
+      if (typeof it.test !== "function") continue;
       var matched = false;
       try { matched = it.test(t); } catch (e) { matched = false; }
       if (!matched) continue;
@@ -1131,6 +1101,7 @@
       var A = window.IgnytAIActions;
       for (var i = 0; i < INTENTS.length; i++) {
         if (INTENTS[i].needs && !has(A, INTENTS[i].needs)) continue;
+        if (typeof INTENTS[i].test !== "function") continue;   // retired; classifier owns it
         try { if (INTENTS[i].test(t)) return INTENTS[i].name; } catch (e) {}
       }
       return null;
