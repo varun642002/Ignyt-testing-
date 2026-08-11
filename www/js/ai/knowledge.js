@@ -347,7 +347,24 @@
        questions are a duplicate and either answer will do; genuinely different questions at the
        same score are a real coin toss and go to Gemini. */
     if (second && runnerUp > 0 && bestScore - runnerUp < 0.06 && !sameQuestion(best, second)) {
-      return null;
+      /* BEFORE REFUSING, TRY THE CHEAPEST TIE-BREAK THERE IS: which question is actually shaped
+         like the one that was asked. Measured on a 20-question probe, "how much protein should
+         i eat" reached nothing even though that exact question is IN the base -- tokenising
+         strips the common words, "protein" is all that survives, and dozens of entries hold it
+         at indistinguishable scores. Refusing there is not caution, it is discarding an exact
+         match because near-duplicates exist.
+         Overlap of the raw query words against each question decides it. Only a CLEAR winner
+         breaks the tie; if both are equally close in wording the coin toss is real and the
+         original refusal stands. */
+      var qw = String(text || "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+      var overlap = function (e) {
+        var ew = String(e.q || "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+        var hit = 0;
+        for (var x = 0; x < qw.length; x++) if (ew.indexOf(qw[x]) !== -1) hit++;
+        return ew.length ? hit / Math.max(qw.length, ew.length) : 0;
+      };
+      var ob = overlap(best), os = overlap(second);
+      if (!(ob - os >= 0.15)) return null;
     }
 
     return {
