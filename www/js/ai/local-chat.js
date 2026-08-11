@@ -923,10 +923,22 @@
      start: "add what i ate" is still a command, while "what did i eat" is not. */
   /* Words that pin a question to the user's own records rather than to fitness in general. */
   var SCOPE_WORDS = ["today", "todays", "yesterday", "this week", "last week", "this month", "so far"];
+  /* POSSESSIVE PLUS A RECORD NOUN IS ALSO ABOUT THE USER, with no date needed. "how is MY
+     PROGRESS" asks what the app has stored, not what progressive overload means -- but the
+     knowledge base holds "How should I progress rows?" and, once the corpus grew to 6,685
+     entries, that entry's score rose past the threshold on the shifted IDF weights and stood the
+     read down. The content did not change and neither did the question; adding entries elsewhere
+     moved the arithmetic under both. Which is the standing hazard of a bigger corpus, and the
+     reason the probe runs after every batch. */
+  var SCOPE_PHRASES = ["my progress", "my weight", "my food", "my workout", "my log", "my calories",
+                       "my steps", "my routine", "my stats", "my macros"];
   function recordScoped(t) {
     var pad = " " + String(t || "") + " ";
     for (var i = 0; i < SCOPE_WORDS.length; i++) {
       if (pad.indexOf(" " + SCOPE_WORDS[i] + " ") !== -1) return true;
+    }
+    for (var j = 0; j < SCOPE_PHRASES.length; j++) {
+      if (pad.indexOf(" " + SCOPE_PHRASES[j] + " ") !== -1) return true;
     }
     return false;
   }
