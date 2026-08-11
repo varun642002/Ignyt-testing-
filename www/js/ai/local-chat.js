@@ -954,7 +954,16 @@
     return null;
   }
 
+  /* ROUTE TRACE. Off unless hx_trace is set. Five fixes for one message were reasoned out
+     against a guess at which ladder stage it reached, and all five were wrong, so the stages
+     now say so themselves. */
+  var _trace = [];
+  function trace(stage, detail) {
+    try { if (localStorage.getItem("hx_trace")) _trace.push(stage + (detail ? ": " + detail : "")); } catch (e) {}
+  }
+
   async function tryAnswer(message) {
+    _trace = [];
     /* Before norm(), which converts the words to English and erases the evidence. */
     _lang = (window.IgnytLang && IgnytLang.languageFor) ? IgnytLang.languageFor(message) : "en";
     var t = norm(message);
@@ -1026,9 +1035,14 @@
         try { kb = await IgnytKnowledge.ask(t); } catch (e) { kb = null; }
         if (kb && kb.answer) lead = null;
       }
+      trace("classify", lead ? lead.intent + " " + lead.confidence.toFixed(2) : "null");
       if (lead && PROMOTED[lead.intent] && lead.confidence >= 0.8) {
+        trace("promoted-enter", lead.intent);
         var led = await runClassified(A, t, lead);
+        trace("promoted-result", led ? led.source : "null (fell through)");
         if (led) return led;
+      } else {
+        trace("promoted-skip", lead ? "not promoted or under 0.8" : "no lead");
       }
     }
 
@@ -1083,6 +1097,7 @@
       }
 
       out.source = "BUILT_IN_ACTION:" + it.name;
+      trace("pattern-match", it.name + " (needs=" + (it.needs || "none") + ")");
       return out;
     }
 
@@ -1134,6 +1149,7 @@
         return null;
       }
       if (kb && kb.answer) {
+        trace("knowledge", kb.question || "answered");
         return { text: kb.answer, source: kb.source, confidence: kb.confidence };
       }
     }
@@ -1143,6 +1159,7 @@
 
   window.IgnytLocalChat = Object.freeze({
     tryAnswer: tryAnswer,
+    lastTrace: function () { return _trace.slice(); },
     /* The intent -> handler map, exposed read-only so the test suite can assert that a
        message reached the RIGHT HANDLER without caring which route carried it there.
        Promoting an intent changes the reported label from the handler name to
