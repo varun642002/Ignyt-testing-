@@ -16133,5 +16133,145 @@
   "q": "Why does my daily weight keep changing?",
   "a": "Water, food, sodium, carbohydrates, bowel contents, exercise, and hormones can all affect scale weight.",
   "s": "general_fitness"
+ },
+ {
+  "id": 2306,
+  "c": "Nutrition",
+  "q": "How much protein should I eat?",
+  "a": "Most people training for muscle do well on roughly 1.6 to 2.2 g of protein per kg of bodyweight per day. Spreading it across 3-4 meals is easier than one large serving.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2307,
+  "c": "Nutrition",
+  "q": "Is creatine safe?",
+  "a": "Creatine monohydrate is one of the most studied supplements and is considered safe for healthy adults at about 3-5 g per day. If you have a kidney condition, ask your doctor first.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2308,
+  "c": "Training",
+  "q": "How many days a week should I train?",
+  "a": "Three to five sessions a week suits most people. What matters more is hitting each muscle group about twice a week and recovering between sessions.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2309,
+  "c": "Training",
+  "q": "Can I build muscle and lose fat at the same time?",
+  "a": "Yes, but usually only when you are new to training, returning after a break, or carrying higher body fat. Otherwise progress is faster if you focus on one at a time.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2310,
+  "c": "Training",
+  "q": "How long should I rest between sets?",
+  "a": "Around 1-2 minutes for smaller isolation work and 2-3 minutes for heavy compound lifts. Rest long enough that the next set is limited by the muscle, not by being out of breath.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2311,
+  "c": "Training",
+  "q": "Should I do cardio before or after weights?",
+  "a": "After, if strength is the priority, since cardio first leaves less for your heavy sets. A short easy warm-up beforehand is fine either way.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2312,
+  "c": "Training",
+  "q": "How do I get bigger arms?",
+  "a": "Train them directly two or three times a week with curls and triceps work, add weight or reps over time, and keep eating enough. Arms also grow from heavy pressing and pulling.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2313,
+  "c": "Training",
+  "q": "What is progressive overload?",
+  "a": "Gradually asking more of the muscle over time - more weight, more reps, more sets, or better control. Without it, the body has no reason to adapt.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2314,
+  "c": "Training",
+  "q": "Should I train to failure?",
+  "a": "Not on every set. Stopping one or two reps short on most sets builds muscle just as well with less fatigue. Save true failure for isolation work.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2315,
+  "c": "Training",
+  "q": "How long does it take to build muscle?",
+  "a": "Visible change usually takes 8-12 weeks of consistent training, and meaningful size takes months to years. Strength improves much sooner than size.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2316,
+  "c": "Recovery",
+  "q": "Is it okay to train sore muscles?",
+  "a": "Mild soreness is fine to train through, and light work often helps. If the muscle feels weak, sharp, or painful rather than tender, give it more time.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2317,
+  "c": "Nutrition",
+  "q": "How much water should I drink?",
+  "a": "Roughly 2-3 litres a day for most adults, plus more when training hard or in heat. Pale urine is a simple everyday check.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2318,
+  "c": "Nutrition",
+  "q": "What should I eat before a workout?",
+  "a": "A mix of carbohydrate and some protein 1-3 hours before works well - for example rice and dal, or toast and eggs. Keep fat and fibre lower close to training.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2319,
+  "c": "Nutrition",
+  "q": "Why do I feel tired after eating?",
+  "a": "Large meals, especially heavy in refined carbohydrate, can cause a dip in energy as blood sugar rises and falls. Smaller, balanced meals usually help.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2320,
+  "c": "Nutrition",
+  "q": "Is soya good for muscle?",
+  "a": "Yes. Soya is a complete protein and supports muscle growth. Soya chunks, tofu and soya milk are all useful sources, especially on a vegetarian diet.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2321,
+  "c": "Nutrition",
+  "q": "Is dal enough protein?",
+  "a": "Dal alone is usually not enough. It is moderate in protein and low in the amino acid methionine, so pair it with rice, curd, paneer or soya across the day.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2322,
+  "c": "Fat Loss",
+  "q": "How many calories do I need to lose 1 kg?",
+  "a": "About 7,700 kcal below maintenance for 1 kg of fat. A deficit of 500 kcal a day gives roughly 0.5 kg a week, which is a sustainable pace.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2323,
+  "c": "Nutrition",
+  "q": "Can I skip breakfast?",
+  "a": "Yes, if it suits you. Total daily food matters more than meal timing. If you skip it, make sure you still reach your protein and calorie targets later.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2324,
+  "c": "Training",
+  "q": "How do I fix my posture?",
+  "a": "Strengthen the upper back and core, stretch the chest and hip flexors, and change position often through the day. Posture improves more from moving regularly than from sitting perfectly.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2325,
+  "c": "Fat Loss",
+  "q": "Why am I not losing weight?",
+  "a": "The most common reasons are eating more than estimated, weekends undoing weekday effort, and normal water-weight masking fat loss. Track intake honestly for two weeks before changing anything.",
+  "s": "general_fitness"
  }
 ]
