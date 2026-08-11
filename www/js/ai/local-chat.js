@@ -785,6 +785,16 @@
         /* No digit is required. "add a banana" is a perfectly ordinary thing to say and the
            earlier version demanded a number, so it was handed to Gemini — which food logging
            must never reach. Quantity defaults to one below. */
+        /* A QUESTION IS NOT A COMMAND TO LOG. "how many calories did i eat today" contains
+           "eat" and was matching here, so a question about the food log was answered by
+           WRITING to it -- creating an entry the user never asked for. Traced: the food-log
+           read classifies correctly at 1.00, but declines when nothing is logged yet, and
+           this pattern was the next thing willing to take the message.
+           Interrogative openers only. "log 2 eggs", "i ate chicken" and "add a banana" are
+           untouched; they are statements. A question about food is for the read handler or
+           the knowledge base, and if neither can answer, saying so is correct -- inventing
+           a food entry is not. */
+        if (QUESTION_OPENER.test(t)) return false;
         return /\b(log|ate|eat|had|add)\b/.test(t)
             && !/\b(weight|weigh|steps?|workout|water|streak|score|progress)\b/.test(t);
       },
@@ -909,6 +919,10 @@
      have to let the knowledge base outrank them. */
   var RECORD_READS = { "food log today": 1, "progress": 1, "weight history": 1, "today workout": 1 };
 
+  /* Openers that make a sentence a question rather than an instruction. Anchored at the
+     start: "add what i ate" is still a command, while "what did i eat" is not. */
+  var QUESTION_OPENER = /^(how many|how much|what|whats|which|did i|do i|have i|am i|is my|are my|show|tell me)\b/;
+
   var HANDLER = {
     DELETE_TODAY_FOOD: "delete todays food",
     LOG_FOOD: "log food",
@@ -1030,6 +1044,12 @@
          knowledge base has a confident answer the message was a QUESTION, so it wins. Reads that
          genuinely address the records -- "did i log anything today" -- are not in the knowledge
          base at all, so they are untouched. */
+      /* NOT FOR A QUESTION ABOUT THE USER'S OWN DATA. "how many calories did i eat today" is
+         answered by the food log; "how much protein should i eat" by the knowledge base. The time
+         word is what separates them. Without this, batch 1 of the corpus made the base confident
+         on the dated question too, the guard stood the read down, and a question about today was
+         answered with a general calorie target. Word list, not a regex -- a word-boundary escape
+         written here as a literal control character silently disabled this guard once already. */
       if (lead && PROMOTED[lead.intent] && lead.confidence >= 0.8 && window.IgnytKnowledge) {
         var kb = null;
         try { kb = await IgnytKnowledge.ask(t); } catch (e) { kb = null; }
