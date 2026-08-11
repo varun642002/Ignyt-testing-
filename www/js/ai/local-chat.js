@@ -958,10 +958,16 @@
        "how much protein should i eat" scored VIEW_FOOD_LOG and answered with the food log. Both
        have real answers in the base. A read of the user's records only wins when the base has
        nothing, which is exactly the case for "did i log anything today". */
-    if (RECORD_READS[wanted] && window.IgnytKnowledge) {
+    /* The same dated-question rule as the promoted call site -- and the copy that was missed,
+       which is the whole reason this took eight attempts. This guard sits INSIDE runClassified
+       and consults the knowledge base itself, so adding corpus entries changed the outcome of a
+       loop the corpus cannot reach: with the batch applied "how many calories did i eat today"
+       returned null here, silently, before the handler was ever looked up. It was the only exit
+       in this function with no trace on it, so the message appeared to fall out of the loop. */
+    if (RECORD_READS[wanted] && window.IgnytKnowledge && !recordScoped(t)) {
       var kbWins = null;
       try { kbWins = await IgnytKnowledge.ask(t); } catch (e) { kbWins = null; }
-      if (kbWins && kbWins.answer) return null;
+      if (kbWins && kbWins.answer) { trace("rc-exit", "base outranked the read: " + kbWins.question); return null; }
     }
     for (var k = 0; k < INTENTS.length; k++) {
       if (INTENTS[k].name !== wanted) continue;

@@ -16273,5 +16273,628 @@
   "q": "Why am I not losing weight?",
   "a": "The most common reasons are eating more than estimated, weekends undoing weekday effort, and normal water-weight masking fat loss. Track intake honestly for two weeks before changing anything.",
   "s": "general_fitness"
+ },
+ {
+  "id": 2326,
+  "c": "Training",
+  "q": "How often should I work out?",
+  "a": "Three to five days a week suits most people, with at least one or two full rest days. Consistency over months matters far more than squeezing in an extra session.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2327,
+  "c": "Training",
+  "q": "Do I need to work out every day?",
+  "a": "No. Muscle is built while you recover, not while you train. Daily light movement is good, but daily hard training usually leads to fatigue and stalled progress.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2328,
+  "c": "Training",
+  "q": "Should I do strength training or cardio?",
+  "a": "Both, if you can. Strength training builds and keeps muscle; cardio improves heart and lung fitness. If your goal is body composition, make strength the priority and add cardio around it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2329,
+  "c": "Training",
+  "q": "Will lifting weights make me bulky?",
+  "a": "No, not by accident. Visible bulk needs years of heavy training plus a consistent calorie surplus. Lifting on a normal diet makes you stronger and firmer, not bigger.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2330,
+  "c": "Training",
+  "q": "What weight should I start with?",
+  "a": "Light enough that your last two reps are still clean. If your form breaks before the target reps the weight is too heavy; if you finish easily, add a little next session.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2331,
+  "c": "Training",
+  "q": "How important is form?",
+  "a": "More important than the weight on the bar. Good form puts the load on the muscle you are training and keeps it off your joints, which is what lets you keep training for years.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2332,
+  "c": "Training",
+  "q": "How many sets and reps should I do?",
+  "a": "For most goals, 3 to 4 sets of 6 to 12 reps per exercise works well. Lower reps with heavier weight favour strength; higher reps favour endurance.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2333,
+  "c": "Training",
+  "q": "How many exercises per workout?",
+  "a": "Four to six is plenty for most sessions - one or two big compound lifts and a few accessories. More exercises usually means less effort available for each.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2334,
+  "c": "Training",
+  "q": "Should I warm up before lifting?",
+  "a": "Yes. Five to ten minutes of light cardio then a few progressively heavier sets of your first exercise. Warming up improves performance as much as it lowers injury risk.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2335,
+  "c": "Training",
+  "q": "Do I need to stretch after a workout?",
+  "a": "It is optional. Light stretching can feel good, but it does not prevent soreness. Mobility work is better done on its own, when you are not fatigued.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2336,
+  "c": "Training",
+  "q": "How long should a workout be?",
+  "a": "Forty-five to seventy-five minutes of actual training is enough for almost everyone. Beyond that, quality usually drops faster than the extra volume helps.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2337,
+  "c": "Training",
+  "q": "Is it better to train in the morning or evening?",
+  "a": "Whichever you will do consistently. Strength is often slightly higher later in the day, but that difference is small next to actually turning up.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2338,
+  "c": "Training",
+  "q": "What is a push pull legs split?",
+  "a": "A three-way split: pushing muscles (chest, shoulders, triceps), pulling muscles (back, biceps), then legs. Run twice a week it hits everything about twice, which suits most people.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2339,
+  "c": "Training",
+  "q": "What is an upper lower split?",
+  "a": "Upper body one day, lower body the next, usually four days a week. A simple way to train each muscle group twice weekly without long sessions.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2340,
+  "c": "Training",
+  "q": "Should I train full body or a split?",
+  "a": "Full body two or three times a week is excellent for beginners. Splits become more useful once you need more volume per muscle than one session can hold.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2341,
+  "c": "Training",
+  "q": "How do I know if I am making progress?",
+  "a": "Weight on the bar, reps at the same weight, how the same session feels, and measurements. The scale alone is the least useful of these.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2342,
+  "c": "Training",
+  "q": "How do I apply progressive overload?",
+  "a": "Add a little each week: one more rep, a slightly heavier weight, or one more set. Small and steady beats big jumps that cost your form.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2343,
+  "c": "Training",
+  "q": "Should I lift heavy or light?",
+  "a": "Both work if you train close to your limit. Heavy builds strength efficiently, lighter with more reps is easier on joints. Most programmes use a mix.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2344,
+  "c": "Training",
+  "q": "Can I train the same muscle two days in a row?",
+  "a": "You can, but it is rarely useful. The muscle is still repairing, so the second session is lower quality and adds fatigue without much benefit.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2345,
+  "c": "Training",
+  "q": "How many times a week should I train each muscle?",
+  "a": "About twice. Spreading your weekly sets across two sessions generally builds more than doing them all at once.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2346,
+  "c": "Training",
+  "q": "What should a beginner do in the gym?",
+  "a": "Learn a handful of basic lifts - squat, hinge, press, row - with light weight and good form, two or three times a week. Add weight gradually. Complexity can wait.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2347,
+  "c": "Training",
+  "q": "How long before I see results from the gym?",
+  "a": "Strength improves within two to four weeks. Visible change usually takes eight to twelve weeks of consistent training and eating.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2348,
+  "c": "Recovery",
+  "q": "How much sleep do I need to build muscle?",
+  "a": "Seven to nine hours. Sleep is when most repair happens, and short sleep reliably lowers strength, appetite control and training quality.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2349,
+  "c": "Recovery",
+  "q": "What are rest days for?",
+  "a": "Repair and adaptation. Training breaks tissue down; rest is when it rebuilds stronger. Skipping rest days slows progress rather than speeding it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2350,
+  "c": "Recovery",
+  "q": "Should I do anything on rest days?",
+  "a": "Light activity helps - walking, easy cycling, gentle mobility. Full immobility is not necessary and often leaves you feeling stiffer.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2351,
+  "c": "Recovery",
+  "q": "Why am I so sore after training?",
+  "a": "Delayed onset muscle soreness usually peaks a day or two after unfamiliar or heavy work. It fades as your body adapts and is not a measure of a good session.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2352,
+  "c": "Recovery",
+  "q": "Does soreness mean the workout worked?",
+  "a": "No. Soreness mostly reflects novelty, not effectiveness. You can make excellent progress with very little soreness once you are used to a programme.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2353,
+  "c": "Recovery",
+  "q": "How do I recover faster?",
+  "a": "Sleep enough, eat enough protein and total calories, keep stress manageable, and stay lightly active. No supplement replaces those four.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2354,
+  "c": "Recovery",
+  "q": "Should I use ice or heat?",
+  "a": "Heat suits stiffness and general aches; ice suits an acute swollen injury in the first day or two. For ordinary training soreness, neither is necessary.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2355,
+  "c": "Recovery",
+  "q": "Is a massage gun useful?",
+  "a": "It can ease stiffness and feels good, but it does not speed up muscle repair. Treat it as comfort, not recovery.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2356,
+  "c": "Recovery",
+  "q": "What is overtraining?",
+  "a": "Training more than you recover from, over weeks. Signs are stalled or falling strength, poor sleep, low motivation and persistent aches. The fix is a lighter week, not more effort.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2357,
+  "c": "Recovery",
+  "q": "How do I know if I need a deload?",
+  "a": "When strength drops for two weeks straight, joints ache constantly, or motivation disappears. A week at about half your usual volume usually resets it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2358,
+  "c": "Nutrition",
+  "q": "How many calories should I eat?",
+  "a": "It depends on size, activity and goal. A common starting point is bodyweight in kg times 30 to 33 for maintenance, then adjust based on what the scale does over two to three weeks.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2359,
+  "c": "Nutrition",
+  "q": "What are macros?",
+  "a": "Protein, carbohydrate and fat - the three nutrients that supply calories. Tracking them tells you not just how much you ate, but what it was made of.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2360,
+  "c": "Nutrition",
+  "q": "How do I calculate my macros?",
+  "a": "Set protein first at about 1.6 to 2.2 g per kg, fat at around 0.8 to 1 g per kg, and fill the remaining calories with carbohydrate.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2361,
+  "c": "Nutrition",
+  "q": "Do carbs make you fat?",
+  "a": "No. Excess calories do, from any source. Carbohydrate is the body's preferred fuel for hard training and cutting it does not by itself cause fat loss.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2362,
+  "c": "Nutrition",
+  "q": "Should I cut carbs to lose weight?",
+  "a": "Only if it helps you eat fewer calories. Low-carb diets work for some people for that reason, not because carbohydrate is uniquely fattening.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2363,
+  "c": "Nutrition",
+  "q": "Is fat bad for you?",
+  "a": "No. Fat is essential for hormones and for absorbing several vitamins. Keep it at roughly a quarter to a third of your calories and favour nuts, seeds, oils, eggs and fish.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2364,
+  "c": "Nutrition",
+  "q": "How much should I eat to gain muscle?",
+  "a": "A small surplus, around 200 to 400 calories above maintenance, with enough protein. Gaining faster than about 0.25 to 0.5 percent of bodyweight a week mostly adds fat.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2365,
+  "c": "Nutrition",
+  "q": "When should I take protein?",
+  "a": "Any time that helps you hit your daily total. The old thirty-minute window matters far less than eating enough across the day.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2366,
+  "c": "Nutrition",
+  "q": "Is it bad to eat late at night?",
+  "a": "Not by itself. Total daily intake matters more than timing. Late eating causes problems mainly when it is extra food on top of the day.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2367,
+  "c": "Nutrition",
+  "q": "How many meals a day should I eat?",
+  "a": "Three to five, whatever fits your routine. Meal frequency has little effect on fat loss or muscle gain once calories and protein are matched.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2368,
+  "c": "Nutrition",
+  "q": "Do I need a pre-workout supplement?",
+  "a": "No. Most of the effect is caffeine. A coffee an hour before training does much the same thing for less money.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2369,
+  "c": "Nutrition",
+  "q": "Is caffeine good before training?",
+  "a": "Yes, in moderation. Around 100 to 200 mg an hour before training improves focus and perceived effort for most people. Avoid it late in the day.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2370,
+  "c": "Nutrition",
+  "q": "Are eggs good for building muscle?",
+  "a": "Yes. Eggs are a complete protein with about 6 g each, and they are cheap and easy to prepare. The yolk carries most of the micronutrients.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2371,
+  "c": "Nutrition",
+  "q": "Is paneer good for muscle?",
+  "a": "Yes. Paneer is high in protein and calcium and suits vegetarian diets well. Watch the quantity in a deficit, as it is also high in fat.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2372,
+  "c": "Nutrition",
+  "q": "Is milk good after a workout?",
+  "a": "Yes. Milk provides protein and carbohydrate together and is one of the simplest post-training options available.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2373,
+  "c": "Nutrition",
+  "q": "How much protein is in one egg?",
+  "a": "About 6 g in a medium egg, split between the white and the yolk.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2374,
+  "c": "Nutrition",
+  "q": "How much protein is in 100g of chicken?",
+  "a": "Roughly 25 to 31 g depending on the cut, with breast at the higher end.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2375,
+  "c": "Nutrition",
+  "q": "Is white rice bad?",
+  "a": "No. White rice is a clean, easily digested carbohydrate. Brown rice adds fibre and micronutrients, but neither choice decides your results.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2376,
+  "c": "Nutrition",
+  "q": "Should I avoid sugar completely?",
+  "a": "No. Small amounts within your calorie target are fine. Problems come from large quantities crowding out protein, fibre and micronutrients.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2377,
+  "c": "Nutrition",
+  "q": "Do I need to count calories?",
+  "a": "Not forever, but counting for a few weeks teaches you what portions actually contain. Most people find that education more valuable than the tracking itself.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2378,
+  "c": "Nutrition",
+  "q": "Is intermittent fasting better for fat loss?",
+  "a": "Not inherently. It works when it helps you eat less overall. Compared calorie for calorie, results are similar to any other approach.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2379,
+  "c": "Nutrition",
+  "q": "How much fibre do I need?",
+  "a": "Around 25 to 35 g a day. Fibre helps digestion and keeps you full, which makes a calorie deficit far easier to hold.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2380,
+  "c": "Fat Loss",
+  "q": "How fast can I lose fat safely?",
+  "a": "About 0.5 to 1 percent of bodyweight a week. Faster than that tends to cost muscle, strength and adherence.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2381,
+  "c": "Fat Loss",
+  "q": "Can I target fat loss on my belly?",
+  "a": "No. Fat comes off the whole body in an order set largely by genetics. Abdominal exercises strengthen the muscle underneath but do not remove the fat above it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2382,
+  "c": "Fat Loss",
+  "q": "Do ab exercises burn belly fat?",
+  "a": "No. They build the muscle. Visible abs come from lowering overall body fat, which is a diet and total-activity outcome.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2383,
+  "c": "Fat Loss",
+  "q": "Is cardio necessary to lose fat?",
+  "a": "No, but it helps by increasing the calories you burn. Diet creates the deficit; cardio widens it and improves heart health.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2384,
+  "c": "Fat Loss",
+  "q": "How much cardio should I do?",
+  "a": "Two to four sessions a week, twenty to forty minutes, is plenty alongside lifting. More is fine if it does not eat into your recovery.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2385,
+  "c": "Fat Loss",
+  "q": "Is HIIT better than steady cardio?",
+  "a": "Not better, just different. HIIT saves time but is more fatiguing; steady cardio is easier to recover from. Choose by how it fits around your lifting.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2386,
+  "c": "Fat Loss",
+  "q": "Will I lose muscle in a deficit?",
+  "a": "Not much, if protein is high and you keep lifting heavy. Muscle loss becomes likely with very aggressive deficits or when training stops.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2387,
+  "c": "Fat Loss",
+  "q": "Why do I weigh more after a workout?",
+  "a": "Inflammation and fluid retention after training, plus food and water still in you. It is not fat and it settles within a day or two.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2388,
+  "c": "Fat Loss",
+  "q": "What is a realistic goal for 12 weeks?",
+  "a": "Roughly 4 to 8 kg of fat loss, or a visible change in body composition with modest scale movement if you are also gaining muscle.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2389,
+  "c": "Muscle Gain",
+  "q": "How do I build muscle as a beginner?",
+  "a": "Train each muscle about twice a week, add weight or reps over time, eat enough protein, and sleep. Beginners gain fastest, so keep it simple and consistent.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2390,
+  "c": "Muscle Gain",
+  "q": "Why am I not building muscle?",
+  "a": "Most often too little food, too little protein, no progression in the weights, or inconsistent attendance. Check those four before changing programme.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2391,
+  "c": "Muscle Gain",
+  "q": "How much muscle can I gain in a month?",
+  "a": "Around 0.5 to 1 kg a month early on, less as you become more trained. Claims well above that usually include water and fat.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2392,
+  "c": "Muscle Gain",
+  "q": "Can I gain muscle without weights?",
+  "a": "Yes, early on. Bodyweight training builds muscle while it is still challenging, but progress slows once you can do many reps and cannot easily add load.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2393,
+  "c": "Muscle Gain",
+  "q": "Do I need to lift heavy to grow?",
+  "a": "Not necessarily. Sets taken close to failure build muscle across a wide range of weights. Heavy work is efficient but not the only way.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2394,
+  "c": "Muscle Gain",
+  "q": "How do I get a bigger chest?",
+  "a": "Press at several angles - flat, incline, dumbbell - add weight over time, and train chest twice a week. Add flyes once your pressing is progressing.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2395,
+  "c": "Muscle Gain",
+  "q": "How do I get a wider back?",
+  "a": "Vertical pulling like pull-ups and lat pulldowns builds width; rows build thickness. Both, twice a week, with the weight increasing over time.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2396,
+  "c": "Muscle Gain",
+  "q": "How do I grow my legs?",
+  "a": "Squat or leg press with real load, add hinges like Romanian deadlifts for hamstrings, and train them twice a week. Legs respond to weight added, not to variety.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2397,
+  "c": "Muscle Gain",
+  "q": "How do I grow my calves?",
+  "a": "Train them often - three or four times a week - with a full stretch at the bottom and a pause at the top. Calves tolerate frequency well.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2398,
+  "c": "Muscle Gain",
+  "q": "How do I get bigger shoulders?",
+  "a": "Overhead pressing for the front and mid delts, plus lateral raises for width. Side delts respond well to higher reps and frequent work.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2399,
+  "c": "Muscle Gain",
+  "q": "Are pull-ups enough for back?",
+  "a": "They build width well but leave rowing patterns undertrained. Pair them with a horizontal row for a complete back.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2400,
+  "c": "Muscle Gain",
+  "q": "How long does it take to look muscular?",
+  "a": "Usually one to two years of consistent training and eating for a clearly athletic look, though noticeable change comes in the first three months.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2401,
+  "c": "Exercise Safety",
+  "q": "What should I do if an exercise hurts?",
+  "a": "Stop that exercise. Sharp, joint-centred or one-sided pain is a signal, not something to push through. Ordinary muscular burn is different and is fine.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2402,
+  "c": "Exercise Safety",
+  "q": "Is knee pain during squats normal?",
+  "a": "Mild discomfort while adapting can be, but real pain is not. Check depth, stance and load first, and see a professional if it persists.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2403,
+  "c": "Exercise Safety",
+  "q": "Should I wear a lifting belt?",
+  "a": "Only for heavy squats and deadlifts near your limit. A belt supports bracing on top sets; using it for everything lets your own bracing weaken.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2404,
+  "c": "Exercise Safety",
+  "q": "Do I need lifting straps?",
+  "a": "They help when grip fails before the target muscle does, mainly on heavy pulls. Use them on your heaviest sets rather than everything.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2405,
+  "c": "Exercise Safety",
+  "q": "Should I train with an injury?",
+  "a": "Not the injured area without guidance. You can usually keep training everything else, which preserves most of your progress while it heals.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2406,
+  "c": "Exercise Safety",
+  "q": "Is it safe to lift weights every day?",
+  "a": "Only if intensity and volume are managed, and even then most people do better with rest days. Daily hard lifting on the same muscles is not sustainable.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2407,
+  "c": "General Fitness",
+  "q": "How do I stay motivated?",
+  "a": "Set a schedule rather than relying on feeling like it, keep sessions short enough to be repeatable, and track something that improves. Motivation follows progress more than it causes it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2408,
+  "c": "General Fitness",
+  "q": "What if I miss a workout?",
+  "a": "Nothing important happens. Carry on with the next session rather than trying to make it up - one missed session matters far less than the pattern around it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2409,
+  "c": "General Fitness",
+  "q": "How do I get back into training after a break?",
+  "a": "Start at about two-thirds of the weights you used before, for two weeks. Strength returns quickly, and starting light protects you from unnecessary soreness.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2410,
+  "c": "General Fitness",
+  "q": "Is it too late to start training?",
+  "a": "No. Strength and muscle respond to training at every age, and the health benefits are largest for those starting from the least activity.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2411,
+  "c": "General Fitness",
+  "q": "How many steps should I walk a day?",
+  "a": "Eight to ten thousand is a good general target. Even six thousand carries clear health benefits compared with a sedentary day.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2412,
+  "c": "General Fitness",
+  "q": "Does exercise help with stress?",
+  "a": "Yes. Regular activity reliably improves mood, sleep and stress tolerance, and even a brisk walk has a measurable effect.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2413,
+  "c": "General Fitness",
+  "q": "Should I train when I am ill?",
+  "a": "If symptoms are above the neck and mild, light training is usually fine. With fever, body aches or chest symptoms, rest until recovered.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 2414,
+  "c": "General Fitness",
+  "q": "What is a realistic first goal?",
+  "a": "Training consistently three times a week for a month. Get that habit in place before worrying about programmes, splits or supplements.",
+  "s": "general_fitness"
  }
 ]
