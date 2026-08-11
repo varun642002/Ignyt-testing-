@@ -970,8 +970,18 @@
            Only plain words joined by and or a comma qualify, and run() still refuses unless every
            segment is a food the library actually holds, so a sentence about anything else falls
            through untouched. */
-        if (/^[a-z][a-z ,]*(?:\band\b|,)[a-z ,]*[a-z]$/.test(t)
-            && !/\b(weight|weigh|steps?|workout|water|streak|score|progress|delete|remove)\b/.test(t)) {
+        if (/\b(weight|weigh|steps?|workout|water|streak|score|progress|delete|remove|sets?|reps?)\b/.test(t)) return false;
+        /* A bare list of plain words: "chicken and chapati". */
+        if (/^[a-z][a-z ,]*(?:\band\b|,)[a-z ,]*[a-z]$/.test(t)) return true;
+        /* THE SAME LIST WITH QUANTITIES, WHICH IS THE COMMONER SHAPE. "3 eggs, 2 slices of bread
+           and a banana" is the answer to "what did you eat?", and the plain-words pattern above
+           excludes it for containing digits. It still needs a separator and at least two real
+           words, so a bare number -- the answer to "what weight should I log?" -- cannot reach
+           here, and run() refuses anyway unless the segments parse as foods. */
+        if (/[0-9]/.test(t)
+            && /(?:\band\b|,)/.test(t)
+            && /^[a-z0-9][a-z0-9 ,.]*[a-z]$/.test(t)
+            && (t.match(/\b[a-z]{3,}\b/g) || []).length >= 2) {
           return true;
         }
         return /\b(log|ate|eat|had|add|drank|drink|drinking|having|consumed|finished)\b/.test(t)
