@@ -860,9 +860,16 @@
       name: "delete food",
       needs: "deleteFoodLog",
       test: function (t) {
-        return /\b(delete|remove|undo|clear)\b/.test(t)
-            && /\b(foods?|meals?|entry|log|last|that)\b/.test(t)
-            && !/\b(weight|workout|steps?|history|all|everything)\b/.test(t);
+        if (!/\b(delete|remove|undo|clear)\b/.test(t)) return false;
+        /* Never this handler's business, whatever else the sentence says. */
+        if (/\b(weight|weigh|workout|routine|exercise|steps?|history|all|everything)\b/.test(t)) return false;
+        if (/\b(foods?|meals?|entry|log|last|that)\b/.test(t)) return true;
+        /* A NAMED FOOD IS ALSO A DELETE REQUEST. "delete the chicken" carries none of the words
+           above, so it never reached here and came back as no answer at all -- while
+           deleteFoodByName sat in the registry, written and tested, with nothing routing to it.
+           Anything after the verb and an article is a candidate name; run() refuses if it is not
+           actually in the log, so a stray noun cannot delete anything. */
+        return /^(?:delete|remove|undo|clear)\s+(?:the\s+|my\s+|a\s+|an\s+)?[a-z][a-z\s]{1,40}$/.test(t);
       },
       run: async function (A, t) {
         /* A NAMED DAY SCOPES THE DELETE TO THAT DAY. Without this the handler fell straight
@@ -887,6 +894,29 @@
         var items = d.entries || d.items || d.foods;
         if (!Array.isArray(items) || !items.length) {
           return { text: "There's nothing in today's food log to delete." };
+        }
+
+        /* BY NAME, AND ONLY IF IT IS REALLY THERE. Matched against what is actually logged today
+           before anything is confirmed: "delete the chicken" with no chicken logged says so,
+           rather than confirming a deletion that removes nothing, or falling through to "newest
+           entry" and taking a food the user never named. */
+        var named = t.match(/^(?:delete|remove|undo|clear)\s+(?:the\s+|my\s+|a\s+|an\s+)?([a-z][a-z\s]{1,40})$/);
+        if (named) {
+          var want = named[1].replace(/\s+/g, " ").trim().toLowerCase();
+          var RESERVED = ["food", "foods", "meal", "meals", "entry", "log", "last", "that", "it", "this"];
+          /* Every word reserved means no food was named. "the last food" captured as "last food"
+             is not a food called that -- it is the existing "newest entry" request wearing two
+             words, and matching it by name told the user their last food was missing. */
+          var words = want.split(" ").filter(function (w) { return w.length; });
+          var allReserved = words.length > 0 && words.every(function (w) { return RESERVED.indexOf(w) !== -1; });
+          if (!allReserved) {
+            var hit = items.filter(function (x) {
+              var nm = String(x.name || "").toLowerCase();
+              return nm === want || nm.indexOf(want) !== -1;
+            });
+            if (!hit.length) return { text: "I can't see " + want + " in today's food log." };
+            return { text: null, pending: { action: "deleteFoodByName", args: { food: want } } };
+          }
         }
         /* Newest first, which is how addFoodLog unshifts them. "The last food" means the one
            most recently added, not the last chronologically in the day. */
