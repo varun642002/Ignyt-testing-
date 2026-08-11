@@ -987,6 +987,30 @@
     return t;
   }
 
+
+  /* ONE MEAL OF ONE DAY. "delete breakfast" had no action at all behind it -- the alternatives
+     were deleting the whole day or nothing, and the whole day is not what was asked.
+     Scoped to a date as well as a meal, so it can never reach across days: deleting breakfast
+     leaves yesterday's breakfast alone. */
+  function deleteFoodForMeal(args) {
+    var meal = str(args && args.meal, "Meal", 20);
+    var ds = dateKey(args && args.date);
+    var want = meal.toLowerCase();
+    var st = S();
+    var before = (st.foodLog || []).length;
+    st.foodLog = (st.foodLog || []).filter(function (f) {
+      return !(String(f.date) === ds && String(f.meal || "").toLowerCase() === want);
+    });
+    var removed = before - st.foodLog.length;
+    if (!removed) {
+      return { card: "error", code: "nothing_to_delete", affectedRecords: 0,
+               message: "There's nothing logged for " + meal.toLowerCase() + " on " + ds + "." };
+    }
+    window.persist();
+    return { card: "deleted", scope: "meal", meal: meal, date: ds, affectedRecords: removed,
+             message: "Deleted " + removed + (removed === 1 ? " entry" : " entries") + " from " + meal.toLowerCase() + "." };
+  }
+
   var ACTIONS = {
     getUserProfile:   { risk: "read",    fn: getUserProfile },
     getGoals:         { risk: "read",    fn: getGoals },
@@ -1016,6 +1040,7 @@
        before anything is removed. deleteAllFoodLogs especially: it is the widest action in the
        registry and the one a misheard sentence must never reach unchallenged. */
     deleteFoodForDate: { risk: "destroy", fn: deleteFoodLogForDate },
+    deleteFoodForMeal: { risk: "destroy", fn: deleteFoodForMeal },
     deleteAllFoodLogs: { risk: "destroy", fn: deleteAllFoodLogs },
     deleteFoodByName:  { risk: "destroy", fn: deleteFoodByName },
     deleteWeightEntry: { risk: "destroy", fn: deleteWeightEntry },

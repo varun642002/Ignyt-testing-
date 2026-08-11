@@ -864,6 +864,7 @@
         /* Never this handler's business, whatever else the sentence says. */
         if (/\b(weight|weigh|workout|routine|exercise|steps?|history|all|everything)\b/.test(t)) return false;
         if (/\b(foods?|meals?|entry|log|last|that)\b/.test(t)) return true;
+        if (/\b(breakfast|lunch|dinner|snacks?)\b/.test(t)) return true;
         /* A NAMED FOOD IS ALSO A DELETE REQUEST. "delete the chicken" carries none of the words
            above, so it never reached here and came back as no answer at all -- while
            deleteFoodByName sat in the registry, written and tested, with nothing routing to it.
@@ -877,6 +878,26 @@
            of a record the user had not mentioned -- today's most recent -- while appearing to do
            what was asked. The confirmation gate was the only thing standing between that and
            real data loss, and a prompt naming the wrong food is not much of a gate. */
+        /* MEAL FIRST, THEN DAY. "delete yesterday's breakfast" carries both scopes, and the day
+           branch below would have taken the whole of yesterday -- far more than was asked. The
+           meal branch reads that same day offset, so both are honoured together. */
+        var mealWord = t.match(/\b(breakfast|lunch|dinner|snacks?)\b/);
+        if (mealWord) {
+          var mName = mealWord[1].replace(/^snacks?$/, "snack");
+          mName = mName.charAt(0).toUpperCase() + mName.slice(1);
+          var mOff = dayOffsetFrom(t);
+          var mDate = localDayString(mOff == null ? 0 : mOff);
+          var mLog = await A.run("getFoodLog", { date: mDate });
+          var mItems = ((mLog && mLog.result) || {}).items || [];
+          var inMeal = mItems.filter(function (x) {
+            return String(x.meal || "").toLowerCase() === mName.toLowerCase();
+          });
+          if (!inMeal.length) {
+            return { text: "There's nothing logged for " + mName.toLowerCase() + " on " + mDate + "." };
+          }
+          return { text: null, pending: { action: "deleteFoodForMeal", args: { meal: mName, date: mDate } } };
+        }
+
         var off = dayOffsetFrom(t);
         if (off != null) {
           var ds = localDayString(off);
