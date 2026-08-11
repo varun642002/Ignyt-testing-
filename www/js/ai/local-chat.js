@@ -1079,8 +1079,30 @@
               if (!nm || !/^[a-z][a-z ]{1,40}$/.test(nm)) { known = []; break; }
               var look = await A.run("searchFood", { query: nm });
               var rows = ((look && look.result) || {}).results || ((look && look.result) || {}).foods || [];
+              /* SEARCH THE SINGULAR TOO. "rotis" returns only Plain Chapati and never Roti, which
+                 the library does hold -- the index does not fold that plural, so the word has to
+                 be asked for both ways. Cheap, and it is the difference between logging what was
+                 said and refusing it. */
+              var singularQ = nm.replace(/ies$/, "y").replace(/([^s])s$/, "$1");
+              if (singularQ !== nm) {
+                var look2 = await A.run("searchFood", { query: singularQ });
+                var rows2 = ((look2 && look2.result) || {}).results || ((look2 && look2.result) || {}).foods || [];
+                rows = rows.concat(rows2);
+              }
+              /* PLURALS COUNT AS THE FOOD. The search already resolves them -- "eggs" returns
+                 Egg (Whole), "idlis" returns Idli -- but this test demanded the stored name equal
+                 the spoken word, so "breakfast eggs and bread" refused on a food the library
+                 plainly has. An exact match still wins; failing that, the singular form matching
+                 the start of the stored name is accepted, which takes Egg (Whole) for "eggs"
+                 without taking Banana Bun for "banana". A word the library does not begin an
+                 entry with still fails, so "chest and back" is refused as before. */
+              var singular = nm.replace(/ies$/, "y").replace(/(ses|xes|ches|shes)$/, function (m0) {
+                return m0.slice(0, -2);
+              }).replace(/([^s])s$/, "$1");
               var exact = rows.filter(function (x) {
-                return String(x.name || "").toLowerCase() === nm.toLowerCase();
+                var n0 = String(x.name || "").toLowerCase();
+                if (n0 === nm.toLowerCase() || n0 === singular) return true;
+                return n0.indexOf(singular + " ") === 0 || n0.indexOf(singular + " (") === 0;
               });
               if (!exact.length) { known = []; break; }
               known.push({ food: nm, quantity: 1 });
