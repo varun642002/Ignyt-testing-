@@ -964,6 +964,16 @@
            the knowledge base, and if neither can answer, saying so is correct -- inventing
            a food entry is not. */
         if (QUESTION_OPENER.test(t)) return false;
+        /* A BARE LIST IS A LOG REQUEST WITHOUT THE VERB. "chicken and chapati" -- which is what
+           the microphone produces when someone answers a question or just names what they ate --
+           carried no log or ate, so it never reached this handler and came back as no answer.
+           Only plain words joined by and or a comma qualify, and run() still refuses unless every
+           segment is a food the library actually holds, so a sentence about anything else falls
+           through untouched. */
+        if (/^[a-z][a-z ,]*(?:\band\b|,)[a-z ,]*[a-z]$/.test(t)
+            && !/\b(weight|weigh|steps?|workout|water|streak|score|progress|delete|remove)\b/.test(t)) {
+          return true;
+        }
         return /\b(log|ate|eat|had|add|drank|drink|drinking|having|consumed|finished)\b/.test(t)
             && !/\b(weight|weigh|steps?|workout|water|streak|score|progress)\b/.test(t);
       },
@@ -989,6 +999,19 @@
            failed, every meal phrasing passed.
            Stripped before the food is read, for the same reason the meal is: whatever is left
            has to be the food and the quantity and nothing else. */
+        /* A BARE MEAL WORD COUNTS TOO. The prepositional form above wants "for lunch"; a spoken
+           sentence arrives as "today lunch chicken and chapati", so the meal stayed in the text
+           and the first segment became "today lunch chicken", which matches no food. Stripped
+           only when no meal was found already, so "for lunch" still wins. */
+        if (!meal) {
+          var bare = t.match(/\b(breakfast|lunch|dinner|snacks?)\b/);
+          if (bare) {
+            meal = bare[1].replace(/^snacks?$/, "snack");
+            meal = meal.charAt(0).toUpperCase() + meal.slice(1);
+            t = t.replace(bare[0], "").replace(/\s+/g, " ").trim();
+          }
+        }
+
         var dayOffset = null;
         var DAY_WORDS = [
           ["day before yesterday", 2],
