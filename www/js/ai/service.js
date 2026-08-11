@@ -46,7 +46,13 @@
      train is a worse outcome than an evaluation that occasionally reads a local answer, and the
      source field says which answered: AI_INTENT for the model, BUILT_IN_ for local.
      Set to false to restore local-first, which costs nothing and answers instantly. */
-  var AI_FIRST = true;
+  /* SET BACK TO FALSE AFTER TRYING IT. AI-first meant every message waited up to six seconds
+     for a model that is asleep most of the time -- including "log 200g chicken", which local
+     answers offline in about a millisecond. The chat reads as permanently thinking, which is a
+     worse product than one that occasionally says it does not understand.
+     Local first, model when local cannot: the same hybrid, in the order that keeps the app fast.
+     Flip to true to evaluate the model alone, knowing what it costs. */
+  var AI_FIRST = false;
 
   function apiBase() {
     return (window.IgnytConfig && IgnytConfig.apiBase && IgnytConfig.apiBase()) || window.IGNYT_API_BASE || "";
