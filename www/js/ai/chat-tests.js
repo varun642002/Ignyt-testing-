@@ -340,6 +340,32 @@
     if (!/weight/i.test(text)) throw new Error("did not ask for a weight: " + text.slice(0, 90));
   });
 
+
+  test("calorie target reads the app's own goal maths, not a second formula", "action", async function () {
+    var saved = window.IgnytGoals;
+    window.IgnytGoals = {
+      GOAL_TYPES: [{ id: "fat_loss", label: "Fat Loss", protein: 2.2 }],
+      activeGoal: function () { return { type: "fat_loss" }; },
+      compute: function () { return { maintenance: 2693, goalDelta: -550, calories: 2143, protein: 180, carbs: 200, fat: 60 }; }
+    };
+    try {
+      var r = await say("how many calories should i eat");
+      var text = String(r.response || "");
+      if (text.indexOf("2,143") === -1) throw new Error("did not report the computed target: " + text.slice(0, 90));
+      if (text.indexOf("2,693") === -1) throw new Error("did not report maintenance: " + text.slice(0, 90));
+    } finally { window.IgnytGoals = saved; }
+  });
+
+  test("calorie target asks rather than inventing when no goal is set", "safety", async function () {
+    var saved = window.IgnytGoals;
+    window.IgnytGoals = { GOAL_TYPES: [], activeGoal: function () { return null; }, compute: function () { return null; } };
+    try {
+      var r = await say("how many calories should i eat");
+      var text = String(r.response || "");
+      if (/\d,\d{3}\s*kcal/.test(text)) throw new Error("invented a target with no goal: " + text.slice(0, 90));
+    } finally { window.IgnytGoals = saved; }
+  });
+
   /* ---------- runner ------------------------------------------------------------------------ */
 
   async function run(filter) {

@@ -346,6 +346,30 @@
         return { text: d.message, card: d.card || null };
       }
     },
+    {
+      name: "calorie target",
+      needs: "getCalorieTarget",
+      /* Same split as the protein target: "how many calories SHOULD i eat" is the target,
+         "how many calories DID i eat today" is the food log. Past tense and dated forms are
+         excluded and left to the read. Written with indexOf rather than word-boundary escapes,
+         which have been silently corrupted into control characters four times in this file. */
+      test: function (t) {
+        var pad = " " + t + " ";
+        if (pad.indexOf(" calorie") === -1 && pad.indexOf(" calories") === -1
+            && pad.indexOf(" macros ") === -1 && pad.indexOf(" tdee ") === -1) return false;
+        var past = [" did ", " ate ", " had ", " eaten ", " today ", " yesterday ", " so far ", " burned ", " burnt "];
+        for (var i = 0; i < past.length; i++) if (pad.indexOf(past[i]) !== -1) return false;
+        var want = [" should ", " target ", " need ", " needs ", " goal ", " intake ", " per day ", " a day ", " daily ", " maintenance ", " my macros ", " macro "];
+        for (var j = 0; j < want.length; j++) if (pad.indexOf(want[j]) !== -1) return true;
+        return false;
+      },
+      run: async function (A) {
+        var r = await A.run("getCalorieTarget", {});
+        var d = (r && r.result) || {};
+        if (!d.message) return null;
+        return { text: d.message, card: d.card || null };
+      }
+    },
 {
       name: "food log today",
       needs: "getFoodLog",
@@ -996,6 +1020,7 @@
     VIEW_FOOD_LOG: "food log today",
     GET_PROTEIN_TARGET: "protein target",
     GET_WEEKLY_PROGRESS: "weekly progress",
+    GET_CALORIE_TARGET: "calorie target",
     LOG_WEIGHT: "ask weight",
     VIEW_WEIGHT_HISTORY: "weight history",
     VIEW_TODAY_WORKOUT: "today workout",
@@ -1131,7 +1156,7 @@
        certain about a sentence it was written for while the classifier is choosing between
        neighbours. Add the next intent to this list, run the suite, and keep it only if the
        count holds. */
-    var PROMOTED = { GET_PROTEIN_TARGET: 1, GET_WEEKLY_PROGRESS: 1, VIEW_FOOD_LOG: 1, VIEW_PROGRESS: 1, VIEW_WEIGHT_HISTORY: 1, VIEW_TODAY_WORKOUT: 1 };
+    var PROMOTED = { GET_PROTEIN_TARGET: 1, GET_CALORIE_TARGET: 1, GET_WEEKLY_PROGRESS: 1, VIEW_FOOD_LOG: 1, VIEW_PROGRESS: 1, VIEW_WEIGHT_HISTORY: 1, VIEW_TODAY_WORKOUT: 1 };
     if (window.IgnytIntents) {
       var lead = null;
       try { lead = IgnytIntents.classify(t); } catch (e) { lead = null; }

@@ -205,6 +205,17 @@
       "how did last week go", "show last week", "last week summary", "how was last week"
     ],
 
+    GET_CALORIE_TARGET: [
+      "how many calories should i eat", "whats my calorie target", "my calorie target",
+      "how many calories do i need", "daily calorie target", "calorie target",
+      "how many calories per day", "what should my calorie intake be",
+      "how many calories to lose weight for me", "whats my daily calorie goal",
+      "how many calories should i be eating", "my daily calories",
+      "what are my macros", "whats my macro target", "my macros",
+      "how many calories for my goal", "calorie goal", "my tdee",
+      "whats my maintenance calories", "how many calories do i burn a day"
+    ],
+
     EXERCISE_HOW_TO: [
       "how do i do bench press", "how to do squats", "how do i perform a deadlift",
       "bench press form", "squat technique", "teach me deadlift", "show me how to squat",

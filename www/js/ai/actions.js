@@ -808,6 +808,55 @@
     };
   }
 
+
+  /* THE USER'S CALORIE TARGET, FROM THE APP'S OWN GOAL MATHS.
+     IgnytGoals.compute() already derives BMR by Mifflin-St Jeor, maintenance from the activity
+     multiplier, and a daily delta from the goal's weekly rate, clamped to safe bounds. Those are
+     the numbers the goal screens already show the user, so this reads them rather than deriving
+     a second set that could disagree.
+     A CALORIE TARGET NEEDS MORE THAN A WEIGHT -- height, age and sex all enter the BMR. Those
+     live on the goal, so with no goal set there is nothing honest to compute and it says so
+     instead of guessing an average person. */
+  function getCalorieTarget() {
+    var G = window.IgnytGoals;
+    if (!G || !G.activeGoal || !G.compute) {
+      return { card: "error", code: "unavailable", message: "I can't work out your calorie target right now." };
+    }
+    var goal = null;
+    try { goal = G.activeGoal(); } catch (e) { goal = null; }
+    if (!goal) {
+      return { card: "need_data", need: "goal", askedFor: "calorie target",
+               message: "I need a goal set up first — your height, age and activity level go into this. Set one in Goals and I can give you the number." };
+    }
+    var c = null;
+    try { c = G.compute(goal); } catch (e) { c = null; }
+    if (!c || !c.calories) {
+      return { card: "need_data", need: "goal_details", askedFor: "calorie target",
+               message: "Your goal is missing some details — height, age or activity level — so I can't calculate the target yet." };
+    }
+
+    var label = null;
+    if (G.GOAL_TYPES) {
+      var t = G.GOAL_TYPES.filter(function (x) { return x.id === (goal.type || goal.goalType); })[0];
+      if (t) label = t.label;
+    }
+    var delta = Number(c.goalDelta) || 0;
+    var msg = "Your calorie target is about " + c.calories.toLocaleString() + " kcal a day";
+    if (label) msg += " for " + label.toLowerCase();
+    msg += ".";
+    if (c.maintenance) {
+      msg += " Maintenance is around " + c.maintenance.toLocaleString()
+           + (delta < 0 ? ", so that is a deficit of " + Math.abs(delta)
+              : delta > 0 ? ", so that is a surplus of " + delta : "")
+           + (delta ? " kcal a day." : ".");
+    }
+    if (c.protein) msg += " Protein " + c.protein + " g, carbs " + c.carbs + " g, fat " + c.fat + " g.";
+
+    return { card: "target", kind: "calories",
+             calories: c.calories, maintenance: c.maintenance, bmr: c.bmr, goalDelta: delta,
+             protein: c.protein, carbs: c.carbs, fat: c.fat, goal: label, message: msg };
+  }
+
   var ACTIONS = {
     getUserProfile:   { risk: "read",    fn: getUserProfile },
     getGoals:         { risk: "read",    fn: getGoals },
@@ -817,6 +866,7 @@
     getFoodLog:       { risk: "read",    fn: getFoodLog },
     getProteinTarget: { risk: "read",    fn: getProteinTarget },
     getWeeklyProgress:{ risk: "read",    fn: getWeeklyProgress },
+    getCalorieTarget: { risk: "read",    fn: getCalorieTarget },
     getTodayWorkout:  { risk: "read",    fn: getTodayWorkout },
     getWorkoutHistory:{ risk: "read",    fn: getWorkoutHistory },
     searchFood:       { risk: "read",    fn: searchFood },
