@@ -101,7 +101,17 @@
          resolved. MAX_LISTEN_MS is the backstop so a live microphone can never be left open. */
       rec.continuous = true;
 
-      var finalText = "";
+      /* TWO SEPARATE STORES, AND THE DISTINCTION IS THE BUG THAT WAS SHIPPED.
+         `carry` is what earlier recognition instances finalised, `sessionFinal` is what THIS
+         instance has finalised. sessionFinal is RECOMPUTED from e.results every time rather than
+         appended to, because with continuous:true the engine re-delivers earlier results
+         whenever one of them is revised -- so "+=" appended the same words again on every
+         event, and restarting after a pause did it once more from the top. The result on a
+         device was "howhow tohow to dohow to do late", which is the same phrase glued to itself
+         at every restart. */
+      var carry = "";
+      var sessionFinal = "";
+      function transcript() { return (carry + " " + sessionFinal).replace(/\s+/g, " ").trim(); }
       var settled = false;
       var stopping = false;              // stop() was called deliberately; do not restart
       var lastVoiceAt = Date.now();
@@ -134,15 +144,17 @@
       rec.onstart = function () { onState("listening"); };
 
       rec.onresult = function (e) {
-        var interim = "";
-        for (var i = e.resultIndex; i < e.results.length; i++) {
+        /* From zero every time, over ALL results -- not from e.resultIndex, and never appending
+           to what is already stored. */
+        var finals = "", interim = "";
+        for (var i = 0; i < e.results.length; i++) {
           var r = e.results[i];
-          if (r.isFinal) finalText += r[0].transcript;
+          if (r.isFinal) finals += r[0].transcript + " ";
           else interim += r[0].transcript;
         }
-        if (interim) onPartial(interim);
-        /* Any speech at all, final or interim, means they are still going. */
-        if (interim || finalText) { lastVoiceAt = Date.now(); armSilence(); }
+        sessionFinal = finals.trim();
+        if (interim) onPartial((carry + " " + sessionFinal + " " + interim).replace(/\s+/g, " ").trim());
+        if (interim || sessionFinal) { lastVoiceAt = Date.now(); armSilence(); }
       };
 
       rec.onerror = function (e) {
@@ -176,10 +188,18 @@
            user tapping the mic off from outside this closure. Checking only one restarts the
            microphone on a deliberate stop, which is the opposite of what the tap meant. */
         if (!stopping && !rec._ignytStopping && quietFor < SILENCE_MS && openFor < MAX_LISTEN_MS) {
-          try { rec.start(); return; } catch (e) { /* fall through and settle below */ }
+          /* Bank this instance's words before restarting -- the next instance starts with an
+             empty e.results, so anything not moved into carry here is lost, and anything left
+             in sessionFinal would be counted twice. */
+          try {
+            carry = transcript();
+            sessionFinal = "";
+            rec.start();
+            return;
+          } catch (e) { /* fall through and settle below */ }
         }
         clearSilence();
-        var text = finalText.trim();
+        var text = transcript();
         if (!text) return done(reject, { code: "no_speech", message: "Didn't catch that. Try again." });
         onState("processing");
         settled = true; _rec = null;
