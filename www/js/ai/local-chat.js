@@ -943,7 +943,12 @@
     return false;
   }
 
-  var QUESTION_OPENER = /^(how many|how much|what|whats|which|did i|do i|have i|am i|is my|are my|show|tell me)\b/;
+  /* Widened after "should i eat back the calories i burn exercising" reached LOG FOOD and
+     tried to write. The first list covered questions that ASK ABOUT the log -- how many,
+     what did i -- and missed the ones that ask for ADVICE about eating, which contain the
+     same verbs. "should i eat", "can i eat", "is it ok to eat", "why do i eat" are all
+     questions, and none of them is an instruction to log anything. */
+  var QUESTION_OPENER = /^(how many|how much|how do|how often|what|whats|which|when|where|why|did i|do i|does|have i|am i|is my|is it|are my|can i|should i|could i|would i|will i|show|tell me)\b/;
 
   var HANDLER = {
     DELETE_TODAY_FOOD: "delete todays food",

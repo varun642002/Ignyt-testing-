@@ -37826,5 +37826,376 @@
   "q": "How long should a bulk last?",
   "a": "Three to six months, then a period at maintenance or a short cut. Longer bulks tend to add fat faster than muscle after the first few months.",
   "s": "general_fitness"
+ },
+ {
+  "id": 6749,
+  "c": "General Fitness",
+  "q": "What is BMI and is it useful?",
+  "a": "Weight over height squared. It is a rough population measure and it misreads muscular people as overweight. Use it as one number among several, never on its own.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6750,
+  "c": "General Fitness",
+  "q": "What is a healthy body fat percentage?",
+  "a": "Roughly 10 to 20 percent for men and 18 to 28 for women, with athletes lower. Health outcomes track waist and fitness more closely than any single percentage.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6751,
+  "c": "General Fitness",
+  "q": "What is BMR?",
+  "a": "The calories your body uses at complete rest. It is the floor of your daily burn, before any movement, and it is mostly set by your size and muscle mass.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6752,
+  "c": "General Fitness",
+  "q": "What is TDEE?",
+  "a": "Total daily energy expenditure - your BMR plus movement, exercise and digestion. It is the number a calorie target is built from.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6753,
+  "c": "General Fitness",
+  "q": "Why does my calorie target change?",
+  "a": "It is calculated from your weight and activity, so it moves as those do. A lighter body needs less, which is why a deficit that worked at the start eventually stalls.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6754,
+  "c": "General Fitness",
+  "q": "What is a maintenance calorie level?",
+  "a": "The intake at which your weight holds steady over two or three weeks. It is found by measuring, not by a formula - the formula only gives a starting guess.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6755,
+  "c": "General Fitness",
+  "q": "How accurate are calorie estimates?",
+  "a": "Formulas are typically within ten to fifteen percent, which is enough to start with and not enough to trust blindly. Adjust from what the scale actually does.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6756,
+  "c": "General Fitness",
+  "q": "What is resting heart rate and what is normal?",
+  "a": "Beats per minute at rest, usually 60 to 100 for adults and lower in trained people. A rise of several beats over a few days often signals poor recovery or illness.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6757,
+  "c": "General Fitness",
+  "q": "What is VO2 max?",
+  "a": "The most oxygen your body can use during hard exercise. It is one of the strongest predictors of long-term health, and it improves with regular cardio.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6758,
+  "c": "General Fitness",
+  "q": "What is a good step count for weight loss?",
+  "a": "Eight to twelve thousand a day suits most people. Steps are the easiest lever to add because they cost almost nothing in recovery.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6759,
+  "c": "Muscle Gain",
+  "q": "How do I build a bigger chest at home?",
+  "a": "Push-up variations with the feet elevated, deep push-ups on handles, and slow lowering. Progress by changing leverage and tempo when you cannot add weight.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6760,
+  "c": "Muscle Gain",
+  "q": "How do I train back without equipment?",
+  "a": "Inverted rows under a table, towel rows against a door frame, and any hanging work you can rig. Back is the hardest group to train with nothing at all.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6761,
+  "c": "Muscle Gain",
+  "q": "Do I need to train arms directly?",
+  "a": "If you want them bigger, yes. Compound pressing and pulling builds them, but direct curls and triceps work adds size faster.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6762,
+  "c": "Muscle Gain",
+  "q": "How many exercises for biceps?",
+  "a": "Two is plenty - one with the arm in front and one with it behind or neutral. Volume matters more than variety.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6763,
+  "c": "Muscle Gain",
+  "q": "Why are my shoulders not growing?",
+  "a": "Usually not enough direct side delt work. Lateral raises respond to frequency and higher reps; most people do too few, too heavy, with too much swing.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6764,
+  "c": "Muscle Gain",
+  "q": "Should I lift heavy or light for arms?",
+  "a": "Both. Heavier work for compound curls and presses, lighter high-rep work for the pump and the small muscles that fatigue quickly.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6765,
+  "c": "Muscle Gain",
+  "q": "What is the mind muscle connection?",
+  "a": "Deliberately focusing on the working muscle. It measurably increases activation on isolation work; on heavy compounds, focusing on moving the weight works better.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6766,
+  "c": "Muscle Gain",
+  "q": "Does the pump mean muscle growth?",
+  "a": "Not directly. The pump is blood and fluid. It feels good and correlates loosely with effort, but progress in load and reps is the real signal.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6767,
+  "c": "Muscle Gain",
+  "q": "How long should I rest between exercises?",
+  "a": "The same as between sets - one to three minutes. If you are moving to a completely different muscle group, less is fine.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6768,
+  "c": "Muscle Gain",
+  "q": "Is training one muscle a day enough?",
+  "a": "It builds muscle, but training each group twice a week generally builds more for the same total sets. It is the weakest part of a classic bro split.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6769,
+  "c": "Nutrition",
+  "q": "What is flexible dieting?",
+  "a": "Hitting calorie and macro targets without banning foods. It works because adherence is the hardest part of any diet, and restriction is what usually breaks it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6770,
+  "c": "Nutrition",
+  "q": "What is carb cycling?",
+  "a": "Higher carbohydrate on training days and lower on rest days. It can help if it fits your appetite, but it is not better than steady intake at the same weekly total.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6771,
+  "c": "Nutrition",
+  "q": "Is keto good for building muscle?",
+  "a": "It is workable but not ideal - low carbohydrate reduces training performance for most people, and performance is what drives growth.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6772,
+  "c": "Nutrition",
+  "q": "Is a high protein diet safe long term?",
+  "a": "For healthy people, yes. Long-term intakes around 2 g per kg show no harm in the research. Existing kidney disease is the exception and needs medical advice.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6773,
+  "c": "Nutrition",
+  "q": "How do I calculate protein if I am overweight?",
+  "a": "Base it on a target or lean bodyweight rather than current weight, or use roughly 1.6 g per kg of a realistic goal weight. Otherwise the number gets very large.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6774,
+  "c": "Nutrition",
+  "q": "Should I eat back the calories I burn exercising?",
+  "a": "Partly, or not at all if your target already accounts for activity. Watch and app estimates overstate burn, so eating all of them back often erases the deficit.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6775,
+  "c": "Nutrition",
+  "q": "What is the difference between soluble and insoluble fibre?",
+  "a": "Soluble fibre slows digestion and helps cholesterol; insoluble adds bulk and helps things move. A varied diet of vegetables, fruit, dal and whole grains gives you both.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6776,
+  "c": "Nutrition",
+  "q": "Do I need to eat organic?",
+  "a": "No. There is no meaningful difference for training results. Eat more vegetables of whatever kind you can afford.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6777,
+  "c": "Nutrition",
+  "q": "Are frozen vegetables as good as fresh?",
+  "a": "Yes, and sometimes better - they are frozen at peak and lose less over time than produce that has sat for days.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6778,
+  "c": "Nutrition",
+  "q": "Is honey better than sugar?",
+  "a": "Nutritionally almost identical for practical purposes. Honey brings trace compounds and slightly fewer calories per spoon, but it is still sugar.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6779,
+  "c": "Nutrition",
+  "q": "How much sugar is too much?",
+  "a": "Under about ten percent of daily calories from added sugar is a reasonable target. Fruit is not the problem and does not need counting the same way.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6780,
+  "c": "Nutrition",
+  "q": "Should I drink protein shakes on rest days?",
+  "a": "If you need them to reach your target, yes. Muscle is repaired on rest days, so protein matters just as much then.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6781,
+  "c": "Nutrition",
+  "q": "Is chicken better than mutton or fish?",
+  "a": "For a deficit, chicken and fish are leaner per gram of protein. Mutton is fine within your calories and brings more iron and zinc.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6782,
+  "c": "Nutrition",
+  "q": "Are eggs better boiled or fried?",
+  "a": "Nutritionally the same egg - frying adds the oil's calories. Boiled is easier to count, which is the practical difference.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6783,
+  "c": "Nutrition",
+  "q": "Is jaggery healthier than sugar?",
+  "a": "Marginally, for trace minerals, but it is sugar in calorie terms. Treat it as sugar with better public relations.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6784,
+  "c": "Training",
+  "q": "How do I train for cricket?",
+  "a": "Build general strength and power - squats, hinges, pulls and jumps - plus rotational core work and sprint conditioning. Skill work stays the priority; the gym supports it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6785,
+  "c": "Training",
+  "q": "How do I train for football?",
+  "a": "Lower body strength, sprint work and change of direction, with enough aerobic base to recover between efforts. Keep heavy leg work away from match days.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6786,
+  "c": "Training",
+  "q": "How do I get faster?",
+  "a": "Sprint regularly at full effort with long rests, and build lower body strength. Speed is trained fresh, never as conditioning at the end of a session.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6787,
+  "c": "Training",
+  "q": "How do I jump higher?",
+  "a": "Squats and hinges for force, plus jump training done fresh and in low volume. Quality of each jump matters more than the number of them.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6788,
+  "c": "Training",
+  "q": "How do I improve grip strength?",
+  "a": "Heavy carries, dead hangs, and pulling without straps on lighter sets. Grip responds quickly to a small amount of consistent direct work.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6789,
+  "c": "Training",
+  "q": "How do I improve my endurance?",
+  "a": "Build a base with easy steady cardio most weeks, and add one harder interval session. Most people do the easy work too hard and the hard work too easy.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6790,
+  "c": "Training",
+  "q": "What is functional training?",
+  "a": "Training that transfers to what you do outside the gym. In practice, squats, hinges, presses, pulls and carries are the most functional things there are.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6791,
+  "c": "Training",
+  "q": "Should I train barefoot?",
+  "a": "For deadlifts and some machine work it is fine and gives a stable base. Many gyms do not allow it; flat-soled shoes achieve nearly the same thing.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6792,
+  "c": "General Fitness",
+  "q": "How do I stop comparing myself to people online?",
+  "a": "Remember you are comparing your ordinary day to someone's best angle, best lighting and often years of training. Track your own numbers instead.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6793,
+  "c": "General Fitness",
+  "q": "Is it normal to lose motivation?",
+  "a": "Entirely. Motivation fluctuates; the people who progress are the ones with a routine that survives the weeks it is absent.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6794,
+  "c": "General Fitness",
+  "q": "How do I train when I feel low?",
+  "a": "Lower the bar - a short walk or a light session counts. Exercise reliably helps mood, and the hardest part is almost always starting.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6795,
+  "c": "General Fitness",
+  "q": "Should I train if I am stressed?",
+  "a": "Usually yes, at moderate intensity. Very hard training on top of high stress can be too much, but movement generally helps.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6796,
+  "c": "General Fitness",
+  "q": "How do I make training a habit that lasts?",
+  "a": "Attach it to a fixed time, keep the entry cost low, and measure attendance rather than perfection. Two years of ordinary sessions beats three months of ideal ones.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6797,
+  "c": "General Fitness",
+  "q": "What should I do on days I do not want to train?",
+  "a": "Turn up and do the warm-up. If you still feel bad after ten minutes, go home - but most of the time you will finish the session.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6798,
+  "c": "General Fitness",
+  "q": "Is it bad to miss a week?",
+  "a": "No. A week costs almost nothing physically. The risk is that one week becomes six, so put the next session in the diary before the week ends.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6799,
+  "c": "General Fitness",
+  "q": "How do I know if I am overdoing it?",
+  "a": "Falling performance, poor sleep, constant aches, low mood and no appetite for training. Those together mean take a lighter week.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6800,
+  "c": "Nutrition",
+  "q": "Can I eat rice at night?",
+  "a": "Yes. Meal timing has little effect on fat loss, and an evening carbohydrate meal helps many people sleep. Total intake is what matters.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6801,
+  "c": "Nutrition",
+  "q": "Is it ok to eat eggs daily?",
+  "a": "Yes, for most healthy people. Two or three a day is fine, and dietary cholesterol affects blood cholesterol far less than was once believed.",
+  "s": "general_fitness"
  }
 ]
