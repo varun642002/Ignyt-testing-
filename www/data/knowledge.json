@@ -38869,5 +38869,327 @@
   "q": "Should I set a goal weight or a goal look?",
   "a": "A look, tracked with photographs and measurements. Scale weight is a poor proxy once you are training, since muscle and fat move in opposite directions.",
   "s": "general_fitness"
+ },
+ {
+  "id": 6898,
+  "c": "Nutrition",
+  "q": "Is maida bad for you?",
+  "a": "Refined and low in fibre, so it fills you less per calorie. Occasional maida is fine; the problem is when it crowds out whole grains and protein.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6899,
+  "c": "Nutrition",
+  "q": "Is fried food always bad?",
+  "a": "No, but oil is dense and unmeasured in most fried food, so it is easy to eat a third of your day in one plate. Frequency is what matters.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6900,
+  "c": "Nutrition",
+  "q": "Are packaged snacks bad?",
+  "a": "Not inherently, but they are engineered to be easy to overeat and usually carry little protein or fibre. Portion them out rather than eating from the packet.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6901,
+  "c": "Nutrition",
+  "q": "Is tea or coffee bad for training?",
+  "a": "Neither, and the caffeine helps. Watch only the sugar you add and how late in the day you drink them.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6902,
+  "c": "Nutrition",
+  "q": "Does milk cause acne?",
+  "a": "For some people dairy appears to worsen acne, but the evidence is mixed and it is far from universal. Try reducing it for a few weeks if you suspect it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6903,
+  "c": "Nutrition",
+  "q": "Is gluten bad for you?",
+  "a": "Only if you have coeliac disease or a genuine sensitivity. For everyone else, avoiding it brings no benefit and removes useful foods.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6904,
+  "c": "Nutrition",
+  "q": "Is red meat unhealthy?",
+  "a": "In moderation it is a good source of protein, iron and zinc. Processed meat is the one with clearer risk, and quantity matters more than the category.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6905,
+  "c": "Nutrition",
+  "q": "Are eggs bad for cholesterol?",
+  "a": "For most people, no. Dietary cholesterol has far less effect on blood cholesterol than saturated fat and overall diet.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6906,
+  "c": "Nutrition",
+  "q": "Is coconut oil healthy?",
+  "a": "It is largely saturated fat. Fine in small amounts as part of a varied diet; the health claims made for it are overstated.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6907,
+  "c": "Nutrition",
+  "q": "Is salt bad for you?",
+  "a": "Only in excess. Most adults do fine under about 5 g a day, and people training hard in heat need more rather than less.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6908,
+  "c": "Nutrition",
+  "q": "Are artificial sweeteners safe?",
+  "a": "At normal intakes, yes - they are among the most studied food additives there are. They help many people stay in a deficit.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6909,
+  "c": "Nutrition",
+  "q": "Is soy bad for men?",
+  "a": "No. The claim about oestrogen effects has not held up in research at normal dietary intakes. Soya is a good protein source for anyone.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6910,
+  "c": "General Fitness",
+  "q": "How do I know if I am gaining muscle or fat?",
+  "a": "Weight rising slowly with the same or better strength and stable waist measurement means mostly muscle. Fast weight gain with a growing waist means mostly fat.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6911,
+  "c": "General Fitness",
+  "q": "How do I know if I am eating enough protein?",
+  "a": "Add it up for three days honestly. Most people who think they eat enough are twenty to forty grams short.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6912,
+  "c": "General Fitness",
+  "q": "How do I know if I am training hard enough?",
+  "a": "If the last two reps of a set are genuinely difficult and you are adding weight or reps over months, you are. If every set feels comfortable, you are not.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6913,
+  "c": "General Fitness",
+  "q": "How do I know if I need more sleep?",
+  "a": "Needing an alarm to wake, feeling foggy in the afternoon, and strength dropping without an obvious cause. Those three together usually mean sleep, not programming.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6914,
+  "c": "General Fitness",
+  "q": "How do I know if I should see a doctor about pain?",
+  "a": "Pain that is sharp, does not settle within a week or two, wakes you at night, or comes with numbness, weakness or swelling.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6915,
+  "c": "General Fitness",
+  "q": "How do I know if a fitness claim is nonsense?",
+  "a": "It promises speed without effort, names one food or supplement as the cause, or sells the solution in the same breath. Real advice is usually dull.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6916,
+  "c": "Training",
+  "q": "Free weights or machines for beginners?",
+  "a": "Machines are easier to learn and safer alone; free weights build more coordination and transfer. A mix is ideal - learn the pattern on a machine, then move to the bar.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6917,
+  "c": "Training",
+  "q": "Strength training or HIIT for fat loss?",
+  "a": "Strength training, with walking, because it protects muscle while you lose. HIIT is a useful addition, not the foundation.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6918,
+  "c": "Training",
+  "q": "High reps or low reps for fat loss?",
+  "a": "Neither burns meaningfully more fat. Keep lifting heavy to hold muscle and create the deficit with diet and steps.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6919,
+  "c": "Training",
+  "q": "Should I focus on cardio or weights first?",
+  "a": "If you can only pick one, weights - muscle protects your metabolism and shape. Add cardio for heart health and extra deficit.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6920,
+  "c": "Nutrition",
+  "q": "Whey or plant protein - which is better?",
+  "a": "Whey digests slightly better and has a stronger amino profile; a blended plant protein closes most of that gap. Choose by digestion and preference.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6921,
+  "c": "Nutrition",
+  "q": "Isolate or concentrate protein?",
+  "a": "Concentrate is cheaper and fine for most. Isolate suits those with lactose trouble or a very tight calorie budget.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6922,
+  "c": "Fat Loss",
+  "q": "Diet or exercise - which matters more for fat loss?",
+  "a": "Diet creates the deficit; exercise protects muscle and adds to it. Diet is the bigger lever, but doing only one gives a worse result.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6923,
+  "c": "Cardio",
+  "q": "Walking or running for fat loss?",
+  "a": "Running burns more per minute; walking is easier to do daily and costs almost no recovery. For most people more walking is the more sustainable answer.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6924,
+  "c": "General Fitness",
+  "q": "Why do I look worse after starting the gym?",
+  "a": "Early water retention in trained muscle, plus noticing yourself more. It settles in a few weeks, and the mirror is a poor judge over short spans.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6925,
+  "c": "General Fitness",
+  "q": "Why do I feel weaker than when I started?",
+  "a": "Often accumulated fatigue rather than lost strength. Take a lighter week; most people come back stronger and are surprised by it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6926,
+  "c": "General Fitness",
+  "q": "Is it embarrassing to lift light weights?",
+  "a": "No, and nobody experienced thinks so. Everyone in the gym started where you are, and lifting light with good form is how you eventually lift heavy.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6927,
+  "c": "General Fitness",
+  "q": "Do people judge beginners at the gym?",
+  "a": "Far less than it feels. Most people are focused on their own session, and those who do notice usually respect anyone who turned up.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6928,
+  "c": "General Fitness",
+  "q": "I have failed at this before. What is different now?",
+  "a": "Usually the plan was too demanding to keep. Pick the smallest routine you would still do on a bad week, and build only after that holds for a month.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6929,
+  "c": "General Fitness",
+  "q": "How do I train if I cannot afford a gym?",
+  "a": "Bodyweight work at home, walking, and a pull-up bar and adjustable dumbbells when you can. The equipment matters far less than the consistency.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6930,
+  "c": "General Fitness",
+  "q": "How do I train with very little time?",
+  "a": "Two or three full-body sessions of thirty minutes, built from compound lifts, three sets each. That is enough to build real strength.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6931,
+  "c": "General Fitness",
+  "q": "Is 30 minutes of exercise enough?",
+  "a": "Yes, particularly if it is focused. Thirty minutes done four times a week beats ninety minutes done once.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6932,
+  "c": "General Fitness",
+  "q": "Am I too old to start lifting?",
+  "a": "No. Strength training is one of the highest-value things anyone can do at any age, and the gains are largest for those who have never done it.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6933,
+  "c": "General Fitness",
+  "q": "When will I see results from the gym?",
+  "a": "You will feel changes in two to four weeks, see them in eight to twelve, and have others notice around three to six months.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6934,
+  "c": "Fat Loss",
+  "q": "How long to lose 5 kg?",
+  "a": "Around eight to twelve weeks at a sustainable rate. Faster is possible and usually costs muscle and adherence.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6935,
+  "c": "Fat Loss",
+  "q": "How long to lose 10 kg?",
+  "a": "Four to six months at half a kilo a week. Planning for that pace is what makes it stick, rather than starting at twice the rate and stopping.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6936,
+  "c": "Muscle Gain",
+  "q": "How long to gain 5 kg of muscle?",
+  "a": "For most people a year or more of consistent training and eating. Beginners gain fastest and it slows sharply after the first year.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6937,
+  "c": "Muscle Gain",
+  "q": "How much muscle can a beginner gain in 6 months?",
+  "a": "Roughly 4 to 7 kg for men and half that for women, with good training and food. It is the fastest period you will ever have.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6938,
+  "c": "Training",
+  "q": "How long before I can squat with a barbell?",
+  "a": "Most people can start with an empty bar within their first week, provided the movement is coached and loads rise slowly.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6939,
+  "c": "Cardio",
+  "q": "How long does it take to get fitter aerobically?",
+  "a": "Noticeable improvement in three to four weeks of regular cardio. It is one of the fastest adaptations the body makes.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6940,
+  "c": "General Fitness",
+  "q": "What do I do if I have been eating badly for a week?",
+  "a": "Eat a normal meal at the next opportunity and carry on. A week does not undo a month, and treating it as failure is what turns a week into a month.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6941,
+  "c": "General Fitness",
+  "q": "I stopped training for six months. Where do I start?",
+  "a": "At roughly half your old weights, twice a week, for a fortnight. Muscle memory means it returns far faster than it took to build.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6942,
+  "c": "Fat Loss",
+  "q": "I regained the weight I lost. What now?",
+  "a": "Very common, and it is usually the missing maintenance phase rather than the diet. Restart at a smaller deficit and plan what happens after the goal this time.",
+  "s": "general_fitness"
+ },
+ {
+  "id": 6943,
+  "c": "General Fitness",
+  "q": "I keep starting and stopping. How do I fix that?",
+  "a": "Shrink the plan until it survives your worst week. Consistency at a low level always beats intensity you cannot repeat.",
+  "s": "general_fitness"
  }
 ]
