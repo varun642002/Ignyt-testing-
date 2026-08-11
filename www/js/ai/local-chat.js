@@ -31,6 +31,22 @@
 
   /* ---------- small helpers -------------------------------------------------------------- */
 
+  /* SPELLING, FIXED BEFORE ANYTHING READS THE WORDS. Reported from a device: "How to loose
+     weight" found nothing and then offered "Why does magnesium cause loose stools?" -- the
+     retrieval took "loose" literally and matched the only entry that uses it. Correct in its own
+     terms, absurd as an answer, and the user's question is the single most common one in fitness.
+     Word-for-word replacement on the normalised text, so every layer downstream -- patterns,
+     classifier, knowledge base, the AI rung -- sees the corrected spelling. 64 corrections,
+     supplied with the indexed FAQ rather than invented here. */
+  var TYPOS = {"loose": "lose", "loosing": "losing", "loos": "lose", "wieght": "weight", "weigth": "weight", "wight": "weight", "excercise": "exercise", "exersize": "exercise", "excersize": "exercise", "exercize": "exercise", "excercize": "exercise", "musle": "muscle", "muscel": "muscle", "mucle": "muscle", "protien": "protein", "protine": "protein", "calory": "calorie", "calries": "calories", "workut": "workout", "workot": "workout", "wrkout": "workout", "strenght": "strength", "strengh": "strength", "creatin": "creatine", "creatien": "creatine", "suppliments": "supplements", "suppliment": "supplement", "sopplement": "supplement", "supplment": "supplement", "carbes": "carbs", "carbo": "carbs", "carbohyrate": "carbohydrate", "definate": "definite", "recieve": "receive", "streching": "stretching", "strech": "stretch", "shoulda": "shoulder", "sholder": "shoulder", "shouler": "shoulder", "bicep": "biceps", "tricep": "triceps", "squats": "squat", "deadlifts": "deadlift", "benchpress": "bench press", "hirox": "hyrox", "hyrocks": "hyrox", "runing": "running", "cardios": "cardio", "beginer": "beginner", "begginer": "beginner", "diets": "diet", "dieting": "diet", "fatloss": "fat loss", "weightloss": "weight loss", "reduse": "reduce", "dosage": "dose", "dosages": "dose", "dosing": "dose", "howmuch": "how much", "prep": "preparation", "progam": "program", "programme": "program", "reps": "rep", "sets": "set"};
+  function fixSpelling(t) {
+    var w = String(t || "").split(" ");
+    for (var i = 0; i < w.length; i++) {
+      if (Object.prototype.hasOwnProperty.call(TYPOS, w[i])) w[i] = TYPOS[w[i]];
+    }
+    return w.join(" ");
+  }
+
   function norm(s) {
     var text = String(s || "");
 
@@ -92,6 +108,7 @@
       [/\bsquad(?=s?\b)/g, "squat"]
     ];
     for (var h = 0; h < HEARD.length; h++) text = text.replace(HEARD[h][0], HEARD[h][1]);
+    text = fixSpelling(text);
 
     /* REPHRASING AFTER A BAD ANSWER. Seen on a real device: the assistant answered "how to do
        bench press" with the anatomy entry, and the reply — "I asked how to do bench press" —
