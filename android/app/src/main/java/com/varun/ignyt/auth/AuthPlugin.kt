@@ -321,7 +321,23 @@ class AuthPlugin : com.getcapacitor.Plugin() {
             } catch (e: GetCredentialCancellationException) {
                 resolveError(call, "Sign-in was cancelled.")
             } catch (e: NoCredentialException) {
-                resolveError(call, "No Google account is available on this device. Add a Google account in Android Settings first.")
+                /* This does NOT reliably mean what its name suggests. Credential Manager reports
+                   an unregistered signing certificate, a serverClientId that does not match the
+                   project, and an out-of-date Play Services the same way it reports a genuinely
+                   signed-out device: no credential available. Telling the user to add a Google
+                   account is then wrong and unactionable, because they usually already have one.
+
+                   NoCredentialException extends GetCredentialException, so it is caught here and
+                   never reaches the logging in that branch below -- the fingerprint has to be
+                   logged again here or this case, the most common one, stays undiagnosable. */
+                val fp = fingerprints()
+                Log.w("IgnytAuth", "Google Sign-In returned no credential. " +
+                    "App signing SHA-1: ${fp?.first ?: "unreadable"} -- if that value is not " +
+                    "registered in the Firebase project this is a configuration failure, not a " +
+                    "missing account. Underlying: ${e.message ?: e.type}")
+                resolveError(call, "Google Sign-In is unavailable on this device right now. " +
+                    "Check that a Google account is added in Android Settings and that Google " +
+                    "Play services is up to date, or sign in with email below.")
             } catch (e: GetCredentialProviderConfigurationException) {
                 resolveError(call, "Google Play Services isn't available or is out of date on this device.")
             } catch (e: GetCredentialInterruptedException) {
