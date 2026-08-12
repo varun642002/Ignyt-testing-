@@ -327,6 +327,20 @@ class AuthPlugin : com.getcapacitor.Plugin() {
             } catch (e: GetCredentialInterruptedException) {
                 resolveError(call, "Sign-in was interrupted. Please try again.")
             } catch (e: GetCredentialException) {
+                /* The overwhelmingly common cause of a GetCredentialException on a build the user
+                   installed from Play is that Play re-signed the app with its own key, so the
+                   running app presents a fingerprint that is not registered in Firebase. Sign-in
+                   then works sideloaded and fails from the store, and nothing on the device says
+                   why -- checkSigning withholds fingerprints in release builds, which is exactly
+                   the build that fails.
+                   So the fingerprint goes to logcat on failure. It stays out of the UI, which is
+                   what that gate was protecting; a certificate hash is a public value, and
+                   without it diagnosing this needs a Play Console the phone cannot see. */
+                val fp = fingerprints()
+                Log.w("IgnytAuth", "Google Sign-In failed (${e.type}). " +
+                    "App signing SHA-1: ${fp?.first ?: "unreadable"} -- this exact value must be " +
+                    "registered in the Firebase project, and differs from your upload key when " +
+                    "Play App Signing is enabled.")
                 resolveError(call, "Google Sign-In failed: ${e.message ?: e.type}")
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
                 resolveError(call, "Sign-in timed out. Check your internet connection and try again.")
