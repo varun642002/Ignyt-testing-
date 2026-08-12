@@ -211,7 +211,10 @@
     },
     {
       name: "help",
-      test: function (t) { return /\b(what can you do|help me|^help$|commands|how do (i|you) use)\b/.test(t); },
+      /* "how do i use" alone claimed "how do i use psyllium husk" and "how do i use volume
+         eating" -- both knowledge questions. The phrase only means help when what follows is
+         the app itself. */
+      test: function (t) { return /\b(what can you do|help me|^help$|commands|how do (i|you) use (this|the app|ignyt|you))\b/.test(t); },
       run: function () {
         return { text: [
           "Things I can do without going online:",
@@ -349,10 +352,16 @@
     {
       name: "weekly progress",
       needs: "getWeeklyProgress",
+      /* Measured over 2,500 real questions, this matcher was the single largest source of wrong
+         answers: 49 of them. It claimed any sentence containing "week", so "how many hours a
+         week should I cycle" was answered with the user's training summary. A question about
+         what someone OUGHT to do is advice; only a question about what they DID is this report. */
       test: function (t) {
         if (!/week|weekly/.test(t)) return false;
         if (/(plan|routine|create|make|build)/.test(t)) return false;   // planning, not reporting
-        return true;
+        var reporting = /\b(how was|how did|how is|summary|progress|report|so far|did i|have i)\b/.test(t);
+        if (!reporting && /\b(should|how often|how many|how much|how long|can i|is it|need to|recommend|suggest|per week|a week|each week|good idea)\b/.test(t)) return false;
+        return aboutTheirRecords(t);   // possessive or a date word, same gate the other reads use
       },
       run: async function (A, t) {
         /* "last week" is one week back. Anything else is the current week. */
