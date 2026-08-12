@@ -7,21 +7,9 @@ import com.getcapacitor.JSObject
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
-import androidx.credentials.ClearCredentialStateRequest
-import androidx.credentials.CredentialManager
-import androidx.credentials.CustomCredential
-import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.GetCredentialCancellationException
-import androidx.credentials.exceptions.GetCredentialException
-import androidx.credentials.exceptions.GetCredentialInterruptedException
-import androidx.credentials.exceptions.GetCredentialProviderConfigurationException
-import androidx.credentials.exceptions.NoCredentialException
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
-import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -33,21 +21,20 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
 
 /**
- * Capacitor bridge for the IGNYT account layer: Google Sign-In (via androidx Credential
- * Manager, the current non-deprecated API) and email/password, both exchanged for a Firebase
+ * Capacitor bridge for the IGNYT account layer: email/password, exchanged for a Firebase
  * Authentication session. Firebase Auth persists the session itself and restores it offline,
  * so getCurrentUser() works with no network after a previous successful sign-in.
  *
- * Google was removed once and is now back. What made it worth removing has not changed --
- * it needs its own certificate fingerprints registered on the Firebase project and its own
- * OAuth clients, and it fails in ways email never does -- so signIn() reports each of those
- * failure modes as its own message rather than one generic error, and isConfigured() refuses
- * to claim the flow is available in a build with no web client id.
+ * Google Sign-In has been removed for the third and final time. The last attempt failed on a
+ * project that checked out completely -- plugin applied, default_web_client_id generated, all
+ * three Credential Manager libraries present, three certificate fingerprints registered
+ * including Play's app signing key -- and Credential Manager still returned no credential.
+ * Three attempts, no successful sign-in, and a second provider costs its own fingerprints,
+ * OAuth clients and failure modes to keep working.
  *
- * Phone/SMS stays out: it could not send a single message until Play Integrity succeeded.
+ * Phone/SMS stays out too: it could not send a single message until Play Integrity succeeded.
  *
- * The Google ID token is exchanged for the Firebase session and immediately discarded -- it is
- * never logged, never stored, and never returned across the JS bridge.
+ * iOS signs in with Apple over the Identity Toolkit REST API, which is untouched by this.
  *
  * Same contract as HealthConnectPlugin: every method resolves {"success": true, "data": ...}
  * or {"success": false, "error": "..."} -- never rejects, and never crashes the app.
@@ -90,9 +77,10 @@ class AuthPlugin : com.getcapacitor.Plugin() {
         put("email", user.email ?: "")
         put("photoUrl", user.photoUrl?.toString() ?: "")
         put("emailVerified", user.isEmailVerified)
-        /* Google Sign-In is back alongside email/password, so this reads the provider off the
-           user again rather than asserting one. Phone auth is still gone -- there is no
-           sendOtp/verifyOtp on this plugin -- so "phone" is not a case here. */
+        /* Still read off the user rather than hardcoded to "password". Google sign-in is gone,
+           but accounts created through it before its removal still exist and still report
+           google.com, and telling one of those users their provider is a password they never
+           set would be a lie. */
         put("provider", if (user.providerData.any { it.providerId == "google.com" }) "google" else "password")
     }
 
@@ -263,109 +251,14 @@ class AuthPlugin : com.getcapacitor.Plugin() {
         }
     }
 
-    @PluginMethod
-    fun signIn(call: PluginCall) {
-        val auth = firebaseAuthOrNull()
-        val webClientId = webClientIdOrNull()
-        if (auth == null || webClientId == null) {
-            resolveError(call, "Sign-in isn't configured in this build yet (missing Firebase configuration).")
-            return
-        }
-        val currentActivity = activity
-        if (currentActivity == null) {
-            resolveError(call, "Sign-in requires a foreground activity.")
-            return
-        }
-        pluginScope.launch {
-            try {
-                // filterByAuthorizedAccounts=false: show every Google account on the device,
-                // not only ones that already authorized IGNYT -- this is a first sign-in flow.
-                val googleIdOption = GetGoogleIdOption.Builder()
-                    .setFilterByAuthorizedAccounts(false)
-                    .setServerClientId(webClientId)
-                    .setAutoSelectEnabled(false)
-                    .build()
-                val request = GetCredentialRequest.Builder()
-                    .addCredentialOption(googleIdOption)
-                    .build()
+    /* Google sign-in was removed here. It was tried three times and never signed anyone
+       in. The last attempt failed on a project that checked out completely: the
+       google-services plugin applied, default_web_client_id generated for both build
+       types, credentials, credentials-play-services-auth and googleid all present, and
+       three certificate fingerprints registered including the Play app signing key.
+       Credential Manager still returned no credential.
 
-                // No artificial timeout here: this shows system UI and legitimately waits on
-                // the user. Cancellation/dismissal arrives as GetCredentialCancellationException.
-                val credentialManager = CredentialManager.create(currentActivity)
-                val result = credentialManager.getCredential(currentActivity, request)
-
-                val credential = result.credential
-                if (credential !is CustomCredential ||
-                    credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-                ) {
-                    resolveError(call, "Google returned an unexpected credential type.")
-                    return@launch
-                }
-                val idToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
-
-                // The token-for-session exchange IS a plain network call, so this one gets a
-                // real timeout -- a hung request must not leave the button spinning forever.
-                val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
-                val authResult = withTimeout(30_000L) {
-                    auth.signInWithCredential(firebaseCredential).await()
-                }
-                val user = authResult.user
-                if (user == null) {
-                    resolveError(call, "Sign-in completed but no user was returned. Please try again.")
-                    return@launch
-                }
-                resolveSuccess(call, JSObject().apply {
-                    put("signedIn", true)
-                    put("user", userJson(user))
-                })
-            } catch (e: GetCredentialCancellationException) {
-                resolveError(call, "Sign-in was cancelled.")
-            } catch (e: NoCredentialException) {
-                /* This does NOT reliably mean what its name suggests. Credential Manager reports
-                   an unregistered signing certificate, a serverClientId that does not match the
-                   project, and an out-of-date Play Services the same way it reports a genuinely
-                   signed-out device: no credential available. Telling the user to add a Google
-                   account is then wrong and unactionable, because they usually already have one.
-
-                   NoCredentialException extends GetCredentialException, so it is caught here and
-                   never reaches the logging in that branch below -- the fingerprint has to be
-                   logged again here or this case, the most common one, stays undiagnosable. */
-                val fp = fingerprints()
-                Log.w("IgnytAuth", "Google Sign-In returned no credential. " +
-                    "App signing SHA-1: ${fp?.first ?: "unreadable"} -- if that value is not " +
-                    "registered in the Firebase project this is a configuration failure, not a " +
-                    "missing account. Underlying: ${e.message ?: e.type}")
-                resolveError(call, "Google Sign-In is unavailable on this device right now. " +
-                    "Check that a Google account is added in Android Settings and that Google " +
-                    "Play services is up to date, or sign in with email below.")
-            } catch (e: GetCredentialProviderConfigurationException) {
-                resolveError(call, "Google Play Services isn't available or is out of date on this device.")
-            } catch (e: GetCredentialInterruptedException) {
-                resolveError(call, "Sign-in was interrupted. Please try again.")
-            } catch (e: GetCredentialException) {
-                /* The overwhelmingly common cause of a GetCredentialException on a build the user
-                   installed from Play is that Play re-signed the app with its own key, so the
-                   running app presents a fingerprint that is not registered in Firebase. Sign-in
-                   then works sideloaded and fails from the store, and nothing on the device says
-                   why -- checkSigning withholds fingerprints in release builds, which is exactly
-                   the build that fails.
-                   So the fingerprint goes to logcat on failure. It stays out of the UI, which is
-                   what that gate was protecting; a certificate hash is a public value, and
-                   without it diagnosing this needs a Play Console the phone cannot see. */
-                val fp = fingerprints()
-                Log.w("IgnytAuth", "Google Sign-In failed (${e.type}). " +
-                    "App signing SHA-1: ${fp?.first ?: "unreadable"} -- this exact value must be " +
-                    "registered in the Firebase project, and differs from your upload key when " +
-                    "Play App Signing is enabled.")
-                resolveError(call, "Google Sign-In failed: ${e.message ?: e.type}")
-            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                resolveError(call, "Sign-in timed out. Check your internet connection and try again.")
-            } catch (e: Exception) {
-                // Firebase network failures land here (FirebaseNetworkException etc.).
-                resolveError(call, "Sign-in failed: ${e.message ?: "unknown error"}")
-            }
-        }
-    }
+       Email is the way in on Android; Apple remains on iOS through the REST path. */
 
     @PluginMethod
     fun signUpWithEmail(call: PluginCall) {
@@ -516,15 +409,9 @@ class AuthPlugin : com.getcapacitor.Plugin() {
             } catch (e: Exception) {
                 Log.w("IgnytAuth", "Firebase signOut failed: ${e.message}")
             }
-            try {
-                // Clears the credential-manager session so the next sign-in shows the account
-                // picker again instead of silently reusing the last account.
-                CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest())
-            } catch (e: Exception) {
-                // Non-fatal: the Firebase session is already gone, which is what "signed out"
-                // means for the app. Worst case the account picker preselects the old account.
-                Log.w("IgnytAuth", "clearCredentialState failed: ${e.message}")
-            }
+            /* The credential-manager state clear went with Google sign-in. Nothing on Android
+               holds a credential outside Firebase now, so signing out of Firebase is the whole
+               operation. */
             resolveSuccess(call, JSObject().apply { put("signedOut", true) })
         }
     }

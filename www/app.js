@@ -10701,9 +10701,9 @@ function completeSignIn(user){
 function hasThirdPartySignIn(){
   const a = window.IgnytAuth;
   if(!a) return false;
-  const google = !!(a.isNativeAndroid && a.isNativeAndroid());
-  const apple  = !!(a.appleAvailable && a.appleAvailable());
-  return google || apple;
+  /* Apple only, since Google was removed. On Android this is now false, so the OR divider
+     disappears with the button rather than sitting above nothing. */
+  return !!(a.appleAvailable && a.appleAvailable());
 }
 
 /* =========================================================
@@ -10804,10 +10804,11 @@ function renderSignInScreen(){
               Email first, providers under the rule: the primary route leads, and the divider
               means "or instead of that". */''}
         ${hasThirdPartySignIn() ? `<div class="auth-div">OR</div>` : ""}
-        ${(window.IgnytAuth && IgnytAuth.isNativeAndroid && IgnytAuth.isNativeAndroid()) ? `
-          <button class="auth-social__btn" data-auth="google" ${busy ? "disabled" : ""}>
-            ${AUTH_ICONS.google}<span>${busy ? "Signing in…" : "Continue with Google"}</span>
-          </button>` : ""}
+        ${''/* Google sign-in was removed. It never signed anyone in: the last attempt returned
+              "no credential available" on a correctly configured project -- plugin applied,
+              default_web_client_id generated, all three Credential Manager libraries present,
+              three certificate fingerprints registered including Play's. Email is the route in
+              on Android, and Apple remains on iOS. */}
         ${window.IgnytAuth && IgnytAuth.appleAvailable && IgnytAuth.appleAvailable() ? `
           <button class="apple-signin-btn" data-auth="apple" ${busy?'disabled':''} aria-label="Sign in with Apple">
             <svg viewBox="0 0 16 20" width="15" height="19" aria-hidden="true" focusable="false"><path fill="currentColor" d="M13.29 10.62c.02 2.4 2.1 3.2 2.12 3.21-.02.05-.33 1.14-1.1 2.26-.66.97-1.35 1.93-2.44 1.95-1.07.02-1.41-.63-2.63-.63-1.22 0-1.6.61-2.61.65-1.05.04-1.85-1.05-2.52-2.01C2.75 14.1 1.7 10.5 3.1 8.08c.7-1.2 1.94-1.96 3.29-1.98 1.03-.02 2 .69 2.63.69.63 0 1.81-.86 3.05-.73.52.02 1.98.21 2.92 1.58-.08.05-1.74 1.02-1.72 3.03M11.3 4.4c.56-.68.94-1.62.84-2.56-.81.03-1.79.54-2.37 1.22-.52.6-.97 1.56-.85 2.48.9.07 1.82-.46 2.38-1.14"/></svg>
@@ -10866,25 +10867,11 @@ function bindSignInScreen(){
   });
 }
 
-/* Two routes in: Google and email. Phone/SMS stays out. Whichever is used, the account layer,
-   the session and the navigation are identical -- only how you prove who you are differs, and
-   both finish through completeSignIn(). */
+/* Email on Android, Apple on iOS. Google and phone/SMS both stay out. Whichever is used, the
+   account layer, the session and the navigation are identical -- only how you prove who you are
+   differs, and every route finishes through completeSignIn(). */
 function signInAction(kind){
   const auth = window.IgnytAuth;
-  if(kind === "google"){
-    if(!auth || !auth.signIn){
-      showToast("Google sign-in isn't available in this build.", "error", render);
-      return;
-    }
-    /* Awaited, not fire-and-forget. Dropping this promise was a real bug once: the account was
-       saved but nothing advanced past the sign-in screen, so a successful sign-in looked like
-       it had done nothing. */
-    auth.signIn().then(res=>{
-      if(res && res.success && res.data && res.data.user) completeSignIn(res.data.user);
-      else if(res && res.error) showToast(res.error, "error", render);
-    });
-    return;
-  }
   if(kind === "email-back"){
     state.authEmailMode = "signin";
     if(auth && auth.clearError) auth.clearError();
