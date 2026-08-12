@@ -6865,7 +6865,7 @@ function renderSettingsTab(){
 
       <div class="rh-section-head"><span>${svg('dumbbell',13)} Workout Settings</span></div>
       <div class="pg-card">
-        ${settingToggle("aiChatOff","Turn Off IGNYT AI","Hides the assistant and its button. Everything else keeps working.","sparkle")}
+        ${settingToggle("aiChatOn","IGNYT AI","Ask about training and nutrition. Off by default; turning it on adds the assistant and its button.","sparkle")}
         ${settingToggle("workoutRecommendations","Workout Recommendations","Suggest a plan and today's session on the Workout tab. Needs a training goal set.","target")}
         ${settingToggle("sounds","Sounds","Beep when the rest timer finishes.","speaker")}
         ${settingToggle("vibration","Vibration","Vibrate when the rest timer finishes.","vibrate")}
@@ -8812,10 +8812,14 @@ function removeAIFab(){
   if(fab) fab.remove();
 }
 
-/* Turned off in Settings, the assistant leaves no trace: the button that opens it goes rather
-   than staying and refusing. removeAIFab() rather than the hidden class, because a hidden
-   element is still focusable by keyboard and still read by a screen reader. */
-function aiChatEnabled(){ return !state.settings.aiChatOff; }
+/* OFF UNLESS ASKED FOR. The key is positive and settings read as !!state.settings[key], so an
+   install that has never seen this switch has the assistant off -- which is the default we
+   want, and it arrives without a migration.
+
+   Switched on, the assistant leaves no trace when switched back off: the button that opens it
+   is removed rather than hidden, because a hidden element still takes keyboard focus and is
+   still read aloud. */
+function aiChatEnabled(){ return !!state.settings.aiChatOn; }
 
 function syncAIFab(){
   if(!aiChatEnabled()){ removeAIFab(); return; }
