@@ -1,0 +1,4642 @@
+[
+ {
+  "file": "idli_food_data.csv",
+  "name": "Idli",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "idli_food_data.csv",
+  "name": "Idli",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "egg_food_data_1.csv",
+  "name": "Egg",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "egg_food_data_1.csv",
+  "name": "Egg Dosa",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "egg_food_data_1.csv",
+  "name": "Egg Yolk",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "egg_food_data_1.csv",
+  "name": "Egg Puff",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "egg_food_data_1.csv",
+  "name": "Egg Roll",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Boiled Eggs",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Burmese Egg Bejo",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Dosa with Egg [",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "efom relat",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg a. y",
+  "reason": "energy 22 does not match macros 226"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Appe :",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Atho",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Bhejo",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Bhurji Poha",
+  "reason": "energy 151 does not match macros 73"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Buns",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Cake",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Chivda",
+  "reason": "energy 151 does not match macros 73"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Chops",
+  "reason": "energy 159 does not match macros 65"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Custard Pie",
+  "reason": "energy 221 does not match macros 140"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Dosa with Oil [",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Flan",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Fried Rice",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Jhol",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Mass",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Mayo",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Paddu",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Paniyaram",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Pav",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Pie",
+  "reason": "energy 221 does not match macros 140"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Poha",
+  "reason": "energy 151 does not match macros 73"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Ponganalu",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Puff",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Roll",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Roti",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Soup",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg stew",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Tarts",
+  "reason": "energy 193 does not match macros 113"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Tofu",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Vada",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Yolk",
+  "reason": "energy 55 does not match macros 1147"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Yolk Raw",
+  "reason": "energy 55 does not match macros 1147"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg, hen",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "epoca commercially",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "ete malle) y",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Fried Egg 4",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Fried Eggs",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "i | 6) Recipe",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Malaysian Egg Tart",
+  "reason": "energy 193 does not match macros 113"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "necite",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "ns a a",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Onion Egg Dosa [",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Over Hard Egg :",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Plain Egg Thosai [",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Raw Egg ; pa! 5",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Recipe } EQQ",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "we | y \u2014_, xe | \u2018Eats Mi 4 Xs i a 4 7 Egg Nog",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Whole Eggs",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Boiled Oats",
+  "reason": "energy 70 does not match macros 1100"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Cooked Oats",
+  "reason": "energy 70 does not match macros 1100"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Dahi Oats",
+  "reason": "fibre 131 per 100 g is out of range"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Oats Adai",
+  "reason": "fibre 210 per 100 g is out of range"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Oats Chapati",
+  "reason": "energy 75 does not match macros 1574"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Oats Dosa",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Oats Idli",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Oats Momos",
+  "reason": "energy 44 does not match macros 560"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Oats Porridge",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Oats Soup",
+  "reason": "energy 75 does not match macros 866"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Oats Upma",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Oats, French Toast, Oats Overnight",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Plain Oats",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Steel Cut Oats, Stoked Oats",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "w Receipe",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Aloo Biryani",
+  "reason": "fibre 110 per 100 g is out of range"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Beef Biryani",
+  "reason": "fibre 110 per 100 g is out of range"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Biryani",
+  "reason": "energy 143 does not match macros 69"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "criled Chicken",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Egg Biryani",
+  "reason": "energy 149 does not match macros 67"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "eyvoniece and Grilled Chicken",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Fish Biryani",
+  "reason": "energy 159 does not match macros 7281"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "gorempah Kuma",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Homemade Fish Biryani",
+  "reason": "energy 159 does not match macros 7281"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Karachi Biryani",
+  "reason": "fibre 110 per 100 g is out of range"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Mutton Biryani",
+  "reason": "energy 187 does not match macros 7191"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Potato Biryani",
+  "reason": "fibre 110 per 100 g is out of range"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Potato Dum Biryani",
+  "reason": "fibre 110 per 100 g is out of range"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Vegetable Biryani",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "37% Alcohol VSOP Brandy, St-Remy",
+  "reason": "energy 273 does not match macros 7"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Alcohol Free Beer",
+  "reason": "energy 145 does not match macros 40"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Alcohol, Pastis",
+  "reason": "energy 265 does not match macros 0"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Alcoholic Beverage",
+  "reason": "serving has no weight (blank)"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Black Jack Alcohol Drink",
+  "reason": "serving has no weight (blank)"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "chives Regal Whiskey",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Drink, ZBiotics",
+  "reason": "serving has no weight (blank)"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "eee wie oad Free Sparkling",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "en ney mae nia Fruited",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "gin rum, vodka, whiskey) 86 proof",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Jungle Alcoholic Punch",
+  "reason": "energy 180 does not match macros 90"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "moor Aechi Alcohol-Free",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Non Alcoholic Glogg",
+  "reason": "fibre 754 per 100 g is out of range"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Non Alcoholic Wine",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "oe - +H l(S ~- - TT Alcohol, Campari",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "oe We : 3",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "original, Bavaria",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "pyaicoholextraction",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "strawberry & Lime, Kopparberg",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Turkish Raki Alcohol",
+  "reason": "energy 251 does not match macros 2"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "urs, chova = Drink, Non-alcohol",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "vee omract imitation",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "vero non Tp sy Brow Liqueur, Vanilla",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "VICAU CAV G VJAeLZe | YNCAIVAU LA WU eee ~~ Original Non Alc",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Whiskey, 43% Alcohol, Oban",
+  "reason": "energy 331 does not match macros 0"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "Wine, non-alcoholic",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "with Turmeric & Oak, Flying Embers",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "food_nutrition_all.csv",
+  "name": "ZBiotics Pre-Alcohol Probiotic Drink",
+  "reason": "serving has no weight (blank)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Apple",
+  "reason": "serving has no weight (1 small)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Apple Ber",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Apple Cider",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Apple Juice",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Apple Rumani Mango",
+  "reason": "serving has no weight (1 fruit)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chinese Apple",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Custard Apple",
+  "reason": "serving has no weight (1 medium)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Green Apple",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Kashmiri Apple",
+  "reason": "serving has no weight (1 small)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Rose Apple",
+  "reason": "serving has no weight (1 small)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Sugar Apple",
+  "reason": "serving has no weight (1 medium)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Washington Apple",
+  "reason": "serving has no weight (1 small)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cold Pressed Orange Juice",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fresh Orange Juice",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fresh Orange Juice without Sugar",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Freshly Squeezed Orange Juice",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Homemade Orange Juice without",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "juice orange",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Malta Orange Juice",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Bar",
+  "reason": "energy 170 does not match macros 328"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Bread",
+  "reason": "calories 948 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Cake",
+  "reason": "calories 1016 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Candy",
+  "reason": "energy 18 does not match macros 176"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Curd",
+  "reason": "energy 56 does not match macros 124"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Jam",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Juice",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Juice without Sugar",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Jus",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Kheer",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Kums",
+  "reason": "energy 94 does not match macros 160"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Pola",
+  "reason": "energy 94 does not match macros 160"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Pound Cake",
+  "reason": "calories 1016 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Rabadi",
+  "reason": "energy 201 does not match macros 378"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Rabri",
+  "reason": "energy 201 does not match macros 378"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Rasam",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Sauce",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Soda",
+  "reason": "energy 81 does not match macros 120"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Soda Drink",
+  "reason": "energy 81 does not match macros 120"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Tart",
+  "reason": "calories 1192 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Tea",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Toffee",
+  "reason": "energy 18 does not match macros 176"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oranges",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "R2 nol Net wt: 131.0 ml",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Snack Bar, Orange, Eat Any Time",
+  "reason": "energy 170 does not match macros 328"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Sugarless Orange Juice",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dehydrated Strawberry",
+  "reason": "energy 50 does not match macros 7"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dried Strawberry",
+  "reason": "energy 50 does not match macros 7"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fanta Flavored Soda, Strawberry",
+  "reason": "calories 1333 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fanta Strawberry Soda",
+  "reason": "calories 1333 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Green Tea with Strawberry",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Sparkling Water, Strawberry, Bubly",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Sparkling Water, Strawberry, Clear",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "STRAWBERRY",
+  "reason": "calories 1500 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry (USDA)",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "STRAWBERRY BANANA BLEND",
+  "reason": "energy 80 does not match macros 120"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry Banana Blend, Great",
+  "reason": "energy 80 does not match macros 120"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry Cake",
+  "reason": "calories 1892 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry Cone",
+  "reason": "calories 1417 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry Cone Ice Cream",
+  "reason": "calories 1417 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry Flan",
+  "reason": "calories 4258 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "STRAWBERRY FLAVOR SODA",
+  "reason": "calories 1333 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry Green Tea",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry Ice Cream Cone",
+  "reason": "calories 1417 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry Jam",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry Jelly",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry Milk",
+  "reason": "energy 123 does not match macros 341"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry Milk, Sangaria",
+  "reason": "energy 123 does not match macros 341"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry Milkshake",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry Oats",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "strawberry Shake",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry Soup",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "STRAWBERRY SPARKLING WATER",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry Tea",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry Tea with Sugar",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry with Green Tea",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "STRAWBERRY ZERO SUGAR SODA",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry, Dannon",
+  "reason": "667 kcal per 100 g from an assumed 12 g serving \u2014 the dish is not one serve"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry, Kellogg's",
+  "reason": "calories 1500 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry, Raw (USDA)",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "YOGURT, STRAWBERRY",
+  "reason": "667 kcal per 100 g from an assumed 12 g serving \u2014 the dish is not one serve"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Zero Sugar Soda, Strawberry, Zevia",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Boiled Oatmeal with Mixed Fruits",
+  "reason": "energy 106 does not match macros 173"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Boiled Oats with Mixed Fruits",
+  "reason": "energy 106 does not match macros 173"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fruits & Honey Seed Mix, Sainsbury's",
+  "reason": "energy 41 does not match macros 231"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fruits and Honey Seed Mix",
+  "reason": "energy 41 does not match macros 231"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fruits and Seeds Muesli",
+  "reason": "energy 194 does not match macros 582"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fruits Date and Peanut Butter",
+  "reason": "energy 269 does not match macros 619"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fruits Nuts and Honey, Gem",
+  "reason": "energy 49 does not match macros 211"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fruits Soy Bar, Raisin Almond, Soyjoy",
+  "reason": "energy 121 does not match macros 287"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fruits Strained Yoghurt, Strawberry",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fruits Thick & Smooth Strained",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fruits with Chocolate Syrup",
+  "reason": "energy 125 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fruits with Oats",
+  "reason": "energy 106 does not match macros 173"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fruity Oatmeal",
+  "reason": "energy 106 does not match macros 173"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oatmeal Fresh Fruits",
+  "reason": "energy 106 does not match macros 173"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oatmeal with Fruit",
+  "reason": "energy 106 does not match macros 173"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats with Fruits",
+  "reason": "energy 106 does not match macros 173"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Organic Muesli, Fruit and Seeds",
+  "reason": "energy 194 does not match macros 582"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Macadamia Nuts",
+  "reason": "energy 72 does not match macros 128"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mixed Nuts",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mixed Nuts and Seeds Dry Roasted",
+  "reason": "energy 51 does not match macros 186"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mixed Nuts Cluster",
+  "reason": "energy 91 does not match macros 176"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mixed Nuts Shake",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts and Seeds",
+  "reason": "energy 51 does not match macros 117"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts Cluster",
+  "reason": "energy 91 does not match macros 176"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts Meringue",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts Milkshake",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts Mix +, Greenfinity",
+  "reason": "energy 58 does not match macros 130"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts Muesli",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts, almond paste",
+  "reason": "energy 92 does not match macros 161"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts, almonds",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts, cashew nuts, raw",
+  "reason": "energy 11 does not match macros 118"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts, ginkgo nuts, dried",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts, ginkgo nuts, raw",
+  "reason": "calories 1800 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts, macadamia nuts, raw",
+  "reason": "energy 72 does not match macros 128"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts, pecans",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts, pilinuts, dried",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts, pine nuts, dried",
+  "reason": "calories 10100 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts, pine nuts, pinyon, dried",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nuts, pistachio nuts, raw",
+  "reason": "calories 5600 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Pecan Nuts",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "t=) ReCIPe",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Aloo Bread Pakoda",
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Alu Bread Pakora",
+  "reason": "serving has no weight (1 pakora)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Besan Bread",
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Besan Bread Pakora",
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Aloo Pakora",
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread and Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread and Jam",
+  "reason": "energy 19 does not match macros 118"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Bajji",
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Bhaji",
+  "reason": "energy 80 does not match macros 227"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Bhajiya",
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Bonda",
+  "reason": "652 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one piece"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Bun",
+  "reason": "energy 161 does not match macros 1893"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Dosa",
+  "reason": "carbs 127 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Egg",
+  "reason": "calories 1088 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Jam",
+  "reason": "energy 19 does not match macros 118"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Kaja",
+  "reason": "serving has no weight (1 triangle)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Makhan",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Malpua",
+  "reason": "672 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one piece"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Maska",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Pakoda",
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Pakora With Brown Bread",
+  "reason": "calories 1024 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Pattice",
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Pizza",
+  "reason": "728 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Pua",
+  "reason": "672 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one piece"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Pudla",
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Roast",
+  "reason": "664 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one piece"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "bread rye",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread stuffing, bread, dry mix",
+  "reason": "energy 219 does not match macros 369"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Toast",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Toast with Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Upma",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread Vada",
+  "reason": "652 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one piece"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread with Amul Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread with Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread with Egg",
+  "reason": "calories 1088 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread with Mixed Fruit Jam",
+  "reason": "energy 19 does not match macros 118"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bread, Rye",
+  "reason": "serving has no weight (1 regular)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Brown Bread Pakora",
+  "reason": "calories 1024 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Brown Bread Pakora with Potato",
+  "reason": "calories 1024 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Butter Toasted Bread",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Buttered Bread",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chashni Bread",
+  "reason": "serving has no weight (1 triangle)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Crisp Sweet Bread",
+  "reason": "serving has no weight (1 triangle)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Crispy Fried Bread in Sugar Syrup",
+  "reason": "serving has no weight (1 triangle)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg and Bread",
+  "reason": "calories 1088 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg bread",
+  "reason": "calories 1088 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg with Bread",
+  "reason": "calories 1088 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Grilled Bread",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Grilled Bread with Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Homemade Bread Malpua",
+  "reason": "672 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one piece"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Kissan Jam-and Bread",
+  "reason": "energy 19 does not match macros 118"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Plain Bread Roll",
+  "reason": "energy 212 does not match macros 1950"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Potato Bread Pakoda",
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Potato Bread Patties",
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Potato Bread Roll",
+  "reason": "energy 212 does not match macros 1950"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Pumpernickel Bread",
+  "reason": "serving has no weight (1 regular)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Rye Bread",
+  "reason": "serving has no weight (1 regular)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Stuffed Bread Pakora",
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Tawa Bread Pakoda",
+  "reason": "energy 243 does not match macros 1376"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Toasted Bread",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Toasted Bread with Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Toasted White Bread",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Toasted White Bread with Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vegetable White Bread Pizza",
+  "reason": "728 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "White Bread",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "White Bread and Boiled Egg",
+  "reason": "calories 1088 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "White Bread Toast",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "White Bread Toast with butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "White Bread Toast with Jam",
+  "reason": "energy 19 does not match macros 118"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "White Bread With Amul Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "White Bread With Butter",
+  "reason": "656 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "White Bread with Egg",
+  "reason": "calories 1088 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "White Bread with Jam",
+  "reason": "energy 19 does not match macros 118"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "White Bread without Butter",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Whole Wheat Bread",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Ban Kismis",
+  "reason": "carbs 114 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Butter Jam",
+  "reason": "energy 305 does not match macros 457"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Cha",
+  "reason": "867 kcal per 100 g from an assumed 45 g serving \u2014 the dish is not one serve"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Chole",
+  "reason": "700 kcal per 100 g from an assumed 45 g serving \u2014 the dish is not one bun"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Dosa",
+  "reason": "energy 16 does not match macros 123"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Kebab",
+  "reason": "887 kcal per 100 g from an assumed 45 g serving \u2014 the dish is not one bun"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Kelapa",
+  "reason": "calories 1069 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Kismis",
+  "reason": "carbs 114 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun maska jam",
+  "reason": "energy 305 does not match macros 457"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Nem Nuong",
+  "reason": "serving has no weight (1 ball)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Nirachathu",
+  "reason": "836 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Omelette",
+  "reason": "calories 960 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Samosa",
+  "reason": "carbs 120 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Tikki",
+  "reason": "carbs 111 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun with Butter and Jam",
+  "reason": "energy 305 does not match macros 457"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun with Jam",
+  "reason": "carbs 133 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun with Omelette",
+  "reason": "calories 960 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun with Raisin",
+  "reason": "carbs 114 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun with Tikki",
+  "reason": "carbs 111 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Butter and Bun",
+  "reason": "serving has no weight (1 vine)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Butter and Raisin Bun",
+  "reason": "carbs 114 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Buns",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Stuffed Buns",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Raisin Bun",
+  "reason": "carbs 114 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Sweet Coconut Bun",
+  "reason": "calories 1069 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Baida Paratha",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Beef Kizhi Parotta",
+  "reason": "calories 928 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Parotta",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Ceylon Chicken Paratha",
+  "reason": "energy 154 does not match macros 494"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Ceylon Egg Parotta",
+  "reason": "812 kcal per 100 g from an assumed 60 g serving \u2014 the dish is not one paratha"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Ceylon Paratha",
+  "reason": "energy 154 does not match macros 494"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Ceylon Parotta",
+  "reason": "energy 154 does not match macros 494"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chicken Dum Parotta",
+  "reason": "calories 942 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Coin Parotta",
+  "reason": "energy 184 does not match macros 937"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Paratha",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Parotta",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Kaima Parotta",
+  "reason": "energy 200 does not match macros 110"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Kerala Parotta",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Kerala Sweet Parotta",
+  "reason": "serving has no weight (1 sweetna)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Madurai Bun Parotta",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Malabar Parotta",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Malaysian Paratha",
+  "reason": "energy 299 does not match macros 466"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mughlai Egg Paratha",
+  "reason": "812 kcal per 100 g from an assumed 60 g serving \u2014 the dish is not one paratha"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mughlai Paratha",
+  "reason": "812 kcal per 100 g from an assumed 60 g serving \u2014 the dish is not one paratha"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mughlai Paratha Stuffed with Egg",
+  "reason": "812 kcal per 100 g from an assumed 60 g serving \u2014 the dish is not one paratha"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Omelette Paratha",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Paneer kizhi parotta",
+  "reason": "serving has no weight (1 kizhi)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Pork Kizhi Parotta",
+  "reason": "897 kcal per 100 g from an assumed 60 g serving \u2014 the dish is not one parotta"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Roti Parotta",
+  "reason": "energy 299 does not match macros 466"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Sri Lankan Paratha",
+  "reason": "energy 154 does not match macros 494"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Veechu Parotta",
+  "reason": "energy 214 does not match macros 381"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Veg Kizhi Parotta",
+  "reason": "serving has no weight (1 kizhi)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vegetarian Kizhi Parotta",
+  "reason": "serving has no weight (1 kizhi)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Wheat Kothu Parotta",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Barley Noodles, Nalabagam",
+  "reason": "calories 985 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Noodles",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodle",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodle Parantha",
+  "reason": "energy 182 does not match macros 349"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodle Vegetable Biryani",
+  "reason": "energy 236 does not match macros 403"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodles",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodles Ball",
+  "reason": "energy 66 does not match macros 103"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodles Biryani",
+  "reason": "energy 236 does not match macros 403"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodles Pancake",
+  "reason": "energy 304 does not match macros 570"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodles Pancake with Olive Oil",
+  "reason": "energy 304 does not match macros 570"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodles Pancake with Vegetables",
+  "reason": "energy 304 does not match macros 570"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodles Paratha",
+  "reason": "energy 182 does not match macros 349"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodles With Cheese",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodles with Onions",
+  "reason": "energy 153 does not match macros 240"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodles with Onions and Potatoes",
+  "reason": "energy 151 does not match macros 532"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodles with Potato",
+  "reason": "energy 151 does not match macros 532"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodles with Potatoes and Onions",
+  "reason": "energy 151 does not match macros 532"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodles, Barley, Nalabagam",
+  "reason": "calories 985 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Noodles, Horlicks",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Onion Noodles",
+  "reason": "energy 153 does not match macros 240"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Ramen Noodle Pancake",
+  "reason": "energy 304 does not match macros 570"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Uncooked Barley Noodles",
+  "reason": "calories 985 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Veg Noodles",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vegetable Noodles with Cheese",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Baked Sponge Tape",
+  "reason": "carbs 124 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Black Glutinous Flour Cake",
+  "reason": "energy 222 does not match macros 391"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake",
+  "reason": "energy 324 does not match macros 485"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake Batter Ice Cream",
+  "reason": "energy 189 does not match macros 261"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake Fudge",
+  "reason": "calories 2040 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake Ketan Hitam",
+  "reason": "energy 222 does not match macros 391"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake Milkshake",
+  "reason": "energy 484 does not match macros 825"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "cake pops chocolate",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake Rusk",
+  "reason": "energy 99 does not match macros 151"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake Rusk, KCB",
+  "reason": "energy 10 does not match macros 118"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake Rusk, Verka",
+  "reason": "energy 120 does not match macros 420"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake Shake",
+  "reason": "energy 484 does not match macros 825"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake Slice without Icing",
+  "reason": "energy 324 does not match macros 485"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake Stabilizer",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake Tapai",
+  "reason": "carbs 124 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake Tape",
+  "reason": "carbs 124 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake Toast",
+  "reason": "668 kcal per 100 g from an assumed 25 g serving \u2014 the dish is not one slice"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake Toast, Lal Sweets",
+  "reason": "energy 59 does not match macros 95"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cake without Cream",
+  "reason": "energy 324 does not match macros 485"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "chocolate cake pops",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "chocolate cake with fudge frosting",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chocolate Fudge Cake",
+  "reason": "calories 2040 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dry Cake",
+  "reason": "energy 99 does not match macros 151"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Sponge Cake",
+  "reason": "energy 324 does not match macros 485"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fermented Cassava Cake",
+  "reason": "carbs 124 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "fudge cake",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Homemade Cake",
+  "reason": "energy 324 does not match macros 485"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Plain Cake",
+  "reason": "energy 324 does not match macros 485"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Plain Sponge Cake",
+  "reason": "energy 324 does not match macros 485"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Sponge Cake",
+  "reason": "energy 324 does not match macros 485"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Sponge Cake with Egg",
+  "reason": "energy 324 does not match macros 485"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Sponge Cake without Icing",
+  "reason": "energy 324 does not match macros 485"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vanilla Sponge Cake",
+  "reason": "energy 324 does not match macros 485"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Baked Chicken Bun",
+  "reason": "680 kcal per 100 g from an assumed 45 g serving \u2014 the dish is not one bun"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chicken",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chicken Bun",
+  "reason": "680 kcal per 100 g from an assumed 45 g serving \u2014 the dish is not one bun"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chicken Collection Chicken & Bacon",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chicken Curry without Chicken",
+  "reason": "energy 99 does not match macros 173"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chicken Egg",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chicken Fried Chicken, Cracker",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chicken Momos",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chicken Noodles with Chicken Gravy",
+  "reason": "energy 314 does not match macros 1356"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chicken Noodles with Gravy",
+  "reason": "energy 314 does not match macros 1356"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chicken Puff",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chicken Sukka",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cracker Barrel Chicken Fried Chicken",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Stuffed Chicken Bun",
+  "reason": "680 kcal per 100 g from an assumed 45 g serving \u2014 the dish is not one bun"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Indian: Style Mutton Soup",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mutton",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mutton Curry",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mutton Keema",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mutton Korma",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mutton Leg Curry",
+  "reason": "energy 157 does not match macros 317"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mutton Paya",
+  "reason": "energy 157 does not match macros 317"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mutton Paya Curry",
+  "reason": "energy 157 does not match macros 317"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mutton Qorma",
+  "reason": "energy 192 does not match macros 352"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mutton Stew",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Quantity Measure \u00ae",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "ad t=) RECIPE",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Boneless Fish Fry",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fish Curry",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fish Curry (Machher Jhol)",
+  "reason": "energy 159 does not match macros 219"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fish Curry without Coconut",
+  "reason": "energy 159 does not match macros 219"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fish Cutlet",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fish Eggs",
+  "reason": "energy 62 does not match macros 210"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "fish fried",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fish Oil",
+  "reason": "calories 4500 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fish oil, herring",
+  "reason": "calories 4500 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fish Soup",
+  "reason": "energy 40 does not match macros 193"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fish Stew",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fish Tofu",
+  "reason": "energy 19 does not match macros 118"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fish Tofu, Hakka",
+  "reason": "energy 19 does not match macros 118"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fish Wrap",
+  "reason": "energy 185 does not match macros 571"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fish, Whitefish, Eggs",
+  "reason": "energy 62 does not match macros 210"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fishballs",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fried Fish",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Quantity Measure \u00ae",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Seer Fish Fry",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "t=) RECIDEG Bee",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Beef Mince Omelette",
+  "reason": "energy 153 does not match macros 217"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Beef Omelette",
+  "reason": "energy 153 does not match macros 217"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Omelette",
+  "reason": "calories 960 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun with Omelette",
+  "reason": "calories 960 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Crab Omelette",
+  "reason": "energy 156 does not match macros 500"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dill Omelette",
+  "reason": "energy 102 does not match macros 141"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Omelette",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Omelette with Onion and",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Plain Omelette",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "el t=) RECIPS Bey",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Ground Beef Omelette",
+  "reason": "energy 153 does not match macros 217"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Hen Egg Omelette",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Herb Omelette",
+  "reason": "energy 129 does not match macros 50"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Lady Finger Omelette",
+  "reason": "energy 151 does not match macros 61"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Masala Omelette with Spinach and",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Minced Beef Omelette",
+  "reason": "energy 153 does not match macros 217"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nandu Omelette",
+  "reason": "energy 156 does not match macros 500"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Okra Omelette",
+  "reason": "energy 151 does not match macros 61"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Omelette",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Onion Spinach Omelette",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Plain Omelette in Oil",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Shepu Omelette",
+  "reason": "energy 102 does not match macros 141"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Tuna Egg Omelette",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Tuna Omelette",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Whole Egg Omelette",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Whole Egg Omelette with Onion and",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Boiled Egg with Yolk",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Boiled Eggs",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Bun Egg",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Burmese Egg Atho",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Burmese Egg Bejo",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chicken Egg",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cooked Egg",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dosa with Egg",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "efom relat",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg (Whole)",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg and Vegetable Rice",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Appe",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Atho",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Bean Curd",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Bejo",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Bhejo",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Buns",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Cake",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Chapati",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Chop",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Chops",
+  "reason": "energy 159 does not match macros 318"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Dosa with Oil",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Flan",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Flip",
+  "reason": "energy 22 does not match macros 226"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Fried Rice",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Jhol",
+  "reason": "energy 117 does not match macros 265"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Mass",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Mayo",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Mayonnaise",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Mayonnaise, Delmonte",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Nog",
+  "reason": "energy 22 does not match macros 226"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Oatmeal",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Paddu",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Paniyaram",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Pav",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Pie",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Poha",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Ponganalu",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Puff",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Puff in Air Fryer",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Puff Pastry",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Rice",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Roll",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Roti",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Roti with Oil",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Shake",
+  "reason": "energy 22 does not match macros 226"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Sixty Five",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Soup",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg stew",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Stuffed Buns",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Stuffed Roti",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Tarts",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Tofu",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Tofu (Tube)",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Tofu, Unicurd",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Vada",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Yolk",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg, hen",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Half Boiled Egg",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Half Cook Eggs",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Hanjuku Egg",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mayonnaise With Egg, Delmonte",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oatmeal with Egg",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats And Egg",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats and Egg Porridge",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats with Egg and Milk",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Onion Egg Dosa",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Over Hard Egg",
+  "reason": "energy 129 does not match macros 1088"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Plain Egg Thosai",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Rice with Egg",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Soft Boiled Egg",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "t(\u2014J) NGCVINS",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "t= Nwevlipe",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "t=) NeviVype",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "t={ )J Nevli-pe",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Whole Boiled Egg",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Whole Egg",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Whole Eggs",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Whole Eggs Boiled",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Basic Curry",
+  "reason": "energy 61 does not match macros 99"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cauliflower Curry",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chicken Curry",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chicken Curry Mee",
+  "reason": "energy 365 does not match macros 1522"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Classic Curry",
+  "reason": "energy 61 does not match macros 99"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Curry",
+  "reason": "energy 61 does not match macros 99"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "curry chicken",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Curry Cockles",
+  "reason": "energy 43 does not match macros 108"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Curry Cockles, Rex",
+  "reason": "energy 43 does not match macros 108"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "curry fried rice",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Curry Laksa",
+  "reason": "energy 365 does not match macros 1522"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Curry Leaf",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Curry Leaf Chicken Curry",
+  "reason": "energy 203 does not match macros 379"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Curry leaves",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Curry Leaves Curry",
+  "reason": "energy 19 does not match macros 119"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Curry Leaves Kulambu",
+  "reason": "energy 19 does not match macros 119"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Curry Leaves Kuzhambu",
+  "reason": "energy 19 does not match macros 119"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Curry Mee",
+  "reason": "energy 365 does not match macros 1522"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Curry Sauce",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Curry Sauce, M savers",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Curry Seku",
+  "reason": "energy 191 does not match macros 579"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Eurasian Curry Seku",
+  "reason": "energy 191 does not match macros 579"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Malaysian Curry Mee",
+  "reason": "energy 365 does not match macros 1522"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Malaysian Curry Seku",
+  "reason": "energy 191 does not match macros 579"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mee Curry",
+  "reason": "energy 365 does not match macros 1522"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Penang Curry Laksa",
+  "reason": "energy 365 does not match macros 1522"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Phulkobi Curry",
+  "reason": "fibre 186 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Plain Curry",
+  "reason": "energy 61 does not match macros 99"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Pork Ribs Curry",
+  "reason": "energy 255 does not match macros 596"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "S A ~ x) RECIPE",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "aw os vs # we (3 eae \u2018a",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Boiled Mixed Vegetables",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Boiled Vegetables",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cooked Vegetables",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "cooked. mixed vegetables",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dehydrated Vegetables",
+  "reason": "energy 166 does not match macros 229"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dry Vegetable Mix",
+  "reason": "energy 82 does not match macros 149"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "f . tJ) RECIDC Bee",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fermented Vegetables",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Hibachi Vegetables",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Kadhai Vegetable with Cream",
+  "reason": "energy 13 does not match macros 117"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Kadhai Vegetables",
+  "reason": "energy 13 does not match macros 117"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Masala Vegetables",
+  "reason": "energy 82 does not match macros 149"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mashed Vegetables",
+  "reason": "energy 106 does not match macros 174"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mixed Vegetable Bhaji",
+  "reason": "energy 82 does not match macros 149"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mixed Vegetable Bharta",
+  "reason": "energy 106 does not match macros 174"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mixed Vegetable Chips",
+  "reason": "energy 166 does not match macros 229"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mixed Vegetable Fritter",
+  "reason": "energy 75 does not match macros 457"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mixed Vegetable Kadai",
+  "reason": "energy 13 does not match macros 117"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mixed Vegetable with Cream",
+  "reason": "energy 13 does not match macros 117"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mixed Vegetables",
+  "reason": "energy 82 does not match macros 149"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mixed Vegetables in Schezwan",
+  "reason": "energy 131 does not match macros 198"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Not Added in Cooking)",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Panfri\u00e9d Vegetables /",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Pickled Vegetables",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "rice and vegetables",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "sauteed Vegetables",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Schezwan Vegetables",
+  "reason": "energy 131 does not match macros 198"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Spicy Vegetable Stir-Fry",
+  "reason": "energy 67 does not match macros 115"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "steamed Vegetables",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Stir Fried Vegetables in Teriyaki",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "stir fry teriyaki vegetables",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "stir fry vegetables",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Szechuan Vegetable Stir-Fry",
+  "reason": "energy 67 does not match macros 115"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "tempura vegetables",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vegetable Chips",
+  "reason": "energy 166 does not match macros 229"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vegetable Jalfrezi",
+  "reason": "energy 82 does not match macros 149"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vegetable Kadhai",
+  "reason": "energy 13 does not match macros 117"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vegetables Fritter",
+  "reason": "energy 75 does not match macros 457"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vegetables Nihari",
+  "reason": "energy 159 does not match macros 247"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "vegetables teriyaki",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "4 Whole Grain Cheerios",
+  "reason": "energy 136 does not match macros 235"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "5 Whole Grains Honey Cheerios",
+  "reason": "energy 13 does not match macros 198"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Basala cheera",
+  "reason": "energy 18 does not match macros 68"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cheera Aviyal",
+  "reason": "energy 115 does not match macros 167"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cheera Leyam",
+  "reason": "energy 10 does not match macros 79"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cheera Moloshyam",
+  "reason": "energy 122 does not match macros 281"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cheera Pachadi",
+  "reason": "energy 123 does not match macros 282"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cheera Vithu",
+  "reason": "energy 160 does not match macros 427"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "cheerios cereal",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cheerios, 4 Whole Grain, Uncletobys",
+  "reason": "energy 136 does not match macros 235"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cheerios, Honey, Nestle",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cherry Soda Drink, Cheerwine",
+  "reason": "carbs 129 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Honey Cheerios, Nestle",
+  "reason": "energy 13 does not match macros 198"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Karie cheera",
+  "reason": "energy 22 does not match macros 90"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Kerala Cheera Aviyal",
+  "reason": "energy 115 does not match macros 167"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "KitKat Cheerful Break, Mango, Nestle",
+  "reason": "energy 39 does not match macros 198"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Paaktali Cheeroti",
+  "reason": "energy 123 does not match macros 549"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chilly Idli",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Stuffed Idli",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Ghee Idli",
+  "reason": "energy 76 does not match macros 113"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Homemade Idli Chaat",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli (Plain)",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli and Sambar",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Batter",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Carrot Upma",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Chaat",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Chilli",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Chitranna",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Curd Salad",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Fry",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Gajar Upma",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Masala Fry",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Noodles",
+  "reason": "energy 136 does not match macros 526"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Onion Fry",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Pakoda",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Pindi Dosa",
+  "reason": "energy 147 does not match macros 528"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Podi",
+  "reason": "energy 33 does not match macros 101"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Pulihora",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Rasam",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Rava",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Rava Dosa",
+  "reason": "energy 161 does not match macros 537"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Rava, Laxmi Brand",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Sambar",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Sambar, MOM",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Sandwich",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Sixty Five",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Upma",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Uppittu",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli Usli",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli with Curd",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli with Egg",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli with Ghee",
+  "reason": "energy 76 does not match macros 113"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Idli/Dosa Batter",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Kollmexelaalejatels",
+  "reason": "serving has no weight (blank)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Lemon Idli",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Masala Idli",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Minapappu Idli",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Pan Fried Idli",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Rice Idli",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Roasted Idli",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Sambar Idli",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Sauteed Idli",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "t=) RECIPE",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Tadka Idli",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vaghareli Idli",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "dry onion soup mix",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "fe t=) RECIPE",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Homemade Vegetable Soup",
+  "reason": "energy 51 does not match macros 198"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mixed Sabzi Ka Soup",
+  "reason": "energy 51 does not match macros 198"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mixed Vegetable Soup",
+  "reason": "energy 51 does not match macros 198"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "soup Base, Mushroom Soup",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "soup chicken corn chowder",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "soup chicken rice",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "soup Kozhumbhu",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "soup lentil",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "soup mushroom",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Soup Sticks",
+  "reason": "energy 40 does not match macros 75"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "soup tomato",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "soup vegetable",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Soup, HEALTHY CHOICE Chicken",
+  "reason": "energy 100 does not match macros 221"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Soup, HEALTHY CHOICE Chicken and",
+  "reason": "energy 89 does not match macros 196"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "soup, HEALTHY CHOICE Garden",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Soup, onion, canned, condensed",
+  "reason": "energy 13 does not match macros 127"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Soup, onion, dry, mix",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "soup, tomato, canned, condensed",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Soup, Tomato, Chings Secret",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Soup, Vegetable & Beef, Continental",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Soup, wonton, Chinese restaurant",
+  "reason": "energy 71 does not match macros 257"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "souper Tomato Soup, Pret",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Tamatar.ka Soup",
+  "reason": "energy 36 does not match macros 1974"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Tomato Soup, Chings Secret",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Tomato,Soup",
+  "reason": "energy 36 does not match macros 1974"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Tomato,Soup without Cream",
+  "reason": "energy 36 does not match macros 1974"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vegetable Soup",
+  "reason": "energy 51 does not match macros 198"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vegetable Soup (Home Recipe)",
+  "reason": "energy 51 does not match macros 198"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Wonton Soup",
+  "reason": "energy 71 does not match macros 257"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "35 % Less Sugar Juice Drink Blend",
+  "reason": "serving has no weight (1 pouch)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "365 EVERYDAY VALUE, JUICE FROM",
+  "reason": "serving has no weight (1 serve)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Acai Mix Juice, Top Juice",
+  "reason": "serving has no weight (1 serve)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cold Pressed Orange Juice",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fresh Orange Juice",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fresh Orange Juice without Sugar",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fruit Juice",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fruit Juicy Red Juice Drink, Hawaiian",
+  "reason": "serving has no weight (1 Vv)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Homemade Orange Juice without",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Immunity Juice, Boost Juice",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Juice Beverage, Cranberry",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Juice Cocktail, Dragonfruit Mango",
+  "reason": "serving has no weight (blank)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Juice Cocktail, Mango Twist, Welch's",
+  "reason": "serving has no weight (1 serve)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Juice Concentrate, Passion Fruit",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Juice Drink Blend, Strawberry Kiwi",
+  "reason": "serving has no weight (1 pouch)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Juice Drink Blend, Strawberry, Capri",
+  "reason": "serving has no weight (1 pouch)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Juice Drink with Nata De Coco",
+  "reason": "energy 159 does not match macros 230"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Juice Drink, Fruit Juicy Red, Hawaiian",
+  "reason": "serving has no weight (blank)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Juice Drink, Mandarin Orange Float",
+  "reason": "serving has no weight (1 serve)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Juice Drink, Pineapple & Coconut",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Juice Drink, Pineapple Plunge",
+  "reason": "serving has no weight (1 serve)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Juice Drink, Reduced Sugar, Fruit",
+  "reason": "serving has no weight (blank)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Juice from Concentrate, Fruit Punch",
+  "reason": "serving has no weight (1 serve)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "juice orange",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Juice Pop, Mango Passion, Barakat",
+  "reason": "serving has no weight (1 stick)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Lychee Juice with Nata De Coco",
+  "reason": "energy 159 does not match macros 230"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Lychee Juice, Mogu Mogu",
+  "reason": "energy 159 does not match macros 230"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Malta Orange Juice",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mogu Mogu Lychee Juice with Nata",
+  "reason": "energy 159 does not match macros 230"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Juice",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Orange Juice without Sugar",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Pineapple & Coconut Juice Drink",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Pineapple Plunge Juice Drink",
+  "reason": "serving has no weight (1 serve)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Reduced Sugar, Fruit Punch, Apple",
+  "reason": "serving has no weight (blank)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Sugarless Orange Juice",
+  "reason": "energy 13 does not match macros 175"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "alee p MILK? f mali",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cadbury Dairy Milk Lolly",
+  "reason": "energy 36 does not match macros 142"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Cadbury Dairy Milk Lolly, Mondelez",
+  "reason": "energy 36 does not match macros 142"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Chocolate, Mondelez Foods India",
+  "reason": "energy 28 does not match macros 174"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Creamer",
+  "reason": "energy 46 does not match macros 260"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Free Apple Pie",
+  "reason": "calories 1252 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Free Chocolate",
+  "reason": "energy 130 does not match macros 303"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Free Rasmalai",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Milk Chocolate, Durian",
+  "reason": "energy 24 does not match macros 130"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Milk Freddo, Cadbury",
+  "reason": "energy 95 does not match macros 146"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Milk Lolly",
+  "reason": "energy 36 does not match macros 142"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Milk Oreo, Cadbury",
+  "reason": "energy 28 does not match macros 174"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Milk, Durian, Cadbury",
+  "reason": "energy 24 does not match macros 130"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Milk, Mondele",
+  "reason": "energy 27 does not match macros 149"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Milk, Silk Oreo",
+  "reason": "energy 28 does not match macros 174"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Spray Cream, Tesco",
+  "reason": "energy 38 does not match macros 82"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Tales Probiotic Curd",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Tales Probiotic Curd, Namdhari",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Whipping Cream, D'lecta",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Whitener",
+  "reason": "energy 46 does not match macros 260"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Whitener, Britannia",
+  "reason": "energy 46 does not match macros 260"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dairy Whitener, Milma",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "es. Dairy FF Daj",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Kes. B pairy FP Daf",
+  "reason": "energy 27 does not match macros 149"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oreo Dairy Milk, Cadbury",
+  "reason": "energy 28 does not match macros 174"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "ry Dairy Milsho\u00ae Mandel",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Better Oats Organic Quick Oats",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "ew INCOUCIVe",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "ew INOCUCIVe",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Instant Oatmeal with Milk",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Miso Oats",
+  "reason": "energy 268 does not match macros 608"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oatmeal Porridge",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oatmeal Porridge with Milk",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oatmeal with Water",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats Adai",
+  "reason": "fibre 210 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats Appe",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats Bhel",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats Cake",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats Curd",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats Ladoo",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats Milk",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats Momo",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats Momos",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats Paddu",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats Poha",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats Porridge",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats Rusk",
+  "reason": "energy 62 does not match macros 7410"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats Soup",
+  "reason": "energy 75 does not match macros 1050"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats Unda",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats Vada",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats, French Toast, Oats Overnight",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Oats, S mores, Oats Overnight",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Plain Oats",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Rye Oats",
+  "reason": "energy 100 does not match macros 244"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Salted Oats",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Steel Cut Oats, Stoked Oats",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "wINCUCIVe",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "wINCUCIVeS",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "wINOCUCIVS",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Ayam Beriani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Banana Flower Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Beriani Kosong",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Biryani Ikan",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Biryani Kosong",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Biryani Noodle, Chicken, Biryaneez",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Biryani Rice",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Biryani Rice without Meat",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Biryani Tea",
+  "reason": "energy 103 does not match macros 462"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Dondakaya Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Egg Biryani",
+  "reason": "energy 149 does not match macros 503"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Fish Biryani",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Ivy Gourd Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Keema Ball Biryani without Oil",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Keema Mutti Biryani without Oil",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Kovakkai Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Malaysian Beef Biryani",
+  "reason": "energy 270 does not match macros 999"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Malaysian Chicken Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Malaysian Fish Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Meal Maker Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Millet Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Millet Vegetable Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mushroom Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Muttai Biryani",
+  "reason": "energy 149 does not match macros 2400"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mutton Biryani",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Mutton Dum Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nasi Beriani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nasi Beriani Ayam",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nasi Beriani Daging",
+  "reason": "energy 270 does not match macros 999"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nasi Beriani Kosong",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nasi Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nasi Biryani Ayam",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nasi Biryani Ayam, Brahim's",
+  "reason": "energy 410 does not match macros 1464"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nasi Biryani Bombay",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nasi Biryani Daging",
+  "reason": "energy 270 does not match macros 999"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nasi Biryani Ikan",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nasi Biryani Kosong",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Nasi Biryani Udang",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Paneer Tikka Biryani",
+  "reason": "energy 189 does not match macros 0"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Pork Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Soya Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Soya Chunk Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Spring Biryani",
+  "reason": "energy 94 does not match macros 183"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Telur Beriani",
+  "reason": "energy 149 does not match macros 2400"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Tindora Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Tofu Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vazhaipoo Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vegetable Biryani",
+  "reason": "already in catalogue"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vegetable Dum Biryani",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "wm INCUCIVNGS",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "37% Alcohol VSOP Brandy, St-Remy",
+  "reason": "energy 273 does not match macros 7"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "43% Alcohol Scotch Whiskey",
+  "reason": "energy 286 does not match macros 0"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Alcohol Free Beer",
+  "reason": "energy 145 does not match macros 40"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Alcohol, Campari",
+  "reason": "serving has no weight (1.0 WU)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Alcoholic Aperitif 45%",
+  "reason": "serving has no weight (100.0 WU)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Alcoholic Beverage",
+  "reason": "serving has no weight (1.0 WVICGSUIS)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Alcoholic beverage, distilled, all",
+  "reason": "serving has no weight (1.0 VICGSUTS)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Alcoholic Popsicle",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Apple Cider, 4.5% Alcohol",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Black Jack Alcohol Drink",
+  "reason": "serving has no weight (160.0 WU)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "by alcohol extraction",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Erdinger Weissbier",
+  "reason": "serving has no weight (1.0 WU)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Journey Juice Alcohol-Free Fruited",
+  "reason": "serving has no weight (1.0 WU)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Jungle Alcoholic Punch",
+  "reason": "energy 180 does not match macros 90"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Larger Beer, Alcohol Free, Heineken",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Non Alcoholic Beer",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Non Alcoholic Beer, Heineken",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Non Alcoholic Moscow Mule",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Non Alcoholic Wine",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Non-Alcoholic Beer",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Non-Alcoholic Beer, Bavaria",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Pre-Alcohol Probiotic",
+  "reason": "serving has no weight (1.0 WU)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Soda Sparkling Drink, Non-alcohol",
+  "reason": "serving has no weight (1.0 WU)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Strawberry & Lime, Kopparberg",
+  "reason": "serving has no weight (1.0 WVICGSUIS)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Sunbrew Alcohol Free Beer, Corona",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Super Dry 0.0% Alcohol-Free",
+  "reason": "serving has no weight (1.0 WVICGSUIS)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Tiramisu without Alcohol",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Turkish Raki Alcohol",
+  "reason": "energy 251 does not match macros 2"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vanilla extract, imitation",
+  "reason": "serving has no weight (1.0 WU)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Vanilla extract, imitation, alcohol",
+  "reason": "duplicate of a more trusted row"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Whiskey, 43% Alcohol, Oban",
+  "reason": "energy 331 does not match macros 0"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Wine, non-alcoholic",
+  "reason": "missing a macro"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "with Turmeric & Oak, Flying Embers",
+  "reason": "unreadable name"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "ZBiotics Pre-Alcohol Probiotic Drink",
+  "reason": "serving has no weight (1.0 WU)"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Zero Alcohol Coffee Liqueur, Vanilla",
+  "reason": "carbs 155 per 100 g is out of range"
+ },
+ {
+  "file": "IGNYT_master_nutrition.csv",
+  "name": "Zerozecco Alcohol Free Sparkling",
+  "reason": "serving has no weight (1.0 WVICGSUIS)"
+ }
+]

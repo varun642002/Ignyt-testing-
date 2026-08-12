@@ -33,7 +33,7 @@
 .swipe-dup-btn { position:absolute; top:0; left:0; bottom:0; width:84px; z-index:0; border:none; cursor:pointer;
   background:var(--rh-blue,#2563EB); color:#fff; display:flex; align-items:center; justify-content:center;
   border-radius:var(--radius-sm) 0 0 10px; }
-.swipe-dup-btn:active { background:#1D4ED8; }
+.swipe-dup-btn:active { background:#2563EB; }
 
 .set-num { width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:var(--radius-sm); font-size:15px; }
 .set-prev { text-align:center; font-size:11px; padding:0 2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -85,7 +85,9 @@
    it cluttered the bottom of the screen -- Duration/Sets/Volume already show in the in-flow
    .live-stats-bar up top). Just a single fixed circular Finish button, bottom-right, clear of
    the app's own bottom-nav. Only ever rendered while a session is active (see the template). */
-.wk-light--session { padding-bottom:112px; } /* 100px base (bottom-nav) + clearance for the FAB */
+/* Nav clearance plus 16px for the FAB that sits above it. Was a flat 112px — the same iPhone
+   bug as everywhere else, with 100px of it standing in for the nav. */
+.wk-light--session { padding-bottom:calc(var(--main-pad-bottom) + 16px); }
 .wk-finish-fab {
   position:fixed; right:16px; bottom:calc(var(--nav-height,72px) + 14px); z-index:39;
   width:56px; height:56px; border-radius:50%; border:none; cursor:pointer;
@@ -104,8 +106,9 @@
 
 .wk-light {
   background:var(--rh-bg); color:var(--rh-text);
-  margin:0 -16px -100px; padding:12px 16px 100px;
-  min-height:calc(100% + 100px);
+  /* Must equal main's bottom padding — see --main-pad-bottom in tokens.css. */
+  margin:0 -16px calc(-1 * var(--main-pad-bottom)); padding:12px 16px var(--main-pad-bottom);
+  min-height:calc(100% + var(--main-pad-bottom));
   font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
 }
 
@@ -139,7 +142,7 @@
 .wk-light .cat-chip { flex:none; background:var(--rh-card); color:var(--rh-muted); border:1px solid var(--rh-border); }
 .wk-light .cat-chip.active { background:var(--rh-blue); color:#fff; border-color:var(--rh-blue); }
 
-.wk-sort-select { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-sm); padding:6px 10px; font-size:12px; font-weight:700; color:var(--rh-text); }
+.wk-sort-select { background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-sm); padding:6px 10px; font-size:16px; font-weight:700; color:var(--rh-text); }
 
 /* ---------- Routine cards ---------- */
 .wk-empty { color:var(--rh-muted); font-size:13px; text-align:center; padding:20px 16px; }
@@ -195,7 +198,7 @@
 .wk-session__notes-wrap { display:flex; align-items:flex-start; gap:8px; background:var(--rh-card); border:1px solid var(--rh-border);
   border-radius:var(--radius-md); padding:12px 14px; margin:8px 0 4px; color:var(--rh-blue); }
 .wk-session__notes-wrap textarea { flex:1; min-width:0; background:none; border:none; outline:none; resize:vertical; min-height:38px;
-  font-size:13px; color:var(--rh-text); font-family:inherit; }
+  font-size:16px; color:var(--rh-text); font-family:inherit; }
 .wk-session__notes-wrap textarea::placeholder { color:var(--rh-muted); }
 .wk-session__stat-icon { display:inline-flex; vertical-align:middle; margin-right:5px; color:var(--rh-blue); }
 
@@ -312,7 +315,7 @@
 .rt-input {
   width:100%; min-width:0; background:var(--surface-alt); border:none;
   border-radius:var(--radius-xs); padding:8px 4px; text-align:center;
-  font-size:13px; color:var(--color-text-primary);
+  font-size:16px; color:var(--color-text-primary);
   font-variant-numeric:tabular-nums;
 }
 .rt-input:focus { outline:2px solid var(--color-interactive); outline-offset:1px; }
@@ -338,7 +341,7 @@
 .rt-unit { font-size:11px; color:var(--color-text-secondary); }
 .rt-textarea {
   width:100%; margin-top:5px; background:var(--surface-alt); border:none;
-  border-radius:var(--radius-xs-plus); padding:9px; font-size:13px; font-family:inherit;
+  border-radius:var(--radius-xs-plus); padding:9px; font-size:16px; font-family:inherit;
   color:var(--color-text-primary); line-height:1.45; resize:vertical;
 }
 .rt-textarea:focus { outline:2px solid var(--color-interactive); outline-offset:1px; }
@@ -622,4 +625,131 @@
   background:rgba(245,187,69,.10); border-left:2px solid var(--rh-amber, #B3800C);
   border-radius:var(--radius-xs, 6px);
   padding:8px 10px; margin:0 0 10px;
+}
+
+/* Muscle chips and the PR flag on a routine card. Both are real data — muscles from the app's
+   own getMuscle(), PRs counted from state.prs by session id. Estimated calories and a
+   difficulty rating are deliberately absent; see the note in js/pages/workout.js. */
+.wk-routine-card__muscles { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.wk-muscle {
+  font-size: 10.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase;
+  padding: 3px 7px; border-radius: 999px;
+  /* Tinted from the routine's own category colour, so the chips belong to the card rather than
+     introducing a sixth palette. */
+  color: var(--m, var(--rh-muted)); background: color-mix(in srgb, var(--m, #64748B) 13%, transparent);
+}
+/* A PR is the one thing on this card worth interrupting for, so it is the only item that
+   carries a colour of its own rather than the muted meta grey. */
+.wk-pr-flag { color: #f59e0b; font-weight: 800; }
+
+/* =========================================================
+   ROUTINE FOLDERS
+
+   A folder is a header over a slice of the same list, so it is styled as a header — not as
+   another card. Nesting cards inside cards is what makes a grouped list look heavier than the
+   flat one it replaced, and the whole point of grouping is to make it feel lighter.
+========================================================= */
+.wk-routine-tools { display:flex; align-items:center; gap:8px; }
+.wk-folder-add {
+  display:grid; place-items:center; width:32px; height:32px; flex:none;
+  border:1px solid var(--rh-border); border-radius:var(--radius-sm);
+  background:var(--rh-card); color:var(--rh-blue); cursor:pointer;
+}
+
+.wk-folder { margin-bottom:6px; }
+.wk-folder__head { display:flex; align-items:center; gap:6px; }
+.wk-folder__toggle {
+  flex:1; min-width:0; display:flex; align-items:center; gap:8px;
+  padding:11px 2px; border:0; background:none; color:var(--rh-text);
+  font:inherit; font-size:15px; font-weight:700; text-align:left; cursor:pointer;
+}
+/* The caret rotates rather than swapping glyph — one element, and the motion says "this opens"
+   in a way a changed character does not. */
+.wk-folder__caret {
+  flex:none; font-size:10px; color:var(--rh-muted);
+  transition:transform .18s cubic-bezier(.32,.72,0,1);
+}
+.wk-folder__caret.is-open { transform:rotate(90deg); }
+.wk-folder__count { font-size:13px; font-weight:600; color:var(--rh-muted); }
+.wk-folder__menu {
+  flex:none; padding:6px 10px; border:0; background:none;
+  color:var(--rh-muted); font-size:15px; letter-spacing:1px; cursor:pointer;
+}
+.wk-folder__body { padding-left:2px; }
+.wk-folder__empty { font-size:12.5px; padding:12px 14px; }
+
+.wk-folder__actions { display:flex; gap:8px; padding:0 2px 10px; }
+.wk-folder__actions button {
+  padding:8px 14px; border:1px solid var(--rh-border); border-radius:var(--radius-sm);
+  background:var(--rh-card); color:var(--rh-text);
+  font:inherit; font-size:13px; font-weight:600; cursor:pointer;
+}
+.wk-folder__actions .is-danger { color:var(--rh-red,#DC2626); border-color:rgba(220,38,38,.35); }
+
+/* The move picker, opened from a routine's own menu. Inline under the card rather than a
+   sheet: it is a short list and the card it belongs to should stay visible while choosing. */
+.wk-move {
+  display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+  padding:10px 12px; margin:0 0 8px;
+  border:1px solid var(--rh-border); border-radius:var(--radius-sm);
+  background:var(--rh-bg);
+}
+.wk-move__title { width:100%; font-size:11px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.05em; color:var(--rh-muted); margin-bottom:2px; }
+.wk-move button {
+  padding:7px 12px; border:1px solid var(--rh-border); border-radius:999px;
+  background:var(--rh-card); color:var(--rh-text);
+  font:inherit; font-size:12.5px; font-weight:600; cursor:pointer;
+}
+.wk-move button.is-on { background:var(--rh-blue); border-color:var(--rh-blue); color:#fff; }
+.wk-move__none { width:100%; font-size:12px; color:var(--rh-muted); }
+
+/* ---- SET TYPE PICKER -------------------------------------------------------------------
+   Rendered at session level, not inside the set row: .set-row-wrap is overflow:hidden for the
+   swipe-to-delete reveal and .set-row is transformed to perform it, so a menu anchored inside
+   the row would be clipped by the first and mis-anchored by the second (position:fixed resolves
+   against a transformed ancestor, not the viewport). A sheet avoids both, and on a phone it is
+   the easier target anyway — four options at thumb height beat a popover over a 36px cell. */
+.set-type-backdrop { position:fixed; inset:0; z-index:80; background:rgba(0,0,0,.45); }
+
+.set-type-sheet {
+  position:fixed; left:50%; bottom:calc(16px + env(safe-area-inset-bottom)); transform:translateX(-50%);
+  z-index:81; width:min(420px, calc(100vw - 24px));
+  background:var(--surface-alt); border:1px solid var(--border);
+  border-radius:16px; padding:8px; box-shadow:0 12px 40px rgba(0,0,0,.45);
+}
+.set-type-sheet__title {
+  padding:8px 12px 10px; font-size:12px; font-weight:700; letter-spacing:.03em;
+  text-transform:uppercase; color:var(--muted);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.set-type-item {
+  display:flex; align-items:center; gap:12px; width:100%;
+  background:none; border:none; color:var(--text);
+  font:inherit; font-size:14px; font-weight:600;
+  padding:13px 12px; border-radius:10px; cursor:pointer; text-align:left;
+}
+.set-type-item:active { background:var(--surface); }
+.set-type-item.is-on { background:var(--surface); }
+.set-type-item__badge {
+  width:26px; flex:0 0 26px; text-align:center;
+  font-weight:800; font-size:15px; font-variant-numeric:tabular-nums;
+}
+.set-type-item__label { flex:1; min-width:0; }
+.set-type-item__tick { display:flex; color:var(--rh-blue, #2563EB); }
+
+/* The session shell runs the light "premium reference" look under .wk-light, same fork the
+   ⋮ menu already makes. */
+.wk-light .set-type-sheet { background:var(--rh-card); border-color:var(--rh-border); box-shadow:0 12px 40px rgba(15,23,42,.18); }
+.wk-light .set-type-sheet__title { color:var(--rh-muted); }
+.wk-light .set-type-item { color:var(--rh-text); }
+.wk-light .set-type-item:active,
+.wk-light .set-type-item.is-on { background:var(--rh-bg); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .set-type-sheet { animation:set-type-in .16s ease-out; }
+}
+@keyframes set-type-in {
+  from { opacity:0; transform:translateX(-50%) translateY(8px); }
+  to   { opacity:1; transform:translateX(-50%) translateY(0); }
 }

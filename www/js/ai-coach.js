@@ -148,7 +148,7 @@
     if (tg && prot != null) lines.push("Protein " + prot + "g of your " + Math.round(tg.protein) + "g target.");
     lines.push("Recovery is " + rec.score + "% (" + rec.label + ").");
     if (g) lines.push("Goal: " + (window.IgnytGoals.GOAL_TYPES.filter(function (t) { return t.id === g.type; })[0] || {}).label + ".");
-    return '<section class="premium-card premium-card--elevated" style="margin-bottom:12px;"><div style="font-size:20px;font-weight:900;">' + greeting() + (S().profile && S().profile.name ? ", " + esc(S().profile.name) : "") + " 👋</div>" +
+    return '<section class="premium-card premium-card--elevated" style="margin-bottom:12px;"><div style="font-size:20px;font-weight:900;">' + greeting() + (S().profile && S().profile.name ? ", " + esc(S().profile.name) : "") + "</div>" +
       '<div style="margin-top:8px;color:var(--color-text-secondary);line-height:1.6;font-size:14px;">' + lines.map(esc).join("<br>") + '</div></section>';
   }
 

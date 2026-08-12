@@ -15,6 +15,13 @@ class HealthResponse(BaseModel):
 class ReadyCheck(BaseModel):
     database: bool
     auth_configured: bool
+    # WHY the database is unreachable, as one of a fixed set of words — never the driver's
+    # message. A raw exception string carries the host, the user and sometimes the database
+    # name, and /ready is public so uptime checks can reach it. These categories are enough to
+    # tell a DNS mistake from a password mistake from a TLS mistake, which is the entire
+    # question when a deploy comes up with a green /health and a dead database, and they say
+    # nothing an attacker can use. Absent when the database is fine.
+    database_error: str | None = None
 
 
 class ReadyResponse(BaseModel):

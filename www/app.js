@@ -10,7 +10,13 @@ const SCHEMA_VERSION = 1; // bump when localStorage shape changes; add a migrate
 /* ---------- Storage ---------- */
 
 const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_profile","hx_nutrition","hx_bodylog","hx_custom_exercises",
-  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history","hx_deleted_workouts","hx_plan","hx_injuries"];
+  "hx_workout_log","hx_food_log","hx_routines","hx_calc","hx_settings","hx_rest_duration","hx_active_session","hx_prs","hx_onboarding_complete","hx_onboarding_wizard","hx_achievements","hx_favorite_foods","hx_favorite_exercises","hx_water_log","hx_race_log","hx_race_active","hx_tab","hx_schema_version","hx_saved_exercises","hx_calc_history","hx_deleted_workouts","hx_plan","hx_injuries","hx_routine_folders",
+  /* The red-flag acknowledgement. Listed so "Clear all data" and the sign-out wipe
+     actually remove it — an unregistered key would leave a record of reported symptoms
+     behind on a device the user believed they had cleared. It is included in backup for
+     the same consistency; restoring a stale one is harmless because it expires after
+     ACK_DAYS regardless of when it was written. */
+  "hx_red_flag_ack"];
 
 /* The subset of the above whose values are arrays of RECORD OBJECTS — the ones the UI reads
    fields off, and so the ones a null element inside can crash. Used by LS.records() on load
@@ -20,7 +26,7 @@ const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_pro
    (exercise names), and hx_completed is an object map, not an array. */
 const RECORD_ARRAY_KEYS = ["hx_bodylog","hx_custom_exercises","hx_workout_log","hx_food_log",
   "hx_routines","hx_prs","hx_achievements","hx_favorite_foods","hx_water_log","hx_race_log",
-  "hx_calc_history","hx_deleted_workouts"];
+  "hx_calc_history","hx_deleted_workouts","hx_routine_folders"];
 
 // Single source of truth for every trackable body measurement beyond weight -- the entry
 // form, CSV export/import, and the chart metric switcher all read this list instead of each
@@ -138,12 +144,15 @@ const LIBRARY = {
     ["Chest Supported T Bar Row","4x8","reps","Upper Back"],["Clean","4x8","reps","Full Body"],
     ["Clean and Jerk","4x8","reps","Full Body"],["Clean and Press","4x8","reps","Full Body"],
     ["Clean Pull","4x8","reps","Full Body"],["Clean to Overhead","4x6","reps","Full Body"],
-    ["Deadlift (Barbell)","4x8","reps","Glutes"],["Deadlift (Trap bar)","4x8","reps","Glutes"],
+    ["Deadlift (Barbell)","4x8","reps","Glutes"],["Deadlift (Trap Bar)","4x8","reps","Glutes"],
     ["Decline Bench Press (Barbell)","4x8","reps","Chest"],["Deficit Deadlift","4x4","reps","Glutes"],
     ["EZ Bar Biceps Curl","3x12","reps","Biceps"],["Fat Grip Hold","3x30s","time","Forearms"],
     ["Feet Up Bench Press (Barbell)","4x8","reps","Chest"],["Floor Press (Barbell)","4x8","reps","Chest"],
-    ["Front Raise (Barbell)","3x12","reps","Shoulders"],["Glute Bridge (Barbell)","4x8","reps","Glutes"],
+    ["Front Raise (Barbell)","3x12","reps","Shoulders"],["Front Squat","4x8","reps","Quadriceps"],
+    ["Glute Bridge (Barbell)","4x8","reps","Glutes"],
     ["Good Morning (Barbell)","4x8","reps","Hamstrings"],["Hang Clean","4x8","reps","Full Body"],
+    ["Hang Power Clean","4x3","reps","Full Body"],
+    ["Hang Power Snatch","4x3","reps","Full Body"],
     ["Hang Snatch","4x8","reps","Full Body"],["Hip Thrust (Barbell)","4x8","reps","Glutes"],
     ["Incline Bench Press (Barbell)","4x8","reps","Chest"],["Jefferson Curl","3x8","reps","Lower Back"],
     ["Jefferson Deadlift","4x6","reps","Glutes"],["JM Press (Barbell)","3x12","reps","Triceps"],
@@ -192,7 +201,8 @@ const LIBRARY = {
     ["Incline Chest Fly (Dumbbell)","4x8","reps","Chest"],["Jefferson Curl (Dumbbell)","3x8","reps","Lower Back"],
     ["Kroc Row","3x15","reps","Upper Back"],["Lateral Raise (Dumbbell)","3x12","reps","Shoulders"],
     ["Lunge (Dumbbell)","4x8","reps","Quadriceps"],["Lunge to Press","4x10","reps","Full Body"],
-    ["Man Maker","4x8","reps","Full Body"],["Overhead Dumbbell Lunge","4x8","reps","Quadriceps"],
+    ["Man Maker","4x8","reps","Full Body"],["One Arm Row (Dumbbell)","4x10","reps","Upper Back"],
+    ["Overhead Dumbbell Lunge","4x8","reps","Quadriceps"],
     ["Overhead Press (Dumbbell)","3x12","reps","Shoulders"],["Pinwheel Curl (Dumbbell)","3x12","reps","Biceps"],
     ["Preacher Curl (Dumbbell)","3x12","reps","Biceps"],["Pronation Supination","3x15","reps","Forearms"],
     ["Prone External Rotation","3x15","reps","Shoulders"],["Pullover (Dumbbell)","4x8","reps","Lats"],
@@ -229,8 +239,8 @@ const LIBRARY = {
     ["Cable Fly Crossovers","4x8","reps","Chest"],["Cable Kickback","4x8","reps","Glutes"],
     ["Cable Pull Through","4x8","reps","Glutes"],["Cable Pullover","3x12","reps","Lats"],
     ["Cable Rear Delt Row","3x15","reps","Upper Back"],["Cable Reverse Woodchop","3x12","reps","Abdominals"],
-    ["Cable Rope Hammer Curl","3x15","reps","Biceps"],["Cable Twist (Down to up)","3x15","reps","Abdominals"],
-    ["Cable Twist (Up to down)","3x15","reps","Abdominals"],["Cable Woodchop","3x12","reps","Abdominals"],
+    ["Cable Rope Hammer Curl","3x15","reps","Biceps"],["Cable Twist (Down to Up)","3x15","reps","Abdominals"],
+    ["Cable Twist (Up to Down)","3x15","reps","Abdominals"],["Cable Woodchop","3x12","reps","Abdominals"],
     ["Calf Extension (Machine)","3x15","reps","Calves"],["Calf Press (Machine)","3x15","reps","Calves"],
     ["Chest Fly (Machine)","4x8","reps","Chest"],["Chest Press (Machine)","4x8","reps","Chest"],
     ["Crunch (Machine)","3x400m","distance","Abdominals"],["Deadlift (Smith Machine)","4x8","reps","Glutes"],
@@ -244,13 +254,16 @@ const LIBRARY = {
     ["Hip Thrust (Machine)","4x8","reps","Glutes"],["Hip Thrust (Smith Machine)","4x8","reps","Glutes"],
     ["Incline Bench Press (Smith Machine)","4x8","reps","Chest"],["Incline Chest Press (Machine)","4x8","reps","Chest"],
     ["Internal Rotation (Cable)","3x15","reps","Shoulders"],["Iso-Lateral Chest Press (Machine)","4x8","reps","Chest"],
-    ["Iso-Lateral High Row (Machine)","4x8","reps","Lats"],["Iso-Lateral Row (Machine)","4x8","reps","Upper Back"],
-    ["Kneeling Cable Crunch","3x15","reps","Abdominals"],["Lat Pulldown - Close Grip (Cable)","4x8","reps","Lats"],
+    ["Iso-Lateral High Row (Machine)","4x8","reps","Lats"],["Iso-Lateral Low Row (Machine)","4x8","reps","Upper Back"],
+    ["Iso-Lateral Row (Machine)","4x8","reps","Upper Back"],
+    ["Kneeling Cable Crunch","3x15","reps","Abdominals"],
+    ["Lat Pulldown - Close Grip (Cable)","4x8","reps","Lats"],
     ["Lat Pulldown (Cable)","4x8","reps","Lats"],["Lat Pulldown (Machine)","4x8","reps","Lats"],
     ["Lateral Raise (Cable)","3x12","reps","Shoulders"],["Lateral Raise (Machine)","3x12","reps","Shoulders"],
     ["Leaning Cable Lateral Raise","3x15","reps","Shoulders"],["Leg Extension (Machine)","4x8","reps","Quadriceps"],
     ["Leg Press (Machine)","4x8","reps","Quadriceps"],["Leg Press Calf Raise","4x15","reps","Calves"],
     ["Leg Press Horizontal (Machine)","4x8","reps","Quadriceps"],["Low Cable Fly Crossovers","4x8","reps","Chest"],
+    ["Low Row (Cable)","4x8","reps","Upper Back"],
     ["Lying Leg Curl (Machine)","4x8","reps","Hamstrings"],["Nautilus Pullover","3x12","reps","Lats"],
     ["Neck Harness Extension","3x15","reps","Neck"],["Overhead Curl (Cable)","3x12","reps","Biceps"],
     ["Overhead Press (Smith Machine)","3x12","reps","Shoulders"],["Overhead Triceps Extension (Cable)","3x12","reps","Triceps"],
@@ -275,11 +288,12 @@ const LIBRARY = {
     ["Smith Machine Calf Raise","4x15","reps","Calves"],["Squat (Machine)","4x8","reps","Quadriceps"],
     ["Squat (Smith Machine)","4x8","reps","Quadriceps"],["Stair Machine (Floors)","3x400m","distance","Cardio"],
     ["Stair Machine (Steps)","3x400m","distance","Cardio"],["Standing Cable Glute Kickbacks","4x8","reps","Glutes"],
-    ["Standing Calf Raise (Machine)","3x15","reps","Calves"],["Standing Calf Raise (Smith)","3x15","reps","Calves"],
-    ["Standing Leg Curl","3x12","reps","Hamstrings"],["Standing Y Raise (Cable)","3x12","reps","Shoulders"],
+    ["Standing Calf Raise (Machine)","3x15","reps","Calves"],["Standing Calf Raise (Smith)","3x15","reps","Calves"],["Standing Leg Curl (Machine)","4x8","reps","Hamstrings"],
+    ["Standing Y Raise (Cable)","3x12","reps","Shoulders"],
     ["Straight Arm Lat Pulldown (Cable)","4x8","reps","Lats"],["Terminal Knee Extension","3x15","reps","Quadriceps"],
     ["Triceps Extension (Cable)","3x12","reps","Triceps"],["Triceps Extension (Machine)","3x12","reps","Triceps"],
-    ["Triceps Kickback (Cable)","3x12","reps","Triceps"],["Triceps Pushdown","3x12","reps","Triceps"],
+    ["Triceps Kickback (Cable)","3x12","reps","Triceps"],["Triceps Pressdown","3x12","reps","Triceps"],
+    ["Triceps Pushdown","3x12","reps","Triceps"],
     ["Triceps Rope Pushdown","3x12","reps","Triceps"],["Upright Row (Cable)","3x12","reps","Shoulders"],
     ["Vertical Traction (Machine)","4x8","reps","Lats"]
   ],
@@ -313,8 +327,10 @@ const LIBRARY = {
     ["Band Dislocate Stretch","2x45s","time","Mobility"],["Band Face Pull","3x15","reps","Upper Back"],
     ["Band Good Morning","3x15","reps","Hamstrings"],["Band Hip Thrust","3x20","reps","Glutes"],
     ["Band Monster Walk","3x20m","distance","Abductors"],["Band Pull Apart Overhead","3x15","reps","Shoulders"],
-    ["Band Pullaparts","3x12","reps","Shoulders"],["Band Shoulder Press","3x15","reps","Shoulders"],
-    ["Band Tricep Extension","3x15","reps","Triceps"],["Banded Ankle Distraction Stretch","2x60s","time","Mobility"],
+    ["Band Pullaparts","3x12","reps","Shoulders"],["Band Romanian Deadlift","3x12","reps","Hamstrings"],
+    ["Band Shoulder Press","3x15","reps","Shoulders"],
+    ["Band Tricep Extension","3x15","reps","Triceps"],["Band Triceps Pushdown","3x15","reps","Triceps"],
+    ["Banded Ankle Distraction Stretch","2x60s","time","Mobility"],
     ["Banded Hip Distraction Stretch","2x60s","time","Mobility"],["Banded Shoulder Distraction Stretch","2x60s","time","Mobility"],
     ["Bar Hang Hold","3x45s","time","Forearms"],["Bear Crawl","3x45s","time","Full Body"],
     ["Bear Crawl Hold","3x30s","time","Full Body"],["Beast Crawl","3x20","reps","Full Body"],
@@ -348,7 +364,9 @@ const LIBRARY = {
     ["Cobra Pose Stretch","2x45s","time","Mobility"],["Codman Circle","3x20","reps","Shoulders"],
     ["Commando Pull Up","3x8","reps","Lats"],["Concentration Curl","3x12","reps","Biceps"],
     ["Continuous Box Jump","4x8","reps","Quadriceps"],["Copenhagen Adduction","3x10","reps","Adductors"],
-    ["Copenhagen Plank","3x30s","time","Adductors"],["Couch Stretch","2x60s","time","Mobility"],
+    ["Copenhagen Plank","3x30s","time","Adductors"],["Cossack Squat","3x8","reps","Adductors"],
+    ["Couch Stretch","2x60s","time","Mobility"],
+    ["Countermovement Jump","3x6","reps","Quadriceps"],
     ["Cow Face Pose","2x45s","time","Mobility"],["Crab Reach","3x10","reps","Shoulders"],
     ["Cross Body Hammer Curl","3x12","reps","Biceps"],["Cross Body Mountain Climber","3x30","reps","Abdominals"],
     ["Cross Body Shoulder Stretch","2x45s","time","Mobility"],["Crow Pose","3x20s","time","Shoulders"],
@@ -361,15 +379,15 @@ const LIBRARY = {
     ["Depth Drop to Broad Jump","4x5","reps","Glutes"],["Depth Jump","4x5","reps","Quadriceps"],
     ["Diamond Push Up","3x12","reps","Triceps"],["Donkey Kick","3x15","reps","Glutes"],
     ["Doorway Chest Stretch","2x45s","time","Mobility"],["Doorway Pec Stretch Rehab","2x45s","time","Mobility"],
-    ["Doorway Row","3x12","reps","Upper Back"],["Downward-Facing Dog Stretch","2x45s","time","Mobility"],
+    ["Doorway Row","3x12","reps","Upper Back"],
     ["Drag Curl","3x12","reps","Biceps"],["Dragon Flag","3x15","reps","Abdominals"],
     ["Dragonfly","3x15","reps","Abdominals"],["Drop Push Up","4x6","reps","Chest"],
     ["Duck Walk","3x20m","distance","Quadriceps"],["Eagle Pose","2x30s","time","Mobility"],
     ["Elbow Lever Hold","3x15s","time","Abdominals"],["Elbow to Knee","3x15","reps","Abdominals"],
     ["Explosive Pull Up","4x5","reps","Lats"],["Explosive Push Up","3x8","reps","Chest"],
-    ["Face Pull","3x12","reps","Shoulders"],["Fire Hydrant","3x15","reps","Abductors"],
+    ["Face Pull","3x12","reps","Shoulders"],
     ["Fire Hydrant Rehab","3x15","reps","Abductors"],["Fire Hydrants","4x8","reps","Glutes"],
-    ["Floor Triceps Dip","3x12","reps","Triceps"],["Flutter Kick","3x30","reps","Abdominals"],
+    ["Floor Triceps Dip","3x12","reps","Triceps"],
     ["Flutter Kicks","3x45s","time","Abdominals"],["Foam Rolling Adductors","2x60s","time","Mobility"],
     ["Foam Rolling Calves","2x60s","time","Mobility"],["Foam Rolling Glutes","2x60s","time","Mobility"],
     ["Foam Rolling Hamstrings","2x60s","time","Mobility"],["Foam Rolling IT Band","2x60s","time","Mobility"],
@@ -379,8 +397,7 @@ const LIBRARY = {
     ["Frog Jumps","4x8","reps","Quadriceps"],["Frog Pump","3x20","reps","Glutes"],
     ["Frog Stand Hold","3x20s","time","Shoulders"],["Frog Stretch","2x60s","time","Mobility"],
     ["Front Lever Hold","3x45s","time","Full Body"],["Front Lever Raise","4x8","reps","Full Body"],
-    ["Front Raise (Band)","3x12","reps","Shoulders"],["Front Raise (Suspension)","3x12","reps","Shoulders"],
-    ["Front Squat","4x8","reps","Quadriceps"],["Full Squat","4x8","reps","Quadriceps"],
+    ["Front Raise (Band)","3x12","reps","Shoulders"],["Front Raise (Suspension)","3x12","reps","Shoulders"],["Full Squat","4x8","reps","Quadriceps"],
     ["Glute Bridge","4x8","reps","Glutes"],["Glute Bridge Hold","3x45s","time","Glutes"],
     ["Glute Bridge March Rehab","3x12","reps","Glutes"],["Glute Bridge Pulse","3x25","reps","Glutes"],
     ["Glute Ham Raise","4x8","reps","Hamstrings"],["Glute Kickback on Floor","4x8","reps","Glutes"],
@@ -391,18 +408,17 @@ const LIBRARY = {
     ["Handstand Push Up Kipping","4x8","reps","Shoulders"],["Handstand Walk","4x10m","distance","Shoulders"],
     ["Hanging Knee Raise","3x15","reps","Abdominals"],["Hanging Leg Raise","3x15","reps","Abdominals"],
     ["Hanging Windshield Wiper","3x8","reps","Abdominals"],["Happy Baby Pose","2x60s","time","Mobility"],
-    ["Headstand Hold","3x45s","time","Shoulders"],["Heel Slide","3x15","reps","Quadriceps"],
-    ["Heel Tap","3x20","reps","Abdominals"],["Heel Taps","3x15","reps","Abdominals"],
+    ["Headstand Hold","3x45s","time","Shoulders"],["Heel Slide","3x15","reps","Quadriceps"],["Heel Taps","3x15","reps","Abdominals"],
     ["Heel Walk","3x20m","distance","Calves"],["High Knee Skips","4x8","reps","Full Body"],
     ["High Knees","3x45s","time","Full Body"],["Hindu Push Up","3x10","reps","Shoulders"],
     ["Hip Airplane","3x8","reps","Glutes"],["Hip Circles Stretch","2x30s","time","Mobility"],
     ["Hip Flexor Stretch","2x45s","time","Mobility"],["Hip Thrust","4x8","reps","Glutes"],
+    ["Hollow Body Hold","3x30","time","Abdominals"],
     ["Hollow Rock","3x15","reps","Abdominals"],["Hub Lift","3x8","reps","Forearms"],
     ["Human Flag Hold","4x10s","time","Abdominals"],["Hurdle Hop","4x6","reps","Calves"],
     ["Impossible Dip","3x5","reps","Chest"],["Inchworm","3x10","reps","Full Body"],
     ["Incline Push Ups","4x8","reps","Chest"],["Inverted Row","4x8","reps","Upper Back"],
-    ["Inverted Row Feet Elevated","3x12","reps","Upper Back"],["Iron Cross Hold","4x8s","time","Chest"],
-    ["Iso-Lateral Low Row","4x8","reps","Upper Back"],["Isometric Lunge Hold","3x45s","time","Quadriceps"],
+    ["Inverted Row Feet Elevated","3x12","reps","Upper Back"],["Iron Cross Hold","4x8s","time","Chest"],["Isometric Lunge Hold","3x45s","time","Quadriceps"],
     ["Isometric Push Up Hold","3x30s","time","Chest"],["Isometric Shoulder Abduction","3x20s","time","Shoulders"],
     ["Isometric Shoulder External Rotation","3x20s","time","Shoulders"],["Isometric Squat Hold","3x45s","time","Quadriceps"],
     ["Jack Knife (Suspension)","3x15","reps","Abdominals"],["Jackknife Sit Up","3x15","reps","Abdominals"],
@@ -410,19 +426,20 @@ const LIBRARY = {
     ["Jump Shrug","4x8","reps","Full Body"],["Jump Squat","4x8","reps","Quadriceps"],
     ["Jumping Jack","4x8","reps","Full Body"],["Jumping Lunge","4x8","reps","Quadriceps"],
     ["Kipping Pull Up","4x8","reps","Lats"],["Kipping Toes to Bar","4x10","reps","Abdominals"],
-    ["Knee Hug Stretch","2x30s","time","Mobility"],["Knee Raise Parallel Bars","3x15","reps","Abdominals"],
-    ["Kneeling Pulldown (band)","4x8","reps","Lats"],["Kneeling Push Up","4x8","reps","Chest"],
+    ["Knee Hug Stretch","2x30s","time","Mobility"],["Knee Push Up","3x12","reps","Chest"],
+    ["Knee Raise Parallel Bars","3x15","reps","Abdominals"],
+    ["Kneeling Pulldown (Band)","4x8","reps","Lats"],["Kneeling Push Up","4x8","reps","Chest"],
     ["Korean Dip","3x8","reps","Triceps"],["L-Sit Hold","3x45s","time","Abdominals"],
-    ["Lacrosse Ball Foot Release Stretch","2x60s","time","Mobility"],["Lacrosse Ball Glute Release Stretch","2x60s","time","Mobility"],
-    ["Lat closed grip pull down","4x8","reps","Lats"],["Lat Pulldown (Band)","4x8","reps","Lats"],
+    ["Lacrosse Ball Foot Release Stretch","2x60s","time","Mobility"],["Lacrosse Ball Glute Release Stretch","2x60s","time","Mobility"],["Lat Pulldown (Band)","4x8","reps","Lats"],
     ["Lat Stretch on Rack","2x45s","time","Mobility"],["Lateral Band Walks","3x400m","distance","Glutes"],
     ["Lateral Bound","4x8","reps","Glutes"],["Lateral Box Jump","4x8","reps","Quadriceps"],
+    ["Lateral Hops","3x12","reps","Calves"],
     ["Lateral Leg Raises","4x8","reps","Glutes"],["Lateral Lunge","4x8","reps","Quadriceps"],
     ["Lateral Raise (Band)","3x12","reps","Shoulders"],["Lateral Skater Bound","4x10","reps","Glutes"],
     ["Lateral Squat","4x8","reps","Quadriceps"],["Leg Raise Parallel Bars","3x15","reps","Abdominals"],
     ["Leg Swings Stretch","2x30s","time","Mobility"],["Levator Scapulae Stretch","2x30s","time","Mobility"],
     ["Lizard Pose Stretch","2x60s","time","Mobility"],["Loaded Beast Hold","3x30s","time","Shoulders"],
-    ["Low Lunge Stretch","2x45s","time","Mobility"],["Low row","4x8","reps","Upper Back"],
+    ["Low Lunge Stretch","2x45s","time","Mobility"],
     ["Low Row (Suspension)","4x8","reps","Upper Back"],["Lumbar Rotation Stretch","2x45s","time","Mobility"],
     ["Lunge","4x8","reps","Quadriceps"],["Lying Glute Stretch","2x45s","time","Mobility"],
     ["Lying Knee Raise","3x15","reps","Abdominals"],["Lying Leg Raise","3x15","reps","Abdominals"],
@@ -500,7 +517,7 @@ const LIBRARY = {
     ["Standing Ab Wheel","3x6","reps","Abdominals"],["Standing Calf Raise","3x15","reps","Calves"],
     ["Standing Calf Raise (Bodyweight)","3x20","reps","Calves"],["Standing Extension","3x12","reps","Lower Back"],
     ["Standing Forward Fold Stretch","2x45s","time","Mobility"],["Standing Hip CAR","3x8","reps","Glutes"],
-    ["Standing IT Band Stretch","2x45s","time","Mobility"],["Standing Leg Curls","4x8","reps","Hamstrings"],
+    ["Standing IT Band Stretch","2x45s","time","Mobility"],
     ["Standing Long Jump Test","3x3","reps","Glutes"],["Standing Quad Stretch","2x45s","time","Mobility"],
     ["Standing Side Bend Stretch","2x30s","time","Mobility"],["Star Jump","3x20","reps","Full Body"],
     ["Step Down Eccentric","3x10","reps","Quadriceps"],["Step Up","4x8","reps","Quadriceps"],
@@ -522,7 +539,7 @@ const LIBRARY = {
     ["Towel Stretch Shoulder","2x45s","time","Mobility"],["Tree Pose","2x45s","time","Mobility"],
     ["Triangle Pose","2x45s","time","Mobility"],["Triceps Dip","3x12","reps","Triceps"],
     ["Triceps Dip (Assisted)","3x12","reps","Triceps"],["Triceps Dip (Weighted)","3x12","reps","Triceps"],
-    ["Triceps Extension (Suspension)","3x12","reps","Triceps"],["Triceps Pressdown","3x12","reps","Triceps"],
+    ["Triceps Extension (Suspension)","3x12","reps","Triceps"],
     ["Triple Jump","4x4","reps","Glutes"],["Tuck Front Lever Hold","4x20s","time","Lats"],
     ["Tuck Jump","4x8","reps","Quadriceps"],["Tuck Planche Hold","4x15s","time","Shoulders"],
     ["Two Finger Hang Hold","3x15s","time","Forearms"],["Tyler Twist","3x15","reps","Forearms"],
@@ -533,7 +550,8 @@ const LIBRARY = {
     ["Wall Handstand Hold","4x30s","time","Shoulders"],["Wall Push Up","3x15","reps","Chest"],
     ["Wall Sit","3x45s","time","Quadriceps"],["Wall Sit Isometric","3x45s","time","Quadriceps"],
     ["Wall Slide Stretch","2x45s","time","Mobility"],["Wall Walk","4x5","reps","Shoulders"],
-    ["Warrior I Pose","2x45s","time","Mobility"],["Warrior II Pose","2x45s","time","Mobility"],
+    ["Warrior I Pose","2x45s","time","Mobility"],["Warrior III Pose","3x30","time","Full Body"],
+    ["Warrior II Pose","2x45s","time","Mobility"],
     ["Weighted Hollow Body Hold","3x30s","time","Abdominals"],["Wide Legged Forward Fold Stretch","2x45s","time","Mobility"],
     ["Wide Pull Up","4x8","reps","Lats"],["Wide Push Up","3x12","reps","Chest"],
     ["World's Greatest Stretch","2x45s","time","Mobility"],["Wrist Circles Stretch","2x30s","time","Mobility"],
@@ -541,6 +559,7 @@ const LIBRARY = {
     ["Wrist Roller","3x15","reps","Forearms"],["Zercher Squat","4x8","reps","Quadriceps"]
   ],
   "Conditioning":[
+    ["A March","3x20m","distance","Cardio"],
     ["Agility Ladder","4x30s","time","Cardio"],["Atlas Stone Lift","4x3","reps","Full Body"],
     ["Atlas Stone Over Bar","4x3","reps","Full Body"],["Ball Slams","4x8","reps","Full Body"],
     ["Battle Ropes Slams","4x30s","time","Full Body"],["Battle Ropes Waves","4x30s","time","Shoulders"],
@@ -548,7 +567,8 @@ const LIBRARY = {
     ["Burpee","4x8","reps","Full Body"],["Burpee Box Jump Over","4x10","reps","Full Body"],
     ["Burpee Broad Jumps","4x8","reps","Full Body"],["Burpee Over the Bar","4x8","reps","Full Body"],
     ["Carioca Drill","4x20m","distance","Cardio"],["Cone Drill","4x30s","time","Cardio"],
-    ["Farmers Walk","3x400m","distance","Full Body"],["Jump Rope Crossover","3x60s","time","Cardio"],
+    ["Farmers Walk","3x400m","distance","Full Body"],["Fast Feet","4x20","time","Cardio"],
+    ["Jump Rope Crossover","3x60s","time","Cardio"],
     ["Jump Rope Double Under","4x40","reps","Cardio"],["Jump Rope Single Under","4x80","reps","Cardio"],
     ["Keg Carry","3x30m","distance","Full Body"],["Kneeling Med Ball Throw","4x8","reps","Chest"],
     ["Lateral Shuffle Drill","4x20m","distance","Cardio"],["Med Ball Clean","4x10","reps","Full Body"],
@@ -596,8 +616,17 @@ const LIBRARY = {
     ["Weighted Vest Walk","1x30min","time","Cardio"]
   ],
   "Mobility / Stretch":[
-    ["Downward Dog","4x8","reps","Full Body"],["Pilates","3x45s","time","Full Body"],
-    ["Stretching","3x45s","time","Full Body"],["Warm Up","3x45s","time","Full Body"],
+    ["Adductor Rock Back Stretch","3x10","reps","Adductors"],
+    ["Arm Swings Stretch","2x10","reps","Shoulders"],
+    ["Boat Pose","3x30","time","Abdominals"],
+    ["Downward Dog","3x30","time","Full Body"],["Garland Pose","3x30","time","Adductors"],
+    ["Half Split Stretch","3x30","time","Hamstrings"],
+    ["Legs Up the Wall","1x3","time","Full Body"],
+    ["Pilates","3x45s","time","Full Body"],
+    ["Savasana","1x5","time","Full Body"],
+    ["Stretching","3x45s","time","Full Body"],["Sun Salutation","4x1","reps","Full Body"],
+    ["Thoracic Extension Stretch","2x10","reps","Upper Back"],
+    ["Warm Up","3x45s","time","Full Body"],
     ["Yoga","3x45s","time","Full Body"]
   ]
 };
@@ -684,23 +713,52 @@ const EXERCISE_DETAILS = {};
 
    Keys are exact library names. The importer matched on name alone and cross-checked every
    match against the muscle the library records; nothing was matched by similarity. */
-if (window.IgnytExerciseInstructions) {
-  Object.keys(window.IgnytExerciseInstructions).forEach(function (name) {
-    var steps = window.IgnytExerciseInstructions[name];
+/* Two sources, merged in this order: the generated import first, then the hand-written
+   additions in exercise-instructions-extra.js, which therefore WIN on a collision.
+
+   The order is the point. The generated file is regenerated wholesale by an importer and says
+   in its own header that hand edits to it are lost, so anything written by a person has to sit
+   outside it — and when a later import happens to ship steps for a movement someone already
+   wrote up, the reviewed version is the one to keep.
+
+   A key in either file that is not an exact LIBRARY name attaches to nothing and fails
+   silently: no error, just an exercise that still shows no How-To. That is the failure mode
+   worth a console warning, so unmatched keys are counted and named rather than ignored. */
+function loadExerciseInstructions(source, label, knownNames) {
+  if (!source) return;
+  var unmatched = [];
+  Object.keys(source).forEach(function (name) {
+    var steps = source[name];
     if (!steps || !steps.length) return;
+    if (knownNames && !knownNames.has(name)) unmatched.push(name);
     EXERCISE_DETAILS[name] = Object.assign({}, EXERCISE_DETAILS[name], { execution: steps });
   });
+  if (unmatched.length) {
+    console.warn("[instructions] " + unmatched.length + " key(s) in " + label +
+      " match no library exercise, so they show no How-To: " + unmatched.join(", "));
+  }
 }
+(function () {
+  var known = null;
+  try {
+    known = new Set();
+    Object.keys(LIBRARY).forEach(function (cat) {
+      LIBRARY[cat].forEach(function (row) { known.add(row[0]); });
+    });
+  } catch (e) { known = null; }   // never let a name check break instruction loading
+  loadExerciseInstructions(window.IgnytExerciseInstructions, "exercise-instructions.js", known);
+  loadExerciseInstructions(window.IgnytExerciseInstructionsExtra, "exercise-instructions-extra.js", known);
+})();
 
 
 // Deterministic avatar colors per muscle bucket — used since no real exercise photos exist
 
 const MUSCLE_AVATAR_COLOR = {
-  Chest:"#FF5A1F", Lats:"#4FA8D8", Traps:"#4FA8D8", Shoulders:"#F2A93B",
+  Chest:"#FF5A1F", Lats:"#2563EB", Traps:"#2563EB", Shoulders:"#F2A93B",
   Biceps:"#3ECF8E", Triceps:"#3ECF8E", Forearms:"#3ECF8E",
   Quadriceps:"#E85D75", Hamstrings:"#E85D75", Glutes:"#E85D75", Calves:"#E85D75", Abductors:"#E85D75", Adductors:"#E85D75",
-  Abdominals:"#9B7EDE", Cardio:"#4FA8D8", Mobility:"#8B8B94",
-  "Upper Back":"#4FA8D8", "Lower Back":"#4FA8D8", Neck:"#F2A93B", "Full Body":"#FF5A1F"
+  Abdominals:"#9B7EDE", Cardio:"#2563EB", Mobility:"#8B8B94",
+  "Upper Back":"#2563EB", "Lower Back":"#2563EB", Neck:"#F2A93B", "Full Body":"#FF5A1F"
 };
 
 const MUSCLE_GROUP_COLOR = {
@@ -725,11 +783,13 @@ const RPE_OPTIONS = ["–","6","6.5","7","7.5","8","8.5","9","9.5","10"];
 
 const SET_TYPE_CYCLE = ["working","warmup","drop","failure"];
 
+/* `label` is what the picker shows. The badge alone is fine once you know the scheme and
+   useless before that — "D" is not a word, and guessing wrong costs a mislogged set. */
 const SET_TYPE_META = {
-  working: { badge:"", color:"var(--muted)" },
-  warmup:  { badge:"W", color:"var(--steel)" },
-  drop:    { badge:"D", color:"var(--accent)" },
-  failure: { badge:"F", color:"#ff6b6b" }
+  working: { badge:"", label:"Working set",  color:"var(--muted)" },
+  warmup:  { badge:"W", label:"Warm-up set", color:"var(--steel)" },
+  drop:    { badge:"D", label:"Drop set",    color:"var(--accent)" },
+  failure: { badge:"F", label:"To failure",  color:"#ff6b6b" }
 };
 
 const PLATE_SIZES = [25,20,15,10,5,2.5,1.25];
@@ -904,50 +964,50 @@ const PREFERRED_CARDIO_OPTIONS = ["Walking","Jogging","Running","Cycling","Swimm
    one thing that can fill several of them in automatically — and by then most people have
    already committed to typing. Asking first also means steps/weight/sleep start flowing from
    the user's first session rather than whenever they later find the toggle. */
-const ONBOARDING_STEP_TITLES = ["Fair Use Policy","About You","Permissions","Your Numbers","Where You Are"];
+const ONBOARDING_STEP_TITLES = ["Fair Use Policy","About You","Notifications","Health","Your Numbers","Where You Are"];
 
 /* The brief's six goals, mapped onto the calorie deltas this app already applies. The keys
    ARE the GOAL_TO_CALORIE_DELTA keys, so the mapping lives in one place instead of becoming a
    second lookup that drifts. */
 const OB_GOAL_OPTIONS = [
-  {key:"Fat Loss",             label:"Lose Fat",             icon:"🔥"},
-  {key:"Build Muscle",         label:"Gain Muscle",          icon:"💪"},
-  {key:"Maintain Weight",      label:"Maintain Weight",      icon:"⚖️"},
-  {key:"Improve Fitness",      label:"Improve Fitness",      icon:"❤️"},
-  {key:"Body Recomposition",   label:"Body Recomposition",   icon:"🔄"},
-  {key:"Athletic Performance", label:"Athletic Performance", icon:"⭐"}
+  {key:"Fat Loss",             label:"Lose Fat",             icon:"flame"},
+  {key:"Build Muscle",         label:"Gain Muscle",          icon:"dumbbell"},
+  {key:"Maintain Weight",      label:"Maintain Weight",      icon:"scale"},
+  {key:"Improve Fitness",      label:"Improve Fitness",      icon:"heart"},
+  {key:"Body Recomposition",   label:"Body Recomposition",   icon:"repeat"},
+  {key:"Athletic Performance", label:"Athletic Performance", icon:"star"}
 ];
 
 const OB_DIET_OPTIONS = [
-  {key:"non-veg",    label:"Non Vegetarian", icon:"🍗"},
-  {key:"vegetarian", label:"Vegetarian",     icon:"🥦"},
-  {key:"vegan",      label:"Vegan",          icon:"🌱"},
-  {key:"eggetarian", label:"Eggetarian",     icon:"🥚"},
-  {key:"jain",       label:"Jain",           icon:"🙏"},
-  {key:"none",       label:"No Preference",  icon:"🍽️"}
+  {key:"non-veg",    label:"Non Vegetarian", icon:"meat"},
+  {key:"vegetarian", label:"Vegetarian",     icon:"leaf"},
+  {key:"vegan",      label:"Vegan",          icon:"sprout"},
+  {key:"eggetarian", label:"Eggetarian",     icon:"egg"},
+  {key:"jain",       label:"Jain",           icon:"hands"},
+  {key:"none",       label:"No Preference",  icon:"plate"}
 ];
 
 const OB_WORKOUT_OPTIONS = [
-  {key:"gym",        label:"Gym",          icon:"🏋️"},
-  {key:"home",       label:"Home Workout", icon:"🏠"},
-  {key:"running",    label:"Running",      icon:"🏃"},
-  {key:"cycling",    label:"Cycling",      icon:"🚴"},
-  {key:"swimming",   label:"Swimming",     icon:"🏊"},
-  {key:"strength",   label:"Strength",     icon:"💪"},
-  {key:"functional", label:"Functional",   icon:"🤸"},
-  {key:"crossfit",   label:"CrossFit",     icon:"🥊"},
-  {key:"hyrox",      label:"HYROX",        icon:"🏆"},
-  {key:"yoga",       label:"Yoga",         icon:"🧘"}
+  {key:"gym",        label:"Gym",          icon:"barbell"},
+  {key:"home",       label:"Home Workout", icon:"home"},
+  {key:"running",    label:"Running",      icon:"run"},
+  {key:"cycling",    label:"Cycling",      icon:"bike"},
+  {key:"swimming",   label:"Swimming",     icon:"swim"},
+  {key:"strength",   label:"Strength",     icon:"dumbbell"},
+  {key:"functional", label:"Functional",   icon:"rings"},
+  {key:"crossfit",   label:"CrossFit",     icon:"kettlebell"},
+  {key:"hyrox",      label:"HYROX",        icon:"trophy"},
+  {key:"yoga",       label:"Yoga",         icon:"yoga"}
 ];
 
 /* Activity levels carry the multiplier TDEE already uses, so the step writes a real number
    into the plan rather than a label something else then has to translate. */
 const OB_ACTIVITY_OPTIONS = [
-  {key:"Sedentary",         label:"Sedentary",         desc:"Little or no exercise", mult:1.2,   icon:"🛋️"},
-  {key:"Lightly Active",    label:"Lightly Active",    desc:"1–3 days per week",     mult:1.375, icon:"🚶"},
-  {key:"Moderately Active", label:"Moderately Active", desc:"3–5 days per week",     mult:1.465, icon:"🏃"},
-  {key:"Very Active",       label:"Very Active",       desc:"6–7 days per week",     mult:1.725, icon:"🏋️"},
-  {key:"Extremely Active",  label:"Athlete",           desc:"Very intense daily",    mult:1.9,   icon:"🥇"}
+  {key:"Sedentary",         label:"Sedentary",         desc:"Little or no exercise", mult:1.2,   icon:"chair"},
+  {key:"Lightly Active",    label:"Lightly Active",    desc:"1–3 days per week",     mult:1.375, icon:"footprints"},
+  {key:"Moderately Active", label:"Moderately Active", desc:"3–5 days per week",     mult:1.465, icon:"run"},
+  {key:"Very Active",       label:"Very Active",       desc:"6–7 days per week",     mult:1.725, icon:"barbell"},
+  {key:"Extremely Active",  label:"Athlete",           desc:"Very intense daily",    mult:1.9,   icon:"medal"}
 ];
 
 const OB_HEALTH_METRICS = [
@@ -958,10 +1018,29 @@ const MOBILITY_RATING_OPTIONS = ["Poor","Fair","Good","Excellent"];
 const FITNESS_LEVELS = ["Beginner","Novice","Intermediate","Advanced","Elite"];
 
 const ICONS = {
+  /* The four-point sparkle, which is what "AI" looks like everywhere now. A new glyph rather
+     than reusing one of the ~130 already here: `bolt` is energy and already appears twice,
+     `star` is a rating, `flask` is the lab. Any of them would have read as its existing
+     meaning first.
+
+     FILLED, not stroked, unlike most of this set. It renders at 22px inside the floating
+     button and a 2px outline on concave points closes up into a smudge at that size — the same
+     reason the barbell's plates are filled. The concave sides are quadratic curves rather than
+     straight lines, which is the difference between a sparkle and a four-pointed diamond. */
+  sparkle:'<path d="M10.5 4Q11.3 9.7 17 10.5Q11.3 11.3 10.5 17Q9.7 11.3 4 10.5Q9.7 9.7 10.5 4z" fill="currentColor"/><path d="M18 14.5Q18.35 16.65 20.5 17Q18.35 17.35 18 19.5Q17.65 17.35 15.5 17Q17.65 16.65 18 14.5z" fill="currentColor"/>',
   eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/>',
   'eye-off':'<path d="M9.9 5.8A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3.2 3.9M6.5 7.6A17 17 0 0 0 2.5 12S6 18.5 12 18.5c1.4 0 2.7-.35 3.8-.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.9 9.9a3.2 3.2 0 0 0 4.35 4.35" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3.5 3.5l17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   plan:'<path d="M6.5 6.5h11v11h-11z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 3v4M16 3v4M6.5 10h11" stroke="currentColor" stroke-width="2" fill="none"/>',
   workout:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 8l6 4-6 4z" fill="currentColor"/>',
+  /* A loaded bar seen side on: two collars, two plates, and the knurl between them. Kept
+     separate from `dumbbell`, which is a one-handed weight used by the protein and 1RM
+     calculators and would be wrong at this size, and separate from `workout`, which is a play
+     triangle — right on a "Start Workout" button because there it means start, and wrong in the
+     nav where the label is a destination rather than an action.
+
+     Drawn on the same 24-grid and to the same weight as the rest of the set: 2px strokes, round
+     caps, plates filled so they hold at 22px where an outlined plate closes up into a blob. */
+  barbell:'<path d="M9 12h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="5.5" y="7.5" width="3.5" height="9" rx="1.2" fill="currentColor"/><rect x="15" y="7.5" width="3.5" height="9" rx="1.2" fill="currentColor"/><path d="M3 9.5v5M21 9.5v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   library:'<path d="M5 4h9a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 4h1a2 2 0 0 1 2 2v14h-3" fill="none" stroke="currentColor" stroke-width="2"/>',
   body:'<circle cx="12" cy="5" r="2.2" fill="currentColor"/><path d="M12 8v7M8 11h8M9 20l3-5 3 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
   profile:'<circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 20c1.2-4 4-6 7.5-6s6.3 2 7.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
@@ -1032,7 +1111,76 @@ const ICONS = {
   scale:'<path d="M12 3v18M7 21h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 6h14M5 6L2.5 11a2.5 2.5 0 0 0 5 0L5 6zM19 6l-2.5 5a2.5 2.5 0 0 0 5 0L19 6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
   drag:'<circle cx="9" cy="6" r="1.6" fill="currentColor"/><circle cx="15" cy="6" r="1.6" fill="currentColor"/><circle cx="9" cy="12" r="1.6" fill="currentColor"/><circle cx="15" cy="12" r="1.6" fill="currentColor"/><circle cx="9" cy="18" r="1.6" fill="currentColor"/><circle cx="15" cy="18" r="1.6" fill="currentColor"/>',
   copy:'<rect x="9" y="9" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 5.5A1.5 1.5 0 0013.5 4h-8A1.5 1.5 0 004 5.5v8A1.5 1.5 0 005.5 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
-  pencil:'<path d="M4 16.5V20h3.5L18 9.5 14.5 6 4 16.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13.2 7.3l3.5 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+  pencil:'<path d="M4 16.5V20h3.5L18 9.5 14.5 6 4 16.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13.2 7.3l3.5 3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+
+  /* ---- ICONS THAT REPLACED EMOJI ------------------------------------------------------
+     Everything below exists because the surface it serves used to render a pictographic
+     emoji. Emoji are the platform's artwork, not this app's: they change shape between
+     Android versions and iOS, they carry their own colour so they cannot follow the accent
+     or dim in a disabled row, several render as a hollow box on older Android, and they sit
+     on a different optical baseline from the 77 icons above — which is why a diet chip and
+     the nav beside it never looked like they came from the same product.
+
+     Drawn to the same rules as the rest of the set: 24-unit grid, 2px strokes, currentColor
+     so the caller decides colour, round caps and joins, and fills only where an outline
+     would close into a blob at ~16px. */
+
+  /* Diet preference. A drumstick, leaf, sprout, egg, open hands and a plate — the same
+     distinctions the emoji drew, minus the colour that made them shout. */
+  meat:'<path d="M13.5 4.2a5 5 0 0 1 6.3 6.3 5 5 0 0 1-4.2 3.4l-1.4.2-3.4 3.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.8 17.5a3.2 3.2 0 1 1-4.3 4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6.5 21.8a3.2 3.2 0 1 1-4.3-4.3l2.4-2.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  leaf:'<path d="M20 4c0 9-5 14-12 14a6 6 0 0 1 0-12c5 0 8-1 12-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 20c3-6 7-9 12-11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  sprout:'<path d="M12 21v-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 13c0-3.3-2.7-6-6-6 0 3.3 2.7 6 6 6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 13c0-3.9 3.1-7 7-7 0 3.9-3.1 7-7 7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  egg:'<path d="M12 3c3.6 0 6.5 5.4 6.5 9.6A6.5 6.5 0 0 1 12 21a6.5 6.5 0 0 1-6.5-8.4C5.5 8.4 8.4 3 12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  hands:'<path d="M12 20c-2.4-1.8-5.5-4.1-5.5-7.4V6.2c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6v4.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 20c2.4-1.8 5.5-4.1 5.5-7.4V6.2c0-.9-.7-1.6-1.6-1.6s-1.6.7-1.6 1.6v4.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  plate:'<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+
+  /* Training mode. */
+  bike:'<circle cx="5.5" cy="16.5" r="3.8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18.5" cy="16.5" r="3.8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5.5 16.5l4-8h5l4 8M9 8.5h4.5M14.5 8.5l-3 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  swim:'<circle cx="16.5" cy="6.5" r="2" fill="currentColor"/><path d="M3.5 12.5l5-3 3.5 2.5 3-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 18c1.6 0 1.6 1.4 3.2 1.4S7.3 18 8.9 18s1.6 1.4 3.2 1.4S13.7 18 15.3 18s1.6 1.4 3.2 1.4S20.1 18 21.5 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  yoga:'<circle cx="12" cy="4.8" r="2.3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 13l-6 3.5M12 13l6 3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 20.5h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  kettlebell:'<path d="M9.2 8.2a3 3 0 1 1 5.6 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 8c4 0 6.5 3.4 6.5 7.2A5.3 5.3 0 0 1 13.2 20.5h-2.4A5.3 5.3 0 0 1 5.5 15.2C5.5 11.4 8 8 12 8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  rings:'<circle cx="7" cy="14.5" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="14.5" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 10V4.5M17 10V4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  chair:'<path d="M6 4v9h12V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4.5 13h15M7 13v7M17 13v7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+
+  /* Food groups. One glyph per shelf of the catalogue, not per food — a carrot standing for
+     every vegetable is honest at this size, where a distinct outline per food item would be
+     twenty near-identical blobs. */
+  carrot:'<path d="M13.5 8.5L6.2 18.4a2 2 0 0 0 2.6 2.9l10.3-6.6a4.5 4.5 0 0 0-5.6-6.2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M15 7l1.5-3M16.5 9l3.5-1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  apple:'<path d="M12 8c-1-2-3.2-2.6-5-1.6C4.6 7.9 4 11.4 5.4 14.8c1.2 3 3.2 5.4 5 5.4.8 0 1.1-.5 1.6-.5s.8.5 1.6.5c1.8 0 3.8-2.4 5-5.4 1.4-3.4.8-6.9-1.6-8.4-1.8-1-4-.4-5 1.6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 8V5.2M12 5.2c1.4 0 2.6-1 2.8-2.2-1.4-.2-2.6.8-2.8 2.2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  grain:'<path d="M12 21V9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 9c0-2.8 2.2-5 5-5 0 2.8-2.2 5-5 5zM12 9c0-2.8-2.2-5-5-5 0 2.8 2.2 5 5 5zM12 15c0-2.5 2-4.5 4.5-4.5 0 2.5-2 4.5-4.5 4.5zM12 15c0-2.5-2-4.5-4.5-4.5 0 2.5 2 4.5 4.5 4.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
+  bread:'<path d="M4 11a4 4 0 0 1 4-4h8a4 4 0 0 1 0 8v5H6a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 11v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  rice:'<path d="M4 13h16a8 8 0 0 1-16 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M2.5 13h19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 9.5c0-1.4 1.3-2.5 3-2.5s3 1.1 3 2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  beans:'<ellipse cx="9" cy="10" rx="3.6" ry="2.6" transform="rotate(-30 9 10)" fill="none" stroke="currentColor" stroke-width="1.8"/><ellipse cx="15.5" cy="13.5" rx="3.6" ry="2.6" transform="rotate(-30 15.5 13.5)" fill="none" stroke="currentColor" stroke-width="1.8"/><ellipse cx="9.5" cy="17" rx="3.6" ry="2.6" transform="rotate(-30 9.5 17)" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  nut:'<path d="M12 3c3.6 2.4 5.5 5.5 5.5 9A5.5 5.5 0 0 1 12 21a5.5 5.5 0 0 1-5.5-9c0-3.5 1.9-6.6 5.5-9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 8v9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  milk:'<path d="M9 2.5h6v3l2.5 4.5V21h-11V10L9 5.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6.5 13h11" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  fish:'<path d="M2.5 12c3.5-4.5 8-6.5 12-6.5 2.6 0 5 1 7 2.8-2 1.5-3 2.5-3 3.7s1 2.2 3 3.7c-2 1.8-4.4 2.8-7 2.8-4 0-8.5-2-12-6.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="17" cy="10.5" r="1" fill="currentColor"/>',
+  shrimp:'<path d="M20 7c-5 0-8 2-9.5 4.5S8 17 4.5 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20 7a5 5 0 0 0-5-5 6 6 0 0 0-6 6c0 3.5 2.5 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16.5" cy="5.5" r="1" fill="currentColor"/>',
+  oil:'<path d="M9 3.5h4.5V7l3.5 3v11h-11V10l3-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6 14h11" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  spice:'<path d="M7 9.5h10l-1 11H8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.5 9.5V6a3.5 3.5 0 0 1 7 0v3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10.5 5v.1M13.5 5v.1M12 7v.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  sauce:'<path d="M9 2.5h6v4l2 2.5V21H7V9l2-2.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12.5h6v4H9z" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  cup:'<path d="M5 6h11v7a5.5 5.5 0 0 1-11 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M16 8.5h1.8a2.7 2.7 0 0 1 0 5.4H16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 21h13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  cake:'<path d="M4 14.5c1.6 0 1.6 1.4 3.2 1.4s1.6-1.4 3.2-1.4 1.6 1.4 3.2 1.4 1.6-1.4 3.2-1.4 1.6 1.4 3.2 1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 14.5V12a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v2.5M4 16.5V20h16v-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9V6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  snack:'<path d="M6.5 4h11l-1.5 16.5h-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.5 8.5h7M8.2 13h7.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  burger:'<path d="M3.5 9.5a8.5 6 0 0 1 17 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3.5 12.5h17M3.5 15.5h17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3.5 18.5a4 3 0 0 0 4 2h9a4 3 0 0 0 4-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  bowl:'<path d="M3 11h18a9 9 0 0 1-18 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7.5c0-1 1.3-2 3-2M13.5 4.5c.9.4 1.5 1.2 1.5 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  shaker:'<path d="M8 3.5h8l-1 3.5H9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7h6l1.5 10.5A3 3 0 0 1 13.5 21h-3A3 3 0 0 1 7.5 17.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.2 12.5h7.6" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  curry:'<path d="M2.5 12.5h19a9.5 8 0 0 1-19 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 8.5c0-1.2 1.8-2.2 4-2.2s4 1 4 2.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 6.3V3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  sunrise:'<circle cx="12" cy="14" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 6.5V4M5.6 8.6L4 7M18.4 8.6L20 7M2.5 18.5h19M6.5 14H4M20 14h-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  cutlery:'<path d="M7 3v8a2 2 0 0 0 4 0V3M9 11v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 3c-1.4 1-2 2.5-2 4.5 0 1.6.7 2.6 2 3v10.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+
+  /* Progress sections and misc surfaces. */
+  medal:'<circle cx="12" cy="15" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 10L6 3h4l2 4 2-4h4l-2.5 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 13v4M10 15h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  archive:'<rect x="3" y="4" width="18" height="5" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 13h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  camera:'<path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.7l1.3-2h6l1.3 2h2.7A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/>',
+  receipt:'<path d="M6 3h12v18l-2-1.5-2 1.5-2-1.5L10 21l-2-1.5L6 21z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 8h6M9 12h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  chart:'<path d="M4 20V4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 20h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 17v-5M12.5 17V7M17 17v-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  microscope:'<path d="M9 3.5h4l1 8h-6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 11.5h6a5 5 0 0 1-2 9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 21h15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  mic:'<rect x="9" y="2.5" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  alert:'<path d="M12 3.5l9.5 16.5h-19z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4.5M12 17.5v.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  pill:'<rect x="2.8" y="8.5" width="18.4" height="7" rx="3.5" transform="rotate(-45 12 12)" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.7 8.7l6.6 6.6" stroke="currentColor" stroke-width="2"/>',
+  bottle:'<path d="M10 2.5h4v3a4 4 0 0 0 1.5 3.1A4 4 0 0 1 17 11.8V19a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-7.2a4 4 0 0 1 1.5-3.2A4 4 0 0 0 10 5.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M7 14h10" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  image:'<rect x="3.5" y="5" width="17" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8.8" cy="10" r="1.6" fill="currentColor"/><path d="M4.5 17l4.8-4.5 3.4 3 2.8-2.4L19.5 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  folder:'<path d="M3.5 7a2 2 0 0 1 2-2h3.2l2 2.5h7.8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>'
 };
 
 /* =========================================================
@@ -1453,7 +1601,20 @@ function dayKeyUTC(d){
 
 function todayStr(){ return dayKey(); }
 
-function svg(name, size=19){ return `<svg width="${size}" height="${size}" viewBox="0 0 24 24">${ICONS[name]}</svg>`; }
+/* An unknown name used to interpolate `undefined` INTO THE SVG, which renders as the literal
+   word on screen — the failure mode that matters now that ~100 call sites pass a name looked
+   up from a data table rather than typed at the call site. An unknown name now draws nothing
+   and says so once in the console, so a typo is visible to whoever can fix it and invisible
+   to the user. */
+function svg(name, size=19){
+  const d = ICONS[name];
+  if(!d){
+    if(name && !svg._warned.has(name)){ svg._warned.add(name); console.warn("[IGNYT] no icon named " + JSON.stringify(name)); }
+    return "";
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24">${d}</svg>`;
+}
+svg._warned = new Set();
 // Icon-size scale (Phase 1 design tokens): svg() takes a raw pixel number, not a CSS custom
 // property, so this is the JS-side equivalent of a token -- the 5 sizes that already cover
 // the vast majority of the ~300 existing svg() call sites (audited), named for new call
@@ -1676,7 +1837,11 @@ const state = {
   bodyCompareB: null,       // later session id
   bodyPhotoCategory: "Front Relaxed",
   viewingBodyPhotoId: null,
-  bodyView: null, // null = Log Weight page; 'calculators' = dedicated calculator view (transient, not persisted)
+  bodyView: null,
+  /* Recommended-programs screen: which program is open and which week is showing.
+     Deliberately NOT persisted — it is a browsing position, not user data. */
+  recProgram: null,
+  recWeek: 1, // null = Log Weight page; 'calculators' = dedicated calculator view (transient, not persisted)
   calc: LS.get("hx_calc", {
     activeCalc:"bmr", result:null,
     neck:38, waist:90, hip:95, restingHR:60,
@@ -1695,7 +1860,8 @@ const state = {
     theme:"dark", weightUnit:"kg", exerciseCalorieBudget:true, notificationsSeenAt:0,
     heightUnit:"cm", dateFormat:"DD MMM YYYY", timeFormat:"12h"
   }, LS.get("hx_settings", {})),
-  notificationsOpen: false, // transient — not persisted, matches other dropdown/menu UI state
+  notificationsOpen: false,
+  scoreDetailOpen: false,   // transient — the IGNYT Score breakdown sheet // transient — not persisted, matches other dropdown/menu UI state
   authFormMode: null, // transient — null|"signin"|"signup"|"forgot" when the email auth form is open in Settings
   authSeen: LS.get("hx_auth_seen", false), // the Sign In screen has been passed, by signing in or skipping
   authPhone: "",      // transient — the number being typed on the Sign In screen
@@ -1731,6 +1897,10 @@ const state = {
   plan: LS.get("hx_plan", null),   // assigned training plan — see PROGRAM PROGRESSION
   /* [{id, severity, side, professionalAdvice}] — see js/coach/injury-catalogue.js */
   injuries: LS.get("hx_injuries", []),
+  /* Routine folders: [{id, name, collapsed}]. A routine carries folderId; anything without one,
+     or pointing at a folder that has since been deleted, falls into the implicit ungrouped
+     group. That fallback is why deleting a folder can never delete routines. */
+  routineFolders: LS.records("hx_routine_folders"),
   showExercisePicker: false,
   exercisePickerSearch: "",
   exercisePickerEquipment: "All",
@@ -1745,8 +1915,24 @@ const state = {
   viewingHyroxInfo: false,
   viewingLegal: null, // "privacy" | "terms" | "disclaimer" | null -- see renderLegalViewer()
   viewingPrivacyInfo: false,
+  viewingDiagnostics: false, // transient -- Settings > (hidden) Diagnostics, read-only
   csvImportPreview: null,
+  /* AI chat. Transient by design — the transcript is a conversation, not a record, and
+     persisting it would mean a stale "log my weight as 96.8" sitting on screen days later
+     next to a card claiming it just happened. */
+  aiChat: [],
+  aiBusy: false,
+  aiListening: false,
+  aiPending: null,      // a destructive call waiting on the user's yes
+  aiLastUser: null,     // what Retry re-sends
+  /* Server-reported allowance. DISPLAY ONLY — the count that matters lives in the
+     database, so clearing storage changes what is shown and nothing else. */
+  aiUsage: null,
   exerciseMenuOpen: null,
+  /* Transient — "exi|si" of the set whose type picker is open, or null. Cycling through four
+     types to reach the one you wanted meant up to three taps and a re-render each; this picks
+     directly. Not persisted: an open menu is not part of the workout. */
+  setTypeMenuFor: null,
   replacingExerciseIndex: null,
   exerciseDetailTab: "summary",
   exerciseSectionsOpen: null, // transient — {sectionKey: bool} for the collapsible guide sections
@@ -1778,7 +1964,6 @@ const state = {
   quickAddOpen: false, quickAddMeal: null,
   // Whether the coach / recovery card detail is expanded (transient).
   // Manual food entry on the search route (transient).
-  manualEntryOpen: false,
   muscleSheetOpen: false,   // Muscle Distribution sheet in the workout logger
   // Which variant groups are expanded, keyed by group key (transient).
   expandedVariants: {},
@@ -1825,6 +2010,7 @@ function persist(){
   LS.set("hx_onboarding_wizard", state.onboarding);
   LS.set("hx_plan", state.plan);
   LS.set("hx_injuries", state.injuries);
+  LS.set("hx_routine_folders", state.routineFolders);
   /* Widgets mirror whatever was just saved. Hooked to persist() rather than to each
      feature so nothing new has to remember to do it; the call is debounced and returns
      immediately when the user has no widgets placed. */
@@ -2248,7 +2434,144 @@ window.IgnytIntegrity = {
   }
 };
 
+/* Library entries that were the SAME MOVEMENT under two names, mapped removed -> kept.
+
+   The library carried both "Heel Tap" and "Heel Taps", both "Fire Hydrant" and "Fire Hydrants",
+   and so on. That is not a cosmetic problem: an exercise's history, personal records and
+   "last performed" are all keyed on its NAME, so a user who logged some sessions under one
+   spelling and some under the other had their progress silently split in half — no PR, no
+   trend, and two rows in the picker that look identical.
+
+   Removing a name from LIBRARY does not remove it from anybody's saved data, which is why this
+   map exists rather than a straight deletion: every stored reference is rewritten to the
+   surviving name, so the two halves become one history.
+
+   WHICH NAME SURVIVED: the one the recommendation programs already prescribe, else the one
+   with an illustration, else the one whose category and unit were right. Where the survivor's
+   own metadata was the wrong one it was corrected in LIBRARY instead — "Downward Dog" is now
+   measured in time rather than repetitions, because a yoga hold is not a rep. */
+const MERGED_EXERCISE_NAMES = {
+  "Heel Tap":                    "Heel Taps",
+  "Downward-Facing Dog Stretch": "Downward Dog",
+  "Standing Leg Curl":           "Standing Leg Curls",
+  "Fire Hydrant":                "Fire Hydrants",
+  "Flutter Kick":                "Flutter Kicks"
+};
+
+/* Entries renamed onto the library's own naming convention, mapped old -> new.
+
+   Same machinery as the merge above and for the same reason: the name IS the key, so a
+   library rename without this would leave every logged set, PR and routine row pointing at a
+   name that no longer exists. Two of these also carry an equipment suffix the entry should
+   always have had, which changes its illustration slug — the image files were renamed to
+   match in the same change.
+
+   "Lat closed grip pull down" is a MERGE rather than a rename: the library already carried
+   "Lat Pulldown - Close Grip (Cable)" as a separate entry for the same movement, which is the
+   sixth duplicate pair and the one that was hardest to see, since the two names share almost
+   no words. */
+const RENAMED_EXERCISE_NAMES = {
+  "Low row":                   "Low Row (Cable)",
+  "Standing Leg Curls":        "Standing Leg Curl (Machine)",
+  "Iso-Lateral Low Row":       "Iso-Lateral Low Row (Machine)",
+  "Deadlift (Trap bar)":       "Deadlift (Trap Bar)",
+  "Cable Twist (Up to down)":  "Cable Twist (Up to Down)",
+  "Cable Twist (Down to up)":  "Cable Twist (Down to Up)",
+  "Kneeling Pulldown (band)":  "Kneeling Pulldown (Band)",
+  "Lat closed grip pull down": "Lat Pulldown - Close Grip (Cable)"
+};
+
+/* Rewrite every stored reference to a merged-away exercise name.
+
+   EVERY PLACE A NAME IS STORED, because missing one leaves an orphan the user can see:
+   logged workouts, the recycle bin, routines, the in-progress session, personal records,
+   favourites and saved exercises. The recycle bin is read straight out of localStorage rather
+   than from state, so it is handled separately — a workout restored from it a month later
+   would otherwise come back under the dead name.
+
+   IT DEFERS TO A CUSTOM EXERCISE OF THE SAME NAME. If the user created their own "Heel Tap",
+   that name is theirs and their history belongs to it, so it is left completely alone.
+   Rewriting it would move their data onto a library exercise they never used.
+
+   Flag-guarded and idempotent; wrapped so a failure can never stop the app booting. */
+function migrateExerciseNames(map){
+  if(!map) return 0;
+  const custom = new Set((state.customExercises || [])
+    .map(function(c){ return c && c.name ? String(c.name).trim() : ""; }).filter(Boolean));
+  // A name the user owns is not ours to move.
+  const rename = {};
+  Object.keys(map).forEach(function(from){ if(!custom.has(from)) rename[from] = map[from]; });
+  if(!Object.keys(rename).length) return 0;
+
+  let touched = 0;
+  const fixName = function(obj){
+    if(obj && obj.name && rename[obj.name]){ obj.name = rename[obj.name]; touched++; }
+  };
+  const fixEntries = function(list){
+    (Array.isArray(list) ? list : []).forEach(function(w){
+      (w && Array.isArray(w.exercises) ? w.exercises : []).forEach(fixName);
+    });
+  };
+  const fixNameList = function(list){
+    if(!Array.isArray(list)) return list;
+    return list.map(function(n){
+      if(typeof n === "string" && rename[n]){ touched++; return rename[n]; }
+      return n;
+    });
+  };
+
+  fixEntries(state.workoutLog);
+  fixEntries(state.routines);
+  if(state.session) fixEntries([state.session]);
+  (state.prs || []).forEach(function(pr){
+    if(pr && pr.exerciseName && rename[pr.exerciseName]){ pr.exerciseName = rename[pr.exerciseName]; touched++; }
+  });
+  state.favoriteExercises = fixNameList(state.favoriteExercises);
+  state.savedExercises    = fixNameList(state.savedExercises);
+
+  if(touched){
+    LS.set("hx_workout_log", state.workoutLog);
+    LS.set("hx_routines", state.routines);
+    LS.set("hx_prs", state.prs);
+    LS.set("hx_favorite_exercises", state.favoriteExercises);
+    LS.set("hx_saved_exercises", state.savedExercises);
+    if(state.session) LS.set("hx_active_session", state.session);
+  }
+
+  // The recycle bin lives only in storage — a workout restored from it later must not come
+  // back under a name the library no longer has.
+  try{
+    const bin = LS.get(RECYCLE_BIN_KEY, []);
+    if(Array.isArray(bin) && bin.length){
+      const before = touched;
+      fixEntries(bin);
+      if(touched > before) LS.set(RECYCLE_BIN_KEY, bin);
+    }
+  }catch(e){ /* the bin is a convenience; never fail the migration over it */ }
+
+  return touched;
+}
+
 function runMigrations(){
+  /* Merge the duplicate exercise names. Runs before anything reads history, so a split PR is
+     recomputed against the joined data rather than the halves. */
+  if(!LS.get("hx_exercise_merge_v1", false)){
+    try{
+      const n = migrateExerciseNames(MERGED_EXERCISE_NAMES);
+      if(n > 0) console.warn("[IGNYT] Merged duplicate exercise names in " + n + " stored reference(s).");
+    }catch(e){ /* a rename must never break boot */ }
+    LS.set("hx_exercise_merge_v1", true);
+  }
+  /* Separate flag from v1, not an extension of it: v1 has already run and set its flag on any
+     install that opened the app between the two changes, and reusing the flag would skip these
+     renames entirely on exactly those devices. */
+  if(!LS.get("hx_exercise_rename_v2", false)){
+    try{
+      const n = migrateExerciseNames(RENAMED_EXERCISE_NAMES);
+      if(n > 0) console.warn("[IGNYT] Updated renamed exercise names in " + n + " stored reference(s).");
+    }catch(e){ /* a rename must never break boot */ }
+    LS.set("hx_exercise_rename_v2", true);
+  }
   // One-time rest-timer default migration (independent of schema version so it also reaches
   // pre-versioning installs, which return early below). The app's default rest timer changed
   // from 90s to 0s (OFF); existing installs still have the old 90 persisted as their GLOBAL
@@ -3265,7 +3588,7 @@ function weeklyBarChart(buckets, metric){
       const label = (showAllLabels || isLast) ? fmt(val) : "";
       return `<div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;overflow:hidden;">
         <span class="mono" style="font-size:11px;font-weight:700;color:${isLast?'var(--accent)':'var(--steel)'};min-height:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</span>
-        <div style="width:${buckets.length>20?'85%':'65%'};border-radius:var(--radius-2xs) 4px 0 0;background:${isLast?'#FF5A1F':'#4FA8D8'};height:${bh}px;"></div>
+        <div style="width:${buckets.length>20?'85%':'65%'};border-radius:var(--radius-2xs) 4px 0 0;background:${isLast?'#FF5A1F':'#2563EB'};height:${bh}px;"></div>
       </div>`;
     }).join("")}
   </div>`;
@@ -3804,10 +4127,11 @@ function prValueLabel(pr){
    EXERCISE PICKER — full-screen searchable "Add Exercise" flow
 ========================================================= */
 
-function nextSetType(t){
-  const i = SET_TYPE_CYCLE.indexOf(t||"working");
-  return SET_TYPE_CYCLE[(i+1) % SET_TYPE_CYCLE.length];
-}
+/* nextSetType() lived here and cycled working -> warmup -> drop -> failure on each tap. The
+   set number now opens a picker instead, so nothing advances a type one step any more and the
+   helper had no callers left. SET_TYPE_CYCLE is still the canonical ORDER — the picker lists
+   the types in it, and it is what validates an incoming pick. */
+
 /* Volume/PR-eligible sets exclude warm-ups (standard practice — warmups don't represent
    a working effort). Backward-compatible: sets logged before this feature have no `type`
    field and are treated as "working". */
@@ -3953,7 +4277,7 @@ function getPreviousSet(exerciseName, setIndex){
 /* True only if the session getPreviousSet() would read from is itself the exact session a
    real weight/1RM PR was recorded on -- reuses the exact same "most recent session that
    logged this exercise" search rather than approximating from the set's raw numbers, so the
-   🏆 badge can never show for a coincidentally-matching weight that wasn't actually a PR. */
+   The PR badge can never show for a coincidentally-matching weight that wasn't actually a PR. */
 function isPreviousSetPR(exerciseName){
   const sess = state.workoutLog.find(s=> s.exercises.some(e=>e.name===exerciseName));
   if(!sess) return false;
@@ -4919,20 +5243,20 @@ const FOOD_PAGE_SIZE = 8;
 
 /* A glyph per category. Purely decorative — the name is always shown next to it. */
 const FOOD_CATEGORY_ICONS = {
-  "Vegetables":"🥦", "Fruits":"🍎", "Grains & Cereals":"🌾", "Bread & Bakery":"🍞",
-  "Rice":"🍚", "Pasta":"🍝", "Beans & Legumes":"🫘", "Nuts & Seeds":"🥜",
-  "Dairy":"🥛", "Eggs":"🥚", "Chicken":"🍗", "Turkey":"🦃", "Beef":"🥩", "Pork":"🥓",
-  "Game & Other Meats":"🍖", "Fish":"🐟", "Seafood":"🦐", "Oils & Fats":"🫒",
-  "Spices & Herbs":"🌿", "Sauces & Condiments":"🥫", "Beverages":"🥤", "Desserts":"🍰",
-  "Snacks":"🍿", "Fast Food":"🍔", "Soups":"🍲", "Meals & Entrees":"🍱",
-  "Restaurant Foods":"🍽️", "Protein Supplements":"💪", "Indian Foods":"🍛",
-  "Custom Foods":"✏️"
+  "Vegetables":"carrot", "Fruits":"apple", "Grains & Cereals":"grain", "Bread & Bakery":"bread",
+  "Rice":"rice", "Pasta":"bowl", "Beans & Legumes":"beans", "Nuts & Seeds":"nut",
+  "Dairy":"milk", "Eggs":"egg", "Chicken":"meat", "Turkey":"meat", "Beef":"meat", "Pork":"meat",
+  "Game & Other Meats":"meat", "Fish":"fish", "Seafood":"shrimp", "Oils & Fats":"oil",
+  "Spices & Herbs":"spice", "Sauces & Condiments":"sauce", "Beverages":"cup", "Desserts":"cake",
+  "Snacks":"snack", "Fast Food":"burger", "Soups":"bowl", "Meals & Entrees":"plate",
+  "Restaurant Foods":"cutlery", "Protein Supplements":"shaker", "Indian Foods":"curry",
+  "Custom Foods":"pencil"
 };
 /* Reads through the image service when it is loaded, so a category's glyph is defined in one
    place; falls back to the local table if that module failed to load. */
 function foodCategoryIcon(name){
   if(window.IgnytFoodImages) return IgnytFoodImages.categoryGlyph(name);
-  return FOOD_CATEGORY_ICONS[name] || "🍴";
+  return FOOD_CATEGORY_ICONS[name] || "cutlery";
 }
 
 /** One search/browse result.
@@ -4960,7 +5284,7 @@ function renderFoodResultCard(f, labelOverride){
            most on a fuzzy or synonym hit where the connection is not otherwise obvious. -->
       <div class="food-row__name">
         <span class="food-row__text">${highlightMatch(labelOverride || (window.IgnytFoodCuration ? IgnytFoodCuration.displayName(f) : f.name), state.foodSearchQuery)}</span>${
-        f.verified ? `<span class="food-row__verified" title="Measured values from a published source" aria-label="Verified">✓</span>` : ""}</div>
+        f.verified ? `<span class="food-row__verified" title="Measured values from a published source" aria-label="Verified">${svg('check',12)}</span>` : ""}</div>
     </div>
     ${/* The row still opens Food Details — that is where you go to change the serving. The +
           is the other half: log it at its default portion and stay on the results, because
@@ -5479,7 +5803,7 @@ function foodSearchResultsHtml(meal){
             ${freq.map(f=>`
               <div class="fs-row" data-quick-recent="${escHtml(String(f.entry.id))}">
                 <span class="fs-row__body">
-                  <span class="fs-row__title">${escHtml(f.entry.name)}${f.fav?' <span class="fs-star">★</span>':''}</span>
+                  <span class="fs-row__title">${escHtml(f.entry.name)}${f.fav?' <span class="fs-star">'+svg('starFilled',12)+'</span>':''}</span>
                   <span class="fs-row__sub">${f.entry.grams?`${Math.round(f.entry.grams)} ${escHtml(f.entry.servingUnit||'g')}`:'&mdash;'}${f.count>1?` · ${f.count}×`:''}</span>
                 </span>
                 <span class="fs-row__cal">${Math.round(f.entry.calories||0)} Cal</span>
@@ -5488,7 +5812,7 @@ function foodSearchResultsHtml(meal){
 
           ${!freq.length && !combos.length && !yday.length ? `
             <div class="fs-empty">
-              <div style="font-size:30px;line-height:1;margin-bottom:8px;">🔍</div>
+              <div class="pg-empty__icon">${svg('search',28)}</div>
               <div style="font-weight:700;font-size:14px;">Search ${(cat?cat.count():0).toLocaleString()} foods</div>
               <div style="font-size:12px;color:var(--muted);margin-top:4px;">
                 Anything you log shows up here for one-tap repeat logging.
@@ -5890,15 +6214,12 @@ function macroMiniCard(label, value, target, colorKey, unit, decimals){
 /* Distinct hues for the calories-by-meal ring. Kept separate from NUTRIENT_COLORS because
    these identify meals, not nutrients, and reusing the macro palette would imply a link
    between "Lunch" and "carbs" that does not exist. */
-const MEAL_DONUT_COLORS = ["var(--mint)", "var(--steel)", "#FFB020", "#A98BFF", "#FF7A5C", "#9AD5FF"];
+const MEAL_DONUT_COLORS = ["var(--mint)", "var(--steel)", "#FFB020", "#A98BFF", "#FF7A5C", "#2563EB"];
 
 /* Emoji per meal, matching the meal rows in the design. */
-const MEAL_ICONS = {
-  "Breakfast":"🍳", "Morning Snack":"🍌", "Lunch":"🥗", "Evening Snack":"🍎",
-  "Afternoon Snack":"🍪", "Dinner":"🍛",
-  /* legacy keys — entries logged under these still render and still count */
-  "Bedtime Snack":"🌙", "Post Workout":"🥤", "Snacks":"🍿"
-};
+/* Meal types deliberately carry NO glyph. The only two places they render are <option>
+   elements, which display text and nothing else — an inline <svg> in one is dropped or
+   printed as raw markup depending on the browser. The names stand on their own. */
 
 /** Short observations derived from the day's totals. Only facts, no advice. */
 function nutritionInsights(totals, coverage, targets, waterMl, waterTarget){
@@ -5964,7 +6285,7 @@ const INSIGHT_TONES = {
   good: { bg:"rgba(62,207,142,.10)",  fg:"var(--mint)" },
   warn: { bg:"rgba(255,176,32,.10)",  fg:"#FFB020" },
   bad:  { bg:"rgba(255,90,31,.10)",   fg:"var(--accent)" },
-  info: { bg:"rgba(79,168,216,.10)",  fg:"var(--steel)" }
+  info: { bg:"rgba(37,99,235,.10)",  fg:"var(--steel)" }
 };
 
 function macroTargets(){
@@ -6125,9 +6446,12 @@ function renderAccountSection(){
 
   if(!auth) return ""; // auth.js failed to load — never break the rest of Settings over it
 
-  if(!auth.isNativeAndroid()){
+  /* canSignIn(), not isNativeAndroid(). iOS signs in over the Identity Toolkit REST API and has
+     done all along — isNativeAndroid is android-only by design, so this card was telling a
+     signed-in iPhone user that sign-in lives in the Android app. */
+  if(!auth.canSignIn || !auth.canSignIn()){
     return `<div class="pg-card">
-      <div style="font-size:13px;color:var(--rh-muted);">Sign-in is available in the IGNYT Android app.</div>
+      <div style="font-size:13px;color:var(--rh-muted);">Sign-in is available in the IGNYT mobile app.</div>
     </div>`;
   }
 
@@ -6163,13 +6487,24 @@ function renderAccountSection(){
       <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Sign in to securely back up your fitness data and enable multi-device sync.</div>
       ${!mode ? errorHtml : ""}
       ${!mode ? `<button class="rh-btn rh-btn--primary" style="width:100%;margin-top:${errorHtml?'10px':'0'};padding:12px;" data-action="auth-form-mode" data-auth-mode="signin">Sign in with Email</button>` : ''}
+      ${!mode && window.IgnytAuth && IgnytAuth.appleAvailable && IgnytAuth.appleAvailable() ? `
+        <button class="apple-signin-btn" data-action="auth-apple" ${busy?'disabled':''} aria-label="Sign in with Apple">
+          <svg viewBox="0 0 16 20" width="15" height="19" aria-hidden="true" focusable="false"><path fill="currentColor" d="M13.29 10.62c.02 2.4 2.1 3.2 2.12 3.21-.02.05-.33 1.14-1.1 2.26-.66.97-1.35 1.93-2.44 1.95-1.07.02-1.41-.63-2.63-.63-1.22 0-1.6.61-2.61.65-1.05.04-1.85-1.05-2.52-2.01C2.75 14.1 1.7 10.5 3.1 8.08c.7-1.2 1.94-1.96 3.29-1.98 1.03-.02 2 .69 2.63.69.63 0 1.81-.86 3.05-.73.52.02 1.98.21 2.92 1.58-.08.05-1.74 1.02-1.72 3.03M11.3 4.4c.56-.68.94-1.62.84-2.56-.81.03-1.79.54-2.37 1.22-.52.6-.97 1.56-.85 2.48.9.07 1.82-.46 2.38-1.14"/></svg>
+          <span>Sign in with Apple</span>
+        </button>` : ''}
       ${emailForm}
       ${renderSigningDiagnostic()}
     </div>`;
   }
 
   const initial = esc((account.displayName || account.email || "?").trim().charAt(0).toUpperCase() || "?");
-  const providerLabel = account.provider === "password" ? "Signed in with email" : "Signed in";
+  /* "Signed in" was the catch-all for everything that was not a password, which was fine when
+     nothing else existed. Apple is worth naming: it is the difference between someone knowing
+     which credential opens this account and guessing. */
+  const providerLabel = account.provider === "password" ? "Signed in with email"
+                      : account.provider === "apple.com" ? "Signed in with Apple"
+                      : account.provider === "google.com" ? "Signed in with Google"
+                      : "Signed in";
   const verifyBanner = (account.provider === "password" && account.emailVerified === false) ? `
     <div style="font-size:11px;color:var(--rh-amber,#d97706);margin-top:8px;padding:8px;background:rgba(217,119,6,.1);border-radius:8px;">
       Email not verified.
@@ -6254,6 +6589,125 @@ function renderCloudSyncRow(){
 /* Real, honest facts about how this app actually handles data -- no dedicated "Privacy &
    Security" screen existed before; this one only states what's genuinely true (local-only
    storage, real notification/Health Connect permission status), nothing invented. */
+/* =========================================================
+   DIAGNOSTICS — hidden dev/QA screen, strictly read-only.
+
+   Reached only by tapping "App Version" in Settings > About seven times within three
+   seconds -- there is no visible menu entry, because none of this (storage byte counts,
+   entitlement cache state, connection status) means anything to a real user. The AI chat
+   test harness (chat-tests.js) is deliberately NOT wired to a button here: its own tests
+   call clearAllData(), which deletes real food-log and weight entries as part of setup --
+   fine on a throwaway test account, not fine as a one-tap button on a real device. This
+   screen only ever points at the console command.
+
+   The unlock persists in localStorage under a key that is not part of the app's own schema
+   list (see ALL_KEYS at the top of this file), so "Reset All App Data" and the backup
+   export/import round-trip both leave it alone -- it is a device preference, not app data.
+========================================================= */
+const DIAG_UNLOCK_KEY = "hx_diag_unlocked";
+let _diagTapCount = 0;
+let _diagTapTimer = null;
+function diagUnlocked(){ try{ return localStorage.getItem(DIAG_UNLOCK_KEY) === "1"; }catch(e){ return false; } }
+function diagRegisterVersionTap(){
+  clearTimeout(_diagTapTimer);
+  _diagTapCount++;
+  _diagTapTimer = setTimeout(()=>{ _diagTapCount = 0; }, 3000);
+  if(_diagTapCount >= 7){
+    _diagTapCount = 0;
+    try{ localStorage.setItem(DIAG_UNLOCK_KEY, "1"); }catch(e){}
+    return true;
+  }
+  return false;
+}
+
+/** Real, computed-on-demand values only -- shared by the screen and the copy-to-clipboard
+ *  button so there is one source of truth for what "diagnostics" means. */
+function diagnosticsRows(){
+  let hcConnected = false;
+  try { hcConnected = !!(window.HealthConnectIntegration && window.HealthConnectIntegration.loadState().connected); } catch(e){}
+  const notifPerm = nativeNotify() ? (state.nativeNotifPermissionGranted===null ? 'unknown' : (state.nativeNotifPermissionGranted?'granted':'denied'))
+    : (typeof Notification!=='undefined' ? Notification.permission : 'unsupported');
+  const cs = window.IgnytCloudSync;
+  const signedIn = window.IgnytAuth && window.IgnytAuth.isNativeAndroid() && !!window.IgnytAuth.getAccount();
+  const ent = window.IgnytEntitlements;
+  const gatedFeatures = ent ? Object.keys(ent.FEATURES || {}) : [];
+  const platformName = document.documentElement.getAttribute("data-platform") || "web";
+  const chatTests = window.IgnytChatTests;
+
+  let storageBytes = 0, storageKeys = 0, ignytKeys = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      const v = localStorage.getItem(k) || "";
+      storageBytes += (k.length + v.length) * 2; // UTF-16 code units -- an estimate, not exact bytes on disk
+      storageKeys++;
+      if (k.indexOf("hx_") === 0) ignytKeys++;
+    }
+  } catch(e){}
+
+  return [
+    ["App", [
+      ["Version", "IGNYT v1.0"],
+      ["Platform", platformName],
+      ["User agent", String(navigator.userAgent || "unknown").slice(0, 70)]
+    ]],
+    ["Data on this device", [
+      ["Workouts logged", state.workoutLog.length],
+      ["Food log entries", state.foodLog.length],
+      ["Weight / body entries", state.bodylog.length],
+      ["Routines", state.routines.length],
+      ["Achievements unlocked", state.achievements.length]
+    ]],
+    ["Connections", [
+      [hcName(), hcConnected ? "Connected" : "Not connected"],
+      ["Cloud Sync", cs ? cs.getStatus().status : "Not available"],
+      ["Account", signedIn ? "Signed in" : "Not signed in"],
+      ["Notifications", notifPerm]
+    ]],
+    ["Billing / entitlements", [
+      ["Paywall applies", ent ? (ent.paywallApplies() ? "Yes (Android)" : "No") : "Module not loaded"],
+      ["Premium (this device)", ent ? (ent.isPremium() ? "Yes" : "No") : "—"],
+      ["Gated features", gatedFeatures.length ? gatedFeatures.join(", ") : "None — everything free"]
+    ]],
+    ["Storage", [
+      ["Total keys", storageKeys],
+      ["IGNYT keys (hx_*)", ignytKeys],
+      ["Estimated size", (storageBytes / 1024).toFixed(1) + " KB"]
+    ]],
+    ["AI chat test harness", [
+      ["Tests defined", chatTests ? chatTests.count() : "Not loaded"],
+      ["How to run", chatTests ? "Console only: IgnytChatTests.run() — it deletes real food/weight entries as part of setup, so use a test account" : "—"]
+    ]]
+  ];
+}
+function diagnosticsText(){
+  return diagnosticsRows().map(([title, items]) =>
+    title + "\n" + items.map(([k,v])=>"  " + k + ": " + v).join("\n")
+  ).join("\n\n");
+}
+
+function renderDiagnosticsScreen(){
+  const rows = diagnosticsRows();
+  return `
+    <div class="pg-light">
+      <button class="rh-btn rh-btn--ghost" style="flex:none;padding:8px 14px;font-size:13px;margin-bottom:10px;" data-action="close-diagnostics">← Back</button>
+      <div style="font-size:22px;font-weight:800;margin-bottom:2px;">Diagnostics</div>
+      <div style="font-size:13px;color:var(--rh-muted);margin-bottom:14px;">Read-only snapshot for testing. Nothing on this screen changes or deletes anything.</div>
+
+      ${rows.map(([title, items]) => `
+        <div class="pg-card" style="margin-bottom:12px;">
+          <div style="font-size:15px;font-weight:800;margin-bottom:6px;">${escHtml(title)}</div>
+          ${items.map(([k,v])=>`
+            <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);">
+              <div class="pi-row__body"><div class="pi-row__label">${escHtml(String(k))}</div><div class="pi-row__value" style="white-space:normal;">${escHtml(String(v))}</div></div>
+            </div>`).join("")}
+        </div>`).join("")}
+
+      <button class="btn btn-steel btn-block" data-action="copy-diagnostics">Copy Diagnostics</button>
+    </div>
+  `;
+}
+
 function renderPrivacySecurityInfo(){
   let hcConnected = false;
   try { hcConnected = !!(window.HealthConnectIntegration && window.HealthConnectIntegration.loadState().connected); } catch(e){}
@@ -6275,7 +6729,7 @@ function renderPrivacySecurityInfo(){
       <div class="pg-card" style="margin-top:12px;">
         <div style="font-size:15px;font-weight:800;margin-bottom:10px;">Real permission status</div>
         <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('bell',16)}</span><div class="pi-row__body"><div class="pi-row__label">Notifications</div><div class="pi-row__value" style="text-transform:capitalize;">${notifPerm}</div></div></div>
-        <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('health',16)}</span><div class="pi-row__body"><div class="pi-row__label">Health Connect</div><div class="pi-row__value">${hcConnected?'Connected':'Not connected'}</div></div></div>
+        <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('health',16)}</span><div class="pi-row__body"><div class="pi-row__label">${hcName()}</div><div class="pi-row__value">${hcConnected?'Connected':'Not connected'}</div></div></div>
         <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('signout',16)}</span><div class="pi-row__body"><div class="pi-row__label">Account</div><div class="pi-row__value">${signedIn?'Signed in':'Not signed in'}</div></div></div>
         <div class="pi-row" style="background:none;border:none;padding:8px 0;border-top:1px solid var(--rh-border);"><span class="pi-row__icon">${svg('cloud',16)}</span><div class="pi-row__body"><div class="pi-row__label">Cloud Sync</div><div class="pi-row__value">${cs?cs.getStatus().status:'Not available'}</div></div></div>
       </div>
@@ -6381,6 +6835,7 @@ function renderRemindersScreen(){
 
 function renderSettingsTab(){
   if(state.reminderScreen) return renderRemindersScreen();
+  if(state.viewingDiagnostics) return renderDiagnosticsScreen();
   if(state.viewingPrivacyInfo) return renderPrivacySecurityInfo();
   const s = state.settings;
   return `
@@ -6443,7 +6898,7 @@ function renderSettingsTab(){
         ${settingToggle("weeklyReports","Weekly Reports","Summary of your training week.","progress")}
         ${settingToggle("workoutLeftReminder","Workout Left Running",`Remind you ${Math.max(1, Number(state.settings.workoutLeftAfterMin)||15)} min after you leave a workout unfinished.`,"timer")}
         <button class="rh-btn rh-btn--ghost" style="width:100%;margin-top:12px;" data-action="test-notification">Send Test Notification</button>
-        ${nativeNotify() ? (state.nativeNotifPermissionGranted===false ? `<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Notifications are blocked — enable them for IGNYT in Android Settings.</div>` : '')
+        ${nativeNotify() ? (state.nativeNotifPermissionGranted===false ? `<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Notifications are blocked — enable them for IGNYT in ${notifSettingsHint()}.</div>` : '')
           : (typeof Notification!=='undefined' && Notification.permission==='denied' ? `<div style="font-size:11px;color:var(--rh-red);margin-top:8px;">Notifications are blocked for this site in your browser settings.</div>` : '')}
       </div>
 
@@ -6492,7 +6947,8 @@ function renderSettingsTab(){
 
       <div class="rh-section-head"><span>${svg('info',13)} About</span></div>
       <div class="tl-grid" style="grid-template-columns:1fr;">
-        <div class="tl-card" style="cursor:default;"><span class="tl-card__icon">${svg('info',20)}</span><div class="tl-card__body"><div class="tl-card__label">App Version</div><div class="tl-card__desc">IGNYT v1.0</div></div></div>
+        <button class="tl-card" style="cursor:default;text-align:left;" data-action="diag-version-tap"><span class="tl-card__icon">${svg('info',20)}</span><div class="tl-card__body"><div class="tl-card__label">App Version</div><div class="tl-card__desc">IGNYT v1.0</div></div></button>
+        ${diagUnlocked() ? `<button class="tl-card" data-action="open-diagnostics"><span class="tl-card__icon">${svg('bolt',20)}</span><div class="tl-card__body"><div class="tl-card__label">Diagnostics</div><div class="tl-card__desc">Read-only app &amp; test status</div></div><span class="tl-card__chev">›</span></button>` : ''}
         <button class="tl-card" data-action="open-legal-privacy"><span class="tl-card__icon">${svg('shield',20)}</span><div class="tl-card__body"><div class="tl-card__label">Privacy Policy</div><div class="tl-card__desc">How your data is stored and shared</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-action="open-legal-terms"><span class="tl-card__icon">${svg('file',20)}</span><div class="tl-card__body"><div class="tl-card__label">Terms and Conditions</div><div class="tl-card__desc">The terms you agreed to on sign-up</div></div><span class="tl-card__chev">›</span></button>
         <button class="tl-card" data-action="open-legal-disclaimer"><span class="tl-card__icon">${svg('health',20)}</span><div class="tl-card__body"><div class="tl-card__label">Medical &amp; Fitness Disclaimer</div><div class="tl-card__desc">Read before starting a program</div></div><span class="tl-card__chev">›</span></button>
@@ -6900,11 +7356,11 @@ function renderLegacyHomeTab(){
     </div>
 
     <div class="grid2" style="margin-top:12px;">
-      <div class="stat-card"><div class="stat-label">Streak</div><div class="stat-value" style="color:var(--accent);">🔥 ${streak}<span class="stat-unit">days</span></div></div>
+      <div class="stat-card"><div class="stat-label">Streak</div><div class="stat-value" style="color:var(--accent);">${svg('flame',16)} ${streak}<span class="stat-unit">days</span></div></div>
       <div class="stat-card"><div class="stat-label">Weight</div><div class="stat-value" style="color:var(--steel);">${displayW(latestWeight?latestWeight.weight:state.profile.weight)}<span class="stat-unit">${wUnit()}</span></div></div>
       <div class="stat-card"><div class="stat-label">Calories Today</div><div class="stat-value" style="color:var(--text);">${eaten}<span class="stat-unit">/ ${targets.kcal}</span></div></div>
       <div class="stat-card"><div class="stat-label">Protein Today</div><div class="stat-value" style="color:var(--text);">${proteinToday}<span class="stat-unit">/ ${Math.round(targets.protein)}g</span></div></div>
-      ${state.prs.length ? `<div class="stat-card" style="grid-column:1/-1;"><div class="stat-label">Latest PR</div><div class="stat-value" style="color:var(--accent);font-size:16px;">🏆 ${state.prs[0].exerciseName||'Session Volume'} — ${prValueLabel(state.prs[0])}<span class="stat-unit" style="display:block;margin-top:2px;">${prTypeLabel(state.prs[0])}</span></div></div>` : ''}
+      ${state.prs.length ? `<div class="stat-card" style="grid-column:1/-1;"><div class="stat-label">Latest PR</div><div class="stat-value" style="color:var(--accent);font-size:16px;">${svg('trophy',15)} ${state.prs[0].exerciseName||'Session Volume'} — ${prValueLabel(state.prs[0])}<span class="stat-unit" style="display:block;margin-top:2px;">${prTypeLabel(state.prs[0])}</span></div></div>` : ''}
     </div>
 
     <div class="eyebrow-label">This Week</div>
@@ -6912,7 +7368,7 @@ function renderLegacyHomeTab(){
       ${week.days.map((d,i)=>{
         const pct = d.exercises.length ? Math.round(d.exercises.filter(ex=>state.completed[`${week.week}|${d.day}|${ex.name}`]).length/d.exercises.length*100) : 0;
         return `<button class="day-tab ${pct===100?'active':''}" data-home-day="${i}" style="opacity:${pct===100?1:.85};">
-          <div class="dtop">${d.day.toUpperCase()}</div><div class="dbot">${pct===100?'✓ Done':pct>0?pct+'%':d.session.split(' ')[0]}</div>
+          <div class="dtop">${d.day.toUpperCase()}</div><div class="dbot">${pct===100?svg('check',12)+' Done':pct>0?pct+'%':d.session.split(' ')[0]}</div>
         </button>`;
       }).join("")}
     </div>
@@ -6989,8 +7445,32 @@ function maybeShowReminders(){
    above stays as the in-app-open fallback for browser/PWA use, where
    there is no such thing as a background reminder.
 ========================================================= */
+/* "Health Connect" is Android's product name and means nothing on an iPhone, where Health
+   ships with the OS and cannot be installed. One source of truth in health-connect.js; this is
+   just a short alias so the templates below stay readable. Falls back to the Android name when
+   health-connect.js has not loaded, which is the only case where neither answer is better. */
+function hcName(){
+  try { return (window.HealthConnect && HealthConnect.brandName) ? HealthConnect.brandName() : "Health Connect"; }
+  catch(e){ return "Health Connect"; }
+}
+
 function nativeNotify(){
   return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.IgnytNotify) || null;
+}
+
+/* Where a user goes to turn notifications back on — a different place, under a different name,
+   on each platform. Naming the wrong one is not a cosmetic slip: "enable them in Android
+   Settings" sends an iPhone owner looking for a screen that does not exist, which is the same
+   fault as telling them Health Connect is not installed.
+
+   Reads the marker index.html sets on <html> rather than calling Capacitor, so it is safe in a
+   template string and correct in the browser too. */
+function notifSettingsHint(){
+  switch(document.documentElement.getAttribute("data-platform")){
+    case "ios":     return "Settings › Notifications › IGNYT";
+    case "android": return "Android Settings";
+    default:        return "your browser settings";
+  }
 }
 
 const REMINDER_DEFS = {
@@ -7066,7 +7546,7 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","workouts","calendar"].includes(state.progressView)))
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="recommendation" || state.tab==="ai" || state.tab==="safety" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","workouts","calendar"].includes(state.progressView)))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || state.bodyView==="calculators" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
@@ -7093,6 +7573,7 @@ function renderApp(){
     ${renderHoldTimerOverlay()}
     ${renderToast()}
     ${renderConfirmDialog()}
+    ${renderScoreDetail()}
     ${renderLegalViewer()}
     ${renderLiveSessionBar()}
     ${renderPaywallSheet()}
@@ -7102,15 +7583,27 @@ function renderApp(){
      outside #app precisely so this innerHTML does not destroy it, which is what lets the
      selection indicator slide instead of cutting. */
   syncBottomNav(isLightTab);
+  syncAIFab();
   const main = document.getElementById("main");
   if(state.tab==="home") main.innerHTML = renderHomeTab();
   if(state.tab==="plan") main.innerHTML = renderPlanTab();
   if(state.tab==="workout") main.innerHTML = renderWorkoutTab();
   if(state.tab==="library") main.innerHTML = renderLibraryTab();
+  /* Recommended programs — Workout > Quick Actions > Recommendation. Reads from
+     js/coach/programs.js and touches nothing the HYROX plan owns. */
+  /* Reached when Start Empty is blocked: the check needs somewhere to render, and it carries a
+     way back to the workout screen so the user is not stranded on it. */
+  if(state.tab==="safety") main.innerHTML = window.IgnytRedFlags
+    ? IgnytRedFlags.screenHtml(escHtml, { title: "Before you start", backAction: 'data-nav="workout"', backLabel: "← Workout" })
+    : "";
+  if(state.tab==="recommendation") main.innerHTML = (window.IgnytPages && IgnytPages.renderRecommendation)
+    ? IgnytPages.renderRecommendation({ state, svg, escHtml, exerciseImageSrc }) : "";
   if(state.tab==="body") main.innerHTML = renderBodyTab();
   if(state.tab==="nutrition") main.innerHTML = renderNutritionTab();
   if(state.tab==="progress") main.innerHTML = renderProgressTab();
   if(state.tab==="ai-coach") main.innerHTML = renderAiCoachTab();
+  if(state.tab==="ai") main.innerHTML = (window.IgnytPages && IgnytPages.renderAIChat)
+    ? IgnytPages.renderAIChat({ state, svg, escHtml }) : "";
   if(state.tab==="settings") main.innerHTML = renderSettingsTab();
   if(state.tab==="health") main.innerHTML = renderHealthDashboard();
   if(state.tab==="healthhub") main.innerHTML = window.IgnytHealthDashboard ? window.IgnytHealthDashboard.render() : "";
@@ -7166,7 +7659,7 @@ function renderToolsTab(){
          got above. Deleting the module would also remove the read path to files a user has
          already uploaded, and "take it out of the app" need not mean "make their data
          unrecoverable". */
-      {id:"health", label:"Health Connect", desc:"Sync with apps, track all metrics", icon:"health"}
+      {id:"health", label:hcName(), desc:"Sync with apps, track all metrics", icon:"health"}
     ]],
     ["Nutrition", [
       /* Food Log is deliberately not listed. It is a bottom-nav tab, permanently one tap
@@ -7239,7 +7732,7 @@ function renderProfileTab(){
 
   function fieldDelta30d(field){
     const cutoff = Date.now() - 30*86400000;
-    const inWindow = state.bodylog.filter(e=>e[field]!=null && e[field]!=="" && new Date(e.date).getTime()>=cutoff)
+    const inWindow = state.bodylog.filter(e=>e[field]!=null && e[field]!=="" && new Date(e.date+"T12:00:00").getTime()>=cutoff)
       .slice().reverse(); // bodylog is newest-first; reverse to chronological
     const latest = state.bodylog.find(e=>e[field]!=null && e[field]!=="");
     if(!latest) return null;
@@ -7298,7 +7791,7 @@ function renderProfileTab(){
           <div class="pf-progress-item">
             <div class="pf-progress-item__head"><span class="pf-progress-item__icon" style="color:var(--rh-purple);">${svg('dumbbell',16)}</span>Muscle Mass</div>
             <div class="pf-progress-item__value">${hcLeanMass!=null?displayW(hcLeanMass):'—'}<span class="pf-progress-item__unit">${wUnit()}</span></div>
-            <div class="pf-progress-item__sub" style="margin-top:6px;">${hcLeanMass!=null?'Latest Health Connect reading':'No data'}</div>
+            <div class="pf-progress-item__sub" style="margin-top:6px;">${hcLeanMass!=null?`Latest ${hcName()} reading`:'No data'}</div>
           </div>
           <div class="pf-progress-item">
             <div class="pf-progress-item__head"><span class="pf-progress-item__icon" style="color:#D97706;">${svg('trend',16)}</span>BMI</div>
@@ -7346,7 +7839,7 @@ function renderAiCoachTab(){
   return `<section class="premium-card premium-card--elevated coach-empty">
     <div class="coach-empty__icon">${svg('more',28)}</div>
     <div style="font-size:24px;font-weight:900;">AI Coach</div>
-    <p style="margin:8px auto 18px;max-width:300px;color:var(--color-text-secondary);line-height:1.5;">Coach is unavailable right now. Your workout, nutrition, progress, and Health Connect data remain available in their existing screens.</p>
+    <p style="margin:8px auto 18px;max-width:300px;color:var(--color-text-secondary);line-height:1.5;">Coach is unavailable right now. Your workout, nutrition, progress, and ${hcName()} data remain available in their existing screens.</p>
     <button class="btn btn-secondary" data-nav="progress">Explore your progress</button>
   </section>`;
 }
@@ -7389,11 +7882,41 @@ const HC_METRIC_PERMISSION = {
 /** true only when we positively know the permission was denied (a real grantedPermissions
  *  list came back from a fresh sync and this metric's permission isn't in it). Older cached
  *  payloads from before this field existed have no grantedPermissions array -- those fall
- *  back to the plain "no data" reading rather than a false "permission required" claim. */
+ *  back to the plain "no data" reading rather than a false "permission required" claim.
+ *
+ *  ON iOS THE ANSWER IS UNKNOWABLE, AND SAYING SO IS THE FIX. HealthKit will not tell an app
+ *  whether a READ was granted: authorizationStatus(for:) answers only for types the app can
+ *  WRITE, and a denied read is deliberately indistinguishable from an empty data set. IGNYT
+ *  writes just two types, workouts and body mass, so the grantedPermissions list coming back
+ *  from iOS can only ever contain those — and it carries HealthKit's own names, which never
+ *  match the android.permission.health.* strings this map is keyed on.
+ *
+ *  The result was that EVERY read metric on iPhone reported "Permission required" for ever,
+ *  whatever the user had actually allowed: steps, calories, distance, heart rate, sleep,
+ *  hydration and nutrition all missing from a list that structurally could not contain them.
+ *  It was never a permissions bug on the device — the grant was fine and the screen was wrong.
+ *
+ *  The plugin already states this in every payload it sends. Honouring the flag is all that was
+ *  missing: where the platform cannot know, claim nothing and let the value speak. A real value
+ *  renders; no value reads "No data", which is the honest answer when a denied read and an empty
+ *  day are genuinely the same observation. */
 function hcPermissionMissing(d, label) {
   if (!d || !Array.isArray(d.grantedPermissions)) return false;
+  if (d.readAuthorizationIsUnknowable) return false;
+  /* AND THE SAME CONCLUSION WITHOUT THE FLAG, because depending on every payload to remember it
+     is how this broke twice. The dashboard sent it and the Insights payload did not, so Insights
+     went on reporting "Permission required" for nine metrics after the dashboard beside it had
+     started showing real numbers — same list, same comparison, one missing field.
+
+     This asks the list itself. Every string this map compares against is an
+     android.permission.health.* identifier, so a list containing none of them is not a Health
+     Connect list at all and the comparison cannot mean anything — which is exactly the state of
+     an iOS payload, where the list holds HealthKit's own write-type names. An empty list says
+     nothing either way and is left to the flag. */
+  const perms = d.grantedPermissions;
+  if (perms.length && !perms.some(p => String(p).startsWith("android.permission.health."))) return false;
   const perm = HC_METRIC_PERMISSION[label];
-  return !!perm && !d.grantedPermissions.includes(perm);
+  return !!perm && !perms.includes(perm);
 }
 
 /* =========================================================
@@ -7455,7 +7978,7 @@ function hcTimeAgo(isoString) {
  *  "No data" and skips the chart entirely, rather than drawing an empty/fake one. */
 function hcCard(opts) {
   const { label, rangeLabel, value, unit, timeLabel, chartHtml, hasData, source } = opts;
-  const sourceLabel = source || "Health Connect"; // real metadata when available, honest fallback otherwise -- never hardcoded to one provider
+  const sourceLabel = source || hcName(); // real metadata when available, honest fallback otherwise -- never hardcoded to one provider
   return `
     <button class="hc-home-card" data-nav="health" style="width:100%;text-align:left;background:var(--surface);border:none;border-radius:var(--radius-card);padding:16px;margin-bottom:12px;cursor:pointer;display:block;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
@@ -7560,7 +8083,7 @@ function renderHomeHabits(){
           <span class="hb-icon" style="background:${meta.bg};color:${meta.color};" aria-hidden="true">${svg(meta.icon,15)}</span>
           <span class="hb-body">
             <span class="hb-name">${escHtml(h.name)}</span>
-            ${streak > 0 ? `<span class="hb-streak">🔥 ${streak} day${streak===1?"":"s"}</span>` : ""}
+            ${streak > 0 ? `<span class="hb-streak">${svg('flame',13)} ${streak} day${streak===1?"":"s"}</span>` : ""}
           </span>
         </button>`;
       }).join("")}
@@ -7582,7 +8105,7 @@ function renderHomeHealthFeed() {
   try { cache = JSON.parse(localStorage.getItem("hx_hc_dashboard_cache") || "null"); } catch (e) { /* ignore */ }
   const liveData = integ ? integ.getSyncData() : null;
   const d = liveData || cache;
-  if (!d) return `<div class="eyebrow-label">Health Connect</div><div class="info-box" style="padding:14px;font-size:13px;color:var(--muted);">Tap Sync in Health Connect to see your data here.</div>`;
+  if (!d) return `<div class="eyebrow-label">${hcName()}</div><div class="info-box" style="padding:14px;font-size:13px;color:var(--muted);">Tap Sync in ${hcName()} to see your data here.</div>`;
 
   const cards = [];
 
@@ -7697,7 +8220,7 @@ function renderHomeHealthFeed() {
     timeLabel: d.nutrition ? `${Math.round(d.nutrition.proteinG||0)}g protein &middot; ${Math.round(d.nutrition.carbsG||0)}g carbs &middot; ${Math.round(d.nutrition.fatG||0)}g fat` : "Today"
   }));
 
-  return `<div class="eyebrow-label">Health Connect</div>${cards.join("")}`;
+  return `<div class="eyebrow-label">${hcName()}</div>${cards.join("")}`;
 }
 
 // icon/bg/color are only passed by the redesigned Insights screen (renderInsightsTab);
@@ -7798,10 +8321,10 @@ function renderHealthDashboard() {
   if (!isNative) {
     return `<div class="pg-light">
       ${backBtn}
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">${headerIcon}<span style="font-size:22px;font-weight:800;">Health Connect</span></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">${headerIcon}<span style="font-size:22px;font-weight:800;">${hcName()}</span></div>
       <div class="pg-card">
-        <div style="font-size:13px;color:var(--rh-muted);">Health Connect is not available on this device.</div>
-        <div style="font-size:12px;color:var(--rh-muted);margin-top:6px;">This feature only works in the IGNYT Android app.</div>
+        <div style="font-size:13px;color:var(--rh-muted);">${hcName()} is not available on this device.</div>
+        <div style="font-size:12px;color:var(--rh-muted);margin-top:6px;">This feature only works in the IGNYT mobile app.</div>
       </div>
     </div>`;
   }
@@ -7814,12 +8337,12 @@ function renderHealthDashboard() {
     return `<div class="pg-light">
       ${backBtn}
       <div class="row-between" style="margin-bottom:14px;">
-        <div style="display:flex;align-items:center;gap:10px;">${headerIcon}<span style="font-size:22px;font-weight:800;">Health Connect</span></div>
+        <div style="display:flex;align-items:center;gap:10px;">${headerIcon}<span style="font-size:22px;font-weight:800;">${hcName()}</span></div>
         ${statusPill}
       </div>
       <div class="pg-card">
         ${errorMsg ? `<div style="font-size:13px;color:var(--rh-red);margin-bottom:10px;">${errorMsg}</div>` : `<div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Sync your fitness and health data with IGNYT.</div>`}
-        <button class="rh-btn rh-btn--primary" style="width:100%;" data-action="health-connect" ${busy ? "disabled" : ""}>${busy ? "Connecting\u2026" : "Connect Health Connect"}</button>
+        <button class="rh-btn rh-btn--primary" style="width:100%;" data-action="health-connect" ${busy ? "disabled" : ""}>${busy ? "Connecting\u2026" : `Connect ${hcName()}`}</button>
       </div>
     </div>`;
   }
@@ -7844,7 +8367,7 @@ function renderHealthDashboard() {
   return `<div class="pg-light">
     ${backBtn}
     <div class="row-between" style="margin-bottom:14px;">
-      <div style="display:flex;align-items:center;gap:10px;">${headerIcon}<span style="font-size:22px;font-weight:800;">Health Connect</span></div>
+      <div style="display:flex;align-items:center;gap:10px;">${headerIcon}<span style="font-size:22px;font-weight:800;">${hcName()}</span></div>
       ${statusPill}
     </div>
 
@@ -7906,7 +8429,7 @@ function renderInsightsTab(){
     return `<div class="pg-light">
       ${backBtn}
       <div style="font-size:22px;font-weight:800;margin-bottom:14px;">Insights</div>
-      <div class="pg-card"><div style="font-size:13px;color:var(--rh-muted);">Health Connect Insights are only available in the IGNYT Android app.</div></div>
+      <div class="pg-card"><div style="font-size:13px;color:var(--rh-muted);">Health insights are only available in the IGNYT mobile app.</div></div>
     </div>`;
   }
 
@@ -7918,8 +8441,8 @@ function renderInsightsTab(){
       ${backBtn}
       <div style="font-size:22px;font-weight:800;margin-bottom:14px;">Insights</div>
       <div class="pg-card">
-        <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Connect Health Connect to see your real Day, Week, Month and Year health trends.</div>
-        <button class="rh-btn rh-btn--primary" style="width:100%;" data-nav="health">Go to Health Connect</button>
+        <div style="font-size:13px;color:var(--rh-muted);margin-bottom:12px;">Connect ${hcName()} to see your real Day, Week, Month and Year health trends.</div>
+        <button class="rh-btn rh-btn--primary" style="width:100%;" data-nav="health">Go to ${hcName()}</button>
       </div>
     </div>`;
   }
@@ -8003,8 +8526,15 @@ const NAV_TABS = [
   ["progress", "Progress"], ["tools", "Tools"]
 ];
 
+/* The nav's icon is USUALLY the tab's own icon, and this is the list of where it is not.
+   `workout` is a play triangle in the other ten places it appears — "Start Workout", "Resume",
+   "Repeat Workout" — where it correctly reads as start. In the nav the label names a place, not
+   an action, so it takes a barbell. Overriding the shared icon instead would have put a barbell
+   on the timer's Start button. */
+const NAV_ICONS = { workout: "barbell" };
+
 function navBtn(id,label){
-  return `<button class="nav-btn" data-navtab="${id}">${svg(id)}<span>${label}</span></button>`;
+  return `<button class="nav-btn" data-navtab="${id}">${svg(NAV_ICONS[id] || id)}<span>${label}</span></button>`;
 }
 
 function buildBottomNav(){
@@ -8240,6 +8770,47 @@ function buildBottomNav(){
 function removeBottomNav(){
   const nav = document.querySelector("nav.bottom-nav");
   if(nav) nav.remove();
+}
+
+/* =========================================================
+   THE AI BUTTON
+
+   Lives on <body> beside the nav, for the same reason the nav does: #app is replaced wholesale
+   on every render, and an element inside it cannot survive one.
+
+   IT DELIBERATELY DOES NOT CARRY data-nav. attachHandlers() re-binds a click listener to every
+   [data-nav] on every render, which is harmless on markup that is rebuilt each time and a leak
+   on an element that is not — the listeners stack, and one tap fires render() once per
+   accumulated listener. The nav documents this same trap above and dodges it the same way:
+   bind once, on the element that outlives the renders.
+========================================================= */
+function buildAIFab(){
+  const fab = document.createElement("button");
+  fab.type = "button";
+  fab.className = "ai-fab";
+  fab.setAttribute("aria-label", "Open AI Coach");
+  fab.innerHTML = svg("sparkle", 26);
+
+  fab.addEventListener("click", ()=>{
+    if(state.tab === "ai") return;      // already there; nothing to do
+    state.notificationsOpen = false;    // any navigation closes the header panel
+    state.tab = "ai";
+    state.bodyView = null;              // land on the chat, not a stale calculator view
+    render();
+  });
+
+  document.body.appendChild(fab);
+  return fab;
+}
+
+function removeAIFab(){
+  const fab = document.querySelector(".ai-fab");
+  if(fab) fab.remove();
+}
+
+function syncAIFab(){
+  const fab = document.querySelector(".ai-fab") || buildAIFab();
+  fab.classList.toggle("is-hidden", state.tab === "ai");
 }
 
 function syncBottomNav(isLightTab){
@@ -9008,7 +9579,6 @@ function obTextarea(fieldPath, placeholder){
   return `<textarea class="note-input" data-ob-field="${obEsc(fieldPath)}" placeholder="${obEsc(placeholder||'')}" style="margin-bottom:14px;min-height:52px;">${obEsc(v||'')}</textarea>`;
 }
 
-const ONBOARDING_TOTAL_STEPS = 5;   // derived from the renderer list below
 
 function onboardingProgressHeader(step){
   return `
@@ -9337,12 +9907,12 @@ function obStepSummary(){
 function obOptionRow(fieldPath, opt, selected, multi){
   const attr = multi ? "data-ob-toggle" : "data-ob-pick";
   return `<button class="ob-opt ${selected?'is-on':''}" ${attr}="${obEsc(fieldPath)}|${obEsc(opt.key)}">
-    <span class="ob-opt__icon" aria-hidden="true">${opt.icon||''}</span>
+    <span class="ob-opt__icon" aria-hidden="true">${opt.icon?svg(opt.icon,20):''}</span>
     <span class="ob-opt__body">
       <span class="ob-opt__label">${obEsc(opt.label)}</span>
       ${opt.desc?`<span class="ob-opt__desc">${obEsc(opt.desc)}</span>`:''}
     </span>
-    <span class="ob-opt__tick" aria-hidden="true">${selected?'✓':''}</span>
+    <span class="ob-opt__tick" aria-hidden="true">${selected?svg('check',15):''}</span>
   </button>`;
 }
 
@@ -9376,7 +9946,7 @@ function obFairUse(){
       ${points.map(([i,t])=>`<div class="ob-policy__row"><span aria-hidden="true">${i}</span><span>${obEsc(t)}</span></div>`).join("")}
     </div>
     <button class="ob-check ${ok?'is-on':''}" data-ob-toggle-bool="onboarding.fairUseAccepted">
-      <span class="ob-check__box" aria-hidden="true">${ok?'✓':''}</span>
+      <span class="ob-check__box" aria-hidden="true">${ok?svg('check',13):''}</span>
       <span>I have read and agree to the <a href="legal/terms-and-conditions.html" data-legal-open="terms">Terms and Conditions</a> and <a href="legal/privacy-policy.html" data-legal-open="privacy">Privacy Policy</a>.</span>
     </button>`;
 }
@@ -9496,7 +10066,7 @@ function obNotifications(){
 
   const EXAMPLES = [
     ["\u{1F373}", "Meals", "A nudge at breakfast, lunch and dinner."],
-    ["\u{1F3CB}️", "Workouts", "When you have a session planned."],
+    ["barbell", "Workouts", "When you have a session planned."],
     ["\u{1F4A7}", "Hydration", "So the water target does not end the day at zero."],
     ["\u{1F4C8}", "Progress", "A weekly summary of what actually happened."]
   ];
@@ -9513,7 +10083,7 @@ function obNotifications(){
 
     ${st === "granted" ? `
       <div class="ob-hc-ok" role="status">
-        <span class="ob-hc-ok__tick" aria-hidden="true">✓</span>
+        <span class="ob-hc-ok__tick" aria-hidden="true">${svg('check',13)}</span>
         <span>Notifications are on. You can fine-tune each reminder in Settings.</span>
       </div>` : ""}
     ${st === "denied" ? `
@@ -9546,27 +10116,27 @@ function obHealthConnect(){
     catch (e) { return false; }
   })();
   return `
-    ${obHero("\u{1F499}", "Connect <span class='ob-accent'>Health Connect</span>", "Sync your health data for better insights and accurate tracking.")}
+    ${obHero("\u{1F499}", `Connect <span class='ob-accent'>${hcName()}</span>`, "Sync your health data for better insights and accurate tracking.")}
     <div class="ob-policy">
-      ${OB_HEALTH_METRICS.map(m=>`<div class="ob-policy__row"><span aria-hidden="true" style="color:var(--mint);">✓</span><span>${obEsc(m)}</span></div>`).join("")}
+      ${OB_HEALTH_METRICS.map(m=>`<div class="ob-policy__row"><span aria-hidden="true" style="color:var(--mint);">${svg('check',13)}</span><span>${obEsc(m)}</span></div>`).join("")}
     </div>
     ${(state.onboarding.healthConnectState === "ok" || alreadyConnected) ? `
       <div class="ob-hc-ok" role="status">
-        <span class="ob-hc-ok__tick" aria-hidden="true">✓</span>
+        <span class="ob-hc-ok__tick" aria-hidden="true">${svg('check',13)}</span>
         <span>Connected. Your health data will sync automatically.</span>
       </div>` : ""}
     ${(state.onboarding.healthConnectState === "denied" || state.onboarding.healthConnectState === "skipped") ? `
-      <div class="ob-note">No problem — you can connect Health Connect any time from Profile.</div>` : ""}
+      <div class="ob-note">No problem — you can connect ${hcName()} any time from Profile.</div>` : ""}
 
     ${native
       ? `<button class="btn btn-accent btn-block" data-ob-health ${state.onboarding.healthConnectBusy?'disabled':''}>
            ${state.onboarding.healthConnectBusy ? 'Connecting…'
              : (state.onboarding.healthConnectState === "ok" || alreadyConnected)
-               ? 'Sync now' : 'Sync with Health Connect'}
+               ? 'Sync now' : `Sync with ${hcName()}`}
          </button>`
-      : `<div class="ob-note">Health Connect is an Android feature, so it isn't available in this
-           preview. On a device you'll be able to sync steps, weight, sleep and workouts here —
-           for now the app uses manual entry, and you can connect later from Tools.</div>`}
+      : `<div class="ob-note">Health syncing needs the IGNYT mobile app, so it isn't available in
+           this preview. On a phone you'll be able to sync steps, weight, sleep and workouts
+           here — for now the app uses manual entry, and you can connect later from Tools.</div>`}
 
     <!-- Secondary, and never absent. Health Connect must not be able to block onboarding:
          a denied permission, an unsupported device or a missing app all still need a way
@@ -9685,9 +10255,9 @@ function obYourDetails(){
    two consecutive permission screens read as nagging. Each keeps its own renderer, so the
    Connect and Allow buttons and their busy states behave exactly as they did when the two
    were separate steps. */
-function obPermissions(){
-  return obNotifications() + '<div class="ob-perm-divider"></div>' + obHealthConnect();
-}
+/* obPermissions() — the combined notifications + Health page — is gone. The two are separate
+   steps again: one permission prompt per page, so neither is scrolled past. See
+   ONBOARDING_STEP_RENDERERS. */
 
 /* Page 4: the figures the app actually computes with, on one screen instead of four.
 
@@ -9753,7 +10323,7 @@ function obBmiSummary(){
         BMI and healthy weight range here. You can also do it later from Log Weight.</div>`;
   }
 
-  const TONES = { blue:"#3B82F6", green:"#16A34A", amber:"#D97706", red:"#EF4444" };
+  const TONES = { blue:"#2563EB", green:"#16A34A", amber:"#D97706", red:"#EF4444" };
   const col = TONES[b.tone] || "var(--muted)";
   const r = b.healthyRange;
 
@@ -9792,8 +10362,18 @@ function obBmiSummary(){
    state.onboarding and still default sensibly, so nothing downstream reads an undefined --
    they are simply no longer collected up front. */
 const ONBOARDING_STEP_RENDERERS = [
-  obFairUse, obYourDetails, obPermissions, obBasics, obBmiSummary
+  obFairUse, obYourDetails, obNotifications, obHealthConnect, obBasics, obBmiSummary
 ];
+
+/* DERIVED, not a number kept in step by hand. It was `const ONBOARDING_TOTAL_STEPS = 5;`
+   declared hundreds of lines above this array with the comment "derived from the renderer list
+   below" — which it was not. It drives the "Step n of N" label, the progress bar segments and
+   the is-this-the-last-step test, so splitting the permissions page would have left all three
+   describing a flow one page shorter than the one being walked through.
+
+   Declared HERE rather than beside its uses because a const cannot be read before the array it
+   measures exists. Every consumer is inside a function, so none of them run this early. */
+const ONBOARDING_TOTAL_STEPS = ONBOARDING_STEP_RENDERERS.length;
 
 /* Step gates and the Health Connect auto-advance used to compare against literal step numbers
    (=== 1, === 9, === 10). Moving Health Connect from step 10 to step 2 silently pointed all of
@@ -9822,8 +10402,11 @@ function obStepIndexOf(renderer){
    out fetching brand marks from a CDN.
 ========================================================= */
 const AUTH_ICONS = {
-  email: `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3.2" stroke="#3B82F6" stroke-width="1.7"/><path d="M3.4 6.8 12 12.9l8.6-6.1" stroke="#3B82F6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  bolt: `<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M13.6 1.5 4.2 13.2c-.4.5-.05 1.25.6 1.25h4.9l-1.5 7.9c-.13.7.76 1.1 1.19.54l9.4-11.7c.4-.5.05-1.25-.6-1.25h-4.9l1.5-7.9c.13-.7-.76-1.1-1.19-.54z" fill="#3B82F6"/></svg>`
+  email: `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3.2" stroke="#2563EB" stroke-width="1.7"/><path d="M3.4 6.8 12 12.9l8.6-6.1" stroke="#2563EB" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  bolt: `<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M13.6 1.5 4.2 13.2c-.4.5-.05 1.25.6 1.25h4.9l-1.5 7.9c-.13.7.76 1.1 1.19.54l9.4-11.7c.4-.5.05-1.25-.6-1.25h-4.9l1.5-7.9c.13-.7-.76-1.1-1.19-.54z" fill="#2563EB"/></svg>`,
+  /* Google's four-colour G, drawn to its published geometry rather than fetched from a CDN --
+     the app has to work offline and under a strict CSP. */
+  google: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.26-2.09 3.56-5.17 3.56-8.87z"/><path fill="#34A853" d="M12 24c3.24 0 5.96-1.08 7.94-2.91l-3.87-3a7.2 7.2 0 0 1-10.75-3.78H1.32v3.09A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.32 14.31a7.19 7.19 0 0 1 0-4.6V6.62H1.32a12 12 0 0 0 0 10.78l4-3.09z"/><path fill="#EA4335" d="M12 4.77c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.18 15.24 0 12 0A12 12 0 0 0 1.32 6.62l4 3.09A7.15 7.15 0 0 1 12 4.77z"/></svg>`
 };
 
 /* Grain for the hero, as a data URI so it survives the CSP and works offline. */
@@ -10112,6 +10695,78 @@ function completeSignIn(user){
 
 
 
+/* Whether ANY provider button will render, so the OR divider is not drawn above nothing.
+   Google is Android-only (Credential Manager, AuthPlugin.kt) and Apple iOS-only, so this is
+   false on the web build and the divider disappears with the buttons. */
+function hasThirdPartySignIn(){
+  const a = window.IgnytAuth;
+  if(!a) return false;
+  const google = !!(a.isNativeAndroid && a.isNativeAndroid());
+  const apple  = !!(a.appleAvailable && a.appleAvailable());
+  return google || apple;
+}
+
+/* =========================================================
+   IGNYT SCORE BREAKDOWN
+
+   The score is the app's own metric and was, until now, a number with no explanation. A number
+   nobody can act on is a number nobody trusts — "84" says nothing about what moved it or what
+   would move it next, which is the difference between a score and a scoreboard.
+
+   Everything here is read from IgnytScore rather than recomputed: today() for what has already
+   been earned, suggestions() for what is still available and worth how much, levelFor() for the
+   band. Restating any of that here would create a second definition of the score that could
+   drift from the engine's.
+========================================================= */
+function renderScoreDetail(){
+  if(!state.scoreDetailOpen) return "";
+  let t = null, sugg = [], band = null, cap = 160;
+  try {
+    t = IgnytScore.summary(state).today;
+    sugg = IgnytScore.suggestions(state) || [];
+    band = IgnytScore.levelFor(t.score || 0);
+  } catch(e){ /* engine unavailable — the sheet still opens and says so */ }
+
+  const colour = (band && band.color) || "var(--accent)";
+  const earned = t && t.done ? Object.keys(t.done).filter(k => t.done[k]) : [];
+
+  return `<div class="sheet-backdrop" data-action="close-score-detail"></div>
+    <div class="sheet sc-sheet" role="dialog" aria-modal="true" aria-label="IGNYT Score breakdown">
+      <div class="sc-head">
+        <div class="sc-head__score" style="color:${colour};">${t ? t.score : "—"}<em>/ ${cap}</em></div>
+        ${band ? `<div class="sc-head__band" style="color:${colour};">${escHtml(band.name)}</div>` : ""}
+        ${band && band.line ? `<div class="sc-head__line">${escHtml(band.line)}</div>` : ""}
+      </div>
+
+      ${earned.length ? `
+        <div class="sc-group">
+          <div class="sc-group__title">Earned today</div>
+          ${earned.map(k => {
+            const def = (IgnytScore.ACTIONS || {})[k] || {};
+            const n = t.done[k];
+            const pts = def.per ? (def.points * n) : def.points;
+            return `<div class="sc-row sc-row--done">
+              <span class="sc-row__label">${escHtml(def.label || k)}${def.per && n > 1 ? ` ×${n}` : ""}</span>
+              <span class="sc-row__pts">+${pts}</span>
+            </div>`;
+          }).join("")}
+        </div>` : `
+        <div class="sc-empty">Nothing logged yet today — every item below is still available.</div>`}
+
+      ${sugg.length ? `
+        <div class="sc-group">
+          <div class="sc-group__title">Still available</div>
+          ${sugg.slice(0, 6).map(x => `<div class="sc-row">
+            <span class="sc-row__label">${escHtml(x.label || x.key)}</span>
+            <span class="sc-row__pts sc-row__pts--open">+${x.points || x.pts || 0}</span>
+          </div>`).join("")}
+        </div>` : `
+        <div class="sc-empty">Everything available today is already logged. That is a full day.</div>`}
+
+      <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:4px;" data-action="close-score-detail">Done</button>
+    </div>`;
+}
+
 function renderSignInScreen(){
   const root = document.getElementById("app");
   const auth = window.IgnytAuth;
@@ -10138,6 +10793,26 @@ function renderSignInScreen(){
         </div>
         <p class="auth-brand__sub">Your fitness companion for a stronger, healthier life.</p>
         ${renderAuthEmailStep(mode, authErr, busy)}
+        ${/* THIRD-PARTY PROVIDERS, below the email form and behind ONE divider.
+
+              Google is Android-only and Apple iOS-only, so exactly one of them can ever render
+              — but they are written as one block because they are the same thing to the person
+              looking at the screen, and because two independently-gated blocks is how the
+              screen ended up with Google above the form and Apple below it, each with its own
+              divider, on platforms that could never show both at once.
+
+              Email first, providers under the rule: the primary route leads, and the divider
+              means "or instead of that". */''}
+        ${hasThirdPartySignIn() ? `<div class="auth-div">OR</div>` : ""}
+        ${(window.IgnytAuth && IgnytAuth.isNativeAndroid && IgnytAuth.isNativeAndroid()) ? `
+          <button class="auth-social__btn" data-auth="google" ${busy ? "disabled" : ""}>
+            ${AUTH_ICONS.google}<span>${busy ? "Signing in…" : "Continue with Google"}</span>
+          </button>` : ""}
+        ${window.IgnytAuth && IgnytAuth.appleAvailable && IgnytAuth.appleAvailable() ? `
+          <button class="apple-signin-btn" data-auth="apple" ${busy?'disabled':''} aria-label="Sign in with Apple">
+            <svg viewBox="0 0 16 20" width="15" height="19" aria-hidden="true" focusable="false"><path fill="currentColor" d="M13.29 10.62c.02 2.4 2.1 3.2 2.12 3.21-.02.05-.33 1.14-1.1 2.26-.66.97-1.35 1.93-2.44 1.95-1.07.02-1.41-.63-2.63-.63-1.22 0-1.6.61-2.61.65-1.05.04-1.85-1.05-2.52-2.01C2.75 14.1 1.7 10.5 3.1 8.08c.7-1.2 1.94-1.96 3.29-1.98 1.03-.02 2 .69 2.63.69.63 0 1.81-.86 3.05-.73.52.02 1.98.21 2.92 1.58-.08.05-1.74 1.02-1.72 3.03M11.3 4.4c.56-.68.94-1.62.84-2.56-.81.03-1.79.54-2.37 1.22-.52.6-.97 1.56-.85 2.48.9.07 1.82-.46 2.38-1.14"/></svg>
+            <span>Sign in with Apple</span>
+          </button>` : ''}
         <p class="auth-legal">
           By continuing you agree to our<br>
           <a href="legal/privacy-policy.html" data-legal-open="privacy">Privacy Policy</a>
@@ -10145,12 +10820,23 @@ function renderSignInScreen(){
         </p>
       </div>
     </div>
+    ${renderToast()}
     ${renderLegalViewer()}`;
   bindSignInScreen();
 }
 
 function bindSignInScreen(){
   bindPwdToggles();
+  /* Bound HERE and not in attachHandlers(): the sign-in screen renders through
+     renderSignInScreen()/bindSignInScreen() and returns before attachHandlers() is ever
+     reached, so a listener added there is added to a screen that is not on display. */
+  const appleBtn = document.querySelector('[data-auth="apple"]');
+  if(appleBtn) appleBtn.addEventListener("click", async (e)=>{
+    e.preventDefault();
+    if(!window.IgnytAuth || !IgnytAuth.signInWithApple) return;
+    await IgnytAuth.signInWithApple();
+    render();
+  });
   document.querySelectorAll('[data-auth="email-mode"]').forEach(el=>{
     el.addEventListener("click", (e)=>{
       e.preventDefault();
@@ -10180,10 +10866,25 @@ function bindSignInScreen(){
   });
 }
 
-/* Email is the only route in. Google Sign-In and phone/SMS were both removed; the account
-   layer, the session and the navigation are unchanged — only how you prove who you are. */
+/* Two routes in: Google and email. Phone/SMS stays out. Whichever is used, the account layer,
+   the session and the navigation are identical -- only how you prove who you are differs, and
+   both finish through completeSignIn(). */
 function signInAction(kind){
   const auth = window.IgnytAuth;
+  if(kind === "google"){
+    if(!auth || !auth.signIn){
+      showToast("Google sign-in isn't available in this build.", "error", render);
+      return;
+    }
+    /* Awaited, not fire-and-forget. Dropping this promise was a real bug once: the account was
+       saved but nothing advanced past the sign-in screen, so a successful sign-in looked like
+       it had done nothing. */
+    auth.signIn().then(res=>{
+      if(res && res.success && res.data && res.data.user) completeSignIn(res.data.user);
+      else if(res && res.error) showToast(res.error, "error", render);
+    });
+    return;
+  }
   if(kind === "email-back"){
     state.authEmailMode = "signin";
     if(auth && auth.clearError) auth.clearError();
@@ -10213,7 +10914,7 @@ function renderOnboardingWizard(){
          collapsing to its content width and centring: 286px of content inside a 412px screen,
          with 63px of dead space either side on every one of the eleven steps. It read as a
          narrow column rather than a page. -->
-    <div style="padding:24px 16px 100px;max-width:480px;width:100%;margin:0 auto;">
+    <div style="padding:max(calc(var(--safe-top) + 12px), 24px) 16px 100px;max-width:480px;width:100%;margin:0 auto;">
       ${step===1 && !state.editingOnboarding ? `
         <div style="text-align:center;margin-bottom:20px;">
           <div style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:800;margin-bottom:4px;">Welcome to</div>
@@ -10389,22 +11090,17 @@ function wireOnboardingWizard(){
     }
     o.notifBusy = false;
     renderOnboardingWizard();
-    /* No auto-advance any more. Notifications and Health Connect now share one page, so
-       moving on the moment notifications were granted would carry the user straight past the
-       Health Connect prompt they had not answered yet. They tap Next when both are dealt
-       with. (The old obStepIndexOf(obNotifications) test would have returned 0 here anyway,
-       since that renderer is no longer in the step list -- a silent no-op rather than a
-       visible bug, which is exactly the kind of thing that survives unnoticed.) */
+    /* Still no auto-advance, now for a different reason. The two prompts have their own pages
+       again, so advancing would no longer skip anything — but a page that moves on by itself
+       the instant a system dialog is answered gives no chance to read the result, and the
+       result is the point: the card underneath says whether notifications ended up on or off.
+       Continue is one tap and it is the user's. */
   });
 
   const notifSkip = document.querySelector("[data-ob-notif-skip]");
   if(notifSkip) notifSkip.addEventListener("click", ()=>{
-    /* Records the choice and STAYS PUT. It used to advance a step, which was right when
-       notifications had a page to themselves — but they now share one with Health Connect, so
-       advancing carried the user straight past a permission prompt they had never seen. The
-       Health Connect skip below already had this reasoning written against it; the same fix
-       simply was not applied here, so the bug it warns about was still live in the other half
-       of the same page. */
+    /* Records the choice and STAYS PUT, so the page can show that the choice registered.
+       Skipping is a decision worth acknowledging rather than a trapdoor. */
     if(!state.onboarding.notifState) state.onboarding.notifState = "denied";
     renderOnboardingWizard();
   });
@@ -10957,7 +11653,7 @@ function renderCalculators(){
 
   return `
     <div class="pg-card" style="display:flex;align-items:center;gap:10px;padding:12px 14px;">
-      <span style="flex:none;font-size:18px;">${{bmi:'🎯',bmr:'🔥',calorie:'🔥',protein:'🍗',carbs:'🍞',fat:'🥑',lbm:'⚖️',ideal:'⚖️',bodyfat:'💧',bodytype:'📐',hr:'❤️'}[active]||'🧮'}</span>
+      <span class="calc-pick__icon">${svg({bmi:'target',bmr:'flame',calorie:'flame',protein:'meat',carbs:'bread',fat:'droplet',lbm:'scale',ideal:'scale',bodyfat:'droplet',bodytype:'ruler',hr:'heart'}[active]||'calc',18)}</span>
       <select class="pi-input" id="calc-picker" style="flex:1;border:none;background:none;padding:0;font-weight:800;font-size:15px;">
         ${CALCULATORS.map(cc=>`<option value="${cc.key}" ${active===cc.key?'selected':''}>${cc.label}</option>`).join("")}
       </select>
@@ -11170,7 +11866,7 @@ function renderSessionDetail(s){
       <div class="stat-card"><div class="stat-label">Duration</div><div class="stat-value">${s.durationMin||'–'}<span class="stat-unit">min</span></div></div>
       <div class="stat-card"><div class="stat-label">Total Volume</div><div class="stat-value">${displayW(s.volume||0,0).toLocaleString()}<span class="stat-unit">${wUnit()}</span></div></div>
       <div class="stat-card"><div class="stat-label">Working Sets</div><div class="stat-value">${workingSets}</div></div>
-      <div class="stat-card"><div class="stat-label">Personal Records</div><div class="stat-value" style="color:${prs.length?'var(--accent)':'var(--text)'};">${prs.length?'🏆 ':''}${prs.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Personal Records</div><div class="stat-value" style="color:${prs.length?'var(--accent)':'var(--text)'};">${prs.length?svg('trophy',15)+' ':''}${prs.length}</div></div>
     </div>
 
     ${prs.length? `<div class="info-box" style="padding:10px 14px;margin-bottom:14px;">
@@ -11216,7 +11912,7 @@ function renderExerciseDetailHistory(history, exerciseName){
           <div style="font-weight:800;font-size:14px;">${h.title}</div>
           <div style="font-size:11px;color:var(--rh-muted);">${h.date}</div>
         </div>
-        ${h.prs.length ? `<span style="font-size:11px;font-weight:800;color:#D97706;">🏆 ${h.prs.length} PR${h.prs.length>1?'s':''}</span>` : ''}
+        ${h.prs.length ? `<span style="font-size:11px;font-weight:800;color:#D97706;">${svg('trophy',12)} ${h.prs.length} PR${h.prs.length>1?'s':''}</span>` : ''}
       </div>
       ${h.notes ? `<div style="font-size:12px;color:var(--rh-muted);font-style:italic;margin-bottom:6px;">"${h.notes}"</div>` : ''}
       ${h.sets.map((s,i)=>`<div class="row-between" style="padding:4px 0;${i>0?'border-top:1px solid var(--rh-border);':''}">
@@ -11262,7 +11958,12 @@ function progressReportFor(days, endMs){
   const start = end - days*86400000;
   const inRange = (t) => t > start && t <= end;
 
-  const workouts = state.workoutLog.filter(w=>inRange(new Date(w.date).getTime()));
+  /* NOON, NOT MIDNIGHT. new Date("2026-08-11") parses as UTC midnight, which in IST is 5:30am
+     the same day and in the other direction lands on the previous day -- so a workout could
+     fall outside a range it belongs in, or inside one it does not. The rest of this file
+     already parses stored day keys at local noon for exactly this reason; these three call
+     sites were missed. Noon is far enough from either boundary that no offset can move it. */
+  const workouts = state.workoutLog.filter(w=>inRange(new Date(w.date+"T12:00:00").getTime()));
   const volume = workouts.reduce((a,w)=>a+Number(w.volume||0), 0);
   const minutes = workouts.reduce((a,w)=>a+Number(w.durationMin||0), 0);
   const sets = workouts.reduce((a,w)=>a+(w.exercises||[]).reduce(
@@ -11326,7 +12027,7 @@ function renderProgressReports(){
 
     ${!now.hasData ? `
       <div class="pg-card" style="text-align:center;padding:28px 16px;">
-        <div style="font-size:32px;line-height:1;margin-bottom:8px;">🧾</div>
+        <div class="pg-empty__icon">${svg('receipt',28)}</div>
         <div style="font-weight:800;font-size:15px;">Nothing logged for ${escHtml(P.label.toLowerCase())}</div>
         <div style="font-size:12.5px;color:var(--rh-muted);margin-top:4px;">
           Log a workout, a meal or a weight and this report fills in.
@@ -11367,20 +12068,20 @@ function renderProgressReports(){
 }
 
 const PROGRESS_VIEWS = {
-  achievements: { icon:"🎖️", title:"Achievements & Records", sub:"Milestones, streaks and unlocked achievements." },
+  achievements: { icon:"medal", title:"Achievements & Records", sub:"Milestones, streaks and unlocked achievements." },
   // `history` has always rendered the PR list, despite its old "Workout History" title --
   // renamed to match what it actually shows. Real workout history is the `workouts` view.
-  history:      { icon:"📄", title:"Personal Records",  sub:"Every personal record you've ever set." },
-  workouts:     { icon:"🗂️", title:"Workout History",   sub:"Search, filter and review every workout you've logged." },
-  habits:       { icon:"🔁", title:"Habit Tracker",      sub:"Daily habits, streaks, and completion history." },
-  analytics:    { icon:"📊", title:"Workout Analytics",  sub:"Training frequency, volume, duration, and muscle distribution." },
-  body:         { icon:"⚖️", title:"Body Progress",      sub:"Body weight and measurement trends." },
-  calendar:     { icon:"📅", title:"Training Calendar",  sub:"See your workout activity by date." },
-  reports:      { icon:"🧾", title:"Reports",            sub:"Weekly, monthly and yearly summaries with period-on-period change." },
+  history:      { icon:"trophy", title:"Personal Records",  sub:"Every personal record you've ever set." },
+  workouts:     { icon:"archive", title:"Workout History",   sub:"Search, filter and review every workout you've logged." },
+  habits:       { icon:"repeat", title:"Habit Tracker",      sub:"Daily habits, streaks, and completion history." },
+  analytics:    { icon:"chart", title:"Workout Analytics",  sub:"Training frequency, volume, duration, and muscle distribution." },
+  body:         { icon:"scale", title:"Body Progress",      sub:"Body weight and measurement trends." },
+  calendar:     { icon:"calendar", title:"Training Calendar",  sub:"See your workout activity by date." },
+  reports:      { icon:"receipt", title:"Reports",            sub:"Weekly, monthly and yearly summaries with period-on-period change." },
   /* Photos already had a complete screen (renderBodyScanArchive) reachable from Body — it was
      simply not reachable from Progress, which is where the brief expects it. Routed rather
      than rebuilt: a second photo UI would mean two places to fix every future bug. */
-  photos:       { icon:"📷", title:"Progress Photos",    sub:"Your body-progress photo archive." }
+  photos:       { icon:"camera", title:"Progress Photos",    sub:"Your body-progress photo archive." }
 };
 
 function fmtMinutes(min){
@@ -11449,7 +12150,7 @@ function renderProgressTab(){
     }
     return `
       <button class="btn btn-ghost" data-action="progress-back" style="padding:8px 14px;font-size:14px;margin:4px 0 10px;">← Progress</button>
-      <div style="font-size:25px;font-weight:900;margin-bottom:12px;">${PROGRESS_VIEWS[view].icon} ${PROGRESS_VIEWS[view].title}</div>
+      <div style="font-size:25px;font-weight:900;margin-bottom:12px;">${svg(PROGRESS_VIEWS[view].icon,22)} ${PROGRESS_VIEWS[view].title}</div>
       ${body}
     `;
   }
@@ -11494,7 +12195,7 @@ function renderLegacyProgressHome(){
     <div class="eyebrow-label">Explore</div>
     ${Object.entries(PROGRESS_VIEWS).map(([key,v])=>`
       <button class="prog-cat-card" data-progress-view="${key}" aria-label="Open ${v.title}">
-        <span class="prog-cat-icon">${v.icon}</span>
+        <span class="prog-cat-icon">${svg(v.icon,18)}</span>
         <span style="flex:1;min-width:0;text-align:left;">
           <span style="display:block;font-size:18px;font-weight:800;color:var(--text);">${v.title}</span>
           <span style="display:block;font-size:13px;color:var(--muted);margin-top:2px;line-height:1.35;">${v.sub}</span>
@@ -11520,7 +12221,7 @@ const PR_TYPE_KEY = {Weight:"weight","1RM":"1rm",Reps:"reps",Volume:"volume"};
 /* One exercise, opened by tapping its record card: the progression chart, the numbers behind
    it, and a coaching line.
 
-   Everything shown is read from logged sets. The brief asked for an "AI Rating ★★★★★" per
+   Everything shown is read from logged sets. The brief asked for an "AI Rating" star score per
    exercise — that is not built, because a five-star score with no stated basis is decoration
    pretending to be assessment. What replaced it is consistency, which is a real number:
    sessions logged against weeks since the first one. */
@@ -11536,7 +12237,7 @@ function renderPrExerciseSheet(){
     let best = 0;
     (w.exercises||[]).forEach(e=>{ if(e.name===name) (e.sets||[]).forEach(st=>{
       const kg = Number(st.weight)||0; if(kg>best) best = kg; }); });
-    if(best>0) points.push({ date: new Date(w.startedAt||w.date), value: best });
+    if(best>0) points.push({ date: new Date(w.startedAt || (w.date+"T12:00:00")), value: best });
   });
 
   const weeks = points.length ? Math.max(1, Math.round((Date.now() - points[0].date.getTime())/(7*86400000))) : 1;
@@ -11672,7 +12373,7 @@ function renderProgressPRs(){
   return `
     ${prsToday.length ? `
     <div class="pr-today">
-      <div class="pr-today__icon">🏆</div>
+      <div class="pr-today__icon">${svg('trophy',22)}</div>
       <div class="pr-today__body">
         <div class="pr-today__title">New personal record${prsToday.length>1?'s':''} today</div>
         <div class="pr-today__sub">${prsToday.map(p=>escHtml(p.exerciseName||'Session Volume')).slice(0,3).join(' · ')}</div>
@@ -11800,12 +12501,21 @@ const BADGE_SHAPES = {
    name being loose. Gold and diamond take near-black band ink because white reversed out of
    either is not readable. */
 const BADGE_TIER_ORDER = ["bronze", "silver", "gold", "diamond", "platinum"];
+/* Each tier now carries a three-stop METAL RAMP as well as its flat hue.
+   hue stays and is still what the locked state, the stars and the icon read — every existing
+   consumer is untouched. lo/mid/hi are only used by the earned gradient.
+
+   A real metal is not one colour lightened and darkened. It is a dark base, a bright specular
+   band where the light hits, and a warmer bounce underneath — which is why each ramp shifts
+   HUE across the three stops rather than only lightness. Bronze warms toward orange at the
+   highlight, silver cools toward blue, gold goes almost white. Lightening a single hex gives
+   plastic. */
 const BADGE_TIERS = {
-  bronze:   { hue: "#A85A29", ink: "#FFFFFF" },
-  silver:   { hue: "#5A6B7D", ink: "#FFFFFF" },
-  gold:     { hue: "#E0A800", ink: "#1A1205" },
-  diamond:  { hue: "#3FBBE0", ink: "#052A3A" },
-  platinum: { hue: "#7C5CD6", ink: "#FFFFFF" }
+  bronze:   { hue: "#A85A29", ink: "#FFFFFF", lo: "#5E2F12", mid: "#C87A3C", hi: "#F0B27A" },
+  silver:   { hue: "#5A6B7D", ink: "#FFFFFF", lo: "#33404D", mid: "#8798A8", hi: "#D9E4EC" },
+  gold:     { hue: "#E0A800", ink: "#1A1205", lo: "#8A5E00", mid: "#F0C020", hi: "#FFF2B0" },
+  diamond:  { hue: "#2563EB", ink: "#052A3A", lo: "#2563EB", mid: "#2563EB", hi: "#DFF7FF" },
+  platinum: { hue: "#7C5CD6", ink: "#FFFFFF", lo: "#3D2A80", mid: "#9B7EE8", hi: "#E3D8FF" }
 };
 
 /* The trophy is gone. A trophy is a prize for beating someone and none of these are that --
@@ -11822,6 +12532,84 @@ const BADGE_ICONS = { milestone:"dumbbell", streak:"flame", strength:"bolt",
  * @param {boolean} earned locked badges keep their shape and their target — a blanked-out
  *                         mystery gives nobody a reason to come back, "100 workouts" does.
  */
+/**
+ * How far along a LOCKED achievement is, as {have, need, pct} — or null when it cannot be known.
+ *
+ * WHY THIS IS NOT DERIVED FROM check(). Every definition's check() returns a boolean: it
+ * answers "is it done", and there is no way to ask a boolean how close it came. Showing a
+ * percentage therefore needs a second, explicit source for the countable ones.
+ *
+ * NULL IS A REAL ANSWER AND IS RETURNED OFTEN. "Hit 100kg on any lift" has a sensible
+ * fraction; "log a workout on Christmas Day" does not, and neither does anything whose
+ * condition is a state rather than a count. Those keep the plain description they always had.
+ * A progress bar on a badge whose progress cannot be computed would be a guess presented as a
+ * measurement, which is worse than no bar.
+ *
+ * Counts are read from the same state the check() reads, so a bar cannot disagree with the
+ * unlock it is predicting.
+ */
+function badgeProgress(def){
+  const N = (v) => (typeof v === "number" && isFinite(v)) ? v : 0;
+  let have = null, need = null;
+  try {
+    const m = /^(workouts|sets|volume|streak|prs)_(\d+)$/.exec(def.id || "");
+    if (m) {
+      need = Number(m[2]);
+      if (m[1] === "workouts") have = N(state.workoutLog.length);
+      else if (m[1] === "sets") have = N(typeof totalWorkingSets === "function" ? totalWorkingSets() : 0);
+      else if (m[1] === "prs")  have = N(state.prs.length);
+      else if (m[1] === "streak") have = N(typeof computeLongestStreak === "function" ? computeLongestStreak() : 0);
+    }
+  } catch (e) { return null; }
+
+  if (have == null || !need || need <= 0) return null;
+  return { have, need, pct: Math.max(0, Math.min(99, Math.round(have / need * 100))) };
+}
+
+/* =========================================================
+   BADGE ORNAMENT — laurel, crown and the faceted interior.
+
+   Drawn as paths rather than shipped as images. The reference this follows is rendered 3D art
+   and a vector cannot equal it; what a vector CAN do is carry the same STRUCTURE — a heavy
+   bevelled frame, a dark faceted face, a wreath around the numeral and a crown at the top of
+   the range — so the grid reads as a set of struck medals instead of coloured labels.
+
+   Every ornament is optional and tier-gated. Handing a laurel to every badge would make the
+   first workout look like the five-hundredth, which is the one thing a collection must not do.
+========================================================= */
+
+/** A five-point crown, only ever on the top tiers. */
+function badgeCrown(fill){
+  return `<g class="bdg__crown" transform="translate(50,15)">
+    <path d="M-13,4 L-13,-5 L-7.5,0.5 L-3.5,-7 L0,0 L3.5,-7 L7.5,0.5 L13,-5 L13,4 Z"
+          fill="${fill}" stroke="${fill}" stroke-width="1.1" stroke-linejoin="round"/>
+    <circle cx="-13" cy="-6.5" r="1.7" fill="${fill}"/>
+    <circle cx="0"   cy="-8.6" r="1.9" fill="${fill}"/>
+    <circle cx="13"  cy="-6.5" r="1.7" fill="${fill}"/>
+  </g>`;
+}
+
+/**
+ * One badge. The supplied artwork when this achievement has any, the hand-drawn SVG otherwise —
+ * see js/badges/badge-frames.js for why both paths are permanent.
+ *
+ * NOTHING IS DRAWN OVER THE ART. The earlier version laid an SVG numeral and star row on top,
+ * which was right for shared category frames and is wrong for this artwork: the value is already
+ * engraved in every image, so the overlay printed the number twice. The art is complete.
+ *
+ * Art is used only for EARNED badges. A locked badge keeps the SVG, which draws it as a dim
+ * silhouette — the collection reads at a glance because earned and locked look different in
+ * kind, not just in brightness.
+ */
+function achievementBadge(d, earned){
+  var F = window.IgnytBadgeFrames;
+  if (earned && F && F.has(d.id)) {
+    return '<div class="bdg__art" role="img" aria-label="' + escHtml(d.name) + '" ' +
+           'style="background-image:url(' + F.src(d.id) + ')"></div>';
+  }
+  return achievementBadgeSvg(d, earned);
+}
+
 function achievementBadgeSvg(d, earned){
   const tier = BADGE_TIERS[d.tier] || BADGE_TIERS.bronze;
   // Star count is the tier. An unknown tier string falls back to one star rather than none,
@@ -11845,18 +12633,86 @@ function achievementBadgeSvg(d, earned){
   const fs = v.length <= 2 ? 27 : v.length === 3 ? 21 : v.length <= 5 ? 15 : 12;
   const icon = ICONS[BADGE_ICONS[d.category]] || ICONS.dumbbell;
 
-  return `<svg viewBox="0 0 100 100" class="bdg__svg" role="img" aria-label="${escHtml(d.name)}">
-    <defs><clipPath id="${id}">${pts
+  /* THE METAL. Four defs, and each is doing one job that a flat fill cannot.
+
+     grad    the tier ramp at 135deg — dark base, specular band, warm bounce. This is what
+             makes it read as a struck medal rather than a coloured sticker.
+     bevel   a soft inner shadow: the shape blurred, offset down, and composited back INSIDE
+             itself. It is what gives the rim thickness.
+     shine   a narrow bright diagonal that sweeps across on unlock and on hover, clipped to
+             the badge so it never escapes the shape.
+     glow    an outer drop shadow in the tier hue, so a gold badge sits in warm light and a
+             diamond one in cold. Earned only — a locked badge that glows is a lie.
+
+     All four are inert on a locked badge: it keeps the flat muted fill it always had, which
+     is what makes the earned ones look like they cost something. */
+  const gid = id + "-g", bid = id + "-b", sid = id + "-s";
+  const metal = earned ? `
+      <linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%"   stop-color="${tier.lo}"/>
+        <stop offset="45%"  stop-color="${tier.mid}"/>
+        <stop offset="72%"  stop-color="${tier.hi}"/>
+        <stop offset="100%" stop-color="${tier.mid}"/>
+      </linearGradient>
+      <filter id="${bid}" x="-20%" y="-20%" width="140%" height="140%">
+        <feOffset dx="0" dy="2.5" in="SourceAlpha" result="o"/>
+        <feGaussianBlur stdDeviation="2.2" in="o" result="bl"/>
+        <feComposite operator="out" in="bl" in2="SourceAlpha" result="inner"/>
+        <feColorMatrix in="inner" type="matrix"
+          values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .45 0" result="shadow"/>
+        <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="shadow"/></feMerge>
+      </filter>
+      <linearGradient id="${sid}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%"   stop-color="#fff" stop-opacity="0"/>
+        <stop offset="45%"  stop-color="#fff" stop-opacity="0"/>
+        <stop offset="52%"  stop-color="#fff" stop-opacity=".55"/>
+        <stop offset="59%"  stop-color="#fff" stop-opacity="0"/>
+        <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+      </linearGradient>` : "";
+
+  const face = pts
+    ? `<polygon points="${pts}" fill="url(#${gid})"/>`
+    : `<circle cx="50" cy="50" r="47" fill="url(#${gid})"/>`;
+
+  return `<svg viewBox="0 0 100 100" class="bdg__svg${earned ? " is-metal" : ""}" role="img" aria-label="${escHtml(d.name)}">
+    <defs>${metal}<clipPath id="${id}">${pts
       ? `<polygon points="${pts}"/>`
       : `<circle cx="50" cy="50" r="47"/>`}</clipPath></defs>
-    ${shape(1, 6)}
-    ${shape(0.82, 2)}
-    <g style="color:${hue};" transform="translate(37,11) scale(1.06)">${icon}</g>
-    <g clip-path="url(#${id})"><rect x="0" y="41" width="100" height="20" fill="${hue}"/></g>
-    ${v ? `<text x="50" y="51" text-anchor="middle" fill="${ink}"
-      font-size="${fs}" font-weight="900" letter-spacing="0.4"
+    ${earned ? `<g filter="url(#${bid})">${face}</g>` : ""}
+    ${/* THE FACE. A dark faceted interior inset inside the metal frame, rather than the flat
+          card colour the old badge used. Two overlaid triangles at low opacity give it the
+          shallow "struck plate" break the reference has — enough to catch the light without
+          becoming a pattern you notice. Earned only; a locked badge stays flat. */''}
+    ${earned ? `<g clip-path="url(#${id})">
+        ${pts ? `<polygon points="${pts}" transform="translate(9,9) scale(0.82)" fill="#12131A"/>`
+              : `<circle cx="50" cy="50" r="38.5" fill="#12131A"/>`}
+        <polygon points="0,100 50,34 100,100" fill="#ffffff" fill-opacity=".035"/>
+        <polygon points="0,0 50,52 100,0"    fill="#000000" fill-opacity=".22"/>
+      </g>` : ""}
+    ${/* Three rules rather than two. The reference's depth comes mostly from the frame, and a
+          6px edge with a 2px inner line reads thin at tile size — this adds a mid-weight band
+          between them so the rim has thickness rather than being a coloured outline. */''}
+    ${shape(1, 7)}
+    ${shape(0.90, 3)}
+    ${shape(0.78, 1.5)}
+    ${/* Laurel from silver up, crown from gold up. The bronze badges stay plain, which is what
+          makes the higher ones look earned rather than decorated. */''}
+    ${/* NO LAUREL. It was drawn and removed in the same pass: on a 100x100 face already
+          carrying an icon at the top, a numeral across the middle and a star row at the
+          bottom, there is no radius where a wreath clears all three. Rendered at size it
+          crossed the numeral and read as a smudge rather than an ornament. The tier is
+          already carried by the metal, the crown and the star count; a fourth signal that
+          damages legibility is not worth having. */''}
+    ${earned && stars >= 3 ? badgeCrown(tier.hi) : ""}
+    <g style="color:${earned ? tier.hi : hue};" transform="translate(37,${earned && stars >= 3 ? 21 : 15}) scale(0.92)">${icon}</g>
+    ${v ? `<text x="50" y="53" text-anchor="middle"
+      fill="${earned ? `url(#${gid})` : hue}"
+      stroke="${earned ? tier.lo : "none"}" stroke-width="${earned ? 0.7 : 0}"
+      paint-order="stroke"
+      font-size="${fs + 10}" font-weight="900" letter-spacing="-0.2"
       style="font-family:inherit;dominant-baseline:middle;">${escHtml(v)}</text>` : ""}
-    ${badgeStars(stars, hue)}
+    ${badgeStars(stars, earned ? tier.hi : hue)}
+    ${earned ? `<g clip-path="url(#${id})"><rect class="bdg__shine" x="-100" y="0" width="100" height="100" fill="url(#${sid})"/></g>` : ""}
   </svg>`;
 }
 
@@ -11921,12 +12777,17 @@ function renderProgressAchievements(){
 
   const tile = (d) => {
     const earned = unlockedIds.has(d.id);
-    return `<div class="bdg${earned ? "" : " bdg--locked"}" title="${escHtml(d.desc)}">
-      ${achievementBadgeSvg(d, earned)}
+    const prog = earned ? null : badgeProgress(d);
+    return `<div class="bdg${earned ? "" : " bdg--locked"}" data-tier="${escHtml(d.tier||'bronze')}" title="${escHtml(d.desc)}">
+      ${achievementBadge(d, earned)}
       <div class="bdg__name">${escHtml(d.name)}</div>
       <div class="bdg__meta">${earned
         ? new Date(earnedAt[d.id]||Date.now()).toLocaleDateString('default',{month:'short',day:'2-digit'})
         : escHtml(d.desc)}</div>
+      ${prog ? `<div class="bdg__prog">
+        <div class="bdg__prog-track"><i style="width:${prog.pct}%;"></i></div>
+        <div class="bdg__prog-label">${prog.have.toLocaleString()} / ${prog.need.toLocaleString()} · ${prog.pct}%</div>
+      </div>` : ""}
     </div>`;
   };
 
@@ -11999,7 +12860,7 @@ function renderProgressHabits(){
             ` : `
               <div style="min-width:0;flex:1;cursor:pointer;" data-rename-habit="${h.id}">
                 <div style="font-weight:800;font-size:16px;">${escHtml(h.name)}</div>
-                <div style="font-size:12px;color:var(--rh-muted);margin-top:3px;">🔥 ${streak} day streak</div>
+                <div style="font-size:12px;color:var(--rh-muted);margin-top:3px;">${svg('flame',12)} ${streak} day streak</div>
                 <div style="font-size:11px;color:var(--rh-muted);margin-top:2px;"><b style="color:var(--rh-text);">Best:</b> ${best} · ${week}/7 this week · ${month} this month</div>
               </div>
             `}
@@ -12487,7 +13348,7 @@ function renderProgressCalendar(){
           <div style="font-size:13px;color:var(--rh-muted);margin-top:3px;">${workoutDurationLabel(s)} · ${displayW(s.volume||0,0).toLocaleString()} ${wUnit()} · ${s.exercises.length} exercise${s.exercises.length!==1?'s':''} · ${doneSets} set${doneSets!==1?'s':''}</div>
         </div>`;
       }).join("")}
-      ${planCount ? `<div class="pg-card" style="font-size:14px;">✅ ${planCount} plan exercise${planCount!==1?'s':''} checked off</div>`:""}`}
+      ${planCount ? `<div class="pg-card" style="font-size:14px;">${svg('check',14)} ${planCount} plan exercise${planCount!==1?'s':''} checked off</div>`:""}`}
     `;
   }
   return `
@@ -12793,7 +13654,7 @@ function renderBodyPhotoViewer(id, photoList){
         <button class="rh-btn rh-btn--ghost" style="flex:1;padding:8px;font-size:12px;" data-action="body-photo-slideshow-toggle">${svg(state.bodyPhotoSlideshow?'x':'plan',13)} ${state.bodyPhotoSlideshow?'Stop':'Slideshow'}</button>
       </div>
       <div style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.7;">
-        <div><b>${ph.date}</b> · ${escHtml(ph.category)}${ph.milestone?' · ★ Milestone':''}</div>
+        <div><b>${ph.date}</b> · ${escHtml(ph.category)}${ph.milestone?' · '+svg('star',12)+' Milestone':''}</div>
         ${ph.weight!=null?`<div>Weight: ${displayW(Number(ph.weight))} ${wUnit()}</div>`:''}
         ${ph.bodyfat!=null?`<div>Body Fat: ${ph.bodyfat}%</div>`:''}
         ${ph.goal?`<div>Goal: ${escHtml(ph.goal)}</div>`:''}
@@ -12904,7 +13765,7 @@ function renderBodyScanArchive(){
           <button class="bp-sess__head" data-bp-session="${escHtml(sess.id)}" aria-expanded="${open?'true':'false'}">
             <span class="bp-sess__dot" aria-hidden="true"></span>
             <span class="bp-sess__title">
-              <span class="bp-sess__date">${escHtml(dateLong(sess.date))}${sess.milestone?' <span class="bp-star">★</span>':''}</span>
+              <span class="bp-sess__date">${escHtml(dateLong(sess.date))}${sess.milestone?' <span class="bp-star">'+svg('starFilled',12)+'</span>':''}</span>
               <span class="bp-sess__meta">${sess.count} photo${sess.count===1?'':'s'}${
                 kg(sess.weight) ? ` · ${escHtml(kg(sess.weight))}` : ""}${
                 sess.takenAt ? ` · ${escHtml(timeShort(sess.takenAt))}` : ""}</span>
@@ -13027,8 +13888,8 @@ function renderWeighInCard(){
   // seeing red for a gain would be told the opposite of the truth.
   const good = ctx === "weightProgress" || ctx === "weightMilestone" || ctx === "weightGoalReached";
   const tone = ctx === "weightSteady" ? "var(--rh-muted)" : good ? "var(--rh-green)" : "var(--rh-blue)";
-  const icon = ctx === "weightGoalReached" ? "🎯" : ctx === "weightMilestone" ? "🏆"
-             : ctx === "weightSteady" ? "➖" : good ? "📈" : "〰️";
+  const icon = ctx === "weightGoalReached" ? svg("target",22) : ctx === "weightMilestone" ? svg("trophy",22)
+             : ctx === "weightSteady" ? svg("trend",22) : good ? svg("trend",22) : svg("trendDown",22);
 
   const delta = (v, invert) => {
     if(v == null) return `<span style="color:var(--rh-muted);">—</span>`;
@@ -13144,8 +14005,15 @@ function renderBmiCard(){
 function renderBodyTab(){
   const entries = state.bodylog;
   const p = state.profile;
-  const fieldSm = (id,label,ph,color) => `<div><label class="pi-label" style="text-transform:uppercase;">${label}</label>
-    <input type="number" id="${id}" placeholder="${ph}" class="pi-input" style="color:${color};"></div>`;
+  /* ONE PLACE THAT DRAWS A FIELD LABEL. The Date field used to write its own markup, so it was
+     the only label on the card without the uppercase treatment fieldSm applies — "Date" beside
+     "WEIGHT (KG)", "WAIST (CM)", "SLEEP (HRS)". The two labels then rendered at different
+     heights and the two inputs in that row stopped lining up, which is the misalignment on the
+     Log Entry card. Both go through this now, so they cannot drift apart again. */
+  const fieldWrap = (label, control) =>
+    `<div><label class="pi-label" style="text-transform:uppercase;">${label}</label>${control}</div>`;
+  const fieldSm = (id,label,ph,color) => fieldWrap(label,
+    `<input type="number" id="${id}" placeholder="${ph}" class="pi-input" style="color:${color};">`);
 
   // Dedicated calculator view (opened by a calculator card or "View All Calculators")
   if(state.bodyView==='calculators'){
@@ -13342,7 +14210,7 @@ function renderBodyTab(){
       <div class="rh-section-head"><span>Log Entry</span></div>
       <div class="pg-card" id="body-log-entry">
         <div class="pi-grid2">
-          <div><label class="pi-label">Date</label><input type="date" id="b-date" value="${dayKey()}" class="pi-input"></div>
+          ${fieldWrap("Date", `<input type="date" id="b-date" value="${dayKey()}" class="pi-input pi-input--date">`)}
           ${fieldSm("b-weight",`Weight (${wUnit()})`,wUnit()==='lb'?'220':'101.0',"var(--rh-blue)")}
         </div>
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">Body</div>
@@ -13666,39 +14534,23 @@ function renderFoodSearchPage(){
       <span class="food-search-bar__icon" aria-hidden="true">⌕</span>
       <input type="text" id="food-search-input" autocomplete="off"
         placeholder="Search by Food Name/Dish" value="${escHtml(state.foodSearchQuery||"")}">
-      ${state.foodSearchQuery?`<button class="food-search-bar__clear" data-food-clear="1" aria-label="Clear search">✕</button>`:""}
-      <button class="food-search-bar__voice" data-food-voice="1" aria-label="Voice search">🎙</button>
+      ${state.foodSearchQuery?`<button class="food-search-bar__clear" data-food-clear="1" aria-label="Clear search">${svg('x',14)}</button>`:""}
+      <button class="food-search-bar__voice" data-food-voice="1" aria-label="Voice search">${svg('mic',16)}</button>
     </div>
 
     <div id="food-search-results">${foodSearchResultsHtml(meal)}</div>
 
-    <!-- Manual entry. It used to live inside the meal card, gated behind the accordion that
-         Part 1 removed; it is not superseded by anything, so it moves here rather than being
-         deleted — without it there is no way to log a food the database does not have.
-         Collapsed by default so the search screen does not open with a form in your face. -->
-    <div class="food-missing__wrap">
-      <button class="food-missing" data-action="toggle-manual-entry"
-        aria-expanded="${state.manualEntryOpen?'true':'false'}">
-        <span>Can&rsquo;t find your food?</span>
-        <span class="food-missing__go" aria-hidden="true">${state.manualEntryOpen?'−':'→'}</span>
-      </button>
+    ${/* The "Can't find your food?" card and the manual-entry form behind it were removed from
+          this screen on request. Everything that existed only to serve them went with it: the
+          toggle handler, the [data-log-meal-food] and save-as-favorite listeners, state
+          .manualEntryOpen, the .food-missing* rules and the padding that reserved room for the
+          pinned card.
 
-      ${state.manualEntryOpen ? `
-        <div style="margin-top:var(--space-sm);">
-          <input type="text" id="food-name" class="food-input" placeholder="Food name" style="margin-bottom:var(--space-xs);">
-          <div style="display:flex;gap:var(--space-2xs);margin-bottom:var(--space-xs);">
-            <input type="number" id="food-cal" class="food-input" placeholder="kcal*" style="text-align:center;color:var(--accent);padding:11px 4px;">
-            <input type="number" id="food-protein" class="food-input" placeholder="P" style="text-align:center;padding:11px 4px;">
-            <input type="number" id="food-carbs" class="food-input" placeholder="C" style="text-align:center;padding:11px 4px;">
-            <input type="number" id="food-fat" class="food-input" placeholder="F" style="text-align:center;padding:11px 4px;">
-            <input type="number" id="food-fibre" class="food-input" placeholder="Fb" style="text-align:center;padding:11px 4px;">
-          </div>
-          <div style="display:flex;gap:var(--space-2xs);">
-            <button class="btn btn-accent" style="flex:1;" data-log-meal-food="${escHtml(meal)}">Add to ${escHtml(meal)}</button>
-            <button class="btn btn-ghost" style="width:48px;flex-shrink:0;" data-action="save-as-favorite" title="Save as favourite">★</button>
-          </div>
-        </div>` : ""}
-    </div>
+          WHAT THIS COSTS, recorded because the old comment here spelled it out and it is still
+          true: this was the only way to log a food the catalogue does not have, and the only
+          way to save one as a favourite. The catalogue is 4,062 foods, so it is a rarer need
+          than it was, but it is not gone — bringing it back means restoring this block and the
+          two listeners in the food-search wiring. */''}
   </div>`;
 }
 
@@ -13872,14 +14724,14 @@ function renderFoodDetailPage(){
   return `<div class="food-page">
     ${foodPageHeader("Food details", null,
       `<button class="food-page__icon${isFav?' is-on':''}" data-food-fav="${escHtml(food.id)}"
-        aria-label="${isFav?'Remove from favourites':'Save to favourites'}">${isFav?'★':'☆'}</button>`)}
+        aria-label="${isFav?'Remove from favourites':'Save to favourites'}">${isFav?svg('starFilled',15):svg('star',15)}</button>`)}
 
     <div class="food-hero">
       ${window.IgnytFoodImages ? IgnytFoodImages.thumbHtml(food, 92) : ""}
       <div style="flex:1;min-width:0;">
         <div class="food-hero__name">${escHtml(food.name)}</div>
         <div class="food-hero__cat">${escHtml(food.category||"")}</div>
-        ${food.source==="usda"?`<div class="food-hero__verified">✓ USDA measured</div>`:""}
+        ${food.source==="usda"?`<div class="food-hero__verified">${svg('check',12)} USDA measured</div>`:""}
       </div>
       <div class="food-hero__kcal">
         <div class="nut-value nut-value--lg" id="fd-kcal" style="color:var(--accent);">${check.ok?N.format("calories", row("calories").serving).replace(" kcal",""):"—"}</div>
@@ -13974,7 +14826,7 @@ function renderFoodDetailPage(){
     <div class="nut-card nut-card--tight">
       <div class="nut-label" style="margin-bottom:var(--space-2xs);">Meal</div>
       <select id="food-flow-meal" class="food-select">
-        ${mealTypes().map(m=>`<option value="${escHtml(m)}" ${m===flow.meal?'selected':''}>${MEAL_ICONS[m]||"🍽️"} ${escHtml(m)}</option>`).join("")}
+        ${mealTypes().map(m=>`<option value="${escHtml(m)}" ${m===flow.meal?'selected':''}>${escHtml(m)}</option>`).join("")}
       </select>
       <div class="nut-label" style="margin:var(--space-sm) 0 var(--space-2xs);">Note (optional)</div>
       <input type="text" id="food-flow-notes" class="food-input" placeholder="Add a note…" value="${escHtml(flow.notes||"")}">
@@ -14063,7 +14915,7 @@ function renderLoggedEntryDetailPage(entry, flow){
     <div class="nut-card nut-card--tight">
       <div class="nut-label" style="margin-bottom:var(--space-2xs);">Meal</div>
       <select id="food-flow-meal" class="food-select">
-        ${mealTypes().map(m=>`<option value="${escHtml(m)}" ${m===flow.meal?'selected':''}>${MEAL_ICONS[m]||"🍽️"} ${escHtml(m)}</option>`).join("")}
+        ${mealTypes().map(m=>`<option value="${escHtml(m)}" ${m===flow.meal?'selected':''}>${escHtml(m)}</option>`).join("")}
       </select>
       <div class="nut-label" style="margin:var(--space-sm) 0 var(--space-2xs);">Note (optional)</div>
       <input type="text" id="food-flow-notes" class="food-input" placeholder="Add a note…" value="${escHtml(flow.notes||"")}">
@@ -14539,23 +15391,23 @@ function renderNutritionInsightsPage(){
   const pctOf = (v, t) => t > 0 ? Math.round((v/t)*100) : 0;
 
   const MACROS = [
-    ["💪", "Protein", T.protein, targets.protein, "g"],
-    ["🌾", "Carbs",   T.carbs,   targets.carbs,   "g"],
-    ["🧈", "Fat",     T.fat,     targets.fat,     "g"],
-    ["🌿", "Fibre",   T.fibre,   targets.fibre,   "g"]
+    ["dumbbell", "Protein", T.protein, targets.protein, "g"],
+    ["grain", "Carbs",   T.carbs,   targets.carbs,   "g"],
+    ["oil", "Fat",     T.fat,     targets.fat,     "g"],
+    ["leaf", "Fibre",   T.fibre,   targets.fibre,   "g"]
   ];
   const MICROS = [
-    ["🛡️", "Calcium",   "calcium",   1300, "mg"],
-    ["🩸", "Iron",      "iron",        18, "mg"],
-    ["🔮", "Magnesium", "magnesium",  420, "mg"],
-    ["🍌", "Potassium", "potassium", 4700, "mg"],
-    ["🍊", "Vitamin C", "vitaminC",    90, "mg"],
-    ["☀️", "Vitamin D", "vitaminD",    20, "µg"]
+    ["shield", "Calcium",   "calcium",   1300, "mg"],
+    ["droplet", "Iron",      "iron",        18, "mg"],
+    ["flask", "Magnesium", "magnesium",  420, "mg"],
+    ["apple", "Potassium", "potassium", 4700, "mg"],
+    ["apple", "Vitamin C", "vitaminC",    90, "mg"],
+    ["sun", "Vitamin D", "vitaminD",    20, "µg"]
   ];
   const microRows = MICROS.filter(([,,key]) => T[key] != null);
 
   // Calories by meal, for the donut. Only meals with food appear — an empty slice is a lie.
-  const mealColours = ["#F5BB45", "#3B82F6", "#A855F7", "#45D294", "#FF8A5C", "#55D8FF"];
+  const mealColours = ["#F5BB45", "#2563EB", "#A855F7", "#45D294", "#FF8A5C", "#2563EB"];
   const byMeal = mealTypes()
     .map((m,i)=>({ meal:m, kcal: Math.round(allEntries.filter(f=>(f.meal||"Lunch")===m)
                                     .reduce((a,f)=>a+Number(f.calories||0),0)),
@@ -14593,7 +15445,7 @@ function renderNutritionInsightsPage(){
       <div class="ni-top">
         <button class="food-page__back" data-insights-back="1" aria-label="Back">←</button>
         <h2 class="ni-title">${tab === "All Meals" ? "Today's Insights" : escHtml(tab)}</h2>
-        <span class="ni-today">📅 ${escHtml(isToday ? "Today" : nutritionDateLabel(ds))}</span>
+        <span class="ni-today">${svg('calendar',13)} ${escHtml(isToday ? "Today" : nutritionDateLabel(ds))}</span>
       </div>
 
       <div class="ni-tabs">
@@ -14604,7 +15456,7 @@ function renderNutritionInsightsPage(){
 
       ${!entries.length ? `
         <div class="ni-card ni-empty">
-          <div style="font-size:34px;line-height:1;margin-bottom:8px;">🍽️</div>
+          <div class="ni-empty__icon">${svg('plate',30)}</div>
           <div style="font-weight:800;font-size:15px;">Nothing logged${tab==="All Meals"?"":" for "+escHtml(tab)}</div>
           <div style="font-size:12.5px;color:var(--muted);margin-top:4px;">
             Log a food and this page fills in with your real numbers.
@@ -14626,9 +15478,9 @@ function renderNutritionInsightsPage(){
           </div>
         </div>
         <div class="ni-score__stats">
-          <div><span class="ni-stat__icon">🔥</span><strong>${eaten.toLocaleString()}</strong><span>Consumed</span></div>
-          <div><span class="ni-stat__icon">🎯</span><strong>${targets.kcal.toLocaleString()}</strong><span>Goal</span></div>
-          <div><span class="ni-stat__icon">⚡</span><strong>${Math.abs(remaining).toLocaleString()}</strong><span>${remaining>=0?'Remaining':'Over'}</span></div>
+          <div><span class="ni-stat__icon">${svg('flame',15)}</span><strong>${eaten.toLocaleString()}</strong><span>Consumed</span></div>
+          <div><span class="ni-stat__icon">${svg('target',15)}</span><strong>${targets.kcal.toLocaleString()}</strong><span>Goal</span></div>
+          <div><span class="ni-stat__icon">${svg('bolt',15)}</span><strong>${Math.abs(remaining).toLocaleString()}</strong><span>${remaining>=0?'Remaining':'Over'}</span></div>
         </div>
         ${bar(eaten, targets.kcal, pctTone(pctGoal))}
         <div class="ni-score__pct">${pctGoal}% of daily goal</div>
@@ -14640,7 +15492,7 @@ function renderNutritionInsightsPage(){
         ${MACROS.map(([icon,label,v,t,unit])=>{
           const p = pctOf(v||0, t);
           return `<div class="ni-row">
-            <span class="ni-row__icon" aria-hidden="true">${icon}</span>
+            <span class="ni-row__icon" aria-hidden="true">${svg(icon,15)}</span>
             <span class="ni-row__label">${label}</span>
             <span class="ni-row__val"><strong>${Math.round(v||0)}</strong> / ${t} ${unit}</span>
             <span class="ni-row__pct ni-row__pct--${pctTone(p)}">${p}%</span>
@@ -14655,7 +15507,7 @@ function renderNutritionInsightsPage(){
         ${microRows.length ? microRows.map(([icon,label,key,t,unit])=>{
           const v = T[key] || 0, p = pctOf(v, t);
           return `<div class="ni-row">
-            <span class="ni-row__icon" aria-hidden="true">${icon}</span>
+            <span class="ni-row__icon" aria-hidden="true">${svg(icon,15)}</span>
             <span class="ni-row__label">${label}</span>
             <span class="ni-row__val"><strong>${Math.round(v)}</strong> / ${t} ${unit}</span>
             <span class="ni-row__pct ni-row__pct--${pctTone(p)}">${p}%</span>
@@ -14745,7 +15597,7 @@ function renderNutritionInsightsPage(){
       <div class="stat-label">${netDeficit>=0?'Deficit Created':'Surplus (over target)'}</div>
       <div class="mono" style="font-weight:900;font-size:22px;color:${netDeficit>=0?'var(--mint)':'var(--accent)'};margin-top:2px;">${netDeficit>=0?'':'+'}${Math.abs(netDeficit)}<span style="font-size:12px;font-weight:700;color:var(--muted);margin-left:4px;">kcal</span></div>
       <div style="font-size:11px;color:var(--muted);margin-top:4px;">Burned = ${profileMaintenance()} maintenance + ~${activityKcal} workout est.${!isToday?" (today's figures)":""}</div>
-      ${useExerciseBudget ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">${activeCalories == null ? `Health Connect active calories: ${hcConnected ? 'No data' : 'Permission required'}` : `Budget includes ${Math.round(activeCalories)} kcal from Health Connect.`}</div>` : ''}
+      ${useExerciseBudget ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">${activeCalories == null ? `${hcName()} active calories: ${hcConnected ? 'No data' : 'Permission required'}` : `Budget includes ${Math.round(activeCalories)} kcal from ${hcName()}.`}</div>` : ''}
     </div>
 
     <div class="eyebrow-label">Calorie & Macro Budget</div>
@@ -14775,15 +15627,15 @@ function renderNutritionInsightsPage(){
       <!-- SUMMARY -->
       <div class="ni-card">
         <div class="ni-card__title">Insights Summary</div>
-        <div class="ni-sum"><span>📈 Goal Progress</span><strong>${pctGoal}%</strong></div>
-        <div class="ni-sum"><span>🎯 Nutrition Score</span><strong>${sc.score}/100</strong></div>
-        <div class="ni-sum"><span>🗓️ Meals Logged</span><strong>${mealsLogged}/${mealTypes().length}</strong></div>
-        <div class="ni-sum"><span>💧 Hydration</span><strong>${pctOf(waterMl, waterTarget)}%</strong></div>
-        ${streak != null ? `<div class="ni-sum"><span>🔥 Streak</span><strong>${streak} day${streak===1?'':'s'}</strong></div>` : ""}
+        <div class="ni-sum"><span>${svg('trend',13)} Goal Progress</span><strong>${pctGoal}%</strong></div>
+        <div class="ni-sum"><span>${svg('target',13)} Nutrition Score</span><strong>${sc.score}/100</strong></div>
+        <div class="ni-sum"><span>${svg('calendar',13)} Meals Logged</span><strong>${mealsLogged}/${mealTypes().length}</strong></div>
+        <div class="ni-sum"><span>${svg('droplet',13)} Hydration</span><strong>${pctOf(waterMl, waterTarget)}%</strong></div>
+        ${streak != null ? `<div class="ni-sum"><span>${svg('flame',13)} Streak</span><strong>${streak} day${streak===1?'':'s'}</strong></div>` : ""}
       </div>
 
       <div class="ni-banner">
-        <span aria-hidden="true">🛡️</span>
+        <span aria-hidden="true">${svg('shield',15)}</span>
         <span>${sc.score>=70 ? "Keep going! You're consistent and making great progress towards your goals."
                              : "Small changes add up — the coach notes above are the quickest wins."}</span>
       </div>`}
@@ -14911,7 +15763,7 @@ function renderNutritionTab(){
     <div class="nd-datebar">
       <button class="nd-date" data-nutrition-date="-1" aria-label="Previous day">‹</button>
       <div class="nd-date__pill">
-        <span aria-hidden="true">📅</span>
+        <span aria-hidden="true">${svg('calendar',15)}</span>
         <span class="nd-date__label">${escHtml(nutritionDateLabel(ds))}</span>
       </div>
       <button class="nd-date" data-nutrition-date="1" ${isToday?'disabled':''} aria-label="Next day">›</button>
@@ -14946,18 +15798,29 @@ function renderNutritionTab(){
          that will be wired up later. -->
     <div class="nd-shortcuts">
       <button class="nd-short" data-open-diet-plan="1">
-        <span class="nd-short__icon nd-short__icon--blue">📋</span>
+        <span class="nd-short__icon nd-short__icon--blue">${svg('receipt',16)}</span>
         <span class="nd-short__body"><span class="nd-short__title">Diet Plan</span><span class="nd-short__sub">Build your meal plan</span></span>
         <span class="nd-short__chev">›</span>
       </button>
       <button class="nd-short" data-nav-insights="1">
-        <span class="nd-short__icon nd-short__icon--purple">📊</span>
+        <span class="nd-short__icon nd-short__icon--purple">${svg('chart',16)}</span>
         <span class="nd-short__body"><span class="nd-short__title">Insights</span><span class="nd-short__sub">See your progress</span></span>
         <span class="nd-short__chev">›</span>
       </button>
-      <button class="nd-short" data-nav="recipes">
-        <span class="nd-short__icon nd-short__icon--orange">🍲</span>
-        <span class="nd-short__body"><span class="nd-short__title">Recipes</span><span class="nd-short__sub">Healthy recipes</span></span>
+      ${/* Was a Recipes shortcut pointing at data-nav="recipes" — a tab with NO renderer
+            anywhere in this file. renderApp's switch has no branch for it, so tapping it set
+            state.tab to a value nothing matched, left main.innerHTML untouched from the last
+            paint, and the page went blank. Not an empty state; an absent screen.
+
+            Fasting replaces it because Fasting genuinely exists — renderFastingScreen, a tab
+            in the whitelist, and the data-open-fasting handler this button now uses. It also
+            has no permanent entry point on this page: renderNutritionFastingStrip above
+            returns "" unless a fast is ACTIVE, so until now there was no way to start one
+            from the screen where eating is decided, which is exactly where that decision is
+            made. */''}
+      <button class="nd-short" data-open-fasting="1">
+        <span class="nd-short__icon nd-short__icon--orange">⏱</span>
+        <span class="nd-short__body"><span class="nd-short__title">Fasting</span><span class="nd-short__sub">Track your eating window</span></span>
         <span class="nd-short__chev">›</span>
       </button>
     </div>
@@ -15061,7 +15924,7 @@ function renderNutritionTab(){
           </div>` : ""}
 
         ${favs.length ? `
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">★ Favourites</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:5px;">${svg('starFilled',11)} Favourites</div>
           <div style="display:flex;gap:5px;flex-wrap:wrap;">
             ${favs.map(f=>`<button class="cat-chip active" data-quick-add-food="${escHtml(state.mealOpen||mealTypes()[0])}" data-food-name="${escHtml(f.name)}" data-food-cal="${f.calories||0}" data-food-protein="${f.protein||0}" data-food-carbs="${f.carbs||0}" data-food-fat="${f.fat||0}" data-food-fibre="${f.fibre||0}" style="margin:0;">${escHtml(f.name)} · ${f.calories||0}kcal</button>`).join("")}
           </div>` : ""}
@@ -15174,6 +16037,54 @@ function withFocusPreserved(fn){
   }catch(e){ /* a field that cannot take a caret is not worth failing a render over */ }
 }
 
+/* WHICH ELEMENT ACTUALLY SCROLLS. <main> is the scroller — it carries overflow-y:auto and a
+   fixed height between the header and the bottom nav, so the document itself never scrolls and
+   documentElement.scrollTop is permanently 0. Measured in the browser on a live session:
+   main.scrollHeight 4892 against clientHeight 642, while documentElement.scrollHeight equalled
+   its clientHeight exactly.
+
+   Worth stating plainly because the comment above restoreNutritionScroll() asserts the
+   opposite — "there is no <main> in this app" — and reading offsets off documentElement is a
+   silent no-op, not an error: it stores 0, restores 0, and looks like it works. */
+function pageScroller(){
+  return document.querySelector("main") || document.scrollingElement || document.documentElement;
+}
+
+/* A re-render that leaves the reader where they were standing.
+
+   render() rebuilds #app wholesale. For one frame the new DOM has no laid-out height, the
+   window scroll offset has nowhere to point, and the browser clamps it to 0 — so every
+   re-render silently scrolls to the top. On a short screen nobody notices. In a live session
+   it is the difference between marking a drop set on exercise nine and being thrown back to
+   exercise one, and it made the ⋮ menu look broken: the menu did open, just far above the
+   fold, with the page now showing the top of the workout instead.
+
+   Restored in requestAnimationFrame AND on a timeout, deliberately — the same pair
+   restoreNutritionScroll() already uses here, and for the same reason: rAF is the correct
+   moment (one frame later, when layout is real) but it does not fire at all while the page
+   is not compositing, which is exactly when a silent failure would be hardest to spot.
+
+   Not folded into render() itself. Plenty of renders SHOULD land at the top — changing tab,
+   opening a detail view — and a blanket restore would fight those. This is opt-in for the
+   handlers that mutate something the reader is looking at. */
+function renderInPlace(){
+  /* Resolve the scroller EVERY time rather than caching it: renderApp() rebuilds #app, and
+     <main> lives inside it, so the element holding the offset is destroyed by the very render
+     this is preserving across. The node read before is not the node written after. */
+  const before = (pageScroller() || {}).scrollTop || 0;
+  render();
+  if(!before) return;
+  const apply = ()=>{
+    const el = pageScroller();
+    if(!el) return;
+    // Clamp: a deletion makes the page shorter, and an offset past the new end would land at
+    // the bottom rather than where the content actually is.
+    el.scrollTop = Math.min(before, Math.max(0, el.scrollHeight - el.clientHeight));
+  };
+  requestAnimationFrame(apply);
+  setTimeout(apply, 0);
+}
+
 function render(){
   try{
     applyTheme();
@@ -15182,11 +16093,11 @@ function render(){
          new install: someone re-editing their answers is already in, and anyone who has
          signed in or chosen to skip has hx_auth_seen set and never sees it again. */
       if(!isSignedIn() && !state.editingOnboarding){
-        removeBottomNav();
+        removeBottomNav(); removeAIFab();
         renderSignInScreen();
         return;
       }
-      removeBottomNav();
+      removeBottomNav(); removeAIFab();
       withFocusPreserved(renderOnboardingWizard);
       return;
     }
@@ -15195,7 +16106,7 @@ function render(){
        to add to. hx_auth_seen is no longer consulted: "has seen the screen" and "has an
        account" were the same flag only while skipping existed. */
     if(!isSignedIn()){
-      removeBottomNav();
+      removeBottomNav(); removeAIFab();
       renderSignInScreen();
       return;
     }
@@ -15229,7 +16140,7 @@ function renderErrorScreen(err){
   try{ msg = (err && err.message) ? err.message : msg; }catch{}
   root.innerHTML = `
     <div style="padding:24px 20px;max-width:480px;margin:0 auto;">
-      <div style="font-size:38px;margin-bottom:8px;">⚠️</div>
+      <div class="ni-empty__icon">${svg('alert',32)}</div>
       <h1 style="font-size:20px;font-weight:900;margin-bottom:6px;">Ignyt hit a snag</h1>
       <p style="font-size:13px;color:var(--muted,#9a9aa4);margin-bottom:18px;">
         A screen failed to load. Your saved data is safe — it lives in this browser's storage, untouched.
@@ -15259,6 +16170,14 @@ function renderErrorScreen(err){
 }
 
 function renderPlanTab(){
+  /* THE SAFETY GATE, in front of the plan rather than inside it. The HYROX plan itself is
+     untouched — this returns before it is built, so nothing about WEEKS, buildWeek or the
+     completion state is involved. A red flag means no workout should be suggested, and the
+     structured plan is the app's strongest suggestion of all. */
+  if(window.IgnytRedFlags && IgnytRedFlags.needsCheck()){
+    return IgnytRedFlags.screenHtml(escHtml, { title: "Before your plan opens" });
+  }
+
   if(state.viewingHyroxSchedule) return renderHyroxSchedule();
   if(state.viewingRaceMode) return renderRaceMode();
   if(state.viewingHyroxInfo) return renderHyroxInfo();
@@ -15506,7 +16425,7 @@ function renderPRCelebration(){
   const prs = state.lastSessionPRs;
   return `<div class="info-box" style="padding:16px;margin-bottom:14px;background:rgba(255,90,31,.1);border:1px solid rgba(255,90,31,.35);">
     <div class="row-between" style="margin-bottom:10px;">
-      <span style="font-weight:900;font-size:15px;color:var(--accent);">🏆 New Personal Record${prs.length>1?'s':''}!</span>
+      <span style="font-weight:900;font-size:15px;color:var(--accent);">${svg('trophy',14)} New Personal Record${prs.length>1?'s':''}!</span>
       <button class="del" data-action="dismiss-prs" aria-label="Dismiss">${svg('x',15)}</button>
     </div>
     ${prs.map(pr=>`<div class="row-between" style="padding:6px 0;border-top:1px solid rgba(255,90,31,.15);">
@@ -15520,7 +16439,7 @@ function renderAchievementCelebration(){
   const list = state.lastUnlockedAchievements;
   return `<div class="info-box" style="padding:16px;margin-bottom:14px;background:rgba(62,207,142,.1);border:1px solid rgba(62,207,142,.35);">
     <div class="row-between" style="margin-bottom:10px;">
-      <span style="font-weight:900;font-size:15px;color:var(--mint);">🎖️ Achievement Unlocked${list.length>1?'s':''}!</span>
+      <span style="font-weight:900;font-size:15px;color:var(--mint);">${svg('medal',14)} Achievement Unlocked${list.length>1?'s':''}!</span>
       <button class="del" data-action="dismiss-achievements" aria-label="Dismiss">${svg('x',15)}</button>
     </div>
     ${list.map(a=>`<div style="padding:6px 0;border-top:1px solid rgba(62,207,142,.15);">
@@ -15545,7 +16464,7 @@ function renderAchievementCelebration(){
    ? key : "steel"`, so a stored key that no longer exists lands on the one that does instead
    of on undefined and a blank card. */
 const SHARE_THEMES = {
-  steel: { label:"Steel", bg0:"#0E1B26", bg1:"#121216", text:"#F2F1ED", muted:"#8FA7B5", accent:"#4FA8D8" }
+  steel: { label:"Steel", bg0:"#0E1B26", bg1:"#121216", text:"#F2F1ED", muted:"#8FA7B5", accent:"#2563EB" }
 };
 
 function workoutDurationLabel(s){
@@ -15591,7 +16510,7 @@ function buildWorkoutSummaryText(s){
   ];
   if(b.length) lines.push("", ...b.map(x=>`${x.sets}× ${x.name}`));
   const prs = state.prs.filter(p=>p.workoutId===s.id);
-  if(prs.length) lines.push("", `🏆 ${prs.length} PR${prs.length>1?'s':''}`);
+  if(prs.length) lines.push("", `${prs.length} PR${prs.length>1?'s':''}`);
   return lines.join("\n");
 }
 
@@ -15740,7 +16659,7 @@ function renderWorkoutComplete(s){
   return `
     <div class="pg-light">
       <div style="text-align:center;margin:8px 0 4px;">
-        <div style="font-size:24px;font-weight:800;">Workout Complete 🎉</div>
+        <div style="font-size:24px;font-weight:800;">Workout Complete</div>
       </div>
 
       <!-- When the workout happened, editable here rather than only from history.
@@ -16796,7 +17715,11 @@ function renderWorkoutTab(){
             const prevOneRM = (logType==="strength" && prev && prev.weight && prev.reps)
               ? Math.round(displayW(estimatedOneRM(parseFloat(prev.weight), parseFloat(prev.reps)))) : null;
             const typeMeta = SET_TYPE_META[set.type||"working"];
-            const numBtn = `<button class="mono set-num" data-cycle-set-type="${exi}|${si}" style="color:${typeMeta.color};background:none;border:none;cursor:pointer;font-weight:800;" title="Tap to mark warm-up / drop / failure set">${typeMeta.badge}${si+1}</button>`;
+            /* The set number opens a picker rather than cycling to the next type. Cycling made
+               the common case — "this one is a drop set" — cost up to three taps, each with a
+               full re-render, and gave no way to see what the options were. */
+            const typeMenuOpen = state.setTypeMenuFor === `${exi}|${si}`;
+            const numBtn = `<button class="mono set-num" data-set-type-menu="${exi}|${si}" aria-haspopup="true" aria-expanded="${typeMenuOpen?'true':'false'}" style="color:${typeMeta.color};background:none;border:none;cursor:pointer;font-weight:800;" title="Set type: ${typeMeta.label}">${typeMeta.badge}${si+1}</button>`;
             const doneBtn = `<button class="set-check ${set.done?'done':''}" data-set-done="${exi}|${si}" aria-label="${set.done?'Mark set incomplete':'Mark set complete'}">${set.done?svg('check',13):''}</button>`;
             // Locked once done: real inputs, not fake ones -- values stay exactly as logged
             // until the user explicitly un-checks the set (tap the check again, any time, no
@@ -16825,7 +17748,7 @@ function renderWorkoutTab(){
               <div class="set-row ${set.done?'done':''}" style="grid-template-columns:${gridCols};">
                 ${numBtn}
                 <span class="set-prev-stack">
-                  <span class="mono set-prev">${prevLabel}${prevIsPR?' <span class="pr-badge" title="Personal record">🏆</span>':''}</span>
+                  <span class="mono set-prev">${prevLabel}${prevIsPR?' <span class="pr-badge" title="Personal record">'+svg('trophy',12)+'</span>':''}</span>
                   ${prevOneRM?`<span class="mono set-prev-1rm">1RM: ${prevOneRM}${wUnit()}</span>`:''}
                 </span>
                 ${fields}
@@ -16841,6 +17764,33 @@ function renderWorkoutTab(){
         </div>
       `;}).join("")}
     </div>
+    ${(()=>{
+      /* THE SET-TYPE PICKER LIVES OUT HERE, not in the set row that opened it.
+         .set-row-wrap is overflow:hidden so the swipe-to-delete buttons stay hidden until
+         they are swiped in, and .set-row is transformed to do the swiping. A menu rendered
+         inside the row would be clipped by the first and, if positioned fixed, would be
+         positioned against the second rather than the viewport. So it is a sheet at session
+         level, which neither of those can reach. */
+      const key = state.setTypeMenuFor;
+      if(!key) return "";
+      const [exi, si] = key.split("|").map(Number);
+      const ex = s.exercises && s.exercises[exi];
+      const set = ex && ex.sets && ex.sets[si];
+      if(!set) return "";
+      return `<div class="set-type-backdrop" data-close-set-type-menu></div>
+        <div class="set-type-sheet" role="dialog" aria-label="Set type">
+          <div class="set-type-sheet__title">Set ${si+1} · ${escHtml(ex.name)}</div>
+          ${SET_TYPE_CYCLE.map(t=>{
+            const m = SET_TYPE_META[t];
+            const on = (set.type||"working") === t;
+            return `<button class="set-type-item${on?' is-on':''}" data-set-type-pick="${exi}|${si}|${t}">
+              <span class="set-type-item__badge" style="color:${m.color};">${m.badge||'—'}</span>
+              <span class="set-type-item__label">${m.label}</span>
+              ${on?`<span class="set-type-item__tick">${svg('check',14)}</span>`:''}
+            </button>`;
+          }).join("")}
+        </div>`;
+    })()}
     <button class="wk-finish-fab" data-action="finish-session" aria-label="${isEditing?'Save workout':'Finish workout'}">${svg('check',22)}</button>
     ${renderMuscleDistributionSheet()}
     ${renderRestTimerSheet()}
@@ -16952,7 +17902,8 @@ function exDetailBadge(label, value, color){
     <span class="ex-badge__k">${escHtml(label)}</span>${escHtml(value)}</span>`;
 }
 
-/* Bulleted list block with a leading glyph (✓ tips, ✕ mistakes, ! safety). */
+/* Bulleted list block with a leading glyph. The caller passes icon markup, not a
+   character, so the tick and cross match the rest of the icon set. */
 function exDetailList(items, glyph, color){
   return items.map(t=>`<div class="ex-li"><span class="ex-li__g" style="color:${color};">${glyph}</span><span>${escHtml(t)}</span></div>`).join("");
 }
@@ -17015,6 +17966,21 @@ function renderExerciseDetail(name){
     ${tab==="howto" ? renderExerciseDetailHowTo(name, nd, libEntry) : ""}
 
     <button class="rh-btn rh-btn--primary" style="width:100%;margin-top:8px;" data-action="add-detail-to-workout" data-exercise-name="${escHtml(name)}">${svg('plus',16)} Add to Workout</button>
+    ${/* The AI already knows WHICH exercise because the question carries its name — that is
+         cheaper and more reliable than giving the model a "current screen" it has to be told
+         about and might carry into the next question. Gated through the same seam as the
+         chat screen, so an unentitled user is not offered a button that opens a paywall. */''}
+    ${(!window.IgnytEntitlements || !IgnytEntitlements.has || IgnytEntitlements.has("coach")) ? `
+    <div class="ex-ai">
+      <div class="ex-ai__label">${svg('bolt',13)} Ask IGNYT AI</div>
+      <div class="ex-ai__row">
+        <button class="aic-chip" data-ai-ask="How do I perform ${escHtml(name)} with good form?">How do I do it?</button>
+        <button class="aic-chip" data-ai-ask="What muscles does ${escHtml(name)} work?">Muscles worked</button>
+        <button class="aic-chip" data-ai-ask="What are common mistakes on ${escHtml(name)}?">Common mistakes</button>
+        <button class="aic-chip" data-ai-ask="How can I make ${escHtml(name)} easier?">Make it easier</button>
+        <button class="aic-chip" data-ai-ask="How do I progress ${escHtml(name)}?">Progress it</button>
+      </div>
+    </div>` : ''}
   </div>`;
 }
 
@@ -17138,8 +18104,8 @@ function renderExerciseDetailHowTo(name, nd, libEntry){
 
   /* ---- Technique: form tips, mistakes, safety ---- */
   const tech = [];
-  if(nd.formTips.length) tech.push(sub("Form Tips") + exDetailList(nd.formTips, "✓", "var(--rh-green)"));
-  if(nd.commonMistakes.length) tech.push(sub("Common Mistakes") + exDetailList(nd.commonMistakes, "✕", "var(--rh-red)"));
+  if(nd.formTips.length) tech.push(sub("Form Tips") + exDetailList(nd.formTips, svg("check",13), "var(--rh-green)"));
+  if(nd.commonMistakes.length) tech.push(sub("Common Mistakes") + exDetailList(nd.commonMistakes, svg("x",13), "var(--rh-red)"));
   if(nd.safety.length) tech.push(sub("Safety") + exDetailList(nd.safety, "!", "var(--rh-amber, #d97706)"));
   if(tech.length) out.push(exDetailSection("technique","Technique","shield", tech.join(""), isOpen("technique", false)));
 
@@ -17627,6 +18593,391 @@ function attachHandlers(){
       if (["home", "health", "nutrition", "insights"].includes(state.tab)) window.dispatchEvent(new Event("ignyt:health-connect-navigation"));
     });
   });
+  /* ---- Recommended program -> routines --------------------------------------------------
+     Saving a day, or a whole week, into the user's own routines. Everything goes through
+     normalizeRoutine, the same function the routine builder uses, so a saved program day is
+     indistinguishable from a hand-built routine — it can be edited, duplicated, foldered and
+     started with no special cases anywhere downstream. */
+  function saveProgramDay(programId, week, dayIndex, folderId){
+    const P = window.IgnytPrograms;
+    if(!P || !P.dayAsRoutine) return null;
+    const draft = P.dayAsRoutine(programId, week, dayIndex);
+    if(!draft) return null;
+    /* A name already in use gets a suffix rather than overwriting. Saving week 3 twice should
+       produce two routines or a clear duplicate, never silently replace the edits someone made
+       to the first one. */
+    let name = draft.name, n = 2;
+    while(state.routines.some(r => r.name === name)) name = draft.name + " (" + (n++) + ")";
+    const rec = normalizeRoutine({ ...draft, name, id: nextId(), folderId: folderId || undefined });
+    state.routines.unshift(rec);
+    return rec;
+  }
+
+
+  /* ---- IGNYT AI chat ------------------------------------------------------------------
+     One send path. The quick chips, the Enter key and the send button all call it, so there
+     is one place where a turn begins and one place it can go wrong. */
+  async function aiSend(text){
+    const msg = String(text || "").trim();
+    if(!msg || state.aiBusy) return;
+    state.aiLastUser = msg;
+    state.aiChat.push({ role:"user", text:msg });
+    state.aiBusy = true;
+    renderInPlace();
+    aiScrollToEnd();
+
+    const push = ev => {
+      if(ev.type === "text")        state.aiChat.push({ role:"assistant", text:ev.text });
+      else if(ev.type === "card")   state.aiChat.push({ role:"card", result:ev.result });
+      else if(ev.type === "clarify")state.aiChat.push({ role:"clarify", result:ev.result });
+      else if(ev.type === "confirm"){
+        state.aiPending = { action:ev.action, args:ev.args };
+        /* THE PROMPT DESCRIBES THE ACTION IT IS GUARDING. This said "Delete this? It can't be
+           undone." for every confirm, which was true while only destructive actions ever asked --
+           and became a lie the moment anything else did. A food log briefly asked the user whether
+           to delete their data. The wording now follows the action's own name. */
+        const _act = String(ev.action || "");
+        const _destructive = /^delete/i.test(_act);
+        state.aiChat.push({
+          role: "confirm",
+          text: _destructive ? "Delete this? It can't be undone."
+              : /^addFoodLog/i.test(_act) ? "Add this to your food log?"
+              : /^logWeight/i.test(_act)   ? "Log this weight?"
+              : /^start/i.test(_act)       ? "Start this workout?"
+              : /^complete/i.test(_act)    ? "Finish this workout?"
+              : "Go ahead with this?"
+        });
+      }
+      else if(ev.type === "usage") state.aiUsage = ev.usage;
+      else if(ev.type === "actionError") state.aiChat.push({ role:"assistant", text:ev.error });
+    };
+
+    try{
+      /* Only the last few turns are sent, and only the text — the cards are a local
+         rendering of what happened, not something the model needs read back to it. */
+      const history = state.aiChat.filter(e => e.role === "user" || e.role === "assistant")
+        .slice(-7, -1).map(e => ({ role: e.role === "user" ? "user" : "assistant", text: e.text }));
+      await IgnytAIService.ask(msg, { history, onEvent: push });
+    }catch(e){
+      state.aiChat.push({ role:"error", text: (e && e.message) || "AI is unavailable right now." });
+    }finally{
+      state.aiBusy = false;
+      renderInPlace();
+      aiScrollToEnd();
+    }
+  }
+
+  /* The transcript scrolls in its own box, so this cannot use the page scroller. rAF because
+     the new bubble has no height until the browser has laid it out. */
+  /* Reachable from OTHER screens. The exercise page's "Ask IGNYT AI" chips switch tab and
+     then send, and they need this after render() has rebuilt the DOM — assigning inside
+     aiSend() would only publish it after the first message, so the very first question from
+     an exercise page silently did nothing. */
+  window.__aiSend = aiSend;
+
+  function aiScrollToEnd(){
+    requestAnimationFrame(()=>{
+      const el = document.getElementById("ai-scroll");
+      if(el) el.scrollTop = el.scrollHeight;
+    });
+  }
+
+  document.querySelectorAll("[data-ai-ask]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const q = el.dataset.aiAsk;
+      state.viewingExerciseDetail = null;
+      state.tab = "ai";
+      render();
+      /* After the tab has rendered, so aiSend() appends to a transcript that is on screen. */
+      setTimeout(()=>{ const f = window.__aiSend; if(f) f(q); }, 0);
+    });
+  });
+  document.querySelectorAll("[data-ai-send]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const inp = document.getElementById("ai-input");
+      if(inp){ const v = inp.value; inp.value = ""; aiSend(v); }
+    });
+  });
+  const aiInput = document.getElementById("ai-input");
+  if(aiInput) aiInput.addEventListener("keydown", e=>{
+    if(e.key === "Enter"){ e.preventDefault(); const v = aiInput.value; aiInput.value = ""; aiSend(v); }
+  });
+  document.querySelectorAll("[data-ai-say]").forEach(el=>{
+    el.addEventListener("click", ()=> aiSend(el.dataset.aiSay));
+  });
+  document.querySelectorAll("[data-ai-retry]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      // Drop the error bubble first so a second failure does not stack two of them.
+      state.aiChat = state.aiChat.filter(e => e.role !== "error");
+      const last = state.aiLastUser;
+      // The failed user message is already in the transcript; re-sending would duplicate it.
+      const i = state.aiChat.map(e=>e.role).lastIndexOf("user");
+      if(i >= 0) state.aiChat.splice(i, 1);
+      aiSend(last);
+    });
+  });
+  document.querySelectorAll("[data-ai-confirm]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const yes = el.dataset.aiConfirm === "yes";
+      const pending = state.aiPending;
+      state.aiPending = null;
+      state.aiChat = state.aiChat.filter(e => e.role !== "confirm");
+      if(!yes || !pending){
+        state.aiChat.push({ role:"assistant", text:"Left it alone." });
+        return renderInPlace();
+      }
+      await IgnytAIService.confirm(pending, { onEvent: ev=>{
+        if(ev.type === "card") state.aiChat.push({ role:"card", result:ev.result });
+        else state.aiChat.push({ role:"assistant", text: ev.error || "Couldn't do that." });
+      }});
+      renderInPlace();
+    });
+  });
+
+  /* VOICE. Web Speech where it exists, which on Android WebView and desktop Chrome it does.
+     Recording is never continuous: one tap starts it, the recogniser stops itself at the end
+     of an utterance, and the transcript is sent as if it had been typed — so voice reaches
+     exactly the same validation and confirmation path as text, with no second code path that
+     could disagree about what needs confirming. */
+  /* Read an answer aloud. A TOGGLE, not a play button: tapping the speaker that is currently
+     talking stops it, which is the only control anyone reaches for when speech starts and they
+     did not want it. Tapping a DIFFERENT answer switches to that one — IgnytVoice.speak()
+     cancels whatever is queued before starting, so two answers can never overlap.
+
+     Failures are swallowed on purpose. The text is already on screen, so a device with no
+     voice for the language has cost the user nothing, and an error bubble explaining that
+     would be noise about a feature they can simply not use. */
+  /* Clear the transcript. No confirmation: the chat is a log of things that already happened,
+     not the data itself — every weight, food and workout the AI logged lives in its own store
+     and is untouched by this. Losing a conversation is cheap; a confirm dialog for it is not. */
+  document.querySelectorAll("[data-ai-clear]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.aiChat = [];
+      state.aiPending = null;
+      state.aiLastUser = null;
+      /* Drop any open follow-up too. The assistant may have just asked "What weight should I
+         log?"; clearing the transcript takes that question off the screen, and a slot waiting
+         for its answer would then capture the next unrelated number the user types. */
+      if (window.IgnytLocalChat && IgnytLocalChat.clearAwaiting) IgnytLocalChat.clearAwaiting();
+      if(window.persist) window.persist();
+      renderInPlace();
+    });
+  });
+
+  document.querySelectorAll("[data-ai-speak]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const V = window.IgnytVoice;
+      if(!V || !V.canSpeak()) return;
+      const text = el.dataset.aiSpeak || "";
+      const wasThisOne = el.classList.contains("is-speaking");
+      document.querySelectorAll(".aic-speak.is-speaking").forEach(b=>b.classList.remove("is-speaking"));
+      V.stopSpeaking();
+      if(wasThisOne) return;                    // second tap on the live one = stop
+      el.classList.add("is-speaking");
+      V.speak(text, {
+        onState: (s)=>{ if(s === "idle") el.classList.remove("is-speaking"); }
+      }).catch(()=>{ el.classList.remove("is-speaking"); });
+    });
+  });
+
+  document.querySelectorAll("[data-ai-mic]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      /* ONE SPEECH IMPLEMENTATION, not two. This drove SpeechRecognition directly and
+         js/ai/voice.js was then written alongside it, which is the duplicate-system trap: two
+         copies of the same browser API, drifting apart, and a language or error-message fix
+         landing in only one of them. The module is the survivor because it is the one that is
+         tested and the one text-to-speech shares state with — it must know whether the
+         microphone is live before it starts speaking, or the app talks over itself.
+         Behaviour here is unchanged except for being better: en-IN instead of navigator
+         .language, a live transcript while talking, and errors that say what to do. */
+      var V = window.IgnytVoice;
+      if(!V || !V.canListen()){
+        state.aiChat.push({ role:"error", text:"Voice isn't available on this device. Type instead." });
+        return renderInPlace();
+      }
+      if(state.aiListening){ V.stopListening(); return; }
+
+      V.listen({
+        onState: (s)=>{ state.aiListening = (s === "listening"); renderInPlace(); },
+        /* Interim results in the placeholder, so the user can see it is hearing them rather
+           than staring at a pulsing button wondering whether to keep talking. */
+        onPartial: (txt)=>{
+          const box = document.getElementById("ai-input");
+          if(box) box.placeholder = txt.slice(0, 60);
+        }
+      }).then(said=>{
+        state.aiListening = false;
+        /* Straight into the SAME send path a typed message uses — which is what keeps a spoken
+           sentence costing the same number of AI activities as a typed one. */
+        if(said) aiSend(said); else renderInPlace();
+      }).catch(err=>{
+        state.aiListening = false;
+        /* An aborted session is the user tapping stop. That is not an error and must not
+           leave a red bubble in their chat history. */
+        if(err && err.code !== "aborted" && err.message){
+          state.aiChat.push({ role:"error", text: err.message });
+        }
+        renderInPlace();
+      });
+    });
+  });
+
+  document.querySelectorAll("[data-add-day]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const rec = saveProgramDay(el.dataset.addDay, Number(el.dataset.addDayW), Number(el.dataset.addDayI));
+      state.routines = enforceRoutineIntegrity(state.routines);
+      showToast(rec ? "Saved “" + rec.name + "” to your routines" : "Could not save that day", rec ? "success" : "error", render);
+    });
+  });
+
+  document.querySelectorAll("[data-add-week]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const P = window.IgnytPrograms;
+      const programId = el.dataset.addWeek, week = Number(el.dataset.addWeekN);
+      if(!P) return;
+      const prog = P.get(programId);
+      const w = P.buildWeek(programId, week);
+      /* The whole week lands in its OWN folder, so adding a second week does not merge into the
+         first and adding a week never scatters six routines through the ungrouped list. */
+      const folder = { id: nextId(), name: prog.label.replace(/^16-Week\s+/, "") + " · Week " + week, collapsed: false };
+      state.routineFolders.push(folder);
+      let saved = 0;
+      w.days.forEach((d, i)=>{
+        const trainable = d.exercises.length > 1 || (d.exercises[0] && d.exercises[0].name !== "Walk / Mobility");
+        if(!trainable) return;      // a rest day is not a routine
+        if(saveProgramDay(programId, week, i, folder.id)) saved++;
+      });
+      state.routines = enforceRoutineIntegrity(state.routines);
+      showToast(saved + " routine" + (saved===1?"":"s") + " saved to “" + folder.name + "”", "success", render);
+    });
+  });
+
+  /* ---- Routine folders ----------------------------------------------------------------
+     A folder is a label over the routine list. Nothing here ever touches state.routines except
+     to set or clear folderId, which is what makes every one of these operations non-destructive
+     — including delete. */
+  /* Ids come back out of dataset as STRINGS while nextId() issues NUMBERS, so every lookup below
+     normalises both sides. Comparing them raw is what made the caret, the ••• menu, rename and
+     delete do nothing at all: each found no folder and returned silently. */
+  const sameId = (a, b)=> a != null && b != null && String(a) === String(b);
+  const folderMenu = (id)=>{
+    const f = (state.routineFolders||[]).find(x=>sameId(x.id, id));
+    return f ? f.name : "";
+  };
+  document.querySelectorAll('[data-action="new-routine-folder"]').forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const name = await confirmDialog("Name this folder", render,
+        { title:"New folder", input:true, confirmLabel:"Create" });
+      if(!name || typeof name !== "string") return;
+      state.routineFolders.push({ id: nextId(), name: name.slice(0,40), collapsed:false });
+      render();
+    });
+  });
+  document.querySelectorAll("[data-folder-toggle]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.folderToggle;
+      if(id === "__ungrouped"){ state.ungroupedCollapsed = !state.ungroupedCollapsed; render(); return; }
+      const f = state.routineFolders.find(x=>sameId(x.id, id));
+      if(f){ f.collapsed = !f.collapsed; render(); }
+    });
+  });
+  document.querySelectorAll("[data-folder-menu]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.folderMenuFor = sameId(state.folderMenuFor, el.dataset.folderMenu) ? null : el.dataset.folderMenu;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-folder-rename]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const id = el.dataset.folderRename;
+      const name = await confirmDialog("Rename this folder", render,
+        { title: folderMenu(id), input:true, confirmLabel:"Rename" });
+      if(!name || typeof name !== "string") return;
+      const f = state.routineFolders.find(x=>sameId(x.id, id));
+      if(f) f.name = name.slice(0,40);
+      state.folderMenuFor = null;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-folder-delete]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const id = el.dataset.folderDelete;
+      const n = state.routines.filter(r=>sameId(r.folderId, id)).length;
+      /* The count is in the question on purpose. "Delete folder?" invites a reflexive yes; the
+         number is what makes someone check whether they meant it. */
+      const ok = await confirmDialog(
+        n ? "Delete this folder? The " + n + " routine" + (n===1?"":"s") + " inside will move back to My Routines — nothing is deleted."
+          : "Delete this folder?",
+        render, { title: folderMenu(id), confirmLabel:"Delete folder", danger:true });
+      if(!ok) return;
+      state.routines.forEach(r=>{ if(sameId(r.folderId, id)) delete r.folderId; });
+      state.routineFolders = state.routineFolders.filter(x=>!sameId(x.id, id));
+      state.folderMenuFor = null;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-move-routine]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.moveRoutineFor = sameId(state.moveRoutineFor, el.dataset.moveRoutine) ? null : el.dataset.moveRoutine;
+      render();
+    });
+  });
+  document.querySelectorAll("[data-move-to]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const r = state.routines.find(x=>String(x.id)===String(state.moveRoutineFor));
+      if(r){
+        const to = el.dataset.moveTo;
+        if(to === "__none") delete r.folderId; else r.folderId = to;
+      }
+      state.moveRoutineFor = null;
+      render();
+    });
+  });
+  /* The red-flag safety check. Submitting either answer records it and re-renders; the gate in
+     renderRecommendation decides what shows next. "None of these apply" stores an empty list,
+     which is what starts the acknowledgement clock. */
+  document.querySelectorAll("[data-rf-submit]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const mode = el.dataset.rfSubmit;
+      let ids = [];
+      if(mode === "checked"){
+        ids = [...document.querySelectorAll(".rf-item__box:checked")].map(b=>b.value);
+        /* Ticking nothing and pressing "report" is the same statement as "none apply", so it
+           is treated as one rather than storing an empty report that blocks nothing. */
+      }
+      if(window.IgnytRedFlags) IgnytRedFlags.report(ids);
+      /* The safety TAB exists only to host the check when Start Empty was blocked, so once the
+         check passes there is nothing left for it to show — it would render the questions again.
+         Send the user back to where they were going. The recommendation and plan screens do not
+         need this: their gate sits in front of real content, which is what appears next. */
+      if(state.tab === "safety" && window.IgnytRedFlags && !IgnytRedFlags.needsCheck()){
+        state.tab = "workout";
+      }
+      render();
+    });
+  });
+  document.querySelectorAll("[data-rf-clear]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(window.IgnytRedFlags) IgnytRedFlags.clear();
+      render();
+    });
+  });
+  /* Recommended programs. Choosing a program opens its week view; the empty value on the back
+     button returns to the list, so one attribute drives both directions. */
+  document.querySelectorAll("[data-rec-program]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const id = el.dataset.recProgram;
+      state.recProgram = id || null;
+      state.recWeek = 1;                 // a new program always opens at week 1
+      render();
+    });
+  });
+  document.querySelectorAll("[data-rec-week]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      state.recWeek = Number(el.dataset.recWeek) || 1;
+      render();
+    });
+  });
   const notifBtn = document.querySelector('[data-action="toggle-notifications"]');
   if(notifBtn) notifBtn.addEventListener("click", ()=>{
     state.notificationsOpen = !state.notificationsOpen;
@@ -17777,6 +19128,18 @@ function attachHandlers(){
       render();
     });
   });
+  /* Sign in with Apple. Nothing to read from the form — the identity comes from Apple's own
+     sheet — so this only kicks it off and repaints. A cancelled sheet returns
+     {cancelled:true} with no error set, so the screen simply goes back to how it was rather
+     than accusing someone of a failure they chose. */
+  const authAppleBtn = document.querySelector('[data-action="auth-apple"]');
+  if(authAppleBtn) authAppleBtn.addEventListener("click", async ()=>{
+    if(!window.IgnytAuth || !IgnytAuth.signInWithApple) return;
+    const res = await IgnytAuth.signInWithApple();
+    if(res && res.success) state.authFormMode = null;
+    render();
+  });
+
   const authSigninBtn = document.querySelector('[data-action="auth-signin-submit"]');
   if(authSigninBtn) authSigninBtn.addEventListener("click", async ()=>{
     const email = (document.getElementById("auth-email-input")||{}).value || "";
@@ -17823,11 +19186,27 @@ function attachHandlers(){
   const cloudSyncNowBtn = document.querySelector('[data-action="cloud-sync-now"]');
   if(cloudSyncNowBtn) cloudSyncNowBtn.addEventListener("click", ()=>{ if(window.IgnytCloudSync) IgnytCloudSync.syncNow(); });
   const closeSettingsBtn = document.querySelector('[data-action="close-settings"]');
-  if(closeSettingsBtn) closeSettingsBtn.addEventListener("click", ()=>{ state.tab = "tools"; state.viewingPrivacyInfo = false; render(); });
+  if(closeSettingsBtn) closeSettingsBtn.addEventListener("click", ()=>{ state.tab = "tools"; state.viewingPrivacyInfo = false; state.viewingDiagnostics = false; render(); });
   const openPrivacyBtn = document.querySelector('[data-action="open-privacy-info"]');
   if(openPrivacyBtn) openPrivacyBtn.addEventListener("click", ()=>{ state.viewingPrivacyInfo = true; render(); });
   const closePrivacyBtn = document.querySelector('[data-action="close-privacy-info"]');
   if(closePrivacyBtn) closePrivacyBtn.addEventListener("click", ()=>{ state.viewingPrivacyInfo = false; render(); });
+  const diagVersionBtn = document.querySelector('[data-action="diag-version-tap"]');
+  if(diagVersionBtn) diagVersionBtn.addEventListener("click", ()=>{
+    if(diagRegisterVersionTap()) showToast("Diagnostics unlocked.", "success", render);
+  });
+  const openDiagBtn = document.querySelector('[data-action="open-diagnostics"]');
+  if(openDiagBtn) openDiagBtn.addEventListener("click", ()=>{ state.viewingDiagnostics = true; render(); });
+  const closeDiagBtn = document.querySelector('[data-action="close-diagnostics"]');
+  if(closeDiagBtn) closeDiagBtn.addEventListener("click", ()=>{ state.viewingDiagnostics = false; render(); });
+  const copyDiagBtn = document.querySelector('[data-action="copy-diagnostics"]');
+  if(copyDiagBtn) copyDiagBtn.addEventListener("click", ()=>{
+    const text = diagnosticsText();
+    const done = ()=> showToast("Diagnostics copied.", "success", render);
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done).catch(()=>legacyCopy(text, done));
+    } else legacyCopy(text, done);
+  });
   const openLegalPrivacyBtn = document.querySelector('[data-action="open-legal-privacy"]');
   if(openLegalPrivacyBtn) openLegalPrivacyBtn.addEventListener("click", ()=>{ state.viewingLegal = "privacy"; render(); });
   const openLegalTermsBtn = document.querySelector('[data-action="open-legal-terms"]');
@@ -17841,7 +19220,7 @@ function attachHandlers(){
     if(plugin){
       plugin.requestPermission().then(res=>{
         state.nativeNotifPermissionGranted = !!(res && res.granted);
-        if(!res || !res.granted){ showToast("Notifications are blocked — enable them for IGNYT in Android Settings.", "error", render); return; }
+        if(!res || !res.granted){ showToast("Notifications are blocked — enable them for IGNYT in " + notifSettingsHint() + ".", "error", render); return; }
         return plugin.sendTest({ title:"IGNYT", body:"Notifications are working. Reminders will look like this." });
       }).catch(e=>console.error("Test notification failed:", e));
       return;
@@ -18067,18 +19446,29 @@ function attachHandlers(){
   // left whichever one is second in the DOM dead.
   document.querySelectorAll('[data-action="start-session"]').forEach(startBtn=>{
     startBtn.addEventListener("click", ()=>{
+      /* An ad-hoc session is still the app helping someone train, so it takes the same gate as
+         the plan and the recommended programs. Sending them to the check rather than showing a
+         toast — a toast is dismissed in half a second and explains nothing. */
+      if(window.IgnytRedFlags && IgnytRedFlags.needsCheck()){
+        state.tab = "safety";
+        render();
+        return;
+      }
       state.session = { startedAt: Date.now(), exercises: [], notes:"", title:"" };
       state.editingSessionId = null;
       applyWakeLock();
       render();
     });
   });
-  document.querySelectorAll("[data-workout-filter]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      state.workoutRoutineFilter = el.dataset.workoutFilter;
-      render();
-    });
+  /* The IGNYT Score hero opens its own breakdown. Bound here with the rest of the delegated
+     handlers so it is re-attached on every render, like every other data-action on the page. */
+  document.querySelectorAll('[data-action="open-score-detail"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.scoreDetailOpen = true; render(); });
   });
+  document.querySelectorAll('[data-action="close-score-detail"]').forEach(el=>{
+    el.addEventListener("click", ()=>{ state.scoreDetailOpen = false; render(); });
+  });
+
   const routineSortSelect = document.getElementById("workout-routine-sort");
   if(routineSortSelect) routineSortSelect.addEventListener("change", ()=>{
     state.workoutRoutineSort = routineSortSelect.value;
@@ -18560,6 +19950,13 @@ function attachHandlers(){
   /* Count the numbers up. Last, so every [data-count] on the freshly rendered screen is in
      the DOM; the module itself decides which of them are actually new to the user. */
   if(window.IgnytCounters) IgnytCounters.attach();
+  /* The badge manifest resolves asynchronously and render() is synchronous, so the first paint
+     after load always uses the hand-drawn SVG. One re-render when it lands swaps in whatever
+     art exists. Guarded by a flag: this fires once per session, not once per render. */
+  if(window.IgnytBadgeFrames && !window.__badgeFramesReady){
+    window.__badgeFramesReady = true;
+    IgnytBadgeFrames.ready().then(function(){ try { render(); } catch(e){} });
+  }
 
   /* Reconcile the live workout notification with the current session. Cheap and idempotent, so
      it goes on the render path rather than being toggled at each of the four places a session
@@ -18676,13 +20073,14 @@ function attachHandlers(){
       e.stopPropagation();
       const i = Number(el.dataset.toggleExMenu);
       state.exerciseMenuOpen = state.exerciseMenuOpen===i ? null : i;
-      render();
+      state.setTypeMenuFor = null;
+      renderInPlace();
     });
   });
   document.querySelectorAll("[data-close-ex-menu]").forEach(el=>{
     el.addEventListener("click", ()=>{
       state.exerciseMenuOpen = null;
-      render();
+      renderInPlace();
     });
   });
   document.querySelectorAll("[data-toggle-superset]").forEach(el=>{
@@ -18691,7 +20089,7 @@ function attachHandlers(){
       const ex = state.session.exercises[i];
       ex.supersetWithNext = !ex.supersetWithNext;
       state.exerciseMenuOpen = null;
-      render();
+      renderInPlace();
     });
   });
   document.querySelectorAll("[data-replace-exercise]").forEach(el=>{
@@ -18788,15 +20186,29 @@ function attachHandlers(){
       const list = state.collapsedExercises||[];
       state.collapsedExercises = list.includes(i) ? list.filter(x=>x!==i) : [...list, i];
       state.exerciseMenuOpen = null;
-      render();
+      renderInPlace();
     });
   });
-  document.querySelectorAll("[data-cycle-set-type]").forEach(el=>{
+  document.querySelectorAll("[data-set-type-menu]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const key = el.dataset.setTypeMenu;
+      state.setTypeMenuFor = state.setTypeMenuFor === key ? null : key;
+      state.exerciseMenuOpen = null;
+      renderInPlace();
+    });
+  });
+  document.querySelectorAll("[data-close-set-type-menu]").forEach(el=>{
+    el.addEventListener("click", ()=>{ state.setTypeMenuFor = null; renderInPlace(); });
+  });
+  document.querySelectorAll("[data-set-type-pick]").forEach(el=>{
     el.addEventListener("click", ()=>{
-      const [exi,si] = el.dataset.cycleSetType.split("|");
-      const set = state.session.exercises[Number(exi)].sets[Number(si)];
-      set.type = nextSetType(set.type);
-      render();
+      const [exi,si,type] = el.dataset.setTypePick.split("|");
+      const ex = state.session && state.session.exercises[Number(exi)];
+      const set = ex && ex.sets[Number(si)];
+      if(set && SET_TYPE_CYCLE.includes(type)) set.type = type;
+      state.setTypeMenuFor = null;
+      renderInPlace();
     });
   });
   const sessionTitleEl = document.getElementById("session-title");
@@ -18869,7 +20281,7 @@ function attachHandlers(){
       const ex = state.session.exercises[Number(el.dataset.addSet)];
       const last = ex.sets[ex.sets.length-1];
       ex.sets.push(newSet(ex.name, last));
-      render();
+      renderInPlace();
     });
   });
   document.querySelectorAll("[data-del-set]").forEach(el=>{
@@ -18883,7 +20295,7 @@ function attachHandlers(){
         return;
       }
       const [removed] = ex.sets.splice(si,1); // remaining sets renumber automatically -- their "Set N" label is just their array index+1
-      render();
+      renderInPlace();
       // Undo re-inserts at the same exercise+index if the exercise is still there and that
       // position still makes sense; if the workout moved on (exercise removed, fewer sets
       // than the original index) it falls back to appending, so Undo can never throw or
@@ -18907,7 +20319,7 @@ function attachHandlers(){
       // "duplicate this set's numbers to log another one", not "duplicate it as already done".
       const copy = Object.assign({}, src, { done:false });
       ex.sets.splice(si+1, 0, copy);
-      render();
+      renderInPlace();
     });
   });
   // Accessible non-swipe fallback (inside the existing ⋮ menu — no permanent delete button on rows).
@@ -18917,7 +20329,7 @@ function attachHandlers(){
       if(!ex || ex.sets.length<=1) return;
       ex.sets.pop();
       state.exerciseMenuOpen = null;
-      render();
+      renderInPlace();
     });
   });
   document.querySelectorAll("[data-set-field]").forEach(el=>{
@@ -19251,7 +20663,7 @@ function attachHandlers(){
     showToast(res.unchanged ? "No changes to save." : "Workout updated.", res.unchanged ? "info" : "success", render);
     // Push the correction to Firestore right away when signed in; offline it stays queued
     // locally and the existing sync triggers pick it up on reconnect.
-    if(window.IgnytCloudSync && IgnytCloudSync.isNativeAndroid()) IgnytCloudSync.syncNow();
+    if(window.IgnytCloudSync && IgnytCloudSync.canSync && IgnytCloudSync.canSync()) IgnytCloudSync.syncNow();
   });
 
   const closeExDetailBtn = document.querySelector('[data-action="close-exercise-detail"]');
@@ -20298,30 +21710,6 @@ function attachHandlers(){
   /* The meal accordion is gone — meals are always expanded, so there is nothing to toggle.
      state.mealOpen survives as "which meal is the user working in", which the search route
      and quick-add still read; it just no longer controls visibility. */
-  const manualToggle = document.querySelector('[data-action="toggle-manual-entry"]');
-  if(manualToggle) manualToggle.addEventListener("click", ()=>{
-    state.manualEntryOpen = !state.manualEntryOpen;
-    render();
-  });
-  document.querySelectorAll("[data-log-meal-food]").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      const meal = el.dataset.logMealFood;
-      const name = document.getElementById("food-name").value.trim();
-      // A blank calorie field also reads as "0" through Number(), same as a deliberately
-      // logged 0-calorie item (black coffee, water) -- checking the raw string for blank/NaN
-      // instead of falsy-0 lets a genuine 0 through without also accepting an empty field.
-      const calStr = document.getElementById("food-cal").value.trim();
-      const cal = Number(calStr);
-      if(!name || calStr === "" || isNaN(cal) || cal < 0) return;
-      state.foodLog.unshift({ id: nextId(), date: nutritionDateStr(), name, calories: cal, meal,
-        protein: Number(document.getElementById("food-protein").value)||0,
-        carbs: Number(document.getElementById("food-carbs").value)||0,
-        fat: Number(document.getElementById("food-fat").value)||0,
-        fibre: Number(document.getElementById("food-fibre").value)||0
-      });
-      render();
-    });
-  });
   /* ---- Food search (Phase 3) ---- */
   const foodSearchInput = document.getElementById("food-search-input");
   if(foodSearchInput) foodSearchInput.addEventListener("input", (e)=>{
@@ -20465,7 +21853,7 @@ function attachHandlers(){
           }catch(e){ /* leave as-is */ }
         }
         if(state.nativeNotifPermissionGranted === false){
-          showToast("Notifications are off for IGNYT in Android settings.", "error", render);
+          showToast("Notifications are off for IGNYT in " + notifSettingsHint() + ".", "error", render);
           render();
           return;
         }
@@ -21106,25 +22494,6 @@ function attachHandlers(){
       render();
     });
   });
-  const saveFavBtn = document.querySelector('[data-action="save-as-favorite"]');
-  if(saveFavBtn) saveFavBtn.addEventListener("click", ()=>{
-    const name = document.getElementById("food-name").value.trim();
-    const calStr = document.getElementById("food-cal").value.trim();
-    const cal = Number(calStr);
-    if(!name || calStr === "" || isNaN(cal) || cal < 0) return;
-    const fav = {
-      id: nextId(), // stable id -- required for the record-based cloud sync
-      name, calories: cal,
-      protein: Number(document.getElementById("food-protein").value)||0,
-      carbs: Number(document.getElementById("food-carbs").value)||0,
-      fat: Number(document.getElementById("food-fat").value)||0,
-      fibre: Number(document.getElementById("food-fibre").value)||0
-    };
-    if(!state.favoriteFoods.some(f=>f.name.toLowerCase()===name.toLowerCase())){
-      state.favoriteFoods.push(fav);
-    }
-    render();
-  });
   const openMuscleSheet = document.querySelector('[data-action="open-muscle-sheet"]');
   if(openMuscleSheet) openMuscleSheet.addEventListener("click", ()=>{ state.muscleSheetOpen = true; render(); });
   document.querySelectorAll('[data-action="close-muscle-sheet"]').forEach(el=>{
@@ -21471,10 +22840,53 @@ if(window.IgnytBodyPhotosDB){
   }).catch(()=>{});
 }
 
+/* =========================================================
+   SERVICE WORKER — WEB ONLY, and it used to be registered everywhere.
+
+   WHAT IT COSTS INSIDE THE NATIVE APP. Every asset is already a local file in the bundle, so
+   there is nothing for a cache to save. What the worker adds is an interception layer in front
+   of every one of them: the fetch handler runs, calls fetch(), that goes through Capacitor's
+   custom scheme handler to the file on disk, and then caches.put() writes a copy back. sw.js
+   is network-first for index.html, app.js and all of /js/ and /css/ — which is most of the
+   app — so this happens for nearly every file, on every launch, to arrive at exactly the bytes
+   that were already sitting there.
+
+   It is worse on iOS than on Android. WKWebView's service worker interception is considerably
+   more expensive than Chromium's, which is the shape of "everything feels slow on the iPhone
+   and fine on Android": not one slow screen, a toll on every asset.
+
+   It is also a correctness hazard. A cache that outlives an app update can serve yesterday's
+   app.js over the one actually shipped in the bundle — the app store is the update mechanism
+   here, not the network, and a second one underneath it can only disagree.
+
+   UNREGISTERING, NOT JUST SKIPPING. A worker registered by an earlier build stays registered;
+   it does not go away because a later build stopped calling register(). Devices that already
+   ran a build with this bug have to be cleaned up, so any existing registration is torn down
+   and its caches deleted. On a device that never had one, both calls are no-ops.
+
+   The web build keeps the worker. There it is doing its actual job — real network, real
+   offline, real cache invalidation.
+========================================================= */
 if("serviceWorker" in navigator){
-  window.addEventListener("load", ()=>{
-    navigator.serviceWorker.register("sw.js").catch(()=>{});
-  });
+  let isNativeApp = false;
+  try {
+    isNativeApp = !!(window.Capacitor
+      && typeof window.Capacitor.isNativePlatform === "function"
+      && window.Capacitor.isNativePlatform());
+  } catch(e){ /* absent Capacitor means the web build, which wants the worker */ }
+
+  if(isNativeApp){
+    navigator.serviceWorker.getRegistrations()
+      .then(rs => rs.forEach(r => r.unregister()))
+      .catch(()=>{});
+    if(window.caches && caches.keys){
+      caches.keys().then(ks => ks.forEach(k => caches.delete(k))).catch(()=>{});
+    }
+  } else {
+    window.addEventListener("load", ()=>{
+      navigator.serviceWorker.register("sw.js").catch(()=>{});
+    });
+  }
 }
 
 /* =========================================================
@@ -21518,6 +22930,7 @@ function handleHardwareBack(){
   if(state.exerciseMenuOpen!=null){ state.exerciseMenuOpen = null; render(); return true; }
   if(state.notificationsOpen){ state.notificationsOpen = false; render(); return true; }
   if(state.viewingPrivacyInfo){ state.viewingPrivacyInfo = false; render(); return true; }
+  if(state.viewingDiagnostics){ state.viewingDiagnostics = false; render(); return true; }
   if(state.editingWorkout){ state.editingWorkout = null; render(); return true; }
   if(state.viewingWorkoutAuditId!=null){ state.viewingWorkoutAuditId = null; render(); return true; }
   if(state.viewingSessionId!=null){ state.viewingSessionId = null; render(); return true; }

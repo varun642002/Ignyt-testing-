@@ -83,15 +83,39 @@ window.IgnytFirebaseRestAuth = (function () {
     TOO_MANY_ATTEMPTS_TRY_LATER: "Too many attempts. Wait a few minutes and try again.",
     TOKEN_EXPIRED: "Your session has expired. Sign in again.",
     USER_NOT_FOUND: "Your session is no longer valid. Sign in again.",
-    OPERATION_NOT_ALLOWED: "Email and password sign-in is not enabled for this project."
+    /* Was "Email and password sign-in is not enabled", which is now wrong half the time —
+       this code comes back for whichever provider was used, and Apple is one of them. */
+    OPERATION_NOT_ALLOWED: "That sign-in method is not enabled for this app yet.",
+
+    /* Apple's identity token carries `aud` = the app's bundle id, and Firebase validates it
+       against an iOS app registered in the project. If none is registered there is nothing to
+       match and the token is rejected — which is what this code means far more often than a
+       genuinely malformed response. Worth naming, because "invalid idp response" reads like a
+       bug in the app and the fix is one form in a browser. */
+    INVALID_IDP_RESPONSE: "Apple sign-in is not finished being set up for this app. The iOS app needs registering in the Firebase project.",
+    MISSING_OR_INVALID_NONCE: "Apple sign-in could not be verified. Try again."
   };
+
+  /* Codes whose DETAIL is worth showing. Firebase answers some errors as
+     "CODE : a sentence explaining which part was wrong", and split(" :")[0] threw that
+     sentence away — so an Apple token rejected for its audience, its nonce or its provider
+     config all arrived as the same four words. For a wrong password the detail is noise and
+     the friendly line is better; for a setup fault it is the entire diagnosis. */
+  var SHOW_DETAIL = ["INVALID_IDP_RESPONSE", "OPERATION_NOT_ALLOWED", "MISSING_OR_INVALID_NONCE",
+                     "FEDERATED_USER_ID_ALREADY_LINKED", "INVALID_CUSTOM_TOKEN"];
 
   function friendly(code) {
     if (!code) return "Sign-in failed.";
-    var key = String(code).split(" :")[0].trim();
-    if (MESSAGES[key]) return MESSAGES[key];
-    if (key.indexOf("WEAK_PASSWORD") === 0) return MESSAGES.WEAK_PASSWORD;
-    return key.replace(/_/g, " ").toLowerCase();
+    var raw = String(code);
+    var key = raw.split(" :")[0].trim();
+    var detail = raw.slice(key.length).replace(/^\s*:\s*/, "").trim();
+
+    var base = MESSAGES[key]
+      || (key.indexOf("WEAK_PASSWORD") === 0 ? MESSAGES.WEAK_PASSWORD : null)
+      || key.replace(/_/g, " ").toLowerCase();
+
+    if (detail && SHOW_DETAIL.indexOf(key) !== -1) return base + " (" + detail + ")";
+    return base;
   }
 
   async function post(url, body) {
@@ -119,13 +143,19 @@ window.IgnytFirebaseRestAuth = (function () {
      Must match what AuthPlugin.kt returns field for field, because saveAccount() reads
      exactly these keys and the rest of the app reads what it wrote. */
 
-  function toUser(account) {
+  function toUser(account, provider) {
     return {
       uid: account.localId || account.user_id || "",
       displayName: account.displayName || "",
       email: account.email || "",
       photoUrl: account.photoUrl || "",
-      provider: "password",
+      /* Was hard-coded "password", which was true while email was the only route here and
+         became a small lie the moment Apple was added: the Settings card reads this to say
+         "Signed in with email", and an Apple account would have claimed a password it does
+         not have. Taken from the lookup's providerUserInfo where present, since that is what
+         Firebase actually recorded, and falling back to what the caller knows it did. */
+      provider: (account.providerUserInfo && account.providerUserInfo[0] && account.providerUserInfo[0].providerId)
+                || provider || "password",
       emailVerified: account.emailVerified === true || account.emailVerified === "true"
     };
   }
@@ -169,9 +199,57 @@ window.IgnytFirebaseRestAuth = (function () {
     return ok({ user: toUser(profile || res.data) });
   }
 
+  /**
+   * Sign in with Apple. The native plugin has already run Apple's sheet and produced a signed
+   * identity token; this exchanges it for a Firebase session, which is what the rest of the app
+   * understands.
+   *
+   * THE NONCE IS THE RAW ONE. Apple was given its SHA-256 hash and put that in the token;
+   * Firebase hashes what it is sent here and compares. Passing the hash instead produces
+   * "INVALID_IDP_RESPONSE" with nothing to indicate which of the two values was wrong, so the
+   * direction is stated at both ends of the trip.
+   *
+   * requestUri is required by the endpoint and unused for a native flow — Firebase validates
+   * its presence, not its value.
+   *
+   * APPLE SENDS NAME AND EMAIL EXACTLY ONCE, on the first authorisation ever for this Apple ID
+   * and app, and returns nulls forever after — including after a delete and reinstall. So when
+   * they arrive they are written to the Firebase profile immediately, because there is no
+   * second chance to ask. When they do not arrive, the existing profile is left alone rather
+   * than being overwritten with blanks.
+   */
+  async function signInWithApple(o) {
+    if (!o || !o.identityToken) return fail("Apple did not return an identity token.");
+
+    var res = await post(IDENTITY + "signInWithIdp?key=" + CONFIG.apiKey, {
+      postBody: "id_token=" + encodeURIComponent(o.identityToken) +
+                "&providerId=apple.com" +
+                (o.nonce ? "&nonce=" + encodeURIComponent(o.nonce) : ""),
+      requestUri: "http://localhost",
+      returnSecureToken: true
+    });
+    if (res.networkError) return fail("No connection. Check your network and try again.");
+    if (res.apiError) return fail(friendly(res.apiError));
+
+    saveTokens(res.data.idToken, res.data.refreshToken, res.data.expiresIn, res.data.localId);
+
+    /* Only on the first sign-in, and only for values Apple actually sent. */
+    if (o.displayName) {
+      await post(IDENTITY + "update?key=" + CONFIG.apiKey, {
+        idToken: res.data.idToken,
+        displayName: o.displayName,
+        returnSecureToken: false
+      });
+    }
+
+    var profile = await lookup(res.data.idToken);
+    return ok({ user: toUser(profile || res.data, "apple.com") });
+  }
+
   var handlers = {
     signUpWithEmail: function (o) { return signUpOrIn("signUp", o.email, o.password); },
     signInWithEmail: function (o) { return signUpOrIn("signInWithPassword", o.email, o.password); },
+    signInWithApple: signInWithApple,
 
     sendPasswordReset: async function (o) {
       if (!o.email) return fail("Enter your email address.");

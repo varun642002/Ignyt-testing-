@@ -9,8 +9,12 @@
   /* --rh-* palette now defined once in tokens.css (Phase 1 consolidation) -- this file
      only carries Home's own layout. */
   background:var(--rh-bg); color:var(--rh-text);
-  margin:0 -16px -100px; padding:12px 16px 100px;
-  min-height:calc(100% + 100px);
+  /* All three are main's bottom padding — see --main-pad-bottom in tokens.css. The negative
+     margin cancels that padding so the light background bleeds to the bottom of the scroll
+     area, which only works while the two are the SAME value. This was hard-coded at 100px
+     against a real 130px on iPhone, leaving a 30px band of dark page below the light one. */
+  margin:0 -16px calc(-1 * var(--main-pad-bottom)); padding:12px 16px var(--main-pad-bottom);
+  min-height:calc(100% + var(--main-pad-bottom));
   font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
 }
 
@@ -21,8 +25,8 @@
 .app-header--home-light .title { color:#0F172A; }
 .app-header--home-light .page-tools-btn { background:#FFFFFF; border-color:#E9EDF3; color:#2563EB; box-shadow:0 1px 3px rgba(15,23,42,.08); }
 nav.bottom-nav--home-light {
-  background:rgba(255,255,255,.94) !important; border:1px solid rgba(15,23,42,.08);
-  box-shadow:0 8px 28px rgba(15,23,42,.12), 0 2px 6px rgba(15,23,42,.06);
+  background:rgba(255,255,255,.06) !important; border:1px solid rgba(15,23,42,.07);
+  box-shadow:0 6px 18px rgba(15,23,42,.07), 0 1px 3px rgba(15,23,42,.04);
 }
 nav.bottom-nav--home-light .nav-btn { color:#94A3B8; }
 nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; background:rgba(37,99,235,.10); }
@@ -424,21 +428,164 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; background:rgba(37,9
 /* The legend sets the card's height (three rows), and the arc block is much shorter, so the
    semicircle was sitting with 46px of dead space above and below it -- centred, but stranded.
    A wider arc column and a tighter row gap bring the two sides to a comparable height. */
-.hm-gauge { display: flex; align-items: center; gap: 14px; }
-.hm-gauge__arcs { flex: none; width: 152px; }
+/* =========================================================
+   THE IGNYT SCORE HERO
+
+   Replaces the three co-equal arcs. The score gets a full ring at the size the app's own
+   metric deserves; steps and training keep their real numbers in a supporting row rather than
+   being deleted or repeated elsewhere.
+
+   THE RING ANIMATES BECAUSE OF ONE PROPERTY. stroke-dashoffset is set inline to the unfilled
+   remainder, and transitioning it makes the arc sweep from empty to its value on every render
+   where the score changed. It is a paint-only property on an SVG stroke — no layout, no
+   reflow, and it composites like an opacity change rather than a width animation.
+
+   The colour is never written here. IgnytScore.LEVELS carries all six bands and their colours
+   through to gold at Legendary, and home.js reads the band from levelFor(), so the ring, the
+   band name and the coach line under it cannot disagree with the engine.
+========================================================= */
+.hm-score {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "ring meta" "stats stats";
+  align-items: center;
+  /* ROW GAP ZERO, deliberately. The stats row carries its own padding-top and a divider rule,
+     so a row gap here stacked on top of it — 14 + 12 = 26px of dead space between the ring and
+     the numbers, which read as the card having come apart. One source of separation, not two.
+     The column gap stays: that one is between the ring and the text beside it. */
+  gap: 0 16px;
+  text-align: left;
+  background: var(--rh-card, var(--surface));
+  border: 1px solid var(--rh-border, var(--border));
+  cursor: pointer;
+  /* The press response. transform only — see the note in gloss.css about layout animation. */
+  transition: transform .16s cubic-bezier(.32,.72,0,1), border-color .16s ease;
+}
+.hm-score:active { transform: scale(.985); }
+
+.hm-score__ringwrap { grid-area: ring; position: relative; width: 104px; height: 104px; flex: none; }
+.hm-score__ring { width: 100%; height: 100%; display: block; }
+/* The sweep. Long and eased, so a score that jumped 18 points reads as earned rather than
+   as the number simply being different. */
+.hm-score__ring circle:last-child { transition: stroke-dashoffset .9s cubic-bezier(.22,1,.36,1); }
+
+.hm-score__center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px; pointer-events: none;
+}
+.hm-score__value { font-size: 31px; font-weight: 900; line-height: 1; letter-spacing: -.03em;
+  color: var(--rh-text, var(--text)); font-variant-numeric: tabular-nums; }
+.hm-score__cap { font-size: 12px; font-weight: 700; color: var(--rh-muted, var(--muted)); }
+
+.hm-score__meta { grid-area: meta; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.hm-score__eyebrow { font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--rh-muted, var(--muted)); }
+.hm-score__band { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+.hm-score__line { font-size: 12px; line-height: 1.4; color: var(--rh-muted, var(--muted)); }
+.hm-score__chev { font-size: 11.5px; font-weight: 700; color: var(--rh-blue, var(--primary)); margin-top: 2px; }
+
+/* The supporting numbers. Deliberately quieter than the ring — same data as before, a rank
+   below it, which is the whole point of promoting the score. */
+.hm-score__stats {
+  grid-area: stats; display: flex; gap: 10px;
+  margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--rh-border, var(--border));
+}
+.hm-score__stat { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hm-score__statlabel { font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.hm-score__statval { font-size: 15px; font-weight: 800; color: var(--rh-text, var(--text));
+  font-variant-numeric: tabular-nums; }
+.hm-score__statval em { font-style: normal; font-size: 11.5px; font-weight: 600;
+  color: var(--rh-muted, var(--muted)); margin-left: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-score__ring circle:last-child { transition: none; }
+  .hm-score { transition: none; }
+}
+
+/* NO DEAD SPACE, BY CONSTRUCTION. The legend is three text rows and the arc block is a half
+   circle in a 120x72 box, so the two have no reason to come out the same height — an earlier
+   version left the semicircle stranded with 46px of empty card above and below it. Hand-tuning
+   a fixed arc width to match only holds until the type scale or a translation moves the legend,
+   so the two are tied together instead: the row STRETCHES both columns to the taller of them and
+   the arc scales to whatever height that turns out to be.
+
+   The svg takes height:100% and width:auto rather than the reverse. Driving it from the width is
+   what created the problem — a fixed 152px column forced a 91px arc no matter how tall the
+   legend beside it actually was. */
+.hm-gauge {
+  display: flex; align-items: stretch; gap: 14px;
+  width: 100%; text-align: left;
+  background: var(--rh-card, var(--surface));
+  border: 1px solid var(--rh-border, var(--border));
+  cursor: pointer;
+  /* The press response. transform only — see the note in gloss.css about layout animation. */
+  transition: transform .16s cubic-bezier(.32,.72,0,1), border-color .16s ease;
+}
+.hm-gauge:active { transform: scale(.985); }
+
+/* THE ARC COLUMN IS SIZED AS A SHARE OF THE CARD, and its height follows from that. Driving it
+   the other way — height:100% with width:auto — was tried and is broken: the svg came out 197px
+   wide inside a 143px column and drew straight over the legend.
+
+   58% is the number that makes the two columns nearly the same height, which is what removes the
+   dead band. A half circle is inherently 2:1, so its height is always half its width, and at 58%
+   of a typical card the arcs stand ~139px against a ~128px legend. The old fixed 152px column
+   produced a 91px arc next to that same 128px legend — the 46px of stranded card the previous
+   comment describes. */
+.hm-gauge__arcs { flex: 0 0 62%; min-width: 0; align-self: center; }
 .hm-gauge__arcs svg { width: 100%; height: auto; display: block; overflow: visible; }
 
-.hm-gauge__legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
+.hm-gauge__legend {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 3px;
+}
 .hm-gauge__row { min-width: 0; }
 .hm-gauge__name { display: block; font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
 .hm-gauge__val {
   display: block; font-size: 13px; font-weight: 700; color: var(--rh-text);
-  font-variant-numeric: tabular-nums; margin-top: 1px;
+  font-variant-numeric: tabular-nums; margin-top: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .hm-gauge__val em { font-style: normal; font-weight: 500; color: var(--rh-muted); }
 
-@media (max-width: 340px) {
+/* On a narrow screen the legend cannot get any shorter — it is three rows of text at a fixed
+   size — so the arcs are what has to give, and SHRINKING them reopens the gap. The earlier rule
+   here dropped the arc share to 58% at this width and pushed the dead space back up to 27px,
+   the opposite of what it was for. Hold the share and take a little off the type instead, which
+   lowers the legend to meet the arcs. */
+@media (max-width: 360px) {
   .hm-gauge { gap: 10px; }
-  .hm-gauge__arcs { width: 124px; }
+  .hm-gauge__name { font-size: 13.5px; }
+  .hm-gauge__val { font-size: 12px; }
 }
+@media (prefers-reduced-motion: reduce) { .hm-gauge { transition: none; } }
+
+
+/* =========================================================
+   IGNYT SCORE BREAKDOWN SHEET
+   Reuses the app's existing .sheet / .sheet-backdrop chrome, so it inherits the same entry
+   animation, backdrop and dismiss behaviour as every other sheet rather than inventing a
+   fourth kind of overlay.
+========================================================= */
+.sc-sheet { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.sc-head { text-align: center; }
+.sc-head__score { font-size: 42px; font-weight: 900; letter-spacing: -.035em; line-height: 1;
+  font-variant-numeric: tabular-nums; }
+.sc-head__score em { font-style: normal; font-size: 15px; font-weight: 700; opacity: .6; margin-left: 6px; }
+.sc-head__band { font-size: 16px; font-weight: 800; margin-top: 6px; }
+.sc-head__line { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin-top: 6px; }
+
+.sc-group__title { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 8px; }
+.sc-row { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 9px 0; border-top: 1px solid var(--border); font-size: 13.5px; }
+.sc-row:first-of-type { border-top: none; }
+.sc-row__label { font-weight: 600; min-width: 0; }
+.sc-row__pts { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--mint); flex: none; }
+/* Points not yet earned are stated in the same units but quieter — available, not achieved. */
+.sc-row__pts--open { color: var(--muted); }
+.sc-row--done .sc-row__label { opacity: .9; }
+.sc-empty { font-size: 13px; line-height: 1.5; color: var(--muted); }
+

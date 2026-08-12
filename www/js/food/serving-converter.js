@@ -126,12 +126,18 @@
     "dates":            { piece: 8 },
     "fig":              { piece: 50 },
     "apricot":          { piece: 35 },
-    "chapati":          { chapati: 40, roti: 40, piece: 40 },
-    "roti":             { roti: 40, chapati: 40, piece: 40 },
+    /* 35 g for chapati, roti, idli and dosa: IGNYT's standard serving, set by Varun
+       2026-08-09. It overrides the published averages these previously used (40 g for
+       chapati/roti, 85 g for dosa) because what matters for logging is the size the
+       user actually eats, and a consistent house number beats a more "correct" one
+       that does not match their plate. Changing these changes the calories on every
+       count-based log of them, so it is a deliberate product decision, not a data fix. */
+    "chapati":          { chapati: 35, roti: 35, piece: 35 },
+    "roti":             { roti: 35, chapati: 35, piece: 35 },
     "naan":             { piece: 90 },
     "paratha":          { piece: 65 },
-    "idli":             { idli: 40, piece: 40 },
-    "dosa":             { dosa: 85, piece: 85 },
+    "idli":             { idli: 35, piece: 35 },
+    "dosa":             { dosa: 35, piece: 35 },
     "masala dosa":      { dosa: 150, piece: 150 },
     "samosa":           { piece: 60 },
     "pakora":           { piece: 25 },

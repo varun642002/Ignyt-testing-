@@ -102,7 +102,7 @@
   flex: 1; min-width: 0; box-sizing: border-box; padding: 10px 11px;
   border: 1px solid var(--rh-border); border-radius: 10px;
   background: var(--rh-bg, transparent); color: var(--rh-text);
-  font: inherit; font-size: 14px; outline: none;
+  font: inherit; font-size:16px; outline: none;
 }
 .sp-field input:focus, .sp-field select:focus, .sp-field textarea:focus { border-color: var(--rh-blue); }
 .sp-field--notes { align-items: flex-start; }

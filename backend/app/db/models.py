@@ -44,6 +44,18 @@ class User(Base):
     # is not an entitlement, it is a request.
     is_premium: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0", nullable=False)
 
+    # --- Google Play entitlement, as VERIFIED BY GOOGLE ---------------------------------
+    # is_premium above is now derived from these rather than set by hand. The token is stored
+    # so the entitlement can be re-checked without the client having to present it again, and
+    # so a token cannot be handed round: it is bound to the first account that verified it.
+    play_purchase_token: Mapped[str | None] = mapped_column(String(512), nullable=True, index=True)
+    # When Google says the subscription lapses. A cancellation is invisible to us until the
+    # next check (no RTDN yet), so entitlement is re-derived from this on every read rather
+    # than trusted as a boolean set once.
+    premium_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    premium_last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    premium_source: Mapped[str | None] = mapped_column(String(32), nullable=True)  # "play"
+
     def __repr__(self) -> str:  # pragma: no cover - debug aid
         return f"<User id={self.id} firebase_uid={self.firebase_uid!r}>"
 

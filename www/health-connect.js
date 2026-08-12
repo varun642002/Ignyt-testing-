@@ -104,7 +104,21 @@ const HealthConnect = (() => {
     saveWeight: (ignytBodyLogId, weightKg, time = Date.now()) =>
       callNative("saveWeight", { ignytBodyLogId, weightKg, time: String(time) }),
 
-    isNativeAndroid: isNative
+    isNativeAndroid: isNative,
+
+    /**
+     * What to CALL the thing, on the platform the user is holding.
+     *
+     * "Health Connect" is an Android product name. On an iPhone it is not a brand the user has
+     * ever seen, cannot be installed, and cannot be opened — so "Connect Health Connect" and
+     * "Health Connect isn't installed" send an iPhone owner to the App Store to look for
+     * something that does not exist. That already happened once here.
+     *
+     * The plugin keeps the name HealthConnect on both platforms deliberately (see the header of
+     * ios/App/App/HealthConnectPlugin.swift — renaming it would mean touching every call site
+     * for no behavioural gain). This is the display name only, and nothing else keys off it.
+     */
+    brandName: () => (platform() === "ios" ? "Apple Health" : "Health Connect")
   };
 })();
 

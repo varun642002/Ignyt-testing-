@@ -62,7 +62,7 @@
 .rm-field input[type="time"] {
   padding: 8px 10px; border: 1px solid var(--rh-border); border-radius: 10px;
   background: var(--rh-bg, transparent); color: var(--rh-text);
-  font: inherit; font-size: 14px; font-variant-numeric: tabular-nums; outline: none;
+  font: inherit; font-size:16px; font-variant-numeric: tabular-nums; outline: none;
 }
 .rm-field input[type="time"]:focus { border-color: var(--rh-blue); }
 

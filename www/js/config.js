@@ -29,7 +29,35 @@
      can detect from in here. Set IGNYT_API_BASE below (or in localStorage, see the override)
      to something like http://192.168.1.20:8001 and make sure the backend is bound to
      0.0.0.0 rather than 127.0.0.1, or the phone cannot reach it. */
-  var DEFAULT_BASE = isCapacitor ? "http://10.0.2.2:8001" : "http://127.0.0.1:8001";
+  /* PRODUCTION BACKEND. A shipped APK has no developer at a console to set a localStorage
+     override, so the packaged app has to know where its backend is without being told.
+
+     Set this once, at release, to the Render URL. It is not a secret — it is a public HTTPS
+     endpoint that authenticates every request with a Firebase token. The thing that must
+     never appear in this file is the GEMINI_API_KEY, which lives only on the server.
+
+     COPY THIS FROM THE RENDER DASHBOARD. Never infer it from the service name: Render appends
+     a random suffix when the name is already taken globally, and "ignyt-backend" was taken —
+     ignyt-backend.onrender.com is a live Flask app belonging to someone else. A guessed URL
+     here is not a 404, it is our users' Firebase ID tokens being posted to a stranger. */
+  var PRODUCTION_BASE = "https://ignyt-backend-oo80.onrender.com";
+
+  /* HOW THE DEFAULT IS CHOSEN, in the order that keeps both workflows working:
+
+       served from a dev server (localhost:4188 in a browser)  -> local backend
+       running inside Capacitor                                -> PRODUCTION_BASE
+       anything else                                           -> PRODUCTION_BASE
+
+     The old rule was "Capacitor means the Android emulator", which was true while the only
+     Capacitor build was a debug one on 10.0.2.2 and becomes wrong the moment a release APK
+     exists: it would ship pointing at a host loopback that does not exist on a user's phone,
+     and every AI request would fail with no obvious cause.
+
+     A DEBUG build still wants the emulator host, and gets it from the localStorage override
+     below — one line in devtools or `adb shell`, and it persists. */
+  var isDevServer = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) &&
+                    location.protocol.indexOf("http") === 0 && !isCapacitor;
+  var DEFAULT_BASE = isDevServer ? "http://127.0.0.1:8001" : PRODUCTION_BASE;
 
   /* localStorage wins, so a base can be changed on a running device without a rebuild —
      which matters because a LAN IP changes with the network and rebuilding an APK to chase

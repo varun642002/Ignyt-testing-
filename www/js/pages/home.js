@@ -12,6 +12,10 @@
    Where the reference shows something this app has no real source for, that element is
    honestly omitted rather than faked. */
 (function () {
+  /* An icon by name, from app.js's set. Guarded so a missing svg() degrades to no
+     decoration rather than taking the page down. */
+  function ic(n, s){ return (typeof svg === "function") ? svg(n, s || 16) : ""; }
+
   window.IgnytPages = window.IgnytPages || {};
 
   const DEFAULT_STEPS_GOAL = 10000; // no configurable step goal exists yet; display-only denominator, real numerator
@@ -126,10 +130,10 @@
         if (now - t < 28 * DAY) active.add(new Date(t).toDateString());
       }
       const pct = Math.round(active.size / 28 * 100);
-      if (pct >= 80) return { label: 'Exceptional', icon: '🏆', tone: 'gold', pct };
-      if (pct >= 60) return { label: 'Consistent', icon: '⭐', tone: 'good', pct };
-      if (pct >= 35) return { label: 'Building', icon: '📈', tone: 'ok', pct };
-      return { label: 'Getting started', icon: '🌱', tone: 'new', pct };
+      if (pct >= 80) return { label: 'Exceptional', icon: 'trophy', tone: 'gold', pct };
+      if (pct >= 60) return { label: 'Consistent', icon: 'star', tone: 'good', pct };
+      if (pct >= 35) return { label: 'Building', icon: 'trend', tone: 'ok', pct };
+      return { label: 'Getting started', icon: 'sprout', tone: 'new', pct };
     })();
 
 
@@ -161,7 +165,7 @@
 
       <div class="pg-card hm-greet">
         <div class="hm-greet__left">
-          <div class="hm-greet__hello">${greeting()}, ${state.profile.name || 'Athlete'} 👋</div>
+          <div class="hm-greet__hello">${greeting()}, ${state.profile.name || 'Athlete'}</div>
           <div class="hm-greet__quote">${quoteOfDay}</div>
           ${window.IgnytXP ? (()=>{ const x = IgnytXP.progress(); return `
           <div class="hm-xp">
@@ -172,8 +176,8 @@
             <div class="hm-xp__track"><div class="hm-xp__fill" style="--fill:${x.percent/100};"></div></div>
           </div>`; })() : ''}
           <div class="hm-greet__chips">
-            <span class="hm-chip hm-chip--streak">🔥 ${streak} day${streak === 1 ? '' : 's'}</span>
-            <span class="hm-chip hm-chip--${consistency.tone}">${consistency.icon} ${consistency.label}</span>
+            <span class="hm-chip hm-chip--streak">${ic("flame",13)} ${streak} day${streak === 1 ? '' : 's'}</span>
+            <span class="hm-chip hm-chip--${consistency.tone}">${ic(consistency.icon,13)} ${consistency.label}</span>
           </div>
         </div>
         <div class="hm-greet__right">
@@ -241,7 +245,17 @@
             Calories and Active Minutes are not here. Calories has the Nutrition card further
             down this page and its own tab; active minutes was the same figure as Training. */''}
       <div class="rh-section-head"><span>Today's Summary</span></div>
-      <div class="pg-card hm-gauge">
+      ${/* THREE ARCS, NOT A SINGLE HERO RING. The score-hero card that stood here promoted the
+            IGNYT Score and demoted steps and training to a stats row beneath it. This reads the
+            three numbers as what they are — three separate goals for the same day, each either
+            met or not — and shows all three at the same weight, which is the whole point of
+            nesting them: one glance says how much of today is done.
+
+            IT STAYS TAPPABLE. The hero introduced the score breakdown sheet, and that sheet is
+            still worth having, so the card remains a button wired to open-score-detail rather
+            than reverting to an inert div. Nothing was lost in bringing the arcs back. */''}
+      <button class="pg-card hm-gauge" data-action="open-score-detail"
+              aria-label="Today's summary. ${gauge.map(g => g.label + ' ' + (g.now == null ? 'not available' : g.now + ' of ' + g.goal)).join(', ')}. Tap for the score breakdown.">
         <div class="hm-gauge__arcs">
           <svg viewBox="0 0 120 72" aria-hidden="true">
             ${gaugeArc(52, gauge[0].goal ? gauge[0].now / gauge[0].goal : 0, gauge[0].color)}
@@ -252,10 +266,11 @@
         <div class="hm-gauge__legend">
           ${gauge.map(g => `<div class="hm-gauge__row">
             <span class="hm-gauge__name" style="color:${g.color};">${g.label}</span>
-            <span class="hm-gauge__val">${g.now == null ? '—' : g.now.toLocaleString()}<em>/${g.goal.toLocaleString()}${g.unit ? ' ' + g.unit : ''}</em></span>
+            <span class="hm-gauge__val">${g.now == null ? '—'
+              : `<b data-count="${g.now}" data-count-key="home-${g.label}">${g.now.toLocaleString()}</b>`}<em>/${g.goal.toLocaleString()}${g.unit ? ' ' + g.unit : ''}</em></span>
           </div>`).join('')}
         </div>
-      </div>
+      </button>
 
       ${(window.IgnytPages && window.IgnytPages.renderFastingHomeCard)
           ? window.IgnytPages.renderFastingHomeCard() : ''}
@@ -299,7 +314,7 @@
             ${bar('Fat', n.fat, targets.fat, '#D97706')}
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--rh-muted);border-top:1px solid rgba(128,128,128,.15);padding-top:9px;">
-            <span>💧 ${(water / 1000).toFixed(1)} / ${(waterTarget / 1000).toFixed(1)} L</span>
+            <span>${ic("droplet",13)} ${(water / 1000).toFixed(1)} / ${(waterTarget / 1000).toFixed(1)} L</span>
             <span>${n.mealCount} meal${n.mealCount === 1 ? '' : 's'} · ${n.entryCount} item${n.entryCount === 1 ? '' : 's'}</span>
           </div>
           ${n.latestName ? `<div style="font-size:11px;color:var(--rh-muted);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
@@ -326,7 +341,7 @@
           <div class="wch__top">
             <span class="wch__icon">${wc.icon}</span>
             <span class="wch__name">${escHtml(wc.name)}</span>
-            <span class="wch__xp">${wc.done ? 'Complete ✓' : '+'+wc.xp+' XP'}</span>
+            <span class="wch__xp">${wc.done ? 'Complete '+ic('check',12) : '+'+wc.xp+' XP'}</span>
           </div>
           <div class="wch__label">${escHtml(wc.label)}</div>
           <div class="wch__track"><div class="wch__fill" style="--fill:${wc.percent/100}"></div></div>
@@ -340,13 +355,14 @@
 `; })() : ''}
 
       <div class="rh-section-head"><span>Quick Actions</span></div>
-      <div class="rh-quick-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+      <div class="rh-quick-grid" style="grid-template-columns:repeat(4,minmax(0,1fr));">
         ${/* Three. Workout, Food, Progress and Health all have a bottom-nav tab or a card
               further up this page, so as shortcuts they were pointing at things already one tap
               away. These three are the ones with no other route from Home. */''}
+        ${quickAction('bolt', 'var(--rh-blue)', 'IGNYT AI', 'data-nav="ai"')}
         ${quickAction('scale', 'var(--rh-blue)', 'Log Weight', 'data-nav="body"')}
         ${quickAction('timer', '#7C3AED', 'Fasting', 'data-nav="fasting"')}
-        ${quickAction('flask', '#0891B2', 'Supplements', 'data-nav="supplements"')}
+        ${quickAction('flask', '#2563EB', 'Supplements', 'data-nav="supplements"')}
       </div>
     </div>`;
   };

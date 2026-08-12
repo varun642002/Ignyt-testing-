@@ -56,6 +56,23 @@
      Regional English (Indian/British/American) differences are the main driver here:
      someone typing "capsicum" or "brinjal" should not get an empty result. */
   var ALIASES = {
+    /* INDIAN STAPLES THAT HAVE NO PLAIN ENTRY.
+       The catalogue carries Egg Roti, Akki Roti, Oats Roti, Ragi Roti and Plain Chapati but no
+       bare "Roti" or "Chapati" — so a search for the single most-eaten item in the country
+       ranked Egg Roti first and "3 roti" logged 238 kcal/100g instead of a plain one. Found by
+       testing Hinglish food logging ("maine aaj 3 roti khayi"), where it is the likeliest
+       thing anyone will say.
+
+       Aliased rather than added as new foods: Plain Chapati already exists with real values,
+       and a second row for the same bread would split its history and give the picker two
+       identical-looking choices. */
+    "roti": "Plain Chapati",
+    "rotis": "Plain Chapati",
+    "chapati": "Plain Chapati",
+    "chapatis": "Plain Chapati",
+    "chapathi": "Plain Chapati",
+    "phulka": "Plain Chapati",
+
     "curd": "Yogurt",
     "dahi": "Yogurt",
     "lady finger": "Okra",

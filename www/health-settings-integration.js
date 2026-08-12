@@ -31,6 +31,24 @@
 (function () {
   "use strict";
 
+  /* Android's product name, and meaningless on an iPhone where Health ships with the OS and
+     cannot be installed. One source of truth in health-connect.js; this is a short alias so
+     the templates below stay readable. */
+  function hcName() {
+    try { return (window.HealthConnect && HealthConnect.brandName) ? HealthConnect.brandName() : "Health Connect"; }
+    catch (e) { return "Health Connect"; }
+  }
+
+  /* Used where the two platforms need a different SENTENCE, not just a different name — the
+     "isn't installed" case, which cannot happen on iOS at all. */
+  function platformIsIOS() {
+    try {
+      return typeof window.Capacitor !== "undefined"
+        && typeof window.Capacitor.getPlatform === "function"
+        && window.Capacitor.getPlatform() === "ios";
+    } catch (e) { return false; }
+  }
+
   const HC_STATE_KEY = "hx_hc_state";           // {connected, lastSyncAt}
   const HC_EXPORTED_KEY = "hx_hc_exported_ids";  // {workouts:[...ids], weights:[...ids]}
   const HC_INSIGHTS_KEY = "hx_hc_insights_cache"; // {day:{...,fetchedAt}, week:{...}, month:{...}, year:{...}}
@@ -137,8 +155,8 @@
     if (!window.HealthConnect || !HealthConnect.isNativeAndroid()) {
       return `
         <div class="hc-card" id="hc-settings-card">
-          <div class="hc-card-header"><span>Health Connect</span></div>
-          <div class="hc-empty">Available in the IGNYT Android app only. Sync your fitness and health data with IGNYT.</div>
+          <div class="hc-card-header"><span>${hcName()}</span></div>
+          <div class="hc-empty">Available in the IGNYT mobile app only. Sync your fitness and health data with IGNYT.</div>
         </div>`;
     }
 
@@ -149,7 +167,7 @@
 
     return `
       <div class="hc-card" id="hc-settings-card">
-        <div class="hc-card-header"><span>Health Connect</span></div>
+        <div class="hc-card-header"><span>${hcName()}</span></div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
           <span style="font-size:13px;color:var(--muted);">Status</span>
           <span style="font-size:13px;font-weight:700;color:${statusColor};">${statusLabel}</span>
@@ -161,7 +179,7 @@
         <div style="font-size:12px;color:var(--muted);margin:10px 0 12px;">Sync your fitness and health data with IGNYT.</div>
         ${_errorMsg ? `<div class="hc-empty hc-error" style="margin-bottom:10px;">${_errorMsg}</div>` : ""}
         ${!hcState.connected
-          ? `<button class="hc-sync-btn" style="width:100%;padding:10px;" data-hc-action="connect" ${_busy ? "disabled" : ""}>${_busy ? "Connecting…" : "Connect Health Connect"}</button>`
+          ? `<button class="hc-sync-btn" style="width:100%;padding:10px;" data-hc-action="connect" ${_busy ? "disabled" : ""}>${_busy ? "Connecting…" : `Connect ${hcName()}`}</button>`
           : `
             <div style="display:flex;gap:8px;">
               <button class="hc-sync-btn" style="flex:1;padding:10px;" data-hc-action="sync" ${_busy ? "disabled" : ""}>${_busy ? "Syncing…" : "Sync Now"}</button>
@@ -214,10 +232,31 @@
     const availability = await HealthConnect.isAvailable();
     if (!availability.success || !availability.data.available) {
       _busy = false;
-      _errorMsg = availability.data && availability.data.status === "UPDATE_REQUIRED"
-        ? "Health Connect needs an update."
-        : "Health Connect isn't installed.";
-      await HealthConnect.openHealthConnectInstall();
+
+      /* THE CALL FAILING AND THE STORE BEING ABSENT ARE NOT THE SAME THING, and this used to
+         report both as "Health Connect isn't installed."
+
+         availability.error carries the real reason — the plugin not being registered, a
+         native call throwing — and it was being discarded in favour of a sentence that is
+         merely wrong on Android and meaningless on iOS, where Health ships with the operating
+         system and cannot be installed or missing. An iPhone reporting that Health Connect is
+         not installed sends its owner to the App Store looking for something that does not
+         exist, which is exactly what happened.
+
+         So: a real error is shown as itself. Only a successful call that honestly answers
+         "not available" gets the store wording, and only on Android. */
+      if (!availability.success) {
+        _errorMsg = availability.error || "Health data is unavailable on this device.";
+      } else if (availability.data && availability.data.status === "UPDATE_REQUIRED") {
+        _errorMsg = `${hcName()} needs an update.`;
+        await HealthConnect.openHealthConnectInstall();
+      } else if (platformIsIOS()) {
+        _errorMsg = "Apple Health is unavailable on this device.";
+      } else {
+        _errorMsg = `${hcName()} isn't installed.`;
+        await HealthConnect.openHealthConnectInstall();
+      }
+
       injectCard(); notifyDashboard();
       return;
     }
@@ -264,7 +303,17 @@
       hcState.lastSyncAt = result.data.syncedAt;
       saveHcState(hcState);
       _errorMsg = null;
-      if (result.data.partialPermissions) _errorMsg = "Permission required for some Health Connect metrics.";
+      /* The same field means different things on the two platforms, so the message cannot be
+         the same. Health Connect reports read grants, so "partial" there really does mean some
+         metrics cannot be read. On iOS the only statuses HealthKit will reveal are for the two
+         types IGNYT WRITES, so "partial" means it cannot save back — reads may be working
+         perfectly. Showing the Android wording there sends the user off to fix a permission
+         that is not broken. */
+      if (result.data.partialPermissions) {
+        _errorMsg = result.data.readAuthorizationIsUnknowable
+          ? `IGNYT can't save workouts or weight back to ${hcName()}. Turn those on in Settings › Privacy & Security › Health › IGNYT.`
+          : `Permission required for some ${hcName()} metrics.`;
+      }
       // Fast-load cache for Home: written only on a SUCCESSFUL explicit sync, read by
       // renderHomeHealthFeed() so Home never has to wait on (or trigger) a native call.
       try { localStorage.setItem("hx_hc_dashboard_cache", JSON.stringify(result.data)); } catch (e) { /* storage full/unavailable -- non-fatal, Home just falls back to no cached data */ }

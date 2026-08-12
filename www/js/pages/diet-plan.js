@@ -16,6 +16,10 @@
    rest of IGNYT in light mode. Structure copied, palette inherited.
 ========================================================= */
 (function () {
+  /* An icon by name, from app.js's set. Guarded so a missing svg() degrades to no
+     decoration rather than taking the page down. */
+  function ic(n, s){ return (typeof svg === "function") ? svg(n, s || 16) : ""; }
+
   "use strict";
 
   window.IgnytPages = window.IgnytPages || {};
@@ -155,7 +159,7 @@
       '<div class="dp-meal' + (expanded ? " is-open" : "") + (done ? " is-done" : "") + '">' +
         '<div class="dp-meal__head">' +
           '<button class="dp-meal__toggle" data-dp-meal-toggle="' + esc(meal.id) + '" aria-expanded="' + (expanded ? "true" : "false") + '">' +
-            '<span class="dp-meal__icon" aria-hidden="true">' + (meal.icon || "🍽️") + '</span>' +
+            '<span class="dp-meal__icon" aria-hidden="true">' + ic(meal.icon || "plate", 18) + '</span>' +
             '<span class="dp-meal__title">' +
               '<span class="dp-meal__name">' + esc(meal.name) +
                 (time ? '<span class="dp-meal__time">' + esc(time) + '</span>' : '') + '</span>' +
@@ -176,7 +180,7 @@
             '<button class="dp-check' + (done ? " is-on" : "") + '" data-dp-meal-done="' + esc(meal.id) + '" ' +
               'aria-pressed="' + (done ? "true" : "false") + '" ' +
               'aria-label="Mark ' + esc(meal.name) + (done ? ' as not eaten' : ' as eaten') + '">' +
-              (done ? "✓" : "") + '</button>') +
+              (done ? ic("check",14) : "") + '</button>') +
         '</div>' +
 
         (expanded ? '<div class="dp-meal__body">' +
@@ -205,11 +209,11 @@
         '<div class="dp-sheet__panel">' +
           '<div class="dp-sheet__title">' + esc(plan.name) + '</div>' +
           '<button class="dp-sheet__item" data-dp-plan-action="rename">' +
-            '<span aria-hidden="true">✎</span> Rename Plan</button>' +
+            '<span aria-hidden="true">' + ic("pencil",15) + '</span> Rename Plan</button>' +
           '<button class="dp-sheet__item" data-dp-plan-action="duplicate">' +
             '<span aria-hidden="true">⧉</span> Duplicate Plan</button>' +
           '<button class="dp-sheet__item dp-sheet__item--danger" data-dp-plan-action="delete">' +
-            '<span aria-hidden="true">🗑</span> Delete Plan</button>' +
+            '<span aria-hidden="true">' + ic("trash",15) + '</span> Delete Plan</button>' +
           '<button class="dp-sheet__cancel" data-dp-plan-menu="1">Cancel</button>' +
         '</div>' +
       '</div>';
@@ -229,7 +233,7 @@
             (n === D.DEFAULT_COUNT ? '<span class="dp-opt__tag">Default</span>' : '') + '</span>' +
           '<span class="dp-opt__names">' + esc(names) + '</span>' +
         '</span>' +
-        (n === current ? '<span class="dp-opt__tick" aria-hidden="true">✓</span>' : '') +
+        (n === current ? '<span class="dp-opt__tick" aria-hidden="true">' + ic("check",14) + '</span>' : '') +
       '</button>';
     }).join("");
 
@@ -266,7 +270,7 @@
           '</div>' +
           (canDelete
             ? '<button class="dp-sheet__item dp-sheet__item--danger" data-dp-delete-meal="1">' +
-                '<span aria-hidden="true">🗑</span> Delete this meal</button>'
+                '<span aria-hidden="true">' + ic("trash",15) + '</span> Delete this meal</button>'
             : '<p class="dp-sheet__note">A plan needs at least one meal, so this one cannot be deleted.</p>') +
           '<div class="dp-sheet__row">' +
             '<button class="dp-sheet__cancel" data-dp-close-sheet="1">Cancel</button>' +
@@ -281,7 +285,7 @@
   function emptyState() {
     return '' +
       '<div class="dp-empty">' +
-        '<div class="dp-empty__icon" aria-hidden="true">🍽️</div>' +
+        '<div class="dp-empty__icon" aria-hidden="true">' + ic("plate",30) + '</div>' +
         '<div class="dp-empty__title">No diet plans yet</div>' +
         '<div class="dp-empty__sub">Build a plan around the way you actually eat — anything from ' +
           'one meal a day to five — and IGNYT totals the calories and nutrients as you go.</div>' +

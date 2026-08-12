@@ -7,6 +7,10 @@
    the frequent one.
 ========================================================= */
 (function () {
+  /* An icon by name, from app.js's set. Guarded so a missing svg() degrades to no
+     decoration rather than taking the page down. */
+  function ic(n, s){ return (typeof svg === "function") ? svg(n, s || 16) : ""; }
+
   "use strict";
 
   window.IgnytPages = window.IgnytPages || {};
@@ -37,7 +41,7 @@
 
     if (!S.all().length) {
       return '<div class="sp-empty">' +
-        '<div class="sp-empty__icon" aria-hidden="true">💊</div>' +
+        '<div class="sp-empty__icon" aria-hidden="true">' + ic("pill",30) + '</div>' +
         '<div class="sp-empty__title">No supplements yet</div>' +
         '<div class="sp-empty__sub">Add what you actually take and IGNYT will track the doses, ' +
           'the streak and how long each tub has left.</div>' +
@@ -63,8 +67,8 @@
           var cat = S.categoryById(s.category);
           return '<button class="sp-row' + (taken ? " is-done" : "") + '" data-sup-take="' + esc(s.id) + '" ' +
             'aria-pressed="' + (taken ? "true" : "false") + '">' +
-            '<span class="sp-check" aria-hidden="true">' + (taken ? "✓" : "") + '</span>' +
-            '<span class="sp-row__icon" aria-hidden="true">' + cat.icon + '</span>' +
+            '<span class="sp-check" aria-hidden="true">' + (taken ? ic("check",14) : "") + '</span>' +
+            '<span class="sp-row__icon" aria-hidden="true">' + ic(cat.icon,16) + '</span>' +
             '<span class="sp-row__body">' +
               '<span class="sp-row__name">' + esc(s.name) + '</span>' +
               '<span class="sp-row__dose">' + esc(doseLabel(s)) + '</span>' +
@@ -90,7 +94,7 @@
           var left = S.daysRemaining(s);
           var low = left != null && left <= 7;
           return '<div class="sp-item">' +
-            '<span class="sp-row__icon" aria-hidden="true">' + cat.icon + '</span>' +
+            '<span class="sp-row__icon" aria-hidden="true">' + ic(cat.icon,16) + '</span>' +
             '<div class="sp-item__body">' +
               '<div class="sp-item__name">' + esc(s.name) +
                 (s.brand ? ' <span class="sp-item__brand">' + esc(s.brand) + '</span>' : '') + '</div>' +
@@ -167,7 +171,7 @@
 
         '<div class="sp-field"><span>Category</span>' +
           '<select id="sup-category">' + S.CATEGORIES.map(function (c) {
-            return '<option value="' + c.id + '"' + (s.category === c.id ? " selected" : "") + '>' + c.icon + " " + esc(c.label) + '</option>';
+            return '<option value="' + c.id + '"' + (s.category === c.id ? " selected" : "") + '>' + esc(c.label) + '</option>';
           }).join("") + '</select></div>' +
 
         '<div class="sp-field"><span>Dose</span>' +

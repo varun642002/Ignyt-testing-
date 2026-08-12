@@ -34,8 +34,23 @@
 
 .pi-label { display:flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:var(--rh-muted); margin-bottom:5px; }
 .pi-input { width:100%; background:var(--rh-card); border:1px solid var(--rh-border); border-radius:var(--radius-sm); padding:10px 12px;
-  font-size:14px; color:var(--rh-text); font-family:inherit; }
+  font-size:16px; color:var(--rh-text); font-family:inherit; }
 .pi-input:disabled { color:var(--rh-muted); }
+/* A date input is not a text input wearing a different type. WebKit gives it its own internal
+   layout — the value comes out centred while every neighbouring field is left aligned, and the
+   native control carries padding of its own on top of ours, so the box sits a few pixels off
+   the one beside it. Both are visible on the Log Entry card, where Date and Weight share a row.
+   Stripping the appearance lets the shared .pi-input rules actually apply to it. */
+.pi-input--date {
+  -webkit-appearance: none; appearance: none;
+  text-align: left;
+  /* THE 2px THAT BROKE THE ROW. Padding and box-sizing are identical to a text .pi-input, so the
+     height difference was not spacing — it is line-height:normal, which a date input resolves
+     against its own internal layout and comes out 45px against the number field's 43px. Same
+     top edge, different bottom edge, and the row reads as crooked. An explicit line-height makes
+     the two deterministic: measured 43px each. */
+  line-height: 1.2;
+}
 .pi-grid2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 .pi-field { position:relative; }
 .pi-unit { position:absolute; right:12px; bottom:10px; font-size:11px; color:var(--rh-muted); font-weight:600; pointer-events:none; }

@@ -1,0 +1,122 @@
+/* =========================================================
+   PLATFORM OVERRIDES — the ONE place iOS and Android are allowed to differ.
+
+   Keyed off data-platform on <html>, which index.html sets in <head> before first paint.
+
+   WHY A FILE OF ITS OWN, AND WHY LOADED LAST.
+
+   These rules exist to win. A platform override that loses to a later stylesheet is worse
+   than no override, because it looks correct in the source and does nothing on the device —
+   which is exactly what happened when these lived in index.html's inline <style>: equal
+   specificity against css/layout.css, and the inline block comes first, so layout.css took
+   the background and the override silently did half its job. Last in the cascade means these
+   need no specificity tricks to hold.
+
+   THE RULE FOR ADDING TO THIS FILE.
+
+   Prefer a solution that is correct on both platforms. Reach for a fork only where they
+   genuinely disagree, and write down WHY in the rule — a fork without a reason becomes
+   permanent, because nobody who finds it later can tell whether it is still needed. A
+   codebase where every rule is forked twice is two codebases wearing one name.
+========================================================= */
+
+
+/* ---------------------------------------------------------------------------------------
+   iOS: no backdrop blur on fixed elements that sit over scrolling content.
+
+   A position:fixed element carrying backdrop-filter, over an area that scrolls, is the one
+   composition WebKit handles badly: the blurred backdrop must be recomputed against whatever
+   has just scrolled beneath it, every frame, for the whole length of the scroll. Chromium
+   caches this far more aggressively, which is why the same bar costs nothing on Android and
+   makes an iPhone feel heavy.
+
+   Both elements here are that case — the nav sits over `main`, and the timer overlay covers
+   the whole screen.
+
+   Very little is given up. layout.css already paints the bar at 92% opacity, so the blur
+   contributes under a tenth of what is seen; at 98% on a dark ground the difference is not
+   perceptible, and it costs one composited layer instead of a per-frame recomposite.
+
+   Android keeps the blur, deliberately. Deleting the property outright would have been the
+   easier change and the wrong one: the platforms differ here for a reason that holds. */
+/* THE NAV IS THE EXCEPTION NOW, and the reason above is what makes it one. Dropping the blur
+   here was close to free while the bar was painted at 92% opacity — the blur contributed under
+   a tenth of what you saw, so 98% flat looked the same and cost one composited layer instead of
+   a per-frame recomposite.
+
+   The bar is transparent now (layout.css), which inverts that trade completely: the blur is no
+   longer a tenth of the effect, it IS the effect, and it is the only thing holding 11px labels
+   against whatever content scrolls under them. Replacing it with a near-opaque fill would not
+   be an optimisation of a transparent bar, it would be the opposite of one.
+
+   So iOS keeps the blur here and pays for it. The timer overlay below still drops it: that one
+   covers the whole screen and has an opaque surface of its own, so the original reasoning holds
+   there unchanged. */
+html[data-platform="ios"] nav.bottom-nav {
+  backdrop-filter: blur(9px) saturate(115%);
+  -webkit-backdrop-filter: blur(9px) saturate(115%);
+}
+
+/* The Home tab swaps the bar for a lighter variant, and css/pages/dark-mode.css sets that
+   one's background with !important. Nothing without !important can answer that, so this
+   restates it — the alternative was leaving one tab in five visibly more transparent than the
+   rest with its blur removed, which reads as a rendering fault rather than a choice. */
+html[data-platform="ios"] nav.bottom-nav--home-light {
+  backdrop-filter: blur(9px) saturate(115%);
+  -webkit-backdrop-filter: blur(9px) saturate(115%);
+  background: rgba(28, 27, 35, .03) !important;
+}
+
+html[data-platform="ios"] .timer-overlay {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: rgba(10, 10, 12, .985);
+}
+
+
+/* ---------------------------------------------------------------------------------------
+   SIGN IN WITH APPLE BUTTON
+
+   Apple's Human Interface Guidelines govern this button's appearance, and they are a review
+   requirement rather than a suggestion: the logo may not be redrawn or recoloured, the label
+   is one of a fixed set of phrases, the corner radius and height have minimums, and the logo
+   must keep its proportion to the text. A button that "looks Apple-ish" is a rejection.
+
+   White-on-black here because IGNYT is a dark app and Apple's own guidance is to pick the
+   variant that contrasts with the background — the black-on-white variant would sit on a dark
+   card as a bright slab.
+
+   The button lives in app.js next to Sign in with Email, and only renders when
+   IgnytAppleSignIn is present, so this styling is only ever reached on iOS. It is here rather
+   than in components.css because it is a platform's own component, not one of IGNYT's.
+--------------------------------------------------------------------------------------- */
+.apple-signin-btn {
+  width: 100%;
+  margin-top: 10px;
+  /* 44px is the minimum comfortable touch target and also Apple's floor for this button. */
+  min-height: 44px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* The logo sits close to the text as one lockup rather than drifting to the far edge. */
+  gap: 8px;
+  border: none;
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: #000000;
+  font-size: 17px;
+  font-weight: 600;
+  /* The system font, deliberately. Apple's spec names SF, which -apple-system resolves to on
+     the device; substituting IGNYT's stack would be a visible deviation. */
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+}
+
+/* The logo takes its colour from the label, so the two can never drift apart. */
+.apple-signin-btn svg { display: block; }
+
+.apple-signin-btn:active { opacity: .85; }
+
+.apple-signin-btn:disabled { opacity: .5; cursor: default; }

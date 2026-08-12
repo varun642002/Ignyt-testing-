@@ -109,7 +109,7 @@
   flex: 1; min-width: 0; box-sizing: border-box; padding: 10px 12px;
   border: 1px solid var(--rh-border); border-radius: 10px;
   background: var(--rh-bg, transparent); color: var(--rh-text);
-  font: inherit; font-size: 14.5px; outline: none;
+  font: inherit; font-size:16px; outline: none;
 }
 .ft-field input:focus { border-color: var(--rh-blue); }
 .ft-note { margin: 10px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--rh-muted); }

@@ -158,7 +158,7 @@
 
     const weeklyGoalPct = weekStats.workoutsGoal ? Math.min(100, Math.round(weekStats.workoutsCompleted/weekStats.workoutsGoal*100)) : null;
     const goalMsg = weeklyGoalPct==null ? "Set weekly training days in your Profile to track this."
-      : weeklyGoalPct>=100 ? "Goal complete! 🎉"
+      : weeklyGoalPct>=100 ? "Goal complete!"
       : weeklyGoalPct>=75 ? "Great progress! Keep going."
       : weeklyGoalPct>=50 ? "Halfway there — keep it up."
       : weeklyGoalPct>0 ? "Let's get moving this week."
@@ -172,7 +172,7 @@
       ['history','file','#64748B', `${state.prs.length} record${state.prs.length!==1?'s':''}`],
       ['habits','check','#16A34A', `${state.habits.length} habit${state.habits.length!==1?'s':''} active`],
       ['analytics','progress','#2563EB', 'View insights'],
-      ['body','body','#0891B2', 'Track your body'],
+      ['body','body','#2563EB', 'Track your body'],
       ['calendar','calendar','#4F46E5', 'View your activity'],
       ['reports','file','#0D9488', 'Weekly · monthly · yearly'],
       ['photos','body','#DB2777', `${(state.bodyPhotos||[]).length} photo${(state.bodyPhotos||[]).length!==1?'s':''}`]
@@ -241,11 +241,17 @@
       <div style="margin-top:12px;">
         <div class="pg-card">
           <div class="pg-card__head"><span class="pg-card__title">Weekly Goal</span><span class="pg-card__badge">${svg('trophy',18)}</span></div>
+          ${/* The count and its caption sit BESIDE the ring, not under the whole row. They were
+                stacked as separate blocks — ring row, then caption, then message — which cost a
+                full row of height and left the caption a row away from the number it describes,
+                while the 64px ring had empty space next to it the caption could have used. */''}
           <div class="pg-weekly-goal">
             ${ring(weeklyGoalPct, '#2563EB')}
-            <div class="pg-weekly-goal__count">${weekStats.workoutsCompleted}<span> / ${weekStats.workoutsGoal||'—'}</span></div>
+            <div class="pg-weekly-goal__body">
+              <div class="pg-weekly-goal__count">${weekStats.workoutsCompleted}<span> / ${weekStats.workoutsGoal||'—'}</span></div>
+              <div class="pg-card__sub-label">Workouts Completed</div>
+            </div>
           </div>
-          <div class="pg-card__sub-label">Workouts Completed</div>
           <div class="pg-weekly-goal__msg">${goalMsg}</div>
         </div>
       </div>

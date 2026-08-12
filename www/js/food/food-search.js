@@ -5,17 +5,18 @@
    imports) plus the user's own favourites.
 
    SCALE CHANGED THE DESIGN.
-   The previous version scanned all 273 foods on every keystroke, which was fine. At ~8,000
-   foods a full scan per keystroke is 8,000 string comparisons times however fast someone
+   The previous version scanned all 273 seed foods on every keystroke, which was fine. At the
+   catalogue's present ~4,000 a full scan per keystroke is 4,000 string comparisons times however
+   fast someone
    types, so this version builds a TOKEN POSTINGS INDEX once and looks candidates up instead:
 
      tokens[]        every distinct word across all food names, sorted
      postings[]      for each token, the indices of the foods containing it
 
    A sorted token array makes prefix matching a binary search for the range starting with the
-   query fragment, rather than a scan of every token. Building the index over 8,000 foods
-   costs ~40 ms once; a query then touches only the foods that actually contain a matching
-   word.
+   query fragment, rather than a scan of every token. Building the index over the catalogue
+   costs tens of milliseconds once; a query then touches only the foods that actually contain a
+   matching word.
 
    MATCHING IS AND, NOT OR.
    "chicken breast" must mean foods containing BOTH words. Scoring the union would bury
@@ -24,7 +25,7 @@
 
    THREE TIERS, cheapest first, each running only if the previous returned too little:
      1. token match   exact word, then word-prefix          (index lookup)
-     2. substring     "ghurt" -> "Yogurt"                   (linear, ~2 ms at 8,000 foods)
+     2. substring     "ghurt" -> "Yogurt"                   (linear, a couple of ms)
      3. fuzzy         edit distance, "chikn" -> "chicken"   (linear, only when nothing matched)
 
    TYPO TOLERANCE STAYS NARROW. The budget scales with query length: none below 4 characters,
@@ -133,7 +134,7 @@
       : (window.IgnytFoodDB ? window.IgnytFoodDB.all() : []);
 
     /* Curation context, built once per index rather than per food — tierOf() needs to know
-       what the user favourites and logs, and recomputing that 8,000 times would be waste. */
+       what the user favourites and logs, and recomputing that per food would be waste. */
     var CUR = window.IgnytFoodCuration;
     var curCtx = null;
     if (CUR) {
@@ -545,7 +546,7 @@
     /* --- tier 2: substring scan ---
        Catches a query that sits inside a word rather than starting one ("gurt" -> "Yogurt"),
        which a prefix-based token index cannot see. Only runs when tier 1 came up short, and
-       it is a single linear pass over ~8,000 short strings. */
+       it is a single linear pass over a few thousand short strings. */
     if (matchCount() < limit) {
       for (var i = 0; i < index.length; i++) {
         if (seenAny[i]) continue;

@@ -16,6 +16,38 @@ from typing import List
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# asyncpg does not speak `sslmode`. That spelling is libpq's, which means psycopg2 accepts it
+# and asyncpg raises `TypeError: connect() got an unexpected keyword argument 'sslmode'` —
+# reproduced against a Render-shaped URL. asyncpg's own parameter is `ssl`, and it takes the
+# same values, so the fix is a rename rather than a translation table.
+#
+# This matters because Render puts `?sslmode=require` on the External Database URL, which is
+# the one shown most prominently on the dashboard and the obvious thing to paste. The failure
+# surfaces at connect time, not startup, so /v1/health stays green while every route that
+# touches the database returns 500 — the symptom pointing nowhere near the cause.
+_SSLMODE_VALUES = {"disable", "allow", "prefer", "require", "verify-ca", "verify-full"}
+
+
+def _asyncpg_sslmode_fix(url: str) -> str:
+    """Rename `sslmode` to `ssl` for asyncpg. Left alone for every other driver."""
+    if "+asyncpg" not in url or "sslmode=" not in url:
+        return url
+
+    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+    parts = urlsplit(url)
+    query = parse_qsl(parts.query, keep_blank_values=True)
+    rebuilt = []
+    for key, value in query:
+        if key != "sslmode":
+            rebuilt.append((key, value))
+            continue
+        # An unrecognised value is passed through under the original name rather than guessed
+        # at: failing loudly on a typo beats quietly connecting with weaker transport security
+        # than was asked for.
+        rebuilt.append(("ssl", value) if value in _SSLMODE_VALUES else (key, value))
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(rebuilt), parts.fragment))
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
@@ -73,6 +105,56 @@ class Settings(BaseSettings):
     ai_estimate_concurrency: int = Field(default=5, alias="AI_ESTIMATE_CONCURRENCY")
     # Premium allowance. Free users get none, per the brief; the counter resets on UTC date.
     ai_scan_daily_limit: int = Field(default=15, alias="AI_SCAN_DAILY_LIMIT")
+
+    # --- AI Coach (chat) ---
+    # A short answer is both the product requirement and the cost ceiling — the brief asks for
+    # bullet points rather than paragraphs, and output tokens are the expensive half of a call.
+    # 400 is roughly 250 words, which is far more than any answer here should need; it is a
+    # backstop against a runaway generation, not a target.
+    # 1200, not 400. This is NOT a longer-answer setting — the system instruction still asks
+    # for bullet points, and answers have not got longer. It is headroom for the THINKING
+    # tokens Gemini 2.5 Flash spends before writing, which count against this same budget: at
+    # 400 the model could use the entire allowance reasoning and return a candidate with no
+    # text and no function call, which reached the user as "The AI returned an empty answer"
+    # on a question it had understood. Capping thinking directly via thinkingConfig would be
+    # the tidier fix and is refused by this model with a 400, so the room is given here.
+    ai_chat_max_output_tokens: int = Field(default=1200, alias="AI_CHAT_MAX_OUTPUT_TOKENS")
+    # TWO TIERS. "I ate 200g of chicken" is extraction — pull three fields out of a sentence
+    # and call a tool — and the cheapest model does it as well as the expensive one. "Why did
+    # my weight go up?" needs the model to read a trend and reason about it. Routing the first
+    # kind to Flash-Lite is most of the cost saving available here, because logging is what
+    # people do many times a day and asking is what they do occasionally.
+    #
+    # An ALIAS, not a pinned version, for the reason gemini_model documents above: the
+    # previously pinned name was retired by Google mid-flight and gemini-2.5-flash is already
+    # refused for newly issued keys. Set these explicitly if you would rather own the upgrades.
+    gemini_model_light: str = Field(default="gemini-flash-lite-latest", alias="GEMINI_MODEL_LIGHT")
+    # Messages per user per UTC day. Counted in the same ai_usage table as scans, so the reset
+    # is implicit: a new day has no row. Generous enough that a real conversation never hits
+    # it, low enough that a stuck client loop cannot run up a bill overnight.
+    ai_chat_daily_limit: int = Field(default=15, alias="AI_CHAT_DAILY_LIMIT")
+    # A second-pass call (the model reading tool results and writing the reply) is part of the
+    # same user turn, so it must not consume a second unit of the daily allowance. This caps
+    # how many round trips one turn may take before the server stops and answers with what it
+    # has — the guard against a model that keeps asking for one more tool forever.
+    ai_chat_max_tool_rounds: int = Field(default=3, alias="AI_CHAT_MAX_TOOL_ROUNDS")
+    # --- Google Play subscription verification ---
+    # The service-account JSON, as a single environment value. It contains a PRIVATE KEY: it is
+    # never logged, never returned by any route, and never sent to a client. Render holds it as
+    # a secret env var; it must not be committed.
+    play_service_account_json: str = Field(default="", alias="PLAY_SERVICE_ACCOUNT_JSON")
+    play_package_name: str = Field(default="com.varun.ignyt", alias="PLAY_PACKAGE_NAME")
+    play_timeout_seconds: float = Field(default=10.0, alias="PLAY_TIMEOUT_SECONDS")
+    # How long a verified entitlement is trusted before Google is asked again. Without
+    # Real-Time Developer Notifications a cancellation is invisible until the next check, so
+    # this is the window in which a cancelled user keeps access. Six hours is short enough to
+    # be defensible and long enough that Play is not called on every request.
+    play_recheck_hours: int = Field(default=6, alias="PLAY_RECHECK_HOURS")
+    # Gate AI on verified entitlement. OFF by default and deliberately so: switching it on
+    # before any purchase has been verified locks out every user, including paying ones,
+    # because is_premium defaults to false. Turn it on once verification is live.
+    ai_requires_premium: bool = Field(default=False, alias="AI_REQUIRES_PREMIUM")
+
     # Hard ceiling on an uploaded frame. The client compresses first; this is the backstop
     # that stops a hostile or broken client from streaming an unbounded body at us.
     max_upload_bytes: int = Field(default=6 * 1024 * 1024, alias="MAX_UPLOAD_BYTES")
@@ -91,18 +173,77 @@ class Settings(BaseSettings):
         return self.environment.lower() == "production"
 
     @property
-    def sync_database_url(self) -> str:
-        """Sync SQLAlchemy URL for Alembic (migrations don't need async)."""
+    def async_database_url(self) -> str:
+        """The URL SQLAlchemy's ASYNC engine can actually open.
+
+        Managed Postgres providers hand out a URL with no driver in it — Render and Heroku
+        both give `postgresql://…`, and Heroku still gives the older `postgres://`. Neither
+        works with create_async_engine, which needs the driver named: passing one through raw
+        fails at import with "the asyncio extension requires an async driver", so the service
+        never starts and the logs blame SQLAlchemy rather than the connection string.
+
+        Normalising here rather than asking whoever deploys it to hand-edit an environment
+        variable into a shape SQLAlchemy likes — that instruction gets followed once and
+        forgotten at the next database rotation.
+        """
         url = self.database_url
+        if url.startswith("postgres://"):          # legacy Heroku-style
+            url = "postgresql://" + url[len("postgres://"):]
+        if url.startswith("postgresql://"):
+            url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+        return _asyncpg_sslmode_fix(url)
+
+    @property
+    def sync_database_url(self) -> str:
+        """Sync SQLAlchemy URL for Alembic (migrations don't need async).
+
+        `postgres://` is normalised here too. SQLAlchemy dropped that scheme in 1.4 and raises
+        rather than guessing, so a migration run against a Heroku-style URL fails before it
+        reads a single revision — and migrations run on deploy, which makes this the first
+        thing that would break rather than the last.
+        """
+        url = self.database_url
+        if url.startswith("postgres://"):
+            url = "postgresql://" + url[len("postgres://"):]
         return (
             url.replace("+aiosqlite", "")
                .replace("+asyncpg", "+psycopg2")
         )
 
+    @property
+    def firebase_keyless(self) -> bool:
+        """Whether tokens are verified against Google's public certs rather than via the SDK.
+
+        Not a preference — it is simply what happens when no service-account credential was
+        supplied. See auth/firebase.py for why that is a supported way to run.
+        """
+        return self.auth_mode == "firebase" and not self.firebase_credentials.strip()
+
+    @property
+    def auth_configured(self) -> bool:
+        """Whether authentication can actually verify anything.
+
+        Deliberately not `bool(firebase_credentials)`, which was only ever asking whether a
+        string was non-empty — a truncated paste passed it and then failed on the first real
+        sign-in, pointing at auth rather than at config.
+        """
+        if self.auth_mode != "firebase":
+            return True
+        if self.firebase_keyless:
+            return bool(self.firebase_project_id.strip())
+        return bool(self.firebase_credentials.strip())
+
     def assert_ready(self) -> None:
         missing: List[str] = []
-        if self.auth_mode == "firebase" and not self.firebase_credentials:
-            missing.append("FIREBASE_CREDENTIALS (required when AUTH_MODE=firebase)")
+        # Either credential route is fine, but keyless REQUIRES the project id: it is the
+        # audience every token is checked against, and Google signs all Firebase projects
+        # with one key. Without it every Firebase token on earth would verify, so this is a
+        # refusal to start rather than a warning.
+        if self.firebase_keyless and not self.firebase_project_id.strip():
+            missing.append(
+                "FIREBASE_PROJECT_ID (required when FIREBASE_CREDENTIALS is unset — it is the "
+                "audience tokens are verified against)"
+            )
         if self.auth_mode == "insecure-uid" and self.is_production:
             raise RuntimeError("AUTH_MODE=insecure-uid is forbidden in production.")
         if self.auth_mode not in ("firebase", "insecure-uid"):

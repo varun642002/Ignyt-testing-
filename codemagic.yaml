@@ -257,8 +257,24 @@ workflows:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        submit_to_testflight: true
-        # Not submitted for App Store review automatically. Review is a one-way door and
+        # false, and NOT because TestFlight is unwanted — this flag does not mean what its
+        # name suggests. It submits the build for TestFlight BETA REVIEW, which is the
+        # EXTERNAL testing path: up to 10,000 strangers, a human review at Apple, and a
+        # prerequisite set of test information (feedback email, and a review contact's name,
+        # phone and email). With `true` and none of that filled in, the build uploaded
+        # perfectly, processed perfectly, and then failed at the last step with "Complete test
+        # information is required" — a red build for an app that was already sitting in
+        # App Store Connect, ready to install.
+        #
+        # INTERNAL testers — up to 100 people who are users on this App Store Connect account,
+        # which for a solo developer means the developer — need none of it. They receive a
+        # build as soon as Apple finishes processing it, with no review and no submission.
+        # Uploading is the whole job, so uploading is all this does.
+        #
+        # Turn it on when external testers are actually wanted, and fill in the test
+        # information first at App Store Connect > TestFlight > Test Information.
+        submit_to_testflight: false
+        # Not submitted for App Store review automatically either. Review is a one-way door and
         # health apps get extra scrutiny over HealthKit usage — that submission should be a
         # deliberate act in the Console, not a side effect of a green build.
         submit_to_app_store: false

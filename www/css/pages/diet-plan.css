@@ -39,7 +39,7 @@
   padding: 10px 30px 10px 12px;
   border: 1px solid var(--rh-border); border-radius: 12px;
   background: var(--rh-card); color: var(--rh-text);
-  font: inherit; font-size: 14px; font-weight: 700;
+  font: inherit; font-size:16px; font-weight: 700;
   text-overflow: ellipsis; cursor: pointer;
 }
 /* The chevron is drawn rather than a background image so it inherits the text colour and
@@ -374,7 +374,7 @@ body.dp-modal-open { overflow: hidden; }
   flex: 1; min-width: 0; box-sizing: border-box; padding: 10px 12px;
   border: 1px solid var(--rh-border); border-radius: 10px;
   background: var(--rh-bg, transparent); color: var(--rh-text);
-  font: inherit; font-size: 14.5px; outline: none;
+  font: inherit; font-size:16px; outline: none;
 }
 .dp-field input:focus { border-color: var(--rh-blue); }
 .dp-sheet__row { display: flex; gap: 8px; padding: 6px 8px; }

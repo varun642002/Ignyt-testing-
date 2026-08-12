@@ -18,7 +18,7 @@
   /* Blue, matching the rest of the app. This screen keeps its own scoped palette — the app
      behind it is a light theme and this is deliberately dark — but the ACCENT is now the same
      IGNYT blue as every other surface, so the brand does not change colour at the door. */
-  --auth-primary:   #3B82F6;
+  --auth-primary:   #2563EB;
   --auth-primary-2: #2563EB;   /* gradient partner, kept close so the button reads as one hue */
   --auth-text:      #FFFFFF;
   --auth-muted:     #9CA3AF;
@@ -38,6 +38,29 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-font-smoothing: antialiased;
+}
+
+/* THE STATUS BAR STRIP, and why it is sticky rather than padding.
+   .auth is position:fixed; inset:0 with its own scrolling, so its content scrolls to the
+   viewport's top edge — behind the clock and battery. Padding on the hero fixed only the
+   resting state: raise the keyboard and the hero is pushed off the top, and the sheet's
+   heading is drawn straight through the status bar. That is what the screenshots showed.
+
+   This is the first flex child, so it RESERVES the inset, and it is sticky, so it stays
+   pinned there while everything scrolls underneath and behind it. Both jobs, one element.
+
+   Height collapses to 0 on a phone with no cut-out, so Android is byte-identical to before —
+   the hero still bleeds to the very top there, which is the intended look.
+
+   z-index 2 clears .auth-sheet's 1. A scrim the sheet can paint over is not a scrim. */
+.auth::before{
+  content: "";
+  flex: 0 0 auto;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: var(--safe-top);
+  background: var(--auth-bg);
 }
 
 /* ---------------------------------------------------------
@@ -165,9 +188,9 @@
   display: grid;
   place-items: center;
   border-radius:15px;
-  border: 1px solid rgba(59,130,246,.28);
-  background: linear-gradient(150deg, rgba(59,130,246,.20), rgba(59,130,246,.05));
-  box-shadow: 0 8px 26px -10px rgba(59,130,246,.55);
+  border: 1px solid rgba(37,99,235,.28);
+  background: linear-gradient(150deg, rgba(37,99,235,.20), rgba(37,99,235,.05));
+  box-shadow: 0 8px 26px -10px rgba(37,99,235,.55);
 }
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)){
   .auth-brand__mark{ backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
@@ -199,8 +222,8 @@
   transition: border-color .18s ease, box-shadow .18s ease;
 }
 .auth-field:focus-within{
-  border-color: rgba(59,130,246,.55);
-  box-shadow: 0 0 0 3px rgba(59,130,246,.13);
+  border-color: rgba(37,99,235,.55);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.13);
 }
 .auth-field__cc{
   display: flex;
@@ -228,7 +251,7 @@
   background: transparent;
   color: var(--auth-text);
   font: inherit;
-  font-size: 15.5px;
+  font-size:16px;
   letter-spacing: .01em;
   font-variant-numeric: tabular-nums;
   outline: none;
@@ -251,10 +274,10 @@
   cursor: pointer;
   /* Two shadows: a tight one for the edge, a wide tinted one for the glow. A single large
      black shadow on a saturated button reads as dirt around it. */
-  box-shadow: 0 2px 6px rgba(0,0,0,.34), 0 12px 30px -10px rgba(59,130,246,.52);
+  box-shadow: 0 2px 6px rgba(0,0,0,.34), 0 12px 30px -10px rgba(37,99,235,.52);
   transition: transform .14s cubic-bezier(.34,1.4,.64,1), box-shadow .18s ease, opacity .18s ease;
 }
-.auth-cta:active{ transform: translateY(1px) scale(.988); box-shadow: 0 1px 4px rgba(0,0,0,.34), 0 6px 18px -10px rgba(59,130,246,.42); }
+.auth-cta:active{ transform: translateY(1px) scale(.988); box-shadow: 0 1px 4px rgba(0,0,0,.34), 0 6px 18px -10px rgba(37,99,235,.42); }
 .auth-cta[disabled]{ opacity: .45; box-shadow: none; cursor: default; }
 
 /* ---- OTP step ----
@@ -396,6 +419,13 @@
 .auth-social__btn:active{ transform: scale(.972); border-color: #3A3A3A; background: #202020; }
 .auth-social__btn svg{ width: 21px; height: 21px; display: block; }
 
+/* Google returns as a single full-width button rather than one tile in a row of providers, so
+   it needs the row layout: icon beside the label, normal button height. The tile rule above is
+   left alone -- it is still correct for a grid, which is what it was written for, and would be
+   needed again the moment a second provider appears. */
+.auth-social__btn{ flex-direction: row; min-height: 0; width: 100%; padding: 13px 16px; font-size: 14.5px; }
+.auth-social__btn[disabled]{ opacity: .6; cursor: default; }
+
 /* ---- legal ---- */
 .auth-legal{
   margin: auto 0 0;
@@ -511,13 +541,13 @@
   width: 100%; box-sizing: border-box; padding: 15px 16px;
   border: 1px solid var(--auth-border); border-radius: var(--auth-radius-sm);
   background: var(--auth-card); color: var(--auth-text);
-  font: inherit; font-size: 15.5px; outline: none;
+  font: inherit; font-size:16px; outline: none;
   transition: border-color .18s ease, box-shadow .18s ease;
 }
 .auth-email__field input::placeholder{ color: #6B7280; }
 .auth-email__field input:focus{
-  border-color: rgba(59,130,246,.55);
-  box-shadow: 0 0 0 3px rgba(59,130,246,.13);
+  border-color: rgba(37,99,235,.55);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.13);
 }
 
 /* Password field with a reveal toggle. The wrapper is the positioning context and the input
@@ -540,7 +570,7 @@
 .pwd-eye:hover{ color: var(--auth-text); }
 .pwd-eye:disabled{ opacity: .4; cursor: default; }
 .pwd-eye:active{ background: rgba(255,255,255,.06); }
-.pwd-eye:focus-visible{ outline: 2px solid rgba(59,130,246,.6); outline-offset: 1px; }
+.pwd-eye:focus-visible{ outline: 2px solid rgba(37,99,235,.6); outline-offset: 1px; }
 
 /* States the whole rule up front. It used to say "At least 6 characters" in the placeholder
    while validateEmailForm() required 8 plus a letter and a number, so the first thing a new

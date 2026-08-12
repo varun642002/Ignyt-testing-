@@ -205,6 +205,19 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- SPEECH INPUT. The AI Coach's microphone uses the WebView's SpeechRecognition, and a
+         WebView cannot be granted a permission the app never declared — so without this the
+         mic failed with "not-allowed" and the app told the user to enable microphone access
+         in Settings, where no microphone toggle for IGNYT exists to find. The error read as
+         the user's fault and was ours.
+         MODIFY_AUDIO_SETTINGS accompanies it because the recogniser adjusts audio routing
+         while listening. Both are requested at runtime on first use, not at install. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Declared so the app still installs on devices without a microphone; the AI Coach
+         hides its mic button there rather than offering a control that cannot work. -->
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
    <!-- Health Connect permissions used by IGNYT:
      17 read permissions and 2 write permissions.
      Supports activity, heart rate, sleep, vitals, body measurements,

@@ -1,5 +1,55 @@
-#app { max-width: 480px; background: var(--color-bg); }
-header.app-header { padding: calc(var(--safe-top) + var(--space-sm)) var(--space-md) var(--space-sm); }
+/* HEIGHT, not min-height, and this is the other half of the main{min-height:0} note below.
+   #app had min-height:100vh and no ceiling, so with a tall page it simply grew — measured at
+   1547px against a 660px viewport. main then received all 1469px it asked for, its content fit
+   exactly, and overflow-y:auto had nothing to do. Releasing main's min-height alone changed
+   nothing for the same reason.
+   Bounding #app to the viewport is what makes the flex line finite, so main is forced to
+   overflow and scroll inside it while the header and nav hold still.
+   dvh rather than vh: on a phone the two differ by the browser chrome, and vh would push the
+   bottom of the app under it. */
+#app { max-width: 480px; background: var(--color-bg); height: 100dvh; }
+/* THE TOP PADDING IS A max(), NOT AN ADDITION.
+   --safe-top is env(safe-area-inset-top, 0px), and on a phone with no cut-out — most Android
+   devices — that is 0px. calc(0px + 12px) gave the header twelve pixels of top padding, so the
+   title sat almost against the status bar; the same rule returned 59 + 12 = 71px on an iPhone,
+   which is why this looked correct on iOS and cramped on Android.
+
+   max() asks the right question: never less than 20px of breathing room, and the full inset
+   plus a gap when the hardware needs more.
+
+   NOTE FOR ANYONE CHANGING THIS: index.html's inline <style> also had a rule for this header,
+   and it was dead — this file loads after it and wins at equal specificity. That has now
+   happened three times in this codebase (main's padding vs base.css, the nav background vs
+   this file, and here), so the inline copy has been removed rather than fixed. One property,
+   one place. */
+header.app-header {
+  padding: max(calc(var(--safe-top) + var(--space-sm)), 20px) var(--space-md) var(--space-sm);
+  /* Rounded foot. Only the bottom two corners: the top pair sit against the physical screen
+     edge, where the device's own corner radius already does the job and a second curve inside
+     it reads as a mistake.
+
+     NOT overflow:hidden to clip the sheen. The header holds the notification bell, whose
+     dropdown opens BELOW it — clipping the box would cut the panel off at the header's edge.
+     The ::after overlay is given the same radius instead, so the gloss follows the curve and
+     the dropdown still escapes. */
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+}
+
+/* THE HEADER SCROLLED AWAY BECAUSE MAIN NEVER SCROLLED. One line, and it is this one.
+
+   #app is a column flex container; main is flex:1 with overflow-y:auto and was meant to be
+   the scrolling area, with the header and the bottom nav fixed either side of it. It never
+   scrolled once. A flex item's default min-height is AUTO, meaning it refuses to shrink below
+   its own content — so main simply grew to fit, overflow-y:auto never had anything to do,
+   #app grew past the viewport, and the BODY scrolled instead. Measured before the fix: main's
+   scroll range 0px on every tab, the page's 514px on Home, and the header travelling the full
+   400px of any scroll.
+
+   min-height:0 releases that floor. main is then bounded by the flex line, its overflow
+   engages, and the header and nav sit still on every page — which is what the markup was
+   always shaped for. */
+main { min-height: 0; }
 .page-title-row { display:flex; align-items:center; justify-content:space-between; gap:var(--space-sm); }
 .page-tools-btn { min-height:44px; min-width:44px; border:1px solid var(--color-border); border-radius:var(--radius-sm); color:var(--color-text-primary); background:var(--color-surface); position:relative; }
 
@@ -22,11 +72,30 @@ header.app-header { padding: calc(var(--safe-top) + var(--space-sm)) var(--space
 .hdr-notif-item__time { font-size:11px; color:var(--color-text-secondary); margin-top:2px; }
 /* The bar is a floating pill (see index.html) -- these only re-skin it per theme. No
    border-color here: a docked strip wanted a top border, a pill wants a hairline all the way
-   round, and setting both left a heavier line across the top edge than the other three. */
-nav.bottom-nav { min-height:64px; background:rgba(18,20,24,.92); }
+   round, and setting both left a heavier line across the top edge than the other three.
+
+   TRANSPARENT, so the content scrolls visibly beneath it. 3%, over four passes — 34, 16, 7 —
+   and each earlier stop still read as a bar rather than as glass. Every pass found a DIFFERENT
+   thing responsible, which is why lowering the fill alone never settled it:
+
+     the fill        34% -> 3%
+     the shadow      a 30px black glow at 35% became the darkest thing about the bar once the
+                     fill went under 20% — a dark band under the glass. Now 18px at 20%.
+     THE BLUR        at 26px it was frosted glass, and frosted glass is a SURFACE — it reads as
+                     opaque whatever the alpha says. 9px lets what is behind stay legibly itself
+                     while still separating it from the labels.
+     the saturation  150% amplified whatever sat behind: over a blue button the whole bar went
+                     blue. 115% keeps the colour honest.
+
+   THE LABELS CARRY THEIR OWN CONTRAST NOW, and that is what makes 3% survivable. Twice before,
+   this note said the floor was wherever the fill stopped holding 11px text — true only while the
+   text had nothing behind it but that fill. A shadow on the glyphs themselves is the standard
+   way out and costs nothing (see .nav-btn below), so legibility no longer depends on the bar and
+   the bar is free to be as transparent as asked. */
+nav.bottom-nav { min-height:64px; background:rgba(18,20,24,.03); }
 [data-theme="light"] nav.bottom-nav {
-  background:rgba(255,255,255,.94); border-color:rgba(15,23,42,.08);
-  box-shadow:0 8px 28px rgba(15,23,42,.12), 0 2px 6px rgba(15,23,42,.06);
+  background:rgba(255,255,255,.06); border-color:rgba(15,23,42,.07);
+  box-shadow:0 6px 18px rgba(15,23,42,.07), 0 1px 3px rgba(15,23,42,.04);
 }
 /* On a white pill a white highlight is invisible, so the selected tab tints toward the
    interactive colour instead. Applied to the sliding indicator rather than to the active
@@ -34,6 +103,24 @@ nav.bottom-nav { min-height:64px; background:rgba(18,20,24,.92); }
 [data-theme="light"] .nav-ind { background:var(--color-interactive-soft, rgba(37,99,235,.10)); }
 .nav-btn { min-height:52px; }
 .nav-btn span { font-size:11px; }
+
+/* THE GLYPHS HOLD THEMSELVES UP. With the bar at 3% the icons and labels sit almost directly on
+   whatever is scrolling underneath, and a tight dark shadow is what keeps them readable over a
+   bright card without putting the fill back. It is invisible over a dark ground — a 2px blur at
+   45% against a near-black backdrop changes nothing you can see — and does all its work exactly
+   when the content behind turns pale, which is the case that used to force the floor.
+
+   drop-shadow, not box-shadow, for the icons: box-shadow would outline the button's rectangle,
+   while a filter follows the drawn strokes of the SVG. */
+nav.bottom-nav .nav-btn span { text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+nav.bottom-nav .nav-btn svg  { filter: drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
+
+/* On the light theme the ground behind the bar is pale, so a dark halo would read as grime.
+   The same trick inverted: a soft light shadow that lifts dark glyphs off a busy background. */
+[data-theme="light"] nav.bottom-nav .nav-btn span,
+nav.bottom-nav--home-light .nav-btn span { text-shadow: 0 1px 2px rgba(255,255,255,.65); }
+[data-theme="light"] nav.bottom-nav .nav-btn svg,
+nav.bottom-nav--home-light .nav-btn svg  { filter: drop-shadow(0 1px 2px rgba(255,255,255,.65)); }
 /* Reference: "blue primary accent for active tab" -- overrides the legacy orange active
    state (.nav-btn.active{color:var(--accent)} in the inline stylesheet) for the primary
    bottom nav specifically. Deliberately NOT a blanket --accent token redefinition: --accent

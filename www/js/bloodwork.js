@@ -17,6 +17,10 @@
    note. No health data ever leaves the device.
 ========================================================= */
 (function () {
+  /* An icon by name, from app.js's set. Guarded so a missing svg() degrades to no
+     decoration rather than taking the page down. */
+  function ic(n, s){ return (typeof svg === "function") ? svg(n, s || 16) : ""; }
+
   "use strict";
   var STORE = "hx_blood_reports";
 
@@ -190,7 +194,7 @@
 
   function header(title, back) {
     return (back ? '<button class="btn btn-ghost" data-bw="back" style="padding:8px 14px;font-size:14px;margin:4px 0 10px;">← Back</button>' : "") +
-      '<div style="font-size:25px;font-weight:900;margin-bottom:4px;">🩸 ' + esc(title) + "</div>";
+      '<div style="font-size:25px;font-weight:900;margin-bottom:4px;">' + ic("droplet",22) + " " + esc(title) + "</div>";
   }
 
   function render() {

@@ -12,11 +12,11 @@
   --color-surface-pressed: #21262f;
   --color-primary: #ff5a1f;
   --color-primary-strong: #ff6a2b;
-  --color-accent-blue: #32b8f4;
-  --color-accent-cyan: #55d8ff;
-  --color-interactive: #3e82f7;
-  --color-interactive-strong: #5a94f9;
-  --color-interactive-soft: rgba(62,130,247,.14);
+  --color-accent-blue: #2563EB;
+  --color-accent-cyan: #2563EB;
+  --color-interactive: #2563EB;
+  --color-interactive-strong: #2563EB;
+  --color-interactive-soft: rgba(37,99,235,.14);
   --color-text-primary: #f7f4ef;
   --color-text-secondary: #aaa9b0;
   --color-success: #45d294;
@@ -62,6 +62,22 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --nav-height: 72px;
+
+  /* How far the bottom of a scrolling page must stay clear of the floating nav.
+     THE ONE DEFINITION. Anything that needs this number reads it here.
+
+     It was written out longhand in base.css and hard-coded as 100px in four other places,
+     which agreed on Android by luck: with no gesture bar --safe-bottom is 0, so 96px and
+     100px both clear the bar and nobody noticed they were different numbers. An iPhone makes
+     --safe-bottom 34px, so this becomes 130px while the hard-coded copies stayed at 100 —
+     and Home, Progress and Workout cancel this padding with a negative margin to bleed their
+     background to the bottom. A negative margin that does not match the padding it is
+     cancelling leaves a 30px band of the wrong colour under every one of those pages, plus
+     content that cannot be scrolled out from under the bar.
+
+     Not the same as --nav-float-clear in index.html, and deliberately so: that one is where
+     to PIN something just above the bar, this one is scroll clearance with breathing room. */
+  --main-pad-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--space-lg));
   /* =========================================================
    TYPE SCALE
 
@@ -130,7 +146,7 @@
   --color-text-secondary:#6B7280; --color-text-placeholder:#9CA3AF;
   --color-border:#E7EBF0; --color-divider:#E8ECF2;
   --shadow-card:0 6px 24px rgba(31,41,55,.07);
-  --color-interactive: #2f6fed; --color-interactive-strong: #1f5adf; --color-interactive-soft: rgba(47,111,237,.12);
+  --color-interactive: #2563EB; --color-interactive-strong: #2563EB; --color-interactive-soft: rgba(37,99,235,.12);
 }
 /* AMOLED theme -- Phase 1 ask ("future AMOLED theme"): true-black background/surfaces for
    OLED power savings and max contrast. Not wired to any theme switcher yet (Settings still
@@ -151,8 +167,9 @@
    layout-only rules (background/margin/padding/font-family) and no longer redeclare --rh-*.
 
    This is deliberately NOT merged into --color-* by value, even though several pairs are
-   close (--rh-card #FFFFFF == --color-surface light #ffffff exactly; --rh-blue #2563EB vs
-   --color-interactive light #2f6fed is a few points of drift). Two pairs are NOT close at
+   now identical (--rh-card #FFFFFF == --color-surface light #ffffff; --rh-blue #2563EB ==
+   --color-interactive, which used to drift by a few points per theme and no longer does —
+   there is one interactive blue now, #2563EB, in both themes). Two pairs are NOT close at
    all (--rh-green #16A34A vs --color-success #45d294; --rh-red #EF4444 vs --color-error
    #ff6b6b) -- forcing those identical would visibly recolor Home/Workout/Progress/Tools/
    Settings/Profile/Library/Exercise Detail/Calculators/Insights/Goals (everything under

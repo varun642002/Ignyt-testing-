@@ -1,0 +1,147 @@
+"""
+/v1/ready must survive a dead database and say why.
+
+It previously could not: it depended on get_db, which commits on the way out, so a connection
+failure turned the readiness endpoint itself into a 500. The endpoint that exists to explain an
+outage was indistinguishable from the app being broken some other way.
+"""
+from __future__ import annotations
+
+import pytest
+
+from app.api.routes_health import _classify
+
+
+@pytest.mark.parametrize("message, expected", [
+    ("connect() got an unexpected keyword argument 'sslmode'", "bad_connection_parameter"),
+    ("[Errno 11001] getaddrinfo failed",                        "host_not_found"),
+    ("could not translate host name \"dpg-abc\" to address",    "host_not_found"),
+    ("password authentication failed for user \"ignyt\"",       "authentication_failed"),
+    ("SSL error: certificate verify failed",                    "tls_error"),
+    ("connection attempt timed out",                            "timeout"),
+    ("connection was closed in the middle of operation",        "connection_refused"),
+    ("relation \"users\" does not exist",                       "migrations_not_run"),
+])
+def test_failures_are_classified(message, expected):
+    assert _classify(Exception(message)) == expected
+
+
+def test_classification_follows_the_exception_chain():
+    """SQLAlchemy wraps driver errors, so the useful text is never on the outermost object."""
+    try:
+        try:
+            raise TypeError("connect() got an unexpected keyword argument 'sslmode'")
+        except TypeError as inner:
+            raise RuntimeError("(sqlalchemy) could not connect") from inner
+    except RuntimeError as outer:
+        assert _classify(outer) == "bad_connection_parameter"
+
+
+def test_unrecognised_failure_is_not_guessed_at():
+    """No category is invented for a failure that matches none of them — but it still names the
+    exception type, because "unknown" tells whoever is holding the outage nothing at all."""
+    out = _classify(Exception("something entirely new"))
+    assert out.startswith("unclassified:Exception")
+    # The driver's own words are kept — with the connection string struck out of them — because
+    # a category nobody anticipated is exactly the case where the message is the only clue.
+    assert "something entirely new" in out
+
+
+@pytest.mark.parametrize("message", [
+    "password authentication failed for user \"ignyt\"",
+    "could not translate host name \"dpg-abc-a.oregon-postgres.render.com\" to address",
+    "FATAL: database \"ignyt_prod\" does not exist",
+])
+def test_classification_leaks_no_connection_details(message):
+    """/ready is public. The category must never carry the host, user or database name."""
+    out = _classify(Exception(message))
+    assert " " not in out and out.islower()
+    for secret in ["ignyt", "render.com", "dpg-", "password", "oregon"]:
+        assert secret not in out
+
+
+@pytest.mark.anyio
+async def test_ready_reports_degraded_instead_of_500(client, monkeypatch):
+    """The regression that mattered: a dead database must yield 200 degraded, never a 500."""
+    import app.api.routes_health as rh
+
+    class DeadEngine:
+        def connect(self):
+            raise OSError("[Errno 11001] getaddrinfo failed")
+
+    monkeypatch.setattr(rh, "engine", DeadEngine())
+    r = await client.get("/v1/ready")
+    assert r.status_code == 200, f"readiness must not 500 when the database is down: {r.text}"
+    body = r.json()
+    assert body["status"] == "degraded"
+    assert body["checks"]["database"] is False
+    assert body["checks"]["database_error"] == "host_not_found"
+
+
+@pytest.mark.anyio
+async def test_ready_is_clean_when_the_database_works(client):
+    r = await client.get("/v1/ready")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["checks"]["database"] is True
+    assert body["checks"]["database_error"] is None
+
+
+def test_unclassified_failures_name_the_exception_chain_not_its_message():
+    """"unknown" is useless during an outage. Class names identify the fault precisely and
+    carry no host, user or database name."""
+    try:
+        try:
+            raise OSError("connect to 10.0.0.5 failed for user ignyt_admin")
+        except OSError as inner:
+            raise RuntimeError("wrapped") from inner
+    except RuntimeError as outer:
+        out = _classify(outer)
+    assert out.startswith("unclassified:")
+    assert "RuntimeError" in out and "OSError" in out
+    for leak in ["10.0.0.5", "ignyt_admin", "connect to", "failed for"]:
+        assert leak not in out
+
+
+def test_unclassified_chain_is_bounded():
+    exc = ValueError("innermost")
+    for i in range(12):
+        try:
+            raise RuntimeError(f"layer{i}") from exc
+        except RuntimeError as e:
+            exc = e
+    out = _classify(exc)
+    assert len(out) < 80, out
+
+
+def test_redacted_detail_removes_every_part_of_the_connection_string(monkeypatch):
+    """The message is the useful part and the dangerous part. Each component of the URL is
+    struck out by value — removing what we KNOW is secret, rather than guessing what a secret
+    looks like."""
+    import app.api.routes_health as rh
+    from app.config import Settings
+
+    url = "postgresql://ignytuser:sup3rSecret@dpg-xyz-a.oregon-postgres.render.com/ignytprod"
+    monkeypatch.setattr(rh, "get_settings", lambda: Settings(DATABASE_URL=url), raising=False)
+    monkeypatch.setattr("app.config.get_settings", lambda: Settings(DATABASE_URL=url))
+
+    # Deliberately worded so it matches none of the categories above and reaches the fallback —
+    # the earlier draft said "password authentication failed", which classified before it ever
+    # got there and tested nothing.
+    exc = ValueError(
+        "invalid dsn for dpg-xyz-a.oregon-postgres.render.com "
+        "given ignytuser / sup3rSecret / ignytprod"
+    )
+    out = rh._classify(exc)
+    for secret in ["sup3rSecret", "ignytuser", "dpg-xyz-a.oregon-postgres.render.com", "ignytprod"]:
+        assert secret not in out, f"leaked {secret!r}: {out}"
+    assert "invalid dsn" in out            # the diagnostic itself survives redaction
+    assert "[redacted]" in out
+
+
+def test_redacted_detail_is_bounded(monkeypatch):
+    import app.api.routes_health as rh
+    from app.config import Settings
+    monkeypatch.setattr("app.config.get_settings", lambda: Settings(DATABASE_URL="sqlite+aiosqlite:///./x.db"))
+    out = rh._classify(ValueError("x" * 5000))
+    assert len(out) < 220, len(out)

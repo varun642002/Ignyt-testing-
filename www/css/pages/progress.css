@@ -15,8 +15,9 @@
 
 .pg-light {
   background:var(--rh-bg); color:var(--rh-text);
-  margin:0 -16px -100px; padding:12px 16px 100px;
-  min-height:calc(100% + 100px);
+  /* Must equal main's bottom padding — see --main-pad-bottom in tokens.css. */
+  margin:0 -16px calc(-1 * var(--main-pad-bottom)); padding:12px 16px var(--main-pad-bottom);
+  min-height:calc(100% + var(--main-pad-bottom));
   font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
 }
 
@@ -76,6 +77,10 @@
 .pg-card__trend.is-up { color:var(--rh-green); }
 .pg-card__trend.is-down { color:var(--rh-red); }
 .pg-card__sub-label { font-size:11px; color:var(--rh-muted); font-weight:600; margin-top:8px; }
+/* Inside the weekly-goal block the caption belongs to the number directly above it, so it gets
+   almost no air — 8px between a figure and its own label reads as two unrelated lines. Scoped so
+   the class keeps its normal spacing everywhere else it is used. */
+.pg-weekly-goal .pg-card__sub-label { margin-top:1px; }
 
 .pg-chart-bubble { display:inline-block; margin-top:-26px; margin-left:calc(100% - 46px); background:var(--rh-blue); color:#fff;
   font-size:11px; font-weight:800; padding:3px 8px; border-radius:var(--radius-xs-plus); position:relative; }
@@ -85,10 +90,18 @@
    the only markup that used them. */
 
 /* ---------- Weekly goal ring ---------- */
-.pg-weekly-goal { display:flex; align-items:center; gap:12px; margin-top:6px; }
-.pg-weekly-goal__count { font-size:22px; font-weight:800; }
+/* No margin-top. .pg-card__head above already carries margin-bottom:8px, and the two stacked
+   to 14px — the single largest gap in a card whose content is only 115px tall. Margins between
+   siblings belong to one side or the other, not both. */
+.pg-weekly-goal { display:flex; align-items:center; gap:12px; }
+/* The number and its caption as one unit beside the ring. This column is what lets the ring's
+   64px carry both lines instead of only the count, which is where the spare row came from. */
+.pg-weekly-goal__body { min-width:0; }
+.pg-weekly-goal__count { font-size:22px; font-weight:800; line-height:1.1; }
 .pg-weekly-goal__count span { font-size:14px; color:var(--rh-muted); font-weight:700; }
-.pg-weekly-goal__msg { font-size:11px; color:var(--rh-muted); margin-top:10px; line-height:1.4; }
+/* 6px was measured against a card whose content is only ~115px tall; the message is a footnote
+   to the block above, not a separate section. */
+.pg-weekly-goal__msg { font-size:11px; color:var(--rh-muted); margin-top:4px; line-height:1.4; }
 .pg-ring { width:64px; height:64px; border-radius:50%; flex:none; display:grid; place-items:center;
   background:conic-gradient(var(--ring-color,#2563EB) calc(var(--pct,0) * 1%), #EEF1F6 0); }
 .pg-ring__inner { width:50px; height:50px; border-radius:50%; background:var(--rh-card); display:flex; align-items:center; justify-content:center;
@@ -404,3 +417,81 @@
    the row scrolls — a setup you cannot see is a setup you will not select. */
 .g-chipwrap{ display:flex; flex-wrap:wrap; gap:8px; }
 .g-chipwrap .cat-chip{ flex:none; }
+
+/* =========================================================
+   METALLIC BADGES
+
+   The SVG carries the gradient, the bevel and the shine (see achievementBadgeSvg). This is the
+   part that cannot live in the SVG: the outer glow, the resting lift, and the timing of the
+   sweep.
+
+   EARNED ONLY, ALL OF IT. A locked badge keeps the flat muted treatment it always had. That
+   contrast is the whole mechanism — a grid where everything glows says nothing about which
+   ones were earned, and the point of a collection is that the gaps are visible.
+========================================================= */
+.bdg__svg.is-metal {
+  /* Tier-coloured light, set per tier below. A single neutral glow makes gold and diamond sit
+     in the same light, which is exactly the flatness the metal is there to remove. */
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,.35));
+  transition: transform .22s cubic-bezier(.32,.72,0,1), filter .22s ease;
+}
+.bdg:hover .bdg__svg.is-metal,
+.bdg:active .bdg__svg.is-metal { transform: translateY(-2px) scale(1.03); }
+
+/* The sweep. Parked off the left edge and moved across on unlock and on interaction — a shine
+   that runs on a loop stops reading as a highlight and starts reading as a loading state. */
+.bdg__shine { transform: translateX(0); }
+.bdg:hover .bdg__shine,
+.bdg:active .bdg__shine { animation: bdg-shine .85s cubic-bezier(.4,0,.2,1); }
+@keyframes bdg-shine { from { transform: translateX(0); } to { transform: translateX(210px); } }
+
+/* A newly unlocked badge sweeps once and settles, without being touched. */
+.bdg.is-new .bdg__shine { animation: bdg-shine 1.1s cubic-bezier(.4,0,.2,1) .25s; }
+.bdg.is-new .bdg__svg.is-metal { animation: bdg-land .6s cubic-bezier(.22,1,.36,1); }
+@keyframes bdg-land {
+  0%   { transform: scale(.72) rotate(-8deg); opacity: 0; }
+  55%  { transform: scale(1.08) rotate(2deg);  opacity: 1; }
+  100% { transform: scale(1) rotate(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bdg__svg.is-metal, .bdg__shine, .bdg.is-new .bdg__svg.is-metal { animation: none; transition: none; }
+  .bdg:hover .bdg__svg.is-metal { transform: none; }
+}
+
+/* Tier-coloured light. Set as a variable on the tile by the renderer so the glow matches the
+   metal — a gold badge in warm light, a diamond one in cold. One neutral shadow for all five
+   would put every tier in the same lighting, which is the flatness the ramp exists to remove. */
+.bdg[data-tier] .bdg__svg.is-metal {
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,.35))
+          drop-shadow(0 0 10px var(--bdg-glow, transparent));
+}
+.bdg[data-tier="bronze"]   { --bdg-glow: rgba(200,122,60,.40); }
+.bdg[data-tier="silver"]   { --bdg-glow: rgba(135,152,168,.40); }
+.bdg[data-tier="gold"]     { --bdg-glow: rgba(240,192,32,.48); }
+.bdg[data-tier="diamond"]  { --bdg-glow: rgba(37,99,235,.48); }
+.bdg[data-tier="platinum"] { --bdg-glow: rgba(155,126,232,.52); }
+
+/* ---------- Locked progress ----------
+   Only rendered where the achievement can actually report progress — see badgeProgress() in
+   app.js. A bar on a badge whose progress cannot be computed would be a guess presented as a
+   measurement, so those keep the plain description they always had. */
+.bdg__prog { margin-top: 6px; }
+.bdg__prog-track { height: 4px; border-radius: 999px; background: var(--rh-border, var(--border)); overflow: hidden; }
+.bdg__prog-track i { display: block; height: 100%; border-radius: 999px; background: var(--rh-blue, var(--primary));
+  transition: width .5s cubic-bezier(.22,1,.36,1); }
+.bdg__prog-label { font-size: 10.5px; font-weight: 700; color: var(--rh-muted, var(--muted)); margin-top: 3px;
+  font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .bdg__prog-track i { transition: none; } }
+
+/* ---------- Imported badge art ----------
+   The whole medal is one background image, numeral included — nothing is laid over it. Same box
+   as .bdg__svg so a grid mixing imported art and hand-drawn badges stays on one baseline, which
+   is the normal case while badges are still being supplied, not an edge case. */
+.bdg__art {
+  width: 84px; height: 84px;
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  transition: transform .22s cubic-bezier(.32,.72,0,1);
+}
+.bdg:hover .bdg__art, .bdg:active .bdg__art { transform: translateY(-2px) scale(1.03); }
+@media (prefers-reduced-motion: reduce) { .bdg__art { transition: none; } }

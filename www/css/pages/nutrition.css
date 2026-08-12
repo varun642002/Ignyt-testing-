@@ -26,11 +26,11 @@
   --n-carbs:     var(--steel);
   --n-fat:       #FFB020;
   --n-fibre:     #A98BFF;
-  --n-water:     #4FC3F7;
+  --n-water:     #2563EB;
   --n-sugar:     #FF8FA3;
   --n-sodium:    #FFB020;
   --n-potassium: #7BD389;
-  --n-calcium:   #9AD5FF;
+  --n-calcium:   #2563EB;
   --n-iron:      #FF7A5C;
   --n-energy:    var(--accent);
 
@@ -43,11 +43,11 @@
      same identities re-mixed for contrast against a light surface. */
   --n-fat:       #B87400;
   --n-fibre:     #6B4FD8;
-  --n-water:     #0B7FA8;
+  --n-water:     #2563EB;
   --n-sugar:     #C2185B;
   --n-sodium:    #B87400;
   --n-potassium: #2E7D32;
-  --n-calcium:   #1565C0;
+  --n-calcium:   #2563EB;
   --n-iron:      #C0392B;
 }
 
@@ -348,7 +348,7 @@
   background: color-mix(in srgb, var(--primary) 12%, var(--surface-alt));
 }
 .srv.is-on .srv__kcal{ color: var(--primary); }
-.srv.is-on .srv__name::after{ content: " ✓"; color: var(--primary); }
+.srv.is-on .srv__name::after{ content: " \2713"; color: var(--primary); }
 
 /* ---------------------------------------------------------
    Micronutrient grid
@@ -514,7 +514,7 @@
   flex: 1; min-width: 0;
   background: none; border: 0; outline: none;
   color: var(--text);
-  font-size: 15px;              /* 16px-ish keeps iOS from zooming the viewport on focus */
+  font-size:16px;              /* 16px-ish keeps iOS from zooming the viewport on focus */
   padding: 11px 0;
 }
 .food-search-bar__clear,
@@ -566,7 +566,7 @@
   border: 0;
   border-radius: var(--radius-sm);
   padding: 11px 12px;
-  font-size: 14px;
+  font-size:16px;
   color: var(--text);
   min-height: 44px;
 }
@@ -584,7 +584,7 @@
   background: var(--surface-alt);
   border: 0; border-radius: var(--radius-sm);
   text-align: center;
-  font-size: 15px; font-weight: 700;
+  font-size:16px; font-weight: 700;
   color: var(--text);
   font-family: 'SF Mono', ui-monospace, monospace;
 }
@@ -1063,7 +1063,7 @@ main{ -webkit-overflow-scrolling: touch; }
 .nd-short__icon{
   width:36px; height:36px; border-radius:var(--radius-sm); display:grid; place-items:center; font-size:17px;
 }
-.nd-short__icon--blue{ background:rgba(59,130,246,.16); }
+.nd-short__icon--blue{ background:rgba(37,99,235,.16); }
 .nd-short__icon--purple{ background:rgba(168,85,247,.16); }
 .nd-short__icon--orange{ background:rgba(245,158,11,.16); }
 .nd-short__title{ display:block; font-size:13px; font-weight:800; }
@@ -1092,7 +1092,7 @@ main{ -webkit-overflow-scrolling: touch; }
   width:32px; height:32px; flex:0 0 32px; border-radius:50%;
   /* --color-interactive, which is the blue the rest of the app already wears: the bottom nav's
      selected tab, the settings toggles, the active chips. Not --primary, which is a near-
-     identical #3B82F6 against this token's #3e82f7 — close enough to look like a mistake rather
+     identical #2563EB against this token's #2563EB — close enough to look like a mistake rather
      than a choice, and there is no reason for the app to carry two blues three points apart.
      It was --accent (orange), which put the loudest colour on this screen on five buttons at
      once and made the meal headings compete with the calorie figures they sit beside. */
@@ -1297,24 +1297,6 @@ body.kb-open
 
 .fs-noresult{ font-size: 13.5px; color: var(--muted); padding: 18px 2px; }
 
-/* Pinned below the results. Placed after the last row it would be unreachable exactly when
-   it is wanted — the list is long and paged, and "it is not here" is a conclusion reached
-   while still scrolling. Same control and same form as before; only the presentation is new. */
-.food-missing__wrap{ position: sticky; bottom: 0; z-index: 2; margin-top: var(--space-sm); }
-.food-missing{
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  width: 100%; padding: 14px 16px;
-  border: 0; border-radius: 12px;
-  background: var(--surface-alt); color: var(--primary);
-  font: inherit; font-size: 14.5px; font-weight: 700; text-align: left; cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.food-missing__go{
-  flex: none; width: 30px; height: 30px; border-radius: 50%;
-  display: grid; place-items: center;
-  background: var(--primary); color: #fff; font-size: 15px; line-height: 1; font-weight: 700;
-}
-
 /* ---- food search: sections and rows ----
    These were .sp-* and collided with the supplements page, which also owns an .sp-*
    family and loads AFTER this file. .sp-row, .sp-head and .sp-row__body were defined
@@ -1398,3 +1380,4 @@ body.kb-open
 .nd-fast__time { display: block; font-size: 17px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .nd-fast__sub { display: block; font-size: 11.5px; color: var(--muted); }
 .nd-fast__chev { flex: none; color: var(--muted); font-size: 19px; }
+

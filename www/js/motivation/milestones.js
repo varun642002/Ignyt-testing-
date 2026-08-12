@@ -88,7 +88,7 @@ window.IgnytMilestones = (function () {
     if (hit == null) return;
     if (!claim("weight:" + direction + ":" + hit)) return;
     fire({
-      kind: "milestone", icon: direction === "lose" ? "📉" : "📈",
+      kind: "milestone", icon: direction === "lose" ? "trendDown" : "trend",
       title: hit + " kg " + (direction === "lose" ? "down" : "gained"),
       body: msg("weightProgress"),
       stat: null
@@ -103,7 +103,7 @@ window.IgnytMilestones = (function () {
     if (!claim("steps:" + hit + ":" + today())) return;
     if (hit >= 10000 && window.IgnytXP) IgnytXP.award("steps10k", today());
     fire({
-      kind: "milestone", icon: "👟",
+      kind: "milestone", icon: "footprints",
       title: hit.toLocaleString() + " steps",
       body: msg("steps"),
       stat: hit >= 10000 ? "+40 XP" : null
@@ -119,7 +119,7 @@ window.IgnytMilestones = (function () {
     if (!claim("water:" + hit + ":" + today())) return;
     if (hit === 100 && window.IgnytXP) IgnytXP.award("waterGoal", today());
     fire({
-      kind: "milestone", icon: "💧",
+      kind: "milestone", icon: "droplet",
       title: hit === 100 ? "Water goal reached" : hit + "% of your water goal",
       body: hit === 100 ? msg("waterGoal") : "",
       stat: hit === 100 ? "+20 XP" : null
@@ -130,7 +130,7 @@ window.IgnytMilestones = (function () {
     if (!(grams > 0) || !(targetG > 0) || grams < targetG) return;
     if (!claim("protein:" + today())) return;
     if (window.IgnytXP) IgnytXP.award("proteinGoal", today());
-    fire({ kind: "milestone", icon: "🥩", title: "Protein goal reached",
+    fire({ kind: "milestone", icon: "meat", title: "Protein goal reached",
            body: msg("proteinHit"), stat: "+30 XP" });
   }
 
@@ -140,7 +140,7 @@ window.IgnytMilestones = (function () {
     var off = Math.abs(kcal - targetKcal) / targetKcal;
     if (off > 0.05) return;
     if (!claim("calories:" + today())) return;
-    fire({ kind: "milestone", icon: "🎯", title: "On target today",
+    fire({ kind: "milestone", icon: "target", title: "On target today",
            body: msg("calorieOnTarget"), stat: null });
   }
 
@@ -151,7 +151,7 @@ window.IgnytMilestones = (function () {
     if (hit == null) return;
     if (!claim("goal:" + goalId + ":" + hit)) return;
     fire({
-      kind: "milestone", icon: hit === 100 ? "🏁" : "📊",
+      kind: "milestone", icon: hit === 100 ? "flag" : "chart",
       title: hit === 100 ? "Goal reached" : hit + "% of the way there",
       body: msg("goalProgress"), stat: null
     });

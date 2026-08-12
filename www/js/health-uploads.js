@@ -19,6 +19,10 @@
    those don't exist yet).
 ========================================================= */
 (function () {
+  /* An icon by name, from app.js's set. Guarded so a missing svg() degrades to no
+     decoration rather than taking the page down. */
+  function ic(n, s){ return (typeof svg === "function") ? svg(n, s || 16) : ""; }
+
   "use strict";
   var META = "hx_health_uploads", RECORDS = "hx_health_records";
   var DB_NAME = "ignyt-health-uploads", DB_VERSION = 1, STORE = "files";
@@ -71,7 +75,7 @@
 
   function head(title, back) {
     return (back ? '<button class="btn btn-ghost" data-hu="list" style="padding:8px 14px;font-size:14px;margin:4px 0 10px;">← Back</button>' : "") +
-      '<div style="font-size:25px;font-weight:900;margin-bottom:4px;">🗂️ ' + esc(title) + "</div>";
+      '<div style="font-size:25px;font-weight:900;margin-bottom:4px;">' + ic("archive",22) + " " + esc(title) + "</div>";
   }
   var NOTE = '<div class="bw-disclaimer">Files stay on this device (private, offline). Automated OCR / PDF extraction is coming; for now the original is stored and you review the values.</div>';
 
@@ -96,7 +100,7 @@
     var opt = function (icon, label, src) { return '<button class="hu-src" data-hu="src" data-src="' + src + '"><span style="font-size:20px;width:28px;display:inline-block;">' + icon + '</span> ' + label + '</button>'; };
     return '<div class="more-sheet-backdrop" data-hu="sheet-close"><div class="more-sheet" data-hu="noop">' +
       '<div class="more-sheet-handle"></div><div class="eyebrow-label" style="margin:0 0 10px;">Upload from</div>' +
-      opt("📷", "Take Photo", "photo") + opt("🖼️", "Choose Image", "image") + opt("📄", "Upload PDF", "pdf") + opt("📁", "Browse Files", "files") +
+      opt(ic("camera",20), "Take Photo", "photo") + opt(ic("image",20), "Choose Image", "image") + opt(ic("file",20), "Upload PDF", "pdf") + opt(ic("folder",20), "Browse Files", "files") +
       '<button class="btn btn-ghost btn-block" data-hu="sheet-close" style="margin-top:8px;">Cancel</button>' +
       '</div></div>';
   }
@@ -112,12 +116,12 @@
       NOTE +
       '<input type="file" id="hu-file" style="display:none;">' +
       '<button class="btn btn-accent btn-block" data-hu="sheet" style="margin:12px 0;">' + svg("plus", 16) + ' Upload Report</button>';
-    if (s.blood) h += '<button class="hu-row" data-nav="bloodwork"><span class="hu-thumb">🩸</span><span style="min-width:0;flex:1;text-align:left;"><span style="display:block;font-weight:700;">Blood Work</span><span style="display:block;font-size:12px;color:var(--muted);">' + s.blood + ' report' + (s.blood !== 1 ? "s" : "") + ' · trends & biomarkers</span></span><span style="color:var(--muted);">' + svg("progress", 16) + '</span></button>';
+    if (s.blood) h += '<button class="hu-row" data-nav="bloodwork"><span class="hu-thumb">' + ic("droplet",18) + '</span><span style="min-width:0;flex:1;text-align:left;"><span style="display:block;font-weight:700;">Blood Work</span><span style="display:block;font-size:12px;color:var(--muted);">' + s.blood + ' report' + (s.blood !== 1 ? "s" : "") + ' · trends & biomarkers</span></span><span style="color:var(--muted);">' + svg("progress", 16) + '</span></button>';
     if (m.length) {
       h += '<div class="section-heading"><span class="section-heading__label">Recent uploads</span></div>';
       m.forEach(function (r) {
         h += '<button class="hu-row" data-hu="open" data-id="' + r.id + '">' +
-          '<span class="hu-thumb">' + (r.mime && r.mime.indexOf("image") === 0 ? "🖼️" : "📄") + '</span>' +
+          '<span class="hu-thumb">' + (r.mime && r.mime.indexOf("image") === 0 ? ic("image",18) : ic("file",18)) + '</span>' +
           '<span style="min-width:0;flex:1;text-align:left;"><span style="display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(r.name) + '</span>' +
           '<span style="display:block;font-size:12px;color:var(--muted);">' + esc(catById[r.category] ? catById[r.category].label : r.category) + ' · ' + fmtDate(r.date || r.createdAt) + ' · ' + (r.status || "uploaded") + '</span></span>' +
           '<span style="color:var(--muted);">' + svg("progress", 16) + '</span></button>';
@@ -132,7 +136,7 @@
     if (!r) { reset(); return renderList(); }
     var isImg = r.mime && r.mime.indexOf("image") === 0;
     var h = head("Report", true) +
-      '<div class="hu-preview" id="hu-preview">' + (isImg ? '<div style="color:var(--muted);font-size:13px;">Loading preview…</div>' : '<div style="font-size:48px;">📄</div>') + '</div>' +
+      '<div class="hu-preview" id="hu-preview">' + (isImg ? '<div style="color:var(--muted);font-size:13px;">Loading preview…</div>' : '<div class="hu-preview__icon">' + ic("file",40) + '</div>') + '</div>' +
       '<div class="goal-card">' +
       '<div style="font-weight:800;overflow-wrap:anywhere;">' + esc(r.name) + '</div>' +
       '<div class="row-between" style="padding:6px 0;font-size:13px;"><span style="color:var(--muted);">Category</span><span>' + esc(catById[r.category] ? catById[r.category].label : r.category) + '</span></div>' +
