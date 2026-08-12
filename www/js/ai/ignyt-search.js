@@ -182,8 +182,13 @@ class IgnytSearchImpl {
     // Below this score the answer is not trustworthy — return the fallback instead
     // of a confidently wrong match. This is what stopped the magnesium answer.
     this.minScore = opts.minScore ?? 8.0;
-    /* Share of the query's IDF mass a hit must cover before it is allowed to answer. */
-    this.minCoverage = opts.minCoverage ?? 0.5;
+    /* Share of the query's IDF mass a hit must cover before it is allowed to answer.
+       0.5 was the first guess and it was too strict: it threw away hits at 0.53 coverage and
+       rejected "How do I get back in shape in middle age?" outright. Measured at 0.4 against
+       the 2,000 supplied questions, answered rises 1,779 to 1,860 with the suite still at 48
+       and every previously wrong answer still correct -- the question-form penalty, not this
+       threshold, is what stops the confident verdicts. */
+    this.minCoverage = opts.minCoverage ?? 0.4;
     /* What a yes/no entry's score is multiplied by when the question asked for a method. */
     this.polarPenalty = opts.polarPenalty ?? 0.35;
     this.build_();
