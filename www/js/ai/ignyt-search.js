@@ -134,6 +134,45 @@ function contentTokens(text) {
   return normalise(text).split(' ').filter(w => w.length > 1 && !STOP.has(w));
 }
 
+/* QUESTION FORM. "How to lose weight" was answered with "Yes. Carbs do not prevent fat loss",
+   from the entry "Can I eat carbs and still lose weight?", at confidence 1.00. Coverage cannot
+   catch that: an open how-question carries its whole meaning in its topic words, so every entry
+   on the topic covers all of it. What separates them is the shape of the question -- one asks
+   for a method, the other asks for a verdict, and a verdict is not an answer to "how".
+
+   Read from the raw text, before stop-word removal: how, what and can are all stop words, so by
+   token time the form is gone. */
+const POLAR_OPENERS = ['is', 'are', 'was', 'were', 'do', 'does', 'did', 'can', 'could', 'should',
+  'would', 'will', 'shall', 'has', 'have', 'had', 'am', 'must', 'may', 'might'];
+const OPEN_OPENERS = ['how', 'what', 'why', 'which', 'when', 'where', 'who'];
+/* Answers that open with a verdict belong to a yes/no question even when the question text does
+   not start with one -- "Indirectly." and "Potentially." both appeared in wrong answers. */
+const VERDICT_STARTS = ['yes', 'no', 'maybe', 'sometimes', 'indirectly', 'potentially', 'rarely',
+  'usually', 'occasionally', 'possibly', 'not necessarily', 'it depends', 'partly'];
+
+function firstWord(text) {
+  const w = String(text || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim().split(/\s+/);
+  return w[0] || '';
+}
+
+function isOpenQuestion(text) {
+  const t = String(text || '').toLowerCase().trim();
+  if (OPEN_OPENERS.indexOf(firstWord(t)) !== -1) return true;
+  return t.indexOf('best way') !== -1 || t.indexOf('how to') !== -1;
+}
+
+function isPolarEntry(question, answer) {
+  if (POLAR_OPENERS.indexOf(firstWord(question)) !== -1) return true;
+  const a = String(answer || '').toLowerCase().trim();
+  for (const v of VERDICT_STARTS) {
+    if (a.indexOf(v) === 0) {
+      const next = a.charAt(v.length);
+      if (next === '' || next === '.' || next === ',' || next === ' ' || next === ';') return true;
+    }
+  }
+  return false;
+}
+
 class IgnytSearchImpl {
   /** @param {Array} corpus records: {id, category, question, answer, keywords?} */
   constructor(corpus, opts = {}) {
@@ -145,6 +184,8 @@ class IgnytSearchImpl {
     this.minScore = opts.minScore ?? 8.0;
     /* Share of the query's IDF mass a hit must cover before it is allowed to answer. */
     this.minCoverage = opts.minCoverage ?? 0.5;
+    /* What a yes/no entry's score is multiplied by when the question asked for a method. */
+    this.polarPenalty = opts.polarPenalty ?? 0.35;
     this.build_();
   }
 
@@ -163,6 +204,8 @@ class IgnytSearchImpl {
       for (const w of d) m.set(w, (m.get(w) || 0) + 1);
       return m;
     });
+    /* Which entries answer a yes/no question. Computed once at build time, not per query. */
+    this.polar = this.corpus.map(r => isPolarEntry(r.question, r.answer));
     this.len = this.docs.map(d => d.length);
     this.avgdl = this.len.reduce((a, b) => a + b, 0) / this.len.length;
 
@@ -236,6 +279,13 @@ class IgnytSearchImpl {
        entries that share the query's words without being about it -- "what should I eat before a
        workout" went to "why do I get shaky after hard workouts", and the suite fell to 47. What
        coverage is good for is refusing a hit, not ordering the ones that qualify. */
+    /* An open question asked for a method; an entry that answers yes or no did not give one.
+       This is a penalty rather than a rejection so that when the base holds nothing better, a
+       related verdict still beats saying nothing -- it just cannot outrank a real answer. */
+    if (isOpenQuestion(text)) {
+      for (const [i, s] of scores) if (this.polar[i]) scores.set(i, s * this.polarPenalty);
+    }
+
     return [...scores.entries()]
       .sort((a, b) => b[1] - a[1])
       .filter(([i, s]) => s >= this.minScore && (covered.get(i) || 0) >= need)
