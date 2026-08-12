@@ -294,6 +294,16 @@ class IgnytSearchImpl {
       for (const [i, s] of scores) if (this.polar[i]) scores.set(i, s * this.polarPenalty);
     }
 
+    /* A MARGIN GATE WAS TRIED HERE AND REMOVED. The theory was that "right topic, wrong
+       question" answers won narrowly over the correct entry, so rejecting near-ties would catch
+       them. Measured: rejecting anything whose runner-up came within 3% dropped coverage from
+       93% to 64% and fixed two of five known-wrong answers. The other three were not close calls
+       at all -- "what muscles does the lateral raise work" beats the correct entry outright with
+       an answer about how high to raise it, because it shares more words.
+
+       Twenty-eight points of coverage for two fixes is not a trade worth making, and it is
+       evidence about the problem: these are confident wrong wins, not coin tosses. No ranking
+       rule over word overlap separates them. That needs the question to be read, not counted. */
     return [...scores.entries()]
       .sort((a, b) => b[1] - a[1])
       .filter(([i, s]) => s >= this.minScore && (covered.get(i) || 0) >= need)
