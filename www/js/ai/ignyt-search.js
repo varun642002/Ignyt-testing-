@@ -143,6 +143,8 @@ class IgnytSearchImpl {
     // Below this score the answer is not trustworthy — return the fallback instead
     // of a confidently wrong match. This is what stopped the magnesium answer.
     this.minScore = opts.minScore ?? 8.0;
+    /* Share of the query's IDF mass a hit must cover before it is allowed to answer. */
+    this.minCoverage = opts.minCoverage ?? 0.5;
     this.build_();
   }
 
@@ -190,22 +192,72 @@ class IgnytSearchImpl {
     if (!qTokens.length) return [];
 
     const scores = new Map();
+    /* BM25 alone lets a document win on several ordinary words while missing the one word that
+       carries the question. "Should I taper before a HYROX event?" matched "How do I transition
+       from running events to hybrid racing?" at high confidence: it shared "event" and scored on
+       length, and nothing required it to know anything about tapering. So alongside the score,
+       track how much of the query's IDF mass each document actually covers. */
+    const covered = new Map();
+    const counted = {};   // per-doc set of query words already credited, so a repeat cannot double-count
+    let totalIdf = 0;
+    const seenTok = new Set();
+    /* A word the corpus has never seen is the most important word in the question, not a free
+       pass: if nothing here mentions tapering, no entry can answer a question about tapering.
+       Unknown terms therefore count fully against coverage rather than dropping out of the sum. */
+    const maxIdf = Math.log(1 + (this.corpus.length + 0.5) / 1.5);
+    /* Coverage is judged on the words the user actually typed, never on the expansion. "HYROX"
+       expands to hybrid, racing and station, so an expanded count gave the topic four times the
+       weight of "taper" and any HYROX entry cleared the bar. Synonyms still drive the score --
+       they are what makes paraphrases match -- they just do not get a vote on whether the hit
+       is about the right thing. */
+    const coverTokens = new Set(contentTokens(text));
     for (const w of qTokens) {
       const posting = this.index.get(w);
-      if (!posting) continue;
       const idf = this.idf.get(w);
+      if (coverTokens.has(w) && !seenTok.has(w)) { totalIdf += (idf || maxIdf); seenTok.add(w); }
+      if (!posting) continue;
       for (const i of posting) {
         const f = this.tf[i].get(w);
         const denom = f + this.k1 * (1 - this.b + this.b * this.len[i] / this.avgdl);
         scores.set(i, (scores.get(i) || 0) + idf * (f * (this.k1 + 1)) / denom);
+        if (coverTokens.has(w) && !counted[i]) counted[i] = new Set();
+        if (coverTokens.has(w) && !counted[i].has(w)) {
+          counted[i].add(w);
+          covered.set(i, (covered.get(i) || 0) + idf);
+        }
       }
     }
 
+    /* A rare word contributes most of the mass, so this is in effect "did the hit know the
+       unusual word in the question?" -- without hard-failing on a single missing synonym. */
+    const need = totalIdf > 0 ? totalIdf * this.minCoverage : 0;
+
+    /* Ranking stays on BM25. Ranking on coverage first was tried and reverted: it promotes short
+       entries that share the query's words without being about it -- "what should I eat before a
+       workout" went to "why do I get shaky after hard workouts", and the suite fell to 47. What
+       coverage is good for is refusing a hit, not ordering the ones that qualify. */
     return [...scores.entries()]
       .sort((a, b) => b[1] - a[1])
+      .filter(([i, s]) => s >= this.minScore && (covered.get(i) || 0) >= need)
       .slice(0, top)
-      .filter(([, s]) => s >= this.minScore)
-      .map(([i, s]) => ({ ...this.corpus[i], score: +s.toFixed(2) }));
+      .map(([i, s]) => ({
+        ...this.corpus[i],
+        score: +s.toFixed(2),
+        coverage: totalIdf > 0 ? +((covered.get(i) || 0) / totalIdf).toFixed(2) : 0
+      }));
+  }
+
+  /** Diagnostic: what the scorer thinks each word in a question is worth. */
+  debugTokens(text) {
+    const toks = expand(normalise(text)).split(' ').filter(w => w.length > 1 && !STOP.has(w));
+    const seen = new Set();
+    for (const w of toks) {
+      if (seen.has(w)) continue;
+      seen.add(w);
+      const post = this.index.get(w);
+      console.log('   tok ' + w.padEnd(14) + ' idf=' + (this.idf.get(w) || 0).toFixed(2) +
+                  '  docs=' + (post ? post.length : 0));
+    }
   }
 
   /** Convenience for the chat UI: best answer or null. */

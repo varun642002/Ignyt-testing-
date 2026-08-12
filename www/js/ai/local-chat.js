@@ -214,7 +214,14 @@
       /* "how do i use" alone claimed "how do i use psyllium husk" and "how do i use volume
          eating" -- both knowledge questions. The phrase only means help when what follows is
          the app itself. */
-      test: function (t) { return /\b(what can you do|help me|^help$|commands|how do (i|you) use (this|the app|ignyt|you))\b/.test(t); },
+      /* "help me" claimed 86 of 2,000 questions: "will rowing help me get fitter", "will pilates
+         help me lose weight". Asking for help means help with the app, not "help me" appearing
+         mid-sentence as an ordinary verb. */
+      test: function (t) {
+        if (/\b(what can you do|commands|how do (i|you) use (this|the app|ignyt|you))\b/.test(t)) return true;
+        if (/^help$/.test(String(t).trim())) return true;
+        return /^(help me|can you help|i need help)\b/.test(String(t).trim());
+      },
       run: function () {
         return { text: [
           "Things I can do without going online:",
