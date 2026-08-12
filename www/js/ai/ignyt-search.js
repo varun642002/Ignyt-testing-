@@ -328,6 +328,38 @@ class IgnytSearchImpl {
     }
   }
 
+  /**
+   * A SHORTLIST, NOT AN ANSWER. query() has to pick one entry and be right, which is what it
+   * cannot reliably do -- "what muscles does the lateral raise work" loses to an entry about how
+   * high to raise it, because that one shares more words. What retrieval IS good at is narrowing
+   * 11,579 entries to the handful that are about the topic at all; measured, the right entry is
+   * nearly always among the top few even when it is not first.
+   *
+   * So this returns those few, ungated, for a model to choose between by reading the question.
+   * The single-answer gates are deliberately skipped: the question-form penalty would push a
+   * legitimate yes/no entry down the list, and coverage would drop candidates the model could
+   * still recognise as correct. Judging relevance is the caller's job here, not the scorer's.
+   */
+  candidates(text, n = 6) {
+    const qTokens = expand(normalise(text)).split(' ').filter(w => w.length > 1 && !STOP.has(w));
+    if (!qTokens.length) return [];
+    const scores = new Map();
+    for (const w of qTokens) {
+      const posting = this.index.get(w);
+      if (!posting) continue;
+      const idf = this.idf.get(w);
+      for (const i of posting) {
+        const f = this.tf[i].get(w);
+        const denom = f + this.k1 * (1 - this.b + this.b * this.len[i] / this.avgdl);
+        scores.set(i, (scores.get(i) || 0) + idf * (f * (this.k1 + 1)) / denom);
+      }
+    }
+    return [...scores.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, n)
+      .map(([i, s]) => ({ ...this.corpus[i], score: +s.toFixed(2) }));
+  }
+
   /** Convenience for the chat UI: best answer or null. */
   answer(text) {
     const hits = this.query(text, 1);
@@ -354,6 +386,7 @@ class IgnytSearchImpl {
     ready: function () { return !!_engine; },
     query: function (text, top) { return _engine ? _engine.query(text, top || 5) : []; },
     answer: function (text) { return _engine ? _engine.answer(text) : null; },
+    candidates: function (text, n) { return _engine ? _engine.candidates(text, n || 6) : []; },
     related: function (id, n) { return _engine ? _engine.related(id, n) : []; }
   });
 }());

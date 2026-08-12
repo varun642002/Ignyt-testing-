@@ -6865,6 +6865,7 @@ function renderSettingsTab(){
 
       <div class="rh-section-head"><span>${svg('dumbbell',13)} Workout Settings</span></div>
       <div class="pg-card">
+        ${settingToggle("aiChatOff","Turn Off IGNYT AI","Hides the assistant and its button. Everything else keeps working.","sparkle")}
         ${settingToggle("workoutRecommendations","Workout Recommendations","Suggest a plan and today's session on the Workout tab. Needs a training goal set.","target")}
         ${settingToggle("sounds","Sounds","Beep when the rest timer finishes.","speaker")}
         ${settingToggle("vibration","Vibration","Vibrate when the rest timer finishes.","vibrate")}
@@ -7602,6 +7603,9 @@ function renderApp(){
   if(state.tab==="nutrition") main.innerHTML = renderNutritionTab();
   if(state.tab==="progress") main.innerHTML = renderProgressTab();
   if(state.tab==="ai-coach") main.innerHTML = renderAiCoachTab();
+  /* Turned off while the chat was the open tab -- send them home rather than render a
+     screen whose only exit was the button the setting just removed. */
+  if(state.tab==="ai" && !aiChatEnabled()) state.tab = "home";
   if(state.tab==="ai") main.innerHTML = (window.IgnytPages && IgnytPages.renderAIChat)
     ? IgnytPages.renderAIChat({ state, svg, escHtml }) : "";
   if(state.tab==="settings") main.innerHTML = renderSettingsTab();
@@ -8808,7 +8812,13 @@ function removeAIFab(){
   if(fab) fab.remove();
 }
 
+/* Turned off in Settings, the assistant leaves no trace: the button that opens it goes rather
+   than staying and refusing. removeAIFab() rather than the hidden class, because a hidden
+   element is still focusable by keyboard and still read by a screen reader. */
+function aiChatEnabled(){ return !state.settings.aiChatOff; }
+
 function syncAIFab(){
+  if(!aiChatEnabled()){ removeAIFab(); return; }
   const fab = document.querySelector(".ai-fab") || buildAIFab();
   fab.classList.toggle("is-hidden", state.tab === "ai");
 }
@@ -17957,7 +17967,7 @@ function renderExerciseDetail(name){
          cheaper and more reliable than giving the model a "current screen" it has to be told
          about and might carry into the next question. Gated through the same seam as the
          chat screen, so an unentitled user is not offered a button that opens a paywall. */''}
-    ${(!window.IgnytEntitlements || !IgnytEntitlements.has || IgnytEntitlements.has("coach")) ? `
+    ${aiChatEnabled() && (!window.IgnytEntitlements || !IgnytEntitlements.has || IgnytEntitlements.has("coach")) ? `
     <div class="ex-ai">
       <div class="ex-ai__label">${svg('bolt',13)} Ask IGNYT AI</div>
       <div class="ex-ai__row">
@@ -18671,6 +18681,7 @@ function attachHandlers(){
 
   document.querySelectorAll("[data-ai-ask]").forEach(el=>{
     el.addEventListener("click", ()=>{
+      if(!aiChatEnabled()) return;   // the assistant is off; this button leads nowhere
       const q = el.dataset.aiAsk;
       state.viewingExerciseDetail = null;
       state.tab = "ai";
