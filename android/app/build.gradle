@@ -18,7 +18,7 @@ apply plugin: 'kotlin-android' // ADDED for Health Connect plugin (Kotlin)
  * One-way door: Play only ever accepts an increasing code, so once an upload succeeds this
  * cannot go back to the small numbers. That is the intent — it is what stops the collisions.
  */
-ext.appVersionName = "1.0.45"
+ext.appVersionName = "1.0.46"
 
 /* Added to every derived code. 1.0.42 derives to 10042; the release that first used this
  * scheme had to clear the codes Play had already taken, so it went out as 10500 — the value
@@ -40,12 +40,16 @@ ext.appVersionCode = {
     assert parts[1] < 100 && parts[2] < 100 : "minor and patch must stay under 100: ${appVersionName}"
     def code = parts[0] * 10000 + parts[1] * 100 + parts[2] + appVersionCodeOffset
     /* Codes Play has already accepted, so anything at or below the highest is rejected:
-     *   10500  (1.0.42)   10501  (1.0.43)   10502  (1.0.44)
+     *   10500  (1.0.42)   10501  (1.0.43)   10502  (1.0.44)   10503  (1.0.45)
      * Raise this floor whenever an upload succeeds. It is the record of what is spent —
      * without it the next collision is again a guess, which is the failure this whole
      * scheme exists to prevent.
+     *
+     * 10503 was spent by an upload this file did not record, which is the same way 10502 was
+     * lost: the floor is only raised when someone remembers. Play rejected the next build with
+     * "Version code 10503 has already been used."
      */
-    assert code > 10502 : "versionCode ${code} is not above the 10502 Play has already taken"
+    assert code > 10503 : "versionCode ${code} is not above the 10503 Play has already taken"
     code
 }()
 
