@@ -193,7 +193,10 @@ class IgnytSearchImpl {
     this.docs = this.corpus.map(r => {
       const q = normalise(r.question);
       const c = normalise(r.category);
-      const kw = (r.keywords || []).join(' ');
+      /* Normalised like every other field. Keywords now carry the alternate phrasings people
+         actually type, and queries are stemmed before lookup -- leaving these raw would index
+         "frequently" while the query looked for "frequent", so they could never match. */
+      const kw = normalise((r.keywords || []).join(' '));
       // question weighted x3, category x2 — title relevance should dominate
       const field = `${q} ${q} ${q} ${c} ${c} ${kw} ${normalise(r.answer)}`;
       return field.split(' ').filter(w => w.length > 1 && !STOP.has(w));
