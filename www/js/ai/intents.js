@@ -3801,6 +3801,15 @@
       "whats my food", "whats my macros", "whats my macros today", "whats my calories",
       "whats my calories today", "did i log food", "have i logged anything", "todays food",
       "todays meals", "food log", "my food log"
+    ,
+      "what i ate", "what i ate today", "what i ate so far", "wat i ate", "wat i ate today",
+      "wat i ate so far", "what i had", "what i had today", "what i had so far", "food today",
+      "food today today", "food today so far", "my food", "my food today", "my food so far",
+      "todays food today", "todays food so far", "my intake", "my intake today", "my intake so far",
+      "show food", "show what i ate", "show todays food", "show my intake", "see food", "see what i ate",
+      "see todays food", "see my intake", "check food", "check what i ate", "check todays food",
+      "check my intake", "how much i ate", "how many cal today", "cal today", "my calories today",
+      "protein today", "how much protein today", "carbs today", "food log pls", "show food log"
     ],
 
     LOG_WEIGHT: [
@@ -3881,6 +3890,9 @@
       "how much weight did i lose", "what was my weight last month", "what was my weight yesterday",
       "my weight history", "weight history", "show my weight over time", "has my weight changed",
       "whats my weight trend", "my weight this month", "weight chart"
+    ,
+      "my weight", "my wt", "my weight log", "show my wt", "check my wt", "weight trend", "wt trend",
+      "how much wt lost", "how much weight lost", "weight going down", "weight chart pls"
     ],
 
     VIEW_TODAY_WORKOUT: [
@@ -3938,6 +3950,10 @@
       "what should i do today", "what should i do", "do i have a workout today",
       "do i have a workout", "do i have a session today", "do i have a session", "my workout today",
       "whats on today", "what workout is today"
+    ,
+      "today workout", "today training", "today session", "today plan", "what workout today",
+      "what to train today", "wat to train", "training today", "gym today", "whats today", "my plan today",
+      "workout pls"
     ],
 
     START_WORKOUT: [
@@ -3976,6 +3992,9 @@
       "im about to start lifting", "i am starting my workout", "i am starting training",
       "i am starting lifting", "i am about to start my workout", "i am about to start training",
       "i am about to start lifting", "im at the gym", "starting my workout", "time to train"
+    ,
+      "start gym", "gym time", "lets go gym", "start session pls", "workout start", "time to lift",
+      "starting now"
     ],
 
     VIEW_PROGRESS: [
@@ -4001,6 +4020,9 @@
       "how is it going so far", "how is it going overall", "how have i done so far",
       "how have i done overall", "am i getting stronger", "am i on track", "progress",
       "my progress", "how have i been doing", "am i doing well"
+    ,
+      "my results", "my numbers", "progress pls", "any progress", "how far have i come", "my results so far",
+      "improving or not"
     ],
 
     CREATE_ROUTINE: [
@@ -4044,6 +4066,13 @@
       "design me a pull day", "design me a program", "i need a new program", "i want a routine",
       "i want a workout plan", "i want a new program", "i want a chest routine", "plan my training",
       "build my program"
+    ,
+      "make me a plan", "make me a split", "make a plan", "make a split", "give me a plan", "give me a split",
+      "give a plan", "give a routine", "give a workout plan", "give a split", "build me a plan",
+      "build me a split", "build a plan", "build a split", "need me a plan", "need me a routine",
+      "need me a workout plan", "need me a split", "need a plan", "need a routine", "need a workout plan",
+      "need a split", "plan pls", "routine pls", "chest day plan", "leg day plan", "new split",
+      "workout plan for me"
     ],
 
 
@@ -4089,6 +4118,8 @@
       "i am done with my workout", "i am done lifting", "i am done for today",
       "i am finished training", "i am finished with my workout", "i am finished lifting",
       "i am finished for today", "im finished"
+    ,
+      "gym done", "workout over", "finished gym", "done for today", "training done", "im done", "wrap it up"
     ],
 
     DELETE_WEIGHT: [
@@ -4133,6 +4164,11 @@
       "what is my protein target", "what is my protein goal", "what is my daily protein",
       "what is my protein number", "tell me my protein target", "tell me my protein goal",
       "tell me my daily protein", "tell me my protein requirement", "tell me my protein number"
+    ,
+      "my protein", "my protein goal", "my protein need", "whats my protein", "whats my protein need",
+      "how much protein", "how much protein target", "how much protein goal", "how much protein need",
+      "protein per day", "how much protein bro", "protein needed", "daily protein pls", "protein requirement",
+      "how much protein for me"
     ],
 
     GET_WEEKLY_PROGRESS: [
@@ -4166,6 +4202,11 @@
       "how many sessions last week", "how many sets this week", "how many sets last week",
       "how did i do last week", "how did i train last week", "how did i perform this week",
       "how did i perform last week", "show me last week", "show me my week"
+    ,
+      "this week recap", "this week report", "this week stats", "this week progress", "last week recap",
+      "last week report", "last week stats", "last week progress", "week summary", "week recap",
+      "week report", "week stats", "week progress", "how was week", "week done", "weekly recap",
+      "how many workouts week", "training this week", "week summary pls"
     ],
 
     GET_CALORIE_TARGET: [
@@ -4189,6 +4230,11 @@
       "what is my macro split", "tell me my calorie target", "tell me my calorie goal",
       "tell me my daily calories", "tell me my maintenance", "tell me my maintenance calories",
       "tell me my tdee", "tell me my macro target", "tell me my macro split", "what is my macros"
+    ,
+      "my calories", "my calorie goal", "my cals", "whats my calories", "whats my cals", "how many calories",
+      "how many calorie target", "how many calorie goal", "how many cals", "cals per day",
+      "how many cal per day", "calorie need", "my macros pls", "macro split", "how many calories for me",
+      "maintenance cal"
     ],
 
     EXERCISE_HOW_TO: [
@@ -4427,6 +4473,14 @@
       "guide me through leg press", "guide me through dips", "guide me through push ups",
       "guide me through planks", "guide me through shoulder press", "guide me through calf raises",
       "guide me through leg curls", "guide me through face pulls"
+    ,
+      "how to squat", "how to row", "how to pullup", "how to curl", "how to plank", "hw to bench",
+      "hw to squat", "hw to deadlift", "hw to row", "hw to pullup", "hw to curl", "hw to plank",
+      "teach bench", "teach squat", "teach deadlift", "teach row", "teach pullup", "teach curl",
+      "teach plank", "bench form", "bench technique", "bench tips", "bench how", "squat form", "squat tips",
+      "squat how", "deadlift how", "row form", "row technique", "row tips", "row how", "pullup form",
+      "pullup technique", "pullup tips", "pullup how", "proper squat form", "correct bench form",
+      "deadlift tips pls"
     ]
   };
 
