@@ -494,7 +494,12 @@ body.kb-open .ai-fab{opacity:0; pointer-events:none;}
    which is what keeps it clear of the home indicator without padding the bar itself taller.
    The old version was flush to the bottom, square, and separated by a 1px border-top. */
 nav.bottom-nav{position:fixed; left:50%; transform:translateX(-50%);
-    bottom:calc(10px + env(safe-area-inset-bottom,0px));
+    /* max, not a sum. Adding the full inset to the base margin put the pill 44px off the bottom
+       on a home-indicator iPhone while it sits only 12px in from the sides -- nearly four times
+       the side margin, which reads as a bar floating too high rather than one inset evenly.
+       The inset already includes the clearance the home indicator needs, so taking whichever is
+       larger keeps that clearance on iPhone and the 10px base everywhere else. */
+    bottom:max(10px, env(safe-area-inset-bottom,0px));
     width:calc(100% - 24px); max-width:456px;
     display:flex; padding:6px; gap:0;
     background:rgba(23,23,28,.86); backdrop-filter:blur(9px) saturate(115%); -webkit-backdrop-filter:blur(9px) saturate(115%);
