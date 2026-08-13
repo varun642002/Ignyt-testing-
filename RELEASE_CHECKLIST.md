@@ -94,7 +94,7 @@ Paste real output. "Ran the tests" is not evidence.
 
 ```
 [ ] backend        cd backend && python -m pytest -q          → __ passed, __ skipped
-[ ] chat suite     (once the harness is committed)            → __/__
+[ ] chat suite     npm run test:chat                          → __/48
 [ ] browser        __/405
 [ ] android        ./gradlew.bat bundleRelease                → BUILD SUCCESSFUL, versionCode ____
 [ ] npm audit      npm audit --omit=dev                       → __ critical, __ high
