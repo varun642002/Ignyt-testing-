@@ -14,7 +14,8 @@
     "test:visual": "playwright test tests/visual",
     "test:ui": "playwright test --ui",
     "test:report": "playwright show-report reports/html",
-    "capacitor:sync:after": "node tools/ios-register-app-plugins.mjs"
+    "capacitor:sync:after": "node tools/ios-register-app-plugins.mjs",
+    "test:chat": "node tools/chat-tests/run-suite.cjs"
   },
   "keywords": [],
   "author": "",

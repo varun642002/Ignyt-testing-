@@ -41,7 +41,7 @@ A release goes out only when **all** of these are true:
 | Gate | Status |
 |---|---|
 | Backend tests | **Green.** 120 passed, 14 skipped. |
-| Chat/intent suite | **Green.** 48/48 — but the harness is NOT checked in. It lives in a scratchpad. Fix that first; an uncommitted test suite is not a gate. |
+| Chat/intent suite | **Green.** 48/48, `npm run test:chat`. Committed at `tools/chat-tests/run-suite.cjs` — it ran from a scratchpad until 2026-08-13, so the only frontend coverage this project had was outside the repo. |
 | Browser tests | **Red.** 405 tests expect an authenticated app and open on the sign-in screen. |
 | Android build | **Green.** `assembleDebug` and `bundleRelease` both clean, versionCode 10506. |
 | iOS build | **Unverified here.** No Mac; goes through Codemagic. |
@@ -72,7 +72,7 @@ holds 13,516 foods. Both are parsed and indexed **on the phone at startup**.
 
 | Gate | Status |
 |---|---|
-| Lint / format / static checks | **None configured.** No ESLint, no formatter, plain JS with no type checking. |
+| Lint / format / static checks | **None configured.** No ESLint, no formatter, plain JS with no type checking. This is now the cheapest remaining gate — the test runner is in place, so a lint step has somewhere to sit. |
 | Dead duplicate runtime files | **Unresolved.** Root-level `app.js`/`sw.js` vs `www/` — confirm what `npx cap sync` copies before removing anything. |
 | Documented public interfaces | **Partial**, via comments. |
 
@@ -94,7 +94,7 @@ Paste real output. "Ran the tests" is not evidence.
 
 ```
 [ ] backend        cd backend && python -m pytest -q          → __ passed, __ skipped
-[ ] chat suite     (once the harness is committed)            → __/__
+[ ] chat suite     npm run test:chat                          → __/48
 [ ] browser        __/405
 [ ] android        ./gradlew.bat bundleRelease                → BUILD SUCCESSFUL, versionCode ____
 [ ] npm audit      npm audit --omit=dev                       → __ critical, __ high
