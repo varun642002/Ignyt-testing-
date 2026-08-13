@@ -47,8 +47,30 @@
   /* ---------- argument validation ------------------------------------------------------
      Each returns the coerced value or throws an Error whose message is safe to show. */
 
+  /* PARSE, DO NOT SALVAGE. This stripped every non-digit character out of a string and hoped
+     what remained was the number. It made "100g" work, which was the point, and it also turned
+     "1e400" into "1400" -- the e and the sign vanished and a nonsense input silently logged
+     1400g of chicken, 2310 kcal, with no error anywhere. Found by fuzzing addFoodLog.
+
+     Number(true) is 1, which isFinite accepts, so a boolean logged one gram. Anything that is
+     not a number or a string is now refused rather than coerced.
+
+     Strings keep the convenience they were given -- a trailing unit is removed -- but what is
+     left has to BE a number, not merely contain digits. */
+  var UNIT_SUFFIX = /(grams?|kgs?|kg|g|ml|l|oz|lbs?)$/i;
   function num(v, name, lo, hi) {
-    var n = typeof v === "string" ? parseFloat(v.replace(/[^0-9.\-]/g, "")) : Number(v);
+    var n;
+    if (typeof v === "number") {
+      n = v;
+    } else if (typeof v === "string") {
+      var t = v.trim().replace(/\s+/g, "").replace(UNIT_SUFFIX, "");
+      /* A plain decimal and nothing else. Exponents, stray letters, commas and multiple dots
+         are rejected here rather than mangled into a plausible wrong number. */
+      if (!/^-?\d+(\.\d+)?$/.test(t)) throw new Error(name + " must be a number.");
+      n = parseFloat(t);
+    } else {
+      throw new Error(name + " must be a number.");
+    }
     if (!isFinite(n)) throw new Error(name + " must be a number.");
     if (lo != null && n < lo) throw new Error(name + " looks too low (" + n + ").");
     if (hi != null && n > hi) throw new Error(name + " looks too high (" + n + ").");

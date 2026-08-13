@@ -6865,6 +6865,7 @@ function renderSettingsTab(){
 
       <div class="rh-section-head"><span>${svg('dumbbell',13)} Workout Settings</span></div>
       <div class="pg-card">
+        ${settingToggle("aiChatOn","IGNYT AI","Ask about training and nutrition. Off by default; turning it on adds the assistant and its button.","sparkle")}
         ${settingToggle("workoutRecommendations","Workout Recommendations","Suggest a plan and today's session on the Workout tab. Needs a training goal set.","target")}
         ${settingToggle("sounds","Sounds","Beep when the rest timer finishes.","speaker")}
         ${settingToggle("vibration","Vibration","Vibrate when the rest timer finishes.","vibrate")}
@@ -7602,6 +7603,9 @@ function renderApp(){
   if(state.tab==="nutrition") main.innerHTML = renderNutritionTab();
   if(state.tab==="progress") main.innerHTML = renderProgressTab();
   if(state.tab==="ai-coach") main.innerHTML = renderAiCoachTab();
+  /* Turned off while the chat was the open tab -- send them home rather than render a
+     screen whose only exit was the button the setting just removed. */
+  if(state.tab==="ai" && !aiChatEnabled()) state.tab = "home";
   if(state.tab==="ai") main.innerHTML = (window.IgnytPages && IgnytPages.renderAIChat)
     ? IgnytPages.renderAIChat({ state, svg, escHtml }) : "";
   if(state.tab==="settings") main.innerHTML = renderSettingsTab();
@@ -8808,7 +8812,17 @@ function removeAIFab(){
   if(fab) fab.remove();
 }
 
+/* OFF UNLESS ASKED FOR. The key is positive and settings read as !!state.settings[key], so an
+   install that has never seen this switch has the assistant off -- which is the default we
+   want, and it arrives without a migration.
+
+   Switched on, the assistant leaves no trace when switched back off: the button that opens it
+   is removed rather than hidden, because a hidden element still takes keyboard focus and is
+   still read aloud. */
+function aiChatEnabled(){ return !!state.settings.aiChatOn; }
+
 function syncAIFab(){
+  if(!aiChatEnabled()){ removeAIFab(); return; }
   const fab = document.querySelector(".ai-fab") || buildAIFab();
   fab.classList.toggle("is-hidden", state.tab === "ai");
 }
@@ -10701,9 +10715,9 @@ function completeSignIn(user){
 function hasThirdPartySignIn(){
   const a = window.IgnytAuth;
   if(!a) return false;
-  const google = !!(a.isNativeAndroid && a.isNativeAndroid());
-  const apple  = !!(a.appleAvailable && a.appleAvailable());
-  return google || apple;
+  /* Apple only, since Google was removed. On Android this is now false, so the OR divider
+     disappears with the button rather than sitting above nothing. */
+  return !!(a.appleAvailable && a.appleAvailable());
 }
 
 /* =========================================================
@@ -10804,10 +10818,11 @@ function renderSignInScreen(){
               Email first, providers under the rule: the primary route leads, and the divider
               means "or instead of that". */''}
         ${hasThirdPartySignIn() ? `<div class="auth-div">OR</div>` : ""}
-        ${(window.IgnytAuth && IgnytAuth.isNativeAndroid && IgnytAuth.isNativeAndroid()) ? `
-          <button class="auth-social__btn" data-auth="google" ${busy ? "disabled" : ""}>
-            ${AUTH_ICONS.google}<span>${busy ? "Signing in…" : "Continue with Google"}</span>
-          </button>` : ""}
+        ${''/* Google sign-in was removed. It never signed anyone in: the last attempt returned
+              "no credential available" on a correctly configured project -- plugin applied,
+              default_web_client_id generated, all three Credential Manager libraries present,
+              three certificate fingerprints registered including Play's. Email is the route in
+              on Android, and Apple remains on iOS. */}
         ${window.IgnytAuth && IgnytAuth.appleAvailable && IgnytAuth.appleAvailable() ? `
           <button class="apple-signin-btn" data-auth="apple" ${busy?'disabled':''} aria-label="Sign in with Apple">
             <svg viewBox="0 0 16 20" width="15" height="19" aria-hidden="true" focusable="false"><path fill="currentColor" d="M13.29 10.62c.02 2.4 2.1 3.2 2.12 3.21-.02.05-.33 1.14-1.1 2.26-.66.97-1.35 1.93-2.44 1.95-1.07.02-1.41-.63-2.63-.63-1.22 0-1.6.61-2.61.65-1.05.04-1.85-1.05-2.52-2.01C2.75 14.1 1.7 10.5 3.1 8.08c.7-1.2 1.94-1.96 3.29-1.98 1.03-.02 2 .69 2.63.69.63 0 1.81-.86 3.05-.73.52.02 1.98.21 2.92 1.58-.08.05-1.74 1.02-1.72 3.03M11.3 4.4c.56-.68.94-1.62.84-2.56-.81.03-1.79.54-2.37 1.22-.52.6-.97 1.56-.85 2.48.9.07 1.82-.46 2.38-1.14"/></svg>
@@ -10866,25 +10881,11 @@ function bindSignInScreen(){
   });
 }
 
-/* Two routes in: Google and email. Phone/SMS stays out. Whichever is used, the account layer,
-   the session and the navigation are identical -- only how you prove who you are differs, and
-   both finish through completeSignIn(). */
+/* Email on Android, Apple on iOS. Google and phone/SMS both stay out. Whichever is used, the
+   account layer, the session and the navigation are identical -- only how you prove who you are
+   differs, and every route finishes through completeSignIn(). */
 function signInAction(kind){
   const auth = window.IgnytAuth;
-  if(kind === "google"){
-    if(!auth || !auth.signIn){
-      showToast("Google sign-in isn't available in this build.", "error", render);
-      return;
-    }
-    /* Awaited, not fire-and-forget. Dropping this promise was a real bug once: the account was
-       saved but nothing advanced past the sign-in screen, so a successful sign-in looked like
-       it had done nothing. */
-    auth.signIn().then(res=>{
-      if(res && res.success && res.data && res.data.user) completeSignIn(res.data.user);
-      else if(res && res.error) showToast(res.error, "error", render);
-    });
-    return;
-  }
   if(kind === "email-back"){
     state.authEmailMode = "signin";
     if(auth && auth.clearError) auth.clearError();
@@ -16016,6 +16017,36 @@ function markPageEnterIfTabChanged(){
   if(main) main.classList.add("page-enter");
 }
 
+/* THE SCROLL POSITION BELONGED TO THE PREVIOUS SCREEN. main is the scroll container and its
+   scrollTop survives a render, so navigating from a scrolled page opened the next one already
+   scrolled -- its title above the viewport, its content starting under the header. Reported as
+   pages falling behind the header; reproduced from Home via the habit tracker.
+
+   Twenty-seven places set a tab and render. Fixing them one at a time is how this got fixed
+   twice already and stayed broken everywhere else -- [data-progress-view] reset the scroll and
+   [data-open-progress-view], which opens the very same screens, did not.
+
+   Keyed on more than state.tab, because Progress swaps its whole screen through progressView
+   and Body through bodyView, and neither changes the tab.
+
+   Deliberately NOT merged into markPageEnterIfTabChanged: that one drives the page-enter
+   animation and is keyed on the tab alone. Widening its key would start animating sub-view
+   changes too, which is a different decision from this one.
+
+   Anything wanting to keep a position still can: this runs inside render(), so a handler that
+   assigns scrollTop AFTER calling render() wins. The Progress back button does exactly that to
+   restore where the user left off, and keeps working untouched. */
+var _lastNavKey = null;
+function resetScrollIfNavigated(){
+  var key = state.tab + "/" + (state.progressView || "") + "/" + (state.bodyView || "");
+  if(key === _lastNavKey) return;
+  var isFirstPaint = _lastNavKey === null;
+  _lastNavKey = key;
+  if(isFirstPaint) return;   // the app arriving is not a navigation
+  var main = document.getElementById("main");
+  if(main) main.scrollTop = 0;
+}
+
 function withFocusPreserved(fn){
   const active = document.activeElement;
   const id = active && active.id;
@@ -16112,6 +16143,7 @@ function render(){
     }
     withFocusPreserved(renderApp);
     markPageEnterIfTabChanged();
+    resetScrollIfNavigated();
     // A running fast ticks wherever it is visible — the Fasting page or the Home card.
     if(window.IgnytFasting && IgnytFasting.active()) ensureFastTimerRunning();
     else stopFastTimer();
@@ -17970,7 +18002,7 @@ function renderExerciseDetail(name){
          cheaper and more reliable than giving the model a "current screen" it has to be told
          about and might carry into the next question. Gated through the same seam as the
          chat screen, so an unentitled user is not offered a button that opens a paywall. */''}
-    ${(!window.IgnytEntitlements || !IgnytEntitlements.has || IgnytEntitlements.has("coach")) ? `
+    ${aiChatEnabled() && (!window.IgnytEntitlements || !IgnytEntitlements.has || IgnytEntitlements.has("coach")) ? `
     <div class="ex-ai">
       <div class="ex-ai__label">${svg('bolt',13)} Ask IGNYT AI</div>
       <div class="ex-ai__row">
@@ -18684,6 +18716,7 @@ function attachHandlers(){
 
   document.querySelectorAll("[data-ai-ask]").forEach(el=>{
     el.addEventListener("click", ()=>{
+      if(!aiChatEnabled()) return;   // the assistant is off; this button leads nowhere
       const q = el.dataset.aiAsk;
       state.viewingExerciseDetail = null;
       state.tab = "ai";
@@ -21537,7 +21570,7 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{
       state.tab = "progress";
       state.progressView = el.dataset.openProgressView;
-      render();
+      render();   // scroll reset is central now, in resetScrollIfNavigated()
     });
   });
 

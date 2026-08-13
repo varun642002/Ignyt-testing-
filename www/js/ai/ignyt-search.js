@@ -134,6 +134,45 @@ function contentTokens(text) {
   return normalise(text).split(' ').filter(w => w.length > 1 && !STOP.has(w));
 }
 
+/* QUESTION FORM. "How to lose weight" was answered with "Yes. Carbs do not prevent fat loss",
+   from the entry "Can I eat carbs and still lose weight?", at confidence 1.00. Coverage cannot
+   catch that: an open how-question carries its whole meaning in its topic words, so every entry
+   on the topic covers all of it. What separates them is the shape of the question -- one asks
+   for a method, the other asks for a verdict, and a verdict is not an answer to "how".
+
+   Read from the raw text, before stop-word removal: how, what and can are all stop words, so by
+   token time the form is gone. */
+const POLAR_OPENERS = ['is', 'are', 'was', 'were', 'do', 'does', 'did', 'can', 'could', 'should',
+  'would', 'will', 'shall', 'has', 'have', 'had', 'am', 'must', 'may', 'might'];
+const OPEN_OPENERS = ['how', 'what', 'why', 'which', 'when', 'where', 'who'];
+/* Answers that open with a verdict belong to a yes/no question even when the question text does
+   not start with one -- "Indirectly." and "Potentially." both appeared in wrong answers. */
+const VERDICT_STARTS = ['yes', 'no', 'maybe', 'sometimes', 'indirectly', 'potentially', 'rarely',
+  'usually', 'occasionally', 'possibly', 'not necessarily', 'it depends', 'partly'];
+
+function firstWord(text) {
+  const w = String(text || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim().split(/\s+/);
+  return w[0] || '';
+}
+
+function isOpenQuestion(text) {
+  const t = String(text || '').toLowerCase().trim();
+  if (OPEN_OPENERS.indexOf(firstWord(t)) !== -1) return true;
+  return t.indexOf('best way') !== -1 || t.indexOf('how to') !== -1;
+}
+
+function isPolarEntry(question, answer) {
+  if (POLAR_OPENERS.indexOf(firstWord(question)) !== -1) return true;
+  const a = String(answer || '').toLowerCase().trim();
+  for (const v of VERDICT_STARTS) {
+    if (a.indexOf(v) === 0) {
+      const next = a.charAt(v.length);
+      if (next === '' || next === '.' || next === ',' || next === ' ' || next === ';') return true;
+    }
+  }
+  return false;
+}
+
 class IgnytSearchImpl {
   /** @param {Array} corpus records: {id, category, question, answer, keywords?} */
   constructor(corpus, opts = {}) {
@@ -143,8 +182,15 @@ class IgnytSearchImpl {
     // Below this score the answer is not trustworthy — return the fallback instead
     // of a confidently wrong match. This is what stopped the magnesium answer.
     this.minScore = opts.minScore ?? 8.0;
-    /* Share of the query's IDF mass a hit must cover before it is allowed to answer. */
-    this.minCoverage = opts.minCoverage ?? 0.5;
+    /* Share of the query's IDF mass a hit must cover before it is allowed to answer.
+       0.5 was the first guess and it was too strict: it threw away hits at 0.53 coverage and
+       rejected "How do I get back in shape in middle age?" outright. Measured at 0.4 against
+       the 2,000 supplied questions, answered rises 1,779 to 1,860 with the suite still at 48
+       and every previously wrong answer still correct -- the question-form penalty, not this
+       threshold, is what stops the confident verdicts. */
+    this.minCoverage = opts.minCoverage ?? 0.4;
+    /* What a yes/no entry's score is multiplied by when the question asked for a method. */
+    this.polarPenalty = opts.polarPenalty ?? 0.35;
     this.build_();
   }
 
@@ -152,7 +198,10 @@ class IgnytSearchImpl {
     this.docs = this.corpus.map(r => {
       const q = normalise(r.question);
       const c = normalise(r.category);
-      const kw = (r.keywords || []).join(' ');
+      /* Normalised like every other field. Keywords now carry the alternate phrasings people
+         actually type, and queries are stemmed before lookup -- leaving these raw would index
+         "frequently" while the query looked for "frequent", so they could never match. */
+      const kw = normalise((r.keywords || []).join(' '));
       // question weighted x3, category x2 — title relevance should dominate
       const field = `${q} ${q} ${q} ${c} ${c} ${kw} ${normalise(r.answer)}`;
       return field.split(' ').filter(w => w.length > 1 && !STOP.has(w));
@@ -163,6 +212,8 @@ class IgnytSearchImpl {
       for (const w of d) m.set(w, (m.get(w) || 0) + 1);
       return m;
     });
+    /* Which entries answer a yes/no question. Computed once at build time, not per query. */
+    this.polar = this.corpus.map(r => isPolarEntry(r.question, r.answer));
     this.len = this.docs.map(d => d.length);
     this.avgdl = this.len.reduce((a, b) => a + b, 0) / this.len.length;
 
@@ -236,6 +287,23 @@ class IgnytSearchImpl {
        entries that share the query's words without being about it -- "what should I eat before a
        workout" went to "why do I get shaky after hard workouts", and the suite fell to 47. What
        coverage is good for is refusing a hit, not ordering the ones that qualify. */
+    /* An open question asked for a method; an entry that answers yes or no did not give one.
+       This is a penalty rather than a rejection so that when the base holds nothing better, a
+       related verdict still beats saying nothing -- it just cannot outrank a real answer. */
+    if (isOpenQuestion(text)) {
+      for (const [i, s] of scores) if (this.polar[i]) scores.set(i, s * this.polarPenalty);
+    }
+
+    /* A MARGIN GATE WAS TRIED HERE AND REMOVED. The theory was that "right topic, wrong
+       question" answers won narrowly over the correct entry, so rejecting near-ties would catch
+       them. Measured: rejecting anything whose runner-up came within 3% dropped coverage from
+       93% to 64% and fixed two of five known-wrong answers. The other three were not close calls
+       at all -- "what muscles does the lateral raise work" beats the correct entry outright with
+       an answer about how high to raise it, because it shares more words.
+
+       Twenty-eight points of coverage for two fixes is not a trade worth making, and it is
+       evidence about the problem: these are confident wrong wins, not coin tosses. No ranking
+       rule over word overlap separates them. That needs the question to be read, not counted. */
     return [...scores.entries()]
       .sort((a, b) => b[1] - a[1])
       .filter(([i, s]) => s >= this.minScore && (covered.get(i) || 0) >= need)
@@ -258,6 +326,38 @@ class IgnytSearchImpl {
       console.log('   tok ' + w.padEnd(14) + ' idf=' + (this.idf.get(w) || 0).toFixed(2) +
                   '  docs=' + (post ? post.length : 0));
     }
+  }
+
+  /**
+   * A SHORTLIST, NOT AN ANSWER. query() has to pick one entry and be right, which is what it
+   * cannot reliably do -- "what muscles does the lateral raise work" loses to an entry about how
+   * high to raise it, because that one shares more words. What retrieval IS good at is narrowing
+   * 11,579 entries to the handful that are about the topic at all; measured, the right entry is
+   * nearly always among the top few even when it is not first.
+   *
+   * So this returns those few, ungated, for a model to choose between by reading the question.
+   * The single-answer gates are deliberately skipped: the question-form penalty would push a
+   * legitimate yes/no entry down the list, and coverage would drop candidates the model could
+   * still recognise as correct. Judging relevance is the caller's job here, not the scorer's.
+   */
+  candidates(text, n = 6) {
+    const qTokens = expand(normalise(text)).split(' ').filter(w => w.length > 1 && !STOP.has(w));
+    if (!qTokens.length) return [];
+    const scores = new Map();
+    for (const w of qTokens) {
+      const posting = this.index.get(w);
+      if (!posting) continue;
+      const idf = this.idf.get(w);
+      for (const i of posting) {
+        const f = this.tf[i].get(w);
+        const denom = f + this.k1 * (1 - this.b + this.b * this.len[i] / this.avgdl);
+        scores.set(i, (scores.get(i) || 0) + idf * (f * (this.k1 + 1)) / denom);
+      }
+    }
+    return [...scores.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, n)
+      .map(([i, s]) => ({ ...this.corpus[i], score: +s.toFixed(2) }));
   }
 
   /** Convenience for the chat UI: best answer or null. */
@@ -286,6 +386,7 @@ class IgnytSearchImpl {
     ready: function () { return !!_engine; },
     query: function (text, top) { return _engine ? _engine.query(text, top || 5) : []; },
     answer: function (text) { return _engine ? _engine.answer(text) : null; },
+    candidates: function (text, n) { return _engine ? _engine.candidates(text, n || 6) : []; },
     related: function (id, n) { return _engine ? _engine.related(id, n) : []; }
   });
 }());

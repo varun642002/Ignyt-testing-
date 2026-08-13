@@ -19,15 +19,10 @@
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
     return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); };
 
-  /* Under the input. Deliberately verbs, not topics — a button that says "Nutrition" makes
-     the user compose a sentence; one that says "Log food" is already the sentence. */
-  var QUICK = [
-    { label: "Today's plan", icon: "barbell",  say: "What should I train today?" },
-    { label: "Log food",     icon: "plate",    say: "Log food" },
-    { label: "Log weight",   icon: "scale",    say: "Log my weight" },
-    { label: "My progress",  icon: "trend",    say: "How is my progress?" },
-    { label: "Recovery",     icon: "moon",     say: "How is my recovery?" }
-  ];
+  /* The preset chips are gone. Two of the five -- Log food, Log weight -- told people to ask
+     for something the chat stopped doing when logging moved to the screens, so the suggestions
+     were advertising a refusal. The rest set the expectation that this is a menu of five
+     things, when it answers eleven and a half thousand questions. */
 
   /* ---------- action cards ---------------------------------------------------------- */
 
@@ -244,10 +239,7 @@
               var c = companion(st);
               return '<div class="aic-hello">' +
                 '<div class="aic-hello__greet">' + greet + (name ? ", " + esc(name) : "") + '</div>' +
-                (c ? '<div class="aic-hello__line">' + esc(c.line) + '</div>' +
-                     '<div class="aic-quick aic-quick--inline">' +
-                       '<button class="aic-chip" data-ai-say="' + esc(c.say) + '">' + esc(c.cta) + '</button>' +
-                     '</div>'
+                (c ? '<div class="aic-hello__line">' + esc(c.line) + '</div>'
                    : '<div class="aic-hello__sub">What can I help with?</div>') +
               '</div>';
             })()
@@ -255,10 +247,6 @@
         (st.aiBusy ? '<div class="aic-typing" aria-label="Thinking"><i></i><i></i><i></i></div>' : '') +
       '</div>' +
 
-      '<div class="aic-quick">' + QUICK.map(function (q) {
-        return '<button class="aic-chip" data-ai-say="' + esc(q.say) + '">' + ic(q.icon, 13) +
-               '<span>' + q.label + '</span></button>';
-      }).join("") + '</div>' +
 
       '<div class="aic-bar">' +
         '<button class="aic-mic' + (st.aiListening ? ' is-live' : '') + '" data-ai-mic="1" ' +
