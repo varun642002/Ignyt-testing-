@@ -1,0 +1,114 @@
+# IGNYT release gates
+
+Every release must show **evidence**, not assertion. A box is ticked by pasting the command and
+its output into the release notes, not by someone remembering they checked.
+
+Nothing in this repo is at 10/10 today. The Status column is what was actually measured, with the
+date. Anything not measured says so rather than being left blank, because a blank box reads as
+"probably fine" and that is how the last few regressions shipped.
+
+---
+
+## The bar
+
+A release goes out only when **all** of these are true:
+
+- every automated gate green
+- no unresolved P0 or P1 findings
+- real-device evidence collected for anything the browser cannot prove
+- production monitoring live and alerting
+- rollback rehearsed, not just documented
+
+---
+
+## Gates
+
+### Security
+
+| Gate | Status (2026-08-13) |
+|---|---|
+| Secrets only in managed stores | **Partial.** `GEMINI_API_KEY` is backend-only and has never been committed — full git history scanned. The only committed `AIza` value is the Firebase Web API key, public by design. It should be restricted by package + SHA-1 in Google Cloud; that is not done. |
+| Gitleaks in CI | **No.** There is no CI workflow in this repo at all. |
+| Dependency scanning in CI | **No.** `npm audit --omit=dev` run by hand: 1 high (brace-expansion, transitive). |
+| SAST in CI | **No.** |
+| Authorization / IDOR tests | **Yes, for the API.** `backend/tests/test_data_isolation.py` — 6 tests, two identities through the real app, including one that reads the route table so a future endpoint cannot start accepting a user id. |
+| Rate limits | **Partial.** AI scan has a real per-user daily limit with DB-backed accounting. Other routes unverified. |
+| Security headers | **Not measured.** |
+| Key-rotation + incident process | **No.** Not written down anywhere. |
+
+### Stability
+
+| Gate | Status |
+|---|---|
+| Backend tests | **Green.** 120 passed, 14 skipped. |
+| Chat/intent suite | **Green.** 48/48 — but the harness is NOT checked in. It lives in a scratchpad. Fix that first; an uncommitted test suite is not a gate. |
+| Browser tests | **Red.** 405 tests expect an authenticated app and open on the sign-in screen. |
+| Android build | **Green.** `assembleDebug` and `bundleRelease` both clean, versionCode 10506. |
+| iOS build | **Unverified here.** No Mac; goes through Codemagic. |
+| Corrupt local data / offline / API failure / upgrade | **Not tested.** |
+| Crash + error monitoring | **No.** |
+
+### Performance
+
+| Gate | Status |
+|---|---|
+| Startup, interaction, API latency, memory | **Nothing measured.** |
+| Budgets enforced in CI | **No.** |
+
+Known figures worth starting from: `www/data/knowledge.json` is 5.4 MB and `clean_foods.json`
+holds 13,516 foods. Both are parsed and indexed **on the phone at startup**.
+
+### Test coverage
+
+| Journey | Status |
+|---|---|
+| User isolation | **Covered** (backend, 6 tests). |
+| Auth: sign-up, sign-in, logout, reset, token expiry | **Not covered.** Needs real Firebase tokens; the harness uses header identity. |
+| Food CRUD + calculations | **Not covered.** One fuzz pass on `addFoodLog` found and fixed a parser that turned `"1e400"` into 1400 g. |
+| Workouts, routines, PRs, progress | **Not covered.** |
+| Cloud sync, billing, import/export, destructive actions | **Not covered.** |
+
+### Code quality
+
+| Gate | Status |
+|---|---|
+| Lint / format / static checks | **None configured.** No ESLint, no formatter, plain JS with no type checking. |
+| Dead duplicate runtime files | **Unresolved.** Root-level `app.js`/`sw.js` vs `www/` — confirm what `npx cap sync` copies before removing anything. |
+| Documented public interfaces | **Partial**, via comments. |
+
+### Maintainability
+
+| Gate | Status |
+|---|---|
+| Architecture + storage docs | **No.** Storage keys are not enumerated anywhere. |
+| Migration strategy | **Ad hoc.** Precedent exists (`defaultRest`), not generalised. |
+| Release runbook / rollback plan | **No.** Rollback has never been rehearsed. |
+| Changelog | **No.** Commit messages carry the reasoning; nothing aggregates it. |
+| CI/CD | **No pipeline.** |
+
+---
+
+## Per-release evidence
+
+Paste real output. "Ran the tests" is not evidence.
+
+```
+[ ] backend        cd backend && python -m pytest -q          → __ passed, __ skipped
+[ ] chat suite     (once the harness is committed)            → __/__
+[ ] browser        __/405
+[ ] android        ./gradlew.bat bundleRelease                → BUILD SUCCESSFUL, versionCode ____
+[ ] npm audit      npm audit --omit=dev                       → __ critical, __ high
+[ ] secret scan    gitleaks detect                            → __ findings
+[ ] device matrix  which devices, which journeys, who ran it
+[ ] monitoring     dashboard link, alert fired in test
+[ ] rollback       rehearsed on ____ , took __ minutes
+[ ] P0/P1 open     ____
+```
+
+## Version codes
+
+`android/app/build.gradle` derives the code from the version name and asserts it clears the
+highest already spent. That floor is hand-maintained, and forgetting to raise it has caused three
+Play rejections. **Raise it in the same commit as the upload, not afterwards.**
+
+Spent so far: 10500–10505. Current: 1.0.48 → 10506.
