@@ -16043,22 +16043,14 @@ function markPageEnterIfTabChanged(){
    assigns scrollTop AFTER calling render() wins. The Progress back button does exactly that to
    restore where the user left off, and keeps working untouched. */
 var _lastNavKey = null;
-function restoreOrResetScroll(savedTop){
+function resetScrollIfNavigated(){
   var key = state.tab + "/" + (state.progressView || "") + "/" + (state.bodyView || "");
+  if(key === _lastNavKey) return;
   var isFirstPaint = _lastNavKey === null;
-  var navigated = key !== _lastNavKey;
   _lastNavKey = key;
+  if(isFirstPaint) return;   // the app arriving is not a navigation
   var main = document.getElementById("main");
-  if(!main || isFirstPaint) return;   // the app arriving is not a navigation
-  /* A NAVIGATION STARTS AT THE TOP. STAYING PUT DOES NOT.
-     render() rewrites main.innerHTML, and replacing a scroll container's contents drops its
-     scrollTop to 0 -- so every re-render threw the user back to the header. Toggling a setting
-     re-renders, which is how this was found: tap a switch near the bottom of Settings and the
-     page jumps to the top with the switch you wanted now off screen.
-     Restoring the captured position makes a same-screen re-render invisible, which is what it
-     should always have been. A real navigation still resets. */
-  if(navigated) main.scrollTop = 0;
-  else if(savedTop) main.scrollTop = savedTop;
+  if(main) main.scrollTop = 0;
 }
 
 function withFocusPreserved(fn){
@@ -16155,13 +16147,9 @@ function render(){
       renderSignInScreen();
       return;
     }
-    /* Captured BEFORE the DOM is rewritten -- afterwards it is already 0 and there is nothing
-       left to restore. */
-    var _mainBefore = document.getElementById("main");
-    var _scrollBefore = _mainBefore ? _mainBefore.scrollTop : 0;
     withFocusPreserved(renderApp);
     markPageEnterIfTabChanged();
-    restoreOrResetScroll(_scrollBefore);
+    resetScrollIfNavigated();
     // A running fast ticks wherever it is visible — the Fasting page or the Home card.
     if(window.IgnytFasting && IgnytFasting.active()) ensureFastTimerRunning();
     else stopFastTimer();
@@ -21588,7 +21576,7 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{
       state.tab = "progress";
       state.progressView = el.dataset.openProgressView;
-      render();   // scroll is handled centrally now, in restoreOrResetScroll()
+      render();   // scroll reset is central now, in resetScrollIfNavigated()
     });
   });
 
