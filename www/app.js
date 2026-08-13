@@ -21540,6 +21540,14 @@ function attachHandlers(){
       state.tab = "progress";
       state.progressView = el.dataset.openProgressView;
       render();
+      /* main is the scroll container, and its scrollTop survives a render. Opening one of these
+         from a scrolled Home landed on the new screen still scrolled to the old offset, so the
+         page began underneath the header with its title out of sight -- reported as pages
+         falling behind the header, reproduced from Home via the habit tracker.
+         The Progress tab's own [data-progress-view] grid has always reset this. These entry
+         points reach the same screens and did not. */
+      const main = document.getElementById("main");
+      if(main) main.scrollTop = 0;
     });
   });
 
