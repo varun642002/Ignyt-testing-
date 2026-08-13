@@ -33,7 +33,39 @@ never left Home. The 25 green navigation tests prove a button was clickable, not
    works. Either the value settles differently than polling expects, or it is not set on every
    tab change. NOT committed; `BasePage.js` was checked out clean and is green at 5 passed.
 
-**Where to start:** open a trace from a failing mobile-safari workout test. That shows whether
+**THE TRACE HAS NOW BEEN OPENED. Here is what it says:**
+
+```
+queryCount  [data-navtab="workout"]          found
+click       [data-navtab="workout"]          EXECUTED
+expect      #app                             passed (always does)
+expect      [data-action="start-session"]    FAILED
+```
+
+The click lands on the correct element and the app does not change tabs. So this is NOT a
+selector problem, NOT an auth problem, and NOT a test problem. It is the app: on WebKit, a click
+on the bottom nav does not navigate.
+
+The handler is `nav.addEventListener("click", ...)` at `www/app.js:8577`. It does two things
+before navigating, and one of them is eating the click:
+
+1. **The drag-suppression guard**, `if(Date.now() - dragEndedAt < 350) return;` (line 8586).
+   `dragEndedAt` is set on pointerup when `moved` is true, and `moved` requires 6px of
+   horizontal travel (line 8729). Playwright moves the pointer BEFORE pointerdown, so `moved`
+   should stay false -- but WebKit's pointer event sequence differs from Chromium's and this is
+   the obvious suspect. Verify by logging `moved` and `dragEndedAt` from a WebKit run before
+   changing anything.
+2. **`goTo(btn.dataset.navtab)`** at line 8587 -- if the guard passes, the failure is inside
+   goTo. Not yet read.
+
+If it IS the guard, this is a REAL USER BUG on iOS, not a test artefact: a tap with any finger
+travel would be swallowed for 350ms. Worth fixing on those grounds regardless of the suite.
+
+**Traces are overwritten by later runs.** Regenerate with:
+`npx playwright test tests/workout/set-logging.spec.js --project=mobile-safari`
+then unzip `test-results/<folder>/trace.zip` and read `*.trace` as JSONL.
+
+**Previously, where to start:** open a trace from a failing mobile-safari workout test. That shows whether
 the click landed, whether the tab state changed, and what rendered — which distinguishes "the
 click missed" from "the click worked and the app did not re-render" from "the app navigated and
 came back". Guessing at assertions without that has now cost four attempts.
