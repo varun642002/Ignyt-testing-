@@ -186,7 +186,9 @@
 /* ---- reminder switches ---- */
 .ft-switch {
   display: flex; align-items: center; gap: 12px; width: 100%;
-  padding: 11px 0; border: 0; border-top: 1px solid var(--rh-border); background: none;
+  /* Right padding for the same reason as .stg-row in tools.css: this row had none, so its
+     switch ran flush to the container edge. Left stays 0 so the label keeps its alignment. */
+  padding: 11px 12px 11px 0; border: 0; border-top: 1px solid var(--rh-border); background: none;
   color: inherit; font: inherit; text-align: left; cursor: pointer;
 }
 .ft-switch:first-of-type { border-top: 0; }
