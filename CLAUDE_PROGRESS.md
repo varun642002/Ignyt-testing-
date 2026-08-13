@@ -45,59 +45,34 @@ rendering in each of the three CSS files. Caught by grepping afterwards and diff
 
 ## Current request
 
-Redesign the toggle switches to match a reference design supplied by the user (a card from
-uiverse.io). NOT STARTED — deliberately. See "Blocked on" below.
+The Settings toggle centring, described at the top. Nothing else is outstanding from the user.
 
 ## Current branch
 
-`feature/diagnostics-screen` at `994c99a`. `main` at `18cf74c`.
+`feature/diagnostics-screen` at `06361d3`. `main` at `18cf74c` — eleven commits unmerged.
 Everything is committed and pushed. Nothing is in flight.
 
 ---
 
-## THE TOGGLE REDESIGN (the actual next task)
+## THE TOGGLE REDESIGN — BUILT, THEN REVERTED. DO NOT REBUILD IT.
 
-### What the user wants
+An earlier note here described a power-switch design (dark notched knob, red and green lamps
+outside the track) as the next task. It was built across all three families in `e2efdcb`, the
+user saw it on a device, and then chose the plain switch instead. Reverted in `d4c2d6e`.
 
-A screenshot of the OFF state was supplied. Read from it:
+The settled design is what the app has now: pale track, white knob, no lamps, no notch. The only
+thing still wrong with it is the vertical centring at the top of this file.
 
-- **Track**: light grey pill (~#C8C8C8) with a subtle inner shadow, so it reads as recessed
-- **Knob**: dark charcoal (~#333), nearly the full height of the track, with a **vertical notch
-  line down its centre** — a power-switch motif
-- **Two indicator dots OUTSIDE the track**: red on the left, hollow white on the right
-- Off state = knob left, red dot lit
-
-### Blocked on
-
-**The ON state was never supplied.** Unknown: whether the red dot goes dark and the white lights,
-whether the white turns green, and whether the knob or track changes colour. That is half the
-design. Ask for the on-state screenshot before writing any CSS.
-
-### What this touches — it is not a one-file change
-
-Three switch families, each with its own markup site and its own stylesheet:
+Reference for anyone tempted: the three families and where they live.
 
 | class | markup | css |
 |---|---|---|
-| `.stg-switch` | `settingToggle()` in `www/app.js` ~6373 | `www/css/pages/tools.css:277` |
-| `.ft-switch` | fasting page | `www/css/pages/fasting.css:187` |
-| `.rm-switch` | reminders page | `www/css/pages/reminders.css:42` |
+| `.stg-switch` | `settingToggle()` in `www/app.js` ~6373 | `www/css/pages/tools.css` |
+| `.ft-switch` | fasting page | `www/css/pages/fasting.css` |
+| `.rm-switch` | reminders page | `www/css/pages/reminders.css` |
 
-The current switch is a 46×26 track with a 20px knob and nothing else. The reference adds two
-indicator dots that do not exist in the markup, so **this needs new HTML in three places**, not
-just CSS.
-
-### Two decisions to make before building
-
-1. **Keep the `<button role="switch" aria-checked>` markup.** Uiverse switches are almost always
-   a hidden `<input type=checkbox>` + `<label>`, which does not announce state to screen readers.
-   IGNYT's button version is the more accessible one. Port the visual CSS onto it; do not adopt
-   their markup wholesale.
-
-2. **The indicator dots make every switch wider.** In Settings the switch is pinned right by
-   `margin-left:auto` in a row that also holds a label and a description. Check the widest labels
-   ("Workout Recommendations", "Auto-Start Rest Timer") on a narrow phone before committing — the
-   description text already wraps.
+Keep the `<button role="switch" aria-checked>` markup if this is ever revisited — it announces
+state to screen readers, which the hidden-checkbox pattern most gallery switches use does not.
 
 ---
 
