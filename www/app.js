@@ -16017,6 +16017,36 @@ function markPageEnterIfTabChanged(){
   if(main) main.classList.add("page-enter");
 }
 
+/* THE SCROLL POSITION BELONGED TO THE PREVIOUS SCREEN. main is the scroll container and its
+   scrollTop survives a render, so navigating from a scrolled page opened the next one already
+   scrolled -- its title above the viewport, its content starting under the header. Reported as
+   pages falling behind the header; reproduced from Home via the habit tracker.
+
+   Twenty-seven places set a tab and render. Fixing them one at a time is how this got fixed
+   twice already and stayed broken everywhere else -- [data-progress-view] reset the scroll and
+   [data-open-progress-view], which opens the very same screens, did not.
+
+   Keyed on more than state.tab, because Progress swaps its whole screen through progressView
+   and Body through bodyView, and neither changes the tab.
+
+   Deliberately NOT merged into markPageEnterIfTabChanged: that one drives the page-enter
+   animation and is keyed on the tab alone. Widening its key would start animating sub-view
+   changes too, which is a different decision from this one.
+
+   Anything wanting to keep a position still can: this runs inside render(), so a handler that
+   assigns scrollTop AFTER calling render() wins. The Progress back button does exactly that to
+   restore where the user left off, and keeps working untouched. */
+var _lastNavKey = null;
+function resetScrollIfNavigated(){
+  var key = state.tab + "/" + (state.progressView || "") + "/" + (state.bodyView || "");
+  if(key === _lastNavKey) return;
+  var isFirstPaint = _lastNavKey === null;
+  _lastNavKey = key;
+  if(isFirstPaint) return;   // the app arriving is not a navigation
+  var main = document.getElementById("main");
+  if(main) main.scrollTop = 0;
+}
+
 function withFocusPreserved(fn){
   const active = document.activeElement;
   const id = active && active.id;
@@ -16113,6 +16143,7 @@ function render(){
     }
     withFocusPreserved(renderApp);
     markPageEnterIfTabChanged();
+    resetScrollIfNavigated();
     // A running fast ticks wherever it is visible — the Fasting page or the Home card.
     if(window.IgnytFasting && IgnytFasting.active()) ensureFastTimerRunning();
     else stopFastTimer();
@@ -21539,15 +21570,7 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{
       state.tab = "progress";
       state.progressView = el.dataset.openProgressView;
-      render();
-      /* main is the scroll container, and its scrollTop survives a render. Opening one of these
-         from a scrolled Home landed on the new screen still scrolled to the old offset, so the
-         page began underneath the header with its title out of sight -- reported as pages
-         falling behind the header, reproduced from Home via the habit tracker.
-         The Progress tab's own [data-progress-view] grid has always reset this. These entry
-         points reach the same screens and did not. */
-      const main = document.getElementById("main");
-      if(main) main.scrollTop = 0;
+      render();   // scroll reset is central now, in resetScrollIfNavigated()
     });
   });
 
