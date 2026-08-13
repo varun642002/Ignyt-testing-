@@ -24,7 +24,9 @@
    catalogue's `foods` array are the answer, not this paragraph.
 
    WHY LAZY
-   clean_foods.json is 3.4 MB. Parsing it costs real time on a mid-range phone, and most app
+   clean_foods.json is 10.4 MB and holds 13,516 foods (it was 3.4 MB when this was written --
+   the food imports tripled it, which makes the reasoning below stronger, not weaker). Parsing
+   it costs real time on a mid-range phone, and most app
    sessions never open the food screen at all, so loading it at boot would tax every session
    to benefit some of them. `load()` is called the first time a food UI renders, resolves
    once, and is shared by every later caller through a cached promise. Until it resolves the
