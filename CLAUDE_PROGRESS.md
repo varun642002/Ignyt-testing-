@@ -1,5 +1,48 @@
 # CLAUDE_PROGRESS.md
 
+## START HERE — open the preview and LOOK before changing anything
+
+Everything below was reasoned from screenshots. Nothing in the last stretch of work was seen
+running. Two bugs the user reported were caused by my own earlier unverified changes, so the
+first action in a new session is to start the dev server and look, not to edit.
+
+### The open bug
+
+**Settings toggle sits high in its row** — "close to the top, the bottom has more space, it needs
+to be in the centre". Reported twice; not fixed, because no screenshot of the actual screen was
+supplied, only the reference image, and the CSS says it should already be centred:
+`.stg-row` is `display:flex; align-items:center` and `.stg-row__ctrl` is too.
+
+Three candidates, different fixes:
+1. the knob inside the track — `top:3px`, 26px track, 20px knob, mathematically centred, so it
+   would be a shadow reading as asymmetric
+2. the switch inside its row — something overriding `align-items`, or that row is not `.stg-row`
+   at all (Settings has more than one row class)
+3. the track inside its tap target — `.rm-switch` carries an invisible `inset:-8px` expander; if
+   Settings gained something similar it would shift the visual centre
+
+Measure it in the preview rather than guessing. The toggle DESIGN is settled — plain pale track,
+white knob, no lamps, restored in `d4c2d6e`. Do not restyle it.
+
+### Verify these, all shipped unseen
+
+- **Settings toggle keeps scroll** (`67cce0e`) — tap a switch at the bottom of Settings; the page
+  must not move. The restore is synchronous and scoped to that handler on purpose.
+- **No flicker** (`7c27a0c` reverted the global version) — add food, add to a diet plan. If it
+  still flickers the cause is older than today and the revert was wrong.
+- **Profile weight** (`b7f74ee`) — the field is read-only by design; the note and Log weight
+  button must appear even with no weight ever logged. That was the bug.
+- **Food Log nav** (`55da132`) — dark pill, not solid blue.
+- **iPhone bottom nav at 22px** — `www/index.html:507`. Needs iOS; no Mac here.
+- **Fasting row right padding** — fixed by analogy with Settings; that screen was never looked at.
+
+### The trap that nearly shipped
+
+Reverting the two power-switch commits was NOT enough: the second had edited lines the first
+added, so each revert undid part of the other and left ~2,300 characters stranded and still
+rendering in each of the three CSS files. Caught by grepping afterwards and diffing against
+`origin/main`. Do the same after any multi-commit revert here.
+
 ## Current request
 
 Redesign the toggle switches to match a reference design supplied by the user (a card from
