@@ -265,7 +265,13 @@
    above its own icon (11.7px for the unit chips, which are taller) — small enough to look
    like nothing in particular and large enough to make the column read as crooked. Making them
    siblings means one align-items does the work for every control type. */
-.stg-row{ display:flex; align-items:center; gap:10px; padding:14px 0; }
+/* Right padding, and only right. The row had none, so the switch ran flush to whatever edge its
+   container ended at and sat almost against the screen. The left is untouched deliberately: the
+   icon and label line up with the rest of the card there, and indenting them to match would move
+   text nobody complained about.
+   On the padding box, not a margin, so the border-top divider still runs the full width and the
+   rows stay separated edge to edge. */
+.stg-row{ display:flex; align-items:center; gap:10px; padding:14px 12px 14px 0; }
 .stg-row + .stg-row{ border-top:1px solid var(--rh-border); }
 .stg-row__body{ flex:1; min-width:0; }
 .stg-row__label{ display:block; font-size:14px; font-weight:700; }
