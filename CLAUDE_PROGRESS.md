@@ -6,6 +6,38 @@ Everything below was reasoned from screenshots. Nothing in the last stretch of w
 running. Two bugs the user reported were caused by my own earlier unverified changes, so the
 first action in a new session is to start the dev server and look, not to edit.
 
+### THE BROWSER SUITE — read this before touching tests/pages/BasePage.js
+
+Full suite: **187 passed, 5 skipped, 23 failed.** All 23 are `mobile-safari` + `workout`, and
+all 23 are ONE bug: `[data-action="start-session"]` not found, because the app is still on Home
+after `navigate('workout')`. The page snapshot in each `test-results/*/error-context.md` shows
+Home. `trace.zip` is saved alongside — open it in the trace viewer; it shows the click landing.
+
+**navigate() cannot currently prove arrival.** It ends at `expect(this.app).toBeVisible()`, and
+`#app` is visible on every screen. So the navigation specs pass on mobile-safari while the app
+never left Home. The 25 green navigation tests prove a button was clickable, nothing more.
+
+**FOUR attempts at fixing this failed. Do not repeat them:**
+
+1. *Seeding an authenticated session* (`hx_auth_account`) — a real defect in the fixture, kept,
+   but not the cause. Commit `58956c9`.
+2. *Matching `[data-nav]` and `[data-navtab]`* — fixed a genuine selector mismatch and took
+   navigation from 25 red to 25 green. Commit `211e730`. Did not fix workout.
+3. *Preferring the tab bar over in-page links* — `.first()` on a comma selector returns document
+   order, a real hazard, but not the cause. Commit `c5d3d24`.
+4. *Asserting the tab button has class `active`* — WRONG. That class is set only while DRAGGING
+   the nav (`www/app.js:8695`); a tap sets no per-button class. Failed all 25 on every browser.
+   Reverted in `52a322d`.
+5. *Asserting `--nav-i` on `.nav-ind` equals the tab's DOM index* — the property IS what moves
+   the pill (`syncBottomNav`), but the assertion failed 4 of 5 on mobile-chrome where navigation
+   works. Either the value settles differently than polling expects, or it is not set on every
+   tab change. NOT committed; `BasePage.js` was checked out clean and is green at 5 passed.
+
+**Where to start:** open a trace from a failing mobile-safari workout test. That shows whether
+the click landed, whether the tab state changed, and what rendered — which distinguishes "the
+click missed" from "the click worked and the app did not re-render" from "the app navigated and
+came back". Guessing at assertions without that has now cost four attempts.
+
 ### The open bug
 
 **Settings toggle sits high in its row** — "close to the top, the bottom has more space, it needs
