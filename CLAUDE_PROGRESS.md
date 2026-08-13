@@ -1,141 +1,173 @@
-# IGNYT — progress and the next task
+# CLAUDE_PROGRESS.md
 
-Branch: `feature/premium-subscription`  ·  HEAD at time of writing: `97f3c1b`  ·  Suite: 45/48
+## Current request
 
-The three failing tests are the **empty knowledge base** (`www/data/knowledge.json` is `[]`, emptied
-on request). They assert that the base answers a known question, that a bench-press question
-returns anatomy, and that changing the subject mid-follow-up gets a real answer. All three pass
-once data is loaded. They are not weakened to go green.
+Redesign the toggle switches to match a reference design supplied by the user (a card from
+uiverse.io). NOT STARTED — deliberately. See "Blocked on" below.
 
----
+## Current branch
 
-## THE NEXT TASK: rebuild the routing decision
-
-### Why
-
-`runClassified()` in `www/js/ai/local-chat.js` executes a handler's `run()` **without consulting
-that handler's own `test()`**. Two live consequences:
-
-- `"macros of dal"` answers with the user's calorie target instead of dal's nutrition, because
-  `GET_CALORIE_TARGET` is a promoted intent and claims the word *macros* before the nutrition
-  handler is consulted.
-- The protein-target handler was reached by past-tense questions its own matcher excludes.
-
-**Do not "fix" this by making `runClassified` respect `test()`.** That was tried (2026-08-11) and
-it broke `"get rid of everything I ate today"`, which reaches the delete handler *precisely
-because* the classifier rescues phrasings the regex misses. That bypass is the point of the
-classifier route, not an oversight. The conflict is structural and needs the redesign below.
-
-### The shape to build
-
-One declarative entry per intent, in one file, replacing the current split across three:
-
-```
-{
-  intent:   "LOG_FOOD",
-  examples: [...],              // today in intents.js
-  match:    function (t) {},    // today in local-chat.js INTENTS[].test
-  needs:    "addFoodLog",       // today in local-chat.js INTENTS[].needs
-  run:      async function (A, t) {},
-  scope:    "records" | "knowledge" | "compute",   // decides who outranks whom
-  strict:   true | false        // does match() also gate the classifier route?
-}
-```
-
-`strict` is the crux. `DELETE_TODAY_FOOD` wants `strict: false` so the classifier can rescue
-unusual phrasings. `GET_CALORIE_TARGET` wants `strict: true` so its "not a past-tense question,
-not a food lookup" guard applies on **both** routes. Today that choice cannot be expressed, which
-is why fixing one case breaks the other.
-
-The router becomes a thin loop over the table. Same behaviour, one place to read, and impossible
-to guard half of — which is the failure that recurred four times on 2026-08-11 (a rule added to
-the pattern loop but not `runClassified`, or the reverse).
-
-### How to verify it
-
-The tooling exists in the scratchpad and must be used, not replaced:
-
-- `run-suite.js` — runs the 48-test harness against the real modules. `node run-suite.js`.
-- `FOOD=1 node run-suite.js` — ad-hoc probes; edit the `process.env.FOOD` block.
-- `TRACE_IN_SUITE="phrase" node run-suite.js` — prints the ladder trace for a message **inside**
-  a suite run. Built because tracing a message in isolation gives different state and produced
-  three wrong diagnoses.
-
-**Assert on stored rows, not on which action was chosen.** Those two disagreed twice on
-2026-08-11, including a delete that removed the wrong record and survived its own first fix.
-
-Boundary phrases that must not regress:
-
-```
-how much protein should i eat     -> the target        how much protein did i eat today -> the log
-how many calories should i eat    -> the target        how many calories did i eat today -> the log
-macros of dal                     -> nutrition lookup  (BROKEN TODAY - the reason for this task)
-delete it                         -> asks which record
-delete yesterdays food            -> yesterday only, today survives
-get rid of everything i ate today -> the delete handler (classifier rescue - must keep working)
-log 200g chicken / i ate 2 eggs   -> writes
-chicken and chapati               -> two foods, one serving each
-```
+`feature/diagnostics-screen` at `994c99a`. `main` at `18cf74c`.
+Everything is committed and pushed. Nothing is in flight.
 
 ---
 
-## State of the system
+## THE TOGGLE REDESIGN (the actual next task)
 
-**Food (complete, verified against stored data).** Logging in 15 phrasings, dates, meals,
-multi-item with and without quantities, plurals, bare lists, guided flow, running daily totals,
-deletion by day / meal / name / all / newest, and `"delete it"` asking which.
+### What the user wants
 
-**Library:** 11,149 foods. Every import applies an audit — impossible magnitudes, macros over
-105 g per 100 g, calories disagreeing with their own macros — and rejects rather than importing
-bad rows. Rejected rows are listed in the scratchpad with reasons.
+A screenshot of the OFF state was supplied. Read from it:
 
-*The audit cannot catch a mislabelled row.* The old `Chicken` entry read 131 kcal / 8.2 g protein
-and was internally consistent; it was a curry filed under the plain name. Fixed, along with
-`Fish`. A second check exists for plain-named staples whose protein density is implausible.
+- **Track**: light grey pill (~#C8C8C8) with a subtle inner shadow, so it reads as recessed
+- **Knob**: dark charcoal (~#333), nearly the full height of the track, with a **vertical notch
+  line down its centre** — a power-switch motif
+- **Two indicator dots OUTSIDE the track**: red on the left, hollow white on the right
+- Off state = knob left, red dot lit
 
-**Every import adds variants and never the base.** `Rice`, `Dal`, `Biryani` all had to be added by
-hand after imports buried them. Check the plain name after every import.
+### Blocked on
 
-**Intents:** 15, 3,051 examples, generated from templates with a cross-intent collision check.
+**The ON state was never supplied.** Unknown: whether the red dot goes dark and the white lights,
+whether the white turns green, and whether the knob or track changes colour. That is half the
+design. Ask for the on-state screenshot before writing any CSS.
 
-**AI (hybrid, working on device).** Local first, model last. `www/js/ai/ai-intent.js` validates
-the model's `{intent, args}` against a 17-entry allow-list before anything executes: unknown
-intents, wrong types, out-of-range values and markup are all refused, and a field that fails its
-check fails the whole reply. Risk tier comes from the action registry, so destructive intents
-still confirm. Fails silently to local on timeout, malformed reply or no backend.
+### What this touches — it is not a one-file change
 
-`AI_FIRST` in `service.js` puts the model ahead of local. It was tried and reverted: every message
-then waits up to six seconds for a backend that sleeps every fifteen minutes.
+Three switch families, each with its own markup site and its own stylesheet:
 
-**Backend:** `https://ignyt-backend-oo80.onrender.com`, healthy, auth enforced. `ChatRequest`
-accepts `message, context, history, toolResults, timezone` — **there is no `system` field**;
-sending one silently loses the instruction. Free tier sleeps; first request after idle takes ~45 s.
+| class | markup | css |
+|---|---|---|
+| `.stg-switch` | `settingToggle()` in `www/app.js` ~6373 | `www/css/pages/tools.css:277` |
+| `.ft-switch` | fasting page | `www/css/pages/fasting.css:187` |
+| `.rm-switch` | reminders page | `www/css/pages/reminders.css:42` |
+
+The current switch is a 46×26 track with a 20px knob and nothing else. The reference adds two
+indicator dots that do not exist in the markup, so **this needs new HTML in three places**, not
+just CSS.
+
+### Two decisions to make before building
+
+1. **Keep the `<button role="switch" aria-checked>` markup.** Uiverse switches are almost always
+   a hidden `<input type=checkbox>` + `<label>`, which does not announce state to screen readers.
+   IGNYT's button version is the more accessible one. Port the visual CSS onto it; do not adopt
+   their markup wholesale.
+
+2. **The indicator dots make every switch wider.** In Settings the switch is pinned right by
+   `margin-left:auto` in a row that also holds a label and a description. Check the widest labels
+   ("Workout Recommendations", "Auto-Start Rest Timer") on a narrow phone before committing — the
+   description text already wraps.
 
 ---
 
-## Open items
+## UNVERIFIED VISUAL CHANGES — check these in a preview first
 
-- **`createWorkout` is `destroy` tier**, so creating a routine asks for confirmation. Likely wrong
-  — creation is reversible — but it is a product call and has not been made.
-- **`"calories in 65 chicken"`** returns nothing: food-name patterns require a letter first and
-  several dozen imported dishes begin with a digit.
-- **Knowledge base is empty**, awaiting data.
-- **Voice**: the repeated-transcript fix in `voice.js` is a guard (`collapseRepeats`) that removes
-  the damage without the cause being fully understood. Two earlier fixes to how the transcript is
-  built did not hold. Confirmed working on device once.
+Three changes shipped today were reasoned from screenshots, not seen rendered. A new session
+should start the preview server and look at them before doing anything else:
 
-## A recurring failure worth knowing about
+1. **iPhone bottom nav at 22px** — `www/index.html:507`,
+   `bottom:max(10px, calc(env(safe-area-inset-bottom,0px) - 12px))`. Second adjustment to this
+   value. If still wrong, the number to change is the `12`. Cannot be checked on Android (zero
+   inset) — needs iOS, which goes through Codemagic, no Mac here.
+2. **Settings toggle right padding, 12px** — `www/css/pages/tools.css:268`. Confirmed as a bug by
+   the user; the 12px value is a judgement.
+3. **Fasting toggle right padding, 12px** — `www/css/pages/fasting.css:187`. Fixed BY ANALOGY
+   with the settings row, same zero-horizontal-padding shape. **Nobody has looked at this screen.**
+   If its card already pads its children, 12px is now too far in.
 
-**Eight times on 2026-08-11**, a regex escape was written into a file as a literal control
-character — `\b` became `0x08`, `\s` became `s`, `\n` became a real newline. `node --check` passes
-most of them. Two produced a *plausible wrong answer* rather than an obvious failure; one disabled
-a safety guard silently.
+Also unverified: the **central scroll reset** (`76a4df2`). Two things to check —
+Home → Habit Tracker opens at the top, AND Progress → a detail → back still returns you to where
+you were in the Progress list. The second is what regresses if the call-ordering assumption was
+wrong.
 
-Sweep the **built bundle**, not the source, after any edit containing a backslash:
+---
 
-```bash
-python -c "import io,re,glob;print({f:len(re.findall(r'[\x00-\x08\x0b\x0c\x0e-\x1f]',io.open(f,encoding='utf-8').read())) for f in glob.glob('android/app/src/main/assets/public/js/**/*.js',recursive=True) if re.search(r'[\x00-\x08\x0b\x0c\x0e-\x1f]',io.open(f,encoding='utf-8').read())})"
+## Where the assistant stands (do not lose this)
+
+**IGNYT AI now ships OFF by default** (`aiChatOn`, positive key so a missing value reads as off).
+Everything below only affects users who opt in, which is why merging it to main was low-risk.
+
+Measured on 2,000 supplied questions: **93.1% get an answer, but a hand-read sample of 14 was
+only ~70% correct.** Coverage is not accuracy, and the coverage number was the easier thing to
+measure. Do not quote 93% as a quality figure.
+
+The failure mode is **"right topic, wrong question"** — an answer to a different question about
+the same subject. Two gates were added and both work: retrieval must know the word you asked
+about (IDF coverage on the user's own words, not the synonym expansion), and an open question
+cannot be answered by a yes/no entry (question-form penalty ×0.35).
+
+**A margin gate was tried and reverted** (`f46a16e`). Rejecting near-ties cost 29 points of
+coverage and fixed only 2 of 5 known-wrong answers. The other three were not close calls — they
+won outright. That negative result matters: no ranking rule over word overlap separates them.
+
+**The path forward is RAG, and half of it is built.** `IgnytSearch.candidates(text, n)` returns
+the top few entries ungated, for a model to choose between. Measured on the five known-wrong
+answers, it splits them cleanly:
+
+- **Retrieval failures (fixable by grounding a model in the shortlist)**: "how many carbs should
+  I eat a day" has the exact right entry at position 4; "will burpees help me get fitter" at
+  position 3.
+- **Content gaps (not fixable by RAG)**: "what muscles does the lateral raise work" — all six
+  candidates are about lateral raises and not one names a muscle. The entry does not exist.
+
+**Nothing calls `candidates()` yet.** `EXTERNAL_AI` is `false` in `www/js/ai/service.js`, so no
+Gemini call happens at all. Turning it on has a known cost the user has already rejected once:
+AI-first made every message wait ~6s on a sleeping backend ("ai is thinking not giving answers").
+
+---
+
+## Production audit — where it got to
+
+The user asked for a 32-phase production audit. Two phases are done:
+
+**Phase 25, data isolation — DONE.** Firestore rules are owner-only and deny by default. No API
+route accepts a user id from the caller; identity always comes from `Depends(current_user)`.
+Six tests in `backend/tests/test_data_isolation.py` prove it with two users through the real app,
+including one that reads the route table so a future endpoint cannot quietly start accepting a
+user id. **Found and fixed a P2**: `AUTH_MODE=insecure-uid` takes identity from a request header
+and was refused only when `ENVIRONMENT` read exactly `"production"` — `prod`, `production-eu` and
+an unset value all permitted it. Now an allowlist of known dev environments; 17 tests.
+
+**Phase 6/22, input validation — STARTED, one action only.** Fuzzed `addFoodLog` with 21 hostile
+values. Good news: nothing ever stored NaN or Infinity. Found and fixed: `num()` stripped every
+non-digit from strings, so `"1e400"` became `"1400"` and logged 1400g of chicken at 2310 kcal
+with no error. `Number(true)` is 1, so a boolean logged one gram.
+
+**Still untested**: weight, sets, reps, dates, CSV import, profile data, workout names. `num()`
+is shared so they inherit the fix, but their own paths have not been fuzzed.
+
+Next-highest value from the user's list, in order: automated test layers for food/workout/
+progress/storage (there is currently NO coverage outside the chat suite), then Android/Capacitor
+hardening, then dead-code cleanup last once tests exist to catch mistakes.
+
+---
+
+## Standing constraints — read before touching anything
+
+- **`feature/coach-sync` must not be merged anywhere** until the user says so. Verified absent
+  from `main` and from `feature/diagnostics-screen`. Check again before any merge.
+- **Never push feature work directly to `main`.** Merges to main have been done twice, both times
+  explicitly requested, both via a temporary `git worktree` because the working tree has
+  uncommitted files that block `git checkout main`. Do not stash the user's work.
+- **`GEMINI_API_KEY` never leaves the backend.** Verified: it has never been committed. The only
+  key in git history is the Firebase Web API key, which is public by design and ships in every
+  APK — it does not need rotating, but it should be restricted by package + SHA-1 in Google Cloud.
+- **iOS builds go through Codemagic.** There is no Mac. Never suggest Xcode.
+- **Google Sign-In was removed for the third time** (`40b483f`) after an attempt that failed with
+  everything correct — plugin applied, `default_web_client_id` generated, all three Credential
+  Manager libraries present, three fingerprints registered including Play's. Do not re-add it on
+  a hunch; the reasons are recorded in `AuthPlugin.kt` and `android/app/build.gradle`.
+- **Version codes**: `1.0.48` → `10506`, floor asserts `> 10505`. 10505 was built and handed over
+  but its upload was never confirmed — the comment says so rather than claiming an upload that
+  may not have happened. Bump the name before building any AAB.
+
+## Build commands
+
+```
+npx cap sync android
+cd android && ./gradlew.bat assembleDebug        # or bundleRelease for the AAB
 ```
 
-`js/food/food-search.js` contains one `\x01` deliberately, as a cache-key delimiter. Everything
-else should be clean.
+Chat/intent suite (48 tests) is driven from a harness in the session scratchpad, not the repo —
+it is not checked in. Backend: `cd backend && python -m pytest -q` (120 passed, 14 skipped).
+
+Bump the service worker cache in `www/sw.js` on any `www/` change so installed clients update.
+Currently `ignyt-v465`.
