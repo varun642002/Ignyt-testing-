@@ -13569,7 +13569,19 @@ function renderPersonalInfoTab(){
           <div class="pi-field"><label class="pi-label">${svg('workout',14)} Activity Level</label>
             <select class="pi-input" id="p-activity">${ACTIVITY_MULTIPLIERS.map(a=>`<option value="${a.mult}" ${p.activityMultiplier===a.mult?'selected':''}>${a.label}</option>`).join("")}</select></div>
         </div>
-        ${latestW ? `<div style="font-size:11px;color:var(--rh-muted);margin-top:8px;">Weight is set from your latest log entry — update it from the Log Weight screen.</div>` : ''}
+        ${''/* UNCONDITIONAL. This note used to render only when a weight had already been
+              logged -- but the field is disabled either way, so the one person guaranteed to
+              see a greyed box with no explanation was someone who had never logged a weight
+              and was trying to set it for the first time. Reported as "I cannot update the
+              weight in the profile", which is exactly what it looks like.
+              The button goes where the note only pointed. */}
+        <div style="font-size:11px;color:var(--rh-muted);margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span>${latestW
+            ? "Weight comes from your latest log entry."
+            : "Weight is set by logging it, so your history and trend stay in one place."}</span>
+          <button class="btn-link" data-action="open-log-weight"
+            style="font-size:11px;background:none;border:none;color:var(--accent);padding:0;cursor:pointer;font-weight:700;">Log weight</button>
+        </div>
       </div>
 
       <div class="rh-section-head"><span>Preferences</span></div>
@@ -21393,6 +21405,10 @@ function attachHandlers(){
     render();
     setTimeout(()=>{ const h=document.getElementById("body-history"); if(h) h.scrollIntoView({behavior:"smooth", block:"start"}); }, 0);
   });
+  /* Profile's weight field is read-only by design; this is the way to the screen that does own
+     it. bodyView null is the Log Weight view -- personal-info and calculators are the other two. */
+  const openLogWeightBtn = document.querySelector('[data-action="open-log-weight"]');
+  if(openLogWeightBtn) openLogWeightBtn.addEventListener("click", ()=>{ state.tab = "body"; state.bodyView = null; render(); });
   const closeLogWeightBtn = document.querySelector('[data-action="close-log-weight"]');
   if(closeLogWeightBtn) closeLogWeightBtn.addEventListener("click", ()=>{ state.tab = "tools"; state.bodyView = null; render(); });
   document.querySelectorAll("[data-body-weight-range]").forEach(el=>{
