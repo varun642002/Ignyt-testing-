@@ -16060,14 +16060,32 @@ function markPageEnterIfTabChanged(){
    assigns scrollTop AFTER calling render() wins. The Progress back button does exactly that to
    restore where the user left off, and keeps working untouched. */
 var _lastNavKey = null;
+var _scrollBefore = null;
+/* SECOND ATTEMPT, and the first one is why this is shaped the way it is.
+   render() rewrites main.innerHTML, which drops the scroll container to 0. Restoring the
+   position unconditionally was tried and reverted: on a screen whose CONTENT HEIGHT CHANGED --
+   a food row appearing, a plan item added -- the page painted at one offset and was moved to
+   another, which is the flicker that was reported across many pages.
+   The height is the discriminator. Same height means the DOM was re-rendered but not
+   restructured -- ticking a habit, flipping a switch, a counter changing -- and putting the
+   position back is invisible. Different height means something appeared or vanished, and the
+   old offset no longer refers to the same place, so it is not restored.
+   Reads scrollHeight before and after, and only restores when they match. */
+function scrollStateOf(){
+  var m = document.getElementById("main");
+  return m ? { top: m.scrollTop, height: m.scrollHeight } : null;
+}
 function resetScrollIfNavigated(){
   var key = state.tab + "/" + (state.progressView || "") + "/" + (state.bodyView || "");
-  if(key === _lastNavKey) return;
   var isFirstPaint = _lastNavKey === null;
+  var navigated = key !== _lastNavKey;
   _lastNavKey = key;
-  if(isFirstPaint) return;   // the app arriving is not a navigation
   var main = document.getElementById("main");
-  if(main) main.scrollTop = 0;
+  if(!main || isFirstPaint) return;   // the app arriving is not a navigation
+  if(navigated){ main.scrollTop = 0; return; }
+  if(_scrollBefore && _scrollBefore.top && _scrollBefore.height === main.scrollHeight){
+    main.scrollTop = _scrollBefore.top;
+  }
 }
 
 function withFocusPreserved(fn){
@@ -16164,6 +16182,7 @@ function render(){
       renderSignInScreen();
       return;
     }
+    _scrollBefore = scrollStateOf();   // captured before the DOM is rewritten
     withFocusPreserved(renderApp);
     markPageEnterIfTabChanged();
     resetScrollIfNavigated();
