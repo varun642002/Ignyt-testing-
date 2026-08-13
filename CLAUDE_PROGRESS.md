@@ -65,6 +65,49 @@ travel would be swallowed for 350ms. Worth fixing on those grounds regardless of
 `npx playwright test tests/workout/set-logging.spec.js --project=mobile-safari`
 then unzip `test-results/<folder>/trace.zip` and read `*.trace` as JSONL.
 
+**INSTRUMENTED THE HANDLER ON WEBKIT. The result rules out the guard and points somewhere worse.**
+
+Probes were added to the nav click handler (line 8586 area), pointerdown (8714) and pointerup
+(8752), writing to `window.__navDbg`. Then a temporary spec clicked `[data-navtab="workout"]` on
+mobile-safari and dumped the array. Instrumentation has been reverted; `www/app.js` is clean.
+
+```
+NAVDBG {"dbg":[], "tab":"(no window.state)", "startBtn":0}
+```
+
+**The array is EMPTY.** Not "the guard swallowed it" -- no pointerdown, no pointerup, no click
+probe fired at all. The nav's listeners never ran.
+
+So the 350ms drag guard is NOT the cause, and neither is goTo(). Ruled out.
+
+The DOM is not the problem either, checked in the same way:
+
+```
+navCount 1 · btnCount 5 · all five inside nav.bottom-nav · classes: "bottom-nav
+bottom-nav--home-light has-active"
+```
+
+One nav, five buttons, all children of it, and `has-active` present -- so syncBottomNav has run.
+The element Playwright clicks is the right element, in the right parent.
+
+**Therefore: the nav element in the DOM does not carry the click/pointer listeners on WebKit.**
+The listeners are attached in buildBottomNav (www/app.js:8556 onward). Either that attachment
+path does not run on WebKit, or the nav that receives listeners is later replaced by one that
+does not -- removeBottomNav()/buildBottomNav() are both called from render paths, and a rebuild
+that skips re-attachment would look exactly like this.
+
+**NEXT:** log from inside buildBottomNav itself -- does it run on WebKit, how many times, and is
+the element it attaches to still the one in the DOM afterwards (`document.contains(nav)`). That
+distinguishes "never attached" from "attached to an element that was replaced".
+
+Ruled out so far, do not retry: the selector, the auth fixture, the tab-bar preference, the
+`active` class assertion, the `--nav-i` assertion, the 350ms drag guard, goTo(), and a duplicate
+or missing nav in the DOM.
+
+**Regenerating traces:** `npx playwright test tests/workout/set-logging.spec.js --project=mobile-safari`
+then unzip `test-results/<folder>/trace.zip` and read `*.trace` as JSONL. Traces are overwritten
+by later runs.
+
 **Previously, where to start:** open a trace from a failing mobile-safari workout test. That shows whether
 the click landed, whether the tab state changed, and what rendered — which distinguishes "the
 click missed" from "the click worked and the app did not re-render" from "the app navigated and
