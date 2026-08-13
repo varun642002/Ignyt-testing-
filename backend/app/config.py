@@ -27,6 +27,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # touches the database returns 500 — the symptom pointing nowhere near the cause.
 _SSLMODE_VALUES = {"disable", "allow", "prefer", "require", "verify-ca", "verify-full"}
 
+# Environments where AUTH_MODE=insecure-uid is tolerated. Deliberately an allowlist: the check
+# that used it as a denylist ("is it production?") let every unrecognised spelling through.
+# Add a name here only if it is genuinely a developer machine or an isolated test runner.
+_DEV_ENVIRONMENTS = {"development", "dev", "local", "test", "testing"}
+
 
 def _asyncpg_sslmode_fix(url: str) -> str:
     """Rename `sslmode` to `ssl` for asyncpg. Left alone for every other driver."""
@@ -72,7 +77,9 @@ class Settings(BaseSettings):
 
     # --- Identity (Firebase Admin) ---
     # "firebase" verifies a Firebase ID token (production). "insecure-uid" trusts an
-    # X-Ignyt-Uid header — LOCAL DEV ONLY, and hard-refused when ENVIRONMENT=production.
+    # X-Ignyt-Uid header — LOCAL DEV ONLY, and refused unless ENVIRONMENT names a recognised
+    # development environment (_DEV_ENVIRONMENTS). Not "refused in production": an unknown
+    # environment name is refused too, so a typo cannot open it.
     auth_mode: str = Field(default="firebase", alias="AUTH_MODE")
     # Firebase Admin credentials: a path to the service-account JSON, or the JSON content.
     firebase_credentials: str = Field(default="", alias="FIREBASE_CREDENTIALS")
@@ -244,8 +251,23 @@ class Settings(BaseSettings):
                 "FIREBASE_PROJECT_ID (required when FIREBASE_CREDENTIALS is unset — it is the "
                 "audience tokens are verified against)"
             )
-        if self.auth_mode == "insecure-uid" and self.is_production:
-            raise RuntimeError("AUTH_MODE=insecure-uid is forbidden in production.")
+        # FAIL CLOSED. This used to read `and self.is_production`, which is
+        # `environment.lower() == "production"` -- so the bypass was refused only when the
+        # environment was spelled exactly right. ENVIRONMENT unset, or set to "prod",
+        # "prod-1", "Production " with a trailing space, or anything else nobody thought of,
+        # left is_production False and permitted an auth mode where identity is whatever the
+        # caller puts in a header.
+        #
+        # Inverted: the bypass is allowed only where the environment is a RECOGNISED
+        # development one. Anything unrecognised is treated as production, because an
+        # environment name this code does not know is not a name it can vouch for.
+        if self.auth_mode == "insecure-uid" and self.environment.strip().lower() not in _DEV_ENVIRONMENTS:
+            raise RuntimeError(
+                "AUTH_MODE=insecure-uid is only permitted when ENVIRONMENT is one of: "
+                + ", ".join(sorted(_DEV_ENVIRONMENTS))
+                + f" (got {self.environment.strip()!r}). It accepts the caller's X-Ignyt-Uid "
+                "header as identity, so any request could read any user's data."
+            )
         if self.auth_mode not in ("firebase", "insecure-uid"):
             raise RuntimeError(f"Unknown AUTH_MODE: {self.auth_mode}")
         if missing:
