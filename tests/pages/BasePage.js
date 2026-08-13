@@ -19,11 +19,20 @@ export class BasePage {
        looked for data-nav, so they never found a bottom-nav tab and failed on
        expect(trigger).toBeVisible() -- which read as an auth problem and was not one.
        Matching either keeps the Tools fallback below working for tabs reached that way. */
-    const sel = `[data-nav="${tab}"], [data-navtab="${tab}"]`;
-    let trigger = this.page.locator(sel).first();
+    /* THE TAB BAR FIRST, then in-page links. A comma selector with .first() returns whatever
+       comes first in DOCUMENT order, not the first branch of the selector -- so a quick-action
+       card carrying data-nav (the Workout page has two: library, recommendation) could win over
+       the bottom-nav button and navigate somewhere else entirely. That is how the workout specs
+       ended up asserting against Home.
+       data-navtab is only ever the bottom nav, so ask for it explicitly and fall back. */
+    const pick = (t) => {
+      const bar = this.page.locator(`[data-navtab="${t}"]`).first();
+      return bar.count().then(n => n > 0 ? bar : this.page.locator(`[data-nav="${t}"]`).first());
+    };
+    let trigger = await pick(tab);
     if (await trigger.count() === 0 && tab !== 'tools') {
       await this.navigate('tools');
-      trigger = this.page.locator(sel).first();
+      trigger = await pick(tab);
     }
     await expect(trigger).toBeVisible();
     await trigger.click();
