@@ -215,3 +215,69 @@ it is not checked in. Backend: `cd backend && python -m pytest -q` (120 passed, 
 
 Bump the service worker cache in `www/sw.js` on any `www/` change so installed clients update.
 Currently `ignyt-v465`.
+
+---
+
+# PRODUCTION CHECKLIST (user's 12 items) — with what is already known
+
+Recorded so the next session starts from measurements rather than re-deriving them. Findings
+below are from this session unless marked otherwise.
+
+**1. Browser tests open on the sign-in screen.** 405 tests expect an authed app. Not started.
+Note before building the fixture: `skipSignIn()` was deliberately removed (there is a comment
+about it in `www/app.js`) because Play review could not tell whether an account was required.
+The fixture must authenticate, not bypass the gate.
+
+**2. Rotate the Gemini key + Gitleaks in CI.** IMPORTANT CORRECTION TO THE PREMISE: the key has
+NEVER been committed. Verified by scanning all of git history — the only `AIza`-prefixed value
+ever committed is the Firebase Web API key (`AIzaSyBf3Is97T...`), which is public by design and
+ships inside every APK. It does not need rotating; it SHOULD be restricted by package name +
+SHA-1 in Google Cloud. A key sitting in a gitignored local `backend/.env` is where it belongs.
+Rotate anyway if that file has been shared around, but this is hygiene, not an active leak.
+Gitleaks in CI is still worth adding — the value is preventing a future mistake.
+
+**3. npm audit.** Measured `npm audit --omit=dev`: ONE high (brace-expansion DoS, transitive,
+tooling only). The "five high" figure presumably includes dev dependencies. Confirm which set
+matters before upgrading the Capacitor chain — Capacitor is pinned at 8.4.1 and CLAUDE.md
+forbids changing the toolchain versions without explicit authorization.
+
+**4. AI food scanning.** Backend exists and is wired: `routes_food.py` has `/scan` and
+`/scan-status`, gated on `gemini_api_key` being configured, with a per-user daily limit
+(`ai_scan_daily_limit`, default 15) and real usage accounting in `AiScanUsage`. The frontend
+row asks scan-status once and renders nothing when the server has no key — so it already hides
+itself honestly. The decision is product, not code.
+
+**5. Android build verification.** NOT BROKEN in this session — `./gradlew.bat assembleDebug`
+and `bundleRelease` both ran clean many times, most recently for versionCode 10506. If it fails
+elsewhere it is a machine-local JDK issue, not the repo.
+
+**6. Auth E2E.** Partly done for the isolation half: `backend/tests/test_data_isolation.py` has
+six tests proving user A cannot reach user B through the API, including one that reads the route
+table so a future endpoint cannot start accepting a user id. What is NOT covered: sign-up,
+sign-in, logout, password reset, token expiry — all of which need real Firebase tokens rather
+than the header-based dev identity the test harness uses.
+
+**7. Physical device testing.** Agreed and unavoidable. Add to the list: EVERY visual change in
+the last stretch of this session was reasoned from screenshots, and three came back as
+regressions. See the top of this file.
+
+**8. Frontend quality gates.** There is currently NO lint config, NO formatter, NO type checking
+(plain JS, no TS), and no bundle-size check. The only automated frontend coverage in the repo is
+the chat/intent suite, and even that is driven from a scratchpad harness that is NOT checked in.
+Checking that harness in would be a cheap first win.
+
+**9. Duplicate root files.** Do not delete on sight. `capacitor.config` and the Android build
+copy `www/` into assets — confirm by checking what `npx cap sync` copies before removing
+anything at the repo root.
+
+**10. Privacy/storage governance.** Storage keys seen this session: `hx_settings`, `hx_habits`,
+`hx_auth_seen`, `hx_tab`, `hx_ios_auth_tokens`, plus `state.foodLog`, `state.bodylog`,
+`state.prs`, `state.habitCompletions`. That is not the full set — enumerate from `LS.records(`
+and `LS.set(` call sites rather than from this list.
+
+**11. Security testing in CI.** There is no CI workflow in the repo at all as far as this session
+saw. That is the first thing to establish before adding scanners to it.
+
+**12. Performance budgets.** One number worth knowing: `www/data/knowledge.json` is 5.4 MB and
+`clean_foods.json` holds 13,516 foods. Both are parsed and indexed on the phone at startup. If
+startup time is a budget, those two files are where to look first.
