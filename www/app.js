@@ -7553,7 +7553,13 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="recommendation" || state.tab==="ai" || state.tab==="safety" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","workouts","calendar"].includes(state.progressView)))
+  /* "nutrition" is the Food Log. It was the only one of the five bottom-nav tabs missing from
+     this list, so the nav rendered in the wrong style there -- solid blue against the dark
+     pill every other tab gets. A hand-maintained allow-list of tab names goes stale the
+     moment a tab is added, which is exactly what happened.
+     Checked against NAV_TABS rather than added on sight: home, workout, progress and tools
+     were all already present. */
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="nutrition" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="recommendation" || state.tab==="ai" || state.tab==="safety" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","workouts","calendar"].includes(state.progressView)))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || state.bodyView==="calculators" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
