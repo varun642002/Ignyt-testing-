@@ -33,7 +33,128 @@ never left Home. The 25 green navigation tests prove a button was clickable, not
    works. Either the value settles differently than polling expects, or it is not set on every
    tab change. NOT committed; `BasePage.js` was checked out clean and is green at 5 passed.
 
-**Where to start:** open a trace from a failing mobile-safari workout test. That shows whether
+**THE TRACE HAS NOW BEEN OPENED. Here is what it says:**
+
+```
+queryCount  [data-navtab="workout"]          found
+click       [data-navtab="workout"]          EXECUTED
+expect      #app                             passed (always does)
+expect      [data-action="start-session"]    FAILED
+```
+
+The click lands on the correct element and the app does not change tabs. So this is NOT a
+selector problem, NOT an auth problem, and NOT a test problem. It is the app: on WebKit, a click
+on the bottom nav does not navigate.
+
+The handler is `nav.addEventListener("click", ...)` at `www/app.js:8577`. It does two things
+before navigating, and one of them is eating the click:
+
+1. **The drag-suppression guard**, `if(Date.now() - dragEndedAt < 350) return;` (line 8586).
+   `dragEndedAt` is set on pointerup when `moved` is true, and `moved` requires 6px of
+   horizontal travel (line 8729). Playwright moves the pointer BEFORE pointerdown, so `moved`
+   should stay false -- but WebKit's pointer event sequence differs from Chromium's and this is
+   the obvious suspect. Verify by logging `moved` and `dragEndedAt` from a WebKit run before
+   changing anything.
+2. **`goTo(btn.dataset.navtab)`** at line 8587 -- if the guard passes, the failure is inside
+   goTo. Not yet read.
+
+If it IS the guard, this is a REAL USER BUG on iOS, not a test artefact: a tap with any finger
+travel would be swallowed for 350ms. Worth fixing on those grounds regardless of the suite.
+
+**Traces are overwritten by later runs.** Regenerate with:
+`npx playwright test tests/workout/set-logging.spec.js --project=mobile-safari`
+then unzip `test-results/<folder>/trace.zip` and read `*.trace` as JSONL.
+
+**INSTRUMENTED THE HANDLER ON WEBKIT. The result rules out the guard and points somewhere worse.**
+
+Probes were added to the nav click handler (line 8586 area), pointerdown (8714) and pointerup
+(8752), writing to `window.__navDbg`. Then a temporary spec clicked `[data-navtab="workout"]` on
+mobile-safari and dumped the array. Instrumentation has been reverted; `www/app.js` is clean.
+
+```
+NAVDBG {"dbg":[], "tab":"(no window.state)", "startBtn":0}
+```
+
+**The array is EMPTY.** Not "the guard swallowed it" -- no pointerdown, no pointerup, no click
+probe fired at all. The nav's listeners never ran.
+
+So the 350ms drag guard is NOT the cause, and neither is goTo(). Ruled out.
+
+The DOM is not the problem either, checked in the same way:
+
+```
+navCount 1 · btnCount 5 · all five inside nav.bottom-nav · classes: "bottom-nav
+bottom-nav--home-light has-active"
+```
+
+One nav, five buttons, all children of it, and `has-active` present -- so syncBottomNav has run.
+The element Playwright clicks is the right element, in the right parent.
+
+**Therefore: the nav element in the DOM does not carry the click/pointer listeners on WebKit.**
+The listeners are attached in buildBottomNav (www/app.js:8556 onward). Either that attachment
+path does not run on WebKit, or the nav that receives listeners is later replaced by one that
+does not -- removeBottomNav()/buildBottomNav() are both called from render paths, and a rebuild
+that skips re-attachment would look exactly like this.
+
+**buildBottomNav LOGGED. It runs, and the listeners are on the right element:**
+
+```
+BUILDDBG {"log":[{"ev":"buildBottomNav"},{"ev":"listenersAttached"}],
+          "listenerNavStillInDom":true,"listenerNavIsDomNav":true}
+```
+
+So "never attached" and "attached then replaced" are both ruled out.
+
+**Then the click handler's FIRST line was logged, and this is the finding:**
+
+```
+ENTRYDBG click-entry: target="NAV", targetClass="bottom-nav ...", btnFound=false
+```
+
+`e.target` is the NAV ITSELF, so `e.target.closest("[data-navtab]")` returns null and the handler
+returns on its first line. That is why every earlier probe looked like "nothing fired" -- they
+were all placed AFTER this early return.
+
+**But hit-testing says that should not happen:**
+
+```
+HITDBG topAtCentre="svg", topIsBtnOrChild=true, btnPointerEvents="auto",
+       stack=[svg, BUTTON.nav-btn, NAV.bottom-nav], rect={x:89,y:594,w:70,h:53}
+```
+
+`document.elementFromPoint` at the button's centre returns the SVG icon, which IS inside the
+button. There is no overlay, no pointer-events:none, and no pseudo-element covering the bar
+(checked: no `bottom-nav::after`/`::before` exists).
+
+**So: the hit test resolves to the button's SVG, and the dispatched click's target is NAV.**
+Those cannot both be right. Two candidates left:
+
+1. **WebKit event retargeting from the SVG.** `e.target` for a click on an SVG child may resolve
+   differently than elementFromPoint suggests, and `closest()` from an SVG element is the classic
+   place this bites. Test directly: log `e.target.tagName` AND `e.target.parentElement` in the
+   handler, and try `e.composedPath()` instead of `closest()`.
+2. **Playwright dispatching at a different point than the centre** -- the button is 70x53 at
+   y=594; check the viewport height for the mobile-safari project and whether the nav is partly
+   below the fold at click time.
+
+**LIKELY FIX IF IT IS (1):** the handler should not depend on `closest()` from whatever child was
+hit. `e.composedPath().find(el => el.dataset && el.dataset.navtab)` is robust to SVG targets, and
+would be a real iOS fix, not a test workaround -- a user tapping the icon rather than the label
+would hit the same path.
+
+**Previously NEXT:** log from inside buildBottomNav itself -- does it run on WebKit, how many times, and is
+the element it attaches to still the one in the DOM afterwards (`document.contains(nav)`). That
+distinguishes "never attached" from "attached to an element that was replaced".
+
+Ruled out so far, do not retry: the selector, the auth fixture, the tab-bar preference, the
+`active` class assertion, the `--nav-i` assertion, the 350ms drag guard, goTo(), and a duplicate
+or missing nav in the DOM.
+
+**Regenerating traces:** `npx playwright test tests/workout/set-logging.spec.js --project=mobile-safari`
+then unzip `test-results/<folder>/trace.zip` and read `*.trace` as JSONL. Traces are overwritten
+by later runs.
+
+**Previously, where to start:** open a trace from a failing mobile-safari workout test. That shows whether
 the click landed, whether the tab state changed, and what rendered — which distinguishes "the
 click missed" from "the click worked and the app did not re-render" from "the app navigated and
 came back". Guessing at assertions without that has now cost four attempts.

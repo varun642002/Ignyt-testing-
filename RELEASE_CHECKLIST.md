@@ -93,8 +93,29 @@ reasoning built on that figure is out by 3x.
 | Gate | Status |
 |---|---|
 | Lint / format / static checks | **None configured.** No ESLint, no formatter, plain JS with no type checking. This is now the cheapest remaining gate — the test runner is in place, so a lint step has somewhere to sit. |
-| Dead duplicate runtime files | **Unresolved.** Root-level `app.js`/`sw.js` vs `www/` — confirm what `npx cap sync` copies before removing anything. |
+| Dead duplicate runtime files | **Verified obsolete, not yet removed.** See below. |
 | Documented public interfaces | **Partial**, via comments. |
+
+#### Root-level app.js / sw.js / index.html — verified obsolete (2026-08-13)
+
+Checked rather than assumed, because deleting a runtime file on a hunch is how an app ships
+broken:
+
+```
+root app.js         386 KB, last touched 2026-07-12 ("Add files via upload")
+www/app.js          1.33 MB, touched today
+capacitor.config    webDir: "www"          -- only www/ is ever packaged
+APK assets/public/app.js == www/app.js     -- byte-identical, confirmed with cmp
+references to root copies                  -- only its own stale index.html and sw.js
+```
+
+So the repo root holds a month-old fork of the app that nothing builds from and nothing else
+references. Safe to remove — but as its own reviewed change with a regression run, not folded
+into unrelated work.
+
+`ios/App/App/public/` is a THIRD copy and is stale too, but it is **untracked** (0 files in
+git) — a local artifact `cap sync ios` regenerates. Leave it alone; it is not a repo risk and
+deleting it by hand just forces a re-sync.
 
 ### Maintainability
 
