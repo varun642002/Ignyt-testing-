@@ -6858,7 +6858,13 @@ function renderSettingsTab(){
           ${[{key:"dark",label:"Dark",icon:"moon"},{key:"light",label:"Light",icon:"sun"},{key:"system",label:"System",icon:"monitor"}].map(t=>`
             <button class="tl-card ${s.theme===t.key?'is-connected':''}" style="flex-direction:column;align-items:center;text-align:center;padding:16px 8px;" data-theme-select="${t.key}">
               <span class="tl-card__icon" style="margin:0 0 8px;">${svg(t.icon,20)}</span>
-              <span style="font-size:13px;font-weight:700;">${t.label}</span>
+              ${''/* tl-card__label, not a bare span. This was styled inline with a size and a
+                    weight and NO COLOUR, and it sits inside a <button> -- which does not inherit
+                    the page's text colour, it falls back to the browser's default button text.
+                    On the dark theme that rendered "Dark", "Light" and "System" in near-black on
+                    a near-black card, effectively invisible. Every other tl-card names this class
+                    and gets var(--rh-text) from it, in both themes. */}
+              <span class="tl-card__label">${t.label}</span>
             </button>`).join("")}
         </div>
       </div>
@@ -7547,7 +7553,13 @@ function renderApp(){
   // home.css/workout.css/progress.css/tools.css); the header/nav shell is shared across
   // every tab, so this modifier class is only added while one of those is showing and
   // disappears the moment you navigate away or open a Progress detail view.
-  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="recommendation" || state.tab==="ai" || state.tab==="safety" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","workouts","calendar"].includes(state.progressView)))
+  /* "nutrition" is the Food Log. It was the only one of the five bottom-nav tabs missing from
+     this list, so the nav rendered in the wrong style there -- solid blue against the dark
+     pill every other tab gets. A hand-maintained allow-list of tab names goes stale the
+     moment a tab is added, which is exactly what happened.
+     Checked against NAV_TABS rather than added on sight: home, workout, progress and tools
+     were all already present. */
+  const isLightTab = state.tab==="home" || state.tab==="workout" || state.tab==="nutrition" || state.tab==="tools" || state.tab==="profile" || state.tab==="library" || state.tab==="recommendation" || state.tab==="ai" || state.tab==="safety" || state.tab==="insights" || state.tab==="health" || (state.tab==="progress" && (!state.progressView || ["body","habits","analytics","achievements","history","workouts","calendar"].includes(state.progressView)))
     || (state.tab==="goals" && window.IgnytGoals && window.IgnytGoals.isDashboardShowing())
     || (state.tab==="body" && (state.bodyView==="personal-info" || state.bodyView==="calculators" || !state.bodyView))
     || (state.tab==="plan" && !state.viewingHyroxSchedule && !state.viewingRaceMode && !state.viewingHyroxInfo)
@@ -13563,7 +13575,19 @@ function renderPersonalInfoTab(){
           <div class="pi-field"><label class="pi-label">${svg('workout',14)} Activity Level</label>
             <select class="pi-input" id="p-activity">${ACTIVITY_MULTIPLIERS.map(a=>`<option value="${a.mult}" ${p.activityMultiplier===a.mult?'selected':''}>${a.label}</option>`).join("")}</select></div>
         </div>
-        ${latestW ? `<div style="font-size:11px;color:var(--rh-muted);margin-top:8px;">Weight is set from your latest log entry — update it from the Log Weight screen.</div>` : ''}
+        ${''/* UNCONDITIONAL. This note used to render only when a weight had already been
+              logged -- but the field is disabled either way, so the one person guaranteed to
+              see a greyed box with no explanation was someone who had never logged a weight
+              and was trying to set it for the first time. Reported as "I cannot update the
+              weight in the profile", which is exactly what it looks like.
+              The button goes where the note only pointed. */}
+        <div style="font-size:11px;color:var(--rh-muted);margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span>${latestW
+            ? "Weight comes from your latest log entry."
+            : "Weight is set by logging it, so your history and trend stay in one place."}</span>
+          <button class="btn-link" data-action="open-log-weight"
+            style="font-size:11px;background:none;border:none;color:var(--accent);padding:0;cursor:pointer;font-weight:700;">Log weight</button>
+        </div>
       </div>
 
       <div class="rh-section-head"><span>Preferences</span></div>
@@ -14497,9 +14521,10 @@ function foodPageHeader(title, subtitle, trailing){
 /* =========================================================
    AI FOOD SCAN — the Food Log surface
 
-   Four ways in, per the brief: AI Scan, Camera, Gallery, Manual Entry — plus the barcode
-   button that already lived in the header. AI Scan and Camera differ only in whether the
-   picker opens the camera directly, so they share one path.
+   Four ways in, per the brief: AI Scan, Camera, Gallery, Manual Entry. AI Scan and Camera
+   differ only in whether the picker opens the camera directly, so they share one path.
+   (A barcode button used to sit in the header too. It was removed -- it had no scanner behind
+   it and only ever raised a toast saying so.)
 
    WHAT IS SHOWN DEPENDS ON WHAT IS TRUE. The row asks the backend once for scan-status and
    then renders the honest thing: the allowance when scanning is available, and nothing at all
@@ -14528,8 +14553,7 @@ function renderFoodSearchPage(){
   const total = cat ? cat.count() : IgnytFoodDB.count();
 
   return `<div class="food-page">
-    ${foodPageHeader(meal, `${mealKcal} kcal logged`,
-      `<button class="food-page__icon" data-food-scan="1" aria-label="Scan barcode">▤</button>`)}
+    ${foodPageHeader(meal, `${mealKcal} kcal logged`)}
 
     <div class="food-search-bar">
       <span class="food-search-bar__icon" aria-hidden="true">⌕</span>
@@ -15877,7 +15901,6 @@ function renderNutritionTab(){
 
     <!-- Add actions -->
     <div style="display:flex;gap:6px;margin-bottom:8px;">
-      <button class="btn btn-ghost" style="flex:1;padding:11px;font-size:11px;" data-action="scan-barcode">Scan Barcode</button>
       <button class="btn btn-accent" style="flex:1.3;padding:11px;font-size:13px;" data-action="add-food">+ Add Food</button>
       <button class="btn btn-ghost" style="flex:1;padding:11px;font-size:11px;${state.quickAddOpen?'color:var(--accent);':''}" data-action="quick-add-recent">Quick Add</button>
     </div>
@@ -16037,14 +16060,32 @@ function markPageEnterIfTabChanged(){
    assigns scrollTop AFTER calling render() wins. The Progress back button does exactly that to
    restore where the user left off, and keeps working untouched. */
 var _lastNavKey = null;
+var _scrollBefore = null;
+/* SECOND ATTEMPT, and the first one is why this is shaped the way it is.
+   render() rewrites main.innerHTML, which drops the scroll container to 0. Restoring the
+   position unconditionally was tried and reverted: on a screen whose CONTENT HEIGHT CHANGED --
+   a food row appearing, a plan item added -- the page painted at one offset and was moved to
+   another, which is the flicker that was reported across many pages.
+   The height is the discriminator. Same height means the DOM was re-rendered but not
+   restructured -- ticking a habit, flipping a switch, a counter changing -- and putting the
+   position back is invisible. Different height means something appeared or vanished, and the
+   old offset no longer refers to the same place, so it is not restored.
+   Reads scrollHeight before and after, and only restores when they match. */
+function scrollStateOf(){
+  var m = document.getElementById("main");
+  return m ? { top: m.scrollTop, height: m.scrollHeight } : null;
+}
 function resetScrollIfNavigated(){
   var key = state.tab + "/" + (state.progressView || "") + "/" + (state.bodyView || "");
-  if(key === _lastNavKey) return;
   var isFirstPaint = _lastNavKey === null;
+  var navigated = key !== _lastNavKey;
   _lastNavKey = key;
-  if(isFirstPaint) return;   // the app arriving is not a navigation
   var main = document.getElementById("main");
-  if(main) main.scrollTop = 0;
+  if(!main || isFirstPaint) return;   // the app arriving is not a navigation
+  if(navigated){ main.scrollTop = 0; return; }
+  if(_scrollBefore && _scrollBefore.top && _scrollBefore.height === main.scrollHeight){
+    main.scrollTop = _scrollBefore.top;
+  }
 }
 
 function withFocusPreserved(fn){
@@ -16141,6 +16182,7 @@ function render(){
       renderSignInScreen();
       return;
     }
+    _scrollBefore = scrollStateOf();   // captured before the DOM is rewritten
     withFocusPreserved(renderApp);
     markPageEnterIfTabChanged();
     resetScrollIfNavigated();
@@ -19034,6 +19076,27 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{
       const key = el.dataset.settingToggle;
       state.settings[key] = !state.settings[key];
+      /* FLIP THE SWITCH IN PLACE. A full render() rewrites main.innerHTML, which drops the
+         scroll container's scrollTop to 0 -- so tapping a switch near the bottom of Settings
+         threw the page to the header with the switch you wanted now off screen.
+         Restoring the scroll after the rewrite was tried and reverted: reassigning scrollTop
+         after the DOM is replaced makes the page paint in one place and jump to another, which
+         showed up as flicker on every screen, worst while adding food.
+         Not re-rendering at all is the fix that has neither problem. A toggle changes exactly
+         two things about this button -- the class and the ARIA state -- so it sets those and
+         leaves the rest of the page alone. render() below still runs for the keys that change
+         what else is on screen. */
+      el.classList.toggle("is-on", !!state.settings[key]);
+      el.setAttribute("aria-checked", state.settings[key] ? "true" : "false");
+      /* The full render() below still runs -- it is what persists and what updates anything
+         else the setting affects -- so the scroll position is carried across it here.
+         SCOPED TO THIS HANDLER on purpose. Doing the same thing globally inside render() was
+         tried and reverted: on screens whose content changes height, reassigning scrollTop
+         after the DOM is replaced makes the page paint in one place and jump to another, which
+         is the flicker seen while adding food. Toggling a switch changes no heights, so there
+         is nothing to jump against and the restore is invisible. */
+      const _mainEl = document.getElementById("main");
+      const _keepScroll = _mainEl ? _mainEl.scrollTop : 0;
       if(key==="keepAwake") applyWakeLock();
       if(key==="workoutLeftReminder") syncWorkoutLeftNotification();
       const NOTIFICATION_KEYS = ["workoutReminders","hydrationReminders","weeklyReports","workoutLeftReminder"];
@@ -19050,6 +19113,8 @@ function attachHandlers(){
         }
       }
       render();
+      const _m = document.getElementById("main");
+      if(_m && _keepScroll) _m.scrollTop = _keepScroll;
     });
   });
   const restSelect = document.getElementById("default-rest-select");
@@ -21387,6 +21452,10 @@ function attachHandlers(){
     render();
     setTimeout(()=>{ const h=document.getElementById("body-history"); if(h) h.scrollIntoView({behavior:"smooth", block:"start"}); }, 0);
   });
+  /* Profile's weight field is read-only by design; this is the way to the screen that does own
+     it. bodyView null is the Log Weight view -- personal-info and calculators are the other two. */
+  const openLogWeightBtn = document.querySelector('[data-action="open-log-weight"]');
+  if(openLogWeightBtn) openLogWeightBtn.addEventListener("click", ()=>{ state.tab = "body"; state.bodyView = null; render(); });
   const closeLogWeightBtn = document.querySelector('[data-action="close-log-weight"]');
   if(closeLogWeightBtn) closeLogWeightBtn.addEventListener("click", ()=>{ state.tab = "tools"; state.bodyView = null; render(); });
   document.querySelectorAll("[data-body-weight-range]").forEach(el=>{
@@ -21732,12 +21801,6 @@ function attachHandlers(){
     });
   });
 
-  const scanBtn = document.querySelector('[data-action="scan-barcode"]');
-  if(scanBtn) scanBtn.addEventListener("click", ()=>{
-    // Deliberately honest: no camera or barcode lookup exists yet, so this says so instead
-    // of opening something that cannot work.
-    showToast("Barcode scanning isn't built yet — search or add the food manually.", "error", render);
-  });
 
   // Nutrition tab — meals & food log
   /* The meal accordion is gone — meals are always expanded, so there is nothing to toggle.
@@ -22500,10 +22563,6 @@ function attachHandlers(){
   });
   const voiceBtn = document.querySelector("[data-food-voice]");
   if(voiceBtn) voiceBtn.addEventListener("click", ()=>startFoodVoiceSearch());
-  const scanBtn2 = document.querySelector("[data-food-scan]");
-  if(scanBtn2) scanBtn2.addEventListener("click", ()=>{
-    showToast("Barcode scanning needs a camera plugin, which isn't in this build. Search instead.", "error", render);
-  });
 
   // Lives in the panel header, outside the swapped container, so it is bound once per full
   // render rather than once per keystroke.

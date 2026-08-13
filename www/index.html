@@ -499,7 +499,12 @@ nav.bottom-nav{position:fixed; left:50%; transform:translateX(-50%);
        the side margin, which reads as a bar floating too high rather than one inset evenly.
        The inset already includes the clearance the home indicator needs, so taking whichever is
        larger keeps that clearance on iPhone and the 10px base everywhere else. */
-    bottom:max(10px, env(safe-area-inset-bottom,0px));
+    /* The full inset is 34px on a home-indicator iPhone, which still sat higher than it needed
+       to against a 12px side inset. The indicator itself occupies roughly the bottom 20px --
+       it is about 5px tall sitting about 8px up -- so the inset carries more clearance than the
+       hardware asks for. Twelve of those go back, leaving 22px on iPhone and the 10px base
+       everywhere the inset is zero. */
+    bottom:max(10px, calc(env(safe-area-inset-bottom,0px) - 12px));
     width:calc(100% - 24px); max-width:456px;
     display:flex; padding:6px; gap:0;
     background:rgba(23,23,28,.86); backdrop-filter:blur(9px) saturate(115%); -webkit-backdrop-filter:blur(9px) saturate(115%);
