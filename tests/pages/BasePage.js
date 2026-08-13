@@ -37,6 +37,25 @@ export class BasePage {
     await expect(trigger).toBeVisible();
     await trigger.click();
     await expect(this.app).toBeVisible();
+
+    /* NO ARRIVAL ASSERTION HERE YET, AND THAT IS A KNOWN HOLE -- not an oversight.
+
+       This method ends at `expect(this.app).toBeVisible()`, and #app is visible on EVERY
+       screen, so it holds whether or not the tab changed. That is why the navigation specs
+       pass on mobile-safari while the workout specs, which need to actually arrive somewhere,
+       fail on a button that only exists on the Workout tab.
+
+       An assertion on the button carrying class "active" was tried and reverted: that class is
+       applied only while DRAGGING across the nav (www/app.js:8695). A tap sets no per-button
+       class, so the assertion failed all 25 specs on every browser including ones where
+       navigation genuinely works.
+
+       The signal that does track the current tab is the indicator: syncBottomNav sets
+       `has-active` on nav.bottom-nav and writes the tab's index into the `--nav-i` custom
+       property on .nav-ind. Asserting that --nav-i equals the tab's index in NAV_TABS would
+       prove arrival. It needs the index, which this generic method does not have -- so it
+       belongs either in a page object that knows the tab order, or behind a small helper that
+       reads NAV_TABS from the page. */
   }
 
   async expectNoHorizontalOverflow() {
