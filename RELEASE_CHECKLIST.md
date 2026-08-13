@@ -55,8 +55,28 @@ A release goes out only when **all** of these are true:
 | Startup, interaction, API latency, memory | **Nothing measured.** |
 | Budgets enforced in CI | **No.** |
 
-Known figures worth starting from: `www/data/knowledge.json` is 5.4 MB and `clean_foods.json`
-holds 13,516 foods. Both are parsed and indexed **on the phone at startup**.
+### Measured baseline (2026-08-13) — no budgets set yet
+
+```
+www total                          33 MB
+data/food/clean_foods.json      10.42 MB    13,516 foods
+data/knowledge.json              5.43 MB    11,579 entries
+app.js                           1.33 MB
+js/ai/intents.js                 0.64 MB    24,096 training examples
+<script> tags in index.html           88
+```
+
+**Both big data files are already lazy** — `knowledge.ask()` awaits `load()` on first use, and
+`food-catalogue.js` defers its parse deliberately. So the obvious "stop parsing 16 MB at boot"
+win does not exist; it was already taken. Measure before assuming otherwise.
+
+**The 88 script tags are the untested cost.** Nothing here has been timed on a device — that is
+item 1 of the performance list and it is still not done. Do not set budgets from these byte
+counts; bytes are not milliseconds.
+
+**Stale comment worth fixing:** `www/js/food/food-catalogue.js:27` says clean_foods.json is
+3.4 MB. It is 10.42 MB — it tripled through the food imports and the note never moved. Any
+reasoning built on that figure is out by 3x.
 
 ### Test coverage
 
