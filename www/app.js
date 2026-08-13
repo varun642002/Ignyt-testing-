@@ -14521,9 +14521,10 @@ function foodPageHeader(title, subtitle, trailing){
 /* =========================================================
    AI FOOD SCAN — the Food Log surface
 
-   Four ways in, per the brief: AI Scan, Camera, Gallery, Manual Entry — plus the barcode
-   button that already lived in the header. AI Scan and Camera differ only in whether the
-   picker opens the camera directly, so they share one path.
+   Four ways in, per the brief: AI Scan, Camera, Gallery, Manual Entry. AI Scan and Camera
+   differ only in whether the picker opens the camera directly, so they share one path.
+   (A barcode button used to sit in the header too. It was removed -- it had no scanner behind
+   it and only ever raised a toast saying so.)
 
    WHAT IS SHOWN DEPENDS ON WHAT IS TRUE. The row asks the backend once for scan-status and
    then renders the honest thing: the allowance when scanning is available, and nothing at all
@@ -14552,8 +14553,7 @@ function renderFoodSearchPage(){
   const total = cat ? cat.count() : IgnytFoodDB.count();
 
   return `<div class="food-page">
-    ${foodPageHeader(meal, `${mealKcal} kcal logged`,
-      `<button class="food-page__icon" data-food-scan="1" aria-label="Scan barcode">▤</button>`)}
+    ${foodPageHeader(meal, `${mealKcal} kcal logged`)}
 
     <div class="food-search-bar">
       <span class="food-search-bar__icon" aria-hidden="true">⌕</span>
@@ -15901,7 +15901,6 @@ function renderNutritionTab(){
 
     <!-- Add actions -->
     <div style="display:flex;gap:6px;margin-bottom:8px;">
-      <button class="btn btn-ghost" style="flex:1;padding:11px;font-size:11px;" data-action="scan-barcode">Scan Barcode</button>
       <button class="btn btn-accent" style="flex:1.3;padding:11px;font-size:13px;" data-action="add-food">+ Add Food</button>
       <button class="btn btn-ghost" style="flex:1;padding:11px;font-size:11px;${state.quickAddOpen?'color:var(--accent);':''}" data-action="quick-add-recent">Quick Add</button>
     </div>
@@ -21783,12 +21782,6 @@ function attachHandlers(){
     });
   });
 
-  const scanBtn = document.querySelector('[data-action="scan-barcode"]');
-  if(scanBtn) scanBtn.addEventListener("click", ()=>{
-    // Deliberately honest: no camera or barcode lookup exists yet, so this says so instead
-    // of opening something that cannot work.
-    showToast("Barcode scanning isn't built yet — search or add the food manually.", "error", render);
-  });
 
   // Nutrition tab — meals & food log
   /* The meal accordion is gone — meals are always expanded, so there is nothing to toggle.
@@ -22551,10 +22544,6 @@ function attachHandlers(){
   });
   const voiceBtn = document.querySelector("[data-food-voice]");
   if(voiceBtn) voiceBtn.addEventListener("click", ()=>startFoodVoiceSearch());
-  const scanBtn2 = document.querySelector("[data-food-scan]");
-  if(scanBtn2) scanBtn2.addEventListener("click", ()=>{
-    showToast("Barcode scanning needs a camera plugin, which isn't in this build. Search instead.", "error", render);
-  });
 
   // Lives in the panel header, outside the swapped container, so it is bound once per full
   // render rather than once per keystroke.
