@@ -24,6 +24,32 @@ Three candidates, different fixes:
 Measure it in the preview rather than guessing. The toggle DESIGN is settled — plain pale track,
 white knob, no lamps, restored in `d4c2d6e`. Do not restyle it.
 
+### STILL BROKEN — I reported this fixed and it is not
+
+**Food Log bottom nav is still solid blue.** `55da132` added `"nutrition"` to the `isLightTab`
+list in `www/app.js` ~7556, on the theory that the Food Log tab was missing from it and so fell
+through to the wrong nav style. The user's screenshot AFTER that build still shows blue. So the
+diagnosis was wrong, or incomplete, and it was reported as done on reasoning alone.
+
+Start by reading what `bottom-nav--home-light` actually does in CSS and what the nav looks like
+with and without it, rather than trusting that list. Note the user was on the LIGHT theme in the
+later screenshot and dark in the earlier one, and the nav was blue in both — so the cause may
+have nothing to do with the tab list at all.
+
+### Requested, not built: add a diet plan's meals to the Food Log
+
+"No option to add the diet plan to add in food logs." Correct — `IgnytDietPlans`
+(`www/js/diet/diet-plans.js:538`) exposes `toggleMealDone`, `isMealDone` and `followedTotals`,
+so a planned meal can be TICKED as eaten and counted toward the day, but nothing copies plan
+items into `state.foodLog` as real entries.
+
+Decide before coding: does "add to log" COPY the items (editable after, can drift from the plan)
+or LINK them (stay in sync, but deleting one is ambiguous)? Copy is simpler and matches how the
+rest of the log behaves. Also needs an answer for adding the same plan twice in one day.
+
+Not started deliberately — it writes food-log data, and the last two unverified changes in this
+area came back as regressions.
+
 ### Verify these, all shipped unseen
 
 - **Settings toggle keeps scroll** (`67cce0e`) — tap a switch at the bottom of Settings; the page
