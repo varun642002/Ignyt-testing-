@@ -6858,7 +6858,13 @@ function renderSettingsTab(){
           ${[{key:"dark",label:"Dark",icon:"moon"},{key:"light",label:"Light",icon:"sun"},{key:"system",label:"System",icon:"monitor"}].map(t=>`
             <button class="tl-card ${s.theme===t.key?'is-connected':''}" style="flex-direction:column;align-items:center;text-align:center;padding:16px 8px;" data-theme-select="${t.key}">
               <span class="tl-card__icon" style="margin:0 0 8px;">${svg(t.icon,20)}</span>
-              <span style="font-size:13px;font-weight:700;">${t.label}</span>
+              ${''/* tl-card__label, not a bare span. This was styled inline with a size and a
+                    weight and NO COLOUR, and it sits inside a <button> -- which does not inherit
+                    the page's text colour, it falls back to the browser's default button text.
+                    On the dark theme that rendered "Dark", "Light" and "System" in near-black on
+                    a near-black card, effectively invisible. Every other tl-card names this class
+                    and gets var(--rh-text) from it, in both themes. */}
+              <span class="tl-card__label">${t.label}</span>
             </button>`).join("")}
         </div>
       </div>
