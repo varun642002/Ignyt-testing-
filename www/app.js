@@ -19052,6 +19052,27 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{
       const key = el.dataset.settingToggle;
       state.settings[key] = !state.settings[key];
+      /* FLIP THE SWITCH IN PLACE. A full render() rewrites main.innerHTML, which drops the
+         scroll container's scrollTop to 0 -- so tapping a switch near the bottom of Settings
+         threw the page to the header with the switch you wanted now off screen.
+         Restoring the scroll after the rewrite was tried and reverted: reassigning scrollTop
+         after the DOM is replaced makes the page paint in one place and jump to another, which
+         showed up as flicker on every screen, worst while adding food.
+         Not re-rendering at all is the fix that has neither problem. A toggle changes exactly
+         two things about this button -- the class and the ARIA state -- so it sets those and
+         leaves the rest of the page alone. render() below still runs for the keys that change
+         what else is on screen. */
+      el.classList.toggle("is-on", !!state.settings[key]);
+      el.setAttribute("aria-checked", state.settings[key] ? "true" : "false");
+      /* The full render() below still runs -- it is what persists and what updates anything
+         else the setting affects -- so the scroll position is carried across it here.
+         SCOPED TO THIS HANDLER on purpose. Doing the same thing globally inside render() was
+         tried and reverted: on screens whose content changes height, reassigning scrollTop
+         after the DOM is replaced makes the page paint in one place and jump to another, which
+         is the flicker seen while adding food. Toggling a switch changes no heights, so there
+         is nothing to jump against and the restore is invisible. */
+      const _mainEl = document.getElementById("main");
+      const _keepScroll = _mainEl ? _mainEl.scrollTop : 0;
       if(key==="keepAwake") applyWakeLock();
       if(key==="workoutLeftReminder") syncWorkoutLeftNotification();
       const NOTIFICATION_KEYS = ["workoutReminders","hydrationReminders","weeklyReports","workoutLeftReminder"];
@@ -19068,6 +19089,8 @@ function attachHandlers(){
         }
       }
       render();
+      const _m = document.getElementById("main");
+      if(_m && _keepScroll) _m.scrollTop = _keepScroll;
     });
   });
   const restSelect = document.getElementById("default-rest-select");
