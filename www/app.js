@@ -14123,6 +14123,35 @@ function renderBodyTab(){
       <div style="font-size:22px;font-weight:800;">Log Weight</div>
       <div style="font-size:12px;color:var(--rh-muted);margin-bottom:14px;">Track your progress. Stay consistent.</div>
 
+      <div class="rh-section-head"><span>Log Entry</span></div>
+      <div class="pg-card" id="body-log-entry">
+        <div class="pi-grid2">
+          ${fieldWrap("Date", `<input type="date" id="b-date" value="${dayKey()}" class="pi-input pi-input--date">`)}
+          ${fieldSm("b-weight",`Weight (${wUnit()})`,wUnit()==='lb'?'220':'101.0',"var(--rh-blue)")}
+        </div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">Body</div>
+        <div class="pi-grid2" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+          ${fieldSm("b-waist","Waist (cm)","","var(--rh-text)")}
+          ${fieldSm("b-chest","Chest (cm)","","var(--rh-text)")}
+          ${fieldSm("b-bodyfat","Body Fat (%)","","var(--rh-text)")}
+        </div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">Recovery</div>
+        <div class="pi-grid2">
+          ${fieldSm("b-sleep","Sleep (hrs)","7.5","var(--rh-purple)")}
+          ${fieldSm("b-hrv","HRV (ms)","91","var(--rh-purple)")}
+        </div>
+        ${showMore ? BODY_MEASUREMENT_GROUPS.map(g=>`
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">${escHtml(g.label)}</div>
+          <div class="pi-grid2" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+            ${g.fields.filter(f=>f.key!=="waist"&&f.key!=="chest"&&f.key!=="bodyfat").map(f=>fieldSm("b-"+f.key, f.label+(f.unit?` (${f.unit})`:""), "", "var(--rh-text)")).join("")}
+          </div>`).join("") : ''}
+        <div style="font-size:11px;color:var(--rh-muted);margin:12px 0 4px;">Logging a weight here updates your profile weight and recalculates calories &amp; macros everywhere.</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+          <button class="rh-btn rh-btn--ghost" style="flex:1;padding:10px;font-size:13px;" data-action="toggle-body-more-metrics">${svg('plus',13)} ${showMore?'Fewer Metrics':'More Metrics'}</button>
+          <button style="flex:none;height:44px;padding:0 18px;border-radius:22px;border:none;background:var(--rh-blue);color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:800;white-space:nowrap;cursor:pointer;" data-action="log-body">${svg('plus',16)}<span>Add Weight</span></button>
+        </div>
+      </div>
+
       <div class="pg-card-row" style="margin-top:0;grid-template-columns:1.4fr 1fr;">
         <div class="pg-card" style="display:flex;align-items:center;gap:12px;">
           <div style="flex:1;min-width:0;">
@@ -14232,34 +14261,6 @@ function renderBodyTab(){
         </div>`).join("")}
       </div>` : ''}
 
-      <div class="rh-section-head"><span>Log Entry</span></div>
-      <div class="pg-card" id="body-log-entry">
-        <div class="pi-grid2">
-          ${fieldWrap("Date", `<input type="date" id="b-date" value="${dayKey()}" class="pi-input pi-input--date">`)}
-          ${fieldSm("b-weight",`Weight (${wUnit()})`,wUnit()==='lb'?'220':'101.0',"var(--rh-blue)")}
-        </div>
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">Body</div>
-        <div class="pi-grid2" style="grid-template-columns:repeat(3,minmax(0,1fr));">
-          ${fieldSm("b-waist","Waist (cm)","","var(--rh-text)")}
-          ${fieldSm("b-chest","Chest (cm)","","var(--rh-text)")}
-          ${fieldSm("b-bodyfat","Body Fat (%)","","var(--rh-text)")}
-        </div>
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">Recovery</div>
-        <div class="pi-grid2">
-          ${fieldSm("b-sleep","Sleep (hrs)","7.5","var(--rh-purple)")}
-          ${fieldSm("b-hrv","HRV (ms)","91","var(--rh-purple)")}
-        </div>
-        ${showMore ? BODY_MEASUREMENT_GROUPS.map(g=>`
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">${escHtml(g.label)}</div>
-          <div class="pi-grid2" style="grid-template-columns:repeat(3,minmax(0,1fr));">
-            ${g.fields.filter(f=>f.key!=="waist"&&f.key!=="chest"&&f.key!=="bodyfat").map(f=>fieldSm("b-"+f.key, f.label+(f.unit?` (${f.unit})`:""), "", "var(--rh-text)")).join("")}
-          </div>`).join("") : ''}
-        <div style="font-size:11px;color:var(--rh-muted);margin:12px 0 4px;">Logging a weight here updates your profile weight and recalculates calories &amp; macros everywhere.</div>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
-          <button class="rh-btn rh-btn--ghost" style="flex:1;padding:10px;font-size:13px;" data-action="toggle-body-more-metrics">${svg('plus',13)} ${showMore?'Fewer Metrics':'More Metrics'}</button>
-          <button style="flex:none;width:44px;height:44px;border-radius:50%;border:none;background:var(--rh-blue);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;" data-action="log-body" aria-label="Log entry">${svg('plus',18)}</button>
-        </div>
-      </div>
 
       <div class="rh-section-head"><span>Body Scan Archive</span>${state.bodyPhotos.length>0?`<a href="#" class="rh-view-all" data-action="open-body-scan-archive">Open Archive</a>`:''}</div>
       <div class="pg-card">
