@@ -159,6 +159,29 @@ the click landed, whether the tab state changed, and what rendered — which dis
 click missed" from "the click worked and the app did not re-render" from "the app navigated and
 came back". Guessing at assertions without that has now cost four attempts.
 
+### TWO REQUESTS OPEN, NEITHER DONE
+
+**A. Log Entry should be FIRST on the Log Weight page.** Current order in `renderBodyTab()`
+(`www/app.js`): page title -> stat cards -> Trend chart -> "Recent Entries" -> **"Log Entry"** ->
+"Body Scan Archive". The Log Entry block is the ~28 lines from the
+`<div class="rh-section-head"><span>Log Entry</span></div>` line to just before the Body Scan
+Archive section head, and it is self-contained.
+
+ATTEMPTED AND REVERTED. A script moved it above the stats row by anchoring on the string
+"Track your progress" — which appears TWICE in app.js, in two different functions. It matched the
+wrong one and spliced the block into an unrelated template, breaking the file. Reverted clean
+(`node --check` passes). If you retry: anchor on line numbers found relative to the "Log Weight"
+title inside renderBodyTab, or on a string that is unique, and run `node --check` before anything
+else.
+
+**B. Back-swipe should be ENABLED on iPhone and Android.** The user has confirmed the iOS
+edge-swipe chevron is WANTED, so the earlier note about disabling it is wrong — do not disable it.
+Android already has a handler: `AppPlugin.addListener("backButton", ...)` at `www/app.js:23090`.
+iOS has no `ios` section in capacitor.config.json at all, so whatever Capacitor's default is,
+applies. NOT CHANGED — it is a behaviour change on a platform this session cannot build or test,
+and the SPA's own back stack and WKWebView history are two different things that need
+reconciling before the gesture is trusted.
+
 ### REPORTED FROM A DEVICE, NOT YET FIXED (2026-08-13)
 
 Four reports. One was data and is done; three are iPhone visual/behavioural and need a device.
