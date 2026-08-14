@@ -159,6 +159,35 @@ the click landed, whether the tab state changed, and what rendered — which dis
 click missed" from "the click worked and the app did not re-render" from "the app navigated and
 came back". Guessing at assertions without that has now cost four attempts.
 
+### FOUR REQUESTS OPEN, NONE DONE — stopped editing deliberately
+
+Context was exhausted and an attempted edit broke www/app.js (reverted clean). These are
+recorded rather than half-applied. Each is small; none is risky with room to verify.
+
+**A. Log Entry first on the Log Weight page.** See detail below — includes the anchor trap that
+broke the file.
+
+**B. Back-swipe ENABLED on iPhone and Android** — confirmed wanted. See below.
+
+**C. Back button must not exit the app outright.** FOUND THE CAUSE, not fixed.
+`handleHardwareBack()` (`www/app.js:23020` onward) closes overlays in priority order — crash
+screen, confirm dialog, legal, body photo, muscle sheet, RPE sheet, rest timer, plate calc,
+exercise picker, exercise menu, notifications, privacy — returning `true` for each. If nothing is
+open it returns `false`, and the listener at `www/app.js:23090` calls `AppPlugin.exitApp()`.
+So back exits from ANY tab, including Workout or Progress with nothing open.
+
+FIX: before `exitApp()`, add a step — if `state.tab !== "home"`, set it to "home", render, and
+return. Only exit when already on Home. Consider the usual double-press-to-exit on Home too.
+Both are a few lines in that one listener; neither is verifiable without an Android device, so
+build and hand over rather than claiming it works.
+
+**D. Remove IGNYT AI from Quick Actions.** Not started, and NOT located — the Workout tab's
+Quick Actions grid (`www/js/pages/workout.js:243`) holds New Routine, Library, Recommendation and
+Start Empty, with no AI entry. Find which screen's Quick Actions the user means before editing;
+Home and Tools both have their own. Note IGNYT AI already ships OFF by default (`aiChatOn`), so
+whatever card is showing may be rendering without checking that flag — worth checking
+`aiChatEnabled()` is consulted wherever it appears.
+
 ### TWO REQUESTS OPEN, NEITHER DONE
 
 **A. Log Entry should be FIRST on the Log Weight page.** Current order in `renderBodyTab()`
