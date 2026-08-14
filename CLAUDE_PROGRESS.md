@@ -159,6 +159,14 @@ the click landed, whether the tab state changed, and what rendered — which dis
 click missed" from "the click worked and the app did not re-render" from "the app navigated and
 came back". Guessing at assertions without that has now cost four attempts.
 
+### FIVE REQUESTS OPEN, NONE DONE — stopped editing deliberately
+
+**E. Log Weight: replace the round "+" with a labelled "Add Weight" button.** The control is the
+44x44 circular button inside the Log Entry card (`www/app.js`, search
+`width:44px;height:44px;border-radius:50%` within renderBodyTab). Changing it to a labelled
+button changes its width and the flex row it shares, so check that row's layout after — it is
+not a text swap. Pairs naturally with request A, since both touch the Log Entry card.
+
 ### FOUR REQUESTS OPEN, NONE DONE — stopped editing deliberately
 
 Context was exhausted and an attempted edit broke www/app.js (reverted clean). These are
