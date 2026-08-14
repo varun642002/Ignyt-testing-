@@ -165,6 +165,31 @@ Same shape as the food log, so the good news holds: **`sumItems()`
 (`www/js/diet/diet-plans.js:453`) reads `it[k]` straight off each item**, so writing
 `item.calories` IS the override. No new totals plumbing.
 
+**EXACT SAVE PATH FOUND (this is the hard half, and it is easy):** `www/app.js:22478-22495`.
+The plan-edit branch builds a fresh `next` object and calls
+`D.replaceItem(t.planId, t.mealId, t.itemId, next)`. Everything needed for the carry-and-scale
+lives in that one block:
+
+```js
+// before building `next`, read what is already there:
+const prev = D.findItem(t.planId, t.mealId, t.itemId);
+// ... build next as today ...
+if (prev && prev.caloriesOverridden && prev.overrideGrams) {
+  next.calories = Math.round(prev.calories * (Number(next.grams) / Number(prev.overrideGrams)));
+  next.caloriesOverridden = true;
+  next.overrideGrams = prev.overrideGrams;   // ORIGINAL, so repeats do not compound
+}
+```
+
+The edit flow that reaches it is `openPlanItemDetail()` (`app.js:14471`), which sets
+`state.foodFlow.target = { kind: "plan-edit", planId, mealId, itemId }`.
+
+**STILL MISSING: the UI to SET an override.** The food-details screen render was not located.
+Without a field there, the block above carries a value nothing can create -- dead code. Find
+where the detail screen renders its serving/quantity controls (it is the same screen for logging
+and for plan edits, per the comment at `app.js:14467`), add a calories field shown in edit mode,
+and set `caloriesOverridden`/`overrideGrams` when the typed value differs from the computed one.
+
 Three touch points, in the order they matter:
 
 1. **`replaceItem(planId, mealId, itemId, record)`** — `diet-plans.js:417`. The write path. It
