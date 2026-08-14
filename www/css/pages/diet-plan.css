@@ -10,7 +10,12 @@
 ========================================================= */
 .dp {
   --dp-gap: 12px;
-  padding: 0 0 96px;
+  /* Nav clearance from the token, not a literal. 96px was a guess that happened to match the
+     72px bar plus breathing room on a device with NO safe-area inset -- on a phone with a home
+     indicator the bar sits ~34px higher and the last meal's "+ Add Food" row ended up under it,
+     which is exactly what was reported. --main-pad-bottom is nav-height + safe-bottom +
+     space-lg, so it grows with the inset and follows the bar if it ever changes height. */
+  padding: 0 0 var(--main-pad-bottom);
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: var(--rh-text);
 }
