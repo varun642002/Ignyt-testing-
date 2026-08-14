@@ -183,10 +183,15 @@
               (done ? ic("check",14) : "") + '</button>') +
         '</div>' +
 
+        /* ACTIONS ABOVE THE ITEMS. They used to sit under the list, which put "+ Add Food" at
+           the far end of a meal -- on a full breakfast it was several screens down, and on the
+           last meal of the day it landed under the bottom nav where it could not be tapped at
+           all. Adding food is the thing people come to this card to do, so it goes where the
+           card starts rather than where it ends.
+
+           Reads sensibly for the other two as well: "Log to Food Log" and "Edit meal" act on the
+           meal as a whole, so they belong with its header rather than trailing its contents. */
         (expanded ? '<div class="dp-meal__body">' +
-          (empty
-            ? '<div class="dp-meal__empty">Nothing planned for ' + esc(meal.name) + ' yet.</div>'
-            : meal.items.map(function (it) { return itemRow(it, meal); }).join("")) +
           '<div class="dp-meal__actions">' +
             '<button class="dp-add" data-dp-add-food="' + esc(meal.id) + '">+ Add Food</button>' +
             /* Copy the planned meal into today's Food Log. Only offered when the meal actually
@@ -196,6 +201,9 @@
               : '') +
             '<button class="dp-mealcfg" data-dp-meal-config="' + esc(meal.id) + '">Edit meal</button>' +
           '</div>' +
+          (empty
+            ? '<div class="dp-meal__empty">Nothing planned for ' + esc(meal.name) + ' yet.</div>'
+            : meal.items.map(function (it) { return itemRow(it, meal); }).join("")) +
         '</div>' : '') +
       '</div>';
   }

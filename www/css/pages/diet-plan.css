@@ -226,9 +226,12 @@
 .dp-item__more:active { background: var(--rh-border); }
 
 /* ---- meal actions ---- */
+/* The divider flipped with the row. This used to sit UNDER the item list, so its separator was
+   a border-top; it now sits above the list, so the separator has to be underneath it or the rule
+   lands directly against the meal header and the row appears to belong to the wrong thing. */
 .dp-meal__actions {
   display: flex; align-items: center; gap: 8px;
-  padding-top: 10px; border-top: 1px solid var(--rh-border); margin-top: 2px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--rh-border); margin-bottom: 2px;
 }
 .dp-add {
   border: 0; background: none; padding: 4px 0;
