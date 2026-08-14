@@ -21714,19 +21714,39 @@ function attachHandlers(){
   document.querySelectorAll("[data-nutrition-range]").forEach(el=>{
     el.addEventListener("click", ()=>{ state.nutritionRange = Number(el.dataset.nutritionRange); render(); });
   });
+  /* THE CALENDAR KEEPS ITS PLACE. Both of these rebuild the whole page through render(), and
+     replacing main's contents drops its scrollTop to 0 -- so tapping a day or changing month
+     threw the page to the top and the calendar you were looking at vanished upwards. Reported
+     as flickering, which is exactly what a rebuild plus a jump looks like.
+
+     The global restore in render() cannot help here: it only restores when the page height is
+     UNCHANGED, and both of these change it -- selecting a day opens a detail panel, and months
+     have different numbers of rows. That gate exists because restoring across a height change
+     is what caused the food-log flicker, so it stays; this is the narrower case where staying
+     put is still right and the caller knows it.
+
+     Restored synchronously, immediately after render() and in the same task, so the browser
+     never paints between the rebuild and the reposition. A setTimeout here would fire after
+     paint and reintroduce the very flicker being fixed. */
+  const keepCalendarScroll = (mutate) => {
+    const before = document.getElementById("main");
+    const top = before ? before.scrollTop : 0;
+    mutate();
+    render();
+    const after = document.getElementById("main");
+    if(after && top) after.scrollTop = top;
+  };
   document.querySelectorAll("[data-cal-day]").forEach(el=>{
-    el.addEventListener("click", ()=>{
+    el.addEventListener("click", ()=>keepCalendarScroll(()=>{
       state.calendarSelectedDate = state.calendarSelectedDate===el.dataset.calDay ? null : el.dataset.calDay;
-      render();
-    });
+    }));
   });
   document.querySelectorAll("[data-cal-nav]").forEach(el=>{
-    el.addEventListener("click", ()=>{
+    el.addEventListener("click", ()=>keepCalendarScroll(()=>{
       const delta = Number(el.dataset.calNav);
       const next = (state.calendarMonthOffset||0) + delta;
       if(next<=0) state.calendarMonthOffset = next;
-      render();
-    });
+    }));
   });
   document.querySelectorAll("[data-bodydist-nav]").forEach(el=>{
     el.addEventListener("click", ()=>{
