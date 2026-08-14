@@ -355,11 +355,16 @@
 `; })() : ''}
 
       <div class="rh-section-head"><span>Quick Actions</span></div>
-      <div class="rh-quick-grid" style="grid-template-columns:repeat(4,minmax(0,1fr));">
+      <div class="rh-quick-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));">
         ${/* Three. Workout, Food, Progress and Health all have a bottom-nav tab or a card
               further up this page, so as shortcuts they were pointing at things already one tap
-              away. These three are the ones with no other route from Home. */''}
-        ${quickAction('bolt', 'var(--rh-blue)', 'IGNYT AI', 'data-nav="ai"')}
+              away. These three are the ones with no other route from Home.
+
+              IGNYT AI was a fourth here and has been removed. The column count came down to
+              three with it -- leaving repeat(4) would have left a hole on the right rather than
+              spreading the survivors, which is the same trap the Workout tab's grid comment
+              already warns about. The comment above said "Three" while four were listed, so it
+              was describing the intent rather than the code; it is true again now. */''}
         ${quickAction('scale', 'var(--rh-blue)', 'Log Weight', 'data-nav="body"')}
         ${quickAction('timer', '#7C3AED', 'Fasting', 'data-nav="fasting"')}
         ${quickAction('flask', '#2563EB', 'Supplements', 'data-nav="supplements"')}
