@@ -159,6 +159,31 @@ the click landed, whether the tab state changed, and what rendered — which dis
 click missed" from "the click worked and the app did not re-render" from "the app navigated and
 came back". Guessing at assertions without that has now cost four attempts.
 
+### REPORTED FROM A DEVICE, NOT YET FIXED (2026-08-13)
+
+Four reports. One was data and is done; three are iPhone visual/behavioural and need a device.
+
+1. **Egg small/medium/large — FIXED.** `Egg` had NO portions at all and `Whole Egg`/`Boiled Egg`
+   had a single `piece: 50g`, so there was no size to choose. Added small 38 g, medium 44 g,
+   large 50 g (USDA edible-portion weights, shell removed) to `Egg`, `Whole Egg`, `Boiled Egg`,
+   `Egg (Whole)` and `Egg, hen`, plus a `g` portion on the three rows that had none. Large keeps
+   50 g deliberately, so anything already logged as a piece does not shift.
+
+2. **Calendar flickers — NOT FIXED.** Almost certainly the same class as the food-log flicker:
+   a re-render that changes content height, where restoring scroll makes the page paint at one
+   offset then jump. The global restore is height-gated now (`d0233ca`), so if the calendar
+   still flickers, the height gate is not catching that path. Look at what the calendar re-renders
+   on — month switching changes row count, so height changes legitimately.
+
+3. **Achievements need updating on iPhone — NOT FIXED, and unclear.** Ask what "updating" means:
+   stale data, wrong layout, or missing new achievements. Do not guess.
+
+4. **Alignment issues in many places on iPhone — NOT FIXED.** This is the one that needs a
+   device or a WebKit preview. Three CSS changes shipped this session were reasoned from
+   screenshots and never seen rendered (fasting row padding, iPhone nav at 22 px, settings
+   padding at 12 px) — any of them could be contributing. Check those three first before
+   treating it as a new problem.
+
 ### The open bug
 
 **Settings toggle sits high in its row** — "close to the top, the bottom has more space, it needs
