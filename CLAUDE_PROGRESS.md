@@ -159,6 +159,45 @@ the click landed, whether the tab state changed, and what rendered — which dis
 click missed" from "the click worked and the app did not re-render" from "the app navigated and
 came back". Guessing at assertions without that has now cost four attempts.
 
+### SPECCED, NOT BUILT: edit an entry's calories in the Food Log
+
+User chose this over a manual adjustment row or editing the daily target: tap a logged food and
+change its kcal directly, for when the library value is wrong for what was actually eaten.
+
+**The groundwork is already there, which makes this smaller than it looks.** Each food-log entry
+STORES its own `calories`; totals read that field rather than recomputing from the library:
+
+```
+app.js:5927   foodsForDate(todayStr()).reduce((a,f)=>a+Number(f.calories||0),0)
+app.js:6308   same, per date
+app.js:6331   same, for the day summary
+app.js:6032   entry built as: calories: Number(src.calories)||0
+```
+
+So writing `entry.calories` IS the override. No new storage field is needed for the value.
+
+**The one real decision — what happens when quantity changes afterwards.** Today, changing grams
+recomputes calories from the library. If someone overrides 187 kcal to 210 and then edits the
+quantity, silently reverting to the library figure would be wrong, and silently scaling their 210
+would be a guess. Options, in order of preference:
+
+1. Store `caloriesOverridden: true` alongside. On a quantity change, SCALE the override by the
+   grams ratio (210 kcal at 100 g becomes 315 at 150 g). Predictable, keeps the user's intent.
+2. Same flag, but on a quantity change ask, or drop the override and say so in the UI.
+3. No flag: quantity changes overwrite the override silently. Simplest, and the one people will
+   report as a bug.
+
+**Where the UI goes:** the food detail/edit sheet reached by "tap to edit" on a log row. There is
+a save path around `app.js:15113` (`calories: Number(v.calories)||0`) — read it before adding a
+field; the value may already flow through and only need exposing.
+
+**Do not forget:** protein/carbs/fat have the same problem. An entry whose calories are corrected
+but whose macros are not now disagrees with itself, and the assistant reads both. Either allow
+editing all of them or state in the UI that only calories is adjustable.
+
+**Test after:** day total, weekly progress, and the assistant's "how many calories did I eat
+today" all read the same field, so one override should move all three consistently.
+
 ### FIVE REQUESTS OPEN, NONE DONE — stopped editing deliberately
 
 **E. Log Weight: replace the round "+" with a labelled "Add Weight" button.** The control is the
