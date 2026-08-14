@@ -22217,6 +22217,42 @@ function attachHandlers(){
     });
   });
 
+  /* PLAN -> FOOD LOG. The plan says what you intend to eat; the log says what you did. Ticking a
+     meal done already counts it toward followedTotals, but nothing put those items in the Food
+     Log, so the day's real totals never saw them.
+
+     Copies rather than links. A logged entry is then editable and deletable like any other, and
+     changing the plan afterwards does not silently rewrite history. The cost is that the two can
+     drift, which is correct: the plan is a plan.
+
+     copyFoodEntry() is the app's own entry builder -- it assigns the id, date and timestamp and
+     carries foodId, category, quantity, servingUnit and grams across. Plan items already hold
+     exactly those fields, so nothing is invented here and nothing is recalculated.
+
+     Logged under the PLAN's meal name where the food log knows it, so "Breakfast" lands in
+     breakfast rather than whatever the time of day suggests. */
+  document.querySelectorAll("[data-dp-log-meal]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const plan = currentDietPlan();
+      if(!plan || !D){ showToast("Create a plan first.", "info", render); return; }
+      const meal = D.mealById(plan, el.dataset.dpLogMeal);
+      if(!meal || !(meal.items||[]).length){ showToast("That meal has no foods yet.", "info", render); return; }
+
+      const known = mealTypes();
+      const mealName = known.indexOf(meal.name) !== -1 ? meal.name : (typeof mealForNow === "function" ? mealForNow() : known[0]);
+      const date = nutritionDateStr();
+
+      /* reverse + unshift keeps the plan's own order once they are in the log, the same way
+         copyDayFoods does it a few hundred lines up. */
+      meal.items.slice().reverse().forEach(it=>{ state.foodLog.unshift(copyFoodEntry(it, date, mealName)); });
+      persist();
+
+      const kcal = Math.round(meal.items.reduce((a,it)=>a+(Number(it.calories)||0), 0));
+      showToast(meal.items.length + (meal.items.length === 1 ? " food" : " foods") + " logged · " + kcal + " kcal", "success", render);
+      render();
+    });
+  });
+
   document.querySelectorAll("[data-dp-add-food]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const plan = currentDietPlan();
