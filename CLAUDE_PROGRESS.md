@@ -159,7 +159,36 @@ the click landed, whether the tab state changed, and what rendered — which dis
 click missed" from "the click worked and the app did not re-render" from "the app navigated and
 came back". Guessing at assertions without that has now cost four attempts.
 
-### STOP: the calorie-override spec below may target the WRONG SCREEN
+### CONFIRMED: it is the DIET PLAN. Implementation spec, with scaling (user chose option 1).
+
+Same shape as the food log, so the good news holds: **`sumItems()`
+(`www/js/diet/diet-plans.js:453`) reads `it[k]` straight off each item**, so writing
+`item.calories` IS the override. No new totals plumbing.
+
+Three touch points, in the order they matter:
+
+1. **`replaceItem(planId, mealId, itemId, record)`** — `diet-plans.js:417`. The write path. It
+   replaces the WHOLE record with what the caller built, so anything not in that record is lost.
+
+2. **The item builder around `app.js:15100`** — this is the catch and the reason the job is not
+   a one-liner. It rebuilds the record from the food every time (`calories: Number(v.calories)||0`),
+   so an override is ERASED by the next quantity edit unless it is explicitly carried across.
+   Carry `caloriesOverridden` and `overrideGrams` through, then apply the scaling the user asked
+   for: `calories = override * (newGrams / overrideGrams)`. Keep `overrideGrams` at its ORIGINAL
+   value so repeated edits scale from the user's figure rather than compounding rounding.
+
+3. **The edit UI** — Food Details opened in edit mode for a plan item (`app.js:14467` names this
+   path). Add a calories field there. Not yet read; read it before designing the field.
+
+**Macros disagree if only calories is editable.** `sumItems` sums every key in `NUTRIENTS` the
+same way, so an item with corrected calories and untouched protein/carbs/fat is internally
+inconsistent, and the plan's macro row will not match its calorie row. Either make all four
+editable or label the field so it is clear only calories is adjusted.
+
+**Verify after:** meal totals, `dayTotals()`, and `followedTotals()` — the last one feeds the
+"followed the plan" numbers and reads the same items, so one override should move all three.
+
+
 
 Discovered while starting the build. **"tap to edit" appears only in `www/js/pages/diet-plan.js:134`
 — it does not exist in the food log.** The screenshot the request came from (Whey Protein /
