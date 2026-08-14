@@ -23089,7 +23089,25 @@ if(window.IgnytSecurity){
   if(!AppPlugin) return;
   AppPlugin.addListener("backButton", ()=>{
     if(handleHardwareBack()) return;
-    AppPlugin.exitApp(); // nothing open -- same exit-at-root behavior as before this fix
+    /* HOME IS THE FLOOR, NOT THE APP BOUNDARY. handleHardwareBack() unwinds overlays -- sheets,
+       dialogs, pickers -- and returns false once there is nothing left to close. Straight to
+       exitApp() from there meant back closed the whole app from ANY tab: reading Progress,
+       pressing back once, gone. Reported as "the app should not completely come out".
+
+       Back now walks to Home first and only leaves from Home, which is what Android users
+       expect and what every tab-based app does.
+
+       Exit from Home is KEPT deliberately. An app that cannot be dismissed with back is its own
+       complaint, and Android treats back-at-root as leave. If a confirmation is wanted later,
+       the place for it is here, not in the removal of this line. */
+    if(state.tab !== "home"){
+      state.tab = "home";
+      state.progressView = null;   // the sub-views have their own back paths; do not land inside one
+      state.bodyView = null;
+      render();
+      return;
+    }
+    AppPlugin.exitApp();
   });
 })();
 
