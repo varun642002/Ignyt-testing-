@@ -159,6 +159,26 @@ the click landed, whether the tab state changed, and what rendered — which dis
 click missed" from "the click worked and the app did not re-render" from "the app navigated and
 came back". Guessing at assertions without that has now cost four attempts.
 
+### STOP: the calorie-override spec below may target the WRONG SCREEN
+
+Discovered while starting the build. **"tap to edit" appears only in `www/js/pages/diet-plan.js:134`
+— it does not exist in the food log.** The screenshot the request came from (Whey Protein /
+Banana / Oats, each showing "· tap to edit") is therefore the DIET PLAN screen, not the Food Log.
+
+Those are two different models with two different edit paths:
+
+- **Food log** entries: `state.foodLog`, totals via `foodsForDate()` (`app.js:5927`, `6308`, `6331`)
+- **Diet plan** items: `IgnytDietPlans`, totals via `mealTotals()` / `dayTotals()` /
+  `followedTotals()` (`www/js/diet/diet-plans.js:538`)
+
+The spec below researched the FOOD LOG. If the request is really about the diet plan, its
+conclusions about where totals are read do not apply and the item builder near `app.js:15100`
+(diet-plan item, `calories: Number(v.calories)||0`) is the relevant path instead.
+
+**ASK WHICH SCREEN before building.** Writing an override into the model nothing reads is worse
+than not building it, and the two screens look similar enough in a screenshot to be confused —
+they were confused here.
+
 ### SPECCED, NOT BUILT: edit an entry's calories in the Food Log
 
 User chose this over a manual adjustment row or editing the daily target: tap a logged food and
