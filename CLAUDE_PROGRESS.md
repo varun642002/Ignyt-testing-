@@ -178,6 +178,22 @@ Four reports. One was data and is done; three are iPhone visual/behavioural and 
 3. **Achievements need updating on iPhone — NOT FIXED, and unclear.** Ask what "updating" means:
    stale data, wrong layout, or missing new achievements. Do not guess.
 
+4b. **iPhone screenshots supplied. Three distinct faults, only one fixed:**
+
+   - **A stray `❯` control on the left edge**, half off-screen, overlapping content. Visible on
+     the Workout tab and Personal Info. Looks like a drawer/panel handle positioned outside the
+     viewport. NOT FIXED — find what renders `❯` and why it sits at x<0.
+   - **Horizontal overflow.** "RECENT SESSIONS" renders as "ECENT SESSIONS", and selects
+     truncate mid-word: `Daily exercise o|`, `Centimeters (cn`, `12 Hour (AM/PM`. The page is
+     wider than the viewport, or a container is shifted left. NOT FIXED — `BasePage.js` already
+     has `expectNoHorizontalOverflow()`; point it at these screens and it will catch this.
+   - **Goal wizard contradicted itself — FIXED (labelling, not maths).** The form showed
+     "1 Jan 2027 · 141 days remaining" while the summary card below showed "Target date
+     31 Dec 2026 · Days remaining 139". Both numbers were correct: the first is the chosen date
+     minus the goal start, the second is `cp.completion` (where the current weekly rate lands
+     you) minus now. The card was labelling a PROJECTION as the target. Renamed to "Projected
+     finish" and "Days to finish" (`www/js/goals.js:271`).
+
 4. **Alignment issues in many places on iPhone — NOT FIXED.** This is the one that needs a
    device or a WebKit preview. Three CSS changes shipped this session were reasoned from
    screenshots and never seen rendered (fasting row padding, iPhone nav at 22 px, settings
