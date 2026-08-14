@@ -92,9 +92,24 @@ main { min-height: 0; }
    text had nothing behind it but that fill. A shadow on the glyphs themselves is the standard
    way out and costs nothing (see .nav-btn below), so legibility no longer depends on the bar and
    the bar is free to be as transparent as asked. */
-nav.bottom-nav { min-height:64px; background:rgba(18,20,24,.03); }
+/* OPAQUE ENOUGH TO BE ITS OWN SURFACE, by request. At 3% the bar had essentially no
+   background and showed whatever was painted behind it -- which is why it read blue on the Food
+   Log, pale on Workout, and blue again in dark mode. One bar, five backdrops.
+
+   The note above argues 3% is survivable because the labels carry their own text-shadow, and
+   that is true for LEGIBILITY. It is not true for identity: a bar that changes colour per screen
+   reads as a bug regardless of whether you can still see the words.
+
+   .86 matches the value index.html's inline rule always intended (rgba(23,23,28,.86)) and never
+   applied, because this file loads after it and wins. */
+nav.bottom-nav { min-height:64px; background:rgba(18,20,24,.86);
+  backdrop-filter:blur(9px) saturate(115%); -webkit-backdrop-filter:blur(9px) saturate(115%); }
+/* The light theme kept its own near-transparent value (6%) and had the same problem. Given the
+   dark bar above, this keeps the SAME surface in both themes rather than inverting: the nav
+   labels are white on every tab that sets bottom-nav--home-light, so a light bar there would put
+   white text on white. A single dark bar is the one that stays legible in both. */
 [data-theme="light"] nav.bottom-nav {
-  background:rgba(255,255,255,.06); border-color:rgba(15,23,42,.07);
+  background:rgba(18,20,24,.80); border-color:rgba(15,23,42,.07);
   box-shadow:0 6px 18px rgba(15,23,42,.07), 0 1px 3px rgba(15,23,42,.04);
 }
 /* On a white pill a white highlight is invisible, so the selected tab tints toward the
