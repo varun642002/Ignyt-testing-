@@ -233,10 +233,17 @@
   display: flex; align-items: center; gap: 8px;
   padding-bottom: 10px; border-bottom: 1px solid var(--rh-border); margin-bottom: 2px;
 }
+/* A BUTTON, not a text link. This was borderless blue text at weight 700 sitting in a row with
+   two other plain-text actions, so the primary thing you open a meal to do looked identical to
+   the two secondary ones beside it. Filled and bold, it reads as the action and the other two
+   stay as text -- which is the hierarchy the row always wanted. */
 .dp-add {
-  border: 0; background: none; padding: 4px 0;
-  color: var(--rh-blue); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  border: 0; background: var(--rh-blue); padding: 9px 16px; border-radius: 999px;
+  color: #fff; font: inherit; font-size: 13px; font-weight: 800; letter-spacing: .01em;
+  cursor: pointer; white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(37,99,235,.35);
 }
+.dp-add:active { transform: translateY(1px); box-shadow: none; }
 
 /* ---- empty state ---- */
 .dp-empty { text-align: center; padding: 40px 20px; }
