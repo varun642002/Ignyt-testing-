@@ -413,6 +413,33 @@ Three candidates, different fixes:
 Measure it in the preview rather than guessing. The toggle DESIGN is settled — plain pale track,
 white knob, no lamps, restored in `d4c2d6e`. Do not restyle it.
 
+### NAV COLOUR — CAUSE FOUND (2026-08-13, second attempt)
+
+`www/css/layout.css:95`:
+
+```css
+nav.bottom-nav { min-height:64px; background:rgba(18,20,24,.03); }
+```
+
+**3% opacity — the bar has effectively no background of its own.** layout.css loads AFTER
+index.html's inline `background:rgba(23,23,28,.86)` and wins at equal specificity, so the
+translucent-dark bar the inline rule intended never applies.
+
+That is why the colour changes per screen and per theme: the bar is showing whatever is painted
+behind it. Blue on Food Log, pale on Workout, blue again in dark mode — all the same bar,
+different backdrops.
+
+**So `isLightTab` was never the cause.** `bottom-nav--home-light` only sets BUTTON text to white
+(`gloss.css:293-298`, `layout.css:121-123`) — it does not touch the background at all. Adding
+"nutrition" to that list in `55da132` was therefore a no-op for this symptom, and reporting it
+fixed was wrong.
+
+**NOT FIXED, deliberately.** Choosing the replacement needs seeing it: the bar sits over five
+tabs in two themes, and index.html's own comment records that this exact rule has been the site
+of a CSS collision before ("the nav background vs this file"). Picking a colour blind is how the
+first wrong fix happened. Start the preview, look at the bar on each tab in both themes, then
+decide whether it wants the inline dark translucent value restored, a token, or a per-theme pair.
+
 ### STILL BROKEN — I reported this fixed and it is not
 
 **Food Log bottom nav is still solid blue.** `55da132` added `"nutrition"` to the `isLightTab`
