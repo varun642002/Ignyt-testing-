@@ -178,6 +178,28 @@ Four reports. One was data and is done; three are iPhone visual/behavioural and 
 3. **Achievements need updating on iPhone — NOT FIXED, and unclear.** Ask what "updating" means:
    stale data, wrong layout, or missing new achievements. Do not guess.
 
+4a. **THE "ALIGNMENT" AND "STRAY ARROW" ARE ONE THING: an in-progress iOS back-swipe.**
+
+   Evidence, in the order it accumulated:
+   - `❯` appears NOWHERE in www/ — not in any js, html or css. It is not ours.
+   - `expectNoHorizontalOverflow()` across home/workout/nutrition/progress/tools passes on
+     mobile-chrome AND mobile-safari. Six tests, no overflow at any tested viewport.
+   - The clipping in the screenshots is on the LEFT ("ECENT SESSIONS"), and the chevron is on
+     the LEFT edge. Overflow clips the RIGHT. A left-clip means the page was dragged RIGHT.
+
+   So the screenshots were taken mid back-swipe: iOS's edge-swipe navigation affordance is the
+   `❯`, and the "misalignment" is the page sliding out from under it. Nothing to fix in CSS.
+
+   **The real question is whether that gesture should exist at all.** IGNYT is a single-page
+   app; a webview back-swipe walks WKWebView history, not app state, so it can strand a user
+   outside the app's own navigation. Capacitor exposes this — set `ios.allowsBackForwardNavigationGestures`
+   to false in capacitor.config.json (the file currently has NO ios section at all, so the
+   default applies). NOT DONE HERE: unverifiable without a Mac, and it is a behaviour change on
+   a platform this session cannot test.
+
+   The truncated selects (`Centimeters (cn`, `12 Hour (AM/PM`) are the same drag, not separate.
+   If they persist in a screenshot taken at rest, they ARE a real width bug — reopen then.
+
 4b. **iPhone screenshots supplied. Three distinct faults, only one fixed:**
 
    - **A stray `❯` control on the left edge**, half off-screen, overlapping content. Visible on
