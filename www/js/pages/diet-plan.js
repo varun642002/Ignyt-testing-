@@ -197,7 +197,7 @@
             /* Copy the planned meal into today's Food Log. Only offered when the meal actually
                has items -- an empty meal would log nothing and the button would be a lie. */
             (meal.items && meal.items.length
-              ? '<button class="dp-mealcfg" data-dp-log-meal="' + esc(meal.id) + '">Log to Food Log</button>'
+              ? '<button class="dp-logmeal" data-dp-log-meal="' + esc(meal.id) + '">' + ic("check", 13) + 'Log to Food Log</button>'
               : '') +
             '<button class="dp-mealcfg" data-dp-meal-config="' + esc(meal.id) + '">Edit meal</button>' +
           '</div>' +

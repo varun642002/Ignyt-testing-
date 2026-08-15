@@ -245,6 +245,21 @@
 }
 .dp-add:active { transform: translateY(1px); box-shadow: none; }
 
+/* SECOND IN THE HIERARCHY, not second-class. "Log to Food Log" is the action that turns a plan
+   into a record, so it should be findable -- but it must not compete with "+ Add Food", which is
+   what the card exists for. A tinted fill reads as a button at a glance while staying quieter
+   than the solid one beside it, and "Edit meal" stays plain text below both.
+   So the row now says, in order of weight: do this, then this, and there is a settings link. */
+.dp-logmeal {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid rgba(37,99,235,.28); background: rgba(37,99,235,.10);
+  padding: 8px 13px; border-radius: 999px;
+  color: var(--rh-blue); font: inherit; font-size: 12.5px; font-weight: 800;
+  cursor: pointer; white-space: nowrap;
+}
+.dp-logmeal:active { background: rgba(37,99,235,.18); transform: translateY(1px); }
+.dp-logmeal svg { flex: none; }
+
 /* ---- empty state ---- */
 .dp-empty { text-align: center; padding: 40px 20px; }
 .dp-empty__icon { font-size: 42px; line-height: 1; }
