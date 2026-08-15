@@ -102,20 +102,26 @@ main { min-height: 0; }
 
    .86 matches the value index.html's inline rule always intended (rgba(23,23,28,.86)) and never
    applied, because this file loads after it and wins. */
-/* NO backdrop-filter. It was added alongside the opaque background and the bar stayed blue on
-   device, which points straight at it: a backdrop-filter samples what is painted behind the
-   element and saturate(115%) amplifies whatever tint it finds, and the Android WebView composites
-   that differently from desktop. gloss.css already records the same conclusion from the other
-   direction -- "it is why the bottom nav's blur had to be dropped on iOS (css/platform.css)".
-   Dropping it here makes the bar a plain opaque surface on every platform, which is what was
-   actually asked for. */
-nav.bottom-nav { min-height:64px; background:rgba(18,20,24,.86);
-  /* EXPLICIT none, not merely absent. index.html:510 declares backdrop-filter on this same
-     element, and a later stylesheet that simply omits a property does not override an earlier one
-     -- it has to cancel it. Leaving it out here would have left the inline blur in force and the
-     bar unchanged, which is exactly the kind of near-miss that made the last fix look like it had
-     not been applied. */
-  backdrop-filter:none; -webkit-backdrop-filter:none; }
+/* FROSTED GLASS. Three parts, and it only reads as glass with all three:
+
+   a translucent tint so the bar has its own colour rather than none,
+   a blur so what passes behind it softens instead of showing through sharp,
+   and saturate so the colours it picks up stay alive rather than turning to grey mud.
+
+   At 55% the tint dominates enough to keep the bar recognisably one surface across every tab,
+   which was the earlier complaint -- at 3% it had no identity and took the page's colour. The
+   blur is what stops the remaining 45% reading as a see-through panel.
+
+   The white top edge is the highlight that sells it: real frosted glass catches light along its
+   upper rim, and without it a blurred translucent box just looks unfinished. */
+nav.bottom-nav {
+  min-height:64px;
+  background:rgba(18,20,24,.55);
+  backdrop-filter:blur(18px) saturate(150%);
+  -webkit-backdrop-filter:blur(18px) saturate(150%);
+  border:1px solid rgba(255,255,255,.10);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14);
+}
 /* The light theme kept its own near-transparent value (6%) and had the same problem. Given the
    dark bar above, this keeps the SAME surface in both themes rather than inverting: the nav
    labels are white on every tab that sets bottom-nav--home-light, so a light bar there would put
