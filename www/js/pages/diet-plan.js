@@ -399,8 +399,6 @@
       if (sm) sheet = mealConfigSheet(plan, sm);
     }
 
-    var firstMealId = plan.meals[0] ? plan.meals[0].id : "";
-    var stickyTarget = (ui.expanded && D.mealById(plan, ui.expanded)) ? ui.expanded : firstMealId;
 
     return '' +
       '<div class="dp">' +
@@ -412,10 +410,10 @@
           ? '<button class="dp-addmeal" data-dp-add-meal="1">+ Add a meal</button>' : '') +
         '<div class="dp-spacer"></div>' +
         sheet +
-        '<div class="dp-sticky">' +
-          '<button class="btn btn-accent dp-sticky__btn" data-dp-add-food="' + esc(stickyTarget) + '">' +
-            '+ Add Food to Plan</button>' +
-        '</div>' +
+        /* The sticky "+ Add Food to Plan" bar is gone. It was position:fixed at bottom:0, which
+           put it underneath the floating nav pill, and it duplicated the per-meal "+ Add Food"
+           button -- which now sits at the top of each meal card where it is reachable without
+           scrolling. One add action, in the place that knows which meal it is adding to. */
       '</div>';
   };
 })();

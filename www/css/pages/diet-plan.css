@@ -310,14 +310,9 @@ body.dp-modal-open { overflow: hidden; }
   color: var(--rh-text); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
 }
 
-/* ---- sticky action ---- */
+/* .dp-sticky and .dp-sticky__btn are gone with the bar they styled. .dp-spacer stays -- it is
+   the gap after the last card, which the removed bar used to sit over. */
 .dp-spacer { height: 8px; }
-.dp-sticky {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(to top, var(--rh-bg, #fff) 62%, transparent);
-}
-.dp-sticky__btn { width: 100%; min-height: 52px; font-size: 15px; font-weight: 800; }
 
 @media (prefers-reduced-motion: reduce) {
   .dp-progress__fill, .dp-check { transition: none; }
