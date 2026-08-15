@@ -245,8 +245,15 @@
           <button class="rh-quick-card" data-action="toggle-routine-builder">${svg('plus',20)}<span>New Routine</span></button>
           <button class="rh-quick-card" data-nav="library">${svg('library',20)}<span>Library</span></button>
           <button class="rh-quick-card" data-nav="recommendation">${svg('target',20)}<span>Recommendation</span></button>
-          <button class="rh-quick-card" data-action="start-session">${svg('workout',20)}<span>Start Empty</span></button>
         </div>
+        ${/* Start Empty leaves the grid and becomes a full-width button beneath it. It is not a
+             shortcut to a screen like the other three -- it STARTS something -- so a tile that
+             looks identical to its neighbours understated it. Pulling it out also drops the grid
+             from four columns to three, which is what stops "Recommendation" wrapping mid-word:
+             a third of the width fits it, a quarter did not. */''}
+        <button class="wk-start-empty" data-action="start-session">
+          ${svg('workout',18)}<span>Start Empty Workout</span>
+        </button>
 
         ${state.routineBuilder ? renderRoutineBuilder() : ''}
 

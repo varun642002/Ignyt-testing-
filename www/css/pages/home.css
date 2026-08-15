@@ -73,8 +73,14 @@ nav.bottom-nav--home-light .nav-btn.active { color:#2563EB; background:rgba(37,9
    min-width:0 lets the card take the track's width; overflow-wrap lets the word break rather
    than dictate it. The label wraps to two lines and the grid keeps equal heights on its own. */
 .rh-quick-card { min-width:0; }
+/* break-word, NOT anywhere. `anywhere` breaks at the first character that does not fit, which
+   is what produced "Recommendati / on" -- correct by the spec, unreadable on screen. break-word
+   keeps whole words together and only splits one that cannot fit on a line by itself, which is
+   the behaviour wanted: wrap if you must, never mid-word if you need not.
+   min-width:0 on the card above is what lets either work at all -- a grid item defaults to its
+   min-content width, so without it the longest word sets the tile's floor and it overflows. */
 .rh-quick-card span { font-size:11px; font-weight:700; color:var(--rh-text); text-align:center; line-height:1.2;
-    max-width:100%; overflow-wrap:anywhere; }
+    max-width:100%; overflow-wrap:break-word; hyphens:auto; }
 
 /* ---------- Today's Overview (horizontal scroll) ---------- */
 .rh-overview-scroll { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; }
