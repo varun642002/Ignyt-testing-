@@ -134,7 +134,22 @@
 .wk-stat-card__sub.is-down { color:var(--rh-red); }
 
 /* ---------- Quick actions ---------- */
-.wk-quick-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:16px; }
+/* THREE, not four. Start Empty moved out to its own button below, and the column count came
+   with it so the survivors share the width rather than leaving a hole -- and so that
+   "Recommendation" gets a third of the row, which fits it on one line. */
+.wk-quick-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:16px; }
+
+/* The one action on this screen that begins a session rather than opening one. Full width, so
+   it reads as a decision rather than a fourth tile. */
+.wk-start-empty {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:100%; margin-top:8px; min-height:50px; padding:0 16px;
+  border:0; border-radius:14px; background:var(--rh-blue); color:#fff;
+  font:inherit; font-size:14.5px; font-weight:800; letter-spacing:.01em;
+  cursor:pointer; box-shadow:0 2px 8px rgba(37,99,235,.28);
+}
+.wk-start-empty:active { transform:translateY(1px); box-shadow:none; }
+.wk-start-empty svg { flex:none; }
 
 /* ---------- Category filter chips (reskins the shared .cat-chip for this light page) ---------- */
 .wk-filter-row { display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; margin-top:16px; -webkit-overflow-scrolling:touch; }
