@@ -14123,6 +14123,35 @@ function renderBodyTab(){
       <div style="font-size:22px;font-weight:800;">Log Weight</div>
       <div style="font-size:12px;color:var(--rh-muted);margin-bottom:14px;">Track your progress. Stay consistent.</div>
 
+      <div class="rh-section-head"><span>Log Entry</span></div>
+      <div class="pg-card" id="body-log-entry">
+        <div class="pi-grid2">
+          ${fieldWrap("Date", `<input type="date" id="b-date" value="${dayKey()}" class="pi-input pi-input--date">`)}
+          ${fieldSm("b-weight",`Weight (${wUnit()})`,wUnit()==='lb'?'220':'101.0',"var(--rh-blue)")}
+        </div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">Body</div>
+        <div class="pi-grid2" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+          ${fieldSm("b-waist","Waist (cm)","","var(--rh-text)")}
+          ${fieldSm("b-chest","Chest (cm)","","var(--rh-text)")}
+          ${fieldSm("b-bodyfat","Body Fat (%)","","var(--rh-text)")}
+        </div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">Recovery</div>
+        <div class="pi-grid2">
+          ${fieldSm("b-sleep","Sleep (hrs)","7.5","var(--rh-purple)")}
+          ${fieldSm("b-hrv","HRV (ms)","91","var(--rh-purple)")}
+        </div>
+        ${showMore ? BODY_MEASUREMENT_GROUPS.map(g=>`
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">${escHtml(g.label)}</div>
+          <div class="pi-grid2" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+            ${g.fields.filter(f=>f.key!=="waist"&&f.key!=="chest"&&f.key!=="bodyfat").map(f=>fieldSm("b-"+f.key, f.label+(f.unit?` (${f.unit})`:""), "", "var(--rh-text)")).join("")}
+          </div>`).join("") : ''}
+        <div style="font-size:11px;color:var(--rh-muted);margin:12px 0 4px;">Logging a weight here updates your profile weight and recalculates calories &amp; macros everywhere.</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+          <button class="rh-btn rh-btn--ghost" style="flex:1;padding:10px;font-size:13px;" data-action="toggle-body-more-metrics">${svg('plus',13)} ${showMore?'Fewer Metrics':'More Metrics'}</button>
+          <button style="flex:none;height:44px;padding:0 18px;border-radius:22px;border:none;background:var(--rh-blue);color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:800;white-space:nowrap;cursor:pointer;" data-action="log-body">${svg('plus',16)}<span>Add Weight</span></button>
+        </div>
+      </div>
+
       <div class="pg-card-row" style="margin-top:0;grid-template-columns:1.4fr 1fr;">
         <div class="pg-card" style="display:flex;align-items:center;gap:12px;">
           <div style="flex:1;min-width:0;">
@@ -14232,34 +14261,6 @@ function renderBodyTab(){
         </div>`).join("")}
       </div>` : ''}
 
-      <div class="rh-section-head"><span>Log Entry</span></div>
-      <div class="pg-card" id="body-log-entry">
-        <div class="pi-grid2">
-          ${fieldWrap("Date", `<input type="date" id="b-date" value="${dayKey()}" class="pi-input pi-input--date">`)}
-          ${fieldSm("b-weight",`Weight (${wUnit()})`,wUnit()==='lb'?'220':'101.0',"var(--rh-blue)")}
-        </div>
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">Body</div>
-        <div class="pi-grid2" style="grid-template-columns:repeat(3,minmax(0,1fr));">
-          ${fieldSm("b-waist","Waist (cm)","","var(--rh-text)")}
-          ${fieldSm("b-chest","Chest (cm)","","var(--rh-text)")}
-          ${fieldSm("b-bodyfat","Body Fat (%)","","var(--rh-text)")}
-        </div>
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">Recovery</div>
-        <div class="pi-grid2">
-          ${fieldSm("b-sleep","Sleep (hrs)","7.5","var(--rh-purple)")}
-          ${fieldSm("b-hrv","HRV (ms)","91","var(--rh-purple)")}
-        </div>
-        ${showMore ? BODY_MEASUREMENT_GROUPS.map(g=>`
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rh-muted);margin:14px 0 8px;">${escHtml(g.label)}</div>
-          <div class="pi-grid2" style="grid-template-columns:repeat(3,minmax(0,1fr));">
-            ${g.fields.filter(f=>f.key!=="waist"&&f.key!=="chest"&&f.key!=="bodyfat").map(f=>fieldSm("b-"+f.key, f.label+(f.unit?` (${f.unit})`:""), "", "var(--rh-text)")).join("")}
-          </div>`).join("") : ''}
-        <div style="font-size:11px;color:var(--rh-muted);margin:12px 0 4px;">Logging a weight here updates your profile weight and recalculates calories &amp; macros everywhere.</div>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
-          <button class="rh-btn rh-btn--ghost" style="flex:1;padding:10px;font-size:13px;" data-action="toggle-body-more-metrics">${svg('plus',13)} ${showMore?'Fewer Metrics':'More Metrics'}</button>
-          <button style="flex:none;width:44px;height:44px;border-radius:50%;border:none;background:var(--rh-blue);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;" data-action="log-body" aria-label="Log entry">${svg('plus',18)}</button>
-        </div>
-      </div>
 
       <div class="rh-section-head"><span>Body Scan Archive</span>${state.bodyPhotos.length>0?`<a href="#" class="rh-view-all" data-action="open-body-scan-archive">Open Archive</a>`:''}</div>
       <div class="pg-card">
@@ -21714,19 +21715,39 @@ function attachHandlers(){
   document.querySelectorAll("[data-nutrition-range]").forEach(el=>{
     el.addEventListener("click", ()=>{ state.nutritionRange = Number(el.dataset.nutritionRange); render(); });
   });
+  /* THE CALENDAR KEEPS ITS PLACE. Both of these rebuild the whole page through render(), and
+     replacing main's contents drops its scrollTop to 0 -- so tapping a day or changing month
+     threw the page to the top and the calendar you were looking at vanished upwards. Reported
+     as flickering, which is exactly what a rebuild plus a jump looks like.
+
+     The global restore in render() cannot help here: it only restores when the page height is
+     UNCHANGED, and both of these change it -- selecting a day opens a detail panel, and months
+     have different numbers of rows. That gate exists because restoring across a height change
+     is what caused the food-log flicker, so it stays; this is the narrower case where staying
+     put is still right and the caller knows it.
+
+     Restored synchronously, immediately after render() and in the same task, so the browser
+     never paints between the rebuild and the reposition. A setTimeout here would fire after
+     paint and reintroduce the very flicker being fixed. */
+  const keepCalendarScroll = (mutate) => {
+    const before = document.getElementById("main");
+    const top = before ? before.scrollTop : 0;
+    mutate();
+    render();
+    const after = document.getElementById("main");
+    if(after && top) after.scrollTop = top;
+  };
   document.querySelectorAll("[data-cal-day]").forEach(el=>{
-    el.addEventListener("click", ()=>{
+    el.addEventListener("click", ()=>keepCalendarScroll(()=>{
       state.calendarSelectedDate = state.calendarSelectedDate===el.dataset.calDay ? null : el.dataset.calDay;
-      render();
-    });
+    }));
   });
   document.querySelectorAll("[data-cal-nav]").forEach(el=>{
-    el.addEventListener("click", ()=>{
+    el.addEventListener("click", ()=>keepCalendarScroll(()=>{
       const delta = Number(el.dataset.calNav);
       const next = (state.calendarMonthOffset||0) + delta;
       if(next<=0) state.calendarMonthOffset = next;
-      render();
-    });
+    }));
   });
   document.querySelectorAll("[data-bodydist-nav]").forEach(el=>{
     el.addEventListener("click", ()=>{
@@ -22192,6 +22213,42 @@ function attachHandlers(){
     el.addEventListener("click", ()=>{
       const id = el.dataset.dpMealToggle;
       dpUI({ expanded: (state.dietUI||{}).expanded === id ? "__none__" : id });
+      render();
+    });
+  });
+
+  /* PLAN -> FOOD LOG. The plan says what you intend to eat; the log says what you did. Ticking a
+     meal done already counts it toward followedTotals, but nothing put those items in the Food
+     Log, so the day's real totals never saw them.
+
+     Copies rather than links. A logged entry is then editable and deletable like any other, and
+     changing the plan afterwards does not silently rewrite history. The cost is that the two can
+     drift, which is correct: the plan is a plan.
+
+     copyFoodEntry() is the app's own entry builder -- it assigns the id, date and timestamp and
+     carries foodId, category, quantity, servingUnit and grams across. Plan items already hold
+     exactly those fields, so nothing is invented here and nothing is recalculated.
+
+     Logged under the PLAN's meal name where the food log knows it, so "Breakfast" lands in
+     breakfast rather than whatever the time of day suggests. */
+  document.querySelectorAll("[data-dp-log-meal]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const plan = currentDietPlan();
+      if(!plan || !D){ showToast("Create a plan first.", "info", render); return; }
+      const meal = D.mealById(plan, el.dataset.dpLogMeal);
+      if(!meal || !(meal.items||[]).length){ showToast("That meal has no foods yet.", "info", render); return; }
+
+      const known = mealTypes();
+      const mealName = known.indexOf(meal.name) !== -1 ? meal.name : (typeof mealForNow === "function" ? mealForNow() : known[0]);
+      const date = nutritionDateStr();
+
+      /* reverse + unshift keeps the plan's own order once they are in the log, the same way
+         copyDayFoods does it a few hundred lines up. */
+      meal.items.slice().reverse().forEach(it=>{ state.foodLog.unshift(copyFoodEntry(it, date, mealName)); });
+      persist();
+
+      const kcal = Math.round(meal.items.reduce((a,it)=>a+(Number(it.calories)||0), 0));
+      showToast(meal.items.length + (meal.items.length === 1 ? " food" : " foods") + " logged · " + kcal + " kcal", "success", render);
       render();
     });
   });
@@ -23069,7 +23126,25 @@ if(window.IgnytSecurity){
   if(!AppPlugin) return;
   AppPlugin.addListener("backButton", ()=>{
     if(handleHardwareBack()) return;
-    AppPlugin.exitApp(); // nothing open -- same exit-at-root behavior as before this fix
+    /* HOME IS THE FLOOR, NOT THE APP BOUNDARY. handleHardwareBack() unwinds overlays -- sheets,
+       dialogs, pickers -- and returns false once there is nothing left to close. Straight to
+       exitApp() from there meant back closed the whole app from ANY tab: reading Progress,
+       pressing back once, gone. Reported as "the app should not completely come out".
+
+       Back now walks to Home first and only leaves from Home, which is what Android users
+       expect and what every tab-based app does.
+
+       Exit from Home is KEPT deliberately. An app that cannot be dismissed with back is its own
+       complaint, and Android treats back-at-root as leave. If a confirmation is wanted later,
+       the place for it is here, not in the removal of this line. */
+    if(state.tab !== "home"){
+      state.tab = "home";
+      state.progressView = null;   // the sub-views have their own back paths; do not land inside one
+      state.bodyView = null;
+      render();
+      return;
+    }
+    AppPlugin.exitApp();
   });
 })();
 

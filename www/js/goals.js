@@ -267,7 +267,7 @@
           '<div style="display:flex;align-items:center;gap:6px;font-weight:800;font-size:14px;">' + svg("progress", 16) + ' Goal Summary</div>' +
           '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px;text-align:center;">' +
           '<div><div style="font-size:11px;color:var(--rh-muted);">Weight to ' + (tgtW < curW ? "lose" : "gain") + '</div><div style="font-size:16px;font-weight:800;color:var(--rh-blue);margin-top:2px;">' + Math.round(Math.abs(curW - tgtW) * 10) / 10 + ' ' + wUnit() + '</div></div>' +
-          '<div><div style="font-size:11px;color:var(--rh-muted);">Days remaining</div><div style="font-size:16px;font-weight:800;color:var(--rh-blue);margin-top:2px;">' + (daysLeft != null ? daysLeft : "—") + '</div></div>' +
+          '<div><div style="font-size:11px;color:var(--rh-muted);">Days to finish</div><div style="font-size:16px;font-weight:800;color:var(--rh-blue);margin-top:2px;">' + (daysLeft != null ? daysLeft : "—") + '</div></div>' +
           '<div><div style="font-size:11px;color:var(--rh-muted);">Target date</div><div style="font-size:13px;font-weight:800;margin-top:4px;">' + (cp.completion ? fmtDate(cp.completion) : "—") + '</div></div>' +
           '</div>' +
           '<div style="display:flex;gap:14px;margin-top:14px;border-top:1px solid var(--rh-border);padding-top:12px;">' +

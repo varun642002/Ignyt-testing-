@@ -159,6 +159,242 @@ the click landed, whether the tab state changed, and what rendered — which dis
 click missed" from "the click worked and the app did not re-render" from "the app navigated and
 came back". Guessing at assertions without that has now cost four attempts.
 
+### CONFIRMED: it is the DIET PLAN. Implementation spec, with scaling (user chose option 1).
+
+Same shape as the food log, so the good news holds: **`sumItems()`
+(`www/js/diet/diet-plans.js:453`) reads `it[k]` straight off each item**, so writing
+`item.calories` IS the override. No new totals plumbing.
+
+**EXACT SAVE PATH FOUND (this is the hard half, and it is easy):** `www/app.js:22478-22495`.
+The plan-edit branch builds a fresh `next` object and calls
+`D.replaceItem(t.planId, t.mealId, t.itemId, next)`. Everything needed for the carry-and-scale
+lives in that one block:
+
+```js
+// before building `next`, read what is already there:
+const prev = D.findItem(t.planId, t.mealId, t.itemId);
+// ... build next as today ...
+if (prev && prev.caloriesOverridden && prev.overrideGrams) {
+  next.calories = Math.round(prev.calories * (Number(next.grams) / Number(prev.overrideGrams)));
+  next.caloriesOverridden = true;
+  next.overrideGrams = prev.overrideGrams;   // ORIGINAL, so repeats do not compound
+}
+```
+
+The edit flow that reaches it is `openPlanItemDetail()` (`app.js:14471`), which sets
+`state.foodFlow.target = { kind: "plan-edit", planId, mealId, itemId }`.
+
+**STILL MISSING: the UI to SET an override.** The food-details screen render was not located.
+Without a field there, the block above carries a value nothing can create -- dead code. Find
+where the detail screen renders its serving/quantity controls (it is the same screen for logging
+and for plan edits, per the comment at `app.js:14467`), add a calories field shown in edit mode,
+and set `caloriesOverridden`/`overrideGrams` when the typed value differs from the computed one.
+
+Three touch points, in the order they matter:
+
+1. **`replaceItem(planId, mealId, itemId, record)`** — `diet-plans.js:417`. The write path. It
+   replaces the WHOLE record with what the caller built, so anything not in that record is lost.
+
+2. **The item builder around `app.js:15100`** — this is the catch and the reason the job is not
+   a one-liner. It rebuilds the record from the food every time (`calories: Number(v.calories)||0`),
+   so an override is ERASED by the next quantity edit unless it is explicitly carried across.
+   Carry `caloriesOverridden` and `overrideGrams` through, then apply the scaling the user asked
+   for: `calories = override * (newGrams / overrideGrams)`. Keep `overrideGrams` at its ORIGINAL
+   value so repeated edits scale from the user's figure rather than compounding rounding.
+
+3. **The edit UI** — Food Details opened in edit mode for a plan item (`app.js:14467` names this
+   path). Add a calories field there. Not yet read; read it before designing the field.
+
+**Macros disagree if only calories is editable.** `sumItems` sums every key in `NUTRIENTS` the
+same way, so an item with corrected calories and untouched protein/carbs/fat is internally
+inconsistent, and the plan's macro row will not match its calorie row. Either make all four
+editable or label the field so it is clear only calories is adjusted.
+
+**Verify after:** meal totals, `dayTotals()`, and `followedTotals()` — the last one feeds the
+"followed the plan" numbers and reads the same items, so one override should move all three.
+
+
+
+Discovered while starting the build. **"tap to edit" appears only in `www/js/pages/diet-plan.js:134`
+— it does not exist in the food log.** The screenshot the request came from (Whey Protein /
+Banana / Oats, each showing "· tap to edit") is therefore the DIET PLAN screen, not the Food Log.
+
+Those are two different models with two different edit paths:
+
+- **Food log** entries: `state.foodLog`, totals via `foodsForDate()` (`app.js:5927`, `6308`, `6331`)
+- **Diet plan** items: `IgnytDietPlans`, totals via `mealTotals()` / `dayTotals()` /
+  `followedTotals()` (`www/js/diet/diet-plans.js:538`)
+
+The spec below researched the FOOD LOG. If the request is really about the diet plan, its
+conclusions about where totals are read do not apply and the item builder near `app.js:15100`
+(diet-plan item, `calories: Number(v.calories)||0`) is the relevant path instead.
+
+**ASK WHICH SCREEN before building.** Writing an override into the model nothing reads is worse
+than not building it, and the two screens look similar enough in a screenshot to be confused —
+they were confused here.
+
+### SPECCED, NOT BUILT: edit an entry's calories in the Food Log
+
+User chose this over a manual adjustment row or editing the daily target: tap a logged food and
+change its kcal directly, for when the library value is wrong for what was actually eaten.
+
+**The groundwork is already there, which makes this smaller than it looks.** Each food-log entry
+STORES its own `calories`; totals read that field rather than recomputing from the library:
+
+```
+app.js:5927   foodsForDate(todayStr()).reduce((a,f)=>a+Number(f.calories||0),0)
+app.js:6308   same, per date
+app.js:6331   same, for the day summary
+app.js:6032   entry built as: calories: Number(src.calories)||0
+```
+
+So writing `entry.calories` IS the override. No new storage field is needed for the value.
+
+**The one real decision — what happens when quantity changes afterwards.** Today, changing grams
+recomputes calories from the library. If someone overrides 187 kcal to 210 and then edits the
+quantity, silently reverting to the library figure would be wrong, and silently scaling their 210
+would be a guess. Options, in order of preference:
+
+1. Store `caloriesOverridden: true` alongside. On a quantity change, SCALE the override by the
+   grams ratio (210 kcal at 100 g becomes 315 at 150 g). Predictable, keeps the user's intent.
+2. Same flag, but on a quantity change ask, or drop the override and say so in the UI.
+3. No flag: quantity changes overwrite the override silently. Simplest, and the one people will
+   report as a bug.
+
+**Where the UI goes:** the food detail/edit sheet reached by "tap to edit" on a log row. There is
+a save path around `app.js:15113` (`calories: Number(v.calories)||0`) — read it before adding a
+field; the value may already flow through and only need exposing.
+
+**Do not forget:** protein/carbs/fat have the same problem. An entry whose calories are corrected
+but whose macros are not now disagrees with itself, and the assistant reads both. Either allow
+editing all of them or state in the UI that only calories is adjustable.
+
+**Test after:** day total, weekly progress, and the assistant's "how many calories did I eat
+today" all read the same field, so one override should move all three consistently.
+
+### FIVE REQUESTS OPEN, NONE DONE — stopped editing deliberately
+
+**E. Log Weight: replace the round "+" with a labelled "Add Weight" button.** The control is the
+44x44 circular button inside the Log Entry card (`www/app.js`, search
+`width:44px;height:44px;border-radius:50%` within renderBodyTab). Changing it to a labelled
+button changes its width and the flex row it shares, so check that row's layout after — it is
+not a text swap. Pairs naturally with request A, since both touch the Log Entry card.
+
+### FOUR REQUESTS OPEN, NONE DONE — stopped editing deliberately
+
+Context was exhausted and an attempted edit broke www/app.js (reverted clean). These are
+recorded rather than half-applied. Each is small; none is risky with room to verify.
+
+**A. Log Entry first on the Log Weight page.** See detail below — includes the anchor trap that
+broke the file.
+
+**B. Back-swipe ENABLED on iPhone and Android** — confirmed wanted. See below.
+
+**C. Back button must not exit the app outright.** FOUND THE CAUSE, not fixed.
+`handleHardwareBack()` (`www/app.js:23020` onward) closes overlays in priority order — crash
+screen, confirm dialog, legal, body photo, muscle sheet, RPE sheet, rest timer, plate calc,
+exercise picker, exercise menu, notifications, privacy — returning `true` for each. If nothing is
+open it returns `false`, and the listener at `www/app.js:23090` calls `AppPlugin.exitApp()`.
+So back exits from ANY tab, including Workout or Progress with nothing open.
+
+FIX: before `exitApp()`, add a step — if `state.tab !== "home"`, set it to "home", render, and
+return. Only exit when already on Home. Consider the usual double-press-to-exit on Home too.
+Both are a few lines in that one listener; neither is verifiable without an Android device, so
+build and hand over rather than claiming it works.
+
+**D. Remove IGNYT AI from Quick Actions.** Not started, and NOT located — the Workout tab's
+Quick Actions grid (`www/js/pages/workout.js:243`) holds New Routine, Library, Recommendation and
+Start Empty, with no AI entry. Find which screen's Quick Actions the user means before editing;
+Home and Tools both have their own. Note IGNYT AI already ships OFF by default (`aiChatOn`), so
+whatever card is showing may be rendering without checking that flag — worth checking
+`aiChatEnabled()` is consulted wherever it appears.
+
+### TWO REQUESTS OPEN, NEITHER DONE
+
+**A. Log Entry should be FIRST on the Log Weight page.** Current order in `renderBodyTab()`
+(`www/app.js`): page title -> stat cards -> Trend chart -> "Recent Entries" -> **"Log Entry"** ->
+"Body Scan Archive". The Log Entry block is the ~28 lines from the
+`<div class="rh-section-head"><span>Log Entry</span></div>` line to just before the Body Scan
+Archive section head, and it is self-contained.
+
+ATTEMPTED AND REVERTED. A script moved it above the stats row by anchoring on the string
+"Track your progress" — which appears TWICE in app.js, in two different functions. It matched the
+wrong one and spliced the block into an unrelated template, breaking the file. Reverted clean
+(`node --check` passes). If you retry: anchor on line numbers found relative to the "Log Weight"
+title inside renderBodyTab, or on a string that is unique, and run `node --check` before anything
+else.
+
+**B. Back-swipe should be ENABLED on iPhone and Android.** The user has confirmed the iOS
+edge-swipe chevron is WANTED, so the earlier note about disabling it is wrong — do not disable it.
+Android already has a handler: `AppPlugin.addListener("backButton", ...)` at `www/app.js:23090`.
+iOS has no `ios` section in capacitor.config.json at all, so whatever Capacitor's default is,
+applies. NOT CHANGED — it is a behaviour change on a platform this session cannot build or test,
+and the SPA's own back stack and WKWebView history are two different things that need
+reconciling before the gesture is trusted.
+
+### REPORTED FROM A DEVICE, NOT YET FIXED (2026-08-13)
+
+Four reports. One was data and is done; three are iPhone visual/behavioural and need a device.
+
+1. **Egg small/medium/large — FIXED.** `Egg` had NO portions at all and `Whole Egg`/`Boiled Egg`
+   had a single `piece: 50g`, so there was no size to choose. Added small 38 g, medium 44 g,
+   large 50 g (USDA edible-portion weights, shell removed) to `Egg`, `Whole Egg`, `Boiled Egg`,
+   `Egg (Whole)` and `Egg, hen`, plus a `g` portion on the three rows that had none. Large keeps
+   50 g deliberately, so anything already logged as a piece does not shift.
+
+2. **Calendar flickers — NOT FIXED.** Almost certainly the same class as the food-log flicker:
+   a re-render that changes content height, where restoring scroll makes the page paint at one
+   offset then jump. The global restore is height-gated now (`d0233ca`), so if the calendar
+   still flickers, the height gate is not catching that path. Look at what the calendar re-renders
+   on — month switching changes row count, so height changes legitimately.
+
+3. **Achievements need updating on iPhone — NOT FIXED, and unclear.** Ask what "updating" means:
+   stale data, wrong layout, or missing new achievements. Do not guess.
+
+4a. **THE "ALIGNMENT" AND "STRAY ARROW" ARE ONE THING: an in-progress iOS back-swipe.**
+
+   Evidence, in the order it accumulated:
+   - `❯` appears NOWHERE in www/ — not in any js, html or css. It is not ours.
+   - `expectNoHorizontalOverflow()` across home/workout/nutrition/progress/tools passes on
+     mobile-chrome AND mobile-safari. Six tests, no overflow at any tested viewport.
+   - The clipping in the screenshots is on the LEFT ("ECENT SESSIONS"), and the chevron is on
+     the LEFT edge. Overflow clips the RIGHT. A left-clip means the page was dragged RIGHT.
+
+   So the screenshots were taken mid back-swipe: iOS's edge-swipe navigation affordance is the
+   `❯`, and the "misalignment" is the page sliding out from under it. Nothing to fix in CSS.
+
+   **The real question is whether that gesture should exist at all.** IGNYT is a single-page
+   app; a webview back-swipe walks WKWebView history, not app state, so it can strand a user
+   outside the app's own navigation. Capacitor exposes this — set `ios.allowsBackForwardNavigationGestures`
+   to false in capacitor.config.json (the file currently has NO ios section at all, so the
+   default applies). NOT DONE HERE: unverifiable without a Mac, and it is a behaviour change on
+   a platform this session cannot test.
+
+   The truncated selects (`Centimeters (cn`, `12 Hour (AM/PM`) are the same drag, not separate.
+   If they persist in a screenshot taken at rest, they ARE a real width bug — reopen then.
+
+4b. **iPhone screenshots supplied. Three distinct faults, only one fixed:**
+
+   - **A stray `❯` control on the left edge**, half off-screen, overlapping content. Visible on
+     the Workout tab and Personal Info. Looks like a drawer/panel handle positioned outside the
+     viewport. NOT FIXED — find what renders `❯` and why it sits at x<0.
+   - **Horizontal overflow.** "RECENT SESSIONS" renders as "ECENT SESSIONS", and selects
+     truncate mid-word: `Daily exercise o|`, `Centimeters (cn`, `12 Hour (AM/PM`. The page is
+     wider than the viewport, or a container is shifted left. NOT FIXED — `BasePage.js` already
+     has `expectNoHorizontalOverflow()`; point it at these screens and it will catch this.
+   - **Goal wizard contradicted itself — FIXED (labelling, not maths).** The form showed
+     "1 Jan 2027 · 141 days remaining" while the summary card below showed "Target date
+     31 Dec 2026 · Days remaining 139". Both numbers were correct: the first is the chosen date
+     minus the goal start, the second is `cp.completion` (where the current weekly rate lands
+     you) minus now. The card was labelling a PROJECTION as the target. Renamed to "Projected
+     finish" and "Days to finish" (`www/js/goals.js:271`).
+
+4. **Alignment issues in many places on iPhone — NOT FIXED.** This is the one that needs a
+   device or a WebKit preview. Three CSS changes shipped this session were reasoned from
+   screenshots and never seen rendered (fasting row padding, iPhone nav at 22 px, settings
+   padding at 12 px) — any of them could be contributing. Check those three first before
+   treating it as a new problem.
+
 ### The open bug
 
 **Settings toggle sits high in its row** — "close to the top, the bottom has more space, it needs
@@ -176,6 +412,33 @@ Three candidates, different fixes:
 
 Measure it in the preview rather than guessing. The toggle DESIGN is settled — plain pale track,
 white knob, no lamps, restored in `d4c2d6e`. Do not restyle it.
+
+### NAV COLOUR — CAUSE FOUND (2026-08-13, second attempt)
+
+`www/css/layout.css:95`:
+
+```css
+nav.bottom-nav { min-height:64px; background:rgba(18,20,24,.03); }
+```
+
+**3% opacity — the bar has effectively no background of its own.** layout.css loads AFTER
+index.html's inline `background:rgba(23,23,28,.86)` and wins at equal specificity, so the
+translucent-dark bar the inline rule intended never applies.
+
+That is why the colour changes per screen and per theme: the bar is showing whatever is painted
+behind it. Blue on Food Log, pale on Workout, blue again in dark mode — all the same bar,
+different backdrops.
+
+**So `isLightTab` was never the cause.** `bottom-nav--home-light` only sets BUTTON text to white
+(`gloss.css:293-298`, `layout.css:121-123`) — it does not touch the background at all. Adding
+"nutrition" to that list in `55da132` was therefore a no-op for this symptom, and reporting it
+fixed was wrong.
+
+**NOT FIXED, deliberately.** Choosing the replacement needs seeing it: the bar sits over five
+tabs in two themes, and index.html's own comment records that this exact rule has been the site
+of a CSS collision before ("the nav background vs this file"). Picking a colour blind is how the
+first wrong fix happened. Start the preview, look at the bar on each tab in both themes, then
+decide whether it wants the inline dark translucent value restored, a token, or a per-theme pair.
 
 ### STILL BROKEN — I reported this fixed and it is not
 

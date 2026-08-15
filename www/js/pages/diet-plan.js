@@ -183,14 +183,27 @@
               (done ? ic("check",14) : "") + '</button>') +
         '</div>' +
 
+        /* ACTIONS ABOVE THE ITEMS. They used to sit under the list, which put "+ Add Food" at
+           the far end of a meal -- on a full breakfast it was several screens down, and on the
+           last meal of the day it landed under the bottom nav where it could not be tapped at
+           all. Adding food is the thing people come to this card to do, so it goes where the
+           card starts rather than where it ends.
+
+           Reads sensibly for the other two as well: "Log to Food Log" and "Edit meal" act on the
+           meal as a whole, so they belong with its header rather than trailing its contents. */
         (expanded ? '<div class="dp-meal__body">' +
+          '<div class="dp-meal__actions">' +
+            '<button class="dp-add" data-dp-add-food="' + esc(meal.id) + '">+ Add Food</button>' +
+            /* Copy the planned meal into today's Food Log. Only offered when the meal actually
+               has items -- an empty meal would log nothing and the button would be a lie. */
+            (meal.items && meal.items.length
+              ? '<button class="dp-logmeal" data-dp-log-meal="' + esc(meal.id) + '">' + ic("check", 13) + 'Log to Food Log</button>'
+              : '') +
+            '<button class="dp-mealcfg" data-dp-meal-config="' + esc(meal.id) + '">Edit meal</button>' +
+          '</div>' +
           (empty
             ? '<div class="dp-meal__empty">Nothing planned for ' + esc(meal.name) + ' yet.</div>'
             : meal.items.map(function (it) { return itemRow(it, meal); }).join("")) +
-          '<div class="dp-meal__actions">' +
-            '<button class="dp-add" data-dp-add-food="' + esc(meal.id) + '">+ Add Food</button>' +
-            '<button class="dp-mealcfg" data-dp-meal-config="' + esc(meal.id) + '">Edit meal</button>' +
-          '</div>' +
         '</div>' : '') +
       '</div>';
   }
@@ -386,8 +399,6 @@
       if (sm) sheet = mealConfigSheet(plan, sm);
     }
 
-    var firstMealId = plan.meals[0] ? plan.meals[0].id : "";
-    var stickyTarget = (ui.expanded && D.mealById(plan, ui.expanded)) ? ui.expanded : firstMealId;
 
     return '' +
       '<div class="dp">' +
@@ -399,10 +410,10 @@
           ? '<button class="dp-addmeal" data-dp-add-meal="1">+ Add a meal</button>' : '') +
         '<div class="dp-spacer"></div>' +
         sheet +
-        '<div class="dp-sticky">' +
-          '<button class="btn btn-accent dp-sticky__btn" data-dp-add-food="' + esc(stickyTarget) + '">' +
-            '+ Add Food to Plan</button>' +
-        '</div>' +
+        /* The sticky "+ Add Food to Plan" bar is gone. It was position:fixed at bottom:0, which
+           put it underneath the floating nav pill, and it duplicated the per-meal "+ Add Food"
+           button -- which now sits at the top of each meal card where it is reachable without
+           scrolling. One add action, in the place that knows which meal it is adding to. */
       '</div>';
   };
 })();

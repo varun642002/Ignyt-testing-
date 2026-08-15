@@ -10,7 +10,12 @@
 ========================================================= */
 .dp {
   --dp-gap: 12px;
-  padding: 0 0 96px;
+  /* Nav clearance from the token, not a literal. 96px was a guess that happened to match the
+     72px bar plus breathing room on a device with NO safe-area inset -- on a phone with a home
+     indicator the bar sits ~34px higher and the last meal's "+ Add Food" row ended up under it,
+     which is exactly what was reported. --main-pad-bottom is nav-height + safe-bottom +
+     space-lg, so it grows with the inset and follows the bar if it ever changes height. */
+  padding: 0 0 var(--main-pad-bottom);
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: var(--rh-text);
 }
@@ -221,14 +226,39 @@
 .dp-item__more:active { background: var(--rh-border); }
 
 /* ---- meal actions ---- */
+/* The divider flipped with the row. This used to sit UNDER the item list, so its separator was
+   a border-top; it now sits above the list, so the separator has to be underneath it or the rule
+   lands directly against the meal header and the row appears to belong to the wrong thing. */
 .dp-meal__actions {
   display: flex; align-items: center; gap: 8px;
-  padding-top: 10px; border-top: 1px solid var(--rh-border); margin-top: 2px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--rh-border); margin-bottom: 2px;
 }
+/* A BUTTON, not a text link. This was borderless blue text at weight 700 sitting in a row with
+   two other plain-text actions, so the primary thing you open a meal to do looked identical to
+   the two secondary ones beside it. Filled and bold, it reads as the action and the other two
+   stay as text -- which is the hierarchy the row always wanted. */
 .dp-add {
-  border: 0; background: none; padding: 4px 0;
-  color: var(--rh-blue); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  border: 0; background: var(--rh-blue); padding: 9px 16px; border-radius: 999px;
+  color: #fff; font: inherit; font-size: 13px; font-weight: 800; letter-spacing: .01em;
+  cursor: pointer; white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(37,99,235,.35);
 }
+.dp-add:active { transform: translateY(1px); box-shadow: none; }
+
+/* SECOND IN THE HIERARCHY, not second-class. "Log to Food Log" is the action that turns a plan
+   into a record, so it should be findable -- but it must not compete with "+ Add Food", which is
+   what the card exists for. A tinted fill reads as a button at a glance while staying quieter
+   than the solid one beside it, and "Edit meal" stays plain text below both.
+   So the row now says, in order of weight: do this, then this, and there is a settings link. */
+.dp-logmeal {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid rgba(37,99,235,.28); background: rgba(37,99,235,.10);
+  padding: 8px 13px; border-radius: 999px;
+  color: var(--rh-blue); font: inherit; font-size: 12.5px; font-weight: 800;
+  cursor: pointer; white-space: nowrap;
+}
+.dp-logmeal:active { background: rgba(37,99,235,.18); transform: translateY(1px); }
+.dp-logmeal svg { flex: none; }
 
 /* ---- empty state ---- */
 .dp-empty { text-align: center; padding: 40px 20px; }
@@ -295,14 +325,9 @@ body.dp-modal-open { overflow: hidden; }
   color: var(--rh-text); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
 }
 
-/* ---- sticky action ---- */
+/* .dp-sticky and .dp-sticky__btn are gone with the bar they styled. .dp-spacer stays -- it is
+   the gap after the last card, which the removed bar used to sit over. */
 .dp-spacer { height: 8px; }
-.dp-sticky {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(to top, var(--rh-bg, #fff) 62%, transparent);
-}
-.dp-sticky__btn { width: 100%; min-height: 52px; font-size: 15px; font-weight: 800; }
 
 @media (prefers-reduced-motion: reduce) {
   .dp-progress__fill, .dp-check { transition: none; }

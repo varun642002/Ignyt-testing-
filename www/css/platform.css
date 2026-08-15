@@ -53,18 +53,21 @@
    covers the whole screen and has an opaque surface of its own, so the original reasoning holds
    there unchanged. */
 html[data-platform="ios"] nav.bottom-nav {
-  backdrop-filter: blur(9px) saturate(115%);
-  -webkit-backdrop-filter: blur(9px) saturate(115%);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
 }
 
 /* The Home tab swaps the bar for a lighter variant, and css/pages/dark-mode.css sets that
    one's background with !important. Nothing without !important can answer that, so this
    restates it — the alternative was leaving one tab in five visibly more transparent than the
    rest with its blur removed, which reads as a rendering fault rather than a choice. */
+/* iOS no longer forces its own near-transparent background here. That !important at 3% beat
+   everything layout.css could set, so on iPhone the bar had no surface of its own regardless --
+   it simply showed the page. The frosted treatment in layout.css is what should apply on every
+   platform, so this rule now only matches the blur strength rather than overriding the tint. */
 html[data-platform="ios"] nav.bottom-nav--home-light {
-  backdrop-filter: blur(9px) saturate(115%);
-  -webkit-backdrop-filter: blur(9px) saturate(115%);
-  background: rgba(28, 27, 35, .03) !important;
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
 }
 
 html[data-platform="ios"] .timer-overlay {
