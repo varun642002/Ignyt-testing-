@@ -32,6 +32,16 @@ cross-device sync) MUST be gated in the backend as well. Precedent exists and is
 everywhere else. Ship this spec as-is and the whole app is free on iPhone. Decide deliberately:
 either implement StoreKit for iOS, or accept it and write down that it is intentional.
 
+### SCOPE CONFIRMED BY THE USER
+
+Everything except the two free features is locked after day 7, **including cloud sync**. There is
+no partial tier -- it is two features free, everything else premium.
+
+That makes cloud sync a PAID feature, which raises the one question with a data-loss edge:
+**what happens to a user whose trial ends while their data is only in the cloud?** They must not
+lose access to their own records. Sync stopping is fine; the local copy going away, or the app
+refusing to read data it already has, is not. Gate the SYNC, never the local data.
+
 ### WHAT "BASIC" MEANS IS UNDEFINED
 
 "Basic workout tracking" and "basic food tracking" need a line each. Does basic food tracking
