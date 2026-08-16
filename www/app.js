@@ -2558,7 +2558,132 @@ function migrateExerciseNames(map){
   return touched;
 }
 
+/* The 2026-08-16 badge-id rename. The original 82 achievements used underscore ids from before
+   the designed medal set existed; every one of them now ships under its id from that set, so the
+   whole collection speaks one naming scheme.
+
+   state.achievements is keyed by id, so WITHOUT this map every user loses every badge they have
+   earned: the old records stop matching any def (they become ghosts that still inflate the
+   "X of Y earned" count, since that reads state.achievements.length) and the same medals
+   re-unlock under new ids carrying today's date instead of the day they were actually earned.
+
+   volume_1m is the one that is not a straight rename -- the designed set already ships that
+   medal as lifetime-volume, so the legacy def was removed rather than renamed onto it, and this
+   map points its earners at the survivor. */
+const ACHIEVEMENT_ID_MIGRATION = {
+  "early_bird": "early-bird",
+  "early_bird_10": "sunrise-regular",
+  "exercises_100": "ex-100",
+  "exercises_25": "ex-25",
+  "exercises_50": "ex-50",
+  "first_100kg": "lift-100",
+  "first_140kg": "lift-140",
+  "first_180kg": "lift-180",
+  "first_60kg": "lift-60",
+  "first_pr": "pr-first",
+  "first_workout": "first-workout",
+  "food_days_100": "food-100days",
+  "food_days_30": "food-month",
+  "food_days_7": "food-week",
+  "food_entries_500": "food-500",
+  "food_first": "meal-first",
+  "habit_hero": "healthy-habit-hero",
+  "hours_10": "hours-10",
+  "hours_100": "hours-100",
+  "hours_50": "hours-50",
+  "hours_500": "hours-500",
+  "hyrox_full_program": "hyrox-8week",
+  "hyrox_week1": "hyrox-week1",
+  "muscles_10": "muscle-10",
+  "muscles_5": "muscle-5",
+  "night_owl": "night-owl",
+  "prs_10": "pr-10",
+  "prs_100": "pr-100",
+  "prs_25": "pr-25",
+  "prs_50": "pr-50",
+  "reps_1000": "reps-1000",
+  "reps_10000": "reps-10000",
+  "reps_50000": "reps-50000",
+  "score_100_once": "excellent-day",
+  "score_130_once": "elite-day",
+  "score_70_once": "great-day",
+  "score_70_x30": "thirty-strong",
+  "sets_100": "sets-100",
+  "sets_1000": "sets-1000",
+  "sets_500": "sets-500",
+  "sets_5000": "sets-5000",
+  "streak_100": "streak-100",
+  "streak_14": "streak-14",
+  "streak_180": "streak-180",
+  "streak_21": "streak-21",
+  "streak_3": "streak-3",
+  "streak_30": "streak-30",
+  "streak_365": "streak-365",
+  "streak_60": "streak-60",
+  "streak_7": "streak-7",
+  "training_days_200": "days-200",
+  "training_days_50": "days-50",
+  "volume_1m": "lifetime-volume",
+  "volume_250k": "vol-250k",
+  "volume_500k": "vol-500k",
+  "volume_50k": "vol-50k",
+  "volume_5m": "vol-5m",
+  "water_days_100": "hydrated-100",
+  "water_days_30": "hydrated-30",
+  "water_first": "hydrated",
+  "weekly_1": "wc-1",
+  "weekly_20": "wc-20",
+  "weekly_5": "wc-5",
+  "weigh_10": "weigh-10",
+  "weigh_50": "weigh-50",
+  "weigh_champion": "consistency-champion",
+  "weigh_first": "weigh-first",
+  "weigh_streak_30": "weigh-logs-30",
+  "weigh_streak_5": "weigh-logs-5",
+  "weight_goal_reached": "goal-achieved",
+  "weight_moved_10": "goal-10",
+  "weight_moved_20": "goal-20",
+  "weight_moved_5": "goal-5",
+  "workouts_10": "workouts-10",
+  "workouts_100": "workouts-100",
+  "workouts_1000": "workouts-1000",
+  "workouts_25": "workouts-25",
+  "workouts_250": "workouts-250",
+  "workouts_5": "workouts-5",
+  "workouts_50": "workouts-50",
+  "workouts_500": "workouts-500",
+  "workouts_750": "workouts-750"
+};
+
 function runMigrations(){
+  /* Badge ids: underscore scheme -> the designed set's ids. Mutates state.achievements IN
+     MEMORY and then writes it, which is the only order that works here -- runMigrations() is
+     called at the bottom of this file, long after `const state = {...}` has read storage, so a
+     migration that rewrote localStorage instead would be flattened by the first persist()
+     writing the stale in-memory copy back over it. Same trap the day-key migration documents
+     at the top of the file. */
+  if(!LS.get("hx_achievement_ids_v1", false)){
+    try{
+      let renamed = 0;
+      (state.achievements||[]).forEach(a=>{
+        const next = a && ACHIEVEMENT_ID_MIGRATION[a.id];
+        if(next){ a.id = next; renamed++; }
+      });
+      /* A rename can collide with a badge already held under the new id. Keep the EARLIER
+         achievedAt: the medal was earned when it was first earned, and showing today's date on
+         a badge from last year is the visible symptom this whole migration exists to avoid. */
+      const best = new Map();
+      (state.achievements||[]).forEach(a=>{
+        if(!a || !a.id) return;
+        const held = best.get(a.id);
+        if(!held || (a.achievedAt||0) < (held.achievedAt||0)) best.set(a.id, a);
+      });
+      state.achievements = Array.from(best.values());
+      LS.set("hx_achievements", state.achievements);
+      if(renamed > 0) console.warn("[IGNYT] Migrated " + renamed + " achievement id(s) to the current scheme.");
+    }catch(e){ /* a rename must never break boot */ }
+    LS.set("hx_achievement_ids_v1", true);
+  }
   /* Merge the duplicate exercise names. Runs before anything reads history, so a split PR is
      recomputed against the joined data rather than the halves. */
   if(!LS.get("hx_exercise_merge_v1", false)){
@@ -5400,26 +5525,25 @@ function trainedDuringFestival(name){ return daysTrainedDuringFestival(name) >= 
 function trainedOnAnyFestival(){ return FESTIVAL_NAMES.some(n=>trainedDuringFestival(n)); }
 
 const ACHIEVEMENT_DEFS = [
-  { id:"first_workout", name:"First Workout", desc:"Complete your first freestyle workout.", check:()=> state.workoutLog.length>=1 , category:"milestone", tier:"bronze", value:"1" },
-  { id:"workouts_5", name:"5 Workouts", desc:"Log 5 freestyle workouts.", check:()=> state.workoutLog.length>=5 , category:"milestone", tier:"bronze", value:"5" },
-  { id:"workouts_10", name:"10 Workouts", desc:"Log 10 freestyle workouts.", check:()=> state.workoutLog.length>=10 , category:"milestone", tier:"bronze", value:"10" },
-  { id:"workouts_25", name:"25 Workouts", desc:"Log 25 freestyle workouts.", check:()=> state.workoutLog.length>=25 , category:"milestone", tier:"silver", value:"25" },
-  { id:"workouts_50", name:"50 Workouts", desc:"Log 50 freestyle workouts.", check:()=> state.workoutLog.length>=50 , category:"milestone", tier:"silver", value:"50" },
-  { id:"workouts_100", name:"100 Workouts", desc:"Log 100 freestyle workouts.", check:()=> state.workoutLog.length>=100 , category:"milestone", tier:"gold", value:"100" },
-  { id:"workouts_250", name:"250 Workouts", desc:"Log 250 freestyle workouts.", check:()=> state.workoutLog.length>=250 , category:"milestone", tier:"gold", value:"250" },
-  { id:"workouts_500", name:"500 Workouts", desc:"Log 500 freestyle workouts.", check:()=> state.workoutLog.length>=500 , category:"milestone", tier:"diamond", value:"500" },
-  { id:"first_pr", name:"First Personal Record", desc:"Set your first PR.", check:()=> state.prs.length>=1 , category:"strength", tier:"bronze", value:"1" },
-  { id:"first_100kg", name:"First 100kg Lift", desc:"Hit 100kg or more on any lift.", check:()=> state.prs.some(p=>p.type==="weight" && p.value>=100) , category:"strength", tier:"silver", value:"100kg" },
-  { id:"sets_100", name:"100 Working Sets", desc:"Log 100 working sets total.", check:()=> totalWorkingSets()>=100 , category:"strength", tier:"bronze", value:"100" },
-  { id:"volume_1m", name:"1,000,000kg Lifetime Volume", desc:"Move a million kg over your lifetime.", check:()=> totalLifetimeVolume()>=1000000 , category:"strength", tier:"diamond", value:"1M kg" },
-  { id:"hyrox_week1", name:"Complete HYROX Week 1", desc:"Finish every session in Week 1 of the program.", check:()=> weekProgress(WEEKS[0])===100 , category:"program", tier:"bronze", value:"W1" },
-  { id:"hyrox_full_program", name:"Complete 8-Week HYROX Program", desc:"Finish the entire 8-week structured program.", check:()=> overallPlanProgress()===100 , category:"program", tier:"gold", value:"8W" },
-  { id:"streak_3", name:"3-Day Streak", desc:"Train 3 days in a row.", check:()=> computeStreak()>=3 , category:"streak", tier:"bronze", value:"3" },
-  { id:"streak_7", name:"7-Day Streak", desc:"Train 7 days in a row.", check:()=> computeStreak()>=7 , category:"streak", tier:"bronze", value:"7" },
-  { id:"streak_14", name:"14-Day Streak", desc:"Train 14 days in a row.", check:()=> computeStreak()>=14 , category:"streak", tier:"silver", value:"14" },
-  { id:"streak_30", name:"30-Day Streak", desc:"Train 30 days in a row.", check:()=> computeStreak()>=30 , category:"streak", tier:"silver", value:"30" },
-  { id:"streak_60", name:"60-Day Streak", desc:"Train 60 days in a row.", check:()=> computeStreak()>=60 , category:"streak", tier:"gold", value:"60" },
-  { id:"streak_100", name:"100-Day Streak", desc:"Train 100 days in a row.", check:()=> computeStreak()>=100 , category:"streak", tier:"diamond", value:"100" },
+  { id:"first-workout", name:"First Workout", desc:"Complete your first freestyle workout.", check:()=> state.workoutLog.length>=1 , category:"milestone", tier:"bronze", value:"1" },
+  { id:"workouts-5", name:"5 Workouts", desc:"Log 5 freestyle workouts.", check:()=> state.workoutLog.length>=5 , category:"milestone", tier:"bronze", value:"5" },
+  { id:"workouts-10", name:"10 Workouts", desc:"Log 10 freestyle workouts.", check:()=> state.workoutLog.length>=10 , category:"milestone", tier:"bronze", value:"10" },
+  { id:"workouts-25", name:"25 Workouts", desc:"Log 25 freestyle workouts.", check:()=> state.workoutLog.length>=25 , category:"milestone", tier:"silver", value:"25" },
+  { id:"workouts-50", name:"50 Workouts", desc:"Log 50 freestyle workouts.", check:()=> state.workoutLog.length>=50 , category:"milestone", tier:"gold", value:"50" },
+  { id:"workouts-100", name:"100 Workouts", desc:"Log 100 freestyle workouts.", check:()=> state.workoutLog.length>=100 , category:"milestone", tier:"platinum", value:"100" },
+  { id:"workouts-250", name:"250 Workouts", desc:"Log 250 freestyle workouts.", check:()=> state.workoutLog.length>=250 , category:"milestone", tier:"gold", value:"250" },
+  { id:"workouts-500", name:"500 Workouts", desc:"Log 500 freestyle workouts.", check:()=> state.workoutLog.length>=500 , category:"milestone", tier:"diamond", value:"500" },
+  { id:"pr-first", name:"First Personal Record", desc:"Set your first personal record.", check:()=> state.prs.length>=1 , category:"strength", tier:"bronze", value:"PR" },
+  { id:"lift-100", name:"First 100kg Lift", desc:"Hit 100kg or more on any lift.", check:()=> state.prs.some(p=>p.type==="weight" && p.value>=100) , category:"strength", tier:"gold", value:"100KG" },
+  { id:"sets-100", name:"100 Working Sets", desc:"Log 100 working sets total.", check:()=> totalWorkingSets()>=100 , category:"strength", tier:"gold", value:"100" },
+  { id:"hyrox-week1", name:"Complete HYROX Week 1", desc:"Finish every session in Week 1 of the program.", check:()=> weekProgress(WEEKS[0])===100 , category:"hyrox", tier:"gold", value:"W1" },
+  { id:"hyrox-8week", name:"Complete 8-Week HYROX Program", desc:"Finish the entire 8-week structured program.", check:()=> overallPlanProgress()===100 , category:"hyrox", tier:"diamond", value:"8W" },
+  { id:"streak-3", name:"3-Day Streak", desc:"Train 3 days in a row.", check:()=> computeStreak()>=3 , category:"streak", tier:"bronze", value:"3" },
+  { id:"streak-7", name:"7-Day Streak", desc:"Train 7 days in a row.", check:()=> computeStreak()>=7 , category:"streak", tier:"gold", value:"7" },
+  { id:"streak-14", name:"14-Day Streak", desc:"Train 14 days in a row.", check:()=> computeStreak()>=14 , category:"streak", tier:"gold", value:"14" },
+  { id:"streak-30", name:"30-Day Streak", desc:"Train 30 days in a row.", check:()=> computeStreak()>=30 , category:"streak", tier:"gold", value:"30" },
+  { id:"streak-60", name:"60-Day Streak", desc:"Train 60 days in a row.", check:()=> computeStreak()>=60 , category:"streak", tier:"gold", value:"60" },
+  { id:"streak-100", name:"100-Day Streak", desc:"Train 100 days in a row.", check:()=> computeStreak()>=100 , category:"streak", tier:"diamond", value:"100" },
 
   /* ---------------------------------------------------------------------------------------
      Everything below was added to take the set past fifty. Every check reads logged data --
@@ -5429,94 +5553,94 @@ const ACHIEVEMENT_DEFS = [
   --------------------------------------------------------------------------------------- */
 
   /* ---- volume of work ---- */
-  { id:"workouts_750", name:"750 Workouts", desc:"Log 750 freestyle workouts.", check:()=> state.workoutLog.length>=750 , category:"milestone", tier:"diamond", value:"750" },
-  { id:"workouts_1000", name:"1,000 Workouts", desc:"Log 1,000 freestyle workouts.", check:()=> state.workoutLog.length>=1000 , category:"milestone", tier:"platinum", value:"1K" },
-  { id:"training_days_50", name:"50 Training Days", desc:"Train on 50 different days.", check:()=> distinctTrainingDays()>=50 , category:"milestone", tier:"silver", value:"50" },
-  { id:"training_days_200", name:"200 Training Days", desc:"Train on 200 different days.", check:()=> distinctTrainingDays()>=200 , category:"milestone", tier:"gold", value:"200" },
-  { id:"hours_10", name:"10 Hours Trained", desc:"Spend 10 hours in logged sessions.", check:()=> totalTrainingMinutes()>=600 , category:"milestone", tier:"bronze", value:"10h" },
-  { id:"hours_50", name:"50 Hours Trained", desc:"Spend 50 hours in logged sessions.", check:()=> totalTrainingMinutes()>=3000 , category:"milestone", tier:"silver", value:"50h" },
-  { id:"hours_100", name:"100 Hours Trained", desc:"Spend 100 hours in logged sessions.", check:()=> totalTrainingMinutes()>=6000 , category:"milestone", tier:"gold", value:"100h" },
-  { id:"hours_500", name:"500 Hours Trained", desc:"Spend 500 hours in logged sessions.", check:()=> totalTrainingMinutes()>=30000 , category:"milestone", tier:"diamond", value:"500h" },
+  { id:"workouts-750", name:"750 Workouts", desc:"Log 750 freestyle workouts.", check:()=> state.workoutLog.length>=750 , category:"milestone", tier:"diamond", value:"750" },
+  { id:"workouts-1000", name:"1,000 Workouts", desc:"Log 1,000 freestyle workouts.", check:()=> state.workoutLog.length>=1000 , category:"milestone", tier:"platinum", value:"1K" },
+  { id:"days-50", name:"50 Training Days", desc:"Train on 50 different days.", check:()=> distinctTrainingDays()>=50 , category:"consistency", tier:"silver", value:"50" },
+  { id:"days-200", name:"200 Training Days", desc:"Train on 200 different days.", check:()=> distinctTrainingDays()>=200 , category:"consistency", tier:"gold", value:"200" },
+  { id:"hours-10", name:"10 Hours Trained", desc:"Spend 10 hours in logged sessions.", check:()=> totalTrainingMinutes()>=600 , category:"consistency", tier:"bronze", value:"10H" },
+  { id:"hours-50", name:"50 Hours Trained", desc:"Spend 50 hours in logged sessions.", check:()=> totalTrainingMinutes()>=3000 , category:"consistency", tier:"silver", value:"50H" },
+  { id:"hours-100", name:"100 Hours Trained", desc:"Spend 100 hours in logged sessions.", check:()=> totalTrainingMinutes()>=6000 , category:"consistency", tier:"gold", value:"100H" },
+  { id:"hours-500", name:"500 Hours Trained", desc:"Spend 500 hours in logged sessions.", check:()=> totalTrainingMinutes()>=30000 , category:"consistency", tier:"diamond", value:"500H" },
 
   /* ---- sets and reps ---- */
-  { id:"sets_500", name:"500 Working Sets", desc:"Log 500 working sets total.", check:()=> totalWorkingSets()>=500 , category:"strength", tier:"silver", value:"500" },
-  { id:"sets_1000", name:"1,000 Working Sets", desc:"Log 1,000 working sets total.", check:()=> totalWorkingSets()>=1000 , category:"strength", tier:"silver", value:"1K" },
-  { id:"sets_5000", name:"5,000 Working Sets", desc:"Log 5,000 working sets total.", check:()=> totalWorkingSets()>=5000 , category:"strength", tier:"diamond", value:"5K" },
-  { id:"reps_1000", name:"1,000 Reps", desc:"Complete 1,000 working reps.", check:()=> totalWorkingReps()>=1000 , category:"strength", tier:"bronze", value:"1K" },
-  { id:"reps_10000", name:"10,000 Reps", desc:"Complete 10,000 working reps.", check:()=> totalWorkingReps()>=10000 , category:"strength", tier:"silver", value:"10K" },
-  { id:"reps_50000", name:"50,000 Reps", desc:"Complete 50,000 working reps.", check:()=> totalWorkingReps()>=50000 , category:"strength", tier:"diamond", value:"50K" },
+  { id:"sets-500", name:"500 Working Sets", desc:"Log 500 working sets total.", check:()=> totalWorkingSets()>=500 , category:"strength", tier:"silver", value:"500" },
+  { id:"sets-1000", name:"1,000 Working Sets", desc:"Log 1,000 working sets total.", check:()=> totalWorkingSets()>=1000 , category:"strength", tier:"silver", value:"1K" },
+  { id:"sets-5000", name:"5,000 Working Sets", desc:"Log 5,000 working sets total.", check:()=> totalWorkingSets()>=5000 , category:"strength", tier:"diamond", value:"5K" },
+  { id:"reps-1000", name:"1,000 Reps", desc:"Complete 1,000 working reps.", check:()=> totalWorkingReps()>=1000 , category:"strength", tier:"bronze", value:"1K" },
+  { id:"reps-10000", name:"10,000 Reps", desc:"Complete 10,000 working reps.", check:()=> totalWorkingReps()>=10000 , category:"strength", tier:"silver", value:"10K" },
+  { id:"reps-50000", name:"50,000 Reps", desc:"Complete 50,000 working reps.", check:()=> totalWorkingReps()>=50000 , category:"strength", tier:"diamond", value:"50K" },
 
   /* ---- load ---- */
-  { id:"first_60kg", name:"First 60kg Lift", desc:"Hit 60kg or more on any lift.", check:()=> heaviestLiftKg()>=60 , category:"strength", tier:"bronze", value:"60kg" },
-  { id:"first_140kg", name:"First 140kg Lift", desc:"Hit 140kg or more on any lift.", check:()=> heaviestLiftKg()>=140 , category:"strength", tier:"gold", value:"140kg" },
-  { id:"first_180kg", name:"First 180kg Lift", desc:"Hit 180kg or more on any lift.", check:()=> heaviestLiftKg()>=180 , category:"strength", tier:"diamond", value:"180kg" },
-  { id:"volume_50k", name:"50,000kg Lifted", desc:"Move 50,000kg over your lifetime.", check:()=> totalLifetimeVolume()>=50000 , category:"strength", tier:"bronze", value:"50K kg" },
-  { id:"volume_250k", name:"250,000kg Lifted", desc:"Move 250,000kg over your lifetime.", check:()=> totalLifetimeVolume()>=250000 , category:"strength", tier:"silver", value:"250K kg" },
-  { id:"volume_500k", name:"500,000kg Lifted", desc:"Move half a million kg over your lifetime.", check:()=> totalLifetimeVolume()>=500000 , category:"strength", tier:"gold", value:"500K kg" },
-  { id:"volume_5m", name:"5,000,000kg Lifted", desc:"Move five million kg over your lifetime.", check:()=> totalLifetimeVolume()>=5000000 , category:"strength", tier:"platinum", value:"5M kg" },
+  { id:"lift-60", name:"First 60kg Lift", desc:"Hit 60kg or more on any lift.", check:()=> heaviestLiftKg()>=60 , category:"strength", tier:"bronze", value:"60KG" },
+  { id:"lift-140", name:"First 140kg Lift", desc:"Hit 140kg or more on any lift.", check:()=> heaviestLiftKg()>=140 , category:"strength", tier:"gold", value:"140KG" },
+  { id:"lift-180", name:"First 180kg Lift", desc:"Hit 180kg or more on any lift.", check:()=> heaviestLiftKg()>=180 , category:"strength", tier:"diamond", value:"180KG" },
+  { id:"vol-50k", name:"50,000kg Lifted", desc:"Move 50,000kg over your lifetime.", check:()=> totalLifetimeVolume()>=50000 , category:"strength", tier:"bronze", value:"50K KG" },
+  { id:"vol-250k", name:"250,000kg Lifted", desc:"Move 250,000kg over your lifetime.", check:()=> totalLifetimeVolume()>=250000 , category:"strength", tier:"silver", value:"250K KG" },
+  { id:"vol-500k", name:"500,000kg Lifted", desc:"Move half a million kg over your lifetime.", check:()=> totalLifetimeVolume()>=500000 , category:"strength", tier:"gold", value:"500K KG" },
+  { id:"vol-5m", name:"5,000,000kg Lifted", desc:"Move five million kg over your lifetime.", check:()=> totalLifetimeVolume()>=5000000 , category:"strength", tier:"platinum", value:"5M KG" },
 
   /* ---- records ---- */
-  { id:"prs_10", name:"10 Personal Records", desc:"Set 10 personal records.", check:()=> state.prs.length>=10 , category:"strength", tier:"bronze", value:"10" },
-  { id:"prs_25", name:"25 Personal Records", desc:"Set 25 personal records.", check:()=> state.prs.length>=25 , category:"strength", tier:"silver", value:"25" },
-  { id:"prs_50", name:"50 Personal Records", desc:"Set 50 personal records.", check:()=> state.prs.length>=50 , category:"strength", tier:"gold", value:"50" },
-  { id:"prs_100", name:"100 Personal Records", desc:"Set 100 personal records.", check:()=> state.prs.length>=100 , category:"strength", tier:"diamond", value:"100" },
+  { id:"pr-10", name:"10 Personal Records", desc:"Set 10 personal records.", check:()=> state.prs.length>=10 , category:"strength", tier:"gold", value:"10" },
+  { id:"pr-25", name:"25 Personal Records", desc:"Set 25 personal records.", check:()=> state.prs.length>=25 , category:"strength", tier:"silver", value:"25" },
+  { id:"pr-50", name:"50 Personal Records", desc:"Set 50 personal records.", check:()=> state.prs.length>=50 , category:"strength", tier:"gold", value:"50" },
+  { id:"pr-100", name:"100 Personal Records", desc:"Set 100 personal records.", check:()=> state.prs.length>=100 , category:"strength", tier:"diamond", value:"100" },
 
   /* ---- breadth ---- */
-  { id:"muscles_5", name:"Five Muscle Groups", desc:"Train five different muscle groups.", check:()=> distinctMusclesTrained()>=5 , category:"milestone", tier:"bronze", value:"5" },
-  { id:"muscles_10", name:"Ten Muscle Groups", desc:"Train ten different muscle groups.", check:()=> distinctMusclesTrained()>=10 , category:"milestone", tier:"silver", value:"10" },
-  { id:"exercises_25", name:"25 Exercises", desc:"Log 25 different exercises.", check:()=> distinctExercisesLogged()>=25 , category:"milestone", tier:"bronze", value:"25" },
-  { id:"exercises_50", name:"50 Exercises", desc:"Log 50 different exercises.", check:()=> distinctExercisesLogged()>=50 , category:"milestone", tier:"silver", value:"50" },
-  { id:"exercises_100", name:"100 Exercises", desc:"Log 100 different exercises.", check:()=> distinctExercisesLogged()>=100 , category:"milestone", tier:"gold", value:"100" },
+  { id:"muscle-5", name:"Five Muscle Groups", desc:"Train five different muscle groups.", check:()=> distinctMusclesTrained()>=5 , category:"strength", tier:"bronze", value:"5" },
+  { id:"muscle-10", name:"Ten Muscle Groups", desc:"Train ten different muscle groups.", check:()=> distinctMusclesTrained()>=10 , category:"strength", tier:"silver", value:"10" },
+  { id:"ex-25", name:"25 Exercises", desc:"Log 25 different exercises.", check:()=> distinctExercisesLogged()>=25 , category:"strength", tier:"bronze", value:"25" },
+  { id:"ex-50", name:"50 Exercises", desc:"Log 50 different exercises.", check:()=> distinctExercisesLogged()>=50 , category:"strength", tier:"silver", value:"50" },
+  { id:"ex-100", name:"100 Exercises", desc:"Log 100 different exercises.", check:()=> distinctExercisesLogged()>=100 , category:"strength", tier:"gold", value:"100" },
 
   /* ---- when you train ---- */
-  { id:"early_bird", name:"Early Bird", desc:"Start a workout before 6am.", check:()=> sessionsAtHour(h=>h<6)>=1 , category:"consistency", tier:"bronze", value:"5am" },
-  { id:"early_bird_10", name:"Sunrise Regular", desc:"Start ten workouts before 7am.", check:()=> sessionsAtHour(h=>h<7)>=10 , category:"consistency", tier:"silver", value:"10" },
-  { id:"night_owl", name:"Night Owl", desc:"Start a workout after 10pm.", check:()=> sessionsAtHour(h=>h>=22)>=1 , category:"consistency", tier:"bronze", value:"10pm" },
+  { id:"early-bird", name:"Early Bird", desc:"Start a workout before 6am.", check:()=> sessionsAtHour(h=>h<6)>=1 , category:"consistency", tier:"silver", value:"5AM" },
+  { id:"sunrise-regular", name:"Sunrise Regular", desc:"Start ten workouts before 7am.", check:()=> sessionsAtHour(h=>h<7)>=10 , category:"consistency", tier:"silver", value:"7AM" },
+  { id:"night-owl", name:"Night Owl", desc:"Start a workout after 10pm.", check:()=> sessionsAtHour(h=>h>=22)>=1 , category:"consistency", tier:"silver", value:"10PM" },
 
   /* ---- streaks ---- */
-  { id:"streak_21", name:"21-Day Streak", desc:"Train 21 days in a row.", check:()=> computeStreak()>=21 , category:"streak", tier:"silver", value:"21" },
-  { id:"streak_180", name:"180-Day Streak", desc:"Train 180 days in a row.", check:()=> computeStreak()>=180 , category:"streak", tier:"diamond", value:"180" },
-  { id:"streak_365", name:"One Year Streak", desc:"Train every day for a year.", check:()=> computeStreak()>=365 , category:"streak", tier:"platinum", value:"365" },
+  { id:"streak-21", name:"21-Day Streak", desc:"Train 21 days in a row.", check:()=> computeStreak()>=21 , category:"streak", tier:"gold", value:"21" },
+  { id:"streak-180", name:"180-Day Streak", desc:"Train 180 days in a row.", check:()=> computeStreak()>=180 , category:"streak", tier:"diamond", value:"180" },
+  { id:"streak-365", name:"One Year Streak", desc:"Train every day for a year.", check:()=> computeStreak()>=365 , category:"streak", tier:"platinum", value:"365" },
 
   /* ---- the IGNYT Score ---- */
-  { id:"score_70_once", name:"Great Day", desc:"Score 70 or more in a day.", check:()=> scoreDaysAtLeast(70)>=1 , category:"consistency", tier:"bronze", value:"70" },
-  { id:"score_100_once", name:"Excellent Day", desc:"Score 100 or more in a day.", check:()=> scoreDaysAtLeast(100)>=1 , category:"consistency", tier:"silver", value:"100" },
-  { id:"score_130_once", name:"Elite Day", desc:"Score 130 or more in a day.", check:()=> scoreDaysAtLeast(130)>=1 , category:"consistency", tier:"gold", value:"130" },
-  { id:"score_70_x30", name:"Thirty Strong Days", desc:"Score 70 or more on thirty days.", check:()=> scoreDaysAtLeast(70)>=30 , category:"consistency", tier:"gold", value:"30" },
+  { id:"great-day", name:"Great Day", desc:"Score 70 or more in a day.", check:()=> scoreDaysAtLeast(70)>=1 , category:"consistency", tier:"silver", value:"70+" },
+  { id:"excellent-day", name:"Excellent Day", desc:"Score 100 or more in a day.", check:()=> scoreDaysAtLeast(100)>=1 , category:"consistency", tier:"gold", value:"100" },
+  { id:"elite-day", name:"Elite Day", desc:"Score 130 or more in a day.", check:()=> scoreDaysAtLeast(130)>=1 , category:"consistency", tier:"gold", value:"130" },
+  { id:"thirty-strong", name:"Thirty Strong Days", desc:"Score 70 or more on thirty days.", check:()=> scoreDaysAtLeast(70)>=30 , category:"consistency", tier:"gold", value:"30" },
 
   /* ---- weekly challenges ---- */
-  { id:"weekly_1", name:"First Weekly Challenge", desc:"Complete a weekly challenge.", check:()=> weeklyChallengesCompleted()>=1 , category:"consistency", tier:"bronze", value:"1" },
-  { id:"weekly_5", name:"Five Weekly Challenges", desc:"Complete five weekly challenges.", check:()=> weeklyChallengesCompleted()>=5 , category:"consistency", tier:"silver", value:"5" },
-  { id:"weekly_20", name:"Twenty Weekly Challenges", desc:"Complete twenty weekly challenges.", check:()=> weeklyChallengesCompleted()>=20 , category:"consistency", tier:"gold", value:"20" },
+  { id:"wc-1", name:"First Weekly Challenge", desc:"Complete a weekly challenge.", check:()=> weeklyChallengesCompleted()>=1 , category:"consistency", tier:"bronze", value:"1" },
+  { id:"wc-5", name:"Five Weekly Challenges", desc:"Complete five weekly challenges.", check:()=> weeklyChallengesCompleted()>=5 , category:"consistency", tier:"silver", value:"5" },
+  { id:"wc-20", name:"Twenty Weekly Challenges", desc:"Complete twenty weekly challenges.", check:()=> weeklyChallengesCompleted()>=20 , category:"consistency", tier:"gold", value:"20" },
 
   /* ---- nutrition and hydration ---- */
-  { id:"food_first", name:"First Meal Logged", desc:"Log your first meal.", check:()=> state.foodLog.length>=1 , category:"nutrition", tier:"bronze", value:"1" },
-  { id:"food_days_7", name:"A Week of Food Logs", desc:"Log food on seven different days.", check:()=> daysWithFoodLogged()>=7 , category:"nutrition", tier:"bronze", value:"7" },
-  { id:"food_days_30", name:"A Month of Food Logs", desc:"Log food on thirty different days.", check:()=> daysWithFoodLogged()>=30 , category:"nutrition", tier:"silver", value:"30" },
-  { id:"food_days_100", name:"100 Days Logged", desc:"Log food on a hundred different days.", check:()=> daysWithFoodLogged()>=100 , category:"nutrition", tier:"gold", value:"100" },
-  { id:"food_entries_500", name:"500 Food Entries", desc:"Log 500 individual food entries.", check:()=> state.foodLog.length>=500 , category:"nutrition", tier:"silver", value:"500" },
-  { id:"water_first", name:"Hydrated", desc:"Hit your water goal for a day.", check:()=> daysWaterGoalMet()>=1 , category:"nutrition", tier:"bronze", value:"1" },
-  { id:"water_days_30", name:"Thirty Hydrated Days", desc:"Hit your water goal on thirty days.", check:()=> daysWaterGoalMet()>=30 , category:"nutrition", tier:"silver", value:"30" },
-  { id:"water_days_100", name:"A Hundred Hydrated Days", desc:"Hit your water goal on a hundred days.", check:()=> daysWaterGoalMet()>=100 , category:"nutrition", tier:"gold", value:"100" },
+  { id:"meal-first", name:"First Meal Logged", desc:"Log your first meal.", check:()=> state.foodLog.length>=1 , category:"nutrition", tier:"bronze", value:"1" },
+  { id:"food-week", name:"A Week of Food Logs", desc:"Log food on seven different days.", check:()=> daysWithFoodLogged()>=7 , category:"nutrition", tier:"silver", value:"7" },
+  { id:"food-month", name:"A Month of Food Logs", desc:"Log food on thirty different days.", check:()=> daysWithFoodLogged()>=30 , category:"nutrition", tier:"gold", value:"30" },
+  { id:"food-100days", name:"100 Days Logged", desc:"Log food on a hundred different days.", check:()=> daysWithFoodLogged()>=100 , category:"nutrition", tier:"gold", value:"100" },
+  { id:"food-500", name:"500 Food Entries", desc:"Log 500 individual food entries.", check:()=> state.foodLog.length>=500 , category:"nutrition", tier:"silver", value:"500" },
+  { id:"hydrated", name:"Hydrated", desc:"Hit your water goal for a day.", check:()=> daysWaterGoalMet()>=1 , category:"nutrition", tier:"bronze", value:"" },
+  { id:"hydrated-30", name:"Thirty Hydrated Days", desc:"Hit your water goal on thirty days.", check:()=> daysWaterGoalMet()>=30 , category:"nutrition", tier:"silver", value:"30" },
+  { id:"hydrated-100", name:"A Hundred Hydrated Days", desc:"Hit your water goal on a hundred days.", check:()=> daysWaterGoalMet()>=100 , category:"nutrition", tier:"gold", value:"100" },
 
   /* ---- body tracking ---- */
-  { id:"weigh_first", name:"First Weigh-In", desc:"Log your body weight.", check:()=> weighInCount()>=1 , category:"consistency", tier:"bronze", value:"1" },
-  { id:"weigh_10", name:"Ten Weigh-Ins", desc:"Log your body weight ten times.", check:()=> weighInCount()>=10 , category:"consistency", tier:"bronze", value:"10" },
-  { id:"weigh_50", name:"Fifty Weigh-Ins", desc:"Log your body weight fifty times.", check:()=> weighInCount()>=50 , category:"consistency", tier:"silver", value:"50" },
+  { id:"weigh-first", name:"First Weigh-In", desc:"Log your body weight.", check:()=> weighInCount()>=1 , category:"body", tier:"bronze", value:"" },
+  { id:"weigh-10", name:"Ten Weigh-Ins", desc:"Log your body weight ten times.", check:()=> weighInCount()>=10 , category:"body", tier:"bronze", value:"10" },
+  { id:"weigh-50", name:"Fifty Weigh-Ins", desc:"Log your body weight fifty times.", check:()=> weighInCount()>=50 , category:"body", tier:"silver", value:"50" },
 
   /* ---- weight tracking ----
      The kg badges are earned for movement toward the user's OWN goal, so a muscle-gain user
      earns them for going up. There is deliberately no badge for a number on the scale in
      absolute terms -- 60kg is an achievement for one person and a warning sign for another,
      and the app cannot tell which it is looking at. */
-  { id:"weigh_streak_5", name:"5 Consecutive Logs", desc:"Weigh in five days in a row.", check:()=> weightLogStreakBest()>=5 , category:"consistency", tier:"bronze", value:"5" },
-  { id:"weigh_streak_30", name:"30 Consecutive Logs", desc:"Weigh in thirty days in a row.", check:()=> weightLogStreakBest()>=30 , category:"consistency", tier:"gold", value:"30" },
-  { id:"weight_moved_5", name:"5 kg Toward Your Goal", desc:"Move 5 kg in the direction of your goal.", check:()=> weightMovedTowardGoalKg()>=5 , category:"consistency", tier:"bronze", value:"5 kg" },
-  { id:"weight_moved_10", name:"10 kg Toward Your Goal", desc:"Move 10 kg in the direction of your goal.", check:()=> weightMovedTowardGoalKg()>=10 , category:"consistency", tier:"silver", value:"10 kg" },
-  { id:"weight_moved_20", name:"20 kg Toward Your Goal", desc:"Move 20 kg in the direction of your goal.", check:()=> weightMovedTowardGoalKg()>=20 , category:"consistency", tier:"gold", value:"20 kg" },
-  { id:"weight_goal_reached", name:"Goal Achieved", desc:"Reach your target weight.", check:()=> weightGoalReached() , category:"consistency", tier:"diamond", value:"GOAL" },
-  { id:"weigh_champion", name:"Consistency Champion", desc:"Weigh in at least once a week for twelve weeks running.", check:()=> weightWeeksRunning()>=12 , category:"consistency", tier:"gold", value:"12w" },
-  { id:"habit_hero", name:"Healthy Habit Hero", desc:"Log your weight, a meal and a workout on the same day, thirty times.", check:()=> daysWithFullLog()>=30 , category:"consistency", tier:"diamond", value:"30" },
+  { id:"weigh-logs-5", name:"5 Consecutive Logs", desc:"Weigh in five days in a row.", check:()=> weightLogStreakBest()>=5 , category:"body", tier:"bronze", value:"5" },
+  { id:"weigh-logs-30", name:"30 Consecutive Logs", desc:"Weigh in thirty days in a row.", check:()=> weightLogStreakBest()>=30 , category:"body", tier:"gold", value:"30" },
+  { id:"goal-5", name:"5 kg Toward Your Goal", desc:"Move 5 kg in the direction of your goal.", check:()=> weightMovedTowardGoalKg()>=5 , category:"body", tier:"bronze", value:"5 KG" },
+  { id:"goal-10", name:"10 kg Toward Your Goal", desc:"Move 10 kg in the direction of your goal.", check:()=> weightMovedTowardGoalKg()>=10 , category:"body", tier:"silver", value:"10 KG" },
+  { id:"goal-20", name:"20 kg Toward Your Goal", desc:"Move 20 kg in the direction of your goal.", check:()=> weightMovedTowardGoalKg()>=20 , category:"body", tier:"gold", value:"20 KG" },
+  { id:"goal-achieved", name:"Goal Achieved", desc:"Reach your target weight.", check:()=> weightGoalReached() , category:"body", tier:"diamond", value:"" },
+  { id:"consistency-champion", name:"Consistency Champion", desc:"Weigh in at least once a week for twelve weeks.", check:()=> weightWeeksRunning()>=12 , category:"consistency", tier:"gold", value:"12W" },
+  { id:"healthy-habit-hero", name:"Healthy Habit Hero", desc:"Log your weight, a meal and a workout for 30 days.", check:()=> daysWithFullLog()>=30 , category:"consistency", tier:"diamond", value:"30" },
 
   /* ---- STRENGTH — ratios, rep totals and the big three ---- */
   { id:"lift-50", name:"50kg Lift", desc:"Hit 50kg or more on any lift.", check:()=> heaviestLiftKg()>=50 , category:"strength", tier:"bronze", value:"50KG" },

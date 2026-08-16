@@ -48,6 +48,34 @@ Six of these — sleep, festivals, program history, rest days, cuisine, race div
 **small, self-contained features** that would unlock 49 medals between them. That is the
 highest-value work left in this area.
 
+## One naming scheme (2026-08-16)
+
+The original 82 achievements used underscore ids (`first_workout`) from before the designed
+medal set existed. All 82 now ship under their id from that set (`first-workout`), so the whole
+collection speaks one scheme and nothing is left over from the old one.
+
+**This required a migration, and shipping it without one would have been destructive.**
+`state.achievements` is keyed by id, so a bare rename means every user loses every badge they
+have earned: the old records stop matching any def — becoming ghosts that still inflate the
+"X of Y earned" count, since that reads `state.achievements.length` — and the same medals
+re-unlock under new ids stamped with today's date instead of the day they were actually earned.
+
+`ACHIEVEMENT_ID_MIGRATION` maps all 82. It runs inside `runMigrations()` and **mutates
+`state.achievements` in memory before writing it**, which is the only order that works: the
+migration runs at the bottom of `app.js`, long after `const state = {...}` has read storage, so
+rewriting localStorage instead would be flattened by the first `persist()` putting the stale
+in-memory copy back on top. That trap is documented at the top of the file by the day-key
+migration, which hit it.
+
+`volume_1m` is the one that is not a straight rename — the designed set already ships that medal
+as `lifetime-volume`, so the legacy def was **removed** rather than renamed onto it (which would
+have produced two defs with the same id), and the map points its earners at the survivor.
+Where a rename collides with a badge already held, the **earlier** `achievedAt` wins.
+
+Verified in the browser against a pre-rename profile: 5 stored records → 4, every id on the new
+scheme, every date preserved at its original February value including the collision, zero
+ghosts, and idempotent across reloads.
+
 ## The sleep log was already there
 
 This file previously said "no sleep log exists". That was wrong, and the way it was wrong is

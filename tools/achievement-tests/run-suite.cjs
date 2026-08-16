@@ -214,4 +214,34 @@ t("no sessions, no holiday", fc.ANY(), false);
 
 console.log("\n" + pass + " passed, " + fail + " failed");
 
-process.exit(fail>0?1:0);
+
+/* ---- 5. the badge-id migration.
+   state.achievements is keyed by id. If a mapping points at an id no def uses, the user's badge
+   becomes a ghost: invisible in the grid, but still counted by state.achievements.length, which
+   is exactly what renders "X of Y earned". That is strictly worse than not renaming at all. */
+const defIds = new Set([...defs.matchAll(/\{ id:"([^"]+)"/g)].map(m => m[1]));
+const migBlock = src.slice(src.indexOf("const ACHIEVEMENT_ID_MIGRATION = {"), src.indexOf("function runMigrations()"));
+const pairs = [...migBlock.matchAll(/"([^"]+)": "([^"]+)"/g)].map(m => ({ from: m[1], to: m[2] }));
+
+console.log("\n== badge-id migration ==");
+t("every mapping has a target def", pairs.filter(p => !defIds.has(p.to)).length, 0);
+t("no mapped-away id still ships as a def", pairs.filter(p => defIds.has(p.from)).length, 0);
+t("no def still uses the underscore scheme", [...defIds].filter(i => i.includes("_")).length, 0);
+t("all 82 legacy ids are mapped", pairs.length, 82);
+
+/* The collision case: someone who earned BOTH the legacy id and its new-scheme twin must end up
+   with one badge carrying the EARLIER date. Showing today's date on a badge earned last year is
+   the visible symptom this migration exists to prevent. */
+const migrated = (() => {
+  const map = Object.fromEntries(pairs.map(p => [p.from, p.to]));
+  const ach = [{ id: "volume_1m", achievedAt: 1000 }, { id: "lifetime-volume", achievedAt: 5000 }];
+  ach.forEach(a => { if (map[a.id]) a.id = map[a.id]; });
+  const best = new Map();
+  ach.forEach(a => { const h = best.get(a.id); if (!h || a.achievedAt < h.achievedAt) best.set(a.id, a); });
+  return Array.from(best.values());
+})();
+t("a collision collapses to one badge", migrated.length, 1);
+t("...keeping the earlier achievedAt", migrated[0].achievedAt, 1000);
+
+console.log("\n" + pass + " passed, " + fail + " failed");
+process.exit(fail > 0 ? 1 : 0);
