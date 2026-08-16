@@ -1,5 +1,22 @@
 # CLAUDE_PROGRESS.md
 
+## BILLING DECISIONS (2026-08-13) — settled, do not relitigate without new information
+
+**Play Billing only.** No external gateway, no web checkout, no User Choice Billing at launch.
+Considered and rejected: an external gateway means building the whole subscription lifecycle --
+renewals, failed payments, cancellations, refunds, dunning, webhook reconciliation -- that Play
+already does, plus a second entitlement source that can disagree with the first. The fee saving
+on pre-launch revenue is zero, and the removal risk on a new app is not. Revisit with real
+subscriber numbers; User Choice Billing is the sanctioned route and India is where it is most
+available.
+
+**Android is paid, iOS is free.** Play Billing exists on one platform and StoreKit is not built.
+Recorded in `paywallApplies()`'s own comment.
+
+**The 7-day trial is a Play OFFER on the base plan, not app-side logic.** `build.gradle` already
+says so. A local timer is beaten by clearing data or changing the clock and will disagree with
+Google about who is entitled.
+
 ## PREMIUM GATING — HALF IMPLEMENTED (2026-08-13)
 
 `PREMIUM_FEATURES` in `www/js/billing/entitlements.js` was `{}` -- an empty map, which is why
