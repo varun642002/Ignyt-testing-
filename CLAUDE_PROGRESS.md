@@ -1,5 +1,52 @@
 # CLAUDE_PROGRESS.md
 
+## MONETISATION SPEC (from the user, 2026-08-13) — NOT IMPLEMENTED
+
+**The rule:** free for 7 days with everything unlocked. After day 7, a free user keeps only
+**basic workout tracking** and **basic food tracking**. Everything else is premium.
+
+A ~40-row feature table was supplied (exercise library, custom workouts, history depth, charts,
+PRs, plans, HYROX, nutrition depth, micronutrients, meal planning, Health Connect, wearables,
+sync, export, cloud backup, reminders, calendar, deload, recovery, training load, dashboards,
+ads). It is in the session transcript. The simplified rule above supersedes the per-row detail:
+two things free, the rest gated.
+
+### THREE DECISIONS BEFORE WRITING ANY CODE
+
+**1. Do NOT implement the 7-day timer in the app.** Play trials are configured as an offer on
+the base plan in Play Console, and `android/app/build.gradle` already says so in a comment:
+"The 7-day free trial is configured as an offer on the base plan in Play Console, so no trial
+logic ships in the app." An app-side timer is bypassable by clearing data or changing the clock,
+and it will disagree with what Google thinks the user's status is. Ask the billing bridge, do not
+count days locally.
+
+**2. Client-side gating is decorative.** Audited today: `isPremium()` reads
+`localStorage["hx_entitlement"]` (`www/js/billing/entitlements.js:130`) -- plain JSON, forgeable
+in seconds. That is fine for HIDING UI, and useless for anything that costs money or touches
+server data. Anything in the table that consumes backend resources (AI, cloud sync, cloud backup,
+cross-device sync) MUST be gated in the backend as well. Precedent exists and is correct:
+`routes_ai.py:219` calls `is_entitled(user)` server-side before spending anything.
+
+**3. iOS and web currently have NO paywall at all.** `paywallApplies()` returns
+`platform() === "android"` (`entitlements.js:91`), so `isPremium()` is unconditionally true
+everywhere else. Ship this spec as-is and the whole app is free on iPhone. Decide deliberately:
+either implement StoreKit for iOS, or accept it and write down that it is intentional.
+
+### WHAT "BASIC" MEANS IS UNDEFINED
+
+"Basic workout tracking" and "basic food tracking" need a line each. Does basic food tracking
+include the 13,516-food library or a subset? Does basic workout tracking include history, or
+only logging today? Those two sentences decide half the implementation, and guessing them is how
+a paywall ends up either locking out paying users or giving the product away.
+
+### WHERE THE WORK GOES
+
+`PREMIUM_FEATURES` in `entitlements.js` is the map every gate reads (`has(feature)`); adding
+entries there is the client half. `is_entitled(user)` in `backend/app/api/routes_billing.py` is
+the server half. `AI_REQUIRES_PREMIUM` in `backend/app/config.py` is currently FALSE -- flipping
+the client without it leaves the API open, and flipping it without the client blocks paying users
+from a feature the UI still offers.
+
 ## START HERE — open the preview and LOOK before changing anything
 
 Everything below was reasoned from screenshots. Nothing in the last stretch of work was seen
