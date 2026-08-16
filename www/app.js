@@ -5129,6 +5129,151 @@ function bestMonthlyVolumeKg(){
   return vals.length ? Math.max(...vals) : 0;
 }
 
+/* -----------------------------------------------------------------------------------------
+   Second helper pass, for the 686-medal set (2026-08-16).
+
+   Same rule again: logged data only. Where the designed set asked for something this app does
+   not record -- sleep, rest days, app opens, elevation, shares, festival dates, a race
+   division -- the medal is not here rather than being awarded on a guess.
+----------------------------------------------------------------------------------------- */
+
+const ACH_BURPEE_RE = /burpee/i;
+
+/** Distinct year-months trained in. Different from distinctMonthsTrained(), which counts
+    month-of-year and therefore caps at 12 -- these medals go to 60. */
+function distinctCalendarMonths(){
+  const m = new Set();
+  (state.workoutLog||[]).forEach(s=>{
+    const t = new Date(s.startedAt || s.date);
+    if(!isNaN(t)) m.add(t.getFullYear() + "-" + t.getMonth());
+  });
+  return m.size;
+}
+
+/** Volume (weight x reps) moved on one movement, in kg. */
+function liftVolumeKg(re){
+  let v = 0;
+  eachLoggedSet((set, name)=>{ if(re.test(name)) v += achNum(set.weight) * achNum(set.reps); });
+  return v;
+}
+
+/** Distance covered on a bike, in km. */
+function totalRideKm(){ return cardioPieces(ACH_BIKE_RE).reduce((a,p)=>a + achNum(p.set.distanceKm), 0); }
+
+/** Minutes logged on any set that recorded a duration alongside a distance or calories --
+    i.e. real conditioning work, not a timed hold. */
+function totalCardioMinutes(){
+  let sec = 0;
+  eachLoggedSet(set=>{
+    if(achNum(set.durationSec) > 0 && (achNum(set.distanceKm) > 0 || achNum(set.calories) > 0)) sec += achNum(set.durationSec);
+  });
+  return sec / 60;
+}
+
+/** Calories the user actually recorded. Never estimated from weight and duration -- an
+    invented number here would be indistinguishable from a real one. */
+function totalCardioCalories(){
+  let kcal = 0;
+  eachLoggedSet(set=>{ kcal += achNum(set.calories); });
+  return kcal;
+}
+
+/** Stations finished across every logged simulation. */
+function raceStationsCompleted(){
+  return (state.raceLog||[]).reduce((a,r)=>a + (r.segments||[]).filter(s=>s && s.type === "station").length, 0);
+}
+/** Boundaries actually cleared between one recorded segment and the next -- the roxzone
+    transitions. A race of n segments has n-1 of them. */
+function raceTransitionsCleared(){
+  return (state.raceLog||[]).reduce((a,r)=>a + Math.max(0, (r.segments||[]).length - 1), 0);
+}
+
+/** Longest run of consecutive days with a session started before 08:00. */
+function morningStreakDays(){
+  const days = new Set((state.workoutLog||[]).map(s=>{
+    const t = new Date(s.startedAt);
+    return (!isNaN(t) && t.getHours() < 8) ? dayKey(t) : null;
+  }).filter(Boolean));
+  return longestConsecutiveRun(Array.from(days));
+}
+
+/** Sessions logged on a Saturday or Sunday. */
+function weekendSessionCount(){
+  return (state.workoutLog||[]).filter(s=>{
+    const t = new Date(s.startedAt || s.date);
+    if(isNaN(t)) return false;
+    const d = t.getDay();
+    return d === 0 || d === 6;
+  }).length;
+}
+
+/** How many times training resumed after a gap of two weeks or more. */
+function comebackCount(){
+  const ds = Array.from(new Set((state.workoutLog||[]).map(s=>{
+    const t = new Date(s.startedAt || s.date);
+    return isNaN(t) ? null : dayKey(t);
+  }).filter(Boolean))).sort();
+  let n = 0;
+  for(let i=1;i<ds.length;i++){
+    if(Math.round((new Date(ds[i]) - new Date(ds[i-1])) / 86400000) >= 14) n++;
+  }
+  return n;
+}
+
+/** Longest run of consecutive days with anything at all in the food log. */
+function foodLogStreakDays(){
+  return longestConsecutiveRun(Array.from(new Set((state.foodLog||[]).map(f=>f && f.date).filter(Boolean))));
+}
+/** Days carrying a breakfast entry. */
+function breakfastDaysLogged(){
+  return new Set((state.foodLog||[])
+    .filter(f=>f && f.date && String(f.meal||"").toLowerCase() === "breakfast")
+    .map(f=>f.date)).size;
+}
+
+/** Every litre ever logged. */
+function totalWaterLitres(){
+  return (state.waterLog||[]).reduce((a,w)=>a + achNum(w && w.ml), 0) / 1000;
+}
+/** Longest run of consecutive days that met the water target. */
+function waterGoalStreakDays(){
+  const target = (state.settings && state.settings.waterTargetMl) || 2500;
+  const byDay = {};
+  (state.waterLog||[]).forEach(w=>{ if(w && w.date) byDay[w.date] = (byDay[w.date]||0) + achNum(w.ml); });
+  return longestConsecutiveRun(Object.keys(byDay).filter(d=>byDay[d] >= target));
+}
+
+/* Weight moved from the FIRST weigh-in, in the direction named. Deliberately not
+   "peak to trough": a medal for losing 10 kg should mean 10 kg off where you started, not
+   10 kg off a one-off high reading. */
+function weightLostKg(){
+  const w = (state.bodylog||[]).filter(b=>b && achNum(b.weight) > 0).map(b=>achNum(b.weight));
+  if(w.length < 2) return 0;
+  return Math.max(0, w[w.length-1] - Math.min(...w));   // bodylog is newest-first
+}
+function weightGainedKg(){
+  const w = (state.bodylog||[]).filter(b=>b && achNum(b.weight) > 0).map(b=>achNum(b.weight));
+  if(w.length < 2) return 0;
+  return Math.max(0, Math.max(...w) - w[w.length-1]);
+}
+
+/** Body-log entries carrying a value for one specific metric. */
+function bodyMetricLogCount(key){
+  return (state.bodylog||[]).filter(b=>b && achNum(b[key]) > 0).length;
+}
+
+/** Minutes held in stretch/mobility work -- these are `hold` sets, so they carry a duration. */
+function stretchMinutes(){
+  const RE = /stretch|mobility|\byoga\b|foam rolling|cat-cow|child's pose|downward-facing dog|thoracic rotation|90\/90 hip switch|ankle circles|dislocate/i;
+  let sec = 0;
+  eachLoggedSet((set, name)=>{ if(RE.test(name)) sec += achNum(set.durationSec); });
+  return sec / 60;
+}
+/** Sessions containing a meditation entry -- exerciseLogType() already classifies it as a hold. */
+function meditationSessionCount(){
+  return (state.workoutLog||[]).filter(s=>(s.exercises||[]).some(e=>/meditation/i.test(e.name||""))).length;
+}
+
 const ACHIEVEMENT_DEFS = [
   { id:"first_workout", name:"First Workout", desc:"Complete your first freestyle workout.", check:()=> state.workoutLog.length>=1 , category:"milestone", tier:"bronze", value:"1" },
   { id:"workouts_5", name:"5 Workouts", desc:"Log 5 freestyle workouts.", check:()=> state.workoutLog.length>=5 , category:"milestone", tier:"bronze", value:"5" },
@@ -5352,6 +5497,468 @@ const ACHIEVEMENT_DEFS = [
   { id:"midnight", name:"Midnight Warrior", desc:"Start a workout between midnight and 4am.", check:()=> sessionsAtHour(h=>h<4)>=1 , category:"special", tier:"gold", value:"12AM" },
   { id:"four-seasons", name:"Four Seasons", desc:"Train in spring, summer, autumn and winter.", check:()=> seasonsTrained()>=4 , category:"special", tier:"gold", value:"4", prog:{ have:()=> seasonsTrained(), need:4 } },
   { id:"anniversary", name:"One Year In", desc:"Use IGNYT for a full year.", check:()=> accountDays()>=365 , category:"special", tier:"diamond", value:"1YR", prog:{ have:()=> accountDays(), need:365 } },
+
+  /* =======================================================================================
+     THE 686-MEDAL SET (2026-08-16). Everything below is a threshold on a metric the app
+     already logs -- most are new rungs on ladders that already existed, which is why they
+     cost helpers rather than features. Medals needing a source this app does not record
+     are listed in docs/achievements-686.md rather than being awarded on a guess.
+  ======================================================================================= */
+
+  /* ---- MILESTONES AND COLLECTION (21) ---- */
+  { id:"lifetime-volume", name:"Lifetime Volume", desc:"Move a million kg over your lifetime.", check:()=> totalLifetimeVolume()>=1000000 , category:"milestone", tier:"diamond", value:"1M KG", prog:{ have:()=> Math.round(totalLifetimeVolume()), need:1000000 } },
+  { id:"sess-150", name:"Sessions · 150", desc:"Log 150 workouts.", check:()=> (state.workoutLog||[]).length>=150 , category:"milestone", tier:"bronze", value:"150", prog:{ have:()=> Math.round((state.workoutLog||[]).length), need:150 } },
+  { id:"sess-200", name:"Sessions · 200", desc:"Log 200 workouts.", check:()=> (state.workoutLog||[]).length>=200 , category:"milestone", tier:"bronze", value:"200", prog:{ have:()=> Math.round((state.workoutLog||[]).length), need:200 } },
+  { id:"sess-250", name:"Sessions · 250", desc:"Log 250 workouts.", check:()=> (state.workoutLog||[]).length>=250 , category:"milestone", tier:"bronze", value:"250", prog:{ have:()=> Math.round((state.workoutLog||[]).length), need:250 } },
+  { id:"sess-300", name:"Sessions · 300", desc:"Log 300 workouts.", check:()=> (state.workoutLog||[]).length>=300 , category:"milestone", tier:"silver", value:"300", prog:{ have:()=> Math.round((state.workoutLog||[]).length), need:300 } },
+  { id:"sess-400", name:"Sessions · 400", desc:"Log 400 workouts.", check:()=> (state.workoutLog||[]).length>=400 , category:"milestone", tier:"silver", value:"400", prog:{ have:()=> Math.round((state.workoutLog||[]).length), need:400 } },
+  { id:"sess-500", name:"Sessions · 500", desc:"Log 500 workouts.", check:()=> (state.workoutLog||[]).length>=500 , category:"milestone", tier:"gold", value:"500", prog:{ have:()=> Math.round((state.workoutLog||[]).length), need:500 } },
+  { id:"sess-750", name:"Sessions · 750", desc:"Log 750 workouts.", check:()=> (state.workoutLog||[]).length>=750 , category:"milestone", tier:"gold", value:"750", prog:{ have:()=> Math.round((state.workoutLog||[]).length), need:750 } },
+  { id:"sess-1000", name:"Sessions · 1,000", desc:"Log 1,000 workouts.", check:()=> (state.workoutLog||[]).length>=1000 , category:"milestone", tier:"gold", value:"1K", prog:{ have:()=> Math.round((state.workoutLog||[]).length), need:1000 } },
+  { id:"sess-1500", name:"Sessions · 1,500", desc:"Log 1,500 workouts.", check:()=> (state.workoutLog||[]).length>=1500 , category:"milestone", tier:"diamond", value:"1.5K", prog:{ have:()=> Math.round((state.workoutLog||[]).length), need:1500 } },
+  { id:"sess-2000", name:"Sessions · 2,000", desc:"Log 2,000 workouts.", check:()=> (state.workoutLog||[]).length>=2000 , category:"milestone", tier:"diamond", value:"2K", prog:{ have:()=> Math.round((state.workoutLog||[]).length), need:2000 } },
+  { id:"sess-3000", name:"Sessions · 3,000", desc:"Log 3,000 workouts.", check:()=> (state.workoutLog||[]).length>=3000 , category:"milestone", tier:"platinum", value:"3K", prog:{ have:()=> Math.round((state.workoutLog||[]).length), need:3000 } },
+  { id:"sess-5000", name:"Sessions · 5,000", desc:"Log 5,000 workouts.", check:()=> (state.workoutLog||[]).length>=5000 , category:"milestone", tier:"platinum", value:"5K", prog:{ have:()=> Math.round((state.workoutLog||[]).length), need:5000 } },
+  { id:"coll-10", name:"Collector · 10", desc:"Unlock 10 medals.", check:()=> (state.achievements||[]).length>=10 , category:"milestone", tier:"bronze", value:"10", prog:{ have:()=> Math.round((state.achievements||[]).length), need:10 } },
+  { id:"coll-25", name:"Collector · 25", desc:"Unlock 25 medals.", check:()=> (state.achievements||[]).length>=25 , category:"milestone", tier:"bronze", value:"25", prog:{ have:()=> Math.round((state.achievements||[]).length), need:25 } },
+  { id:"coll-50", name:"Collector · 50", desc:"Unlock 50 medals.", check:()=> (state.achievements||[]).length>=50 , category:"milestone", tier:"silver", value:"50", prog:{ have:()=> Math.round((state.achievements||[]).length), need:50 } },
+  { id:"coll-100", name:"Collector · 100", desc:"Unlock 100 medals.", check:()=> (state.achievements||[]).length>=100 , category:"milestone", tier:"silver", value:"100", prog:{ have:()=> Math.round((state.achievements||[]).length), need:100 } },
+  { id:"coll-200", name:"Collector · 200", desc:"Unlock 200 medals.", check:()=> (state.achievements||[]).length>=200 , category:"milestone", tier:"gold", value:"200", prog:{ have:()=> Math.round((state.achievements||[]).length), need:200 } },
+  { id:"coll-350", name:"Collector · 350", desc:"Unlock 350 medals.", check:()=> (state.achievements||[]).length>=350 , category:"milestone", tier:"diamond", value:"350", prog:{ have:()=> Math.round((state.achievements||[]).length), need:350 } },
+  { id:"coll-500", name:"Collector · 500", desc:"Unlock 500 medals.", check:()=> (state.achievements||[]).length>=500 , category:"milestone", tier:"diamond", value:"500", prog:{ have:()=> Math.round((state.achievements||[]).length), need:500 } },
+  { id:"coll-650", name:"Collector · 650", desc:"Unlock 650 medals.", check:()=> (state.achievements||[]).length>=650 , category:"milestone", tier:"platinum", value:"650", prog:{ have:()=> Math.round((state.achievements||[]).length), need:650 } },
+
+  /* ---- STRENGTH (131) ---- */
+  { id:"vol-1m", name:"1,000,000kg Lifted", desc:"Move one million kg over your lifetime.", check:()=> totalLifetimeVolume()>=1000000 , category:"strength", tier:"gold", value:"1M KG", prog:{ have:()=> Math.round(totalLifetimeVolume()), need:1000000 } },
+  { id:"volk-1000", name:"Iron Hauler · 1,000 kg", desc:"Move 1,000 kg.", check:()=> totalLifetimeVolume()>=1000 , category:"strength", tier:"bronze", value:"1K", prog:{ have:()=> Math.round(totalLifetimeVolume()), need:1000 } },
+  { id:"volk-10000", name:"Iron Hauler · 10,000 kg", desc:"Move 10,000 kg.", check:()=> totalLifetimeVolume()>=10000 , category:"strength", tier:"bronze", value:"10K", prog:{ have:()=> Math.round(totalLifetimeVolume()), need:10000 } },
+  { id:"volk-25000", name:"Iron Hauler · 25,000 kg", desc:"Move 25,000 kg.", check:()=> totalLifetimeVolume()>=25000 , category:"strength", tier:"silver", value:"25K", prog:{ have:()=> Math.round(totalLifetimeVolume()), need:25000 } },
+  { id:"volk-50000", name:"Iron Hauler · 50,000 kg", desc:"Move 50,000 kg.", check:()=> totalLifetimeVolume()>=50000 , category:"strength", tier:"silver", value:"50K", prog:{ have:()=> Math.round(totalLifetimeVolume()), need:50000 } },
+  { id:"volk-100000", name:"Iron Hauler · 100,000 kg", desc:"Move 100,000 kg.", check:()=> totalLifetimeVolume()>=100000 , category:"strength", tier:"silver", value:"100K", prog:{ have:()=> Math.round(totalLifetimeVolume()), need:100000 } },
+  { id:"volk-250000", name:"Iron Hauler · 250,000 kg", desc:"Move 250,000 kg.", check:()=> totalLifetimeVolume()>=250000 , category:"strength", tier:"gold", value:"250K", prog:{ have:()=> Math.round(totalLifetimeVolume()), need:250000 } },
+  { id:"volk-500000", name:"Iron Hauler · 500,000 kg", desc:"Move 500,000 kg.", check:()=> totalLifetimeVolume()>=500000 , category:"strength", tier:"gold", value:"500K", prog:{ have:()=> Math.round(totalLifetimeVolume()), need:500000 } },
+  { id:"volk-1000000", name:"Iron Hauler · 1,000,000 kg", desc:"Move 1,000,000 kg.", check:()=> totalLifetimeVolume()>=1000000 , category:"strength", tier:"diamond", value:"1M", prog:{ have:()=> Math.round(totalLifetimeVolume()), need:1000000 } },
+  { id:"volk-2500000", name:"Iron Hauler · 2,500,000 kg", desc:"Move 2,500,000 kg.", check:()=> totalLifetimeVolume()>=2500000 , category:"strength", tier:"diamond", value:"2.5M", prog:{ have:()=> Math.round(totalLifetimeVolume()), need:2500000 } },
+  { id:"volk-5000000", name:"Iron Hauler · 5,000,000 kg", desc:"Move 5,000,000 kg.", check:()=> totalLifetimeVolume()>=5000000 , category:"strength", tier:"platinum", value:"5M", prog:{ have:()=> Math.round(totalLifetimeVolume()), need:5000000 } },
+  { id:"volk-10000000", name:"Iron Hauler · 10,000,000 kg", desc:"Move 10,000,000 kg.", check:()=> totalLifetimeVolume()>=10000000 , category:"strength", tier:"platinum", value:"10M", prog:{ have:()=> Math.round(totalLifetimeVolume()), need:10000000 } },
+  { id:"reps-500", name:"Rep Machine · 500", desc:"Complete 500 reps.", check:()=> totalWorkingReps()>=500 , category:"strength", tier:"bronze", value:"500", prog:{ have:()=> Math.round(totalWorkingReps()), need:500 } },
+  { id:"reps-1000x", name:"Rep Machine · 1,000", desc:"Complete 1,000 reps.", check:()=> totalWorkingReps()>=1000 , category:"strength", tier:"bronze", value:"1K", prog:{ have:()=> Math.round(totalWorkingReps()), need:1000 } },
+  { id:"reps-10000x", name:"Rep Machine · 10,000", desc:"Complete 10,000 reps.", check:()=> totalWorkingReps()>=10000 , category:"strength", tier:"silver", value:"10K", prog:{ have:()=> Math.round(totalWorkingReps()), need:10000 } },
+  { id:"reps-25000", name:"Rep Machine · 25,000", desc:"Complete 25,000 reps.", check:()=> totalWorkingReps()>=25000 , category:"strength", tier:"silver", value:"25K", prog:{ have:()=> Math.round(totalWorkingReps()), need:25000 } },
+  { id:"reps-50000x", name:"Rep Machine · 50,000", desc:"Complete 50,000 reps.", check:()=> totalWorkingReps()>=50000 , category:"strength", tier:"gold", value:"50K", prog:{ have:()=> Math.round(totalWorkingReps()), need:50000 } },
+  { id:"reps-100000", name:"Rep Machine · 100,000", desc:"Complete 100,000 reps.", check:()=> totalWorkingReps()>=100000 , category:"strength", tier:"gold", value:"100K", prog:{ have:()=> Math.round(totalWorkingReps()), need:100000 } },
+  { id:"reps-250000", name:"Rep Machine · 250,000", desc:"Complete 250,000 reps.", check:()=> totalWorkingReps()>=250000 , category:"strength", tier:"diamond", value:"250K", prog:{ have:()=> Math.round(totalWorkingReps()), need:250000 } },
+  { id:"reps-500000", name:"Rep Machine · 500,000", desc:"Complete 500,000 reps.", check:()=> totalWorkingReps()>=500000 , category:"strength", tier:"diamond", value:"500K", prog:{ have:()=> Math.round(totalWorkingReps()), need:500000 } },
+  { id:"reps-1000000", name:"Rep Machine · 1,000,000", desc:"Complete 1,000,000 reps.", check:()=> totalWorkingReps()>=1000000 , category:"strength", tier:"platinum", value:"1M", prog:{ have:()=> Math.round(totalWorkingReps()), need:1000000 } },
+  { id:"sets-100x", name:"Set Collector · 100", desc:"Log 100 sets.", check:()=> totalWorkingSets()>=100 , category:"strength", tier:"bronze", value:"100", prog:{ have:()=> Math.round(totalWorkingSets()), need:100 } },
+  { id:"sets-500x", name:"Set Collector · 500", desc:"Log 500 sets.", check:()=> totalWorkingSets()>=500 , category:"strength", tier:"bronze", value:"500", prog:{ have:()=> Math.round(totalWorkingSets()), need:500 } },
+  { id:"sets-1000x", name:"Set Collector · 1,000", desc:"Log 1,000 sets.", check:()=> totalWorkingSets()>=1000 , category:"strength", tier:"silver", value:"1K", prog:{ have:()=> Math.round(totalWorkingSets()), need:1000 } },
+  { id:"sets-2500", name:"Set Collector · 2,500", desc:"Log 2,500 sets.", check:()=> totalWorkingSets()>=2500 , category:"strength", tier:"gold", value:"2.5K", prog:{ have:()=> Math.round(totalWorkingSets()), need:2500 } },
+  { id:"sets-5000x", name:"Set Collector · 5,000", desc:"Log 5,000 sets.", check:()=> totalWorkingSets()>=5000 , category:"strength", tier:"gold", value:"5K", prog:{ have:()=> Math.round(totalWorkingSets()), need:5000 } },
+  { id:"sets-10000x", name:"Set Collector · 10,000", desc:"Log 10,000 sets.", check:()=> totalWorkingSets()>=10000 , category:"strength", tier:"diamond", value:"10K", prog:{ have:()=> Math.round(totalWorkingSets()), need:10000 } },
+  { id:"sets-25000", name:"Set Collector · 25,000", desc:"Log 25,000 sets.", check:()=> totalWorkingSets()>=25000 , category:"strength", tier:"platinum", value:"25K", prog:{ have:()=> Math.round(totalWorkingSets()), need:25000 } },
+  { id:"benchvol-5000", name:"Bench Volume · 5,000 kg", desc:"Move 5,000 kg on bench.", check:()=> liftVolumeKg(ACH_BENCH_RE)>=5000 , category:"strength", tier:"bronze", value:"5K", prog:{ have:()=> Math.round(liftVolumeKg(ACH_BENCH_RE)), need:5000 } },
+  { id:"benchvol-25000", name:"Bench Volume · 25,000 kg", desc:"Move 25,000 kg on bench.", check:()=> liftVolumeKg(ACH_BENCH_RE)>=25000 , category:"strength", tier:"silver", value:"25K", prog:{ have:()=> Math.round(liftVolumeKg(ACH_BENCH_RE)), need:25000 } },
+  { id:"benchvol-100000", name:"Bench Volume · 100,000 kg", desc:"Move 100,000 kg on bench.", check:()=> liftVolumeKg(ACH_BENCH_RE)>=100000 , category:"strength", tier:"gold", value:"100K", prog:{ have:()=> Math.round(liftVolumeKg(ACH_BENCH_RE)), need:100000 } },
+  { id:"benchvol-500000", name:"Bench Volume · 500,000 kg", desc:"Move 500,000 kg on bench.", check:()=> liftVolumeKg(ACH_BENCH_RE)>=500000 , category:"strength", tier:"diamond", value:"500K", prog:{ have:()=> Math.round(liftVolumeKg(ACH_BENCH_RE)), need:500000 } },
+  { id:"benchvol-1000000", name:"Bench Volume · 1,000,000 kg", desc:"Move 1,000,000 kg on bench.", check:()=> liftVolumeKg(ACH_BENCH_RE)>=1000000 , category:"strength", tier:"platinum", value:"1M", prog:{ have:()=> Math.round(liftVolumeKg(ACH_BENCH_RE)), need:1000000 } },
+  { id:"squatvol-5000", name:"Squat Volume · 5,000 kg", desc:"Move 5,000 kg on squat.", check:()=> liftVolumeKg(ACH_SQUAT_RE)>=5000 , category:"strength", tier:"bronze", value:"5K", prog:{ have:()=> Math.round(liftVolumeKg(ACH_SQUAT_RE)), need:5000 } },
+  { id:"squatvol-25000", name:"Squat Volume · 25,000 kg", desc:"Move 25,000 kg on squat.", check:()=> liftVolumeKg(ACH_SQUAT_RE)>=25000 , category:"strength", tier:"silver", value:"25K", prog:{ have:()=> Math.round(liftVolumeKg(ACH_SQUAT_RE)), need:25000 } },
+  { id:"squatvol-100000", name:"Squat Volume · 100,000 kg", desc:"Move 100,000 kg on squat.", check:()=> liftVolumeKg(ACH_SQUAT_RE)>=100000 , category:"strength", tier:"gold", value:"100K", prog:{ have:()=> Math.round(liftVolumeKg(ACH_SQUAT_RE)), need:100000 } },
+  { id:"squatvol-500000", name:"Squat Volume · 500,000 kg", desc:"Move 500,000 kg on squat.", check:()=> liftVolumeKg(ACH_SQUAT_RE)>=500000 , category:"strength", tier:"diamond", value:"500K", prog:{ have:()=> Math.round(liftVolumeKg(ACH_SQUAT_RE)), need:500000 } },
+  { id:"squatvol-1000000", name:"Squat Volume · 1,000,000 kg", desc:"Move 1,000,000 kg on squat.", check:()=> liftVolumeKg(ACH_SQUAT_RE)>=1000000 , category:"strength", tier:"platinum", value:"1M", prog:{ have:()=> Math.round(liftVolumeKg(ACH_SQUAT_RE)), need:1000000 } },
+  { id:"deadvol-5000", name:"Deadlift Volume · 5,000 kg", desc:"Move 5,000 kg on deadlift.", check:()=> liftVolumeKg(ACH_DEADLIFT_RE)>=5000 , category:"strength", tier:"bronze", value:"5K", prog:{ have:()=> Math.round(liftVolumeKg(ACH_DEADLIFT_RE)), need:5000 } },
+  { id:"deadvol-25000", name:"Deadlift Volume · 25,000 kg", desc:"Move 25,000 kg on deadlift.", check:()=> liftVolumeKg(ACH_DEADLIFT_RE)>=25000 , category:"strength", tier:"silver", value:"25K", prog:{ have:()=> Math.round(liftVolumeKg(ACH_DEADLIFT_RE)), need:25000 } },
+  { id:"deadvol-100000", name:"Deadlift Volume · 100,000 kg", desc:"Move 100,000 kg on deadlift.", check:()=> liftVolumeKg(ACH_DEADLIFT_RE)>=100000 , category:"strength", tier:"gold", value:"100K", prog:{ have:()=> Math.round(liftVolumeKg(ACH_DEADLIFT_RE)), need:100000 } },
+  { id:"deadvol-500000", name:"Deadlift Volume · 500,000 kg", desc:"Move 500,000 kg on deadlift.", check:()=> liftVolumeKg(ACH_DEADLIFT_RE)>=500000 , category:"strength", tier:"diamond", value:"500K", prog:{ have:()=> Math.round(liftVolumeKg(ACH_DEADLIFT_RE)), need:500000 } },
+  { id:"deadvol-1000000", name:"Deadlift Volume · 1,000,000 kg", desc:"Move 1,000,000 kg on deadlift.", check:()=> liftVolumeKg(ACH_DEADLIFT_RE)>=1000000 , category:"strength", tier:"platinum", value:"1M", prog:{ have:()=> Math.round(liftVolumeKg(ACH_DEADLIFT_RE)), need:1000000 } },
+  { id:"ohpvol-5000", name:"Press Volume · 5,000 kg", desc:"Move 5,000 kg overhead.", check:()=> liftVolumeKg(ACH_OHP_RE)>=5000 , category:"strength", tier:"bronze", value:"5K", prog:{ have:()=> Math.round(liftVolumeKg(ACH_OHP_RE)), need:5000 } },
+  { id:"ohpvol-25000", name:"Press Volume · 25,000 kg", desc:"Move 25,000 kg overhead.", check:()=> liftVolumeKg(ACH_OHP_RE)>=25000 , category:"strength", tier:"silver", value:"25K", prog:{ have:()=> Math.round(liftVolumeKg(ACH_OHP_RE)), need:25000 } },
+  { id:"ohpvol-100000", name:"Press Volume · 100,000 kg", desc:"Move 100,000 kg overhead.", check:()=> liftVolumeKg(ACH_OHP_RE)>=100000 , category:"strength", tier:"gold", value:"100K", prog:{ have:()=> Math.round(liftVolumeKg(ACH_OHP_RE)), need:100000 } },
+  { id:"ohpvol-500000", name:"Press Volume · 500,000 kg", desc:"Move 500,000 kg overhead.", check:()=> liftVolumeKg(ACH_OHP_RE)>=500000 , category:"strength", tier:"platinum", value:"500K", prog:{ have:()=> Math.round(liftVolumeKg(ACH_OHP_RE)), need:500000 } },
+  { id:"pullT-100", name:"Pull-Up Total · 100", desc:"Complete 100 pull-ups.", check:()=> stationReps(ACH_PULLUP_RE)>=100 , category:"strength", tier:"bronze", value:"100", prog:{ have:()=> Math.round(stationReps(ACH_PULLUP_RE)), need:100 } },
+  { id:"pullT-500", name:"Pull-Up Total · 500", desc:"Complete 500 pull-ups.", check:()=> stationReps(ACH_PULLUP_RE)>=500 , category:"strength", tier:"silver", value:"500", prog:{ have:()=> Math.round(stationReps(ACH_PULLUP_RE)), need:500 } },
+  { id:"pullT-1000", name:"Pull-Up Total · 1,000", desc:"Complete 1,000 pull-ups.", check:()=> stationReps(ACH_PULLUP_RE)>=1000 , category:"strength", tier:"silver", value:"1K", prog:{ have:()=> Math.round(stationReps(ACH_PULLUP_RE)), need:1000 } },
+  { id:"pullT-5000", name:"Pull-Up Total · 5,000", desc:"Complete 5,000 pull-ups.", check:()=> stationReps(ACH_PULLUP_RE)>=5000 , category:"strength", tier:"gold", value:"5K", prog:{ have:()=> Math.round(stationReps(ACH_PULLUP_RE)), need:5000 } },
+  { id:"pullT-10000", name:"Pull-Up Total · 10,000", desc:"Complete 10,000 pull-ups.", check:()=> stationReps(ACH_PULLUP_RE)>=10000 , category:"strength", tier:"diamond", value:"10K", prog:{ have:()=> Math.round(stationReps(ACH_PULLUP_RE)), need:10000 } },
+  { id:"pullT-25000", name:"Pull-Up Total · 25,000", desc:"Complete 25,000 pull-ups.", check:()=> stationReps(ACH_PULLUP_RE)>=25000 , category:"strength", tier:"platinum", value:"25K", prog:{ have:()=> Math.round(stationReps(ACH_PULLUP_RE)), need:25000 } },
+  { id:"pushT-500", name:"Push-Up Total · 500", desc:"Complete 500 push-ups.", check:()=> stationReps(ACH_PUSHUP_RE)>=500 , category:"strength", tier:"bronze", value:"500", prog:{ have:()=> Math.round(stationReps(ACH_PUSHUP_RE)), need:500 } },
+  { id:"pushT-1000", name:"Push-Up Total · 1,000", desc:"Complete 1,000 push-ups.", check:()=> stationReps(ACH_PUSHUP_RE)>=1000 , category:"strength", tier:"silver", value:"1K", prog:{ have:()=> Math.round(stationReps(ACH_PUSHUP_RE)), need:1000 } },
+  { id:"pushT-5000", name:"Push-Up Total · 5,000", desc:"Complete 5,000 push-ups.", check:()=> stationReps(ACH_PUSHUP_RE)>=5000 , category:"strength", tier:"silver", value:"5K", prog:{ have:()=> Math.round(stationReps(ACH_PUSHUP_RE)), need:5000 } },
+  { id:"pushT-10000", name:"Push-Up Total · 10,000", desc:"Complete 10,000 push-ups.", check:()=> stationReps(ACH_PUSHUP_RE)>=10000 , category:"strength", tier:"gold", value:"10K", prog:{ have:()=> Math.round(stationReps(ACH_PUSHUP_RE)), need:10000 } },
+  { id:"pushT-25000", name:"Push-Up Total · 25,000", desc:"Complete 25,000 push-ups.", check:()=> stationReps(ACH_PUSHUP_RE)>=25000 , category:"strength", tier:"diamond", value:"25K", prog:{ have:()=> Math.round(stationReps(ACH_PUSHUP_RE)), need:25000 } },
+  { id:"pushT-50000", name:"Push-Up Total · 50,000", desc:"Complete 50,000 push-ups.", check:()=> stationReps(ACH_PUSHUP_RE)>=50000 , category:"strength", tier:"platinum", value:"50K", prog:{ have:()=> Math.round(stationReps(ACH_PUSHUP_RE)), need:50000 } },
+  { id:"sqT-1000", name:"Air Squat Total · 1,000", desc:"Complete 1,000 air squats.", check:()=> bodyweightSquatReps()>=1000 , category:"strength", tier:"bronze", value:"1K", prog:{ have:()=> Math.round(bodyweightSquatReps()), need:1000 } },
+  { id:"sqT-5000", name:"Air Squat Total · 5,000", desc:"Complete 5,000 air squats.", check:()=> bodyweightSquatReps()>=5000 , category:"strength", tier:"silver", value:"5K", prog:{ have:()=> Math.round(bodyweightSquatReps()), need:5000 } },
+  { id:"sqT-10000", name:"Air Squat Total · 10,000", desc:"Complete 10,000 air squats.", check:()=> bodyweightSquatReps()>=10000 , category:"strength", tier:"gold", value:"10K", prog:{ have:()=> Math.round(bodyweightSquatReps()), need:10000 } },
+  { id:"sqT-25000", name:"Air Squat Total · 25,000", desc:"Complete 25,000 air squats.", check:()=> bodyweightSquatReps()>=25000 , category:"strength", tier:"diamond", value:"25K", prog:{ have:()=> Math.round(bodyweightSquatReps()), need:25000 } },
+  { id:"sqT-50000", name:"Air Squat Total · 50,000", desc:"Complete 50,000 air squats.", check:()=> bodyweightSquatReps()>=50000 , category:"strength", tier:"platinum", value:"50K", prog:{ have:()=> Math.round(bodyweightSquatReps()), need:50000 } },
+  { id:"kbT-500", name:"Swing Total · 500", desc:"Complete 500 KB swings.", check:()=> stationReps(ACH_KB_SWING_RE)>=500 , category:"strength", tier:"bronze", value:"500", prog:{ have:()=> Math.round(stationReps(ACH_KB_SWING_RE)), need:500 } },
+  { id:"kbT-1000", name:"Swing Total · 1,000", desc:"Complete 1,000 KB swings.", check:()=> stationReps(ACH_KB_SWING_RE)>=1000 , category:"strength", tier:"silver", value:"1K", prog:{ have:()=> Math.round(stationReps(ACH_KB_SWING_RE)), need:1000 } },
+  { id:"kbT-5000", name:"Swing Total · 5,000", desc:"Complete 5,000 KB swings.", check:()=> stationReps(ACH_KB_SWING_RE)>=5000 , category:"strength", tier:"gold", value:"5K", prog:{ have:()=> Math.round(stationReps(ACH_KB_SWING_RE)), need:5000 } },
+  { id:"kbT-10000", name:"Swing Total · 10,000", desc:"Complete 10,000 KB swings.", check:()=> stationReps(ACH_KB_SWING_RE)>=10000 , category:"strength", tier:"platinum", value:"10K", prog:{ have:()=> Math.round(stationReps(ACH_KB_SWING_RE)), need:10000 } },
+  { id:"burpT-100", name:"Burpee Total · 100", desc:"Complete 100 burpees.", check:()=> stationReps(ACH_BURPEE_RE)>=100 , category:"strength", tier:"bronze", value:"100", prog:{ have:()=> Math.round(stationReps(ACH_BURPEE_RE)), need:100 } },
+  { id:"burpT-500", name:"Burpee Total · 500", desc:"Complete 500 burpees.", check:()=> stationReps(ACH_BURPEE_RE)>=500 , category:"strength", tier:"silver", value:"500", prog:{ have:()=> Math.round(stationReps(ACH_BURPEE_RE)), need:500 } },
+  { id:"burpT-1000", name:"Burpee Total · 1,000", desc:"Complete 1,000 burpees.", check:()=> stationReps(ACH_BURPEE_RE)>=1000 , category:"strength", tier:"gold", value:"1K", prog:{ have:()=> Math.round(stationReps(ACH_BURPEE_RE)), need:1000 } },
+  { id:"burpT-5000", name:"Burpee Total · 5,000", desc:"Complete 5,000 burpees.", check:()=> stationReps(ACH_BURPEE_RE)>=5000 , category:"strength", tier:"diamond", value:"5K", prog:{ have:()=> Math.round(stationReps(ACH_BURPEE_RE)), need:5000 } },
+  { id:"burpT-10000", name:"Burpee Total · 10,000", desc:"Complete 10,000 burpees.", check:()=> stationReps(ACH_BURPEE_RE)>=10000 , category:"strength", tier:"platinum", value:"10K", prog:{ have:()=> Math.round(stationReps(ACH_BURPEE_RE)), need:10000 } },
+  { id:"plankB-60", name:"Plank Hold · 1 min", desc:"Hold a 1-minute plank.", check:()=> bestPlankSeconds()>=60 , category:"strength", tier:"bronze", value:"1M" },
+  { id:"plankB-120", name:"Plank Hold · 2 min", desc:"Hold a 2-minute plank.", check:()=> bestPlankSeconds()>=120 , category:"strength", tier:"silver", value:"2M" },
+  { id:"plankB-180", name:"Plank Hold · 3 min", desc:"Hold a 3-minute plank.", check:()=> bestPlankSeconds()>=180 , category:"strength", tier:"gold", value:"3M" },
+  { id:"plankB-300", name:"Plank Hold · 5 min", desc:"Hold a 5-minute plank.", check:()=> bestPlankSeconds()>=300 , category:"strength", tier:"diamond", value:"5M" },
+  { id:"plankB-600", name:"Plank Hold · 10 min", desc:"Hold a 10-minute plank.", check:()=> bestPlankSeconds()>=600 , category:"strength", tier:"platinum", value:"10M" },
+  { id:"prc-5", name:"PR Count · 5", desc:"Set 5 PRs.", check:()=> (state.prs||[]).length>=5 , category:"strength", tier:"bronze", value:"5", prog:{ have:()=> Math.round((state.prs||[]).length), need:5 } },
+  { id:"prc-10", name:"PR Count · 10", desc:"Set 10 PRs.", check:()=> (state.prs||[]).length>=10 , category:"strength", tier:"silver", value:"10", prog:{ have:()=> Math.round((state.prs||[]).length), need:10 } },
+  { id:"prc-25", name:"PR Count · 25", desc:"Set 25 PRs.", check:()=> (state.prs||[]).length>=25 , category:"strength", tier:"silver", value:"25", prog:{ have:()=> Math.round((state.prs||[]).length), need:25 } },
+  { id:"prc-50", name:"PR Count · 50", desc:"Set 50 PRs.", check:()=> (state.prs||[]).length>=50 , category:"strength", tier:"gold", value:"50", prog:{ have:()=> Math.round((state.prs||[]).length), need:50 } },
+  { id:"prc-100", name:"PR Count · 100", desc:"Set 100 PRs.", check:()=> (state.prs||[]).length>=100 , category:"strength", tier:"diamond", value:"100", prog:{ have:()=> Math.round((state.prs||[]).length), need:100 } },
+  { id:"prc-250", name:"PR Count · 250", desc:"Set 250 PRs.", check:()=> (state.prs||[]).length>=250 , category:"strength", tier:"platinum", value:"250", prog:{ have:()=> Math.round((state.prs||[]).length), need:250 } },
+  { id:"bench-40", name:"Bench · 40kg", desc:"Lift 40kg on bench (1RM).", check:()=> bestLiftKg(ACH_BENCH_RE)>=40 , category:"strength", tier:"bronze", value:"40" },
+  { id:"bench-60", name:"Bench · 60kg", desc:"Lift 60kg on bench (1RM).", check:()=> bestLiftKg(ACH_BENCH_RE)>=60 , category:"strength", tier:"bronze", value:"60" },
+  { id:"bench-80", name:"Bench · 80kg", desc:"Lift 80kg on bench (1RM).", check:()=> bestLiftKg(ACH_BENCH_RE)>=80 , category:"strength", tier:"silver", value:"80" },
+  { id:"bench-100", name:"Bench · 100kg", desc:"Lift 100kg on bench (1RM).", check:()=> bestLiftKg(ACH_BENCH_RE)>=100 , category:"strength", tier:"silver", value:"100" },
+  { id:"bench-120", name:"Bench · 120kg", desc:"Lift 120kg on bench (1RM).", check:()=> bestLiftKg(ACH_BENCH_RE)>=120 , category:"strength", tier:"gold", value:"120" },
+  { id:"bench-140", name:"Bench · 140kg", desc:"Lift 140kg on bench (1RM).", check:()=> bestLiftKg(ACH_BENCH_RE)>=140 , category:"strength", tier:"gold", value:"140" },
+  { id:"bench-160", name:"Bench · 160kg", desc:"Lift 160kg on bench (1RM).", check:()=> bestLiftKg(ACH_BENCH_RE)>=160 , category:"strength", tier:"diamond", value:"160" },
+  { id:"bench-180", name:"Bench · 180kg", desc:"Lift 180kg on bench (1RM).", check:()=> bestLiftKg(ACH_BENCH_RE)>=180 , category:"strength", tier:"diamond", value:"180" },
+  { id:"bench-200", name:"Bench · 200kg", desc:"Lift 200kg on bench (1RM).", check:()=> bestLiftKg(ACH_BENCH_RE)>=200 , category:"strength", tier:"platinum", value:"200" },
+  { id:"squat-60", name:"Squat · 60kg", desc:"Lift 60kg on squat (1RM).", check:()=> bestLiftKg(ACH_SQUAT_RE)>=60 , category:"strength", tier:"bronze", value:"60" },
+  { id:"squat-80", name:"Squat · 80kg", desc:"Lift 80kg on squat (1RM).", check:()=> bestLiftKg(ACH_SQUAT_RE)>=80 , category:"strength", tier:"bronze", value:"80" },
+  { id:"squat-100", name:"Squat · 100kg", desc:"Lift 100kg on squat (1RM).", check:()=> bestLiftKg(ACH_SQUAT_RE)>=100 , category:"strength", tier:"silver", value:"100" },
+  { id:"squat-120", name:"Squat · 120kg", desc:"Lift 120kg on squat (1RM).", check:()=> bestLiftKg(ACH_SQUAT_RE)>=120 , category:"strength", tier:"silver", value:"120" },
+  { id:"squat-140", name:"Squat · 140kg", desc:"Lift 140kg on squat (1RM).", check:()=> bestLiftKg(ACH_SQUAT_RE)>=140 , category:"strength", tier:"silver", value:"140" },
+  { id:"squat-160", name:"Squat · 160kg", desc:"Lift 160kg on squat (1RM).", check:()=> bestLiftKg(ACH_SQUAT_RE)>=160 , category:"strength", tier:"gold", value:"160" },
+  { id:"squat-180", name:"Squat · 180kg", desc:"Lift 180kg on squat (1RM).", check:()=> bestLiftKg(ACH_SQUAT_RE)>=180 , category:"strength", tier:"gold", value:"180" },
+  { id:"squat-200", name:"Squat · 200kg", desc:"Lift 200kg on squat (1RM).", check:()=> bestLiftKg(ACH_SQUAT_RE)>=200 , category:"strength", tier:"diamond", value:"200" },
+  { id:"squat-220", name:"Squat · 220kg", desc:"Lift 220kg on squat (1RM).", check:()=> bestLiftKg(ACH_SQUAT_RE)>=220 , category:"strength", tier:"diamond", value:"220" },
+  { id:"squat-250", name:"Squat · 250kg", desc:"Lift 250kg on squat (1RM).", check:()=> bestLiftKg(ACH_SQUAT_RE)>=250 , category:"strength", tier:"platinum", value:"250" },
+  { id:"dead-80", name:"Deadlift · 80kg", desc:"Lift 80kg on deadlift (1RM).", check:()=> bestLiftKg(ACH_DEADLIFT_RE)>=80 , category:"strength", tier:"bronze", value:"80" },
+  { id:"dead-100", name:"Deadlift · 100kg", desc:"Lift 100kg on deadlift (1RM).", check:()=> bestLiftKg(ACH_DEADLIFT_RE)>=100 , category:"strength", tier:"bronze", value:"100" },
+  { id:"dead-120", name:"Deadlift · 120kg", desc:"Lift 120kg on deadlift (1RM).", check:()=> bestLiftKg(ACH_DEADLIFT_RE)>=120 , category:"strength", tier:"silver", value:"120" },
+  { id:"dead-140", name:"Deadlift · 140kg", desc:"Lift 140kg on deadlift (1RM).", check:()=> bestLiftKg(ACH_DEADLIFT_RE)>=140 , category:"strength", tier:"silver", value:"140" },
+  { id:"dead-160", name:"Deadlift · 160kg", desc:"Lift 160kg on deadlift (1RM).", check:()=> bestLiftKg(ACH_DEADLIFT_RE)>=160 , category:"strength", tier:"silver", value:"160" },
+  { id:"dead-180", name:"Deadlift · 180kg", desc:"Lift 180kg on deadlift (1RM).", check:()=> bestLiftKg(ACH_DEADLIFT_RE)>=180 , category:"strength", tier:"gold", value:"180" },
+  { id:"dead-200", name:"Deadlift · 200kg", desc:"Lift 200kg on deadlift (1RM).", check:()=> bestLiftKg(ACH_DEADLIFT_RE)>=200 , category:"strength", tier:"gold", value:"200" },
+  { id:"dead-220", name:"Deadlift · 220kg", desc:"Lift 220kg on deadlift (1RM).", check:()=> bestLiftKg(ACH_DEADLIFT_RE)>=220 , category:"strength", tier:"diamond", value:"220" },
+  { id:"dead-250", name:"Deadlift · 250kg", desc:"Lift 250kg on deadlift (1RM).", check:()=> bestLiftKg(ACH_DEADLIFT_RE)>=250 , category:"strength", tier:"diamond", value:"250" },
+  { id:"dead-300", name:"Deadlift · 300kg", desc:"Lift 300kg on deadlift (1RM).", check:()=> bestLiftKg(ACH_DEADLIFT_RE)>=300 , category:"strength", tier:"platinum", value:"300" },
+  { id:"ohp-30", name:"Press · 30kg", desc:"Lift 30kg overhead (1RM).", check:()=> bestLiftKg(ACH_OHP_RE)>=30 , category:"strength", tier:"bronze", value:"30" },
+  { id:"ohp-40", name:"Press · 40kg", desc:"Lift 40kg overhead (1RM).", check:()=> bestLiftKg(ACH_OHP_RE)>=40 , category:"strength", tier:"bronze", value:"40" },
+  { id:"ohp-50", name:"Press · 50kg", desc:"Lift 50kg overhead (1RM).", check:()=> bestLiftKg(ACH_OHP_RE)>=50 , category:"strength", tier:"silver", value:"50" },
+  { id:"ohp-60", name:"Press · 60kg", desc:"Lift 60kg overhead (1RM).", check:()=> bestLiftKg(ACH_OHP_RE)>=60 , category:"strength", tier:"silver", value:"60" },
+  { id:"ohp-70", name:"Press · 70kg", desc:"Lift 70kg overhead (1RM).", check:()=> bestLiftKg(ACH_OHP_RE)>=70 , category:"strength", tier:"gold", value:"70" },
+  { id:"ohp-80", name:"Press · 80kg", desc:"Lift 80kg overhead (1RM).", check:()=> bestLiftKg(ACH_OHP_RE)>=80 , category:"strength", tier:"diamond", value:"80" },
+  { id:"ohp-90", name:"Press · 90kg", desc:"Lift 90kg overhead (1RM).", check:()=> bestLiftKg(ACH_OHP_RE)>=90 , category:"strength", tier:"diamond", value:"90" },
+  { id:"ohp-100", name:"Press · 100kg", desc:"Lift 100kg overhead (1RM).", check:()=> bestLiftKg(ACH_OHP_RE)>=100 , category:"strength", tier:"platinum", value:"100" },
+  { id:"t5k-30", name:"5K Sub-30", desc:"Finish 5km under 30 minutes.", check:()=> bestPieceUnder(ACH_RUN_RE,5,30*60) , category:"strength", tier:"bronze", value:"<30" },
+  { id:"t5k-27", name:"5K Sub-27", desc:"Finish 5km under 27 minutes.", check:()=> bestPieceUnder(ACH_RUN_RE,5,27*60) , category:"strength", tier:"silver", value:"<27" },
+  { id:"t5k-25", name:"5K Sub-25", desc:"Finish 5km under 25 minutes.", check:()=> bestPieceUnder(ACH_RUN_RE,5,25*60) , category:"strength", tier:"silver", value:"<25" },
+  { id:"t5k-22", name:"5K Sub-22", desc:"Finish 5km under 22 minutes.", check:()=> bestPieceUnder(ACH_RUN_RE,5,22*60) , category:"strength", tier:"gold", value:"<22" },
+  { id:"t5k-20", name:"5K Sub-20", desc:"Finish 5km under 20 minutes.", check:()=> bestPieceUnder(ACH_RUN_RE,5,20*60) , category:"strength", tier:"diamond", value:"<20" },
+  { id:"t5k-18", name:"5K Sub-18", desc:"Finish 5km under 18 minutes.", check:()=> bestPieceUnder(ACH_RUN_RE,5,18*60) , category:"strength", tier:"platinum", value:"<18" },
+  { id:"t2k-9", name:"2K Row Sub-9", desc:"Row 2,000m under 9 minutes.", check:()=> bestRowUnder(2000,9*60) , category:"strength", tier:"bronze", value:"<9" },
+  { id:"t2k-8", name:"2K Row Sub-8", desc:"Row 2,000m under 8 minutes.", check:()=> bestRowUnder(2000,8*60) , category:"strength", tier:"silver", value:"<8" },
+  { id:"t2k-7p5", name:"2K Row Sub-7.5", desc:"Row 2,000m under 7.5 minutes.", check:()=> bestRowUnder(2000,7.5*60) , category:"strength", tier:"gold", value:"<7.5" },
+  { id:"t2k-7", name:"2K Row Sub-7", desc:"Row 2,000m under 7 minutes.", check:()=> bestRowUnder(2000,7*60) , category:"strength", tier:"platinum", value:"<7" },
+
+  /* ---- CARDIO (49) ---- */
+  { id:"runD-10", name:"Road Warrior · 10 km", desc:"Cover 10 km.", check:()=> totalRunKm()>=10 , category:"cardio", tier:"bronze", value:"10", prog:{ have:()=> Math.round(totalRunKm()), need:10 } },
+  { id:"runD-50", name:"Road Warrior · 50 km", desc:"Cover 50 km.", check:()=> totalRunKm()>=50 , category:"cardio", tier:"bronze", value:"50", prog:{ have:()=> Math.round(totalRunKm()), need:50 } },
+  { id:"runD-100", name:"Road Warrior · 100 km", desc:"Cover 100 km.", check:()=> totalRunKm()>=100 , category:"cardio", tier:"silver", value:"100", prog:{ have:()=> Math.round(totalRunKm()), need:100 } },
+  { id:"runD-250", name:"Road Warrior · 250 km", desc:"Cover 250 km.", check:()=> totalRunKm()>=250 , category:"cardio", tier:"silver", value:"250", prog:{ have:()=> Math.round(totalRunKm()), need:250 } },
+  { id:"runD-750", name:"Road Warrior · 750 km", desc:"Cover 750 km.", check:()=> totalRunKm()>=750 , category:"cardio", tier:"gold", value:"750", prog:{ have:()=> Math.round(totalRunKm()), need:750 } },
+  { id:"runD-1500", name:"Road Warrior · 1,500 km", desc:"Cover 1,500 km.", check:()=> totalRunKm()>=1500 , category:"cardio", tier:"diamond", value:"1.5K", prog:{ have:()=> Math.round(totalRunKm()), need:1500 } },
+  { id:"runD-3000", name:"Road Warrior · 3,000 km", desc:"Cover 3,000 km.", check:()=> totalRunKm()>=3000 , category:"cardio", tier:"diamond", value:"3K", prog:{ have:()=> Math.round(totalRunKm()), need:3000 } },
+  { id:"runD-5000", name:"Road Warrior · 5,000 km", desc:"Cover 5,000 km.", check:()=> totalRunKm()>=5000 , category:"cardio", tier:"platinum", value:"5K", prog:{ have:()=> Math.round(totalRunKm()), need:5000 } },
+  { id:"rowD-10000", name:"Erg Meters · 10,000 m", desc:"Row 10,000 m.", check:()=> totalRowMetres()>=10000 , category:"cardio", tier:"bronze", value:"10K", prog:{ have:()=> Math.round(totalRowMetres()), need:10000 } },
+  { id:"rowD-50000", name:"Erg Meters · 50,000 m", desc:"Row 50,000 m.", check:()=> totalRowMetres()>=50000 , category:"cardio", tier:"bronze", value:"50K", prog:{ have:()=> Math.round(totalRowMetres()), need:50000 } },
+  { id:"rowD-100000", name:"Erg Meters · 100,000 m", desc:"Row 100,000 m.", check:()=> totalRowMetres()>=100000 , category:"cardio", tier:"silver", value:"100K", prog:{ have:()=> Math.round(totalRowMetres()), need:100000 } },
+  { id:"rowD-250000", name:"Erg Meters · 250,000 m", desc:"Row 250,000 m.", check:()=> totalRowMetres()>=250000 , category:"cardio", tier:"gold", value:"250K", prog:{ have:()=> Math.round(totalRowMetres()), need:250000 } },
+  { id:"rowD-500000", name:"Erg Meters · 500,000 m", desc:"Row 500,000 m.", check:()=> totalRowMetres()>=500000 , category:"cardio", tier:"gold", value:"500K", prog:{ have:()=> Math.round(totalRowMetres()), need:500000 } },
+  { id:"rowD-1000000", name:"Erg Meters · 1,000,000 m", desc:"Row 1,000,000 m.", check:()=> totalRowMetres()>=1000000 , category:"cardio", tier:"diamond", value:"1M", prog:{ have:()=> Math.round(totalRowMetres()), need:1000000 } },
+  { id:"rowD-2000000", name:"Erg Meters · 2,000,000 m", desc:"Row 2,000,000 m.", check:()=> totalRowMetres()>=2000000 , category:"cardio", tier:"platinum", value:"2M", prog:{ have:()=> Math.round(totalRowMetres()), need:2000000 } },
+  { id:"rideD-25", name:"Cyclist · 25 km", desc:"Ride 25 km.", check:()=> totalRideKm()>=25 , category:"cardio", tier:"bronze", value:"25", prog:{ have:()=> Math.round(totalRideKm()), need:25 } },
+  { id:"rideD-50", name:"Cyclist · 50 km", desc:"Ride 50 km.", check:()=> totalRideKm()>=50 , category:"cardio", tier:"bronze", value:"50", prog:{ have:()=> Math.round(totalRideKm()), need:50 } },
+  { id:"rideD-100", name:"Cyclist · 100 km", desc:"Ride 100 km.", check:()=> totalRideKm()>=100 , category:"cardio", tier:"silver", value:"100", prog:{ have:()=> Math.round(totalRideKm()), need:100 } },
+  { id:"rideD-250", name:"Cyclist · 250 km", desc:"Ride 250 km.", check:()=> totalRideKm()>=250 , category:"cardio", tier:"gold", value:"250", prog:{ have:()=> Math.round(totalRideKm()), need:250 } },
+  { id:"rideD-500", name:"Cyclist · 500 km", desc:"Ride 500 km.", check:()=> totalRideKm()>=500 , category:"cardio", tier:"gold", value:"500", prog:{ have:()=> Math.round(totalRideKm()), need:500 } },
+  { id:"rideD-1000", name:"Cyclist · 1,000 km", desc:"Ride 1,000 km.", check:()=> totalRideKm()>=1000 , category:"cardio", tier:"diamond", value:"1K", prog:{ have:()=> Math.round(totalRideKm()), need:1000 } },
+  { id:"rideD-2500", name:"Cyclist · 2,500 km", desc:"Ride 2,500 km.", check:()=> totalRideKm()>=2500 , category:"cardio", tier:"platinum", value:"2.5K", prog:{ have:()=> Math.round(totalRideKm()), need:2500 } },
+  { id:"skiD-5000", name:"SkiErg Meters · 5,000 m", desc:"Ski 5,000 m.", check:()=> totalSkiergMetres()>=5000 , category:"cardio", tier:"bronze", value:"5K", prog:{ have:()=> Math.round(totalSkiergMetres()), need:5000 } },
+  { id:"skiD-10000", name:"SkiErg Meters · 10,000 m", desc:"Ski 10,000 m.", check:()=> totalSkiergMetres()>=10000 , category:"cardio", tier:"silver", value:"10K", prog:{ have:()=> Math.round(totalSkiergMetres()), need:10000 } },
+  { id:"skiD-25000", name:"SkiErg Meters · 25,000 m", desc:"Ski 25,000 m.", check:()=> totalSkiergMetres()>=25000 , category:"cardio", tier:"silver", value:"25K", prog:{ have:()=> Math.round(totalSkiergMetres()), need:25000 } },
+  { id:"skiD-50000", name:"SkiErg Meters · 50,000 m", desc:"Ski 50,000 m.", check:()=> totalSkiergMetres()>=50000 , category:"cardio", tier:"gold", value:"50K", prog:{ have:()=> Math.round(totalSkiergMetres()), need:50000 } },
+  { id:"skiD-100000", name:"SkiErg Meters · 100,000 m", desc:"Ski 100,000 m.", check:()=> totalSkiergMetres()>=100000 , category:"cardio", tier:"diamond", value:"100K", prog:{ have:()=> Math.round(totalSkiergMetres()), need:100000 } },
+  { id:"skiD-250000", name:"SkiErg Meters · 250,000 m", desc:"Ski 250,000 m.", check:()=> totalSkiergMetres()>=250000 , category:"cardio", tier:"platinum", value:"250K", prog:{ have:()=> Math.round(totalSkiergMetres()), need:250000 } },
+  { id:"cardMin-60", name:"Cardio Time · 60 min", desc:"Accumulate 60 cardio minutes.", check:()=> totalCardioMinutes()>=60 , category:"cardio", tier:"bronze", value:"60", prog:{ have:()=> Math.round(totalCardioMinutes()), need:60 } },
+  { id:"cardMin-300", name:"Cardio Time · 300 min", desc:"Accumulate 300 cardio minutes.", check:()=> totalCardioMinutes()>=300 , category:"cardio", tier:"bronze", value:"300", prog:{ have:()=> Math.round(totalCardioMinutes()), need:300 } },
+  { id:"cardMin-600", name:"Cardio Time · 600 min", desc:"Accumulate 600 cardio minutes.", check:()=> totalCardioMinutes()>=600 , category:"cardio", tier:"silver", value:"600", prog:{ have:()=> Math.round(totalCardioMinutes()), need:600 } },
+  { id:"cardMin-1200", name:"Cardio Time · 1,200 min", desc:"Accumulate 1,200 cardio minutes.", check:()=> totalCardioMinutes()>=1200 , category:"cardio", tier:"gold", value:"1.2K", prog:{ have:()=> Math.round(totalCardioMinutes()), need:1200 } },
+  { id:"cardMin-3000", name:"Cardio Time · 3,000 min", desc:"Accumulate 3,000 cardio minutes.", check:()=> totalCardioMinutes()>=3000 , category:"cardio", tier:"gold", value:"3K", prog:{ have:()=> Math.round(totalCardioMinutes()), need:3000 } },
+  { id:"cardMin-6000", name:"Cardio Time · 6,000 min", desc:"Accumulate 6,000 cardio minutes.", check:()=> totalCardioMinutes()>=6000 , category:"cardio", tier:"diamond", value:"6K", prog:{ have:()=> Math.round(totalCardioMinutes()), need:6000 } },
+  { id:"cardMin-12000", name:"Cardio Time · 12,000 min", desc:"Accumulate 12,000 cardio minutes.", check:()=> totalCardioMinutes()>=12000 , category:"cardio", tier:"platinum", value:"12K", prog:{ have:()=> Math.round(totalCardioMinutes()), need:12000 } },
+  { id:"calB-5000", name:"Furnace · 5,000 kcal", desc:"Burn 5,000 kcal.", check:()=> totalCardioCalories()>=5000 , category:"cardio", tier:"bronze", value:"5K", prog:{ have:()=> Math.round(totalCardioCalories()), need:5000 } },
+  { id:"calB-25000", name:"Furnace · 25,000 kcal", desc:"Burn 25,000 kcal.", check:()=> totalCardioCalories()>=25000 , category:"cardio", tier:"silver", value:"25K", prog:{ have:()=> Math.round(totalCardioCalories()), need:25000 } },
+  { id:"calB-50000", name:"Furnace · 50,000 kcal", desc:"Burn 50,000 kcal.", check:()=> totalCardioCalories()>=50000 , category:"cardio", tier:"silver", value:"50K", prog:{ have:()=> Math.round(totalCardioCalories()), need:50000 } },
+  { id:"calB-100000", name:"Furnace · 100,000 kcal", desc:"Burn 100,000 kcal.", check:()=> totalCardioCalories()>=100000 , category:"cardio", tier:"gold", value:"100K", prog:{ have:()=> Math.round(totalCardioCalories()), need:100000 } },
+  { id:"calB-250000", name:"Furnace · 250,000 kcal", desc:"Burn 250,000 kcal.", check:()=> totalCardioCalories()>=250000 , category:"cardio", tier:"diamond", value:"250K", prog:{ have:()=> Math.round(totalCardioCalories()), need:250000 } },
+  { id:"calB-500000", name:"Furnace · 500,000 kcal", desc:"Burn 500,000 kcal.", check:()=> totalCardioCalories()>=500000 , category:"cardio", tier:"platinum", value:"500K", prog:{ have:()=> Math.round(totalCardioCalories()), need:500000 } },
+  { id:"runCnt-250", name:"Run Count · 250", desc:"Log 250 runs.", check:()=> runCount()>=250 , category:"cardio", tier:"bronze", value:"250", prog:{ have:()=> Math.round(runCount()), need:250 } },
+  { id:"runCnt-500", name:"Run Count · 500", desc:"Log 500 runs.", check:()=> runCount()>=500 , category:"cardio", tier:"gold", value:"500", prog:{ have:()=> Math.round(runCount()), need:500 } },
+  { id:"runCnt-1000", name:"Run Count · 1,000", desc:"Log 1,000 runs.", check:()=> runCount()>=1000 , category:"cardio", tier:"platinum", value:"1K", prog:{ have:()=> Math.round(runCount()), need:1000 } },
+  { id:"longRun-15", name:"Long Run · 15km", desc:"Run 15km in one session.", check:()=> longestRunKm()>=15 , category:"cardio", tier:"bronze", value:"15" },
+  { id:"longRun-30", name:"Long Run · 30km", desc:"Run 30km in one session.", check:()=> longestRunKm()>=30 , category:"cardio", tier:"silver", value:"30" },
+  { id:"longRun-50", name:"Long Run · 50km", desc:"Run 50km in one session.", check:()=> longestRunKm()>=50 , category:"cardio", tier:"gold", value:"50" },
+  { id:"longRun-80", name:"Long Run · 80km", desc:"Run 80km in one session.", check:()=> longestRunKm()>=80 , category:"cardio", tier:"diamond", value:"80" },
+  { id:"longRun-100", name:"Long Run · 100km", desc:"Run 100km in one session.", check:()=> longestRunKm()>=100 , category:"cardio", tier:"platinum", value:"100" },
+
+  /* ---- HYROX (37) ---- */
+  { id:"wbT-2500", name:"Wall Ball Total · 2,500", desc:"Complete 2,500 wall balls.", check:()=> stationReps(ACH_WALLBALL_RE)>=2500 , category:"hyrox", tier:"bronze", value:"2.5K", prog:{ have:()=> Math.round(stationReps(ACH_WALLBALL_RE)), need:2500 } },
+  { id:"wbT-5000", name:"Wall Ball Total · 5,000", desc:"Complete 5,000 wall balls.", check:()=> stationReps(ACH_WALLBALL_RE)>=5000 , category:"hyrox", tier:"silver", value:"5K", prog:{ have:()=> Math.round(stationReps(ACH_WALLBALL_RE)), need:5000 } },
+  { id:"wbT-25000", name:"Wall Ball Total · 25,000", desc:"Complete 25,000 wall balls.", check:()=> stationReps(ACH_WALLBALL_RE)>=25000 , category:"hyrox", tier:"gold", value:"25K", prog:{ have:()=> Math.round(stationReps(ACH_WALLBALL_RE)), need:25000 } },
+  { id:"wbT-50000", name:"Wall Ball Total · 50,000", desc:"Complete 50,000 wall balls.", check:()=> stationReps(ACH_WALLBALL_RE)>=50000 , category:"hyrox", tier:"diamond", value:"50K", prog:{ have:()=> Math.round(stationReps(ACH_WALLBALL_RE)), need:50000 } },
+  { id:"wbT-100000", name:"Wall Ball Total · 100,000", desc:"Complete 100,000 wall balls.", check:()=> stationReps(ACH_WALLBALL_RE)>=100000 , category:"hyrox", tier:"platinum", value:"100K", prog:{ have:()=> Math.round(stationReps(ACH_WALLBALL_RE)), need:100000 } },
+  { id:"slpT-50", name:"Sled Push Total · 50 m", desc:"Push a sled 50 m.", check:()=> stationMetres(ACH_SLED_PUSH_RE)>=50 , category:"hyrox", tier:"bronze", value:"50", prog:{ have:()=> Math.round(stationMetres(ACH_SLED_PUSH_RE)), need:50 } },
+  { id:"slpT-250", name:"Sled Push Total · 250 m", desc:"Push a sled 250 m.", check:()=> stationMetres(ACH_SLED_PUSH_RE)>=250 , category:"hyrox", tier:"silver", value:"250", prog:{ have:()=> Math.round(stationMetres(ACH_SLED_PUSH_RE)), need:250 } },
+  { id:"slpT-500", name:"Sled Push Total · 500 m", desc:"Push a sled 500 m.", check:()=> stationMetres(ACH_SLED_PUSH_RE)>=500 , category:"hyrox", tier:"gold", value:"500", prog:{ have:()=> Math.round(stationMetres(ACH_SLED_PUSH_RE)), need:500 } },
+  { id:"slpT-1000", name:"Sled Push Total · 1,000 m", desc:"Push a sled 1,000 m.", check:()=> stationMetres(ACH_SLED_PUSH_RE)>=1000 , category:"hyrox", tier:"diamond", value:"1K", prog:{ have:()=> Math.round(stationMetres(ACH_SLED_PUSH_RE)), need:1000 } },
+  { id:"slpT-2500", name:"Sled Push Total · 2,500 m", desc:"Push a sled 2,500 m.", check:()=> stationMetres(ACH_SLED_PUSH_RE)>=2500 , category:"hyrox", tier:"platinum", value:"2.5K", prog:{ have:()=> Math.round(stationMetres(ACH_SLED_PUSH_RE)), need:2500 } },
+  { id:"slplT-50", name:"Sled Pull Total · 50 m", desc:"Pull a sled 50 m.", check:()=> stationMetres(ACH_SLED_PULL_RE)>=50 , category:"hyrox", tier:"bronze", value:"50", prog:{ have:()=> Math.round(stationMetres(ACH_SLED_PULL_RE)), need:50 } },
+  { id:"slplT-250", name:"Sled Pull Total · 250 m", desc:"Pull a sled 250 m.", check:()=> stationMetres(ACH_SLED_PULL_RE)>=250 , category:"hyrox", tier:"silver", value:"250", prog:{ have:()=> Math.round(stationMetres(ACH_SLED_PULL_RE)), need:250 } },
+  { id:"slplT-500", name:"Sled Pull Total · 500 m", desc:"Pull a sled 500 m.", check:()=> stationMetres(ACH_SLED_PULL_RE)>=500 , category:"hyrox", tier:"gold", value:"500", prog:{ have:()=> Math.round(stationMetres(ACH_SLED_PULL_RE)), need:500 } },
+  { id:"slplT-1000", name:"Sled Pull Total · 1,000 m", desc:"Pull a sled 1,000 m.", check:()=> stationMetres(ACH_SLED_PULL_RE)>=1000 , category:"hyrox", tier:"diamond", value:"1K", prog:{ have:()=> Math.round(stationMetres(ACH_SLED_PULL_RE)), need:1000 } },
+  { id:"slplT-2500", name:"Sled Pull Total · 2,500 m", desc:"Pull a sled 2,500 m.", check:()=> stationMetres(ACH_SLED_PULL_RE)>=2500 , category:"hyrox", tier:"platinum", value:"2.5K", prog:{ have:()=> Math.round(stationMetres(ACH_SLED_PULL_RE)), need:2500 } },
+  { id:"fcT-200", name:"Carry Total · 200 m", desc:"Carry 200 m.", check:()=> stationMetres(ACH_FARMERS_RE)>=200 , category:"hyrox", tier:"bronze", value:"200", prog:{ have:()=> Math.round(stationMetres(ACH_FARMERS_RE)), need:200 } },
+  { id:"fcT-1000", name:"Carry Total · 1,000 m", desc:"Carry 1,000 m.", check:()=> stationMetres(ACH_FARMERS_RE)>=1000 , category:"hyrox", tier:"silver", value:"1K", prog:{ have:()=> Math.round(stationMetres(ACH_FARMERS_RE)), need:1000 } },
+  { id:"fcT-5000", name:"Carry Total · 5,000 m", desc:"Carry 5,000 m.", check:()=> stationMetres(ACH_FARMERS_RE)>=5000 , category:"hyrox", tier:"gold", value:"5K", prog:{ have:()=> Math.round(stationMetres(ACH_FARMERS_RE)), need:5000 } },
+  { id:"fcT-10000", name:"Carry Total · 10,000 m", desc:"Carry 10,000 m.", check:()=> stationMetres(ACH_FARMERS_RE)>=10000 , category:"hyrox", tier:"platinum", value:"10K", prog:{ have:()=> Math.round(stationMetres(ACH_FARMERS_RE)), need:10000 } },
+  { id:"sblT-100", name:"Lunge Total · 100 m", desc:"Lunge 100 sandbag lunge reps.", check:()=> stationReps(ACH_SANDBAG_RE)>=100 , category:"hyrox", tier:"bronze", value:"100", prog:{ have:()=> Math.round(stationReps(ACH_SANDBAG_RE)), need:100 } },
+  { id:"sblT-500", name:"Lunge Total · 500 m", desc:"Lunge 500 sandbag lunge reps.", check:()=> stationReps(ACH_SANDBAG_RE)>=500 , category:"hyrox", tier:"silver", value:"500", prog:{ have:()=> Math.round(stationReps(ACH_SANDBAG_RE)), need:500 } },
+  { id:"sblT-1000", name:"Lunge Total · 1,000 m", desc:"Lunge 1,000 sandbag lunge reps.", check:()=> stationReps(ACH_SANDBAG_RE)>=1000 , category:"hyrox", tier:"gold", value:"1K", prog:{ have:()=> Math.round(stationReps(ACH_SANDBAG_RE)), need:1000 } },
+  { id:"sblT-5000", name:"Lunge Total · 5,000 m", desc:"Lunge 5,000 sandbag lunge reps.", check:()=> stationReps(ACH_SANDBAG_RE)>=5000 , category:"hyrox", tier:"platinum", value:"5K", prog:{ have:()=> Math.round(stationReps(ACH_SANDBAG_RE)), need:5000 } },
+  { id:"bbjT-80", name:"Broad Jump Total · 80 m", desc:"Broad jump 80 burpee broad jump reps.", check:()=> stationReps(ACH_BURPEE_BJ_RE)>=80 , category:"hyrox", tier:"bronze", value:"80", prog:{ have:()=> Math.round(stationReps(ACH_BURPEE_BJ_RE)), need:80 } },
+  { id:"bbjT-400", name:"Broad Jump Total · 400 m", desc:"Broad jump 400 burpee broad jump reps.", check:()=> stationReps(ACH_BURPEE_BJ_RE)>=400 , category:"hyrox", tier:"silver", value:"400", prog:{ have:()=> Math.round(stationReps(ACH_BURPEE_BJ_RE)), need:400 } },
+  { id:"bbjT-1000", name:"Broad Jump Total · 1,000 m", desc:"Broad jump 1,000 burpee broad jump reps.", check:()=> stationReps(ACH_BURPEE_BJ_RE)>=1000 , category:"hyrox", tier:"gold", value:"1K", prog:{ have:()=> Math.round(stationReps(ACH_BURPEE_BJ_RE)), need:1000 } },
+  { id:"bbjT-5000", name:"Broad Jump Total · 5,000 m", desc:"Broad jump 5,000 burpee broad jump reps.", check:()=> stationReps(ACH_BURPEE_BJ_RE)>=5000 , category:"hyrox", tier:"platinum", value:"5K", prog:{ have:()=> Math.round(stationReps(ACH_BURPEE_BJ_RE)), need:5000 } },
+  { id:"simC-10", name:"Simulations · 10", desc:"Complete 10 simulations.", check:()=> hyroxSimCount()>=10 , category:"hyrox", tier:"bronze", value:"10", prog:{ have:()=> Math.round(hyroxSimCount()), need:10 } },
+  { id:"simC-25", name:"Simulations · 25", desc:"Complete 25 simulations.", check:()=> hyroxSimCount()>=25 , category:"hyrox", tier:"gold", value:"25", prog:{ have:()=> Math.round(hyroxSimCount()), need:25 } },
+  { id:"simC-50", name:"Simulations · 50", desc:"Complete 50 simulations.", check:()=> hyroxSimCount()>=50 , category:"hyrox", tier:"platinum", value:"50", prog:{ have:()=> Math.round(hyroxSimCount()), need:50 } },
+  { id:"roxz-20", name:"Roxzone · 20", desc:"Clear 20 transitions.", check:()=> raceTransitionsCleared()>=20 , category:"hyrox", tier:"bronze", value:"20", prog:{ have:()=> Math.round(raceTransitionsCleared()), need:20 } },
+  { id:"roxz-100", name:"Roxzone · 100", desc:"Clear 100 transitions.", check:()=> raceTransitionsCleared()>=100 , category:"hyrox", tier:"gold", value:"100", prog:{ have:()=> Math.round(raceTransitionsCleared()), need:100 } },
+  { id:"roxz-500", name:"Roxzone · 500", desc:"Clear 500 transitions.", check:()=> raceTransitionsCleared()>=500 , category:"hyrox", tier:"platinum", value:"500", prog:{ have:()=> Math.round(raceTransitionsCleared()), need:500 } },
+  { id:"statC-10", name:"Stations Done · 10", desc:"Complete 10 stations.", check:()=> raceStationsCompleted()>=10 , category:"hyrox", tier:"bronze", value:"10", prog:{ have:()=> Math.round(raceStationsCompleted()), need:10 } },
+  { id:"statC-50", name:"Stations Done · 50", desc:"Complete 50 stations.", check:()=> raceStationsCompleted()>=50 , category:"hyrox", tier:"silver", value:"50", prog:{ have:()=> Math.round(raceStationsCompleted()), need:50 } },
+  { id:"statC-100", name:"Stations Done · 100", desc:"Complete 100 stations.", check:()=> raceStationsCompleted()>=100 , category:"hyrox", tier:"gold", value:"100", prog:{ have:()=> Math.round(raceStationsCompleted()), need:100 } },
+  { id:"statC-500", name:"Stations Done · 500", desc:"Complete 500 stations.", check:()=> raceStationsCompleted()>=500 , category:"hyrox", tier:"platinum", value:"500", prog:{ have:()=> Math.round(raceStationsCompleted()), need:500 } },
+
+  /* ---- STREAKS (40) ---- */
+  { id:"wstreak-45", name:"Streak · 45 days", desc:"Maintain a 45-day streak.", check:()=> computeStreak()>=45 , category:"streak", tier:"bronze", value:"45" },
+  { id:"wstreak-60", name:"Streak · 60 days", desc:"Maintain a 60-day streak.", check:()=> computeStreak()>=60 , category:"streak", tier:"bronze", value:"60" },
+  { id:"wstreak-90", name:"Streak · 90 days", desc:"Maintain a 90-day streak.", check:()=> computeStreak()>=90 , category:"streak", tier:"silver", value:"90" },
+  { id:"wstreak-120", name:"Streak · 120 days", desc:"Maintain a 120-day streak.", check:()=> computeStreak()>=120 , category:"streak", tier:"silver", value:"120" },
+  { id:"wstreak-150", name:"Streak · 150 days", desc:"Maintain a 150-day streak.", check:()=> computeStreak()>=150 , category:"streak", tier:"silver", value:"150" },
+  { id:"wstreak-180", name:"Streak · 180 days", desc:"Maintain a 180-day streak.", check:()=> computeStreak()>=180 , category:"streak", tier:"gold", value:"180" },
+  { id:"wstreak-270", name:"Streak · 270 days", desc:"Maintain a 270-day streak.", check:()=> computeStreak()>=270 , category:"streak", tier:"gold", value:"270" },
+  { id:"wstreak-365", name:"Streak · 365 days", desc:"Maintain a 365-day streak.", check:()=> computeStreak()>=365 , category:"streak", tier:"diamond", value:"365" },
+  { id:"wstreak-500", name:"Streak · 500 days", desc:"Maintain a 500-day streak.", check:()=> computeStreak()>=500 , category:"streak", tier:"diamond", value:"500" },
+  { id:"wstreak-730", name:"Streak · 730 days", desc:"Maintain a 730-day streak.", check:()=> computeStreak()>=730 , category:"streak", tier:"platinum", value:"730" },
+  { id:"wstreak-1000", name:"Streak · 1,000 days", desc:"Maintain a 1,000-day streak.", check:()=> computeStreak()>=1000 , category:"streak", tier:"platinum", value:"1K" },
+  { id:"runstk-14", name:"Run Streak · 14 days", desc:"Maintain a 14-day run streak.", check:()=> runStreakDays()>=14 , category:"streak", tier:"bronze", value:"14" },
+  { id:"runstk-30", name:"Run Streak · 30 days", desc:"Maintain a 30-day run streak.", check:()=> runStreakDays()>=30 , category:"streak", tier:"silver", value:"30" },
+  { id:"runstk-60", name:"Run Streak · 60 days", desc:"Maintain a 60-day run streak.", check:()=> runStreakDays()>=60 , category:"streak", tier:"gold", value:"60" },
+  { id:"runstk-100", name:"Run Streak · 100 days", desc:"Maintain a 100-day run streak.", check:()=> runStreakDays()>=100 , category:"streak", tier:"platinum", value:"100" },
+  { id:"nutstk-3", name:"Log Streak · 3 days", desc:"Maintain a 3-day logging streak.", check:()=> foodLogStreakDays()>=3 , category:"streak", tier:"bronze", value:"3" },
+  { id:"nutstk-7", name:"Log Streak · 7 days", desc:"Maintain a 7-day logging streak.", check:()=> foodLogStreakDays()>=7 , category:"streak", tier:"bronze", value:"7" },
+  { id:"nutstk-30", name:"Log Streak · 30 days", desc:"Maintain a 30-day logging streak.", check:()=> foodLogStreakDays()>=30 , category:"streak", tier:"silver", value:"30" },
+  { id:"nutstk-60", name:"Log Streak · 60 days", desc:"Maintain a 60-day logging streak.", check:()=> foodLogStreakDays()>=60 , category:"streak", tier:"gold", value:"60" },
+  { id:"nutstk-100", name:"Log Streak · 100 days", desc:"Maintain a 100-day logging streak.", check:()=> foodLogStreakDays()>=100 , category:"streak", tier:"gold", value:"100" },
+  { id:"nutstk-180", name:"Log Streak · 180 days", desc:"Maintain a 180-day logging streak.", check:()=> foodLogStreakDays()>=180 , category:"streak", tier:"diamond", value:"180" },
+  { id:"nutstk-365", name:"Log Streak · 365 days", desc:"Maintain a 365-day logging streak.", check:()=> foodLogStreakDays()>=365 , category:"streak", tier:"platinum", value:"365" },
+  { id:"waterstk-7", name:"Hydration Streak · 7 days", desc:"Maintain a 7-day hydration streak.", check:()=> waterGoalStreakDays()>=7 , category:"streak", tier:"bronze", value:"7" },
+  { id:"waterstk-14", name:"Hydration Streak · 14 days", desc:"Maintain a 14-day hydration streak.", check:()=> waterGoalStreakDays()>=14 , category:"streak", tier:"silver", value:"14" },
+  { id:"waterstk-30", name:"Hydration Streak · 30 days", desc:"Maintain a 30-day hydration streak.", check:()=> waterGoalStreakDays()>=30 , category:"streak", tier:"gold", value:"30" },
+  { id:"waterstk-60", name:"Hydration Streak · 60 days", desc:"Maintain a 60-day hydration streak.", check:()=> waterGoalStreakDays()>=60 , category:"streak", tier:"diamond", value:"60" },
+  { id:"waterstk-100", name:"Hydration Streak · 100 days", desc:"Maintain a 100-day hydration streak.", check:()=> waterGoalStreakDays()>=100 , category:"streak", tier:"platinum", value:"100" },
+  { id:"protstk-14", name:"Protein Streak · 14 days", desc:"Maintain a 14-day protein streak.", check:()=> longestConsecutiveRun(nutritionDaysMeeting(achProteinMet))>=14 , category:"streak", tier:"bronze", value:"14" },
+  { id:"protstk-30", name:"Protein Streak · 30 days", desc:"Maintain a 30-day protein streak.", check:()=> longestConsecutiveRun(nutritionDaysMeeting(achProteinMet))>=30 , category:"streak", tier:"silver", value:"30" },
+  { id:"protstk-60", name:"Protein Streak · 60 days", desc:"Maintain a 60-day protein streak.", check:()=> longestConsecutiveRun(nutritionDaysMeeting(achProteinMet))>=60 , category:"streak", tier:"gold", value:"60" },
+  { id:"protstk-100", name:"Protein Streak · 100 days", desc:"Maintain a 100-day protein streak.", check:()=> longestConsecutiveRun(nutritionDaysMeeting(achProteinMet))>=100 , category:"streak", tier:"platinum", value:"100" },
+  { id:"perfstk-14", name:"Perfect Streak · 14 days", desc:"Maintain a 14-day perfect streak.", check:()=> scoreStreakAtLeast(100)>=14 , category:"streak", tier:"bronze", value:"14" },
+  { id:"perfstk-60", name:"Perfect Streak · 60 days", desc:"Maintain a 60-day perfect streak.", check:()=> scoreStreakAtLeast(100)>=60 , category:"streak", tier:"silver", value:"60" },
+  { id:"perfstk-90", name:"Perfect Streak · 90 days", desc:"Maintain a 90-day perfect streak.", check:()=> scoreStreakAtLeast(100)>=90 , category:"streak", tier:"gold", value:"90" },
+  { id:"perfstk-180", name:"Perfect Streak · 180 days", desc:"Maintain a 180-day perfect streak.", check:()=> scoreStreakAtLeast(100)>=180 , category:"streak", tier:"diamond", value:"180" },
+  { id:"perfstk-365", name:"Perfect Streak · 365 days", desc:"Maintain a 365-day perfect streak.", check:()=> scoreStreakAtLeast(100)>=365 , category:"streak", tier:"platinum", value:"365" },
+  { id:"mornstk-3", name:"Dawn Streak · 3 days", desc:"Maintain a 3-day morning streak.", check:()=> morningStreakDays()>=3 , category:"streak", tier:"bronze", value:"3" },
+  { id:"mornstk-7", name:"Dawn Streak · 7 days", desc:"Maintain a 7-day morning streak.", check:()=> morningStreakDays()>=7 , category:"streak", tier:"silver", value:"7" },
+  { id:"mornstk-14", name:"Dawn Streak · 14 days", desc:"Maintain a 14-day morning streak.", check:()=> morningStreakDays()>=14 , category:"streak", tier:"gold", value:"14" },
+  { id:"mornstk-30", name:"Dawn Streak · 30 days", desc:"Maintain a 30-day morning streak.", check:()=> morningStreakDays()>=30 , category:"streak", tier:"platinum", value:"30" },
+
+  /* ---- CONSISTENCY (44) ---- */
+  { id:"hrs-100", name:"Hours Trained · 100", desc:"Train 100 hours.", check:()=> totalTrainingMinutes()>=100*60 , category:"consistency", tier:"bronze", value:"100" },
+  { id:"hrs-200", name:"Hours Trained · 200", desc:"Train 200 hours.", check:()=> totalTrainingMinutes()>=200*60 , category:"consistency", tier:"bronze", value:"200" },
+  { id:"hrs-300", name:"Hours Trained · 300", desc:"Train 300 hours.", check:()=> totalTrainingMinutes()>=300*60 , category:"consistency", tier:"silver", value:"300" },
+  { id:"hrs-500", name:"Hours Trained · 500", desc:"Train 500 hours.", check:()=> totalTrainingMinutes()>=500*60 , category:"consistency", tier:"gold", value:"500" },
+  { id:"hrs-750", name:"Hours Trained · 750", desc:"Train 750 hours.", check:()=> totalTrainingMinutes()>=750*60 , category:"consistency", tier:"gold", value:"750" },
+  { id:"hrs-1000", name:"Hours Trained · 1,000", desc:"Train 1,000 hours.", check:()=> totalTrainingMinutes()>=1000*60 , category:"consistency", tier:"diamond", value:"1K" },
+  { id:"hrs-2000", name:"Hours Trained · 2,000", desc:"Train 2,000 hours.", check:()=> totalTrainingMinutes()>=2000*60 , category:"consistency", tier:"platinum", value:"2K" },
+  { id:"days-50x", name:"Training Days · 50", desc:"Train on 50 distinct days.", check:()=> distinctTrainingDays()>=50 , category:"consistency", tier:"bronze", value:"50", prog:{ have:()=> Math.round(distinctTrainingDays()), need:50 } },
+  { id:"days-100", name:"Training Days · 100", desc:"Train on 100 distinct days.", check:()=> distinctTrainingDays()>=100 , category:"consistency", tier:"bronze", value:"100", prog:{ have:()=> Math.round(distinctTrainingDays()), need:100 } },
+  { id:"days-200x", name:"Training Days · 200", desc:"Train on 200 distinct days.", check:()=> distinctTrainingDays()>=200 , category:"consistency", tier:"silver", value:"200", prog:{ have:()=> Math.round(distinctTrainingDays()), need:200 } },
+  { id:"days-300", name:"Training Days · 300", desc:"Train on 300 distinct days.", check:()=> distinctTrainingDays()>=300 , category:"consistency", tier:"silver", value:"300", prog:{ have:()=> Math.round(distinctTrainingDays()), need:300 } },
+  { id:"days-365", name:"Training Days · 365", desc:"Train on 365 distinct days.", check:()=> distinctTrainingDays()>=365 , category:"consistency", tier:"gold", value:"365", prog:{ have:()=> Math.round(distinctTrainingDays()), need:365 } },
+  { id:"days-500", name:"Training Days · 500", desc:"Train on 500 distinct days.", check:()=> distinctTrainingDays()>=500 , category:"consistency", tier:"diamond", value:"500", prog:{ have:()=> Math.round(distinctTrainingDays()), need:500 } },
+  { id:"days-730", name:"Training Days · 730", desc:"Train on 730 distinct days.", check:()=> distinctTrainingDays()>=730 , category:"consistency", tier:"diamond", value:"730", prog:{ have:()=> Math.round(distinctTrainingDays()), need:730 } },
+  { id:"days-1000", name:"Training Days · 1,000", desc:"Train on 1,000 distinct days.", check:()=> distinctTrainingDays()>=1000 , category:"consistency", tier:"platinum", value:"1K", prog:{ have:()=> Math.round(distinctTrainingDays()), need:1000 } },
+  { id:"mon-3", name:"Active Months · 3", desc:"Train across 3 months.", check:()=> distinctCalendarMonths()>=3 , category:"consistency", tier:"bronze", value:"3", prog:{ have:()=> Math.round(distinctCalendarMonths()), need:3 } },
+  { id:"mon-6", name:"Active Months · 6", desc:"Train across 6 months.", check:()=> distinctCalendarMonths()>=6 , category:"consistency", tier:"silver", value:"6", prog:{ have:()=> Math.round(distinctCalendarMonths()), need:6 } },
+  { id:"mon-24", name:"Active Months · 24", desc:"Train across 24 months.", check:()=> distinctCalendarMonths()>=24 , category:"consistency", tier:"gold", value:"24", prog:{ have:()=> Math.round(distinctCalendarMonths()), need:24 } },
+  { id:"mon-36", name:"Active Months · 36", desc:"Train across 36 months.", check:()=> distinctCalendarMonths()>=36 , category:"consistency", tier:"diamond", value:"36", prog:{ have:()=> Math.round(distinctCalendarMonths()), need:36 } },
+  { id:"mon-60", name:"Active Months · 60", desc:"Train across 60 months.", check:()=> distinctCalendarMonths()>=60 , category:"consistency", tier:"platinum", value:"60", prog:{ have:()=> Math.round(distinctCalendarMonths()), need:60 } },
+  { id:"smonth-15", name:"Big Month · 15", desc:"Log 15 sessions in a month.", check:()=> bestSessionsInMonth()>=15 , category:"consistency", tier:"bronze", value:"15", prog:{ have:()=> Math.round(bestSessionsInMonth()), need:15 } },
+  { id:"smonth-20", name:"Big Month · 20", desc:"Log 20 sessions in a month.", check:()=> bestSessionsInMonth()>=20 , category:"consistency", tier:"silver", value:"20", prog:{ have:()=> Math.round(bestSessionsInMonth()), need:20 } },
+  { id:"smonth-40", name:"Big Month · 40", desc:"Log 40 sessions in a month.", check:()=> bestSessionsInMonth()>=40 , category:"consistency", tier:"gold", value:"40", prog:{ have:()=> Math.round(bestSessionsInMonth()), need:40 } },
+  { id:"smonth-50", name:"Big Month · 50", desc:"Log 50 sessions in a month.", check:()=> bestSessionsInMonth()>=50 , category:"consistency", tier:"platinum", value:"50", prog:{ have:()=> Math.round(bestSessionsInMonth()), need:50 } },
+  { id:"wknd-10", name:"Weekend Total · 10", desc:"Log 10 weekend sessions.", check:()=> weekendSessionCount()>=10 , category:"consistency", tier:"bronze", value:"10", prog:{ have:()=> Math.round(weekendSessionCount()), need:10 } },
+  { id:"wknd-25", name:"Weekend Total · 25", desc:"Log 25 weekend sessions.", check:()=> weekendSessionCount()>=25 , category:"consistency", tier:"silver", value:"25", prog:{ have:()=> Math.round(weekendSessionCount()), need:25 } },
+  { id:"wknd-50", name:"Weekend Total · 50", desc:"Log 50 weekend sessions.", check:()=> weekendSessionCount()>=50 , category:"consistency", tier:"gold", value:"50", prog:{ have:()=> Math.round(weekendSessionCount()), need:50 } },
+  { id:"wknd-100", name:"Weekend Total · 100", desc:"Log 100 weekend sessions.", check:()=> weekendSessionCount()>=100 , category:"consistency", tier:"diamond", value:"100", prog:{ have:()=> Math.round(weekendSessionCount()), need:100 } },
+  { id:"wknd-250", name:"Weekend Total · 250", desc:"Log 250 weekend sessions.", check:()=> weekendSessionCount()>=250 , category:"consistency", tier:"platinum", value:"250", prog:{ have:()=> Math.round(weekendSessionCount()), need:250 } },
+  { id:"mornC-10", name:"Early Total · 10", desc:"Log 10 morning sessions.", check:()=> sessionsAtHour(h=>h<8)>=10 , category:"consistency", tier:"bronze", value:"10", prog:{ have:()=> Math.round(sessionsAtHour(h=>h<8)), need:10 } },
+  { id:"mornC-50", name:"Early Total · 50", desc:"Log 50 morning sessions.", check:()=> sessionsAtHour(h=>h<8)>=50 , category:"consistency", tier:"silver", value:"50", prog:{ have:()=> Math.round(sessionsAtHour(h=>h<8)), need:50 } },
+  { id:"mornC-100", name:"Early Total · 100", desc:"Log 100 morning sessions.", check:()=> sessionsAtHour(h=>h<8)>=100 , category:"consistency", tier:"gold", value:"100", prog:{ have:()=> Math.round(sessionsAtHour(h=>h<8)), need:100 } },
+  { id:"mornC-250", name:"Early Total · 250", desc:"Log 250 morning sessions.", check:()=> sessionsAtHour(h=>h<8)>=250 , category:"consistency", tier:"platinum", value:"250", prog:{ have:()=> Math.round(sessionsAtHour(h=>h<8)), need:250 } },
+  { id:"nightC-10", name:"Night Total · 10", desc:"Log 10 night sessions.", check:()=> sessionsAtHour(h=>h>=20)>=10 , category:"consistency", tier:"bronze", value:"10", prog:{ have:()=> Math.round(sessionsAtHour(h=>h>=20)), need:10 } },
+  { id:"nightC-50", name:"Night Total · 50", desc:"Log 50 night sessions.", check:()=> sessionsAtHour(h=>h>=20)>=50 , category:"consistency", tier:"silver", value:"50", prog:{ have:()=> Math.round(sessionsAtHour(h=>h>=20)), need:50 } },
+  { id:"nightC-100", name:"Night Total · 100", desc:"Log 100 night sessions.", check:()=> sessionsAtHour(h=>h>=20)>=100 , category:"consistency", tier:"gold", value:"100", prog:{ have:()=> Math.round(sessionsAtHour(h=>h>=20)), need:100 } },
+  { id:"nightC-250", name:"Night Total · 250", desc:"Log 250 night sessions.", check:()=> sessionsAtHour(h=>h>=20)>=250 , category:"consistency", tier:"platinum", value:"250", prog:{ have:()=> Math.round(sessionsAtHour(h=>h>=20)), need:250 } },
+  { id:"tad-5", name:"Two-a-Day · 5", desc:"Complete 5 two-a-days.", check:()=> daysWithTwoSessions()>=5 , category:"consistency", tier:"bronze", value:"5", prog:{ have:()=> Math.round(daysWithTwoSessions()), need:5 } },
+  { id:"tad-10", name:"Two-a-Day · 10", desc:"Complete 10 two-a-days.", check:()=> daysWithTwoSessions()>=10 , category:"consistency", tier:"silver", value:"10", prog:{ have:()=> Math.round(daysWithTwoSessions()), need:10 } },
+  { id:"tad-25", name:"Two-a-Day · 25", desc:"Complete 25 two-a-days.", check:()=> daysWithTwoSessions()>=25 , category:"consistency", tier:"gold", value:"25", prog:{ have:()=> Math.round(daysWithTwoSessions()), need:25 } },
+  { id:"tad-50", name:"Two-a-Day · 50", desc:"Complete 50 two-a-days.", check:()=> daysWithTwoSessions()>=50 , category:"consistency", tier:"platinum", value:"50", prog:{ have:()=> Math.round(daysWithTwoSessions()), need:50 } },
+  { id:"cbk-3", name:"Comebacks · 3", desc:"Make 3 comebacks.", check:()=> comebackCount()>=3 , category:"consistency", tier:"bronze", value:"3", prog:{ have:()=> Math.round(comebackCount()), need:3 } },
+  { id:"cbk-5", name:"Comebacks · 5", desc:"Make 5 comebacks.", check:()=> comebackCount()>=5 , category:"consistency", tier:"gold", value:"5", prog:{ have:()=> Math.round(comebackCount()), need:5 } },
+  { id:"cbk-10", name:"Comebacks · 10", desc:"Make 10 comebacks.", check:()=> comebackCount()>=10 , category:"consistency", tier:"platinum", value:"10", prog:{ have:()=> Math.round(comebackCount()), need:10 } },
+
+  /* ---- NUTRITION AND HYDRATION (45) ---- */
+  { id:"meals-10", name:"Meals Logged · 10", desc:"Log 10 meals.", check:()=> (state.foodLog||[]).length>=10 , category:"nutrition", tier:"bronze", value:"10", prog:{ have:()=> Math.round((state.foodLog||[]).length), need:10 } },
+  { id:"meals-100", name:"Meals Logged · 100", desc:"Log 100 meals.", check:()=> (state.foodLog||[]).length>=100 , category:"nutrition", tier:"bronze", value:"100", prog:{ have:()=> Math.round((state.foodLog||[]).length), need:100 } },
+  { id:"meals-250", name:"Meals Logged · 250", desc:"Log 250 meals.", check:()=> (state.foodLog||[]).length>=250 , category:"nutrition", tier:"silver", value:"250", prog:{ have:()=> Math.round((state.foodLog||[]).length), need:250 } },
+  { id:"meals-500", name:"Meals Logged · 500", desc:"Log 500 meals.", check:()=> (state.foodLog||[]).length>=500 , category:"nutrition", tier:"gold", value:"500", prog:{ have:()=> Math.round((state.foodLog||[]).length), need:500 } },
+  { id:"meals-1000", name:"Meals Logged · 1,000", desc:"Log 1,000 meals.", check:()=> (state.foodLog||[]).length>=1000 , category:"nutrition", tier:"gold", value:"1K", prog:{ have:()=> Math.round((state.foodLog||[]).length), need:1000 } },
+  { id:"meals-2500", name:"Meals Logged · 2,500", desc:"Log 2,500 meals.", check:()=> (state.foodLog||[]).length>=2500 , category:"nutrition", tier:"diamond", value:"2.5K", prog:{ have:()=> Math.round((state.foodLog||[]).length), need:2500 } },
+  { id:"meals-5000", name:"Meals Logged · 5,000", desc:"Log 5,000 meals.", check:()=> (state.foodLog||[]).length>=5000 , category:"nutrition", tier:"platinum", value:"5K", prog:{ have:()=> Math.round((state.foodLog||[]).length), need:5000 } },
+  { id:"uf-1000", name:"Food Explorer · 1,000", desc:"Log 1,000 unique foods.", check:()=> uniqueFoodsLogged()>=1000 , category:"nutrition", tier:"bronze", value:"1K", prog:{ have:()=> Math.round(uniqueFoodsLogged()), need:1000 } },
+  { id:"uf-2000", name:"Food Explorer · 2,000", desc:"Log 2,000 unique foods.", check:()=> uniqueFoodsLogged()>=2000 , category:"nutrition", tier:"gold", value:"2K", prog:{ have:()=> Math.round(uniqueFoodsLogged()), need:2000 } },
+  { id:"uf-5000", name:"Food Explorer · 5,000", desc:"Log 5,000 unique foods.", check:()=> uniqueFoodsLogged()>=5000 , category:"nutrition", tier:"platinum", value:"5K", prog:{ have:()=> Math.round(uniqueFoodsLogged()), need:5000 } },
+  { id:"protD-60", name:"Protein Days · 60", desc:"Hit protein on 60 days.", check:()=> nutritionDaysMeeting(achProteinMet).length>=60 , category:"nutrition", tier:"bronze", value:"60", prog:{ have:()=> Math.round(nutritionDaysMeeting(achProteinMet).length), need:60 } },
+  { id:"protD-100", name:"Protein Days · 100", desc:"Hit protein on 100 days.", check:()=> nutritionDaysMeeting(achProteinMet).length>=100 , category:"nutrition", tier:"silver", value:"100", prog:{ have:()=> Math.round(nutritionDaysMeeting(achProteinMet).length), need:100 } },
+  { id:"protD-180", name:"Protein Days · 180", desc:"Hit protein on 180 days.", check:()=> nutritionDaysMeeting(achProteinMet).length>=180 , category:"nutrition", tier:"gold", value:"180", prog:{ have:()=> Math.round(nutritionDaysMeeting(achProteinMet).length), need:180 } },
+  { id:"protD-365", name:"Protein Days · 365", desc:"Hit protein on 365 days.", check:()=> nutritionDaysMeeting(achProteinMet).length>=365 , category:"nutrition", tier:"platinum", value:"365", prog:{ have:()=> Math.round(nutritionDaysMeeting(achProteinMet).length), need:365 } },
+  { id:"macD-5", name:"Macro Days · 5", desc:"Hit macros on 5 days.", check:()=> nutritionDaysMeeting(achMacrosMet).length>=5 , category:"nutrition", tier:"bronze", value:"5", prog:{ have:()=> Math.round(nutritionDaysMeeting(achMacrosMet).length), need:5 } },
+  { id:"macD-30", name:"Macro Days · 30", desc:"Hit macros on 30 days.", check:()=> nutritionDaysMeeting(achMacrosMet).length>=30 , category:"nutrition", tier:"silver", value:"30", prog:{ have:()=> Math.round(nutritionDaysMeeting(achMacrosMet).length), need:30 } },
+  { id:"macD-60", name:"Macro Days · 60", desc:"Hit macros on 60 days.", check:()=> nutritionDaysMeeting(achMacrosMet).length>=60 , category:"nutrition", tier:"gold", value:"60", prog:{ have:()=> Math.round(nutritionDaysMeeting(achMacrosMet).length), need:60 } },
+  { id:"macD-100", name:"Macro Days · 100", desc:"Hit macros on 100 days.", check:()=> nutritionDaysMeeting(achMacrosMet).length>=100 , category:"nutrition", tier:"diamond", value:"100", prog:{ have:()=> Math.round(nutritionDaysMeeting(achMacrosMet).length), need:100 } },
+  { id:"macD-180", name:"Macro Days · 180", desc:"Hit macros on 180 days.", check:()=> nutritionDaysMeeting(achMacrosMet).length>=180 , category:"nutrition", tier:"platinum", value:"180", prog:{ have:()=> Math.round(nutritionDaysMeeting(achMacrosMet).length), need:180 } },
+  { id:"calD-7", name:"On-Target Days · 7", desc:"Stay on-target 7 days.", check:()=> nutritionDaysMeeting(achCaloriesMet).length>=7 , category:"nutrition", tier:"bronze", value:"7", prog:{ have:()=> Math.round(nutritionDaysMeeting(achCaloriesMet).length), need:7 } },
+  { id:"calD-30", name:"On-Target Days · 30", desc:"Stay on-target 30 days.", check:()=> nutritionDaysMeeting(achCaloriesMet).length>=30 , category:"nutrition", tier:"silver", value:"30", prog:{ have:()=> Math.round(nutritionDaysMeeting(achCaloriesMet).length), need:30 } },
+  { id:"calD-60", name:"On-Target Days · 60", desc:"Stay on-target 60 days.", check:()=> nutritionDaysMeeting(achCaloriesMet).length>=60 , category:"nutrition", tier:"silver", value:"60", prog:{ have:()=> Math.round(nutritionDaysMeeting(achCaloriesMet).length), need:60 } },
+  { id:"calD-100", name:"On-Target Days · 100", desc:"Stay on-target 100 days.", check:()=> nutritionDaysMeeting(achCaloriesMet).length>=100 , category:"nutrition", tier:"gold", value:"100", prog:{ have:()=> Math.round(nutritionDaysMeeting(achCaloriesMet).length), need:100 } },
+  { id:"calD-180", name:"On-Target Days · 180", desc:"Stay on-target 180 days.", check:()=> nutritionDaysMeeting(achCaloriesMet).length>=180 , category:"nutrition", tier:"diamond", value:"180", prog:{ have:()=> Math.round(nutritionDaysMeeting(achCaloriesMet).length), need:180 } },
+  { id:"calD-365", name:"On-Target Days · 365", desc:"Stay on-target 365 days.", check:()=> nutritionDaysMeeting(achCaloriesMet).length>=365 , category:"nutrition", tier:"platinum", value:"365", prog:{ have:()=> Math.round(nutritionDaysMeeting(achCaloriesMet).length), need:365 } },
+  { id:"waterD-10", name:"Hydration Days · 10", desc:"Hit water on 10 days.", check:()=> daysWaterGoalMet()>=10 , category:"nutrition", tier:"bronze", value:"10", prog:{ have:()=> Math.round(daysWaterGoalMet()), need:10 } },
+  { id:"waterD-30", name:"Hydration Days · 30", desc:"Hit water on 30 days.", check:()=> daysWaterGoalMet()>=30 , category:"nutrition", tier:"silver", value:"30", prog:{ have:()=> Math.round(daysWaterGoalMet()), need:30 } },
+  { id:"waterD-60", name:"Hydration Days · 60", desc:"Hit water on 60 days.", check:()=> daysWaterGoalMet()>=60 , category:"nutrition", tier:"silver", value:"60", prog:{ have:()=> Math.round(daysWaterGoalMet()), need:60 } },
+  { id:"waterD-100", name:"Hydration Days · 100", desc:"Hit water on 100 days.", check:()=> daysWaterGoalMet()>=100 , category:"nutrition", tier:"gold", value:"100", prog:{ have:()=> Math.round(daysWaterGoalMet()), need:100 } },
+  { id:"waterD-250", name:"Hydration Days · 250", desc:"Hit water on 250 days.", check:()=> daysWaterGoalMet()>=250 , category:"nutrition", tier:"diamond", value:"250", prog:{ have:()=> Math.round(daysWaterGoalMet()), need:250 } },
+  { id:"waterD-500", name:"Hydration Days · 500", desc:"Hit water on 500 days.", check:()=> daysWaterGoalMet()>=500 , category:"nutrition", tier:"platinum", value:"500", prog:{ have:()=> Math.round(daysWaterGoalMet()), need:500 } },
+  { id:"bfast-10", name:"Breakfast · 10", desc:"Log 10 breakfasts.", check:()=> breakfastDaysLogged()>=10 , category:"nutrition", tier:"bronze", value:"10", prog:{ have:()=> Math.round(breakfastDaysLogged()), need:10 } },
+  { id:"bfast-30", name:"Breakfast · 30", desc:"Log 30 breakfasts.", check:()=> breakfastDaysLogged()>=30 , category:"nutrition", tier:"silver", value:"30", prog:{ have:()=> Math.round(breakfastDaysLogged()), need:30 } },
+  { id:"bfast-100", name:"Breakfast · 100", desc:"Log 100 breakfasts.", check:()=> breakfastDaysLogged()>=100 , category:"nutrition", tier:"gold", value:"100", prog:{ have:()=> Math.round(breakfastDaysLogged()), need:100 } },
+  { id:"bfast-250", name:"Breakfast · 250", desc:"Log 250 breakfasts.", check:()=> breakfastDaysLogged()>=250 , category:"nutrition", tier:"platinum", value:"250", prog:{ have:()=> Math.round(breakfastDaysLogged()), need:250 } },
+  { id:"rec-5", name:"Recipes · 5", desc:"Save 5 recipes.", check:()=> (state.savedMeals||[]).length>=5 , category:"nutrition", tier:"bronze", value:"5", prog:{ have:()=> Math.round((state.savedMeals||[]).length), need:5 } },
+  { id:"rec-10", name:"Recipes · 10", desc:"Save 10 recipes.", check:()=> (state.savedMeals||[]).length>=10 , category:"nutrition", tier:"silver", value:"10", prog:{ have:()=> Math.round((state.savedMeals||[]).length), need:10 } },
+  { id:"rec-25", name:"Recipes · 25", desc:"Save 25 recipes.", check:()=> (state.savedMeals||[]).length>=25 , category:"nutrition", tier:"gold", value:"25", prog:{ have:()=> Math.round((state.savedMeals||[]).length), need:25 } },
+  { id:"rec-50", name:"Recipes · 50", desc:"Save 50 recipes.", check:()=> (state.savedMeals||[]).length>=50 , category:"nutrition", tier:"platinum", value:"50", prog:{ have:()=> Math.round((state.savedMeals||[]).length), need:50 } },
+  { id:"waterV-50", name:"Water · 50 L", desc:"Drink 50 L of water.", check:()=> totalWaterLitres()>=50 , category:"nutrition", tier:"bronze", value:"50", prog:{ have:()=> Math.round(totalWaterLitres()), need:50 } },
+  { id:"waterV-100", name:"Water · 100 L", desc:"Drink 100 L of water.", check:()=> totalWaterLitres()>=100 , category:"nutrition", tier:"silver", value:"100", prog:{ have:()=> Math.round(totalWaterLitres()), need:100 } },
+  { id:"waterV-250", name:"Water · 250 L", desc:"Drink 250 L of water.", check:()=> totalWaterLitres()>=250 , category:"nutrition", tier:"silver", value:"250", prog:{ have:()=> Math.round(totalWaterLitres()), need:250 } },
+  { id:"waterV-500", name:"Water · 500 L", desc:"Drink 500 L of water.", check:()=> totalWaterLitres()>=500 , category:"nutrition", tier:"gold", value:"500", prog:{ have:()=> Math.round(totalWaterLitres()), need:500 } },
+  { id:"waterV-1000", name:"Water · 1,000 L", desc:"Drink 1,000 L of water.", check:()=> totalWaterLitres()>=1000 , category:"nutrition", tier:"diamond", value:"1K", prog:{ have:()=> Math.round(totalWaterLitres()), need:1000 } },
+  { id:"waterV-2500", name:"Water · 2,500 L", desc:"Drink 2,500 L of water.", check:()=> totalWaterLitres()>=2500 , category:"nutrition", tier:"platinum", value:"2.5K", prog:{ have:()=> Math.round(totalWaterLitres()), need:2500 } },
+
+  /* ---- BODY AND RECOVERY (51) ---- */
+  { id:"wi-10", name:"Weigh-Ins · 10", desc:"Log 10 weigh-ins.", check:()=> (state.bodylog||[]).length>=10 , category:"body", tier:"bronze", value:"10", prog:{ have:()=> Math.round((state.bodylog||[]).length), need:10 } },
+  { id:"wi-25", name:"Weigh-Ins · 25", desc:"Log 25 weigh-ins.", check:()=> (state.bodylog||[]).length>=25 , category:"body", tier:"silver", value:"25", prog:{ have:()=> Math.round((state.bodylog||[]).length), need:25 } },
+  { id:"wi-50", name:"Weigh-Ins · 50", desc:"Log 50 weigh-ins.", check:()=> (state.bodylog||[]).length>=50 , category:"body", tier:"silver", value:"50", prog:{ have:()=> Math.round((state.bodylog||[]).length), need:50 } },
+  { id:"wi-100", name:"Weigh-Ins · 100", desc:"Log 100 weigh-ins.", check:()=> (state.bodylog||[]).length>=100 , category:"body", tier:"gold", value:"100", prog:{ have:()=> Math.round((state.bodylog||[]).length), need:100 } },
+  { id:"wi-250", name:"Weigh-Ins · 250", desc:"Log 250 weigh-ins.", check:()=> (state.bodylog||[]).length>=250 , category:"body", tier:"diamond", value:"250", prog:{ have:()=> Math.round((state.bodylog||[]).length), need:250 } },
+  { id:"wi-500", name:"Weigh-Ins · 500", desc:"Log 500 weigh-ins.", check:()=> (state.bodylog||[]).length>=500 , category:"body", tier:"platinum", value:"500", prog:{ have:()=> Math.round((state.bodylog||[]).length), need:500 } },
+  { id:"ph-50", name:"Photos · 50", desc:"Log 50 progress photos.", check:()=> (state.bodyPhotos||[]).length>=50 , category:"body", tier:"bronze", value:"50", prog:{ have:()=> Math.round((state.bodyPhotos||[]).length), need:50 } },
+  { id:"ph-100", name:"Photos · 100", desc:"Log 100 progress photos.", check:()=> (state.bodyPhotos||[]).length>=100 , category:"body", tier:"gold", value:"100", prog:{ have:()=> Math.round((state.bodyPhotos||[]).length), need:100 } },
+  { id:"ph-250", name:"Photos · 250", desc:"Log 250 progress photos.", check:()=> (state.bodyPhotos||[]).length>=250 , category:"body", tier:"platinum", value:"250", prog:{ have:()=> Math.round((state.bodyPhotos||[]).length), need:250 } },
+  { id:"me-25", name:"Measurements · 25", desc:"Log 25 measurements.", check:()=> measurementEntryCount()>=25 , category:"body", tier:"bronze", value:"25", prog:{ have:()=> Math.round(measurementEntryCount()), need:25 } },
+  { id:"me-50", name:"Measurements · 50", desc:"Log 50 measurements.", check:()=> measurementEntryCount()>=50 , category:"body", tier:"gold", value:"50", prog:{ have:()=> Math.round(measurementEntryCount()), need:50 } },
+  { id:"me-100", name:"Measurements · 100", desc:"Log 100 measurements.", check:()=> measurementEntryCount()>=100 , category:"body", tier:"platinum", value:"100", prog:{ have:()=> Math.round(measurementEntryCount()), need:100 } },
+  { id:"lost-1", name:"Down 1 kg", desc:"Lose 1 kg.", check:()=> weightLostKg()>=1 , category:"body", tier:"bronze", value:"1" },
+  { id:"lost-2", name:"Down 2 kg", desc:"Lose 2 kg.", check:()=> weightLostKg()>=2 , category:"body", tier:"bronze", value:"2" },
+  { id:"lost-5", name:"Down 5 kg", desc:"Lose 5 kg.", check:()=> weightLostKg()>=5 , category:"body", tier:"silver", value:"5" },
+  { id:"lost-10", name:"Down 10 kg", desc:"Lose 10 kg.", check:()=> weightLostKg()>=10 , category:"body", tier:"gold", value:"10" },
+  { id:"lost-15", name:"Down 15 kg", desc:"Lose 15 kg.", check:()=> weightLostKg()>=15 , category:"body", tier:"gold", value:"15" },
+  { id:"lost-20", name:"Down 20 kg", desc:"Lose 20 kg.", check:()=> weightLostKg()>=20 , category:"body", tier:"diamond", value:"20" },
+  { id:"lost-30", name:"Down 30 kg", desc:"Lose 30 kg.", check:()=> weightLostKg()>=30 , category:"body", tier:"platinum", value:"30" },
+  { id:"gain-1", name:"Up 1 kg", desc:"Gain 1 kg.", check:()=> weightGainedKg()>=1 , category:"body", tier:"bronze", value:"1" },
+  { id:"gain-2", name:"Up 2 kg", desc:"Gain 2 kg.", check:()=> weightGainedKg()>=2 , category:"body", tier:"silver", value:"2" },
+  { id:"gain-5", name:"Up 5 kg", desc:"Gain 5 kg.", check:()=> weightGainedKg()>=5 , category:"body", tier:"gold", value:"5" },
+  { id:"gain-10", name:"Up 10 kg", desc:"Gain 10 kg.", check:()=> weightGainedKg()>=10 , category:"body", tier:"diamond", value:"10" },
+  { id:"gain-15", name:"Up 15 kg", desc:"Gain 15 kg.", check:()=> weightGainedKg()>=15 , category:"body", tier:"platinum", value:"15" },
+  { id:"bf-1", name:"Body Fat · 1", desc:"Log 1 body-fat entries.", check:()=> bodyMetricLogCount('bodyfat')>=1 , category:"body", tier:"bronze", value:"1", prog:{ have:()=> Math.round(bodyMetricLogCount('bodyfat')), need:1 } },
+  { id:"bf-5", name:"Body Fat · 5", desc:"Log 5 body-fat entries.", check:()=> bodyMetricLogCount('bodyfat')>=5 , category:"body", tier:"silver", value:"5", prog:{ have:()=> Math.round(bodyMetricLogCount('bodyfat')), need:5 } },
+  { id:"bf-10", name:"Body Fat · 10", desc:"Log 10 body-fat entries.", check:()=> bodyMetricLogCount('bodyfat')>=10 , category:"body", tier:"gold", value:"10", prog:{ have:()=> Math.round(bodyMetricLogCount('bodyfat')), need:10 } },
+  { id:"bf-25", name:"Body Fat · 25", desc:"Log 25 body-fat entries.", check:()=> bodyMetricLogCount('bodyfat')>=25 , category:"body", tier:"platinum", value:"25", prog:{ have:()=> Math.round(bodyMetricLogCount('bodyfat')), need:25 } },
+  { id:"wstk2-7", name:"Weigh Streak · 7 days", desc:"Maintain a 7-day weigh-in streak.", check:()=> weightLogStreakBest()>=7 , category:"body", tier:"bronze", value:"7" },
+  { id:"wstk2-30", name:"Weigh Streak · 30 days", desc:"Maintain a 30-day weigh-in streak.", check:()=> weightLogStreakBest()>=30 , category:"body", tier:"silver", value:"30" },
+  { id:"wstk2-90", name:"Weigh Streak · 90 days", desc:"Maintain a 90-day weigh-in streak.", check:()=> weightLogStreakBest()>=90 , category:"body", tier:"gold", value:"90" },
+  { id:"wstk2-180", name:"Weigh Streak · 180 days", desc:"Maintain a 180-day weigh-in streak.", check:()=> weightLogStreakBest()>=180 , category:"body", tier:"platinum", value:"180" },
+  { id:"gw-60", name:"Goal Weight · 60", desc:"Hold goal weight for 60 days.", check:()=> daysAtGoalWeight()>=60 , category:"body", tier:"bronze", value:"60", prog:{ have:()=> Math.round(daysAtGoalWeight()), need:60 } },
+  { id:"gw-90", name:"Goal Weight · 90", desc:"Hold goal weight for 90 days.", check:()=> daysAtGoalWeight()>=90 , category:"body", tier:"silver", value:"90", prog:{ have:()=> Math.round(daysAtGoalWeight()), need:90 } },
+  { id:"gw-180", name:"Goal Weight · 180", desc:"Hold goal weight for 180 days.", check:()=> daysAtGoalWeight()>=180 , category:"body", tier:"gold", value:"180", prog:{ have:()=> Math.round(daysAtGoalWeight()), need:180 } },
+  { id:"gw-365", name:"Goal Weight · 365", desc:"Hold goal weight for 365 days.", check:()=> daysAtGoalWeight()>=365 , category:"body", tier:"platinum", value:"365", prog:{ have:()=> Math.round(daysAtGoalWeight()), need:365 } },
+  { id:"mob-25", name:"Mobility · 25", desc:"Log 25 mobility sessions.", check:()=> mobilitySessionCount()>=25 , category:"body", tier:"bronze", value:"25", prog:{ have:()=> Math.round(mobilitySessionCount()), need:25 } },
+  { id:"mob-50", name:"Mobility · 50", desc:"Log 50 mobility sessions.", check:()=> mobilitySessionCount()>=50 , category:"body", tier:"gold", value:"50", prog:{ have:()=> Math.round(mobilitySessionCount()), need:50 } },
+  { id:"mob-100", name:"Mobility · 100", desc:"Log 100 mobility sessions.", check:()=> mobilitySessionCount()>=100 , category:"body", tier:"platinum", value:"100", prog:{ have:()=> Math.round(mobilitySessionCount()), need:100 } },
+  { id:"rpe-10", name:"Effort Logs · 10", desc:"Log 10 effort entries.", check:()=> effortLogCount()>=10 , category:"body", tier:"bronze", value:"10", prog:{ have:()=> Math.round(effortLogCount()), need:10 } },
+  { id:"rpe-100", name:"Effort Logs · 100", desc:"Log 100 effort entries.", check:()=> effortLogCount()>=100 , category:"body", tier:"gold", value:"100", prog:{ have:()=> Math.round(effortLogCount()), need:100 } },
+  { id:"rpe-250", name:"Effort Logs · 250", desc:"Log 250 effort entries.", check:()=> effortLogCount()>=250 , category:"body", tier:"platinum", value:"250", prog:{ have:()=> Math.round(effortLogCount()), need:250 } },
+  { id:"med-1", name:"Mindful · 1", desc:"Log 1 mindfulness sessions.", check:()=> meditationSessionCount()>=1 , category:"body", tier:"bronze", value:"1", prog:{ have:()=> Math.round(meditationSessionCount()), need:1 } },
+  { id:"med-10", name:"Mindful · 10", desc:"Log 10 mindfulness sessions.", check:()=> meditationSessionCount()>=10 , category:"body", tier:"silver", value:"10", prog:{ have:()=> Math.round(meditationSessionCount()), need:10 } },
+  { id:"med-30", name:"Mindful · 30", desc:"Log 30 mindfulness sessions.", check:()=> meditationSessionCount()>=30 , category:"body", tier:"gold", value:"30", prog:{ have:()=> Math.round(meditationSessionCount()), need:30 } },
+  { id:"med-60", name:"Mindful · 60", desc:"Log 60 mindfulness sessions.", check:()=> meditationSessionCount()>=60 , category:"body", tier:"diamond", value:"60", prog:{ have:()=> Math.round(meditationSessionCount()), need:60 } },
+  { id:"med-100", name:"Mindful · 100", desc:"Log 100 mindfulness sessions.", check:()=> meditationSessionCount()>=100 , category:"body", tier:"platinum", value:"100", prog:{ have:()=> Math.round(meditationSessionCount()), need:100 } },
+  { id:"strch-60", name:"Stretch · 60", desc:"Stretch 60 minutes.", check:()=> stretchMinutes()>=60 , category:"body", tier:"bronze", value:"60", prog:{ have:()=> Math.round(stretchMinutes()), need:60 } },
+  { id:"strch-300", name:"Stretch · 300", desc:"Stretch 300 minutes.", check:()=> stretchMinutes()>=300 , category:"body", tier:"silver", value:"300", prog:{ have:()=> Math.round(stretchMinutes()), need:300 } },
+  { id:"strch-600", name:"Stretch · 600", desc:"Stretch 600 minutes.", check:()=> stretchMinutes()>=600 , category:"body", tier:"gold", value:"600", prog:{ have:()=> Math.round(stretchMinutes()), need:600 } },
+  { id:"strch-1200", name:"Stretch · 1,200", desc:"Stretch 1,200 minutes.", check:()=> stretchMinutes()>=1200 , category:"body", tier:"platinum", value:"1.2K", prog:{ have:()=> Math.round(stretchMinutes()), need:1200 } },
+
+  /* ---- PROGRAMS AND ROUTINES (12) ---- */
+  { id:"challenge-30", name:"Challenge Accepted", desc:"Complete a 30-day challenge.", check:()=> weeklyChallengesCompleted()>=1 , category:"program", tier:"gold", value:"30", prog:{ have:()=> Math.round(weeklyChallengesCompleted()), need:1 } },
+  { id:"ch-3", name:"Challenges · 3", desc:"Complete 3 challenges.", check:()=> weeklyChallengesCompleted()>=3 , category:"program", tier:"bronze", value:"3", prog:{ have:()=> Math.round(weeklyChallengesCompleted()), need:3 } },
+  { id:"ch-5", name:"Challenges · 5", desc:"Complete 5 challenges.", check:()=> weeklyChallengesCompleted()>=5 , category:"program", tier:"silver", value:"5", prog:{ have:()=> Math.round(weeklyChallengesCompleted()), need:5 } },
+  { id:"ch-10", name:"Challenges · 10", desc:"Complete 10 challenges.", check:()=> weeklyChallengesCompleted()>=10 , category:"program", tier:"gold", value:"10", prog:{ have:()=> Math.round(weeklyChallengesCompleted()), need:10 } },
+  { id:"ch-25", name:"Challenges · 25", desc:"Complete 25 challenges.", check:()=> weeklyChallengesCompleted()>=25 , category:"program", tier:"platinum", value:"25", prog:{ have:()=> Math.round(weeklyChallengesCompleted()), need:25 } },
+  { id:"cw-5", name:"Custom Workouts · 5", desc:"Create 5 custom workouts.", check:()=> (state.routines||[]).length>=5 , category:"program", tier:"bronze", value:"5", prog:{ have:()=> Math.round((state.routines||[]).length), need:5 } },
+  { id:"cw-10", name:"Custom Workouts · 10", desc:"Create 10 custom workouts.", check:()=> (state.routines||[]).length>=10 , category:"program", tier:"silver", value:"10", prog:{ have:()=> Math.round((state.routines||[]).length), need:10 } },
+  { id:"cw-25", name:"Custom Workouts · 25", desc:"Create 25 custom workouts.", check:()=> (state.routines||[]).length>=25 , category:"program", tier:"gold", value:"25", prog:{ have:()=> Math.round((state.routines||[]).length), need:25 } },
+  { id:"cw-50", name:"Custom Workouts · 50", desc:"Create 50 custom workouts.", check:()=> (state.routines||[]).length>=50 , category:"program", tier:"platinum", value:"50", prog:{ have:()=> Math.round((state.routines||[]).length), need:50 } },
+  { id:"sw-25", name:"Saved · 25", desc:"Save 25 workouts.", check:()=> (state.routines||[]).length>=25 , category:"program", tier:"bronze", value:"25", prog:{ have:()=> Math.round((state.routines||[]).length), need:25 } },
+  { id:"sw-50", name:"Saved · 50", desc:"Save 50 workouts.", check:()=> (state.routines||[]).length>=50 , category:"program", tier:"gold", value:"50", prog:{ have:()=> Math.round((state.routines||[]).length), need:50 } },
+  { id:"sw-100", name:"Saved · 100", desc:"Save 100 workouts.", check:()=> (state.routines||[]).length>=100 , category:"program", tier:"platinum", value:"100", prog:{ have:()=> Math.round((state.routines||[]).length), need:100 } },
+
+  /* ---- SPECIAL (5) ---- */
+  { id:"anniv-730", name:"2 Years on IGNYT", desc:"Use IGNYT for 2 years.", check:()=> accountDays()>=730 , category:"special", tier:"bronze", value:"2YR", prog:{ have:()=> Math.round(accountDays()), need:730 } },
+  { id:"anniv-1095", name:"3 Years on IGNYT", desc:"Use IGNYT for 3 years.", check:()=> accountDays()>=1095 , category:"special", tier:"gold", value:"3YR", prog:{ have:()=> Math.round(accountDays()), need:1095 } },
+  { id:"anniv-1825", name:"5 Years on IGNYT", desc:"Use IGNYT for 5 years.", check:()=> accountDays()>=1825 , category:"special", tier:"platinum", value:"5YR", prog:{ have:()=> Math.round(accountDays()), need:1825 } },
+  { id:"mid-5", name:"Midnight Warrior ×5", desc:"Start 5 midnight workouts.", check:()=> sessionsAtHour(h=>h<4)>=5 , category:"special", tier:"bronze", value:"5", prog:{ have:()=> Math.round(sessionsAtHour(h=>h<4)), need:5 } },
+  { id:"mid-10", name:"Midnight Warrior ×10", desc:"Start 10 midnight workouts.", check:()=> sessionsAtHour(h=>h<4)>=10 , category:"special", tier:"platinum", value:"10", prog:{ have:()=> Math.round(sessionsAtHour(h=>h<4)), need:10 } },
 ];
 
 /* Call after any action that could unlock an achievement (finish workout,
