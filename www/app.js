@@ -2001,6 +2001,19 @@ const state = {
      race record at finish; entries written before this existed simply have no `division`, which
      is why the readers treat a missing value as "singles" rather than as unknown. */
   raceDivision: LS.get("hx_race_division", "singles"),
+  /* Days explicitly marked as rest. A day off is otherwise an ABSENCE of data -- indistinguishable
+     from a day the user forgot to log, or never opened the app -- so a rest day only exists if it
+     is claimed. Stored as bare day keys. */
+  restDays: LS.get("hx_rest_days", []),
+  /* One record per program ever started: { templateId, startedAt, completedAt, deloadDone }.
+     state.plan holds only the CURRENT program, so without this, finishing one and starting
+     another erases the first. */
+  programHistory: LS.get("hx_program_history", []),
+  /* Successful shares. A count rather than a log -- what was shared is not the app's business
+     once it has left, and keeping the payload would be storing data with no reader. */
+  shareCount: LS.get("hx_share_count", 0),
+  /* Local calendar days the app was opened, newest last, capped. Recorded at boot. */
+  appDays: LS.get("hx_app_days", []),
   viewingRaceMode: !!LS.get("hx_race_active", null),
   achievements: LS.records("hx_achievements"),
   lastUnlockedAchievements: null, // transient celebration, mirrors lastSessionPRs pattern
@@ -2047,6 +2060,9 @@ function persist(){
   LS.set("hx_calc_history", state.calcHistory);
   LS.set("hx_race_log", state.raceLog);
   LS.set("hx_race_active", state.raceActive);
+  LS.set("hx_rest_days", state.restDays);
+  LS.set("hx_program_history", state.programHistory);
+  LS.set("hx_share_count", state.shareCount);
   LS.set("hx_workout_log", state.workoutLog);
   LS.set("hx_food_log", state.foodLog);
   LS.set("hx_routines", state.routines);
@@ -5561,6 +5577,155 @@ function trainedDuringFestival(name){ return daysTrainedDuringFestival(name) >= 
     not a claim to know every gazetted and regional holiday in India. */
 function trainedOnAnyFestival(){ return FESTIVAL_NAMES.some(n=>trainedDuringFestival(n)); }
 
+/* ---- the last sources ------------------------------------------------------------------
+   Everything below either reads a field that already existed and had no reader, or records a
+   small fact the app was throwing away. Nothing here infers: a rest day is claimed, not
+   guessed from a gap; a share is counted only when the share actually resolves; elevation is
+   entered, never derived from distance.
+------------------------------------------------------------------------------------------ */
+
+/** Local days the app was opened. Called once at load; deduped and capped so it cannot grow
+    without bound on a device used daily for years. */
+function recordAppOpen(){
+  try{
+    const today = dayKey();
+    const days = Array.isArray(state.appDays) ? state.appDays : [];
+    if(days[days.length-1] === today) return;        // already recorded this calendar day
+    if(days.indexOf(today) === -1) days.push(today);
+    /* 800 days is a hair over two years, which is more than the longest badge (500) needs and
+       small enough that the array stays a few KB in a ~5 MB localStorage budget. */
+    state.appDays = days.slice(-800);
+    LS.set("hx_app_days", state.appDays);
+  }catch(e){ /* a telemetry line must never break boot */ }
+}
+function appOpenStreakDays(){ return longestConsecutiveRun(state.appDays||[]); }
+
+/** Days explicitly marked as rest. */
+function restDayCount(){ return (state.restDays||[]).length; }
+function isRestDay(d){ return (state.restDays||[]).indexOf(d || dayKey()) !== -1; }
+/** Marks or unmarks a day as rest. Returns the new state so the caller can render it. */
+function toggleRestDay(d){
+  const day = d || dayKey();
+  const list = Array.isArray(state.restDays) ? state.restDays.slice() : [];
+  const at = list.indexOf(day);
+  if(at === -1) list.push(day); else list.splice(at, 1);
+  state.restDays = list;
+  persist();
+  return at === -1;
+}
+
+/* Program history. state.plan is only ever the CURRENT program, so finishing one and starting
+   another used to erase the first. This keeps one record per program and is called from
+   checkAchievements(), which already runs after everything that could change progress -- so
+   there is no separate "program completed" event to miss. Idempotent by design. */
+function syncProgramHistory(){
+  try{
+    const plan = state.plan;
+    if(!plan || !plan.startedAt) return;
+    const hist = Array.isArray(state.programHistory) ? state.programHistory : (state.programHistory = []);
+    let rec = hist.find(h=>h && h.startedAt === plan.startedAt);
+    if(!rec){
+      rec = { templateId: plan.templateId || "unknown", startedAt: plan.startedAt, completedAt: null, deloadDone: false };
+      hist.push(rec);
+    }
+    if(!rec.completedAt && overallPlanProgress() === 100) rec.completedAt = Date.now();
+    /* The deload week is tracked SEPARATELY from completion, not implied by it: someone can
+       finish the back-off week having skipped week three, and someone can complete a program
+       whose template has no deload at all. phaseFor() is what designates it. */
+    if(!rec.deloadDone && Array.isArray(WEEKS)){
+      const idx = WEEKS.findIndex((w, i)=> phaseFor(i+1) === "deload");
+      if(idx >= 0 && weekProgress(WEEKS[idx]) === 100) rec.deloadDone = true;
+    }
+  }catch(e){ /* history is a nicety; it must never break an achievement sweep */ }
+}
+function programsStarted(){ return (state.programHistory||[]).length; }
+function programsCompleted(){ return (state.programHistory||[]).filter(h=>h && h.completedAt).length; }
+function programTypesTried(){
+  return new Set((state.programHistory||[]).map(h=>h && h.templateId).filter(Boolean)).size;
+}
+function deloadWeeksCompleted(){ return (state.programHistory||[]).filter(h=>h && h.deloadDone).length; }
+
+/** Shares that actually completed.
+
+    Counted only where the share RESOLVES -- the plugin returning success, or navigator.share
+    settling without throwing. The catch below it swallows cancel/abort, which is exactly the
+    case that must not count: opening the share sheet and backing out is not a share, and
+    counting it would make the badge a measure of curiosity. The clipboard fallback does not
+    count either, because copying text is not sharing a workout. */
+function countShare(){
+  state.shareCount = achNum(state.shareCount) + 1;
+  LS.set("hx_share_count", state.shareCount);
+  try{ checkAchievements(); }catch(e){}
+}
+function shareCount(){ return achNum(state.shareCount); }
+
+/** Metres climbed, summed off the elevation field on cardio sets. Never derived from distance. */
+function totalElevationM(){
+  let m = 0;
+  eachLoggedSet(set=>{ m += achNum(set.elevationM); });
+  return m;
+}
+
+/* The 100-day challenge: 100 sessions inside any 100-day window. A derived achievement rather
+   than a feature -- there is nothing to opt into, and someone who already did it should not
+   have to do it again to be credited. Sliding window over the sorted session days. */
+function bestWorkoutsIn100Days(){
+  const stamps = (state.workoutLog||[]).map(s=>{
+    const t = new Date(s.startedAt || s.date);
+    return isNaN(t) ? null : new Date(dayKey(t)).getTime();
+  }).filter(v=>v != null).sort((a,b)=>a-b);
+  if(!stamps.length) return 0;
+  const SPAN = 99 * 86400000;          // inclusive: day 1 and day 100 are 99 days apart
+  let best = 0, lo = 0;
+  for(let hi = 0; hi < stamps.length; hi++){
+    while(stamps[hi] - stamps[lo] > SPAN) lo++;
+    best = Math.max(best, hi - lo + 1);
+  }
+  return best;
+}
+
+/* Indian dishes. The food log stores a foodId, and lookupFood() resolves it against the loaded
+   catalogue synchronously, so the cuisine is read at CHECK time rather than stamped at log time
+   -- which means it also covers everything logged before this existed. If the catalogue has not
+   loaded yet the lookup returns null and the count is simply lower; it corrects itself on the
+   next sweep rather than awarding early. */
+/* The catalogue has no cuisine field, so this reads `category` -- and category mixes cuisine
+   with PREPARATION. "grilled" (1,399 entries), "fried", "fry" and "gravy" are methods, not
+   cuisines, and are left out even though many of their entries are certainly Indian: a badge
+   called "Indian dishes" must not count a grilled chicken breast. Only categories that name an
+   Indian dish form or region are in.
+
+   That yields 3,613 distinct names, which is what makes the 1,000-dish badge reachable --
+   checked, because a threshold above the ceiling is a badge nobody can ever earn. Widening
+   this later is safe; narrowing it is not, since it can only take badges away. */
+const INDIAN_FOOD_CATEGORIES = new Set([
+  "south indian dishes", "curries & gravies", "rice & bread items", "snacks & street foods",
+  "dal & legumes", "gravy_curry", "gravy_tamarind", "rich_gravy", "dry_sabzi", "kootu",
+  "sambar", "rasam", "curry", "curry_noodle", "chaat", "dahichaat", "biryani",
+  "mandhi", "mandhi_plain", "rice_flavored", "tiffin_griddle", "idli", "upma",
+  "flatbread", "leavened_bread", "fried_bread", "kebab", "pickle", "regional", "indochinese"
+]);
+function uniqueIndianDishesLogged(){
+  const seen = new Set();
+  (state.foodLog||[]).forEach(f=>{
+    if(!f) return;
+    let cat = null;
+    try{
+      const food = f.foodId != null ? lookupFood(f.foodId, f.name) : null;
+      cat = food && food.category;
+    }catch(e){ cat = null; }
+    if(cat && INDIAN_FOOD_CATEGORIES.has(String(cat).toLowerCase())){
+      seen.add(String(f.name||"").trim().toLowerCase());
+    }
+  });
+  seen.delete("");
+  return seen.size;
+}
+
+/* Recorded at load, not on a timer or a tab change: "opened the app today" is exactly one
+   fact per calendar day, and anything finer would count tab switches as engagement. */
+recordAppOpen();
+
 const ACHIEVEMENT_DEFS = [
   { id:"first-workout", name:"First Workout", desc:"Complete your first freestyle workout.", check:()=> state.workoutLog.length>=1 , category:"milestone", tier:"bronze", value:"1" },
   { id:"workouts-5", name:"5 Workouts", desc:"Log 5 freestyle workouts.", check:()=> state.workoutLog.length>=5 , category:"milestone", tier:"bronze", value:"5" },
@@ -6300,6 +6465,51 @@ const ACHIEVEMENT_DEFS = [
   { id:"bday-2", name:"Birthday Streak ×2", desc:"Train on 2 birthdays.", check:()=> birthdaysTrained()>=2 , category:"special", tier:"silver", value:"2", prog:{ have:()=> birthdaysTrained(), need:2 } },
   { id:"bday-3", name:"Birthday Streak ×3", desc:"Train on 3 birthdays.", check:()=> birthdaysTrained()>=3 , category:"special", tier:"gold", value:"3", prog:{ have:()=> birthdaysTrained(), need:3 } },
   { id:"bday-5", name:"Birthday Streak ×5", desc:"Train on 5 birthdays.", check:()=> birthdaysTrained()>=5 , category:"special", tier:"diamond", value:"5", prog:{ have:()=> birthdaysTrained(), need:5 } },
+
+  /* ---- The last sources (36). Program history, app opens, rest days, shares, cuisine
+     and the 100-day challenge -- each either reads a field that had no reader, or records a
+     small fact the app was discarding. Nothing here infers: a rest day is claimed rather
+     than guessed from a gap, and a share counts only when the share actually resolves.
+
+     Deliberately still absent: elevation (wants an input on the cardio set row, which is
+     already a three-column grid on a 375px screen), barcode scans (the feature was removed
+     from the food log) and founding (wants a cutoff date, which is a decision). ---- */
+  { id:"desi-25", name:"Desi Delight", desc:"Log 25 different Indian dishes.", check:()=> uniqueIndianDishesLogged()>=25 , category:"nutrition", tier:"silver", value:"25", prog:{ have:()=> uniqueIndianDishesLogged(), need:25 } },
+  { id:"desi-100", name:"Thali Tracker", desc:"Log 100 different Indian dishes.", check:()=> uniqueIndianDishesLogged()>=100 , category:"nutrition", tier:"gold", value:"100", prog:{ have:()=> uniqueIndianDishesLogged(), need:100 } },
+  { id:"app-streak-30", name:"Locked In", desc:"Open IGNYT 30 days in a row.", check:()=> appOpenStreakDays()>=30 , category:"consistency", tier:"silver", value:"30" },
+  { id:"rest-first", name:"Rest Day", desc:"Log your first rest day.", check:()=> restDayCount()>=1 , category:"body", tier:"bronze", value:"1", prog:{ have:()=> restDayCount(), need:1 } },
+  { id:"rest-10", name:"Recovery Pro", desc:"Log 10 rest days.", check:()=> restDayCount()>=10 , category:"body", tier:"silver", value:"10", prog:{ have:()=> restDayCount(), need:10 } },
+  { id:"program-veteran", name:"Program Veteran", desc:"Complete 5 structured programs.", check:()=> programsCompleted()>=5 , category:"program", tier:"diamond", value:"5", prog:{ have:()=> programsCompleted(), need:5 } },
+  { id:"appstk-60", name:"App Streak · 60 days", desc:"Maintain a 60-day app streak.", check:()=> appOpenStreakDays()>=60 , category:"streak", tier:"bronze", value:"60" },
+  { id:"appstk-90", name:"App Streak · 90 days", desc:"Maintain a 90-day app streak.", check:()=> appOpenStreakDays()>=90 , category:"streak", tier:"silver", value:"90" },
+  { id:"appstk-180", name:"App Streak · 180 days", desc:"Maintain a 180-day app streak.", check:()=> appOpenStreakDays()>=180 , category:"streak", tier:"gold", value:"180" },
+  { id:"appstk-365", name:"App Streak · 365 days", desc:"Maintain a 365-day app streak.", check:()=> appOpenStreakDays()>=365 , category:"streak", tier:"diamond", value:"365" },
+  { id:"appstk-500", name:"App Streak · 500 days", desc:"Maintain a 500-day app streak.", check:()=> appOpenStreakDays()>=500 , category:"streak", tier:"platinum", value:"500" },
+  { id:"ind-250", name:"Desi Dishes · 250", desc:"Log 250 Indian dishes.", check:()=> uniqueIndianDishesLogged()>=250 , category:"nutrition", tier:"bronze", value:"250", prog:{ have:()=> uniqueIndianDishesLogged(), need:250 } },
+  { id:"ind-500", name:"Desi Dishes · 500", desc:"Log 500 Indian dishes.", check:()=> uniqueIndianDishesLogged()>=500 , category:"nutrition", tier:"gold", value:"500", prog:{ have:()=> uniqueIndianDishesLogged(), need:500 } },
+  { id:"ind-1000", name:"Desi Dishes · 1,000", desc:"Log 1,000 Indian dishes.", check:()=> uniqueIndianDishesLogged()>=1000 , category:"nutrition", tier:"platinum", value:"1K", prog:{ have:()=> uniqueIndianDishesLogged(), need:1000 } },
+  { id:"rest-25", name:"Rest Days · 25", desc:"Log 25 rest days.", check:()=> restDayCount()>=25 , category:"body", tier:"bronze", value:"25", prog:{ have:()=> restDayCount(), need:25 } },
+  { id:"rest-50", name:"Rest Days · 50", desc:"Log 50 rest days.", check:()=> restDayCount()>=50 , category:"body", tier:"gold", value:"50", prog:{ have:()=> restDayCount(), need:50 } },
+  { id:"rest-100", name:"Rest Days · 100", desc:"Log 100 rest days.", check:()=> restDayCount()>=100 , category:"body", tier:"platinum", value:"100", prog:{ have:()=> restDayCount(), need:100 } },
+  { id:"dl-1", name:"Deload · 1", desc:"Complete 1 deload weeks.", check:()=> deloadWeeksCompleted()>=1 , category:"body", tier:"bronze", value:"1", prog:{ have:()=> deloadWeeksCompleted(), need:1 } },
+  { id:"dl-3", name:"Deload · 3", desc:"Complete 3 deload weeks.", check:()=> deloadWeeksCompleted()>=3 , category:"body", tier:"silver", value:"3", prog:{ have:()=> deloadWeeksCompleted(), need:3 } },
+  { id:"dl-5", name:"Deload · 5", desc:"Complete 5 deload weeks.", check:()=> deloadWeeksCompleted()>=5 , category:"body", tier:"gold", value:"5", prog:{ have:()=> deloadWeeksCompleted(), need:5 } },
+  { id:"dl-10", name:"Deload · 10", desc:"Complete 10 deload weeks.", check:()=> deloadWeeksCompleted()>=10 , category:"body", tier:"platinum", value:"10", prog:{ have:()=> deloadWeeksCompleted(), need:10 } },
+  { id:"pc-3", name:"Programs Done · 3", desc:"Complete 3 programs.", check:()=> programsCompleted()>=3 , category:"program", tier:"bronze", value:"3", prog:{ have:()=> programsCompleted(), need:3 } },
+  { id:"pc-10", name:"Programs Done · 10", desc:"Complete 10 programs.", check:()=> programsCompleted()>=10 , category:"program", tier:"gold", value:"10", prog:{ have:()=> programsCompleted(), need:10 } },
+  { id:"pc-25", name:"Programs Done · 25", desc:"Complete 25 programs.", check:()=> programsCompleted()>=25 , category:"program", tier:"platinum", value:"25", prog:{ have:()=> programsCompleted(), need:25 } },
+  { id:"ps-5", name:"Programs Started · 5", desc:"Start 5 programs.", check:()=> programsStarted()>=5 , category:"program", tier:"bronze", value:"5", prog:{ have:()=> programsStarted(), need:5 } },
+  { id:"ps-10", name:"Programs Started · 10", desc:"Start 10 programs.", check:()=> programsStarted()>=10 , category:"program", tier:"gold", value:"10", prog:{ have:()=> programsStarted(), need:10 } },
+  { id:"ps-25", name:"Programs Started · 25", desc:"Start 25 programs.", check:()=> programsStarted()>=25 , category:"program", tier:"platinum", value:"25", prog:{ have:()=> programsStarted(), need:25 } },
+  { id:"sh-1", name:"Shared · 1", desc:"Share 1 workouts.", check:()=> shareCount()>=1 , category:"special", tier:"bronze", value:"1", prog:{ have:()=> shareCount(), need:1 } },
+  { id:"sh-5", name:"Shared · 5", desc:"Share 5 workouts.", check:()=> shareCount()>=5 , category:"special", tier:"silver", value:"5", prog:{ have:()=> shareCount(), need:5 } },
+  { id:"sh-10", name:"Shared · 10", desc:"Share 10 workouts.", check:()=> shareCount()>=10 , category:"special", tier:"gold", value:"10", prog:{ have:()=> shareCount(), need:10 } },
+  { id:"sh-25", name:"Shared · 25", desc:"Share 25 workouts.", check:()=> shareCount()>=25 , category:"special", tier:"diamond", value:"25", prog:{ have:()=> shareCount(), need:25 } },
+  { id:"sh-50", name:"Shared · 50", desc:"Share 50 workouts.", check:()=> shareCount()>=50 , category:"special", tier:"platinum", value:"50", prog:{ have:()=> shareCount(), need:50 } },
+  { id:"pt-3", name:"Program Variety · 3", desc:"Try 3 program types.", check:()=> programTypesTried()>=3 , category:"program", tier:"bronze", value:"3", prog:{ have:()=> programTypesTried(), need:3 } },
+  { id:"pt-5", name:"Program Variety · 5", desc:"Try 5 program types.", check:()=> programTypesTried()>=5 , category:"program", tier:"gold", value:"5", prog:{ have:()=> programTypesTried(), need:5 } },
+  { id:"pt-10", name:"Program Variety · 10", desc:"Try 10 program types.", check:()=> programTypesTried()>=10 , category:"program", tier:"platinum", value:"10", prog:{ have:()=> programTypesTried(), need:10 } },
+  { id:"hundred", name:"100 Days · 100 Workouts", desc:"Complete the 100-day workout challenge.", check:()=> bestWorkoutsIn100Days()>=100 , category:"special", tier:"diamond", value:"100", prog:{ have:()=> bestWorkoutsIn100Days(), need:100 } },
 ];
 
 /* Call after any action that could unlock an achievement (finish workout,
@@ -6308,6 +6518,9 @@ const ACHIEVEMENT_DEFS = [
    so callers can show a celebration if desired. */
 
 function checkAchievements(){
+  /* Before the sweep, not after: a program that just hit 100% must be recorded as complete
+     before the checks that count completions read the history. */
+  syncProgramHistory();
   const unlockedIds = new Set(state.achievements.map(a=>a.id));
   const newlyUnlocked = [];
   ACHIEVEMENT_DEFS.forEach(def=>{
@@ -18513,9 +18726,10 @@ async function shareWorkoutImage(s){
     if(share){
       const result = await share.shareImage({ base64, fileName:`ignyt-workout-${s.id}.png`, text: buildWorkoutSummaryText(s) });
       if(!result || !result.success) showToast("Sharing isn't available on this device.", "error", render);
+      else countShare();
       return;
     }
-    if(navigator.share){ await navigator.share({ title:"IGNYT Workout", text: buildWorkoutSummaryText(s) }); return; }
+    if(navigator.share){ await navigator.share({ title:"IGNYT Workout", text: buildWorkoutSummaryText(s) }); countShare(); return; }
     await copyWorkoutSummary(s);
   }catch(e){
     if(String(e).toLowerCase().includes("cancel") || String(e).toLowerCase().includes("abort")) return; // user closed the sheet — not an error
@@ -23086,6 +23300,15 @@ function attachHandlers(){
   });
   const moreMetricsBtn = document.querySelector('[data-action="toggle-body-more-metrics"]');
   if(moreMetricsBtn) moreMetricsBtn.addEventListener("click", ()=>{ state.bodyShowMoreMetrics = !state.bodyShowMoreMetrics; render(); });
+
+  const restDayBtn = document.querySelector('[data-action="toggle-rest-day"]');
+  if(restDayBtn) restDayBtn.addEventListener("click", ()=>{
+    const nowResting = toggleRestDay();
+    // Toggling ON can unlock a rest-day badge; toggling off must not, so only sweep on the way in.
+    if(nowResting){ try{ checkAchievements(); }catch(e){} }
+    showToast(nowResting ? "Rest day logged." : "Rest day cleared.", "success", render);
+    render();
+  });
 
   // Calculator cards -> dedicated calculator view
   document.querySelectorAll("[data-calc-open]").forEach(el=>{
