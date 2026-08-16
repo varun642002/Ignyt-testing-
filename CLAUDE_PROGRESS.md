@@ -27,7 +27,17 @@ populating the map gated them immediately:
 
     coach · diet · insights · health · fasting · supplements
 
-**DECLARED BUT NOT ENFORCED (12).** These are in the map and nothing checks them yet, so they
+**GATED SINCE (5).** `plans` (+`hyrox` -- same screen, renderPlanTab), `reminders`, `photos`
+(renderBodyScanArchive), `muscles` (renderMuscleDistributionSheet). Pattern is one guard at the
+top of the render function; `muscles` is placed AFTER its open-check so a closed sheet stays
+closed rather than rendering a wall behind the workout, and `plans` is placed BEFORE the safety
+gate because a free user gets no plan for a red flag to warn about.
+
+**STILL NOT ENFORCED (7).** `history`, `analytics`, `records`, `calendar`, `sync`, `macros`,
+`export`. Their render sites were not located with enough certainty to place a guard blind.
+`history` and `sync` are the two that must NOT be done casually -- see the data-loss note below.
+
+**OLD LIST, superseded:** These are in the map and nothing checks them yet, so they
 remain free. Each needs a `premiumAllows("<key>")` check at its render site, with
 `renderUpgradeWall("<key>")` as the alternative branch (that helper already exists in app.js):
 

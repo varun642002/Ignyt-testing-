@@ -6754,6 +6754,7 @@ function renderPrivacySecurityInfo(){
 const REMINDER_DAY_LABELS = ["S","M","T","W","T","F","S"];
 
 function renderRemindersScreen(){
+  if(!premiumAllows("reminders")) return renderUpgradeWall("reminders");
   const R = window.IgnytReminders;
   if(!R) return `<div class="pg-light"><div class="rm-none">Reminders are unavailable in this build.</div></div>`;
   const open = state.reminderOpen;
@@ -9240,6 +9241,10 @@ function renderPaywallSheet(){
 
 function renderMuscleDistributionSheet(){
   if(!state.muscleSheetOpen || !state.session) return "";
+  /* After the open check, so a closed sheet stays closed rather than rendering a wall behind
+     the workout. A free user who opens it sees the upsell in the sheet, which is the right
+     place for it -- the sheet is the feature. */
+  if(!premiumAllows("muscles")) return renderUpgradeWall("muscles");
   const MM = window.IgnytMuscleMap;
   if(!MM) return "";
 
@@ -13735,6 +13740,7 @@ function renderBodyPhotoViewer(id, photoList){
    about how they are kept.
 ========================================================= */
 function renderBodyScanArchive(){
+  if(!premiumAllows("photos")) return renderUpgradeWall("photos");
   const S = window.IgnytPhotoSessions;
   const view = state.bodyScanView || "timeline";
   const all = S ? S.sessions(state.bodyPhotos) : [];
@@ -16292,6 +16298,11 @@ function renderErrorScreen(err){
 }
 
 function renderPlanTab(){
+  /* Premium gate BEFORE the safety gate, and that ordering is deliberate: a free user gets
+     no plan at all, so there is no workout for a red flag to warn them about. Premium users
+     still meet the safety gate immediately below, unchanged.
+     This covers HYROX too -- it is the same screen, so "plans" gates both. */
+  if(!premiumAllows("plans")) return renderUpgradeWall("plans");
   /* THE SAFETY GATE, in front of the plan rather than inside it. The HYROX plan itself is
      untouched — this returns before it is built, so nothing about WEEKS, buildWeek or the
      completion state is involved. A red flag means no workout should be suggested, and the
