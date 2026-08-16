@@ -42,12 +42,22 @@ That makes cloud sync a PAID feature, which raises the one question with a data-
 lose access to their own records. Sync stopping is fine; the local copy going away, or the app
 refusing to read data it already has, is not. Gate the SYNC, never the local data.
 
-### WHAT "BASIC" MEANS IS UNDEFINED
+### "BASIC" IS NOW DEFINED (user, 2026-08-13)
 
-"Basic workout tracking" and "basic food tracking" need a line each. Does basic food tracking
-include the 13,516-food library or a subset? Does basic workout tracking include history, or
-only logging today? Those two sentences decide half the implementation, and guessing them is how
-a paywall ends up either locking out paying users or giving the product away.
+**Basic food tracking = the FULL 13,516-food library.** Search and log anything, no subset. This
+is the easy half: the catalogue stays untiered, so nothing in `food-catalogue.js`,
+`food-search.js` or the data file changes. Gate the features AROUND food logging -- diet plans,
+macro targets, micronutrients, meal planning, history depth -- not the library itself.
+
+**Basic workout tracking = logging TODAY only.** Start a session, log sets/reps/weight, finish
+it. Workout HISTORY is premium.
+
+That second one carries the same hazard as cloud sync and needs the same treatment: a free user's
+past workouts must not be deleted or become unreadable -- they are simply not browsable. The PR
+engine, streaks and volume charts all read history, so decide whether they degrade gracefully or
+disappear. A streak that silently resets because history is gated would look like data loss.
+
+**The spec is now complete and implementable.**
 
 ### WHERE THE WORK GOES
 
