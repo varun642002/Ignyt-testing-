@@ -12150,6 +12150,23 @@ function renderProgressTab(){
       calendar: renderProgressCalendar,
       reports: renderProgressReports, photos: renderBodyScanArchive
     };
+    /* PREMIUM, mapped view -> gate key. One place rather than one edit per render function,
+       because these are dispatched from a table and a table is where the rule belongs.
+
+       MIND THE NAMES, they do not match intuition and the comment on PROGRESS_VIEWS says so:
+       the `history` VIEW renders the PR list, and `workouts` is the real workout history. So
+       `history` maps to the "records" gate and `workouts` maps to the "history" gate. Getting
+       this pair backwards would gate the wrong screen and look like it worked.
+
+       Free by omission: `body` (weight is free), `habits`, `achievements`. A user who stops
+       paying keeps their weight chart and their streaks. */
+    const VIEW_GATE = {
+      history: "records", workouts: "history", analytics: "analytics",
+      calendar: "calendar", reports: "analytics", photos: "photos"
+    };
+    const gate = VIEW_GATE[view];
+    if(gate && !premiumAllows(gate)) return renderUpgradeWall(gate);
+
     let body;
     try{ body = detailFns[view](); }
     catch(e){

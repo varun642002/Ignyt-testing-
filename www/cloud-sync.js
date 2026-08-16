@@ -288,7 +288,20 @@ const IgnytCloudSync = (() => {
    * and using it for this is what left iOS silently never syncing.
    */
   function canSync() {
-    return platform() === "android" || platform() === "ios";
+    if (platform() !== "android" && platform() !== "ios") return false;
+    /* PREMIUM GATES THE SYNC, NEVER THE LOCAL DATA. This is the correct layer and the
+       distinction matters: a lapsed subscriber stops pushing and pulling, and every record
+       already on the device stays readable and editable exactly as before. Gating higher up --
+       at the screens that read synced data -- would make their own history look deleted, which
+       is a refund and a one-star review rather than a paywall.
+
+       Fails OPEN if entitlements has not loaded: a missing billing layer must never silently
+       stop someone's backup. */
+    if (window.IgnytEntitlements && typeof window.IgnytEntitlements.has === "function") {
+      try { if (!window.IgnytEntitlements.has("sync")) return false; }
+      catch (e) { /* entitlement check failed -- allow the sync rather than lose the backup */ }
+    }
+    return true;
   }
 
   async function callNative(methodName, options) {

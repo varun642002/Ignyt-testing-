@@ -33,7 +33,30 @@ top of the render function; `muscles` is placed AFTER its open-check so a closed
 closed rather than rendering a wall behind the workout, and `plans` is placed BEFORE the safety
 gate because a free user gets no plan for a red flag to warn about.
 
-**STILL NOT ENFORCED (7).** `history`, `analytics`, `records`, `calendar`, `sync`, `macros`,
+**GATED SINCE (6 more).** `records`, `history`, `analytics`, `calendar`, `reports`, `photos` --
+all through ONE guarded lookup in `renderProgressTab()`'s dispatch table, plus `sync` inside
+`canSync()` in `cloud-sync.js`.
+
+MIND THE NAMING TRAP, it is documented on PROGRESS_VIEWS and it is easy to get backwards: the
+`history` VIEW renders the PR list, and `workouts` is the real workout history. So the map reads
+`history -> "records"` and `workouts -> "history"`. Reversed, it gates the wrong screen and looks
+like it worked.
+
+Free by omission and deliberately so: `body` (weight), `habits`, `achievements`. Someone who
+stops paying keeps their weight chart and their streaks.
+
+`sync` is gated at `canSync()` -- the SYNC stops, the local data is untouched and fully readable.
+It fails OPEN if entitlements has not loaded, because a missing billing layer must never silently
+stop someone's backup.
+
+**STILL NOT ENFORCED (2).** `macros` and `export`.
+  `export` is button handlers (`data-action="export-json"`, `export-workouts-csv`,
+  `export-json-encrypted` around app.js:19244-19418), not a render function -- the gate goes in
+  the handler, showing the paywall instead of writing a file.
+  `macros` has no single render site; nutrition depth is spread across the food log. Needs a
+  decision on what "advanced macro tracking" actually means before it can be gated.
+
+**OLD LIST, superseded:** `history`, `analytics`, `records`, `calendar`, `sync`, `macros`,
 `export`. Their render sites were not located with enough certainty to place a guard blind.
 `history` and `sync` are the two that must NOT be done casually -- see the data-loss note below.
 
