@@ -6,6 +6,39 @@ Everything below was reasoned from screenshots. Nothing in the last stretch of w
 running. Two bugs the user reported were caused by my own earlier unverified changes, so the
 first action in a new session is to start the dev server and look, not to edit.
 
+### WEBKIT NAV: FIXED (56dc43a). THE SUITE MOVED ON TO A NEW BUG.
+
+**The navigation bug is solved and proven.** On WebKit `e.target` for a nav click arrives as the
+NAV element itself, so `closest("[data-navtab]")` returned null and every tap died on the
+handler's first line. `elementFromPoint` at the same coordinates returns the button's icon, so
+the coordinates are trustworthy and the event target is not. `closest()` first, coordinate
+hit-test as fallback.
+
+**composedPath() -- proposed in the notes below -- WOULD NOT HAVE WORKED.** It walks UP from the
+target; when the target is already the nav, the button is not on that path either. Do not retry it.
+
+Verified in isolation: btn resolves to "workout", the guard passes, and
+`[data-action="start-session"]` then exists. The app navigated, which it had never done on WebKit.
+
+**THE SUITE WENT 23 FAILURES -> 27, AND THAT IS EXPECTED.** The specs now run past the assertion
+that used to stop them. All 27 share ONE new cause:
+
+```
+Locator: [data-action="finish-session"]     (7 of 7 sampled failures)
+```
+
+So: navigate works, "Start Empty" is found and clicked, and the SESSION NEVER STARTS on WebKit --
+the finish button never renders. That is a different bug one step further in, and it is NOT
+diagnosed.
+
+**Where to start:** the start-session handler is `document.querySelectorAll('[data-action=
+"start-session"]')` at `www/app.js:19545` -- listeners bound to the BUTTON, so the e.target
+retargeting that broke the nav does not apply here. Which means either the click is not reaching
+that listener, or startSession() runs and the finish button renders under a different selector
+than the spec expects. Instrument inside that handler first; the technique that solved the nav
+bug -- probe the FIRST line, because earlier probes all sat after an early return -- is the one
+that works here too.
+
 ### THE BROWSER SUITE — read this before touching tests/pages/BasePage.js
 
 Full suite: **187 passed, 5 skipped, 23 failed.** All 23 are `mobile-safari` + `workout`, and
