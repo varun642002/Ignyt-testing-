@@ -71,6 +71,12 @@ const BODY_MEASUREMENT_KEYS = BODY_MEASUREMENT_GROUPS.flatMap(g=>g.fields.map(f=
 const BODY_CHART_METRICS = [
   {key:"weight", label:"Weight", unit:()=>wUnit()},
   {key:"bmi", label:"BMI", unit:()=>""},
+  /* Sleep is not a BODY_MEASUREMENT_GROUPS field -- it is entered in the Recovery section
+     alongside HRV and stored top-level on the entry, same as weight. bodyMetricSeries() reads
+     e[metric] generically, so listing it here is all that charting it takes. The data has been
+     collected since the measurements CSV was written and has never been viewable until now.
+     HRV sits in exactly the same position and is one line away. */
+  {key:"sleep", label:"Sleep", unit:()=>"h"},
   {key:"bodyfat", label:"Body Fat", unit:()=>"%"},
   {key:"leanBodyMass", label:"Lean Mass", unit:()=>"kg"},
   {key:"muscleMass", label:"Muscle Mass", unit:()=>"kg"},
@@ -5274,6 +5280,40 @@ function meditationSessionCount(){
   return (state.workoutLog||[]).filter(s=>(s.exercises||[]).some(e=>/meditation/i.test(e.name||""))).length;
 }
 
+/* ---- sleep ------------------------------------------------------------------------------
+   `sleep` has been a bodylog field the whole time. It is entered in the Recovery section of
+   the Log Weight form (`b-sleep`), saved by the same handler that saves weight, and exported
+   under the legacy `sleep_hrs` CSV column. What it never had was a reader -- these are it. No
+   new logging was added for these medals.
+
+   It stays OUT of BODY_MEASUREMENT_KEYS on purpose. measurementEntryCount() counts any key in
+   that list as a tape measurement, so moving sleep in would award "Log measurements 100 times"
+   to someone who only ever logged sleep. Blank entries store "" rather than being omitted,
+   which is why every reader below tests achNum(...) > 0 instead of just presence.
+------------------------------------------------------------------------------------------ */
+function sleepLogCount(){
+  return (state.bodylog||[]).filter(b=>b && achNum(b.sleep) > 0).length;
+}
+
+/* A weigh-in is an entry that actually carries a weight, not just any bodylog row.
+   The entry form guarantees one (`if(!rawWeight) return;`), but the measurements CSV importer
+   deliberately does not -- its comment says "a measurements entry doesn't need weight (e.g. a
+   waist-only or body-fat-only day)". So a row imported with only a waist, or only a night's
+   sleep, was being counted toward "Log 50 weigh-ins". Pre-existing, and sleep makes it likelier
+   because sleep is a daily entry. Tightening this cannot revoke anything: unlocks are stored in
+   state.achievements once earned. */
+function weighInCount(){
+  return (state.bodylog||[]).filter(b=>b && achNum(b.weight) > 0).length;
+}
+function totalSleepHours(){
+  return (state.bodylog||[]).reduce((a,b)=>a + achNum(b && b.sleep), 0);
+}
+/** Longest run of consecutive days carrying a sleep figure. */
+function sleepStreakDays(){
+  return longestConsecutiveRun(Array.from(new Set((state.bodylog||[])
+    .filter(b=>b && b.date && achNum(b.sleep) > 0).map(b=>b.date))));
+}
+
 const ACHIEVEMENT_DEFS = [
   { id:"first_workout", name:"First Workout", desc:"Complete your first freestyle workout.", check:()=> state.workoutLog.length>=1 , category:"milestone", tier:"bronze", value:"1" },
   { id:"workouts_5", name:"5 Workouts", desc:"Log 5 freestyle workouts.", check:()=> state.workoutLog.length>=5 , category:"milestone", tier:"bronze", value:"5" },
@@ -5375,9 +5415,9 @@ const ACHIEVEMENT_DEFS = [
   { id:"water_days_100", name:"A Hundred Hydrated Days", desc:"Hit your water goal on a hundred days.", check:()=> daysWaterGoalMet()>=100 , category:"nutrition", tier:"gold", value:"100" },
 
   /* ---- body tracking ---- */
-  { id:"weigh_first", name:"First Weigh-In", desc:"Log your body weight.", check:()=> state.bodylog.length>=1 , category:"consistency", tier:"bronze", value:"1" },
-  { id:"weigh_10", name:"Ten Weigh-Ins", desc:"Log your body weight ten times.", check:()=> state.bodylog.length>=10 , category:"consistency", tier:"bronze", value:"10" },
-  { id:"weigh_50", name:"Fifty Weigh-Ins", desc:"Log your body weight fifty times.", check:()=> state.bodylog.length>=50 , category:"consistency", tier:"silver", value:"50" },
+  { id:"weigh_first", name:"First Weigh-In", desc:"Log your body weight.", check:()=> weighInCount()>=1 , category:"consistency", tier:"bronze", value:"1" },
+  { id:"weigh_10", name:"Ten Weigh-Ins", desc:"Log your body weight ten times.", check:()=> weighInCount()>=10 , category:"consistency", tier:"bronze", value:"10" },
+  { id:"weigh_50", name:"Fifty Weigh-Ins", desc:"Log your body weight fifty times.", check:()=> weighInCount()>=50 , category:"consistency", tier:"silver", value:"50" },
 
   /* ---- weight tracking ----
      The kg badges are earned for movement toward the user's OWN goal, so a muscle-gain user
@@ -5887,12 +5927,12 @@ const ACHIEVEMENT_DEFS = [
   { id:"waterV-2500", name:"Water · 2,500 L", desc:"Drink 2,500 L of water.", check:()=> totalWaterLitres()>=2500 , category:"nutrition", tier:"platinum", value:"2.5K", prog:{ have:()=> Math.round(totalWaterLitres()), need:2500 } },
 
   /* ---- BODY AND RECOVERY (51) ---- */
-  { id:"wi-10", name:"Weigh-Ins · 10", desc:"Log 10 weigh-ins.", check:()=> (state.bodylog||[]).length>=10 , category:"body", tier:"bronze", value:"10", prog:{ have:()=> Math.round((state.bodylog||[]).length), need:10 } },
-  { id:"wi-25", name:"Weigh-Ins · 25", desc:"Log 25 weigh-ins.", check:()=> (state.bodylog||[]).length>=25 , category:"body", tier:"silver", value:"25", prog:{ have:()=> Math.round((state.bodylog||[]).length), need:25 } },
-  { id:"wi-50", name:"Weigh-Ins · 50", desc:"Log 50 weigh-ins.", check:()=> (state.bodylog||[]).length>=50 , category:"body", tier:"silver", value:"50", prog:{ have:()=> Math.round((state.bodylog||[]).length), need:50 } },
-  { id:"wi-100", name:"Weigh-Ins · 100", desc:"Log 100 weigh-ins.", check:()=> (state.bodylog||[]).length>=100 , category:"body", tier:"gold", value:"100", prog:{ have:()=> Math.round((state.bodylog||[]).length), need:100 } },
-  { id:"wi-250", name:"Weigh-Ins · 250", desc:"Log 250 weigh-ins.", check:()=> (state.bodylog||[]).length>=250 , category:"body", tier:"diamond", value:"250", prog:{ have:()=> Math.round((state.bodylog||[]).length), need:250 } },
-  { id:"wi-500", name:"Weigh-Ins · 500", desc:"Log 500 weigh-ins.", check:()=> (state.bodylog||[]).length>=500 , category:"body", tier:"platinum", value:"500", prog:{ have:()=> Math.round((state.bodylog||[]).length), need:500 } },
+  { id:"wi-10", name:"Weigh-Ins · 10", desc:"Log 10 weigh-ins.", check:()=> weighInCount()>=10 , category:"body", tier:"bronze", value:"10", prog:{ have:()=> weighInCount(), need:10 } },
+  { id:"wi-25", name:"Weigh-Ins · 25", desc:"Log 25 weigh-ins.", check:()=> weighInCount()>=25 , category:"body", tier:"silver", value:"25", prog:{ have:()=> weighInCount(), need:25 } },
+  { id:"wi-50", name:"Weigh-Ins · 50", desc:"Log 50 weigh-ins.", check:()=> weighInCount()>=50 , category:"body", tier:"silver", value:"50", prog:{ have:()=> weighInCount(), need:50 } },
+  { id:"wi-100", name:"Weigh-Ins · 100", desc:"Log 100 weigh-ins.", check:()=> weighInCount()>=100 , category:"body", tier:"gold", value:"100", prog:{ have:()=> weighInCount(), need:100 } },
+  { id:"wi-250", name:"Weigh-Ins · 250", desc:"Log 250 weigh-ins.", check:()=> weighInCount()>=250 , category:"body", tier:"diamond", value:"250", prog:{ have:()=> weighInCount(), need:250 } },
+  { id:"wi-500", name:"Weigh-Ins · 500", desc:"Log 500 weigh-ins.", check:()=> weighInCount()>=500 , category:"body", tier:"platinum", value:"500", prog:{ have:()=> weighInCount(), need:500 } },
   { id:"ph-50", name:"Photos · 50", desc:"Log 50 progress photos.", check:()=> (state.bodyPhotos||[]).length>=50 , category:"body", tier:"bronze", value:"50", prog:{ have:()=> Math.round((state.bodyPhotos||[]).length), need:50 } },
   { id:"ph-100", name:"Photos · 100", desc:"Log 100 progress photos.", check:()=> (state.bodyPhotos||[]).length>=100 , category:"body", tier:"gold", value:"100", prog:{ have:()=> Math.round((state.bodyPhotos||[]).length), need:100 } },
   { id:"ph-250", name:"Photos · 250", desc:"Log 250 progress photos.", check:()=> (state.bodyPhotos||[]).length>=250 , category:"body", tier:"platinum", value:"250", prog:{ have:()=> Math.round((state.bodyPhotos||[]).length), need:250 } },
@@ -5959,6 +5999,31 @@ const ACHIEVEMENT_DEFS = [
   { id:"anniv-1825", name:"5 Years on IGNYT", desc:"Use IGNYT for 5 years.", check:()=> accountDays()>=1825 , category:"special", tier:"platinum", value:"5YR", prog:{ have:()=> Math.round(accountDays()), need:1825 } },
   { id:"mid-5", name:"Midnight Warrior ×5", desc:"Start 5 midnight workouts.", check:()=> sessionsAtHour(h=>h<4)>=5 , category:"special", tier:"bronze", value:"5", prog:{ have:()=> Math.round(sessionsAtHour(h=>h<4)), need:5 } },
   { id:"mid-10", name:"Midnight Warrior ×10", desc:"Start 10 midnight workouts.", check:()=> sessionsAtHour(h=>h<4)>=10 , category:"special", tier:"platinum", value:"10", prog:{ have:()=> Math.round(sessionsAtHour(h=>h<4)), need:10 } },
+
+  /* ---- SLEEP (16). The `sleep` field has been on bodylog entries all along --
+     entered in the Recovery section of the Log Weight form, exported under the legacy
+     `sleep_hrs` column -- it simply had no reader until now. No new logging was added.
+
+     Sleep is deliberately NOT in BODY_MEASUREMENT_KEYS and must stay out:
+     measurementEntryCount() treats every key in that list as a tape measurement, so
+     adding it there would hand "Log measurements 100 times" to someone who only ever
+     logged sleep. ---- */
+  { id:"sleep-first", name:"Lights Out", desc:"Log your first night of sleep.", check:()=> sleepLogCount()>=1 , category:"body", tier:"bronze", value:"1", prog:{ have:()=> sleepLogCount(), need:1 } },
+  { id:"sleep-30", name:"Well Rested", desc:"Log 30 nights of sleep.", check:()=> sleepLogCount()>=30 , category:"body", tier:"silver", value:"30", prog:{ have:()=> sleepLogCount(), need:30 } },
+  { id:"sleepstk-7", name:"Sleep Streak · 7 days", desc:"Maintain a 7-day sleep streak.", check:()=> sleepStreakDays()>=7 , category:"streak", tier:"bronze", value:"7" },
+  { id:"sleepstk-14", name:"Sleep Streak · 14 days", desc:"Maintain a 14-day sleep streak.", check:()=> sleepStreakDays()>=14 , category:"streak", tier:"silver", value:"14" },
+  { id:"sleepstk-30", name:"Sleep Streak · 30 days", desc:"Maintain a 30-day sleep streak.", check:()=> sleepStreakDays()>=30 , category:"streak", tier:"gold", value:"30" },
+  { id:"sleepstk-60", name:"Sleep Streak · 60 days", desc:"Maintain a 60-day sleep streak.", check:()=> sleepStreakDays()>=60 , category:"streak", tier:"diamond", value:"60" },
+  { id:"sleepstk-100", name:"Sleep Streak · 100 days", desc:"Maintain a 100-day sleep streak.", check:()=> sleepStreakDays()>=100 , category:"streak", tier:"platinum", value:"100" },
+  { id:"slp-60", name:"Sleep Logs · 60", desc:"Log 60 sleep entries.", check:()=> sleepLogCount()>=60 , category:"body", tier:"bronze", value:"60", prog:{ have:()=> sleepLogCount(), need:60 } },
+  { id:"slp-100", name:"Sleep Logs · 100", desc:"Log 100 sleep entries.", check:()=> sleepLogCount()>=100 , category:"body", tier:"silver", value:"100", prog:{ have:()=> sleepLogCount(), need:100 } },
+  { id:"slp-250", name:"Sleep Logs · 250", desc:"Log 250 sleep entries.", check:()=> sleepLogCount()>=250 , category:"body", tier:"gold", value:"250", prog:{ have:()=> sleepLogCount(), need:250 } },
+  { id:"slp-365", name:"Sleep Logs · 365", desc:"Log 365 sleep entries.", check:()=> sleepLogCount()>=365 , category:"body", tier:"platinum", value:"365", prog:{ have:()=> sleepLogCount(), need:365 } },
+  { id:"slphrs-50", name:"Sleep Hours · 50", desc:"Sleep 50 logged hours.", check:()=> totalSleepHours()>=50 , category:"body", tier:"bronze", value:"50", prog:{ have:()=> Math.round(totalSleepHours()), need:50 } },
+  { id:"slphrs-100", name:"Sleep Hours · 100", desc:"Sleep 100 logged hours.", check:()=> totalSleepHours()>=100 , category:"body", tier:"silver", value:"100", prog:{ have:()=> Math.round(totalSleepHours()), need:100 } },
+  { id:"slphrs-250", name:"Sleep Hours · 250", desc:"Sleep 250 logged hours.", check:()=> totalSleepHours()>=250 , category:"body", tier:"gold", value:"250", prog:{ have:()=> Math.round(totalSleepHours()), need:250 } },
+  { id:"slphrs-500", name:"Sleep Hours · 500", desc:"Sleep 500 logged hours.", check:()=> totalSleepHours()>=500 , category:"body", tier:"diamond", value:"500", prog:{ have:()=> Math.round(totalSleepHours()), need:500 } },
+  { id:"slphrs-1000", name:"Sleep Hours · 1,000", desc:"Sleep 1,000 logged hours.", check:()=> totalSleepHours()>=1000 , category:"body", tier:"platinum", value:"1K", prog:{ have:()=> Math.round(totalSleepHours()), need:1000 } },
 ];
 
 /* Call after any action that could unlock an achievement (finish workout,

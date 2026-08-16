@@ -29,7 +29,7 @@ sessions, distinct calendar months.
 
 | Needs | Medals | Note |
 |---|---|---|
-| **A sleep log** | 16 | `sleep_logs`, `sleep_hours`, `sleep_streak_days`. `sleep_hrs` exists only as a legacy CSV import column. Adding `sleep` to `BODY_MEASUREMENT_GROUPS` would give all 16 a real source and a UI at once — that array is the single place the entry form, CSV and charts read. |
+| ~~A sleep log~~ | ~~16~~ | **Done — and it needed no feature at all.** See "The sleep log was already there" below. |
 | **A festival/holiday calendar** | 11 | 10 `festival_*` (Diwali, Holi, Pongal, Onam, Navratri, Ganesh, Eid, Christmas, Republic, Independence) plus `holiday_workout`. Four are fixed-date; the rest are lunar and move yearly, so this needs a multi-year date table, not a formula. |
 | **Program history** | 10 | `programs_started`, `programs_completed`, `program_types`. Only the CURRENT plan is stored (`state.plan`). Needs an `hx_completed_programs` list written when a plan hits 100%. |
 | **Cardio elevation** | 6 | Cardio sets carry `distanceKm`, `durationSec`, `calories`, `heartRate` — no elevation. Needs a field or a Health Connect read. |
@@ -47,6 +47,44 @@ sessions, distinct calendar months.
 Six of these — sleep, festivals, program history, rest days, cuisine, race division — are
 **small, self-contained features** that would unlock 49 medals between them. That is the
 highest-value work left in this area.
+
+## The sleep log was already there
+
+This file previously said "no sleep log exists". That was wrong, and the way it was wrong is
+worth recording: `grep sleepLog` returns nothing and `sleep_hrs` looks like a legacy CSV column,
+so both signals pointed at a feature that had never been built.
+
+The field is `sleep`, and it has been shipping the whole time:
+
+```
+render   renderProgressBody -> fieldSm("b-sleep","Sleep (hrs)","7.5")   in a "Recovery" section
+save     entry = { ..., sleep: val("b-sleep"), hrv: val("b-hrv") }      alongside weight
+export   e.sleep written under the legacy `sleep_hrs` column
+import   colIdx.sleep = header.indexOf("sleep_hrs")
+```
+
+What it never had was a **reader**. All 16 medals needed was `sleepLogCount()`,
+`totalSleepHours()` and `sleepStreakDays()`. No new logging, no new form field, no migration.
+
+Sleep is now also **chartable** — one line in `BODY_CHART_METRICS`, because `bodyMetricSeries()`
+reads `e[metric]` generically. Data collected since the measurements CSV was written had never
+been viewable. **HRV sits in exactly the same position and is one line away.**
+
+### Two traps this opened, both closed
+
+**Sleep must stay OUT of `BODY_MEASUREMENT_KEYS`.** The obvious way to "add a sleep field" is to
+put it in `BODY_MEASUREMENT_GROUPS`, which is where the entry form, CSV and chart switcher all
+read from. Doing that would have broken `measurementEntryCount()`, which counts *any* key in
+that list as a tape measurement — so logging sleep nightly would have earned "Log measurements
+100 times" without the user ever picking up a tape. The existing design already had sleep
+outside that list, which turned out to be correct rather than an oversight.
+
+**`weigh_ins` was counting rows, not weigh-ins.** Nine defs tested `state.bodylog.length`. The
+entry form guarantees a weight (`if(!rawWeight) return;`), but the measurements CSV importer
+deliberately does not — its own comment says a row "doesn't need weight (e.g. a waist-only or
+body-fat-only day)". So an imported waist-only row counted toward "Log 50 weigh-ins". All nine
+now call `weighInCount()`, which requires an actual weight. Tightening is safe: unlocks are
+stored in `state.achievements` once earned, so no one loses a badge they already have.
 
 ## Two medals whose wording changed
 
