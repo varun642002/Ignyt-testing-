@@ -1,6 +1,41 @@
 # CLAUDE_PROGRESS.md
 
-## MONETISATION SPEC (from the user, 2026-08-13) — NOT IMPLEMENTED
+## PREMIUM GATING — HALF IMPLEMENTED (2026-08-13)
+
+`PREMIUM_FEATURES` in `www/js/billing/entitlements.js` was `{}` -- an empty map, which is why
+every feature was free regardless of entitlement. It now declares 18 gated features per the spec.
+
+**LIVE NOW (6).** These already had a `premiumAllows()` / `has()` call at their render site, so
+populating the map gated them immediately:
+
+    coach · diet · insights · health · fasting · supplements
+
+**DECLARED BUT NOT ENFORCED (12).** These are in the map and nothing checks them yet, so they
+remain free. Each needs a `premiumAllows("<key>")` check at its render site, with
+`renderUpgradeWall("<key>")` as the alternative branch (that helper already exists in app.js):
+
+    plans · hyrox · history · analytics · records · muscles
+    calendar · sync · photos · macros · export · reminders
+
+**THE TWO WITH A DATA-LOSS EDGE -- do these carefully:**
+
+  `history` -- the PR engine, streaks and volume charts all READ workout history. Gating the
+  BROWSING is the intent; if those readers silently get nothing, a paying user's streak resets to
+  zero and it reads as data loss, not as a paywall. Decide per reader: degrade or hide.
+
+  `sync` -- gate the SYNC, never the local data. A lapsed user must still read everything already
+  on the device. Gating at the wrong layer here is a refund and a one-star review.
+
+**STILL NOT DONE, and none of it is optional:**
+  - server-side gates. `is_entitled(user)` exists and `routes_ai.py:219` uses it correctly.
+    Anything spending server resources -- sync, backup, AI -- needs the same, because the client
+    cache is plain JSON in localStorage and forgeable.
+  - iOS has no paywall: `paywallApplies()` is Android-only, so `isPremium()` is unconditionally
+    true there. Ship as-is and the app is free on iPhone.
+  - Play Console: product `ignyt_premium`, a base plan, and a 7-day free-trial OFFER on it.
+    No app-side trial timer.
+
+## MONETISATION SPEC (from the user, 2026-08-13) — SPEC COMPLETE
 
 **The rule:** free for 7 days with everything unlocked. After day 7, a free user keeps only
 **basic workout tracking** and **basic food tracking**. Everything else is premium.
