@@ -772,6 +772,15 @@ const MUSCLE_GROUP_COLOR = {
   Arms:"#FFB020", Shoulders:"#4FD8C4", Cardio:"var(--accent)", Mobility:"var(--muted)"
 };
 
+/* The three ways a HYROX race is actually run. Doubles splits the stations between two athletes;
+   Pro is the same course at heavier sled/wall-ball loads. Recorded rather than inferred -- a
+   doubles time and a singles time are not comparable, and nothing in the segment data tells them
+   apart. */
+const RACE_DIVISIONS = [
+  { id:"singles", label:"Singles" },
+  { id:"doubles", label:"Doubles" },
+  { id:"pro",     label:"Pro" }
+];
 const RACE_SEGMENTS = [
   {type:"run", name:"Run 1"}, {type:"station", name:"SkiErg", detail:"1000m"},
   {type:"run", name:"Run 2"}, {type:"station", name:"Sled Push", detail:"50m"},
@@ -1987,6 +1996,11 @@ const state = {
   justAddedFoodId: null,
   raceActive: LS.get("hx_race_active", null),
   raceLog: LS.records("hx_race_log"),
+  /* Which HYROX division the next simulation is run as. Persisted because it is a property of
+     how someone trains, not of one session -- a doubles athlete picks it once. Stamped onto the
+     race record at finish; entries written before this existed simply have no `division`, which
+     is why the readers treat a missing value as "singles" rather than as unknown. */
+  raceDivision: LS.get("hx_race_division", "singles"),
   viewingRaceMode: !!LS.get("hx_race_active", null),
   achievements: LS.records("hx_achievements"),
   lastUnlockedAchievements: null, // transient celebration, mirrors lastSessionPRs pattern
@@ -5433,6 +5447,29 @@ function weighInCount(){
 function totalSleepHours(){
   return (state.bodylog||[]).reduce((a,b)=>a + achNum(b && b.sleep), 0);
 }
+/** Simulations logged in a given division. Races recorded before the division field existed
+    carry no value and count as singles, which is what they almost certainly were. */
+function hyroxSimsInDivision(division){
+  return (state.raceLog||[]).filter(r=>r && (r.division || "singles") === division).length;
+}
+
+/* Distinct YEARS in which a session landed on the user's birthday. The one-off "Birthday Beast"
+   asks whether it ever happened; these ask how many times, so the same birthday trained twice
+   in one year counts once. False when no birthday was ever given -- an absent date must not
+   quietly become 1 January. */
+function birthdaysTrained(){
+  const raw = (state.onboarding && state.onboarding.birthday) || (state.profile && state.profile.dob);
+  if(!raw) return 0;
+  const b = new Date(raw);
+  if(isNaN(b)) return 0;
+  const years = new Set();
+  (state.workoutLog||[]).forEach(s=>{
+    const t = new Date(s.startedAt || s.date);
+    if(!isNaN(t) && t.getMonth() === b.getMonth() && t.getDate() === b.getDate()) years.add(t.getFullYear());
+  });
+  return years.size;
+}
+
 /** Longest run of consecutive days carrying a sleep figure. */
 function sleepStreakDays(){
   return longestConsecutiveRun(Array.from(new Set((state.bodylog||[])
@@ -6251,6 +6288,18 @@ const ACHIEVEMENT_DEFS = [
   { id:"fest-republic", name:"Republic Rep", desc:"Train on Republic Day.", check:()=> trainedDuringFestival("republic") , category:"special", tier:"silver", value:"R-DAY" },
   { id:"fest-independence", name:"Independence Iron", desc:"Train on Independence Day.", check:()=> trainedDuringFestival("independence") , category:"special", tier:"gold", value:"I-DAY" },
   { id:"holiday", name:"No Days Off", desc:"Train on a public holiday.", check:()=> trainedOnAnyFestival() , category:"special", tier:"silver", value:"HOL" },
+
+  /* ---- The medals the designed set marks "live" that were missing (6). Two needed a real
+     field added (race division); four only needed counting, and were skipped earlier because
+     I read "birthdays_trained" as needing a per-year record when distinct years in the log
+     answer it directly. `founding` is still out: it wants a cutoff date for who counts as a
+     founding athlete, and that is a product decision, not a lookup. ---- */
+  { id:"hyrox-doubles", name:"HYROX Doubles", desc:"Complete a doubles simulation.", check:()=> hyroxSimsInDivision("doubles")>=1 , category:"hyrox", tier:"gold", value:"2X" },
+  { id:"hyrox-pro", name:"HYROX Pro", desc:"Complete a Pro-weight simulation.", check:()=> hyroxSimsInDivision("pro")>=1 , category:"hyrox", tier:"diamond", value:"PRO" },
+  { id:"bday-1", name:"Birthday Streak ×1", desc:"Train on 1 birthdays.", check:()=> birthdaysTrained()>=1 , category:"special", tier:"bronze", value:"1", prog:{ have:()=> birthdaysTrained(), need:1 } },
+  { id:"bday-2", name:"Birthday Streak ×2", desc:"Train on 2 birthdays.", check:()=> birthdaysTrained()>=2 , category:"special", tier:"silver", value:"2", prog:{ have:()=> birthdaysTrained(), need:2 } },
+  { id:"bday-3", name:"Birthday Streak ×3", desc:"Train on 3 birthdays.", check:()=> birthdaysTrained()>=3 , category:"special", tier:"gold", value:"3", prog:{ have:()=> birthdaysTrained(), need:3 } },
+  { id:"bday-5", name:"Birthday Streak ×5", desc:"Train on 5 birthdays.", check:()=> birthdaysTrained()>=5 , category:"special", tier:"diamond", value:"5", prog:{ have:()=> birthdaysTrained(), need:5 } },
 ];
 
 /* Call after any action that could unlock an achievement (finish workout,
@@ -17965,6 +18014,12 @@ function renderRaceStart(){
       <div class="stat-label">Personal Best</div>
       <div class="mono" style="font-weight:900;font-size:28px;color:var(--accent);">${formatDuration(best)}</div>
     </div>` : ''}
+    <div class="eyebrow-label">Division</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      ${RACE_DIVISIONS.map(d=>`<button class="cat-chip${state.raceDivision===d.id?' active':''}"
+        data-race-division="${d.id}" aria-pressed="${state.raceDivision===d.id}"
+        style="flex:1;min-height:44px;font-size:12px;">${escHtml(d.label)}</button>`).join("")}
+    </div>
     <button class="btn btn-accent btn-block" data-action="start-race" style="margin-bottom:20px;">Start Race</button>
 
     <div class="eyebrow-label">Race Order</div>
@@ -21033,9 +21088,19 @@ function attachHandlers(){
   const startRaceBtn = document.querySelector('[data-action="start-race"]');
   if(startRaceBtn) startRaceBtn.addEventListener("click", ()=>{
     const now = Date.now();
-    state.raceActive = { startedAt: now, segmentStartedAt: now, currentIndex: 0, segments: [] };
+    // Division is captured at the gun, so changing the setting mid-race cannot relabel it.
+    state.raceActive = { startedAt: now, segmentStartedAt: now, currentIndex: 0, segments: [],
+                         division: state.raceDivision || "singles" };
     ensureRaceTimerRunning();
     render();
+  });
+  document.querySelectorAll("[data-race-division]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(state.raceActive) return;              // never relabel a race already under way
+      state.raceDivision = el.dataset.raceDivision;
+      LS.set("hx_race_division", state.raceDivision);
+      render();
+    });
   });
   const raceNextBtn = document.querySelector('[data-action="race-next-segment"]');
   if(raceNextBtn) raceNextBtn.addEventListener("click", ()=>{
@@ -21047,7 +21112,10 @@ function attachHandlers(){
     if(r.currentIndex >= RACE_SEGMENTS.length-1){
       // Race complete -- auto-save to history, same "commit on finish" pattern as regular workouts
       const totalMs = now - r.startedAt;
-      state.raceLog.unshift({ id: now, date: dayKey(), totalMs, segments: r.segments });
+      state.raceLog.unshift({ id: now, date: dayKey(), totalMs, segments: r.segments,
+        /* Read off the race that was actually run, not off the current setting -- the two differ
+           if the division is changed while a race is in progress. */
+        division: r.division || "singles" });
       state.raceActive = null;
       state.viewingRaceMode = false; // return to Plan home rather than parking on the race sub-screen
       stopRaceTimer();

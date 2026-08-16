@@ -215,6 +215,36 @@ t("no sessions, no holiday", fc.ANY(), false);
 console.log("\n" + pass + " passed, " + fail + " failed");
 
 
+/* ---- 6. race division and birthdays.
+   Races written before the division field existed carry no value. They must read as singles --
+   the alternative is a legacy PB silently vanishing from the singles count. */
+const divCtx = (races, workouts, birthday) => {
+  const state = { raceLog: races, workoutLog: workouts || [], foodLog: [], bodylog: [], prs: [],
+    routines: [], bodyPhotos: [], waterLog: [], savedMeals: [], achievements: [], plan: null,
+    profile: {}, onboarding: birthday ? { birthday } : {}, settings: {},
+    nutrition: { proteinPct:30, carbPct:45, fatPct:25 } };
+  const sx = { state, localStorage:{getItem:()=>null}, console, Math, Date, JSON, Set, Object,
+    Array, Number, String, parseFloat, isFinite, RegExp };
+  vm.createContext(sx);
+  vm.runInContext(support + helpers +
+    ";globalThis.D=(d)=>hyroxSimsInDivision(d);globalThis.B=()=>birthdaysTrained();", sx);
+  return sx;
+};
+console.log("\n== race division and birthdays ==");
+let d = divCtx([{ id:1, totalMs:1, segments:[] }]);                       // legacy, no division
+t("a race with no division reads as singles", d.D("singles"), 1);
+t("...and not as doubles", d.D("doubles"), 0);
+d = divCtx([{ id:1, totalMs:1, segments:[], division:"doubles" }]);
+t("an explicit doubles race counts", d.D("doubles"), 1);
+
+const bd = "1998-05-20T00:00:00";
+const onBday = y => ({ id:y, startedAt:y+"-05-20T09:00:00", date:y+"-05-20", exercises:[] });
+t("no birthday stored means zero, never 1 Jan", divCtx([], [onBday(2025)], null).B(), 0);
+t("the same birthday twice in a year counts once",
+  divCtx([], [onBday(2025), { id:9, startedAt:"2025-05-20T18:00:00", date:"2025-05-20", exercises:[] }], bd).B(), 1);
+t("three separate birthdays count three",
+  divCtx([], [onBday(2024), onBday(2025), onBday(2026)], bd).B(), 3);
+
 /* ---- 5. the badge-id migration.
    state.achievements is keyed by id. If a mapping points at an id no def uses, the user's badge
    becomes a ghost: invisible in the grid, but still counted by state.achievements.length, which
