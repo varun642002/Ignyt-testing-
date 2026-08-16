@@ -4681,6 +4681,454 @@ function daysWithFullLog(){
   return n;
 }
 
+/* =========================================================================================
+   ACHIEVEMENT HELPERS — added for the 186-medal set (2026-08-16).
+
+   Same rule as the original block above: every helper here reads LOGGED data and nothing
+   else. That rule is why 14 of the 186 designed medals are not in ACHIEVEMENT_DEFS — there
+   is no honest source for them. docs/achievements-186.md lists which and why.
+
+   Set shape is whatever exerciseLogType() chose when the set was created:
+     strength -> weight, reps, rpe        cardio -> distanceKm, durationSec, calories
+     hold     -> durationSec              carry  -> distanceKm, weight, durationSec
+   so these read the FIELD rather than re-deriving the type. Cardio helpers additionally
+   require distanceKm to be present, which is what keeps "Barbell Row" out of the rowing
+   totals — a strength row has reps and no distance.
+========================================================================================= */
+
+const achNum = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+
+/** Walk every counting (non-warm-up) set in every logged session. fn(set, exerciseName, session). */
+function eachLoggedSet(fn){
+  (state.workoutLog||[]).forEach(s=>{
+    (s.exercises||[]).forEach(e=>{
+      (e.sets||[]).forEach(set=>{ if(isCountingSet(set)) fn(set, e.name||"", s); });
+    });
+  });
+}
+
+/* ---- cardio ------------------------------------------------------------------------- */
+/* Deliberately narrow name patterns. `\brow\b` would swallow Barbell Row and Bent-Over Row,
+   so rowing matches the MACHINE words only, and every cardio total is additionally gated on
+   a distance/calorie field existing on the set. */
+const ACH_RUN_RE  = /\brun(ning)?\b|treadmill|\bjog/i;
+const ACH_ROW_RE  = /rowing|\brower\b|concept ?2/i;
+const ACH_SKI_RE  = /ski ?erg/i;
+const ACH_BIKE_RE = /\bbike\b|cycling|echo bike/i;
+
+/** Sets of a cardio movement that actually carry a distance. */
+function cardioPieces(re){
+  const out = [];
+  eachLoggedSet((set, name, s)=>{
+    if(re.test(name) && achNum(set.distanceKm) > 0) out.push({ set, name, session:s });
+  });
+  return out;
+}
+function runCount(){ return cardioPieces(ACH_RUN_RE).length; }
+function longestRunKm(){ return cardioPieces(ACH_RUN_RE).reduce((m,p)=>Math.max(m, achNum(p.set.distanceKm)), 0); }
+function totalRunKm(){ return cardioPieces(ACH_RUN_RE).reduce((a,p)=>a + achNum(p.set.distanceKm), 0); }
+function totalRowMetres(){ return cardioPieces(ACH_ROW_RE).reduce((a,p)=>a + achNum(p.set.distanceKm)*1000, 0); }
+function longestRowMetres(){ return cardioPieces(ACH_ROW_RE).reduce((m,p)=>Math.max(m, achNum(p.set.distanceKm)*1000), 0); }
+function totalSkiergMetres(){ return cardioPieces(ACH_SKI_RE).reduce((a,p)=>a + achNum(p.set.distanceKm)*1000, 0); }
+function rowCount(){ return cardioPieces(ACH_ROW_RE).length; }
+
+/** Calories logged on a bike. Only counts sets that recorded calories. */
+function totalBikeCalories(){
+  let kcal = 0;
+  eachLoggedSet((set, name)=>{ if(ACH_BIKE_RE.test(name)) kcal += achNum(set.calories); });
+  return kcal;
+}
+
+/* A distance-and-time piece of AT LEAST `km` finished within `seconds`. Deliberately literal:
+   a 10 km piece can satisfy the 5 km medal only by covering 10 km inside the 5 km time, which
+   is strictly harder. Never awards on an estimate or a split the app did not record. */
+function bestPieceUnder(re, km, seconds){
+  return cardioPieces(re).some(p=>{
+    const d = achNum(p.set.distanceKm), t = achNum(p.set.durationSec);
+    return d >= km && t > 0 && t <= seconds;
+  });
+}
+function bestRowUnder(metres, seconds){
+  return cardioPieces(ACH_ROW_RE).some(p=>{
+    const d = achNum(p.set.distanceKm)*1000, t = achNum(p.set.durationSec);
+    return d >= metres && t > 0 && t <= seconds;
+  });
+}
+
+/** Longest run of consecutive calendar days carrying at least one logged run. */
+function runStreakDays(){
+  const days = new Set(cardioPieces(ACH_RUN_RE).map(p=>{
+    const t = new Date(p.session.startedAt || p.session.date);
+    return isNaN(t) ? null : dayKey(t);
+  }).filter(Boolean));
+  return longestConsecutiveRun(Array.from(days));
+}
+
+/** Longest run of consecutive days in a list of YYYY-MM-DD keys. */
+function longestConsecutiveRun(dayKeys){
+  const sorted = dayKeys.slice().sort();
+  if(!sorted.length) return 0;
+  let best = 1, cur = 1;
+  for(let i=1;i<sorted.length;i++){
+    const gap = Math.round((new Date(sorted[i]) - new Date(sorted[i-1])) / 86400000);
+    if(gap === 1) cur++; else if(gap > 1) cur = 1;
+    best = Math.max(best, cur);
+  }
+  return best;
+}
+
+/* ---- HYROX stations ------------------------------------------------------------------ */
+/* Sled Push, Sled Pull and anything "... Carry" are logged as CARRY sets, so they have a real
+   distance. Wall Balls, Sandbag Lunge and Burpee Broad Jump are logged in REPS by
+   exerciseLogType() — the medals for those are counted in reps for that reason, and their
+   descriptions say reps rather than metres. */
+function stationMetres(re){
+  let m = 0;
+  eachLoggedSet((set, name)=>{ if(re.test(name)) m += achNum(set.distanceKm)*1000; });
+  return m;
+}
+function stationReps(re){
+  let r = 0;
+  eachLoggedSet((set, name)=>{ if(re.test(name)) r += achNum(set.reps); });
+  return r;
+}
+/** Most reps of a movement inside any one session. */
+function bestSessionReps(re){
+  let best = 0;
+  (state.workoutLog||[]).forEach(s=>{
+    let n = 0;
+    (s.exercises||[]).forEach(e=>{
+      if(!re.test(e.name||"")) return;
+      (e.sets||[]).forEach(set=>{ if(isCountingSet(set)) n += achNum(set.reps); });
+    });
+    best = Math.max(best, n);
+  });
+  return best;
+}
+/** Most reps of a movement inside any one set. */
+function bestSingleSetReps(re){
+  let best = 0;
+  eachLoggedSet((set, name)=>{ if(re.test(name)) best = Math.max(best, achNum(set.reps)); });
+  return best;
+}
+const ACH_WALLBALL_RE = /wall ?balls?/i;
+const ACH_SLED_PUSH_RE = /sled push/i;
+const ACH_SLED_PULL_RE = /sled pull/i;
+const ACH_FARMERS_RE = /farmers?[' ]?s? ?carry|farmer ?carry/i;
+const ACH_SANDBAG_RE = /sandbag lunge/i;
+const ACH_BURPEE_BJ_RE = /burpee broad jump/i;
+const ACH_PULLUP_RE = /pull[- ]?ups?|chin[- ]?ups?/i;
+const ACH_PUSHUP_RE = /push[- ]?ups?/i;
+const ACH_KB_SWING_RE = /kettlebell swing|kb swing/i;
+const ACH_PLANK_RE = /\bplank\b/i;
+/* Bodyweight squats only — must not count a Back Squat, which is where the weight field is
+   the whole point. A set with weight on it is not a bodyweight squat. */
+function bodyweightSquatReps(){
+  let r = 0;
+  eachLoggedSet((set, name)=>{
+    const n = name.toLowerCase();
+    if(/squat/.test(n) && /\bbodyweight\b|\bair squat\b|\bbw\b/.test(n) && achNum(set.weight) === 0) r += achNum(set.reps);
+  });
+  return r;
+}
+/** Longest timed hold on any plank variation, in seconds. */
+function bestPlankSeconds(){
+  let best = 0;
+  eachLoggedSet((set, name)=>{ if(ACH_PLANK_RE.test(name)) best = Math.max(best, achNum(set.durationSec)); });
+  return best;
+}
+/** A run of at least `km` logged immediately after a HYROX station in the same session. */
+function ranAfterStation(km){
+  const STATION = /sled push|sled pull|wall ?balls?|farmers?[' ]?s? ?carry|sandbag lunge|burpee broad jump|ski ?erg|rowing|\brower\b/i;
+  return (state.workoutLog||[]).some(s=>{
+    const ex = s.exercises||[];
+    for(let i=1;i<ex.length;i++){
+      if(!STATION.test(ex[i-1].name||"")) continue;
+      if(!ACH_RUN_RE.test(ex[i].name||"")) continue;
+      const far = (ex[i].sets||[]).some(set=>isCountingSet(set) && achNum(set.distanceKm) >= km);
+      if(far) return true;
+    }
+    return false;
+  });
+}
+
+/* ---- HYROX simulations --------------------------------------------------------------- */
+/* state.raceLog entries are { id, date, totalMs, segments } — written by the race timer when
+   a simulation is finished. There is no division or weight-class field on them, which is why
+   the Doubles and Pro medals are not implemented. */
+function hyroxSimCount(){ return (state.raceLog||[]).length; }
+function bestHyroxMs(){
+  const l = (state.raceLog||[]).map(r=>achNum(r.totalMs)).filter(ms=>ms > 0);
+  return l.length ? Math.min(...l) : 0;
+}
+function hyroxUnderMinutes(min){ const b = bestHyroxMs(); return b > 0 && b <= min*60000; }
+
+/* ---- strength ratios ------------------------------------------------------------------ */
+/** Bodyweight to compare lifts against: the most recent weigh-in, else the profile figure. */
+function currentBodyweightKg(){
+  const logged = (state.bodylog||[]).filter(b=>b && achNum(b.weight) > 0);
+  if(logged.length) return achNum(logged[0].weight);   // bodylog is stored newest-first
+  return achNum(state.profile && state.profile.weight);
+}
+/** Heaviest weight ever logged on a movement, from sets and from PRs. */
+function bestLiftKg(re){
+  let best = 0;
+  eachLoggedSet((set, name)=>{ if(re.test(name)) best = Math.max(best, achNum(set.weight)); });
+  (state.prs||[]).forEach(p=>{
+    if(p && p.type === "weight" && re.test(p.exercise || p.name || "")) best = Math.max(best, achNum(p.value));
+  });
+  return best;
+}
+function liftBodyweightRatio(re){
+  const bw = currentBodyweightKg();
+  return bw > 0 ? bestLiftKg(re) / bw : 0;
+}
+const ACH_BENCH_RE = /bench press/i;
+const ACH_SQUAT_RE = /back squat|front squat|\bsquat\b/i;
+const ACH_DEADLIFT_RE = /deadlift/i;
+const ACH_OHP_RE = /overhead press|shoulder press|military press/i;
+/** Bench, squat and deadlift all logged inside one ISO week. */
+function bigThreeInOneWeek(){
+  const weeks = {};
+  (state.workoutLog||[]).forEach(s=>{
+    const t = new Date(s.startedAt || s.date);
+    if(isNaN(t)) return;
+    const monday = new Date(t); monday.setDate(t.getDate() - ((t.getDay() + 6) % 7));
+    const k = dayKey(monday);
+    const bucket = weeks[k] || (weeks[k] = { b:false, s:false, d:false });
+    (s.exercises||[]).forEach(e=>{
+      const n = e.name || "";
+      if(ACH_BENCH_RE.test(n)) bucket.b = true;
+      if(ACH_SQUAT_RE.test(n)) bucket.s = true;
+      if(ACH_DEADLIFT_RE.test(n)) bucket.d = true;
+    });
+  });
+  return Object.keys(weeks).some(k=>weeks[k].b && weeks[k].s && weeks[k].d);
+}
+
+/* ---- when you train ------------------------------------------------------------------- */
+/** Calendar days carrying more than one logged session. */
+function daysWithTwoSessions(){
+  const byDay = {};
+  (state.workoutLog||[]).forEach(s=>{
+    const t = new Date(s.startedAt || s.date);
+    if(isNaN(t)) return;
+    const k = dayKey(t);
+    byDay[k] = (byDay[k]||0) + 1;
+  });
+  return Object.keys(byDay).filter(k=>byDay[k] >= 2).length;
+}
+/** ISO-week keys in which BOTH Saturday and Sunday were trained. */
+function weekendsBothDays(){
+  const weeks = {};
+  (state.workoutLog||[]).forEach(s=>{
+    const t = new Date(s.startedAt || s.date);
+    if(isNaN(t)) return;
+    const dow = t.getDay();                       // 0 Sun, 6 Sat
+    if(dow !== 0 && dow !== 6) return;
+    const sat = new Date(t);
+    sat.setDate(t.getDate() - (dow === 0 ? 1 : 0));  // anchor the pair on its Saturday
+    const k = dayKey(sat);
+    const b = weeks[k] || (weeks[k] = { sat:false, sun:false });
+    if(dow === 6) b.sat = true; else b.sun = true;
+  });
+  return Object.keys(weeks).filter(k=>weeks[k].sat && weeks[k].sun);
+}
+/** Consecutive weekends (Sat+Sun both trained). */
+function weekendStreak(){
+  const sats = weekendsBothDays().sort();
+  if(!sats.length) return 0;
+  let best = 1, cur = 1;
+  for(let i=1;i<sats.length;i++){
+    const gap = Math.round((new Date(sats[i]) - new Date(sats[i-1])) / 86400000);
+    if(gap === 7) cur++; else cur = 1;
+    best = Math.max(best, cur);
+  }
+  return best;
+}
+/** True once a session follows a gap of at least `days` since the previous one. */
+function returnedAfterBreak(days){
+  const ds = Array.from(new Set((state.workoutLog||[]).map(s=>{
+    const t = new Date(s.startedAt || s.date);
+    return isNaN(t) ? null : dayKey(t);
+  }).filter(Boolean))).sort();
+  for(let i=1;i<ds.length;i++){
+    if(Math.round((new Date(ds[i]) - new Date(ds[i-1])) / 86400000) >= days) return true;
+  }
+  return false;
+}
+/** Most sessions logged inside any one calendar month. */
+function bestSessionsInMonth(){
+  const months = {};
+  (state.workoutLog||[]).forEach(s=>{
+    const t = new Date(s.startedAt || s.date);
+    if(isNaN(t)) return;
+    const k = t.getFullYear() + "-" + t.getMonth();
+    months[k] = (months[k]||0) + 1;
+  });
+  const vals = Object.keys(months).map(k=>months[k]);
+  return vals.length ? Math.max(...vals) : 0;
+}
+/** Distinct calendar months (Jan..Dec) ever trained in. */
+function distinctMonthsTrained(){
+  const m = new Set();
+  (state.workoutLog||[]).forEach(s=>{
+    const t = new Date(s.startedAt || s.date);
+    if(!isNaN(t)) m.add(t.getMonth());
+  });
+  return m.size;
+}
+/** Distinct meteorological seasons ever trained in. */
+function seasonsTrained(){
+  const seasons = new Set();
+  (state.workoutLog||[]).forEach(s=>{
+    const t = new Date(s.startedAt || s.date);
+    if(isNaN(t)) return;
+    seasons.add(Math.floor(((t.getMonth() + 1) % 12) / 3));   // 0 winter, 1 spring, 2 summer, 3 autumn
+  });
+  return seasons.size;
+}
+/** A session logged on a given month/day, in local time. */
+function trainedOnMonthDay(month, day){
+  return (state.workoutLog||[]).some(s=>{
+    const t = new Date(s.startedAt || s.date);
+    return !isNaN(t) && t.getMonth() === month && t.getDate() === day;
+  });
+}
+/** A session logged on the user's stored birthday. False when no birthday was ever given. */
+function trainedOnBirthday(){
+  const raw = (state.onboarding && state.onboarding.birthday) || (state.profile && state.profile.dob);
+  if(!raw) return false;
+  const b = new Date(raw);
+  if(isNaN(b)) return false;
+  return trainedOnMonthDay(b.getMonth(), b.getDate());
+}
+/** Days between the first thing ever logged and today. */
+function accountDays(){
+  const stamps = []
+    .concat((state.workoutLog||[]).map(s=>s.startedAt || s.date))
+    .concat((state.foodLog||[]).map(f=>f.date))
+    .concat((state.bodylog||[]).map(b=>b.date))
+    .map(v=>new Date(v)).filter(d=>!isNaN(d));
+  if(!stamps.length) return 0;
+  return Math.floor((Date.now() - Math.min(...stamps.map(d=>d.getTime()))) / 86400000);
+}
+
+/* ---- nutrition ------------------------------------------------------------------------- */
+/** Every logged day's macro totals, keyed by date. */
+function macroTotalsByDay(){
+  const days = {};
+  (state.foodLog||[]).forEach(f=>{
+    if(!f || !f.date) return;
+    const d = days[f.date] || (days[f.date] = { kcal:0, protein:0, carbs:0, fat:0 });
+    d.kcal    += achNum(f.calories);
+    d.protein += achNum(f.protein);
+    d.carbs   += achNum(f.carbs);
+    d.fat     += achNum(f.fat);
+  });
+  return days;
+}
+/** Dates on which a predicate over that day's totals held. */
+function nutritionDaysMeeting(pred){
+  const t = macroTargets();
+  const days = macroTotalsByDay();
+  return Object.keys(days).filter(k=>pred(days[k], t));
+}
+const achProteinMet = (d, t) => t.protein > 0 && d.protein >= t.protein;
+/* "Within your calorie goal" means a real day of eating that did not go over — a day with one
+   apple on it is not a day on target, hence the lower bound. */
+const achCaloriesMet = (d, t) => t.kcal > 0 && d.kcal >= t.kcal*0.8 && d.kcal <= t.kcal;
+/* All three macros inside +/-10% of target. Protein is allowed to run over: eating more
+   protein than the split calls for is not a miss. */
+const achMacrosMet = (d, t) => t.kcal > 0
+  && d.protein >= t.protein*0.9
+  && d.carbs >= t.carbs*0.9 && d.carbs <= t.carbs*1.1
+  && d.fat   >= t.fat*0.9   && d.fat   <= t.fat*1.1;
+
+/** Longest run of consecutive days on which breakfast was logged. */
+function breakfastStreak(){
+  const days = new Set((state.foodLog||[])
+    .filter(f=>f && f.date && String(f.meal||"").toLowerCase() === "breakfast")
+    .map(f=>f.date));
+  return longestConsecutiveRun(Array.from(days));
+}
+/** Distinct foods ever logged, by name. */
+function uniqueFoodsLogged(){
+  return new Set((state.foodLog||[])
+    .map(f=>String((f && f.name) || "").trim().toLowerCase())
+    .filter(Boolean)).size;
+}
+
+/* ---- body ------------------------------------------------------------------------------ */
+/** Body-log entries carrying at least one tape/composition measurement, not just a weight. */
+function measurementEntryCount(){
+  return (state.bodylog||[]).filter(b=>
+    b && BODY_MEASUREMENT_KEYS.some(k=>k !== "weight" && achNum(b[k]) > 0)
+  ).length;
+}
+/** True when the most recent weigh-in is the lowest ever recorded (and there is more than one). */
+function atNewLowWeight(){
+  const w = (state.bodylog||[]).filter(b=>b && achNum(b.weight) > 0).map(b=>achNum(b.weight));
+  if(w.length < 2) return false;
+  return w[0] <= Math.min(...w);     // newest-first
+}
+/** Latest weigh-in puts BMI in the 18.5–24.9 band, using the profile height. */
+function bmiInHealthyRange(){
+  const kg = currentBodyweightKg();
+  const cm = achNum(state.profile && state.profile.height);
+  if(kg <= 0 || cm <= 0) return false;
+  const bmi = kg / Math.pow(cm/100, 2);
+  return bmi >= 18.5 && bmi <= 24.9;
+}
+/** Weigh-ins within 1kg of the target weight. */
+function daysAtGoalWeight(){
+  const target = achNum((state.profile && state.profile.targetWeight) || (state.onboarding && state.onboarding.targetWeight));
+  if(target <= 0) return 0;
+  return (state.bodylog||[]).filter(b=>b && achNum(b.weight) > 0 && Math.abs(achNum(b.weight) - target) <= 1).length;
+}
+/** A single day carrying a weigh-in, a measurement and a progress photo. */
+function trackingTrioDay(){
+  const measured = new Set((state.bodylog||[])
+    .filter(b=>b && BODY_MEASUREMENT_KEYS.some(k=>k !== "weight" && achNum(b[k]) > 0))
+    .map(b=>b.date));
+  const weighed = new Set((state.bodylog||[]).filter(b=>b && achNum(b.weight) > 0).map(b=>b.date));
+  const shot = new Set((state.bodyPhotos||[]).map(p=>p && p.date).filter(Boolean));
+  return Array.from(weighed).some(d=>measured.has(d) && shot.has(d));
+}
+/** Sessions containing a mobility/stretch movement — the ones exerciseLogType() calls holds. */
+function mobilitySessionCount(){
+  const RE = /stretch|mobility|\byoga\b|foam rolling|cat-cow|child's pose|downward-facing dog|thoracic rotation|90\/90 hip switch|ankle circles|dislocate/i;
+  return (state.workoutLog||[]).filter(s=>(s.exercises||[]).some(e=>RE.test(e.name||""))).length;
+}
+/** Times an effort or feeling was recorded — a set RPE, or a session mood/energy/rating. */
+function effortLogCount(){
+  let n = 0;
+  eachLoggedSet(set=>{ if(achNum(set.rpe) > 0) n++; });
+  (state.workoutLog||[]).forEach(s=>{ if(s && (s.mood || s.energy || s.rating || s.rpe)) n++; });
+  return n;
+}
+
+/* ---- consistency ----------------------------------------------------------------------- */
+/** Longest run of consecutive days scoring at least `n` in the IGNYT Score history. */
+function scoreStreakAtLeast(n){
+  try {
+    const h = JSON.parse(localStorage.getItem("hx_score_history") || "{}") || {};
+    return longestConsecutiveRun(Object.keys(h).filter(k=>h[k] >= n));
+  } catch(e){ return 0; }
+}
+/** Most volume moved inside any one calendar month, in kg. */
+function bestMonthlyVolumeKg(){
+  const months = {};
+  (state.workoutLog||[]).forEach(s=>{
+    const t = new Date(s.startedAt || s.date);
+    if(isNaN(t)) return;
+    const k = t.getFullYear() + "-" + t.getMonth();
+    months[k] = (months[k]||0) + achNum(s.volume);
+  });
+  const vals = Object.keys(months).map(k=>months[k]);
+  return vals.length ? Math.max(...vals) : 0;
+}
+
 const ACHIEVEMENT_DEFS = [
   { id:"first_workout", name:"First Workout", desc:"Complete your first freestyle workout.", check:()=> state.workoutLog.length>=1 , category:"milestone", tier:"bronze", value:"1" },
   { id:"workouts_5", name:"5 Workouts", desc:"Log 5 freestyle workouts.", check:()=> state.workoutLog.length>=5 , category:"milestone", tier:"bronze", value:"5" },
@@ -4798,7 +5246,112 @@ const ACHIEVEMENT_DEFS = [
   { id:"weight_moved_20", name:"20 kg Toward Your Goal", desc:"Move 20 kg in the direction of your goal.", check:()=> weightMovedTowardGoalKg()>=20 , category:"consistency", tier:"gold", value:"20 kg" },
   { id:"weight_goal_reached", name:"Goal Achieved", desc:"Reach your target weight.", check:()=> weightGoalReached() , category:"consistency", tier:"diamond", value:"GOAL" },
   { id:"weigh_champion", name:"Consistency Champion", desc:"Weigh in at least once a week for twelve weeks running.", check:()=> weightWeeksRunning()>=12 , category:"consistency", tier:"gold", value:"12w" },
-  { id:"habit_hero", name:"Healthy Habit Hero", desc:"Log your weight, a meal and a workout on the same day, thirty times.", check:()=> daysWithFullLog()>=30 , category:"consistency", tier:"diamond", value:"30" }
+  { id:"habit_hero", name:"Healthy Habit Hero", desc:"Log your weight, a meal and a workout on the same day, thirty times.", check:()=> daysWithFullLog()>=30 , category:"consistency", tier:"diamond", value:"30" },
+
+  /* ---- STRENGTH — ratios, rep totals and the big three ---- */
+  { id:"lift-50", name:"50kg Lift", desc:"Hit 50kg or more on any lift.", check:()=> heaviestLiftKg()>=50 , category:"strength", tier:"bronze", value:"50KG" },
+  { id:"lift-250", name:"250kg Lift", desc:"Hit 250kg or more on any lift.", check:()=> heaviestLiftKg()>=250 , category:"strength", tier:"silver", value:"250KG" },
+  { id:"sets-10000", name:"10,000 Working Sets", desc:"Log 10,000 working sets total.", check:()=> totalWorkingSets()>=10000 , category:"strength", tier:"silver", value:"10K", prog:{ have:()=> totalWorkingSets(), need:10000 } },
+  { id:"bench-bw", name:"Bodyweight Bench", desc:"Bench press your bodyweight.", check:()=> liftBodyweightRatio(ACH_BENCH_RE)>=1 , category:"strength", tier:"gold", value:"1X" },
+  { id:"squat-1.5", name:"1.5x Squat", desc:"Squat 1.5x your bodyweight.", check:()=> liftBodyweightRatio(ACH_SQUAT_RE)>=1.5 , category:"strength", tier:"diamond", value:"1.5X" },
+  { id:"deadlift-2", name:"2x Deadlift", desc:"Deadlift 2x your bodyweight.", check:()=> liftBodyweightRatio(ACH_DEADLIFT_RE)>=2 , category:"strength", tier:"platinum", value:"2X" },
+  { id:"ohp-half", name:"Overhead Power", desc:"Press half your bodyweight overhead.", check:()=> liftBodyweightRatio(ACH_OHP_RE)>=0.5 , category:"strength", tier:"gold", value:".5X" },
+  { id:"big-three", name:"The Big Three", desc:"Log bench, squat and deadlift in one week.", check:()=> bigThreeInOneWeek() , category:"strength", tier:"silver", value:"3" },
+  { id:"pullup-10", name:"Pull-Up Pro", desc:"Complete 10 strict pull-ups in a set.", check:()=> bestSingleSetReps(ACH_PULLUP_RE)>=10 , category:"strength", tier:"silver", value:"10" },
+  { id:"pullup-1000", name:"1,000 Pull-Ups", desc:"Complete 1,000 pull-ups in total.", check:()=> stationReps(ACH_PULLUP_RE)>=1000 , category:"strength", tier:"diamond", value:"1K", prog:{ have:()=> stationReps(ACH_PULLUP_RE), need:1000 } },
+  { id:"pushup-100", name:"Push-Up Machine", desc:"Complete 100 push-ups in a session.", check:()=> bestSessionReps(ACH_PUSHUP_RE)>=100 , category:"strength", tier:"silver", value:"100" },
+  { id:"pushup-10000", name:"10,000 Push-Ups", desc:"Complete 10,000 push-ups in total.", check:()=> stationReps(ACH_PUSHUP_RE)>=10000 , category:"strength", tier:"diamond", value:"10K", prog:{ have:()=> stationReps(ACH_PUSHUP_RE), need:10000 } },
+  { id:"squats-10000", name:"Squad Goals", desc:"Complete 10,000 bodyweight squats.", check:()=> bodyweightSquatReps()>=10000 , category:"strength", tier:"gold", value:"10K", prog:{ have:()=> bodyweightSquatReps(), need:10000 } },
+  { id:"plank-3min", name:"Iron Core", desc:"Hold a 3-minute plank.", check:()=> bestPlankSeconds()>=180 , category:"strength", tier:"silver", value:"3M" },
+  { id:"kb-swings-500", name:"Iron Grip", desc:"Complete 500 kettlebell swings.", check:()=> stationReps(ACH_KB_SWING_RE)>=500 , category:"strength", tier:"silver", value:"500", prog:{ have:()=> stationReps(ACH_KB_SWING_RE), need:500 } },
+  { id:"monthly-volume-250k", name:"Volume King", desc:"Move 250,000kg in a single month.", check:()=> bestMonthlyVolumeKg()>=250000 , category:"strength", tier:"diamond", value:"250K", prog:{ have:()=> Math.round(bestMonthlyVolumeKg()), need:250000 } },
+
+  /* ---- CARDIO — runs, rows, SkiErg and bike, read off distance/time/calorie fields ---- */
+  { id:"run-first", name:"First Run", desc:"Log your first run.", check:()=> runCount()>=1 , category:"cardio", tier:"bronze", value:"1" },
+  { id:"run-5k", name:"5K Club", desc:"Run 5km in a single session.", check:()=> longestRunKm()>=5 , category:"cardio", tier:"bronze", value:"5K" },
+  { id:"run-10k", name:"10K Club", desc:"Run 10km in a single session.", check:()=> longestRunKm()>=10 , category:"cardio", tier:"silver", value:"10K" },
+  { id:"run-half", name:"Half Marathon", desc:"Run 21.1km in a single session.", check:()=> longestRunKm()>=21.1 , category:"cardio", tier:"gold", value:"21K" },
+  { id:"run-full", name:"Marathon", desc:"Run 42.2km in a single session.", check:()=> longestRunKm()>=42.2 , category:"cardio", tier:"diamond", value:"42K" },
+  { id:"run-sub25-5k", name:"Sub-25 5K", desc:"Finish 5km under 25 minutes.", check:()=> bestPieceUnder(ACH_RUN_RE,5,1500) , category:"cardio", tier:"silver", value:"<25" },
+  { id:"run-sub50-10k", name:"Sub-50 10K", desc:"Finish 10km under 50 minutes.", check:()=> bestPieceUnder(ACH_RUN_RE,10,3000) , category:"cardio", tier:"gold", value:"<50" },
+  { id:"run-500km", name:"500km Logged", desc:"Run 500km in total.", check:()=> totalRunKm()>=500 , category:"cardio", tier:"gold", value:"500", prog:{ have:()=> Math.round(totalRunKm()), need:500 } },
+  { id:"run-1000km", name:"1,000km Logged", desc:"Run 1,000km in total.", check:()=> totalRunKm()>=1000 , category:"cardio", tier:"diamond", value:"1K", prog:{ have:()=> Math.round(totalRunKm()), need:1000 } },
+  { id:"run-streak-7", name:"Run Streak", desc:"Run on 7 consecutive days.", check:()=> runStreakDays()>=7 , category:"cardio", tier:"silver", value:"7" },
+  { id:"run-50", name:"50 Runs", desc:"Log 50 runs.", check:()=> runCount()>=50 , category:"cardio", tier:"silver", value:"50", prog:{ have:()=> runCount(), need:50 } },
+  { id:"run-100", name:"100 Runs", desc:"Log 100 runs.", check:()=> runCount()>=100 , category:"cardio", tier:"gold", value:"100", prog:{ have:()=> runCount(), need:100 } },
+  { id:"row-first", name:"First Row", desc:"Log your first row.", check:()=> rowCount()>=1 , category:"cardio", tier:"bronze", value:"1" },
+  { id:"row-2k", name:"2K Row", desc:"Row 2,000m in a single piece.", check:()=> longestRowMetres()>=2000 , category:"cardio", tier:"silver", value:"2K" },
+  { id:"row-sub8-2k", name:"Sub-8 2K Row", desc:"Row 2,000m under 8 minutes.", check:()=> bestRowUnder(2000,480) , category:"cardio", tier:"gold", value:"<8" },
+  { id:"row-marathon", name:"Marathon Row", desc:"Row 42,195m in total.", check:()=> totalRowMetres()>=42195 , category:"cardio", tier:"diamond", value:"42K", prog:{ have:()=> Math.round(totalRowMetres()), need:42195 } },
+  { id:"skierg-1k", name:"SkiErg Starter", desc:"Log 1,000m on the SkiErg.", check:()=> totalSkiergMetres()>=1000 , category:"cardio", tier:"bronze", value:"1K", prog:{ have:()=> Math.round(totalSkiergMetres()), need:1000 } },
+  { id:"bike-5000cal", name:"Calorie Crusher", desc:"Burn 5,000 kcal on the bike.", check:()=> totalBikeCalories()>=5000 , category:"cardio", tier:"gold", value:"5K", prog:{ have:()=> Math.round(totalBikeCalories()), need:5000 } },
+
+  /* ---- HYROX — stations and full simulations ---- */
+  { id:"hyrox-sim-first", name:"First Simulation", desc:"Complete a full HYROX simulation.", check:()=> hyroxSimCount()>=1 , category:"hyrox", tier:"gold", value:"SIM" },
+  { id:"hyrox-sub90", name:"Sub-90 HYROX", desc:"Finish a simulation under 90 minutes.", check:()=> hyroxUnderMinutes(90) , category:"hyrox", tier:"gold", value:"<90" },
+  { id:"hyrox-sub75", name:"Sub-75 HYROX", desc:"Finish a simulation under 75 minutes.", check:()=> hyroxUnderMinutes(75) , category:"hyrox", tier:"diamond", value:"<75" },
+  { id:"hyrox-sub60", name:"Sub-60 HYROX", desc:"Finish a simulation under 60 minutes.", check:()=> hyroxUnderMinutes(60) , category:"hyrox", tier:"platinum", value:"<60" },
+  { id:"wallball-100", name:"Wall Ball Warrior", desc:"Complete 100 wall balls in a session.", check:()=> bestSessionReps(ACH_WALLBALL_RE)>=100 , category:"hyrox", tier:"silver", value:"100" },
+  { id:"wallball-1000", name:"1,000 Wall Balls", desc:"Complete 1,000 wall balls in total.", check:()=> stationReps(ACH_WALLBALL_RE)>=1000 , category:"hyrox", tier:"gold", value:"1K", prog:{ have:()=> stationReps(ACH_WALLBALL_RE), need:1000 } },
+  { id:"wallball-10000", name:"10,000 Wall Balls", desc:"Complete 10,000 wall balls in total.", check:()=> stationReps(ACH_WALLBALL_RE)>=10000 , category:"hyrox", tier:"diamond", value:"10K", prog:{ have:()=> stationReps(ACH_WALLBALL_RE), need:10000 } },
+  { id:"sled-push", name:"Sled Push Pro", desc:"Push a loaded sled 50m.", check:()=> stationMetres(ACH_SLED_PUSH_RE)>=50 , category:"hyrox", tier:"silver", value:"50M" },
+  { id:"sled-pull", name:"Sled Pull Pro", desc:"Pull a loaded sled 50m.", check:()=> stationMetres(ACH_SLED_PULL_RE)>=50 , category:"hyrox", tier:"silver", value:"50M" },
+  { id:"farmers-200", name:"Farmers Carry", desc:"Carry 200m in a farmers hold.", check:()=> stationMetres(ACH_FARMERS_RE)>=200 , category:"hyrox", tier:"gold", value:"200M" },
+  { id:"lunges-100", name:"Sandbag Lunges", desc:"Complete 100 sandbag lunge reps.", check:()=> stationReps(ACH_SANDBAG_RE)>=100 , category:"hyrox", tier:"gold", value:"100M" },
+  { id:"burpee-bj-80", name:"Burpee Broad Jumps", desc:"Complete 80 burpee broad jump reps.", check:()=> stationReps(ACH_BURPEE_BJ_RE)>=80 , category:"hyrox", tier:"gold", value:"80M" },
+  { id:"compromised-run", name:"Compromised Runner", desc:"Run 1km straight after a station.", check:()=> ranAfterStation(1) , category:"hyrox", tier:"gold", value:"1KM" },
+  { id:"race-ready", name:"Race Ready", desc:"Complete 4 full simulations.", check:()=> hyroxSimCount()>=4 , category:"hyrox", tier:"platinum", value:"4", prog:{ have:()=> hyroxSimCount(), need:4 } },
+
+  /* ---- WHEN YOU TRAIN — hour of day, weekends, months, comebacks ---- */
+  { id:"perfect-week", name:"Perfect Week", desc:"Hit every daily goal for 7 days.", check:()=> scoreStreakAtLeast(100)>=7 , category:"consistency", tier:"gold", value:"7" },
+  { id:"perfect-month", name:"Perfect Month", desc:"Hit every daily goal for 30 days.", check:()=> scoreStreakAtLeast(100)>=30 , category:"consistency", tier:"platinum", value:"30" },
+  { id:"weekend-warrior", name:"Weekend Warrior", desc:"Train both Saturday and Sunday.", check:()=> weekendsBothDays().length>=1 , category:"consistency", tier:"bronze", value:"2" },
+  { id:"weekend-streak", name:"Weekend Streak", desc:"Train four weekends in a row.", check:()=> weekendStreak()>=4 , category:"consistency", tier:"silver", value:"4" },
+  { id:"two-a-day", name:"Two-a-Day", desc:"Log two workouts in one day.", check:()=> daysWithTwoSessions()>=1 , category:"consistency", tier:"silver", value:"2X" },
+  { id:"comeback", name:"Comeback Kid", desc:"Return and train after a 14-day break.", check:()=> returnedAfterBreak(14) , category:"consistency", tier:"silver", value:"14" },
+  { id:"early-30", name:"Dawn Patrol", desc:"Log 30 workouts before 8am.", check:()=> sessionsAtHour(h=>h<8)>=30 , category:"consistency", tier:"gold", value:"30", prog:{ have:()=> sessionsAtHour(h=>h<8), need:30 } },
+  { id:"night-30", name:"Night Grinder", desc:"Log 30 workouts after 8pm.", check:()=> sessionsAtHour(h=>h>=20)>=30 , category:"consistency", tier:"gold", value:"30", prog:{ have:()=> sessionsAtHour(h=>h>=20), need:30 } },
+  { id:"sessions-month-30", name:"Grind Month", desc:"Log 30 sessions in a single month.", check:()=> bestSessionsInMonth()>=30 , category:"consistency", tier:"gold", value:"30", prog:{ have:()=> bestSessionsInMonth(), need:30 } },
+  { id:"year-round", name:"Year Round", desc:"Train in all 12 months.", check:()=> distinctMonthsTrained()>=12 , category:"consistency", tier:"diamond", value:"12", prog:{ have:()=> distinctMonthsTrained(), need:12 } },
+
+  /* ---- NUTRITION — days that actually hit the targets in macroTargets() ---- */
+  { id:"protein-day", name:"Protein Hit", desc:"Hit your protein goal for a day.", check:()=> nutritionDaysMeeting(achProteinMet).length>=1 , category:"nutrition", tier:"bronze", value:"1" },
+  { id:"protein-week", name:"Protein Week", desc:"Hit your protein goal 7 days straight.", check:()=> longestConsecutiveRun(nutritionDaysMeeting(achProteinMet))>=7 , category:"nutrition", tier:"silver", value:"7" },
+  { id:"protein-month", name:"Protein Month", desc:"Hit your protein goal on 30 days.", check:()=> nutritionDaysMeeting(achProteinMet).length>=30 , category:"nutrition", tier:"gold", value:"30", prog:{ have:()=> nutritionDaysMeeting(achProteinMet).length, need:30 } },
+  { id:"macro-day", name:"Macro Master", desc:"Hit all your macros in a single day.", check:()=> nutritionDaysMeeting(achMacrosMet).length>=1 , category:"nutrition", tier:"bronze", value:"1" },
+  { id:"macro-streak", name:"Macro Streak", desc:"Hit all your macros 7 days in a row.", check:()=> longestConsecutiveRun(nutritionDaysMeeting(achMacrosMet))>=7 , category:"nutrition", tier:"gold", value:"7" },
+  { id:"calorie-day", name:"On Target", desc:"Stay within your calorie goal for a day.", check:()=> nutritionDaysMeeting(achCaloriesMet).length>=1 , category:"nutrition", tier:"bronze", value:"1" },
+  { id:"clean-week", name:"Clean Week", desc:"Stay within calories 7 days straight.", check:()=> longestConsecutiveRun(nutritionDaysMeeting(achCaloriesMet))>=7 , category:"nutrition", tier:"silver", value:"7" },
+  { id:"foods-100", name:"Foodie", desc:"Log 100 unique foods.", check:()=> uniqueFoodsLogged()>=100 , category:"nutrition", tier:"silver", value:"100", prog:{ have:()=> uniqueFoodsLogged(), need:100 } },
+  { id:"foods-500", name:"Gourmet", desc:"Log 500 unique foods.", check:()=> uniqueFoodsLogged()>=500 , category:"nutrition", tier:"gold", value:"500", prog:{ have:()=> uniqueFoodsLogged(), need:500 } },
+  { id:"breakfast-30", name:"Breakfast Club", desc:"Log breakfast 30 days in a row.", check:()=> breakfastStreak()>=30 , category:"nutrition", tier:"silver", value:"30", prog:{ have:()=> breakfastStreak(), need:30 } },
+
+  /* ---- BODY — measurements, photos, BMI, mobility and effort ---- */
+  { id:"photo-first", name:"First Snapshot", desc:"Log your first progress photo.", check:()=> (state.bodyPhotos||[]).length>=1 , category:"body", tier:"bronze", value:"1" },
+  { id:"photo-10", name:"Photo Journal", desc:"Log 10 progress photos.", check:()=> (state.bodyPhotos||[]).length>=10 , category:"body", tier:"silver", value:"10", prog:{ have:()=> (state.bodyPhotos||[]).length, need:10 } },
+  { id:"photo-30", name:"Transformation", desc:"Log 30 progress photos.", check:()=> (state.bodyPhotos||[]).length>=30 , category:"body", tier:"gold", value:"30", prog:{ have:()=> (state.bodyPhotos||[]).length, need:30 } },
+  { id:"measure-first", name:"Measured Up", desc:"Log your body measurements.", check:()=> measurementEntryCount()>=1 , category:"body", tier:"bronze", value:"1" },
+  { id:"measure-10", name:"Shape Shifter", desc:"Log measurements 10 times.", check:()=> measurementEntryCount()>=10 , category:"body", tier:"silver", value:"10", prog:{ have:()=> measurementEntryCount(), need:10 } },
+  { id:"tracking-trio", name:"Tracking Trio", desc:"Log weight, measurements and a photo the same day.", check:()=> trackingTrioDay() , category:"body", tier:"silver", value:"3" },
+  { id:"new-low", name:"New Low", desc:"Reach a new lowest logged weight.", check:()=> atNewLowWeight() , category:"body", tier:"silver", value:"LOW" },
+  { id:"bmi-healthy", name:"Balanced", desc:"Reach a healthy BMI range.", check:()=> bmiInHealthyRange() , category:"body", tier:"gold", value:"BMI" },
+  { id:"goal-weight-hold", name:"Maintainer", desc:"Stay at your goal weight for 30 days.", check:()=> daysAtGoalWeight()>=30 , category:"body", tier:"diamond", value:"30" },
+  { id:"mobility-first", name:"Loosen Up", desc:"Log a mobility session.", check:()=> mobilitySessionCount()>=1 , category:"body", tier:"bronze", value:"1" },
+  { id:"mobility-10", name:"Stay Supple", desc:"Log 10 mobility sessions.", check:()=> mobilitySessionCount()>=10 , category:"body", tier:"silver", value:"10", prog:{ have:()=> mobilitySessionCount(), need:10 } },
+  { id:"rpe-30", name:"In Tune", desc:"Log your effort or mood 30 times.", check:()=> effortLogCount()>=30 , category:"body", tier:"silver", value:"30", prog:{ have:()=> effortLogCount(), need:30 } },
+
+  /* ---- PROGRAMS AND ROUTINES ---- */
+  { id:"program-start", name:"Program Starter", desc:"Start a structured program.", check:()=> !!state.plan , category:"program", tier:"bronze", value:"1" },
+  { id:"program-finish", name:"Program Finisher", desc:"Complete a structured program.", check:()=> overallPlanProgress()===100 , category:"program", tier:"gold", value:"1" },
+  { id:"workout-create", name:"Workout Architect", desc:"Create a custom workout.", check:()=> (state.routines||[]).length>=1 , category:"program", tier:"bronze", value:"1" },
+  { id:"workouts-save-10", name:"Playlist Builder", desc:"Save 10 workouts.", check:()=> (state.routines||[]).length>=10 , category:"program", tier:"silver", value:"10", prog:{ have:()=> (state.routines||[]).length, need:10 } },
+
+  /* ---- SPECIAL — dates the log can prove ---- */
+  { id:"new-year", name:"New Year Grind", desc:"Train on January 1st.", check:()=> trainedOnMonthDay(0,1) , category:"special", tier:"silver", value:"JAN" },
+  { id:"birthday", name:"Birthday Beast", desc:"Train on your birthday.", check:()=> trainedOnBirthday() , category:"special", tier:"silver", value:"BDAY" },
+  { id:"midnight", name:"Midnight Warrior", desc:"Start a workout between midnight and 4am.", check:()=> sessionsAtHour(h=>h<4)>=1 , category:"special", tier:"gold", value:"12AM" },
+  { id:"four-seasons", name:"Four Seasons", desc:"Train in spring, summer, autumn and winter.", check:()=> seasonsTrained()>=4 , category:"special", tier:"gold", value:"4", prog:{ have:()=> seasonsTrained(), need:4 } },
+  { id:"anniversary", name:"One Year In", desc:"Use IGNYT for a full year.", check:()=> accountDays()>=365 , category:"special", tier:"diamond", value:"1YR", prog:{ have:()=> accountDays(), need:365 } },
 ];
 
 /* Call after any action that could unlock an achievement (finish workout,
@@ -4811,7 +5364,17 @@ function checkAchievements(){
   const newlyUnlocked = [];
   ACHIEVEMENT_DEFS.forEach(def=>{
     if(unlockedIds.has(def.id)) return;
-    if(def.check()){
+    /* Per-def, not around the loop. This used to be a bare def.check() over 82 entries; at 171
+       the arithmetic changed -- an exception in ONE check would abort forEach and silently
+       cost every badge after it in the list, and the user would just see achievements quietly
+       stop unlocking. A throwing check now costs only its own badge. Verified against a state
+       with every array missing: 21 of the original defs throw there (they index
+       state.workoutLog and state.prs directly), which before this would have taken the other
+       150 down with them. */
+    let earned = false;
+    try { earned = !!def.check(); }
+    catch(e){ return; }
+    if(earned){
       const a = { id:def.id, name:def.name, desc:def.desc, achievedAt: Date.now() };
       state.achievements.push(a);
       newlyUnlocked.push(a);
@@ -12606,6 +13169,14 @@ function badgeProgress(def){
   const N = (v) => (typeof v === "number" && isFinite(v)) ? v : 0;
   let have = null, need = null;
   try {
+    /* A def can declare its own progress. Preferred over the id regex below, which can only
+       ever read a number out of an id it recognises -- that covered five id shapes and left
+       every other badge with a bare tile. Anything with a running total worth showing carries
+       `prog:{have,need}` instead of being renamed to fit a pattern. */
+    if (def.prog && typeof def.prog.have === "function" && def.prog.need > 0) {
+      return { have: N(def.prog.have()), need: def.prog.need,
+               pct: Math.max(0, Math.min(99, Math.round(N(def.prog.have()) / def.prog.need * 100))) };
+    }
     const m = /^(workouts|sets|volume|streak|prs)_(\d+)$/.exec(def.id || "");
     if (m) {
       need = Number(m[2]);
@@ -12813,10 +13384,16 @@ function renderProgressAchievements(){
   const showEarned = state.badgeView !== "remaining";
   const cat = state.badgeCategory || "all";
 
+  /* Order is roughly how much of the set each one holds, so the first tabs are the ones with
+     something in them on day one. `cardio`, `hyrox`, `body` and `special` arrived with the
+     186-medal expansion -- a category missing from this list still WORKS (its badges show
+     under "All") but becomes unreachable as a filter, which is the bug to watch for when
+     ACHIEVEMENT_DEFS gains a category. */
   const CATEGORIES = [
     ["all","All"], ["milestone","Milestones"], ["streak","Streaks"],
-    ["strength","Strength"], ["consistency","Consistency"], ["nutrition","Nutrition"],
-    ["program","Program"]
+    ["strength","Strength"], ["cardio","Cardio"], ["hyrox","HYROX"],
+    ["consistency","Consistency"], ["nutrition","Nutrition"], ["body","Body"],
+    ["program","Program"], ["special","Special"]
   ];
   const inCategory = d => cat === "all" || d.category === cat;
   const pool = ACHIEVEMENT_DEFS.filter(inCategory)
