@@ -30,8 +30,10 @@ remain free. Each needs a `premiumAllows("<key>")` check at its render site, wit
   - server-side gates. `is_entitled(user)` exists and `routes_ai.py:219` uses it correctly.
     Anything spending server resources -- sync, backup, AI -- needs the same, because the client
     cache is plain JSON in localStorage and forgeable.
-  - iOS has no paywall: `paywallApplies()` is Android-only, so `isPremium()` is unconditionally
-    true there. Ship as-is and the app is free on iPhone.
+  - **iOS IS FREE ON PURPOSE** (decided 2026-08-13). `paywallApplies()` is Android-only and
+    stays that way: Play Billing is wired up, StoreKit is not, and a paywall that cannot take
+    money locks users out of an app they cannot pay for. Recorded in the function's own comment.
+    Revisit only when an iOS billing plugin actually exists.
   - Play Console: product `ignyt_premium`, a base plan, and a 7-day free-trial OFFER on it.
     No app-side trial timer.
 

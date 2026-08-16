@@ -124,7 +124,23 @@ window.IgnytEntitlements = (function () {
       ? window.Capacitor.getPlatform() : "web";
   }
 
-  /** The paywall exists on Android and nowhere else, for now. */
+  /**
+   * ANDROID IS PAID. iOS AND WEB ARE FREE. THIS IS A DECISION, NOT AN OVERSIGHT.
+   *
+   * isPremium() returns true unconditionally wherever this is false, so on iPhone every gate
+   * passes and no upgrade wall ever renders -- the whole app is free there. Confirmed as
+   * intended by the product owner on 2026-08-13.
+   *
+   * The reason is simply that billing exists on one platform: Play Billing is wired up through
+   * BillingPlugin.kt, and there is no StoreKit equivalent on the Swift side. Charging on iOS
+   * would need a plugin, App Store Connect products and receipt validation -- none of which
+   * exists, and shipping a paywall that cannot take money is worse than no paywall.
+   *
+   * DO NOT "FIX" THIS by making it return true everywhere. That would gate iOS features behind
+   * an entitlement no iPhone user can ever obtain, locking them out of an app they cannot pay
+   * for. If iOS billing is built later, this is the line that changes -- and it changes at the
+   * same time as the plugin lands, not before.
+   */
   function paywallApplies() {
     return platform() === "android";
   }
