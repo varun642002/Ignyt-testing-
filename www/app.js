@@ -5314,6 +5314,91 @@ function sleepStreakDays(){
     .filter(b=>b && b.date && achNum(b.sleep) > 0).map(b=>b.date))));
 }
 
+/* ---- festivals -------------------------------------------------------------------------
+   A TABLE, not a formula. Diwali, Holi, Onam, Navratri, Ganesh Chaturthi and Eid follow lunar
+   calendars, so there is no arithmetic that yields their Gregorian dates -- and the sources
+   disagree with each other. Checking Holi 2027 across public-holiday lists returned March 15,
+   17-18, 21-22 and 23 depending on the site, because the observed date genuinely varies by
+   region and by which panchang is used.
+
+   Two consequences, both deliberate:
+
+   1. Every entry is a WINDOW, not a day. That is not a fudge to cover the uncertainty -- these
+      really are multi-day festivals. Diwali runs five days, Navratri nine, Onam and Ganesh
+      Chaturthi ten, Holi two (Holika Dahan then Rangwali), and Eid shifts a day either way on
+      moon sighting. "Trained on Diwali" should be true for someone who trained on Dhanteras.
+
+   2. A year absent from the table returns FALSE. It never extrapolates by subtracting eleven
+      days, which is the obvious-looking trick that breaks the moment an adhika masa (leap
+      month) pushes a festival forward instead. A missing badge is recoverable; a badge that
+      fires on the wrong day is the app telling the user something untrue about their own life.
+
+   THE LUNAR ROWS BELOW ARE BEST-EFFORT AND WANT ONE PASS AGAINST AN AUTHORITATIVE PANCHANG
+   BEFORE RELEASE. The fixed rows (Republic Day, Independence Day, Christmas, Pongal) are
+   certain. Extending a year is one line per festival; see docs/achievements-686.md.
+------------------------------------------------------------------------------------------ */
+const FESTIVAL_TABLE_COVERS = [2024, 2028];   // inclusive; outside this, the lunar checks are false
+
+/* Solar or Gregorian, so the same every year. Pongal is the Tamil solar new year and lands on
+   14 or 15 January; both are given because the harvest day itself moves between them. */
+const FESTIVAL_FIXED = {
+  republic:     ["01-26", "01-26"],
+  independence: ["08-15", "08-15"],
+  christmas:    ["12-25", "12-25"],
+  pongal:       ["01-14", "01-15"]
+};
+
+/* [first day, last day] of the observance, per Gregorian year. No window crosses a new year,
+   which is what lets the comparison below be a plain MM-DD string compare. */
+const FESTIVAL_WINDOWS = {
+  diwali: {   2024:["10-29","11-03"], 2025:["10-18","10-23"], 2026:["11-06","11-11"],
+              2027:["10-27","11-01"], 2028:["10-15","10-20"] },
+  holi: {     2024:["03-24","03-25"], 2025:["03-13","03-14"], 2026:["03-03","03-04"],
+              2027:["03-21","03-23"], 2028:["03-10","03-11"] },
+  navratri: { 2024:["10-03","10-11"], 2025:["09-22","09-30"], 2026:["10-11","10-19"],
+              2027:["10-02","10-10"], 2028:["09-20","09-28"] },
+  ganesh: {   2024:["09-07","09-17"], 2025:["08-27","09-06"], 2026:["09-14","09-24"],
+              2027:["09-04","09-14"], 2028:["08-23","09-02"] },
+  onam: {     2024:["09-06","09-15"], 2025:["08-26","09-05"], 2026:["08-17","08-26"],
+              2027:["09-05","09-14"], 2028:["08-24","09-02"] },
+  /* Eid al-Fitr. The widest window here, at plus or minus a day, because the start of Shawwal
+     is declared on local moon sighting and India routinely observes it a day after Saudi. */
+  eid: {      2024:["04-09","04-11"], 2025:["03-29","03-31"], 2026:["03-19","03-21"],
+              2027:["03-09","03-11"], 2028:["02-25","02-27"] }
+};
+
+const FESTIVAL_NAMES = Object.keys(FESTIVAL_FIXED).concat(Object.keys(FESTIVAL_WINDOWS));
+
+/** The observance window for a festival in a given year, or null when the table cannot say. */
+function festivalWindow(name, year){
+  if(FESTIVAL_FIXED[name]) return FESTIVAL_FIXED[name];
+  const rows = FESTIVAL_WINDOWS[name];
+  return (rows && rows[year]) || null;
+}
+
+/** Distinct local calendar days carrying a logged session. */
+function trainingDayKeys(){
+  return Array.from(new Set((state.workoutLog||[]).map(s=>{
+    const t = new Date(s.startedAt || s.date);
+    return isNaN(t) ? null : dayKey(t);
+  }).filter(Boolean)));
+}
+
+/** Days trained inside a festival's window, across every year in the log. */
+function daysTrainedDuringFestival(name){
+  return trainingDayKeys().filter(k=>{
+    const w = festivalWindow(name, Number(k.slice(0,4)));
+    if(!w) return false;                 // year not in the table: no guess, no award
+    const md = k.slice(5);               // "MM-DD", zero-padded, so a string compare is a date compare
+    return md >= w[0] && md <= w[1];
+  }).length;
+}
+function trainedDuringFestival(name){ return daysTrainedDuringFestival(name) >= 1; }
+
+/** Any of the tabled festivals. This is what "a public holiday" means here -- a defined list,
+    not a claim to know every gazetted and regional holiday in India. */
+function trainedOnAnyFestival(){ return FESTIVAL_NAMES.some(n=>trainedDuringFestival(n)); }
+
 const ACHIEVEMENT_DEFS = [
   { id:"first_workout", name:"First Workout", desc:"Complete your first freestyle workout.", check:()=> state.workoutLog.length>=1 , category:"milestone", tier:"bronze", value:"1" },
   { id:"workouts_5", name:"5 Workouts", desc:"Log 5 freestyle workouts.", check:()=> state.workoutLog.length>=5 , category:"milestone", tier:"bronze", value:"5" },
@@ -6024,6 +6109,24 @@ const ACHIEVEMENT_DEFS = [
   { id:"slphrs-250", name:"Sleep Hours · 250", desc:"Sleep 250 logged hours.", check:()=> totalSleepHours()>=250 , category:"body", tier:"gold", value:"250", prog:{ have:()=> Math.round(totalSleepHours()), need:250 } },
   { id:"slphrs-500", name:"Sleep Hours · 500", desc:"Sleep 500 logged hours.", check:()=> totalSleepHours()>=500 , category:"body", tier:"diamond", value:"500", prog:{ have:()=> Math.round(totalSleepHours()), need:500 } },
   { id:"slphrs-1000", name:"Sleep Hours · 1,000", desc:"Sleep 1,000 logged hours.", check:()=> totalSleepHours()>=1000 , category:"body", tier:"platinum", value:"1K", prog:{ have:()=> Math.round(totalSleepHours()), need:1000 } },
+
+  /* ---- FESTIVALS (11). Dates come from FESTIVAL_WINDOWS above, which is a table with a
+     defined coverage range -- a year outside it returns false rather than extrapolating.
+     Navratri asks for five of its nine days: the medal is called "Navratri Nine" and says
+     "train THROUGH", so one session is too weak, but demanding all nine is fragile against a
+     table that is itself uncertain by a day -- someone training the whole festival on a window
+     shifted by one would cover eight of nine and get nothing. ---- */
+  { id:"fest-diwali", name:"Diwali Grind", desc:"Train during Diwali.", check:()=> trainedDuringFestival("diwali") , category:"special", tier:"silver", value:"DIW" },
+  { id:"fest-holi", name:"Holi Hustle", desc:"Train during Holi.", check:()=> trainedDuringFestival("holi") , category:"special", tier:"silver", value:"HOLI" },
+  { id:"fest-pongal", name:"Pongal Power", desc:"Train on Pongal.", check:()=> trainedDuringFestival("pongal") , category:"special", tier:"silver", value:"PON" },
+  { id:"fest-onam", name:"Onam Effort", desc:"Train during Onam.", check:()=> trainedDuringFestival("onam") , category:"special", tier:"silver", value:"ONAM" },
+  { id:"fest-navratri", name:"Navratri Nine", desc:"Train on five days of Navratri.", check:()=> daysTrainedDuringFestival("navratri")>=5 , category:"special", tier:"gold", value:"NAV", prog:{ have:()=> daysTrainedDuringFestival("navratri"), need:5 } },
+  { id:"fest-ganesh", name:"Ganesh Gains", desc:"Train during Ganesh Chaturthi.", check:()=> trainedDuringFestival("ganesh") , category:"special", tier:"silver", value:"GAN" },
+  { id:"fest-eid", name:"Eid Energy", desc:"Train on Eid.", check:()=> trainedDuringFestival("eid") , category:"special", tier:"silver", value:"EID" },
+  { id:"fest-christmas", name:"Christmas Crush", desc:"Train on Christmas.", check:()=> trainedDuringFestival("christmas") , category:"special", tier:"silver", value:"XMAS" },
+  { id:"fest-republic", name:"Republic Rep", desc:"Train on Republic Day.", check:()=> trainedDuringFestival("republic") , category:"special", tier:"silver", value:"R-DAY" },
+  { id:"fest-independence", name:"Independence Iron", desc:"Train on Independence Day.", check:()=> trainedDuringFestival("independence") , category:"special", tier:"gold", value:"I-DAY" },
+  { id:"holiday", name:"No Days Off", desc:"Train on a public holiday.", check:()=> trainedOnAnyFestival() , category:"special", tier:"silver", value:"HOL" },
 ];
 
 /* Call after any action that could unlock an achievement (finish workout,
