@@ -8575,7 +8575,26 @@ function buildBottomNav(){
 
   /* Bound once, on the element that outlives every render. */
   nav.addEventListener("click", (e)=>{
-    const btn = e.target.closest("[data-navtab]");
+    /* RESOLVE THE BUTTON BY WHERE THE TAP LANDED, not by what the event says it hit.
+       On WebKit this handler was receiving clicks whose e.target is the NAV itself, so
+       closest("[data-navtab]") returned null and every tab tap was dropped on its first line.
+       Instrumented and confirmed on mobile-safari: target="NAV", btnFound=false.
+
+       elementFromPoint at the same coordinates DOES return the button's icon -- also measured:
+       topAtCentre="svg", topIsBtnOrChild=true. So the hit test is right and the event target is
+       not, and the coordinates are the trustworthy half.
+
+       Not composedPath(): that walks UP from the target, so when the target is already the nav
+       the button is not on the path either. It looks like the obvious fix and does nothing.
+
+       closest() is still tried first -- it is correct everywhere else and cheaper -- with the
+       hit test as the fallback. clientX/clientY are 0 for a keyboard-activated click, which is
+       why that case is excluded rather than hit-tested at the origin. */
+    let btn = e.target && e.target.closest ? e.target.closest("[data-navtab]") : null;
+    if(!btn && (e.clientX || e.clientY)){
+      const hit = document.elementFromPoint(e.clientX, e.clientY);
+      if(hit && hit.closest) btn = hit.closest("[data-navtab]");
+    }
     if(!btn || !nav.contains(btn)) return;
     /* A drag ends by firing a click too, and that click has already been acted on by the
        gesture. Ignore it — but by TIME, not by a flag. A flag has to be consumed by the click
