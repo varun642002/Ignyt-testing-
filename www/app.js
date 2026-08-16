@@ -16076,10 +16076,38 @@ function scrollStateOf(){
   var m = document.getElementById("main");
   return m ? { top: m.scrollTop, height: m.scrollHeight } : null;
 }
+/* THE BACK STACK. Every screen the user leaves is pushed here, so back returns to where they
+   actually were rather than jumping to Home.
+
+   It is recorded HERE rather than at the ~27 places that set state.tab, for the same reason the
+   scroll reset lives here: a stack maintained by every caller is a stack that is wrong the first
+   time someone adds a screen and forgets. This function already knows precisely when a
+   navigation happened, so it is the one place that cannot fall out of step.
+
+   Capped at 20. A back stack that grows all session is a leak, and nobody presses back twenty
+   times -- past that depth Home is the honest destination anyway. */
+var _navStack = [];
+var NAV_STACK_MAX = 20;
+/* Set while back is navigating, so the resulting render records nothing. Without it, going back
+   pushes the screen you just left onto the stack and back becomes a toggle between two screens
+   forever -- which is the classic way a hand-rolled history loops. */
+var _navigatingBack = false;
+
+function applyNavKey(key){
+  var parts = String(key || "").split("/");
+  state.tab = parts[0] || "home";
+  state.progressView = parts[1] || null;
+  state.bodyView = parts[2] || null;
+}
+
 function resetScrollIfNavigated(){
   var key = state.tab + "/" + (state.progressView || "") + "/" + (state.bodyView || "");
   var isFirstPaint = _lastNavKey === null;
   var navigated = key !== _lastNavKey;
+  if(navigated && !isFirstPaint && !_navigatingBack){
+    _navStack.push(_lastNavKey);
+    if(_navStack.length > NAV_STACK_MAX) _navStack.shift();
+  }
   _lastNavKey = key;
   var main = document.getElementById("main");
   if(!main || isFirstPaint) return;   // the app arriving is not a navigation
@@ -23137,9 +23165,22 @@ if(window.IgnytSecurity){
        Exit from Home is KEPT deliberately. An app that cannot be dismissed with back is its own
        complaint, and Android treats back-at-root as leave. If a confirmation is wanted later,
        the place for it is here, not in the removal of this line. */
+    /* BACK GOES BACK. Pop the previous screen and return to it -- not to Home, which was the
+       earlier behaviour and meant three taps into Progress lost all three at once.
+       _navigatingBack stops the resulting render pushing the screen being left, which would
+       turn back into a two-screen toggle. */
+    if(_navStack.length){
+      var prev = _navStack.pop();
+      _navigatingBack = true;
+      applyNavKey(prev);
+      try { render(); } finally { _navigatingBack = false; }
+      return;
+    }
+    /* Nothing left to go back to. From anywhere other than Home, land there first; only leave
+       from Home itself, which is what Android expects of a tabbed app. */
     if(state.tab !== "home"){
       state.tab = "home";
-      state.progressView = null;   // the sub-views have their own back paths; do not land inside one
+      state.progressView = null;
       state.bodyView = null;
       render();
       return;
