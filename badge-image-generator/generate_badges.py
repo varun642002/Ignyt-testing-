@@ -103,6 +103,18 @@ SHAPES = {
 # example the module docstring gives for why this table exists. Anchored with \b and ^ where the
 # prefix is the whole meaning, because a bare "pr" matches "prc", "protein" and "program".
 ICON_RULES = [
+    # THE ERG AND CARDIO IDS COME FIRST, because their prefixes are claimed by other domains
+    # further down and first match wins. Caught by a --only cardio dry-run before a paid run:
+    #   row-first / row-2k / row-marathon  ->  "a loaded barbell", because ^row(?!D) is the
+    #     STRENGTH rule and a barbell row shares the prefix with a rowing machine.
+    #   calB-* ("Furnace - 250,000 kcal")  ->  "crossed fork and knife", because ^cal[BD]? is
+    #     the NUTRITION rule. Calories burned on a bike is not a meal.
+    #   skierg-* / bike-*                  ->  the default dumbbells, having matched nothing.
+    # Ten of the 73 cardio badges, which is ten paid calls returning the wrong picture.
+    (r"^row-|^rowD|rowing",                     "a rowing machine oar and handle"),
+    (r"^skierg|^skiD|ski-?erg",                 "a pair of ski-erg handles on a vertical rail"),
+    (r"^bike|^ride|^rideD|cycling",             "a bicycle seen from the side"),
+    (r"^calb",                                  "a stylised furnace flame"),
     (r"^night-?owl|^late|after-?9|10pm",        "a wise owl under a crescent moon"),
     (r"^early-?bird|sunrise|before-?6|5am|^dawn", "a rising sun over mountains"),
     (r"^hyrox|^wb[TC]?|^sled|^slp|^sla|^burp|^farm|^lunge|^sandb", "a jagged mountain range"),
