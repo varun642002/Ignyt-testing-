@@ -355,7 +355,7 @@
 `; })() : ''}
 
       <div class="rh-section-head"><span>Quick Actions</span></div>
-      <div class="rh-quick-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+      <div class="rh-quick-grid" style="grid-template-columns:repeat(4,minmax(0,1fr));">
         ${/* Three. Workout, Food, Progress and Health all have a bottom-nav tab or a card
               further up this page, so as shortcuts they were pointing at things already one tap
               away. These three are the ones with no other route from Home.
@@ -368,6 +368,14 @@
         ${quickAction('scale', 'var(--rh-blue)', 'Log Weight', 'data-nav="body"')}
         ${quickAction('timer', '#7C3AED', 'Fasting', 'data-nav="fasting"')}
         ${quickAction('flask', '#2563EB', 'Supplements', 'data-nav="supplements"')}
+        ${/* Four again. Rest Day is the odd one here -- it TOGGLES rather than navigating, which
+              is why it carries aria-pressed and changes colour once set. It earns the slot
+              because a rest day cannot be inferred: a day with no session is indistinguishable
+              from a day the user never opened the app, so unless it is claimed it does not
+              exist. Nothing else on Home offers that. */''}
+        ${(()=>{ const on = typeof isRestDay === 'function' && isRestDay();
+          return quickAction('moon', on ? '#16A34A' : '#64748B', on ? 'Resting' : 'Rest Day',
+            `data-action="toggle-rest-day" aria-pressed="${on}"`); })()}
       </div>
     </div>`;
   };

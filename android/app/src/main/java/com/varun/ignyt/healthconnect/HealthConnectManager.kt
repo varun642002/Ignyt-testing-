@@ -12,6 +12,7 @@ import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeightRecord
@@ -69,6 +70,7 @@ class HealthConnectManager(private val context: Context) {
         HealthPermission.getReadPermission(WeightRecord::class),
         HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
         HealthPermission.getReadPermission(DistanceRecord::class),
+        HealthPermission.getReadPermission(ElevationGainedRecord::class),
         HealthPermission.getReadPermission(ExerciseSessionRecord::class),
         HealthPermission.getReadPermission(SleepSessionRecord::class),
         // ADDED -- the 10 newly requested metrics, read-only (none of these are written by IGNYT)
@@ -107,6 +109,18 @@ class HealthConnectManager(private val context: Context) {
 
     suspend fun grantedPermissions(): Set<String> = client.permissionController.getGrantedPermissions()
     suspend fun hasAllPermissions(): Boolean = grantedPermissions().containsAll(allPermissions)
+
+    /** "May I read anything?" -- the question an individual read should ask, and the same one
+     *  getPermissionStatus() already answers to the UI as "granted".
+     *
+     *  hasAllPermissions() answers a different question: "is setup complete?", which is what
+     *  requestPermissions() needs in order to decide whether to re-show the dialog. Gating reads
+     *  on it makes every added metric a breaking change for existing users -- granting elevation
+     *  became mandatory for steps the moment it joined allPermissions, and the whole Health screen
+     *  went blank for anyone who had granted the previous full set. */
+    suspend fun hasAnyReadPermission(): Boolean =
+        grantedPermissions().any { readPermissions.contains(it) }
+
     suspend fun revokeAllPermissions() = client.permissionController.revokeAllPermissions()
 
     /** Resolves a Health Connect record's data-origin package name to a friendly app label
@@ -222,6 +236,40 @@ class HealthConnectManager(private val context: Context) {
      *  correct Health Connect API for "one aggregate bucket per day", not 7 separate
      *  aggregate() calls and not raw-record grouping (both would reintroduce the same
      *  double-counting risk the main fix addresses). */
+    /* Elevation gained, bucketed by day.
+     *
+     * Returned as a HISTORY rather than a single total because the app needs a LIFETIME figure
+     * and Health Connect will not give one: without PERMISSION_READ_HEALTH_DATA_HISTORY a read
+     * is capped at the last 30 days, and a wider range silently returns only that window rather
+     * than failing. So the caller keeps its own day-keyed ledger and tops it up from this — days
+     * already recorded survive falling out of Health Connect's window.
+     *
+     * Days are clamped to 1..30 for the same reason: asking for more would look like it worked.
+     */
+    suspend fun getElevationHistory(daysRaw: Int): JSONArray {
+        val days = daysRaw.coerceIn(1, 30)
+        val zone = ZoneId.systemDefault()
+        val end = java.time.ZonedDateTime.now(zone)
+        val start = end.minusDays((days - 1).toLong()).toLocalDate().atStartOfDay(zone)
+        val response = client.aggregateGroupByPeriod(AggregateGroupByPeriodRequest(
+            metrics = setOf(ElevationGainedRecord.ELEVATION_GAINED_TOTAL),
+            timeRangeFilter = TimeRangeFilter.between(start.toLocalDateTime(), end.toLocalDateTime()),
+            timeRangeSlicer = Period.ofDays(1)
+        ))
+        val arr = JSONArray()
+        response.forEach { bucket ->
+            /* Buckets with no data are skipped rather than emitted as 0. A zero would overwrite
+             * a real figure already in the ledger for that day if the source app is uninstalled
+             * or revokes access. */
+            val meters = bucket.result[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters ?: return@forEach
+            arr.put(JSONObject().apply {
+                put("date", bucket.startTime.toLocalDate().toString())
+                put("meters", meters)
+            })
+        }
+        return arr
+    }
+
     suspend fun getStepsHistory7Days(): JSONArray {
         val zone = ZoneId.systemDefault()
         val end = java.time.ZonedDateTime.now(zone)

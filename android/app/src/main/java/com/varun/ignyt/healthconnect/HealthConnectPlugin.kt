@@ -162,12 +162,16 @@ class HealthConnectPlugin : com.getcapacitor.Plugin() {
         }
     }
 
+    /** Gates a read on a PARTIAL grant, not a complete one: one ungranted optional metric must
+     *  not suppress steps. The per-metric denial is handled a layer down -- safeResolve/
+     *  safeResolveArray turn that record type's SecurityException into that call's own error,
+     *  leaving every other read working. Same rule getPermissionStatus reports as "granted". */
     private suspend fun ensurePermissions(call: PluginCall): Boolean {
         if (!manager.isAvailable()) {
             resolveError(call, "Health Connect is not available on this device.")
             return false
         }
-        if (manager.hasAllPermissions()) return true
+        if (manager.hasAnyReadPermission()) return true
         resolveError(call, "Health Connect permissions have not been granted yet. Call requestPermissions() first.")
         return false
     }
@@ -236,6 +240,14 @@ class HealthConnectPlugin : com.getcapacitor.Plugin() {
     fun getWeightHistory(call: PluginCall) {
         val days = call.getInt("days", 90) ?: 90
         pluginScope.launch { if (ensurePermissions(call)) safeResolveArray(call) { manager.getWeightHistory(days) } }
+    }
+
+    /* Defaults to 30 -- the widest window Health Connect will actually serve without
+     * PERMISSION_READ_HEALTH_DATA_HISTORY. The manager clamps it regardless. */
+    @PluginMethod
+    fun getElevationHistory(call: PluginCall) {
+        val days = call.getInt("days", 30) ?: 30
+        pluginScope.launch { if (ensurePermissions(call)) safeResolveArray(call) { manager.getElevationHistory(days) } }
     }
 
     private suspend fun safeResolveArray(call: PluginCall, block: suspend () -> JSONArray) {

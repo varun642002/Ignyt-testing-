@@ -49,10 +49,13 @@
     } catch (e) { return false; }
   }
 
-  const HC_STATE_KEY = "hx_hc_state";           // {connected, lastSyncAt}
+  const HC_STATE_KEY = "hx_hc_state";           // {connected, lastSyncAt, lastElevationMergeAt}
   const HC_EXPORTED_KEY = "hx_hc_exported_ids";  // {workouts:[...ids], weights:[...ids]}
   const HC_INSIGHTS_KEY = "hx_hc_insights_cache"; // {day:{...,fetchedAt}, week:{...}, month:{...}, year:{...}}
   const INSIGHTS_PERIODS = ["day", "week", "month", "year"];
+  // Six hours. Comfortably more often than the ledger needs (it is day-keyed) and far less
+  // often than handleSync() runs, which is the point — see the merge call site.
+  const ELEVATION_MERGE_MIN_MS = 6 * 60 * 60 * 1000;
 
   function loadHcState() {
     try { return JSON.parse(localStorage.getItem(HC_STATE_KEY) || "null") || { connected: false, lastSyncAt: null }; }
@@ -301,6 +304,23 @@
       _syncData = result.data;
       const hcState = loadHcState();
       hcState.lastSyncAt = result.data.syncedAt;
+
+      /* Elevation rides along with the sync the user already asked for rather than getting a
+         button of its own. Deliberately NOT awaited: it tops up a badge ledger, and a slow or
+         failing elevation read must not hold up or fail the sync the user is watching.
+
+         Throttled, because "the sync the user asked for" is not what handleSync() mostly is:
+         refreshWhenConnected() drives it on launch, on every visibilitychange to visible, on
+         every health-tab navigation and on a 5-minute interval, so tapping between Home and
+         Nutrition ten times fired ten 30-day aggregate reads, each trailed by a sweep over 680
+         achievement defs. The ledger is day-keyed and only needs topping up about daily; the
+         30-day window it reads gives a wide margin, so a device that is off for a week still
+         loses nothing. */
+      if (typeof mergeElevationFromHealth === "function" &&
+          Date.now() - (Number(hcState.lastElevationMergeAt) || 0) >= ELEVATION_MERGE_MIN_MS) {
+        hcState.lastElevationMergeAt = Date.now();
+        try { mergeElevationFromHealth(30); } catch (e) { /* never breaks the sync */ }
+      }
       saveHcState(hcState);
       _errorMsg = null;
       /* The same field means different things on the two platforms, so the message cannot be

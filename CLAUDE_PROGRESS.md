@@ -1,10 +1,252 @@
 # CLAUDE_PROGRESS.md
 
+## BUG FIX PASS ON THE ELEVATION/BADGE WORK (2026-08-17) — done, built, committed
+
+Feature request: "check for bugs", then "fix the issue". Branch: feature/diagnostics-screen
+(fixes land on the branch that introduced the defects; branching off main would not contain them).
+
+Build: `npx cap sync android` OK, `gradlew clean assembleDebug` BUILD SUCCESSFUL (1m 56s).
+Tests: tools/achievement-tests/run-suite.cjs — 52 passed, 0 failed (was 48; 4 new artwork tests).
+680 defs, 0 threw and 0 unlocked on an empty state.
+
+FIXED
+1. Health Connect went dark for every existing user. HEAD added ElevationGainedRecord to
+   allPermissions, and ensurePermissions() gated EVERY read on hasAllPermissions(), so anyone
+   holding the previous full grant lost steps, heart rate, weight, sleep, syncNow and insights
+   until they re-granted. Added hasAnyReadPermission() and gated reads on that — the same rule
+   getPermissionStatus already reported to the UI as "granted".
+2. The elevation merge could never fill its ledger. It read `res.value`; the bridge sends
+   {success:true,data:{items:[...]}} and callNative does not unwrap. Extracted elevationRows()
+   handling the real envelope, success:false, and the legacy shapes.
+3. No badge rendered its artwork. The b503867 rename migrated the ids but left all 45 .webp
+   files and manifest.json on the retired underscore scheme — 0 of 45 matched a live def.
+   Renamed via git mv, manifest regenerated FROM DISK, 4 regression tests added.
+4. badge-image-generator/generate_badges.py could not run at all (SystemExit on the body/cardio/
+   hyrox/special categories). Added the four shapes.
+5. The suite's only shape test mocked a contract nothing speaks, which is why #2 shipped green.
+   Every elevation mock now uses the real envelope.
+6. ICON_RULES were keyed on the retired ids: 520 of 680 badges got the default dumbbells,
+   Night Owl included. Rekeyed to the hyphen scheme — 205 now on default, mostly legitimately.
+   Docstring economics corrected (was "82 badges, ~2 MB"; it is 680 and ~17 MB).
+7. elevationLog now syncs (www/cloud-sync.js). It was unsynced while achievements WAS, so a
+   restored device showed earned Climber badges at "0 / 500" with the ledger unrecoverable.
+   write() merges by max rather than assigning, preserving the never-shrink invariant.
+8. ALL_DATA_KEYS had drifted past 24 keys that persist() writes. Added the 9 real data keys and
+   introduced WIPE_ONLY_KEYS for caches/session/migration flags — deliberately NOT the same list,
+   because ALL_DATA_KEYS also drives backup and a restored migration flag would skip a migration.
+9. iOS: getElevationHistory is Android-only; the Swift plugin declares no such method. Documented
+   at the export site rather than shipping untested Swift. STILL OPEN — see below.
+10. The merge ran on every resume and every tab change (refreshWhenConnected drives handleSync on
+    launch, visibilitychange, health-nav and a 5-min timer). Throttled to 6h via
+    hcState.lastElevationMergeAt.
+11. The six elev-* defs sat at the end of ACHIEVEMENT_DEFS; the grid filters without re-sorting,
+    so they rendered out of place. Moved inside the CARDIO block.
+12. Simplified the double-negative merge guard; 13. the suite's summary no longer lives inside a
+    trailing async IIFE that swallowed it on a throw.
+
+STILL OPEN
+- iOS elevation: needs a HealthKit implementation (flightsClimbed / HKMetadataKeyElevationAscended)
+  in ios/App/App/HealthConnectPlugin.swift. Not attempted — no Mac, Codemagic-only builds, and the
+  HealthKit plugin has never been exercised at runtime. The six elev-* badges are unreachable on
+  iPhone and nothing in the UI says so.
+- 205 of 680 badges still resolve to the default icon; most are generic workout-count badges where
+  crossed dumbbells is correct. Only 45 badges have art at all.
+
+NEXT ACTION: none pending. Branch pushed.
+
+
+## BILLING DECISIONS (2026-08-13) — settled, do not relitigate without new information
+
+**Play Billing only.** No external gateway, no web checkout, no User Choice Billing at launch.
+Considered and rejected: an external gateway means building the whole subscription lifecycle --
+renewals, failed payments, cancellations, refunds, dunning, webhook reconciliation -- that Play
+already does, plus a second entitlement source that can disagree with the first. The fee saving
+on pre-launch revenue is zero, and the removal risk on a new app is not. Revisit with real
+subscriber numbers; User Choice Billing is the sanctioned route and India is where it is most
+available.
+
+**Android is paid, iOS is free.** Play Billing exists on one platform and StoreKit is not built.
+Recorded in `paywallApplies()`'s own comment.
+
+**The 7-day trial is a Play OFFER on the base plan, not app-side logic.** `build.gradle` already
+says so. A local timer is beaten by clearing data or changing the clock and will disagree with
+Google about who is entitled.
+
+## PREMIUM GATING — HALF IMPLEMENTED (2026-08-13)
+
+`PREMIUM_FEATURES` in `www/js/billing/entitlements.js` was `{}` -- an empty map, which is why
+every feature was free regardless of entitlement. It now declares 18 gated features per the spec.
+
+**LIVE NOW (6).** These already had a `premiumAllows()` / `has()` call at their render site, so
+populating the map gated them immediately:
+
+    coach · diet · insights · health · fasting · supplements
+
+**GATED SINCE (5).** `plans` (+`hyrox` -- same screen, renderPlanTab), `reminders`, `photos`
+(renderBodyScanArchive), `muscles` (renderMuscleDistributionSheet). Pattern is one guard at the
+top of the render function; `muscles` is placed AFTER its open-check so a closed sheet stays
+closed rather than rendering a wall behind the workout, and `plans` is placed BEFORE the safety
+gate because a free user gets no plan for a red flag to warn about.
+
+**GATED SINCE (6 more).** `records`, `history`, `analytics`, `calendar`, `reports`, `photos` --
+all through ONE guarded lookup in `renderProgressTab()`'s dispatch table, plus `sync` inside
+`canSync()` in `cloud-sync.js`.
+
+MIND THE NAMING TRAP, it is documented on PROGRESS_VIEWS and it is easy to get backwards: the
+`history` VIEW renders the PR list, and `workouts` is the real workout history. So the map reads
+`history -> "records"` and `workouts -> "history"`. Reversed, it gates the wrong screen and looks
+like it worked.
+
+Free by omission and deliberately so: `body` (weight), `habits`, `achievements`. Someone who
+stops paying keeps their weight chart and their streaks.
+
+`sync` is gated at `canSync()` -- the SYNC stops, the local data is untouched and fully readable.
+It fails OPEN if entitlements has not loaded, because a missing billing layer must never silently
+stop someone's backup.
+
+**STILL NOT ENFORCED (2).** `macros` and `export`.
+  `export` is button handlers (`data-action="export-json"`, `export-workouts-csv`,
+  `export-json-encrypted` around app.js:19244-19418), not a render function -- the gate goes in
+  the handler, showing the paywall instead of writing a file.
+  `macros` has no single render site; nutrition depth is spread across the food log. Needs a
+  decision on what "advanced macro tracking" actually means before it can be gated.
+
+**OLD LIST, superseded:** `history`, `analytics`, `records`, `calendar`, `sync`, `macros`,
+`export`. Their render sites were not located with enough certainty to place a guard blind.
+`history` and `sync` are the two that must NOT be done casually -- see the data-loss note below.
+
+**OLD LIST, superseded:** These are in the map and nothing checks them yet, so they
+remain free. Each needs a `premiumAllows("<key>")` check at its render site, with
+`renderUpgradeWall("<key>")` as the alternative branch (that helper already exists in app.js):
+
+    plans · hyrox · history · analytics · records · muscles
+    calendar · sync · photos · macros · export · reminders
+
+**THE TWO WITH A DATA-LOSS EDGE -- do these carefully:**
+
+  `history` -- the PR engine, streaks and volume charts all READ workout history. Gating the
+  BROWSING is the intent; if those readers silently get nothing, a paying user's streak resets to
+  zero and it reads as data loss, not as a paywall. Decide per reader: degrade or hide.
+
+  `sync` -- gate the SYNC, never the local data. A lapsed user must still read everything already
+  on the device. Gating at the wrong layer here is a refund and a one-star review.
+
+**STILL NOT DONE, and none of it is optional:**
+  - server-side gates. `is_entitled(user)` exists and `routes_ai.py:219` uses it correctly.
+    Anything spending server resources -- sync, backup, AI -- needs the same, because the client
+    cache is plain JSON in localStorage and forgeable.
+  - **iOS IS FREE ON PURPOSE** (decided 2026-08-13). `paywallApplies()` is Android-only and
+    stays that way: Play Billing is wired up, StoreKit is not, and a paywall that cannot take
+    money locks users out of an app they cannot pay for. Recorded in the function's own comment.
+    Revisit only when an iOS billing plugin actually exists.
+  - Play Console: product `ignyt_premium`, a base plan, and a 7-day free-trial OFFER on it.
+    No app-side trial timer.
+
+## MONETISATION SPEC (from the user, 2026-08-13) — SPEC COMPLETE
+
+**The rule:** free for 7 days with everything unlocked. After day 7, a free user keeps only
+**basic workout tracking** and **basic food tracking**. Everything else is premium.
+
+A ~40-row feature table was supplied (exercise library, custom workouts, history depth, charts,
+PRs, plans, HYROX, nutrition depth, micronutrients, meal planning, Health Connect, wearables,
+sync, export, cloud backup, reminders, calendar, deload, recovery, training load, dashboards,
+ads). It is in the session transcript. The simplified rule above supersedes the per-row detail:
+two things free, the rest gated.
+
+### THREE DECISIONS BEFORE WRITING ANY CODE
+
+**1. Do NOT implement the 7-day timer in the app.** Play trials are configured as an offer on
+the base plan in Play Console, and `android/app/build.gradle` already says so in a comment:
+"The 7-day free trial is configured as an offer on the base plan in Play Console, so no trial
+logic ships in the app." An app-side timer is bypassable by clearing data or changing the clock,
+and it will disagree with what Google thinks the user's status is. Ask the billing bridge, do not
+count days locally.
+
+**2. Client-side gating is decorative.** Audited today: `isPremium()` reads
+`localStorage["hx_entitlement"]` (`www/js/billing/entitlements.js:130`) -- plain JSON, forgeable
+in seconds. That is fine for HIDING UI, and useless for anything that costs money or touches
+server data. Anything in the table that consumes backend resources (AI, cloud sync, cloud backup,
+cross-device sync) MUST be gated in the backend as well. Precedent exists and is correct:
+`routes_ai.py:219` calls `is_entitled(user)` server-side before spending anything.
+
+**3. iOS and web currently have NO paywall at all.** `paywallApplies()` returns
+`platform() === "android"` (`entitlements.js:91`), so `isPremium()` is unconditionally true
+everywhere else. Ship this spec as-is and the whole app is free on iPhone. Decide deliberately:
+either implement StoreKit for iOS, or accept it and write down that it is intentional.
+
+### SCOPE CONFIRMED BY THE USER
+
+Everything except the two free features is locked after day 7, **including cloud sync**. There is
+no partial tier -- it is two features free, everything else premium.
+
+That makes cloud sync a PAID feature, which raises the one question with a data-loss edge:
+**what happens to a user whose trial ends while their data is only in the cloud?** They must not
+lose access to their own records. Sync stopping is fine; the local copy going away, or the app
+refusing to read data it already has, is not. Gate the SYNC, never the local data.
+
+### "BASIC" IS NOW DEFINED (user, 2026-08-13)
+
+**Basic food tracking = the FULL 13,516-food library.** Search and log anything, no subset. This
+is the easy half: the catalogue stays untiered, so nothing in `food-catalogue.js`,
+`food-search.js` or the data file changes. Gate the features AROUND food logging -- diet plans,
+macro targets, micronutrients, meal planning, history depth -- not the library itself.
+
+**Basic workout tracking = logging TODAY only.** Start a session, log sets/reps/weight, finish
+it. Workout HISTORY is premium.
+
+That second one carries the same hazard as cloud sync and needs the same treatment: a free user's
+past workouts must not be deleted or become unreadable -- they are simply not browsable. The PR
+engine, streaks and volume charts all read history, so decide whether they degrade gracefully or
+disappear. A streak that silently resets because history is gated would look like data loss.
+
+**The spec is now complete and implementable.**
+
+### WHERE THE WORK GOES
+
+`PREMIUM_FEATURES` in `entitlements.js` is the map every gate reads (`has(feature)`); adding
+entries there is the client half. `is_entitled(user)` in `backend/app/api/routes_billing.py` is
+the server half. `AI_REQUIRES_PREMIUM` in `backend/app/config.py` is currently FALSE -- flipping
+the client without it leaves the API open, and flipping it without the client blocks paying users
+from a feature the UI still offers.
+
 ## START HERE — open the preview and LOOK before changing anything
 
 Everything below was reasoned from screenshots. Nothing in the last stretch of work was seen
 running. Two bugs the user reported were caused by my own earlier unverified changes, so the
 first action in a new session is to start the dev server and look, not to edit.
+
+### WEBKIT NAV: FIXED (56dc43a). THE SUITE MOVED ON TO A NEW BUG.
+
+**The navigation bug is solved and proven.** On WebKit `e.target` for a nav click arrives as the
+NAV element itself, so `closest("[data-navtab]")` returned null and every tap died on the
+handler's first line. `elementFromPoint` at the same coordinates returns the button's icon, so
+the coordinates are trustworthy and the event target is not. `closest()` first, coordinate
+hit-test as fallback.
+
+**composedPath() -- proposed in the notes below -- WOULD NOT HAVE WORKED.** It walks UP from the
+target; when the target is already the nav, the button is not on that path either. Do not retry it.
+
+Verified in isolation: btn resolves to "workout", the guard passes, and
+`[data-action="start-session"]` then exists. The app navigated, which it had never done on WebKit.
+
+**THE SUITE WENT 23 FAILURES -> 27, AND THAT IS EXPECTED.** The specs now run past the assertion
+that used to stop them. All 27 share ONE new cause:
+
+```
+Locator: [data-action="finish-session"]     (7 of 7 sampled failures)
+```
+
+So: navigate works, "Start Empty" is found and clicked, and the SESSION NEVER STARTS on WebKit --
+the finish button never renders. That is a different bug one step further in, and it is NOT
+diagnosed.
+
+**Where to start:** the start-session handler is `document.querySelectorAll('[data-action=
+"start-session"]')` at `www/app.js:19545` -- listeners bound to the BUTTON, so the e.target
+retargeting that broke the nav does not apply here. Which means either the click is not reaching
+that listener, or startSession() runs and the finish button renders under a different selector
+than the spec expects. Instrument inside that handler first; the technique that solved the nav
+bug -- probe the FIRST line, because earlier probes all sat after an early return -- is the one
+that works here too.
 
 ### THE BROWSER SUITE — read this before touching tests/pages/BasePage.js
 

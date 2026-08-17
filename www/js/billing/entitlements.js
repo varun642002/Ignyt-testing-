@@ -61,7 +61,44 @@ window.IgnytEntitlements = (function () {
    * back, what is gated is new capability, never access to their own data — an app that holds
    * someone's workout history hostage earns the review it gets, and Play takes a dim view of
    * it too. */
-  var PREMIUM_FEATURES = {};
+  /* THE GATE MAP. has(feature) returns true for anything NOT listed here, so this map is the
+     complete definition of what costs money -- an empty map means the whole app is free, which
+     is what it was until now.
+
+     The spec: free for 7 days (the trial is an OFFER on the Play base plan, not app-side logic),
+     after which a free user keeps basic workout logging and basic food logging. Everything else
+     is premium.
+
+     What stays free is deliberately NOT in this map:
+       - logging today's workout: start, sets, reps, weight, finish
+       - logging today's food, searching the FULL 13,516-food library
+       - logging weight
+     Those are the product's floor. A user who stops paying can still record what they did today.
+
+     A gated feature must still let people READ what they already own. Gating history means it
+     is not browsable, never that it is deleted -- and gating sync means it stops syncing, never
+     that local data disappears. That distinction is the difference between a lapsed subscription
+     and a support ticket saying the app ate their data. */
+  var PREMIUM_FEATURES = {
+    coach:       "AI Coach",
+    diet:        "Diet Plans",
+    plans:       "Training Plans",
+    hyrox:       "HYROX Training",
+    history:     "Workout History",
+    analytics:   "Advanced Progress",
+    records:     "Personal Records",
+    muscles:     "Muscle Distribution",
+    calendar:    "Training Calendar",
+    insights:    "Insights",
+    health:      "Health Connect & Wearables",
+    sync:        "Cloud Sync & Backup",
+    photos:      "Progress Photos",
+    fasting:     "Fasting Tracker",
+    supplements: "Supplement Tracker",
+    macros:      "Macro & Micronutrient Tracking",
+    export:      "Data Export",
+    reminders:   "Advanced Reminders"
+  };
 
   var PRODUCT_ID = "ignyt_premium";
   var CACHE_KEY = "hx_entitlement";
@@ -87,7 +124,23 @@ window.IgnytEntitlements = (function () {
       ? window.Capacitor.getPlatform() : "web";
   }
 
-  /** The paywall exists on Android and nowhere else, for now. */
+  /**
+   * ANDROID IS PAID. iOS AND WEB ARE FREE. THIS IS A DECISION, NOT AN OVERSIGHT.
+   *
+   * isPremium() returns true unconditionally wherever this is false, so on iPhone every gate
+   * passes and no upgrade wall ever renders -- the whole app is free there. Confirmed as
+   * intended by the product owner on 2026-08-13.
+   *
+   * The reason is simply that billing exists on one platform: Play Billing is wired up through
+   * BillingPlugin.kt, and there is no StoreKit equivalent on the Swift side. Charging on iOS
+   * would need a plugin, App Store Connect products and receipt validation -- none of which
+   * exists, and shipping a paywall that cannot take money is worse than no paywall.
+   *
+   * DO NOT "FIX" THIS by making it return true everywhere. That would gate iOS features behind
+   * an entitlement no iPhone user can ever obtain, locking them out of an app they cannot pay
+   * for. If iOS billing is built later, this is the line that changes -- and it changes at the
+   * same time as the plugin lands, not before.
+   */
   function paywallApplies() {
     return platform() === "android";
   }
