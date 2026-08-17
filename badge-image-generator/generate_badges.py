@@ -111,6 +111,10 @@ ICON_RULES = [
     #     the NUTRITION rule. Calories burned on a bike is not a meal.
     #   skierg-* / bike-*                  ->  the default dumbbells, having matched nothing.
     # Ten of the 73 cardio badges, which is ten paid calls returning the wrong picture.
+    # burpT-* is a BODYWEIGHT total in the strength category; burpee-bj-* is the HYROX station.
+    # Both begin "burp", and ^burp lives in the HYROX rule below, so the burpee totals were
+    # being sent a jagged mountain range. Same class of collision as the rowing one.
+    (r"^burpt",                                 "a flexed arm silhouette"),
     (r"^row-|^rowD|rowing",                     "a rowing machine oar and handle"),
     (r"^skierg|^skiD|ski-?erg",                 "a pair of ski-erg handles on a vertical rail"),
     (r"^bike|^ride|^rideD|cycling",             "a bicycle seen from the side"),
