@@ -13,6 +13,7 @@
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		5D26DE953AE694A62F723D56 /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7384600F20E7D6C95A3CA0DD /* HealthKitManager.swift */; };
 		83AE4A6E5C627C9EF8F5025D /* AppleSignInPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFCA5BFFE04F53B7F2638ED3 /* AppleSignInPlugin.swift */; };
+		B111FEED0000000000000001 /* BillingPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B111FEED0000000000000002 /* BillingPlugin.swift */; };
 		29237630E4AAD9DA2ABDD5BC /* NotifyPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71A75C51CAC817CC410D214F /* NotifyPlugin.swift */; };
 		AAC681774F4EBB6A569A691D /* HealthConnectPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = C67D2040092DA168078396A7 /* HealthConnectPlugin.swift */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
@@ -29,6 +30,7 @@
 		852F19C4B78BFF1AA1524B1E /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		7384600F20E7D6C95A3CA0DD /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
 		DFCA5BFFE04F53B7F2638ED3 /* AppleSignInPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInPlugin.swift; sourceTree = "<group>"; };
+		B111FEED0000000000000002 /* BillingPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BillingPlugin.swift; sourceTree = "<group>"; };
 		71A75C51CAC817CC410D214F /* NotifyPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotifyPlugin.swift; sourceTree = "<group>"; };
 		C67D2040092DA168078396A7 /* HealthConnectPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthConnectPlugin.swift; sourceTree = "<group>"; };
 		504EC30C1FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
@@ -76,6 +78,7 @@
 				852F19C4B78BFF1AA1524B1E /* App.entitlements */,
 				7384600F20E7D6C95A3CA0DD /* HealthKitManager.swift */,
 				DFCA5BFFE04F53B7F2638ED3 /* AppleSignInPlugin.swift */,
+				B111FEED0000000000000002 /* BillingPlugin.swift */,
 				71A75C51CAC817CC410D214F /* NotifyPlugin.swift */,
 				C67D2040092DA168078396A7 /* HealthConnectPlugin.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
@@ -172,6 +175,7 @@
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				5D26DE953AE694A62F723D56 /* HealthKitManager.swift in Sources */,
 				83AE4A6E5C627C9EF8F5025D /* AppleSignInPlugin.swift in Sources */,
+				B111FEED0000000000000001 /* BillingPlugin.swift in Sources */,
 				29237630E4AAD9DA2ABDD5BC /* NotifyPlugin.swift in Sources */,
 				AAC681774F4EBB6A569A691D /* HealthConnectPlugin.swift in Sources */,
 			);
