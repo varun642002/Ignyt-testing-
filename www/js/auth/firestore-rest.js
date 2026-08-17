@@ -46,9 +46,13 @@ window.IgnytFirestoreRest = (function () {
   /* Mirrors allowedCollections in CloudSyncPlugin.kt. Kept here as well as there because a
      rejected name should never reach the network: the server would refuse it under the
      security rules anyway, and failing locally says so faster and more clearly. */
+  /* MUST match RECORD_CATEGORIES in cloud-sync.js, allowedCollections in CloudSyncPlugin.kt,
+     and allowedCollections in CloudSyncPlugin.swift. Four lists, one meaning -- a category
+     present in cloud-sync.js but absent here is refused with "unknown collection" and that
+     category silently never syncs. elevationLog was exactly that. */
   var ALLOWED = [
     "workouts", "routines", "prs", "bodylog", "races", "customExercises",
-    "foodLog", "waterLog", "goals", "achievements", "favoriteFoods"
+    "foodLog", "waterLog", "goals", "achievements", "favoriteFoods", "elevationLog"
   ];
 
   var TIMEOUT_MS = 25000;

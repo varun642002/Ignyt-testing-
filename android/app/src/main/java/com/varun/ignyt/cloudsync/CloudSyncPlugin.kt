@@ -193,9 +193,12 @@ class CloudSyncPlugin : com.getcapacitor.Plugin() {
 
     /** Only these subcollections exist in the IGNYT schema; anything else is refused even
      *  if a compromised/buggy JS layer asks for it. */
+    // MUST match RECORD_CATEGORIES in cloud-sync.js and the same list in firestore-rest.js and
+    // CloudSyncPlugin.swift. A category synced but not listed here is refused as "unknown
+    // collection" and never syncs -- silently, because one category failing does not fail the run.
     private val allowedCollections = setOf(
         "workouts", "routines", "prs", "bodylog", "races", "customExercises",
-        "foodLog", "waterLog", "goals", "achievements", "favoriteFoods"
+        "foodLog", "waterLog", "goals", "achievements", "favoriteFoods", "elevationLog"
     )
 
     /** Incremental pull: every record in users/{uid}/{collection} whose updatedAt is greater
