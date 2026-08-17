@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import FirebaseCore
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,7 +8,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        /* Firebase, for cloud sync. The Android counterpart is the google-services Gradle plugin
+           reading google-services.json; on iOS it is this call reading GoogleService-Info.plist.
+
+           GUARDED, NOT UNCONDITIONAL. configure() traps if the plist is missing, which would
+           crash the app on launch for anyone whose build lacks it -- and this project has
+           shipped without google-services.json before, deliberately, with sign-in reporting
+           "not configured" rather than dying. Same behaviour here: no plist means Firebase
+           stays uninitialised, CloudSyncPlugin's `db` returns nil, and every sync method
+           answers the "not signed in / unavailable" shape the web layer already handles by
+           keeping data local. A missing config file must not be a crash. */
+        if FirebaseApp.app() == nil,
+           Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil {
+            FirebaseApp.configure()
+        }
         return true
     }
 

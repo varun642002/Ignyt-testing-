@@ -1,7 +1,27 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-    ext.kotlin_version = '1.9.24'
+    /* Bumped 1.9.24 -> 2.1.0 on 2026-08-17, with explicit authorisation.
+     *
+     * WHY: modern Firebase Android artifacts ship Kotlin 2.x metadata. firebase-auth 24.0.1
+     * failed to link with "binary version of its metadata is 2.1.0, expected version is 1.9.0",
+     * which is the exact failure app/build.gradle's Firebase comment warned about. Every route
+     * to iOS cloud sync goes through a Capacitor Firebase plugin, and those plugins ship Android
+     * code too — so an iOS-only need was blocked by this Android pin.
+     *
+     * 2.1.0 rather than newer: it is the metadata version the failing artifact was built with,
+     * so it is the lowest bump that actually resolves the conflict. Raising further is a
+     * separate decision with a separate regression run.
+     *
+     * THIS SWITCHES ON K2, Kotlin 2.0's compiler. It is stricter than the 1.9 frontend about
+     * nullability and inference, so a bump can surface errors in code that compiled for years.
+     * That is why it was done and verified ALONE, before Firebase was re-added — otherwise a K2
+     * error and a dependency error arrive together and neither is diagnosable.
+     *
+     * Unchanged and still pinned: AGP 8.13.0, Gradle 8.14.3, JVM target 21, minSdk 26,
+     * compileSdk/targetSdk 36, and Health Connect at exactly 1.1.0.
+     */
+    ext.kotlin_version = '2.1.0'
 
     repositories {
         google()
