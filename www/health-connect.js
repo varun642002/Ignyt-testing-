@@ -78,6 +78,10 @@ const HealthConnect = (() => {
     getHeartRateHistory:      () => callNative("getHeartRateHistory"),     // ADDED
     getStepsHistory:          () => callNative("getStepsHistory"),         // ADDED
     getWeightHistory:         (days = 90) => callNative("getWeightHistory", { days }),
+    /* Day-bucketed, not a single total: a lifetime figure is impossible to read from Health
+       Connect, which caps at 30 days without PERMISSION_READ_HEALTH_DATA_HISTORY and silently
+       truncates rather than failing. mergeElevationFromHealth() in app.js keeps the ledger. */
+    getElevationHistory:      (days = 30) => callNative("getElevationHistory", { days }),
     // ADDED -- the 10 newly requested metrics
     getRespiratoryRate:       () => callNative("getRespiratoryRate"),
     getOxygenSaturation:      () => callNative("getOxygenSaturation"),

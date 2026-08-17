@@ -273,5 +273,60 @@ const migrated = (() => {
 t("a collision collapses to one badge", migrated.length, 1);
 t("...keeping the earlier achievedAt", migrated[0].achievedAt, 1000);
 
-console.log("\n" + pass + " passed, " + fail + " failed");
-process.exit(fail > 0 ? 1 : 0);
+
+/* ---- 7. the Health Connect elevation ledger.
+   Elevation is the only badge source that comes from OUTSIDE the app, so the failure modes are
+   other people's: a bridge that is absent, one that throws synchronously when the permission is
+   denied, one that rejects, and one that returns a partial day. None may throw into the caller,
+   and none may shrink what is already banked. */
+function elevCtx(){
+  const state = { elevationLog: {}, achievements: [], workoutLog: [], foodLog: [], bodylog: [],
+    prs: [], routines: [], raceLog: [], bodyPhotos: [], waterLog: [], savedMeals: [], plan: null,
+    profile: {}, onboarding: {}, settings: {}, nutrition: { proteinPct:30, carbPct:45, fatPct:25 } };
+  const store = {};
+  const sx = { state, window: {}, console, Math, Date, JSON, Set, Object, Array, Number, String,
+    parseFloat, isFinite, RegExp, Promise,
+    LS: { set: (k, v) => { store[k] = v; }, get: k => store[k] },
+    checkAchievements: () => [],
+    localStorage: { getItem: () => null } };
+  sx.globalThis = sx;
+  vm.createContext(sx);
+  vm.runInContext(support + helpers +
+    ";globalThis.M=mergeElevationFromHealth;globalThis.T=totalElevationM;globalThis.STORE=()=>store;", sx);
+  return sx;
+}
+
+(async () => {
+  console.log("\n== Health Connect elevation ledger ==");
+  let e = elevCtx();
+  t("no bridge at all merges 0", await e.M(30), 0);
+  t("...and does not throw", e.T(), 0);
+
+  e.window.HealthConnect = { getElevationHistory: () => ([
+    { date:"2026-08-10", meters:120.5 }, { date:"2026-08-11", meters:300 }, { date:"2026-08-12", meters:0 }
+  ])};
+  t("banks 2 days, skipping the 0 m day", await e.M(30), 2);
+  t("total is the sum", Math.round(e.T()), 421);
+
+  e.window.HealthConnect = { getElevationHistory: () => ([{ date:"2026-08-11", meters:50 }]) };
+  t("a PARTIAL re-read banks nothing", await e.M(30), 0);
+  t("...and cannot shrink the ledger", Math.round(e.T()), 421);
+
+  e.window.HealthConnect = { getElevationHistory: () => ([{ date:"2026-08-11", meters:450 }]) };
+  t("a fuller re-read does update", await e.M(30), 1);
+  t("total follows", Math.round(e.T()), 571);
+
+  e.window.HealthConnect = { getElevationHistory: () => { throw new Error("denied"); } };
+  t("a SYNCHRONOUS throw is swallowed", await e.M(30), 0);
+  t("...and the ledger survives it", Math.round(e.T()), 571);
+
+  e.window.HealthConnect = { getElevationHistory: () => Promise.reject(new Error("denied")) };
+  t("an async reject is swallowed", await e.M(30), 0);
+
+  e.window.HealthConnect = { getElevationHistory: () => ({ success:true, value:[{ date:"2026-08-13", meters:500 }] }) };
+  t("the wrapped {value:[...]} shape is handled", await e.M(30), 1);
+  t("final total", Math.round(e.T()), 1071);
+
+  console.log("\n" + pass + " passed, " + fail + " failed");
+  process.exit(fail > 0 ? 1 : 0);
+})();

@@ -298,6 +298,12 @@
     const result = await HealthConnect.syncNow();
     _busy = false;
     if (result.success) {
+      /* Elevation rides along with the sync the user already asked for rather than getting a
+         button of its own. Deliberately NOT awaited: it tops up a badge ledger, and a slow or
+         failing elevation read must not hold up or fail the sync the user is watching. */
+      if (typeof mergeElevationFromHealth === "function") {
+        try { mergeElevationFromHealth(30); } catch (e) { /* never breaks the sync */ }
+      }
       _syncData = result.data;
       const hcState = loadHcState();
       hcState.lastSyncAt = result.data.syncedAt;

@@ -2014,6 +2014,9 @@ const state = {
   shareCount: LS.get("hx_share_count", 0),
   /* Local calendar days the app was opened, newest last, capped. Recorded at boot. */
   appDays: LS.get("hx_app_days", []),
+  /* { "YYYY-MM-DD": metres } climbed, topped up from Health Connect. A ledger rather than a
+     live read -- see mergeElevationFromHealth() for why a lifetime total cannot be queried. */
+  elevationLog: LS.get("hx_elevation_log", {}),
   viewingRaceMode: !!LS.get("hx_race_active", null),
   achievements: LS.records("hx_achievements"),
   lastUnlockedAchievements: null, // transient celebration, mirrors lastSessionPRs pattern
@@ -5659,11 +5662,53 @@ function countShare(){
 }
 function shareCount(){ return achNum(state.shareCount); }
 
-/** Metres climbed, summed off the elevation field on cardio sets. Never derived from distance. */
+/* Elevation comes from Health Connect, which is the only place this app has ever had it --
+   cardio sets carry distance, duration, calories and heart rate, and adding a fifth input to a
+   three-column set row on a 375px screen was the wrong trade for six badges.
+
+   It is kept as a day-keyed LEDGER rather than read on demand, because Health Connect will not
+   answer the question the badges ask. Without PERMISSION_READ_HEALTH_DATA_HISTORY a read is
+   capped at 30 days, and a wider range silently returns that window instead of failing -- so a
+   "lifetime metres climbed" query would quietly mean "metres climbed this month". Topping up a
+   local ledger means days already recorded survive falling out of Health Connect's window.
+
+   Merging takes the LARGER of the two values for a day, never the newer. Today's total grows
+   through the day, and a sync at 08:00 must not later be overwritten by a partial re-read; a
+   revoked permission or an uninstalled source app returns nothing for a day, and nothing must
+   not erase what was already banked. The native side already skips empty buckets for the same
+   reason. */
+function mergeElevationFromHealth(days){
+  const hc = window.HealthConnect;
+  if(!hc || typeof hc.getElevationHistory !== "function") return Promise.resolve(0);
+  /* The call goes INSIDE the chain, not into Promise.resolve(hc.getElevationHistory(...)).
+     Written that way the bridge is invoked before the promise exists, so a synchronous throw --
+     which is what a denied permission looks like coming out of the Capacitor shim -- escapes
+     the .catch() below and lands in the caller. */
+  return Promise.resolve().then(()=> hc.getElevationHistory(days || 30)).then(res=>{
+    const rows = Array.isArray(res) ? res : (res && Array.isArray(res.value) ? res.value : []);
+    const log = Object.assign({}, state.elevationLog || {});
+    let merged = 0;
+    rows.forEach(r=>{
+      if(!r || !r.date) return;
+      const m = achNum(r.meters);
+      if(m <= 0) return;
+      if(!(achNum(log[r.date]) >= m)){ log[r.date] = m; merged++; }
+    });
+    if(merged){
+      state.elevationLog = log;
+      LS.set("hx_elevation_log", log);
+      try{ checkAchievements(); }catch(e){}
+    }
+    return merged;
+  }).catch(()=> 0);      // Health Connect absent, denied or erroring is not an app error
+}
+
+/** Metres climbed, from the Health Connect ledger. Never derived from distance -- a 10 km run
+    on the flat and a 10 km run up a hill are not the same thing, and guessing which would put
+    an invented number next to real ones. */
 function totalElevationM(){
-  let m = 0;
-  eachLoggedSet(set=>{ m += achNum(set.elevationM); });
-  return m;
+  const log = state.elevationLog || {};
+  return Object.keys(log).reduce((a,k)=>a + achNum(log[k]), 0);
 }
 
 /* The 100-day challenge: 100 sessions inside any 100-day window. A derived achievement rather
@@ -6510,6 +6555,18 @@ const ACHIEVEMENT_DEFS = [
   { id:"pt-5", name:"Program Variety · 5", desc:"Try 5 program types.", check:()=> programTypesTried()>=5 , category:"program", tier:"gold", value:"5", prog:{ have:()=> programTypesTried(), need:5 } },
   { id:"pt-10", name:"Program Variety · 10", desc:"Try 10 program types.", check:()=> programTypesTried()>=10 , category:"program", tier:"platinum", value:"10", prog:{ have:()=> programTypesTried(), need:10 } },
   { id:"hundred", name:"100 Days · 100 Workouts", desc:"Complete the 100-day workout challenge.", check:()=> bestWorkoutsIn100Days()>=100 , category:"special", tier:"diamond", value:"100", prog:{ have:()=> bestWorkoutsIn100Days(), need:100 } },
+
+  /* ---- ELEVATION (6), from Health Connect's ElevationGainedRecord. The ledger in
+     state.elevationLog is topped up on each health sync; totalElevationM() sums it. On a device
+     with no Health Connect, or with the grant refused, the ledger stays empty and these simply
+     never unlock -- which is correct, and is why nothing here falls back to estimating climb
+     from distance. ---- */
+  { id:"elev-500", name:"Climber · 500 m", desc:"Climb 500 m.", check:()=> totalElevationM()>=500 , category:"cardio", tier:"bronze", value:"500M", prog:{ have:()=> Math.round(totalElevationM()), need:500 } },
+  { id:"elev-1000", name:"Climber · 1,000 m", desc:"Climb 1,000 m.", check:()=> totalElevationM()>=1000 , category:"cardio", tier:"silver", value:"1KM", prog:{ have:()=> Math.round(totalElevationM()), need:1000 } },
+  { id:"elev-2500", name:"Climber · 2,500 m", desc:"Climb 2,500 m.", check:()=> totalElevationM()>=2500 , category:"cardio", tier:"silver", value:"2.5K", prog:{ have:()=> Math.round(totalElevationM()), need:2500 } },
+  { id:"elev-5000", name:"Climber · 5,000 m", desc:"Climb 5,000 m.", check:()=> totalElevationM()>=5000 , category:"cardio", tier:"gold", value:"5KM", prog:{ have:()=> Math.round(totalElevationM()), need:5000 } },
+  { id:"elev-10000", name:"Climber · 10,000 m", desc:"Climb 10,000 m.", check:()=> totalElevationM()>=10000 , category:"cardio", tier:"diamond", value:"10K", prog:{ have:()=> Math.round(totalElevationM()), need:10000 } },
+  { id:"elev-25000", name:"Climber · 25,000 m", desc:"Climb 25,000 m.", check:()=> totalElevationM()>=25000 , category:"cardio", tier:"platinum", value:"25K", prog:{ have:()=> Math.round(totalElevationM()), need:25000 } },
 ];
 
 /* Call after any action that could unlock an achievement (finish workout,

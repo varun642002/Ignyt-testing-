@@ -238,6 +238,14 @@ class HealthConnectPlugin : com.getcapacitor.Plugin() {
         pluginScope.launch { if (ensurePermissions(call)) safeResolveArray(call) { manager.getWeightHistory(days) } }
     }
 
+    /* Defaults to 30 -- the widest window Health Connect will actually serve without
+     * PERMISSION_READ_HEALTH_DATA_HISTORY. The manager clamps it regardless. */
+    @PluginMethod
+    fun getElevationHistory(call: PluginCall) {
+        val days = call.getInt("days", 30) ?: 30
+        pluginScope.launch { if (ensurePermissions(call)) safeResolveArray(call) { manager.getElevationHistory(days) } }
+    }
+
     private suspend fun safeResolveArray(call: PluginCall, block: suspend () -> JSONArray) {
         try {
             resolveSuccess(call, JSObject().apply { put("items", block()) })
