@@ -157,6 +157,16 @@ class Settings(BaseSettings):
     # this is the window in which a cancelled user keeps access. Six hours is short enough to
     # be defensible and long enough that Play is not called on every request.
     play_recheck_hours: int = Field(default=6, alias="PLAY_RECHECK_HOURS")
+
+    # --- Apple StoreKit -------------------------------------------------------------------
+    # Path to Apple's Root CA G3 certificate in DER form. Supplied OUT OF BAND on purpose: it
+    # is the trust anchor, and a root fetched at runtime from a URL an attacker might influence
+    # would verify nothing. Absent, apple_billing refuses every transaction rather than
+    # degrading into trusting whatever the client sent.
+    apple_root_ca_path: str | None = Field(default=None, alias="APPLE_ROOT_CA_PATH")
+    # Checked against the bundleId inside the signed transaction. A validly signed receipt for
+    # a DIFFERENT app is still not a purchase of ours, and without this that would be accepted.
+    apple_bundle_id: str | None = Field(default=None, alias="APPLE_BUNDLE_ID")
     # Gate AI on verified entitlement. OFF by default and deliberately so: switching it on
     # before any purchase has been verified locks out every user, including paying ones,
     # because is_premium defaults to false. Turn it on once verification is live.

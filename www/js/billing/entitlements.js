@@ -141,8 +141,30 @@ window.IgnytEntitlements = (function () {
    * for. If iOS billing is built later, this is the line that changes -- and it changes at the
    * same time as the plugin lands, not before.
    */
+  /* iOS StoreKit landed as ios/App/App/BillingPlugin.swift on 2026-08-17, registered as
+     IgnytBilling — the same plugin name Android uses, returning the same JSON keys, so nothing
+     in this file needs a per-platform branch beyond the flag below.
+
+     THE FLAG IS OFF, AND THAT IS THE POINT. The comment above says this line changes "at the
+     same time as the plugin lands, not before". The plugin has been WRITTEN, not landed: it has
+     never been compiled (no Mac in this toolchain — iOS builds go through Codemagic) and never
+     run. Turning this on now would gate every premium feature on an iPhone behind a purchase
+     path nobody has watched work, and if it does not work those users are locked out of an app
+     they cannot pay for. That is strictly worse than iOS staying free.
+
+     TURN IT ON only after, on a real device: getProducts() returns both plans with real prices,
+     a sandbox purchase completes, getEntitlement() reports entitled afterwards, restore()
+     recovers it on a reinstall, and the BACKEND agrees — /v1/billing/verify has no Apple path
+     yet, so server-side entitlement is still Android-only and must be built before this flips.
+     Flipping it before that ships a client-only paywall, which is forgeable in seconds. */
+  var IOS_BILLING_ENABLED = false;
+
   function paywallApplies() {
-    return platform() === "android";
+    if (platform() === "android") return true;
+    // Plugin presence is checked too, so a build without it cannot gate anything even if the
+    // flag is on by mistake.
+    if (platform() === "ios") return IOS_BILLING_ENABLED && !!bridge();
+    return false;
   }
 
   function bridge() {
