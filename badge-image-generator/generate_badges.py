@@ -144,6 +144,13 @@ PROMPT = (
     "Across the centre, the text \"{value}\" is engraved in large bold metallic capitals, "
     "catching the same light as the frame, perfectly legible and correctly spelled. "
     "This is the ONLY text anywhere on the medal. "
+    # The per-badge discriminator. Without it the prompt was a function of shape, tier, value and
+    # icon alone, so 114 of 680 badges shared a prompt with another and would have come back as
+    # the same picture -- workouts-5 and muscles-5 are both milestone/bronze/"5"/dumbbells. You
+    # pay for each of those calls and then ship two identical medals in one grid. The name steers
+    # the motif ONLY; it must not be rendered, hence the explicit refusal on the next line.
+    "The medal commemorates \"{name}\" — let that guide the motif, composition and mood. "
+    "Do NOT render that phrase, or any part of it, as text anywhere on the medal. "
     "The plate behind the text is dark and faceted with subtle scratches. "
     "Dominant colour {colour}. Game trophy icon, dramatic studio lighting, high detail, crisp "
     "edges, square composition, no background, no ground shadow, no watermark."
@@ -192,20 +199,37 @@ def build_prompt(d):
     metal, colour, ornament, stars = TIERS[d["tier"]]
     return PROMPT.format(shape=SHAPES[d["category"]], metal=metal, colour=colour,
                          ornament=ornament, stars=stars, icon=icon_for(d["id"]).capitalize(),
-                         value=d["value"] or d["name"])
+                         name=d["name"], value=d["value"] or d["name"])
 
 
-def save_webp(image, path):
+def finish_and_save(image, path):
+    """Key out the background, centre on a transparent square, encode.
+
+    THE KEYING IS NOT OPTIONAL, and this is where a whole run gets wasted. The prompt asks for a
+    transparent background, but image models paint a background rather than emit an alpha
+    channel — so `convert("RGBA")` on an opaque return gives alpha=255 everywhere and the badge
+    ships as a solid square. The achievements grid is #121216 in dark and #F8FAFC in light, so
+    that reads as a black tile on the light theme. import_badges.py has said exactly this in its
+    own docstring since it was written, and runs the flood fill before saving; this path did not,
+    which meant every generated badge would have been unusable and the run paid for anyway.
+
+    Reused from import_badges.py rather than reimplemented. Three copies of one contract across
+    two scripts that ship together is how the manifest key and the alpha rule drift apart.
+    """
     from PIL import Image
-    image = image.convert("RGBA").resize((CANVAS, CANVAS), Image.LANCZOS)
-    q = WEBP_QUALITY_START
-    while True:
-        buf = BytesIO()
-        image.save(buf, format="WEBP", quality=q, method=6)
-        if buf.tell() <= TARGET_KB * 1024 or q <= WEBP_QUALITY_FLOOR:
-            path.write_bytes(buf.getvalue())
-            return buf.tell(), q
-        q -= 4
+    from import_badges import key_out_background, trim_to_content, square, save_webp
+
+    img = image.convert("RGBA")
+    if img.getextrema()[3][0] == 255:          # fully opaque -> the model painted a background
+        img, _ = key_out_background(img)
+    # square() also fixes the other silent defect: a 4:3 or 16:9 return was being resized
+    # straight to CANVAS x CANVAS, which squashes the medal and the engraved value with it.
+    final = square(trim_to_content(img))
+    if final.getextrema()[3][0] == 255:
+        # Keying failed -- usually a background that touches no border. Better to say so than to
+        # write a tile that looks broken only on one theme.
+        raise RuntimeError("still fully opaque after keying; would render as a solid square")
+    return save_webp(final, path)
 
 
 def write_manifest():
@@ -225,11 +249,25 @@ def main():
     defs = read_defs()
     jobs = [d for d in defs if not args.only
             or args.only in (d["id"], d["category"], d["tier"])]
-    if args.limit:
-        jobs = jobs[:args.limit]
     if not jobs:
         print("nothing matches --only " + str(args.only))
         return 1
+
+    # SKIP-EXISTING BEFORE --limit, not after. Sliced first, `--limit 5` took the first five
+    # defs, found all five already on disk, called the API zero times and printed
+    # "made 0, skipped 5" -- so the flag whose whole purpose is "sample the look before
+    # committing" could not do that until the directory was empty. With 45 badges already
+    # imported, that is exactly the state it was used in.
+    already = {p.stem for p in OUT_DIR.glob("*.webp")} if OUT_DIR.exists() else set()
+    pending = [d for d in jobs if args.force or d["id"] not in already]
+    preskipped = len(jobs) - len(pending)
+    if args.force and already:
+        print("--force will OVERWRITE %d existing badge(s), including any supplied artwork."
+              % len({d["id"] for d in jobs} & already))
+    # `is not None`, because `if args.limit:` read --limit 0 as "no limit" and generated all 680.
+    if args.limit is not None:
+        pending = pending[:max(0, args.limit)]
+    jobs = pending
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     print("%d of %d badge(s) -> %s" % (len(jobs), len(defs), OUT_DIR))
@@ -257,9 +295,6 @@ def main():
     failed = []
     for d in jobs:
         dest = OUT_DIR / (d["id"] + ".webp")
-        if dest.exists() and not args.force:
-            skipped += 1
-            continue
         try:
             resp = client.models.generate_content(model=model, contents=build_prompt(d))
             data = None
@@ -270,7 +305,7 @@ def main():
             if not data:
                 failed.append(d["id"] + ": no image in response")
                 continue
-            size, q = save_webp(Image.open(BytesIO(data)), dest)
+            size, q = finish_and_save(Image.open(BytesIO(data)), dest)
             print("  %-34s %5.1f KB  q%d" % (dest.name, size / 1024.0, q))
             made += 1
         except Exception as e:
