@@ -299,6 +299,30 @@ t("every manifest id has a file on disk", manifest.filter(i => !artFiles.include
 t("every file on disk is in the manifest", artFiles.filter(i => !manifest.includes(i)).length, 0);
 
 
+
+/* ---- 8. Founding Athlete, and the boundary that defines it.
+   The cutoff is 1 Jan 2027. A date comparison is where off-by-ones live, and this badge can
+   never be re-earned once the date passes, so the edges are asserted rather than eyeballed. */
+function foundCtx(firstDate){
+  const state = { workoutLog: firstDate ? [{ id:1, startedAt:firstDate, date:firstDate, exercises:[] }] : [],
+    foodLog: [], bodylog: [], prs: [], routines: [], raceLog: [], bodyPhotos: [], waterLog: [],
+    savedMeals: [], achievements: [], elevationLog: {}, plan: null, profile: {}, onboarding: {},
+    settings: {}, nutrition: { proteinPct:30, carbPct:45, fatPct:25 } };
+  const sx = { state, window:{}, console, Math, Date, JSON, Set, Object, Array, Number, String,
+    parseFloat, isFinite, RegExp, Promise, LS:{set(){},get(){}}, checkAchievements:()=>[],
+    localStorage:{ getItem:()=>null } };
+  vm.createContext(sx);
+  vm.runInContext(support + helpers + ";globalThis.F=isFoundingAthlete;", sx);
+  return sx.F();
+}
+console.log("\n== Founding Athlete (cutoff 1 Jan 2027) ==");
+t("nothing logged is NOT founding", foundCtx(null), false);
+t("2025 qualifies", foundCtx("2025-06-01T09:00:00"), true);
+t("today qualifies", foundCtx("2026-08-17T09:00:00"), true);
+t("31 Dec 2026 qualifies", foundCtx("2026-12-31T23:59:00"), true);
+t("1 Jan 2027 does NOT", foundCtx("2027-01-01T00:00:00"), false);
+t("later in 2027 does not", foundCtx("2027-06-01T09:00:00"), false);
+
 /* ---- 7. the Health Connect elevation ledger.
    Elevation is the only badge source that comes from OUTSIDE the app, so the failure modes are
    other people's: a bridge that is absent, one that throws synchronously when the permission is

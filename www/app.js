@@ -5190,14 +5190,40 @@ function trainedOnBirthday(){
   return trainedOnMonthDay(b.getMonth(), b.getDate());
 }
 /** Days between the first thing ever logged and today. */
-function accountDays(){
+/** Timestamp of the earliest thing ever logged, or null for someone with no data at all. */
+function firstLoggedAt(){
   const stamps = []
     .concat((state.workoutLog||[]).map(s=>s.startedAt || s.date))
     .concat((state.foodLog||[]).map(f=>f.date))
     .concat((state.bodylog||[]).map(b=>b.date))
-    .map(v=>new Date(v)).filter(d=>!isNaN(d));
-  if(!stamps.length) return 0;
-  return Math.floor((Date.now() - Math.min(...stamps.map(d=>d.getTime()))) / 86400000);
+    .map(v=>new Date(v)).filter(d=>!isNaN(d)).map(d=>d.getTime());
+  return stamps.length ? Math.min(...stamps) : null;
+}
+function accountDays(){
+  const first = firstLoggedAt();
+  return first == null ? 0 : Math.floor((Date.now() - first) / 86400000);
+}
+
+/* Founding Athlete: logging in IGNYT before 2027.
+ *
+ * The cutoff is a DECISION, not a measurement -- there is no server-side join order to ask, so
+ * "among the first" is defined here as "was already using the app before this date" and the date
+ * was chosen deliberately (2026-08-17) rather than derived. Anyone whose first logged entry
+ * predates it qualifies, and once the date passes nobody new ever can, which is what makes it
+ * mean something.
+ *
+ * Read from the LOG rather than an install timestamp, because an install date is lost on a
+ * reinstall and the log survives via backup and restore -- the badge should not evaporate
+ * because someone changed phones. The honest limit: a backdated entry would qualify someone.
+ * That is true of every badge here and is not worth a server round trip to close.
+ *
+ * Someone with nothing logged is NOT founding. firstLoggedAt() returns null there, and null
+ * must not compare its way past a date.
+ */
+const FOUNDING_CUTOFF_MS = new Date("2027-01-01T00:00:00").getTime();
+function isFoundingAthlete(){
+  const first = firstLoggedAt();
+  return first != null && first < FOUNDING_CUTOFF_MS;
 }
 
 /* ---- nutrition ------------------------------------------------------------------------- */
@@ -6627,6 +6653,9 @@ const ACHIEVEMENT_DEFS = [
   { id:"pt-10", name:"Program Variety · 10", desc:"Try 10 program types.", check:()=> programTypesTried()>=10 , category:"program", tier:"platinum", value:"10", prog:{ have:()=> programTypesTried(), need:10 } },
   { id:"hundred", name:"100 Days · 100 Workouts", desc:"Complete the 100-day workout challenge.", check:()=> bestWorkoutsIn100Days()>=100 , category:"special", tier:"diamond", value:"100", prog:{ have:()=> bestWorkoutsIn100Days(), need:100 } },
 
+  /* ---- SPECIAL: Founding Athlete. The 686 set marks this "live"; it needed a cutoff date,
+     which is a product decision rather than a lookup. Set to 1 Jan 2027 on 2026-08-17. ---- */
+  { id:"founding", name:"Founding Athlete", desc:"Started training in IGNYT before 2027.", check:()=> isFoundingAthlete() , category:"special", tier:"platinum", value:"OG" },
 ];
 
 /* Call after any action that could unlock an achievement (finish workout,
