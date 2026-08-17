@@ -254,7 +254,17 @@ const migBlock = src.slice(src.indexOf("const ACHIEVEMENT_ID_MIGRATION = {"), sr
 const pairs = [...migBlock.matchAll(/"([^"]+)": "([^"]+)"/g)].map(m => ({ from: m[1], to: m[2] }));
 
 console.log("\n== badge-id migration ==");
-t("every mapping has a target def", pairs.filter(p => !defIds.has(p.to)).length, 0);
+/* tRef, not t: these compare OTHER artefacts against the def set, so they only mean anything
+   when there is one. With ACHIEVEMENT_DEFS emptied on 2026-08-17 each would fail truthfully and
+   uselessly -- the migration map and the 45 art files DO point at ids no def uses, because no
+   def exists. Skipped rather than deleted: the moment definitions come back, these are the
+   guards that catch a stale mapping or an orphaned image. A per-assertion helper rather than an
+   if-block, because the block form swallowed the manifest declarations below it. */
+const tRef = (label, got, want) => defIds.size === 0
+  ? console.log("  skip  " + label + " (no definitions to compare against)")
+  : t(label, got, want);
+
+tRef("every mapping has a target def", pairs.filter(p => !defIds.has(p.to)).length, 0);
 t("no mapped-away id still ships as a def", pairs.filter(p => defIds.has(p.from)).length, 0);
 t("no def still uses the underscore scheme", [...defIds].filter(i => i.includes("_")).length, 0);
 t("all 82 legacy ids are mapped", pairs.length, 82);
@@ -283,8 +293,8 @@ const artFiles = fs.readdirSync(BADGE_DIR).filter(f => f.endsWith(".webp")).map(
 const manifest = JSON.parse(fs.readFileSync(require("path").join(BADGE_DIR, "manifest.json"), "utf8")).badges;
 
 console.log("\n== badge artwork ==");
-t("every art file names a live def", artFiles.filter(i => !defIds.has(i)).length, 0);
-t("every manifest id names a live def", manifest.filter(i => !defIds.has(i)).length, 0);
+tRef("every art file names a live def", artFiles.filter(i => !defIds.has(i)).length, 0);
+tRef("every manifest id names a live def", manifest.filter(i => !defIds.has(i)).length, 0);
 t("every manifest id has a file on disk", manifest.filter(i => !artFiles.includes(i)).length, 0);
 t("every file on disk is in the manifest", artFiles.filter(i => !manifest.includes(i)).length, 0);
 
