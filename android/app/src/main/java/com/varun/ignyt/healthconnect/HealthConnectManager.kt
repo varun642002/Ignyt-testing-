@@ -109,6 +109,18 @@ class HealthConnectManager(private val context: Context) {
 
     suspend fun grantedPermissions(): Set<String> = client.permissionController.getGrantedPermissions()
     suspend fun hasAllPermissions(): Boolean = grantedPermissions().containsAll(allPermissions)
+
+    /** "May I read anything?" -- the question an individual read should ask, and the same one
+     *  getPermissionStatus() already answers to the UI as "granted".
+     *
+     *  hasAllPermissions() answers a different question: "is setup complete?", which is what
+     *  requestPermissions() needs in order to decide whether to re-show the dialog. Gating reads
+     *  on it makes every added metric a breaking change for existing users -- granting elevation
+     *  became mandatory for steps the moment it joined allPermissions, and the whole Health screen
+     *  went blank for anyone who had granted the previous full set. */
+    suspend fun hasAnyReadPermission(): Boolean =
+        grantedPermissions().any { readPermissions.contains(it) }
+
     suspend fun revokeAllPermissions() = client.permissionController.revokeAllPermissions()
 
     /** Resolves a Health Connect record's data-origin package name to a friendly app label

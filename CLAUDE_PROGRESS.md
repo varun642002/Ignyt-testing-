@@ -1,5 +1,60 @@
 # CLAUDE_PROGRESS.md
 
+## BUG FIX PASS ON THE ELEVATION/BADGE WORK (2026-08-17) — done, built, committed
+
+Feature request: "check for bugs", then "fix the issue". Branch: feature/diagnostics-screen
+(fixes land on the branch that introduced the defects; branching off main would not contain them).
+
+Build: `npx cap sync android` OK, `gradlew clean assembleDebug` BUILD SUCCESSFUL (1m 56s).
+Tests: tools/achievement-tests/run-suite.cjs — 52 passed, 0 failed (was 48; 4 new artwork tests).
+680 defs, 0 threw and 0 unlocked on an empty state.
+
+FIXED
+1. Health Connect went dark for every existing user. HEAD added ElevationGainedRecord to
+   allPermissions, and ensurePermissions() gated EVERY read on hasAllPermissions(), so anyone
+   holding the previous full grant lost steps, heart rate, weight, sleep, syncNow and insights
+   until they re-granted. Added hasAnyReadPermission() and gated reads on that — the same rule
+   getPermissionStatus already reported to the UI as "granted".
+2. The elevation merge could never fill its ledger. It read `res.value`; the bridge sends
+   {success:true,data:{items:[...]}} and callNative does not unwrap. Extracted elevationRows()
+   handling the real envelope, success:false, and the legacy shapes.
+3. No badge rendered its artwork. The b503867 rename migrated the ids but left all 45 .webp
+   files and manifest.json on the retired underscore scheme — 0 of 45 matched a live def.
+   Renamed via git mv, manifest regenerated FROM DISK, 4 regression tests added.
+4. badge-image-generator/generate_badges.py could not run at all (SystemExit on the body/cardio/
+   hyrox/special categories). Added the four shapes.
+5. The suite's only shape test mocked a contract nothing speaks, which is why #2 shipped green.
+   Every elevation mock now uses the real envelope.
+6. ICON_RULES were keyed on the retired ids: 520 of 680 badges got the default dumbbells,
+   Night Owl included. Rekeyed to the hyphen scheme — 205 now on default, mostly legitimately.
+   Docstring economics corrected (was "82 badges, ~2 MB"; it is 680 and ~17 MB).
+7. elevationLog now syncs (www/cloud-sync.js). It was unsynced while achievements WAS, so a
+   restored device showed earned Climber badges at "0 / 500" with the ledger unrecoverable.
+   write() merges by max rather than assigning, preserving the never-shrink invariant.
+8. ALL_DATA_KEYS had drifted past 24 keys that persist() writes. Added the 9 real data keys and
+   introduced WIPE_ONLY_KEYS for caches/session/migration flags — deliberately NOT the same list,
+   because ALL_DATA_KEYS also drives backup and a restored migration flag would skip a migration.
+9. iOS: getElevationHistory is Android-only; the Swift plugin declares no such method. Documented
+   at the export site rather than shipping untested Swift. STILL OPEN — see below.
+10. The merge ran on every resume and every tab change (refreshWhenConnected drives handleSync on
+    launch, visibilitychange, health-nav and a 5-min timer). Throttled to 6h via
+    hcState.lastElevationMergeAt.
+11. The six elev-* defs sat at the end of ACHIEVEMENT_DEFS; the grid filters without re-sorting,
+    so they rendered out of place. Moved inside the CARDIO block.
+12. Simplified the double-negative merge guard; 13. the suite's summary no longer lives inside a
+    trailing async IIFE that swallowed it on a throw.
+
+STILL OPEN
+- iOS elevation: needs a HealthKit implementation (flightsClimbed / HKMetadataKeyElevationAscended)
+  in ios/App/App/HealthConnectPlugin.swift. Not attempted — no Mac, Codemagic-only builds, and the
+  HealthKit plugin has never been exercised at runtime. The six elev-* badges are unreachable on
+  iPhone and nothing in the UI says so.
+- 205 of 680 badges still resolve to the default icon; most are generic workout-count badges where
+  crossed dumbbells is correct. Only 45 badges have art at all.
+
+NEXT ACTION: none pending. Branch pushed.
+
+
 ## BILLING DECISIONS (2026-08-13) — settled, do not relitigate without new information
 
 **Play Billing only.** No external gateway, no web checkout, no User Choice Billing at launch.

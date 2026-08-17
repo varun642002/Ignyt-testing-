@@ -16,7 +16,29 @@ const ALL_DATA_KEYS = ["hx_completed","hx_active_week","hx_active_level","hx_pro
      behind on a device the user believed they had cleared. It is included in backup for
      the same consistency; restoring a stale one is harmless because it expires after
      ACK_DAYS regardless of when it was written. */
-  "hx_red_flag_ack"];
+  "hx_red_flag_ack",
+  /* Data that persist() writes but this list had drifted past. Each one was surviving "Clear all
+     data" and the sign-out wipe, and was missing from every backup. The elevation ledger was the
+     visible symptom: hx_elevation_log outlived a wipe, so the six Climber badges re-unlocked
+     immediately on a supposedly empty account, and a restored device showed them earned at
+     "0 / 500" because the ledger itself was never in the backup. */
+  "hx_elevation_log","hx_habits","hx_habit_completions","hx_program_history","hx_rest_days",
+  "hx_app_days","hx_share_count","hx_saved_meals","hx_race_division"];
+
+/* Wiped, but never backed up — the two lists are NOT the same list, which is why the drift above
+   could not be fixed by appending to ALL_DATA_KEYS.
+   ALL_DATA_KEYS is read by both exportBackup() and the wipes, so anything added there travels
+   inside backup files. A one-shot migration flag must not: restoring a backup taken after a
+   migration would set the flag on a device that never ran it, and the migration would be skipped
+   forever. These are cleared on a wipe (they are device state, and hx_hc_dashboard_cache holds
+   real health figures that must not outlive "Clear all data") and omitted from backups, where
+   they would either be meaningless or actively harmful. */
+const WIPE_ONLY_KEYS = ["hx_hc_dashboard_cache","hx_hc_state","hx_hc_exported_ids","hx_hc_insights_cache",
+  "hx_last_id","hx_swipe_hint_seen",
+  "hx_achievement_ids_v1","hx_local_datekey_v1","hx_exercise_merge_v1","hx_exercise_rename_v2",
+  "hx_favfoods_id_migrated_v1","hx_meal_rename_migrated_v1","hx_plan_exercise_rename_v1",
+  "hx_rest_default_migrated_v1","hx_workout_dedupe_v1","hx_workout_dedupe_notified_v1",
+  "hx_workout_dedupe_removed_v1"];
 
 /* The subset of the above whose values are arrays of RECORD OBJECTS — the ones the UI reads
    fields off, and so the ones a null element inside can crash. Used by LS.records() on load
@@ -5677,6 +5699,29 @@ function shareCount(){ return achNum(state.shareCount); }
    revoked permission or an uninstalled source app returns nothing for a day, and nothing must
    not erase what was already banked. The native side already skips empty buckets for the same
    reason. */
+
+/** The day rows out of a getElevationHistory() response, whatever shape it arrives in.
+ *
+ *  The real one is the Capacitor envelope every other health read already unwraps as
+ *  `res.success` then `res.data.X`: safeResolveArray builds JSObject{items:[...]} and
+ *  resolveSuccess wraps it, giving {success:true, data:{items:[{date,meters}]}}. callNative
+ *  returns that verbatim -- it does not unwrap -- so reading anything else yields no rows and
+ *  the ledger silently never fills.
+ *
+ *  The bare-array and {value:[...]} forms are kept as fallbacks, not because the plugin emits
+ *  them but because the tests do, and a shape check is the wrong place to be strict. A failed
+ *  call ({success:false, error}) has no rows and correctly returns []. */
+function elevationRows(res){
+  if(Array.isArray(res)) return res;
+  if(!res || typeof res !== "object") return [];
+  if(res.success === false) return [];
+  const d = res.data && typeof res.data === "object" ? res.data : res;
+  if(Array.isArray(d.items)) return d.items;
+  if(Array.isArray(d.value)) return d.value;
+  if(Array.isArray(res.value)) return res.value;
+  return [];
+}
+
 function mergeElevationFromHealth(days){
   const hc = window.HealthConnect;
   if(!hc || typeof hc.getElevationHistory !== "function") return Promise.resolve(0);
@@ -5685,14 +5730,14 @@ function mergeElevationFromHealth(days){
      which is what a denied permission looks like coming out of the Capacitor shim -- escapes
      the .catch() below and lands in the caller. */
   return Promise.resolve().then(()=> hc.getElevationHistory(days || 30)).then(res=>{
-    const rows = Array.isArray(res) ? res : (res && Array.isArray(res.value) ? res.value : []);
+    const rows = elevationRows(res);
     const log = Object.assign({}, state.elevationLog || {});
     let merged = 0;
     rows.forEach(r=>{
       if(!r || !r.date) return;
       const m = achNum(r.meters);
       if(m <= 0) return;
-      if(!(achNum(log[r.date]) >= m)){ log[r.date] = m; merged++; }
+      if(m > achNum(log[r.date])){ log[r.date] = m; merged++; }
     });
     if(merged){
       state.elevationLog = log;
@@ -6208,6 +6253,20 @@ const ACHIEVEMENT_DEFS = [
   { id:"longRun-80", name:"Long Run · 80km", desc:"Run 80km in one session.", check:()=> longestRunKm()>=80 , category:"cardio", tier:"diamond", value:"80" },
   { id:"longRun-100", name:"Long Run · 100km", desc:"Run 100km in one session.", check:()=> longestRunKm()>=100 , category:"cardio", tier:"platinum", value:"100" },
 
+  /* ---- ELEVATION (6), from Health Connect's ElevationGainedRecord. The ledger in
+     state.elevationLog is topped up on each health sync; totalElevationM() sums it. On a device
+     with no Health Connect, or with the grant refused, the ledger stays empty and these simply
+     never unlock -- which is correct, and is why nothing here falls back to estimating climb
+     from distance.
+     Lives inside the CARDIO block, not at the end of the file: the achievements grid filters by
+     category without re-sorting, so a def's position in this array IS its position on screen. ---- */
+  { id:"elev-500", name:"Climber · 500 m", desc:"Climb 500 m.", check:()=> totalElevationM()>=500 , category:"cardio", tier:"bronze", value:"500M", prog:{ have:()=> Math.round(totalElevationM()), need:500 } },
+  { id:"elev-1000", name:"Climber · 1,000 m", desc:"Climb 1,000 m.", check:()=> totalElevationM()>=1000 , category:"cardio", tier:"silver", value:"1KM", prog:{ have:()=> Math.round(totalElevationM()), need:1000 } },
+  { id:"elev-2500", name:"Climber · 2,500 m", desc:"Climb 2,500 m.", check:()=> totalElevationM()>=2500 , category:"cardio", tier:"silver", value:"2.5K", prog:{ have:()=> Math.round(totalElevationM()), need:2500 } },
+  { id:"elev-5000", name:"Climber · 5,000 m", desc:"Climb 5,000 m.", check:()=> totalElevationM()>=5000 , category:"cardio", tier:"gold", value:"5KM", prog:{ have:()=> Math.round(totalElevationM()), need:5000 } },
+  { id:"elev-10000", name:"Climber · 10,000 m", desc:"Climb 10,000 m.", check:()=> totalElevationM()>=10000 , category:"cardio", tier:"diamond", value:"10K", prog:{ have:()=> Math.round(totalElevationM()), need:10000 } },
+  { id:"elev-25000", name:"Climber · 25,000 m", desc:"Climb 25,000 m.", check:()=> totalElevationM()>=25000 , category:"cardio", tier:"platinum", value:"25K", prog:{ have:()=> Math.round(totalElevationM()), need:25000 } },
+
   /* ---- HYROX (37) ---- */
   { id:"wbT-2500", name:"Wall Ball Total · 2,500", desc:"Complete 2,500 wall balls.", check:()=> stationReps(ACH_WALLBALL_RE)>=2500 , category:"hyrox", tier:"bronze", value:"2.5K", prog:{ have:()=> Math.round(stationReps(ACH_WALLBALL_RE)), need:2500 } },
   { id:"wbT-5000", name:"Wall Ball Total · 5,000", desc:"Complete 5,000 wall balls.", check:()=> stationReps(ACH_WALLBALL_RE)>=5000 , category:"hyrox", tier:"silver", value:"5K", prog:{ have:()=> Math.round(stationReps(ACH_WALLBALL_RE)), need:5000 } },
@@ -6556,17 +6615,6 @@ const ACHIEVEMENT_DEFS = [
   { id:"pt-10", name:"Program Variety · 10", desc:"Try 10 program types.", check:()=> programTypesTried()>=10 , category:"program", tier:"platinum", value:"10", prog:{ have:()=> programTypesTried(), need:10 } },
   { id:"hundred", name:"100 Days · 100 Workouts", desc:"Complete the 100-day workout challenge.", check:()=> bestWorkoutsIn100Days()>=100 , category:"special", tier:"diamond", value:"100", prog:{ have:()=> bestWorkoutsIn100Days(), need:100 } },
 
-  /* ---- ELEVATION (6), from Health Connect's ElevationGainedRecord. The ledger in
-     state.elevationLog is topped up on each health sync; totalElevationM() sums it. On a device
-     with no Health Connect, or with the grant refused, the ledger stays empty and these simply
-     never unlock -- which is correct, and is why nothing here falls back to estimating climb
-     from distance. ---- */
-  { id:"elev-500", name:"Climber · 500 m", desc:"Climb 500 m.", check:()=> totalElevationM()>=500 , category:"cardio", tier:"bronze", value:"500M", prog:{ have:()=> Math.round(totalElevationM()), need:500 } },
-  { id:"elev-1000", name:"Climber · 1,000 m", desc:"Climb 1,000 m.", check:()=> totalElevationM()>=1000 , category:"cardio", tier:"silver", value:"1KM", prog:{ have:()=> Math.round(totalElevationM()), need:1000 } },
-  { id:"elev-2500", name:"Climber · 2,500 m", desc:"Climb 2,500 m.", check:()=> totalElevationM()>=2500 , category:"cardio", tier:"silver", value:"2.5K", prog:{ have:()=> Math.round(totalElevationM()), need:2500 } },
-  { id:"elev-5000", name:"Climber · 5,000 m", desc:"Climb 5,000 m.", check:()=> totalElevationM()>=5000 , category:"cardio", tier:"gold", value:"5KM", prog:{ have:()=> Math.round(totalElevationM()), need:5000 } },
-  { id:"elev-10000", name:"Climber · 10,000 m", desc:"Climb 10,000 m.", check:()=> totalElevationM()>=10000 , category:"cardio", tier:"diamond", value:"10K", prog:{ have:()=> Math.round(totalElevationM()), need:10000 } },
-  { id:"elev-25000", name:"Climber · 25,000 m", desc:"Climb 25,000 m.", check:()=> totalElevationM()>=25000 , category:"cardio", tier:"platinum", value:"25K", prog:{ have:()=> Math.round(totalElevationM()), need:25000 } },
 ];
 
 /* Call after any action that could unlock an achievement (finish workout,
@@ -18103,7 +18151,7 @@ function renderErrorScreen(err){
   });
   document.getElementById("err-reset").addEventListener("click", ()=>{
     if(confirm("This permanently deletes ALL app data. Are you sure?") && confirm("Last check — this cannot be undone. Delete everything?")){
-      ALL_DATA_KEYS.forEach(k=>localStorage.removeItem(k));
+      ALL_DATA_KEYS.concat(WIPE_ONLY_KEYS).forEach(k=>localStorage.removeItem(k));
       location.reload();
     }
   });
@@ -21093,7 +21141,7 @@ function attachHandlers(){
       return;
     }
     // The account is gone. Only now is it safe to drop the local copy.
-    try{ ALL_DATA_KEYS.forEach(k=>localStorage.removeItem(k)); localStorage.removeItem("hx_auth_account"); localStorage.removeItem("hx_auth_seen"); }
+    try{ ALL_DATA_KEYS.concat(WIPE_ONLY_KEYS).forEach(k=>localStorage.removeItem(k)); localStorage.removeItem("hx_auth_account"); localStorage.removeItem("hx_auth_seen"); }
     catch(e){ /* the account is already deleted; a failed local wipe must not block the reload */ }
     location.reload();
   });
@@ -21310,7 +21358,7 @@ function attachHandlers(){
   if(resetBtn) resetBtn.addEventListener("click", async ()=>{
     if(await confirmDialog("This permanently deletes ALL app data (workouts, logs, routines, settings). Are you sure?", render)){
       if(await confirmDialog("Last check — this cannot be undone. Delete everything?", render)){
-        ALL_DATA_KEYS.forEach(k=>localStorage.removeItem(k));
+        ALL_DATA_KEYS.concat(WIPE_ONLY_KEYS).forEach(k=>localStorage.removeItem(k));
         location.reload();
       }
     }

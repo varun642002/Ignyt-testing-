@@ -167,6 +167,11 @@ const IgnytCloudSync = (() => {
   /* ---------- record categories (users/{uid}/{collection}/{docId}) ---------- */
   // validate() is the minimum shape a record must have to travel; failing records stay
   // local, untouched. sort keeps newest-first ordering the app's UI expects.
+
+  // Metres, coerced. Local rather than borrowing app.js's achNum: this file guards every
+  // global it touches, and a sync helper must not depend on load order to be correct.
+  const metres = (v) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+
   const RECORD_CATEGORIES = {
     workouts: {
       read: () => state.workoutLog, write: (arr) => { state.workoutLog = arr; },
@@ -253,6 +258,42 @@ const IgnytCloudSync = (() => {
       idOf: (r) => String(r.id),
       validate: (r) => !!r && typeof r.id === "string" && typeof r.achievedAt === "number",
       sort: (a, b) => (Number(b.achievedAt) || 0) - (Number(a.achievedAt) || 0)
+    },
+    /* The elevation ledger, for the same reason as achievements and then some: it is not
+       recoverable by recomputation at all. Health Connect reads are capped at 30 days without
+       PERMISSION_READ_HEALTH_DATA_HISTORY, so a day that falls out of that window and was never
+       synced is gone permanently. Without this section a restored device showed the Climber
+       badges as earned (achievements DO sync) sitting at "0 / 500", because the ledger behind
+       them did not.
+       Stored as a day-keyed object, exposed here as one record per day so it fits the same
+       id-addressed engine as everything else — the date IS the id, which is what makes two
+       devices logging the same day converge instead of duplicating it. */
+    elevationLog: {
+      read: () => {
+        const log = (typeof state !== "undefined" && state.elevationLog) || {};
+        return Object.keys(log).map(d => ({ id: d, meters: metres(log[d]) })).filter(r => r.meters > 0);
+      },
+      /* Merged, never assigned. Every other section can take the synced array as the new truth;
+         this one cannot, because the ledger's whole invariant is that a day never shrinks. The
+         engine resolves a same-day conflict as local-wins, which would let a device that synced
+         at 08:00 overwrite a fuller figure from another device — so the larger value wins here,
+         exactly as mergeElevationFromHealth does for the Health Connect side. A tombstoned day
+         is likewise not removed: this ledger only ever grows. */
+      write: (arr) => {
+        if (typeof state === "undefined") return;
+        const log = Object.assign({}, state.elevationLog || {});
+        (arr || []).forEach(r => {
+          if (!r || !r.id) return;
+          const m = metres(r.meters);
+          if (m > metres(log[r.id])) log[r.id] = m;
+        });
+        state.elevationLog = log;
+        if (typeof LS !== "undefined") LS.set("hx_elevation_log", log);
+      },
+      idOf: (r) => String(r.id),
+      validate: (r) => !!r && typeof r.id === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.id)
+        && typeof r.meters === "number" && isFinite(r.meters) && r.meters > 0,
+      sort: (a, b) => (a.id < b.id ? 1 : a.id > b.id ? -1 : 0)
     }
   };
 

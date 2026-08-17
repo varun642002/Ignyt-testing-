@@ -162,12 +162,16 @@ class HealthConnectPlugin : com.getcapacitor.Plugin() {
         }
     }
 
+    /** Gates a read on a PARTIAL grant, not a complete one: one ungranted optional metric must
+     *  not suppress steps. The per-metric denial is handled a layer down -- safeResolve/
+     *  safeResolveArray turn that record type's SecurityException into that call's own error,
+     *  leaving every other read working. Same rule getPermissionStatus reports as "granted". */
     private suspend fun ensurePermissions(call: PluginCall): Boolean {
         if (!manager.isAvailable()) {
             resolveError(call, "Health Connect is not available on this device.")
             return false
         }
-        if (manager.hasAllPermissions()) return true
+        if (manager.hasAnyReadPermission()) return true
         resolveError(call, "Health Connect permissions have not been granted yet. Call requestPermissions() first.")
         return false
     }

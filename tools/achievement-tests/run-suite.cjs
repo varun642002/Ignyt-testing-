@@ -273,6 +273,21 @@ const migrated = (() => {
 t("a collision collapses to one badge", migrated.length, 1);
 t("...keeping the earlier achievedAt", migrated[0].achievedAt, 1000);
 
+/* The artwork is keyed on the badge id, so a rename that skips www/assets/badges silently
+   un-arts every earned badge: achievementBadge() does IgnytBadgeFrames.has(d.id), misses, and
+   falls back to the SVG while the .webp files ship as dead bytes. The migration commit did
+   exactly that -- 45 of 45 images stranded on the retired underscore ids -- and the three tests
+   above all passed, because none of them looks at what is on disk. These do. */
+const BADGE_DIR = require("path").join(__dirname, "..", "..", "www", "assets", "badges");
+const artFiles = fs.readdirSync(BADGE_DIR).filter(f => f.endsWith(".webp")).map(f => f.replace(".webp", ""));
+const manifest = JSON.parse(fs.readFileSync(require("path").join(BADGE_DIR, "manifest.json"), "utf8")).badges;
+
+console.log("\n== badge artwork ==");
+t("every art file names a live def", artFiles.filter(i => !defIds.has(i)).length, 0);
+t("every manifest id names a live def", manifest.filter(i => !defIds.has(i)).length, 0);
+t("every manifest id has a file on disk", manifest.filter(i => !artFiles.includes(i)).length, 0);
+t("every file on disk is in the manifest", artFiles.filter(i => !manifest.includes(i)).length, 0);
+
 
 /* ---- 7. the Health Connect elevation ledger.
    Elevation is the only badge source that comes from OUTSIDE the app, so the failure modes are
@@ -296,23 +311,30 @@ function elevCtx(){
   return sx;
 }
 
-(async () => {
+/* The envelope the DEVICE actually sends. safeResolveArray builds JSObject{items:[...]},
+   resolveSuccess wraps it as {success:true,data:{...}}, and callNative returns that verbatim.
+   Every mock below speaks this shape, because a suite that invents its own contract certifies
+   nothing -- the first version of this section mocked {success:true, value:[...]}, which no
+   plugin has ever returned, and passed green while the ledger merged 0 on real hardware. */
+const envelope = rows => ({ success: true, data: { items: rows } });
+
+async function elevationSection(){
   console.log("\n== Health Connect elevation ledger ==");
   let e = elevCtx();
   t("no bridge at all merges 0", await e.M(30), 0);
   t("...and does not throw", e.T(), 0);
 
-  e.window.HealthConnect = { getElevationHistory: () => ([
+  e.window.HealthConnect = { getElevationHistory: () => envelope([
     { date:"2026-08-10", meters:120.5 }, { date:"2026-08-11", meters:300 }, { date:"2026-08-12", meters:0 }
   ])};
   t("banks 2 days, skipping the 0 m day", await e.M(30), 2);
   t("total is the sum", Math.round(e.T()), 421);
 
-  e.window.HealthConnect = { getElevationHistory: () => ([{ date:"2026-08-11", meters:50 }]) };
+  e.window.HealthConnect = { getElevationHistory: () => envelope([{ date:"2026-08-11", meters:50 }]) };
   t("a PARTIAL re-read banks nothing", await e.M(30), 0);
   t("...and cannot shrink the ledger", Math.round(e.T()), 421);
 
-  e.window.HealthConnect = { getElevationHistory: () => ([{ date:"2026-08-11", meters:450 }]) };
+  e.window.HealthConnect = { getElevationHistory: () => envelope([{ date:"2026-08-11", meters:450 }]) };
   t("a fuller re-read does update", await e.M(30), 1);
   t("total follows", Math.round(e.T()), 571);
 
@@ -323,10 +345,30 @@ function elevCtx(){
   e.window.HealthConnect = { getElevationHistory: () => Promise.reject(new Error("denied")) };
   t("an async reject is swallowed", await e.M(30), 0);
 
-  e.window.HealthConnect = { getElevationHistory: () => ({ success:true, value:[{ date:"2026-08-13", meters:500 }] }) };
-  t("the wrapped {value:[...]} shape is handled", await e.M(30), 1);
+  e.window.HealthConnect = { getElevationHistory: () => envelope([{ date:"2026-08-13", meters:500 }]) };
+  t("the real {success,data:{items}} envelope banks a day", await e.M(30), 1);
   t("final total", Math.round(e.T()), 1071);
 
-  console.log("\n" + pass + " passed, " + fail + " failed");
-  process.exit(fail > 0 ? 1 : 0);
-})();
+  /* A refused call is a resolved promise carrying success:false, NOT a rejection -- callNative
+     converts every failure into one, so "denied" arrives looking exactly like a normal reply. */
+  e.window.HealthConnect = { getElevationHistory: () => ({ success:false, error:"not granted" }) };
+  t("a success:false reply merges nothing", await e.M(30), 0);
+  t("...and cannot shrink the ledger", Math.round(e.T()), 1071);
+
+  /* Legacy shapes stay supported; they are the fallback arms of elevationRows(). */
+  e.window.HealthConnect = { getElevationHistory: () => ([{ date:"2026-08-14", meters:29 }]) };
+  t("a bare array still works", await e.M(30), 1);
+  e.window.HealthConnect = { getElevationHistory: () => ({ success:true, value:[{ date:"2026-08-15", meters:100 }] }) };
+  t("the legacy {value:[...]} shape still works", await e.M(30), 1);
+  t("total after both fallbacks", Math.round(e.T()), 1200);
+}
+
+/* The summary is the file's last statement and runs whether or not the async section threw --
+   inside the IIFE it used to live in, a throw from elevCtx() (its cut() anchors drift whenever
+   app.js moves) killed the run with a raw unhandled-rejection stack and no "N passed" line. */
+elevationSection()
+  .catch(err => { fail++; console.log("  FAIL  elevation section threw: " + (err && err.message ? err.message : err)); })
+  .then(() => {
+    console.log("\n" + pass + " passed, " + fail + " failed");
+    process.exit(fail > 0 ? 1 : 0);
+  });
