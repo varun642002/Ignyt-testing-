@@ -54,7 +54,17 @@ class User(Base):
     # than trusted as a boolean set once.
     premium_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     premium_last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    premium_source: Mapped[str | None] = mapped_column(String(32), nullable=True)  # "play"
+    premium_source: Mapped[str | None] = mapped_column(String(32), nullable=True)  # "play" | "apple"
+
+    # --- Apple StoreKit entitlement ------------------------------------------------------
+    # A SEPARATE column, not a reuse of play_purchase_token. Two reasons and both are hard:
+    # a StoreKit JWS is 1-4 KB and would not fit in String(512), and the JWS is the wrong thing
+    # to key on anyway -- it is re-issued on every renewal, so it cannot answer "is this
+    # subscription already claimed by another account". originalTransactionId is short, stable
+    # for the life of the subscription, and is what Apple itself uses as the identity.
+    apple_original_transaction_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
 
     def __repr__(self) -> str:  # pragma: no cover - debug aid
         return f"<User id={self.id} firebase_uid={self.firebase_uid!r}>"

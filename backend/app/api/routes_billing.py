@@ -24,7 +24,8 @@ from ..config import Settings, get_settings
 from ..core.errors import AppError
 from ..db.models import User
 from ..db.session import get_db
-from ..services import play_billing
+from ..services import apple_billing, play_billing
+from ..services.apple_billing import AppleVerificationFailed
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["billing"])
@@ -38,8 +39,12 @@ class PurchaseAlreadyClaimed(AppError):
 
 
 class VerifyRequest(BaseModel):
-    # Play tokens are long opaque strings. Bounded so a hostile client cannot post a novel.
-    purchaseToken: str = Field(min_length=8, max_length=512)
+    # Play tokens are long opaque strings; a StoreKit JWS is 1-4 KB. Bounded at the larger of
+    # the two so a hostile client cannot post a novel, but iOS receipts still fit.
+    purchaseToken: str = Field(min_length=8, max_length=8192)
+    # Which store issued it. Defaults to play so existing Android clients — which do not send
+    # this field — keep working unchanged.
+    platform: str = Field(default="play", pattern="^(play|apple)$")
 
 
 class EntitlementResponse(BaseModel):
@@ -84,25 +89,57 @@ async def verify_purchase(
     settings: Settings = Depends(get_settings),
     db: AsyncSession = Depends(get_db),
 ) -> EntitlementResponse:
-    """Verify a Play purchase token and record what Google said."""
-    # A token belongs to whoever first verified it. Without this, one purchase could be pasted
-    # into any number of accounts — the single most obvious way to get premium for free.
-    clash = (
-        await db.execute(
-            select(User).where(
-                User.play_purchase_token == body.purchaseToken, User.id != user.id
+    """Verify a purchase with the store that issued it, and record what the store said.
+
+    BOTH PLATFORMS VERIFY BEFORE THEY CLAIM. Apple's proof is a signature this server checks
+    itself; Play's is an answer from Google. Either way the client presents a receipt and never
+    asserts entitlement — the ordering below matters for that reason: nothing is written to the
+    user row until the store has confirmed it.
+    """
+    if body.platform == "apple":
+        # Verified FIRST, so a forged JWS is refused before it can be used to probe which
+        # transaction ids are already claimed.
+        result = apple_billing.verify_transaction(settings, body.purchaseToken)
+        claim = result.get("original_transaction_id")
+        if not claim:
+            raise AppleVerificationFailed("Transaction carries no original transaction id.")
+
+        # Same replay rule as Play: a subscription belongs to whoever first verified it.
+        # Keyed on originalTransactionId rather than the JWS, which is re-issued every renewal
+        # and so would let one subscription be re-claimed on each cycle.
+        clash = (
+            await db.execute(
+                select(User).where(
+                    User.apple_original_transaction_id == claim, User.id != user.id
+                )
             )
-        )
-    ).scalar_one_or_none()
-    if clash is not None:
-        logger.warning("purchase token replay attempt by user %s", user.id)
-        raise PurchaseAlreadyClaimed("That purchase is already linked to another account.")
+        ).scalar_one_or_none()
+        if clash is not None:
+            logger.warning("apple transaction replay attempt by user %s", user.id)
+            raise PurchaseAlreadyClaimed("That purchase is already linked to another account.")
 
-    result = await play_billing.verify_subscription(settings, body.purchaseToken)
+        user.apple_original_transaction_id = claim
+        source = "apple"
+    else:
+        # A token belongs to whoever first verified it. Without this, one purchase could be
+        # pasted into any number of accounts — the most obvious way to get premium for free.
+        clash = (
+            await db.execute(
+                select(User).where(
+                    User.play_purchase_token == body.purchaseToken, User.id != user.id
+                )
+            )
+        ).scalar_one_or_none()
+        if clash is not None:
+            logger.warning("purchase token replay attempt by user %s", user.id)
+            raise PurchaseAlreadyClaimed("That purchase is already linked to another account.")
 
-    user.play_purchase_token = body.purchaseToken
+        result = await play_billing.verify_subscription(settings, body.purchaseToken)
+        user.play_purchase_token = body.purchaseToken
+        source = "play"
+
     user.is_premium = bool(result["entitled"])
-    user.premium_source = "play"
+    user.premium_source = source
     user.premium_last_checked_at = datetime.now(timezone.utc)
     user.premium_expires_at = (
         datetime.fromisoformat(result["expires_at"]) if result.get("expires_at") else None
@@ -111,7 +148,7 @@ async def verify_purchase(
 
     return EntitlementResponse(
         entitled=is_entitled(user),
-        source="play",
+        source=source,
         expires_at=result.get("expires_at"),
         state=result.get("state"),
         in_trial=bool(result.get("in_trial")),

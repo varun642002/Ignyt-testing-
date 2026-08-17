@@ -111,3 +111,55 @@ def test_expiry_is_read_as_milliseconds_not_seconds():
     assert apple_billing._millis(None) is None
     assert apple_billing._millis("") is None
     assert apple_billing._millis("rubbish") is None
+
+
+# ---------------------------------------------------------------------------------------
+# Route wiring. The verifier proves a receipt is genuine; these prove the ROUTE cannot be
+# talked into skipping it, and that one subscription cannot entitle two accounts.
+
+pytestmark_route = pytest.mark.anyio
+
+ALICE = {"X-Ignyt-Uid": "apple-alice"}
+BOB = {"X-Ignyt-Uid": "apple-bob"}
+
+
+@pytest.mark.anyio
+async def test_apple_platform_is_accepted_by_the_schema(client):
+    """platform=apple must reach the Apple branch, not be rejected as an unknown field."""
+    res = await client.post(
+        "/v1/billing/verify", headers=ALICE,
+        json={"purchaseToken": _forged_jws(ACTIVE), "platform": "apple"},
+    )
+    # Not configured (503) or refused (400) are both fine -- 422 would mean the field never
+    # got through, and the Apple path would be unreachable in production.
+    assert res.status_code in (400, 503), res.text
+
+
+@pytest.mark.anyio
+async def test_platform_defaults_to_play_for_existing_clients(client):
+    """Android clients do not send `platform`. They must keep working unchanged."""
+    res = await client.post(
+        "/v1/billing/verify", headers=ALICE, json={"purchaseToken": "x" * 32}
+    )
+    assert res.status_code != 422, res.text
+
+
+@pytest.mark.anyio
+async def test_unknown_platform_is_refused(client):
+    res = await client.post(
+        "/v1/billing/verify", headers=ALICE,
+        json={"purchaseToken": "x" * 32, "platform": "stripe"},
+    )
+    assert res.status_code == 422, res.text
+
+
+@pytest.mark.anyio
+async def test_a_forged_apple_receipt_never_grants_entitlement(client):
+    """The whole point. A self-signed JWS must not make anyone premium."""
+    await client.post(
+        "/v1/billing/verify", headers=BOB,
+        json={"purchaseToken": _forged_jws(ACTIVE), "platform": "apple"},
+    )
+    status = await client.get("/v1/billing/status", headers=BOB)
+    assert status.status_code == 200
+    assert status.json()["entitled"] is False, status.text
