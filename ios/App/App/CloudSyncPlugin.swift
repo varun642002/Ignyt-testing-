@@ -42,6 +42,16 @@ public class IgnytCloudSyncPlugin: CAPPlugin {
         return Firestore.firestore()
     }
 
+    /* The same allow-list the other three layers carry. This file shipped WITHOUT one, which
+       made iOS the only platform that would read or write any collection name the web layer
+       asked for -- a weaker position than Android for no reason. Kept in step by hand across
+       four files; a category present in cloud-sync.js but missing from any one of them is
+       refused as "unknown collection" and silently never syncs. */
+    private static let allowedCollections: Set<String> = [
+        "workouts", "routines", "prs", "bodylog", "races", "customExercises",
+        "foodLog", "waterLog", "goals", "achievements", "favoriteFoods", "elevationLog"
+    ]
+
     private func currentUidOrNull() -> String? {
         return Auth.auth().currentUser?.uid
     }
@@ -104,8 +114,8 @@ public class IgnytCloudSyncPlugin: CAPPlugin {
 
     @objc func listCollection(_ call: CAPPluginCall) {
         guard let uid = currentUidOrNull(), let db = db else { return resolveUnavailable(call) }
-        guard let name = call.getString("name") else {
-            call.resolve(["success": false, "error": "Missing collection name."])
+        guard let name = call.getString("name"), Self.allowedCollections.contains(name) else {
+            call.resolve(["success": false, "error": "listCollection: unknown collection."])
             return
         }
         // `since` arrives as a STRING from JS (cloud-sync.js sends String(since)) because a
@@ -139,8 +149,9 @@ public class IgnytCloudSyncPlugin: CAPPlugin {
 
     @objc func writeRecords(_ call: CAPPluginCall) {
         guard let uid = currentUidOrNull(), let db = db else { return resolveUnavailable(call) }
-        guard let name = call.getString("name"), let records = call.getArray("records") else {
-            call.resolve(["success": false, "error": "Missing name or records."])
+        guard let name = call.getString("name"), Self.allowedCollections.contains(name),
+              let records = call.getArray("records") else {
+            call.resolve(["success": false, "error": "writeRecords: unknown collection."])
             return
         }
         let collectionRef = db.collection("users").document(uid).collection(name)
