@@ -111,6 +111,47 @@ ICON_RULES = [
     #     the NUTRITION rule. Calories burned on a bike is not a meal.
     #   skierg-* / bike-*                  ->  the default dumbbells, having matched nothing.
     # Ten of the 73 cardio badges, which is ten paid calls returning the wrong picture.
+    # --- clusters that were falling through to DEFAULT_ICON ------------------------------
+    # A one-pass audit of every category found 216 badges landing on the generic crossed
+    # dumbbells -- Progress Photos, Measurements, Wall Balls, every Program badge, Birthday,
+    # Midnight Warrior, the anniversaries. Tier metal and the engraved value were the only
+    # things telling them apart, which is the repetition the per-badge art exists to avoid, and
+    # you pay for each one. These are ordered above the broad rules for the same first-match
+    # reason as the erg block below.
+    # Second pass over what was still generic after the block below: short volume/total ids
+    # (sqT, kbT, bbjT, statC) and the streak/period families (perfstk, mornstk, mon, smonth,
+    # wknd). Same cause -- terse ids that match no word-shaped rule.
+    (r"^workouts-|^wo-",                        "a pair of crossed dumbbells over a laurel"),
+    (r"^sqt-|^bpt-|^dlt-|^ohpt-",               "a loaded barbell with a volume arc"),
+    (r"^kbt-",                                  "a kettlebell mid-swing"),
+    (r"^bbjt-",                                 "a figure mid broad-jump burpee"),
+    (r"^statc-",                                "a row of station markers"),
+    (r"^perfstk|^mornstk|^appstk|^wstk",        "a stylised flame"),
+    (r"^mon-|^smonth|^wknd",                    "a calendar page with a tick"),
+    (r"^sh-",                                   "a share arrow rising from a medal"),
+    (r"^photo",                                 "a camera with a laurel"),
+    (r"^measure|^meas|^tracking-trio",          "a coiled tape measure"),
+    (r"^wallball|^wb-",                         "a medicine ball arcing at a wall target"),
+    (r"^fct-|^farm",                            "two heavy carry handles gripped at the sides"),
+    (r"^sblt-|^sandb|^lunge",                   "a sandbag carried over one shoulder"),
+    (r"^sled|^slp|^sla",                        "a weighted push sled"),
+    (r"^compromised",                           "a runner mid-stride leaving a station"),
+    (r"^new-year",                              "fireworks over a calendar page"),
+    (r"^birthday|^bday",                        "a birthday cake with a single candle"),
+    (r"^midnight|^mid-",                        "a crescent moon over a clock face"),
+    (r"^anniv|^four-seasons",                   "a laurel ribbon with a year seal"),
+    (r"^program|^ps-|^pc-|^pt-|^cw-|^sw-|^workout-create|^workouts-save",
+                                                "a clipboard holding a training plan"),
+    (r"^perfect|^excellent-day|^wc-|^weekend|^two-a-day|^comeback",
+                                                "a laurel-framed star"),
+    (r"^uf-",                                   "a plate ringed with varied foods"),
+    (r"^macd|^macro",                           "a three-segment macro pie chart"),
+    (r"^breakfast",                             "a sunrise over a breakfast plate"),
+    (r"^new-low",                               "a downward arrow over a bathroom scale"),
+    (r"^mobility|^mob-|^strch",                 "a figure holding a deep stretch"),
+    (r"^med-|meditat",                          "a seated figure in meditation"),
+    (r"^rpe|^effort",                           "a gauge dial with a needle"),
+    (r"^rest",                                  "a pillow under a crescent moon"),
     # burpT-* is a BODYWEIGHT total in the strength category; burpee-bj-* is the HYROX station.
     # Both begin "burp", and ^burp lives in the HYROX rule below, so the burpee totals were
     # being sent a jagged mountain range. Same class of collision as the rowing one.
