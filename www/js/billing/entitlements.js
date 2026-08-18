@@ -157,7 +157,20 @@ window.IgnytEntitlements = (function () {
      recovers it on a reinstall, and the BACKEND agrees — /v1/billing/verify has no Apple path
      yet, so server-side entitlement is still Android-only and must be built before this flips.
      Flipping it before that ships a client-only paywall, which is forgeable in seconds. */
-  var IOS_BILLING_ENABLED = false;
+  /* ON as of 2026-08-17, FOR TESTFLIGHT. The plugin compiles on Codemagic and is registered,
+     but no purchase has ever completed on a device -- so this is on to make the paywall
+     reachable for sandbox testing, not because iOS billing is proven.
+
+     TURN IT BACK OFF before any App Store submission if the sandbox run does not pass all of:
+     both plans load with real prices, the button reads "Start 7-day free trial", a purchase
+     completes, entitlement survives a reinstall via Restore, and /v1/billing/status agrees.
+     Shipping this true while broken locks iPhone users out of features they cannot buy, which
+     is strictly worse than iOS being free.
+
+     Also still required before it means anything in production: APPLE_ROOT_CA_PATH and
+     APPLE_BUNDLE_ID on the server, and `alembic upgrade head` for the Apple column. Without
+     those the backend refuses every Apple receipt and entitlement would be client-only. */
+  var IOS_BILLING_ENABLED = true;
 
   function paywallApplies() {
     if (platform() === "android") return true;
