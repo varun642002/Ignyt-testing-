@@ -175,7 +175,7 @@ dependencies {
     // Google Play Billing. Required, not chosen: a Play-distributed app selling access to
     // digital content must bill through Play. The 7-day free trial is configured as an offer
     // on the base plan in Play Console, so no trial logic ships in the app.
-    implementation "com.android.billingclient:billing-ktx:7.1.1"
+    implementation "com.android.billingclient:billing-ktx:8.0.0"
     // ADDED for Phase 2B cloud sync (profile/settings backup). Same BOM pins the version;
     // Firestore's built-in disk persistence provides the offline-first queueing.
     implementation "com.google.firebase:firebase-firestore"

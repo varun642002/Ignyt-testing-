@@ -293,11 +293,16 @@ class BillingPlugin : Plugin() {
         }
     }
 
+    /* Billing 8 changed this callback's second argument from List<ProductDetails> to
+     * QueryProductDetailsResult, which is the only source change the v8 bump required.
+     * Unwrapped here rather than at the call sites so the rest of the plugin keeps working with
+     * a plain list -- the shape every caller already expects. Play requires 8.0.0+ from
+     * 31 Aug 2026; 7.1.1 updates are rejected after that. */
     private suspend fun queryProductDetails(params: QueryProductDetailsParams):
         Pair<BillingResult, List<ProductDetails>> =
         suspendCancellableCoroutine { cont ->
             billingClient?.queryProductDetailsAsync(params) { result, details ->
-                if (cont.isActive) cont.resume(result to details)
+                if (cont.isActive) cont.resume(result to details.productDetailsList)
             } ?: run {
                 if (cont.isActive) cont.resume(
                     BillingResult.newBuilder()
