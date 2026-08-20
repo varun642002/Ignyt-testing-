@@ -112,7 +112,19 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            if (releaseSigningConfigured) {
+            /* NO ndk.debugSymbolLevel HERE, and Play's "you've not uploaded debug symbols"
+               warning is expected and safe to ignore.
+
+               Tried it, measured it, removed it. debugSymbolLevel only extracts symbols from
+               native code THIS project builds via externalNativeBuild. The only .so in the
+               bundle is libdatastore_shared_counter (4-7 KB per ABI), a prebuilt from AndroidX
+               DataStore pulled in transitively -- already stripped by whoever shipped it, and
+               nothing here can recover symbols we never had. The setting built clean and added
+               no BUNDLE-METADATA/debugsymbols entry at all, which is how it was caught.
+
+               Leaving it in would have been config that looks like it does something and does
+               not. If IGNYT ever ships its own native code, this is where it goes. */
+           if (releaseSigningConfigured) {
                 signingConfig signingConfigs.release
             }
         }
