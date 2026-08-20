@@ -78,18 +78,6 @@ const HealthConnect = (() => {
     getHeartRateHistory:      () => callNative("getHeartRateHistory"),     // ADDED
     getStepsHistory:          () => callNative("getStepsHistory"),         // ADDED
     getWeightHistory:         (days = 90) => callNative("getWeightHistory", { days }),
-    /* Day-bucketed, not a single total: a lifetime figure is impossible to read from Health
-       Connect, which caps at 30 days without PERMISSION_READ_HEALTH_DATA_HISTORY and silently
-       truncates rather than failing. mergeElevationFromHealth() in app.js keeps the ledger.
-
-       ANDROID ONLY, for now. The iOS plugin declares no getElevationHistory in its pluginMethods
-       list, so on iPhone this resolves to the "native plugin not registered" refusal, which
-       mergeElevationFromHealth correctly swallows -- the six elev-* badges simply never unlock
-       there. That is safe but not honest: HealthKit does carry the data
-       (HKQuantityTypeIdentifierFlightsClimbed, and HKMetadataKeyElevationAscended on workouts),
-       so this is a missing implementation rather than a platform limit. Until it exists, the
-       badges are unreachable on iOS and nothing in the UI says so. */
-    getElevationHistory:      (days = 30) => callNative("getElevationHistory", { days }),
     // ADDED -- the 10 newly requested metrics
     getRespiratoryRate:       () => callNative("getRespiratoryRate"),
     getOxygenSaturation:      () => callNative("getOxygenSaturation"),

@@ -316,11 +316,10 @@
          achievement defs. The ledger is day-keyed and only needs topping up about daily; the
          30-day window it reads gives a wide margin, so a device that is off for a week still
          loses nothing. */
-      if (typeof mergeElevationFromHealth === "function" &&
-          Date.now() - (Number(hcState.lastElevationMergeAt) || 0) >= ELEVATION_MERGE_MIN_MS) {
-        hcState.lastElevationMergeAt = Date.now();
-        try { mergeElevationFromHealth(30); } catch (e) { /* never breaks the sync */ }
-      }
+      /* The elevation merge was removed on 2026-08-20 with the READ_ELEVATION_GAINED
+         permission. Play named it under Health Connect's Minimum Scope policy and the
+         six badges it fed are gone, so this would now request a grant the manifest no
+         longer declares -- and get nothing back for it. */
       saveHcState(hcState);
       _errorMsg = null;
       /* The same field means different things on the two platforms, so the message cannot be

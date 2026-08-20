@@ -6291,19 +6291,12 @@ const ACHIEVEMENT_DEFS = [
   { id:"longRun-80", name:"Long Run · 80km", desc:"Run 80km in one session.", check:()=> longestRunKm()>=80 , category:"cardio", tier:"diamond", value:"80" },
   { id:"longRun-100", name:"Long Run · 100km", desc:"Run 100km in one session.", check:()=> longestRunKm()>=100 , category:"cardio", tier:"platinum", value:"100" },
 
-  /* ---- ELEVATION (6), from Health Connect's ElevationGainedRecord. The ledger in
-     state.elevationLog is topped up on each health sync; totalElevationM() sums it. On a device
-     with no Health Connect, or with the grant refused, the ledger stays empty and these simply
-     never unlock -- which is correct, and is why nothing here falls back to estimating climb
-     from distance.
-     Lives inside the CARDIO block, not at the end of the file: the achievements grid filters by
-     category without re-sorting, so a def's position in this array IS its position on screen. ---- */
-  { id:"elev-500", name:"Climber · 500 m", desc:"Climb 500 m.", check:()=> totalElevationM()>=500 , category:"cardio", tier:"bronze", value:"500M", prog:{ have:()=> Math.round(totalElevationM()), need:500 } },
-  { id:"elev-1000", name:"Climber · 1,000 m", desc:"Climb 1,000 m.", check:()=> totalElevationM()>=1000 , category:"cardio", tier:"silver", value:"1KM", prog:{ have:()=> Math.round(totalElevationM()), need:1000 } },
-  { id:"elev-2500", name:"Climber · 2,500 m", desc:"Climb 2,500 m.", check:()=> totalElevationM()>=2500 , category:"cardio", tier:"silver", value:"2.5K", prog:{ have:()=> Math.round(totalElevationM()), need:2500 } },
-  { id:"elev-5000", name:"Climber · 5,000 m", desc:"Climb 5,000 m.", check:()=> totalElevationM()>=5000 , category:"cardio", tier:"gold", value:"5KM", prog:{ have:()=> Math.round(totalElevationM()), need:5000 } },
-  { id:"elev-10000", name:"Climber · 10,000 m", desc:"Climb 10,000 m.", check:()=> totalElevationM()>=10000 , category:"cardio", tier:"diamond", value:"10K", prog:{ have:()=> Math.round(totalElevationM()), need:10000 } },
-  { id:"elev-25000", name:"Climber · 25,000 m", desc:"Climb 25,000 m.", check:()=> totalElevationM()>=25000 , category:"cardio", tier:"platinum", value:"25K", prog:{ have:()=> Math.round(totalElevationM()), need:25000 } },
+  /* The six Climber badges were removed on 2026-08-20. Play rejected the app under the Health
+     Connect "Minimum Scope" policy, naming ElevationGained among seven data types not justified
+     by the app's features -- and they were right: nothing in IGNYT is about climbing, so these
+     were derived from a data type that happened to be readable rather than from anything a
+     user asked for. With the permission gone totalElevationM() reads zero forever, and a badge
+     nobody can ever earn is worse than no badge. */
 
   /* ---- HYROX (37) ---- */
   { id:"wbT-2500", name:"Wall Ball Total · 2,500", desc:"Complete 2,500 wall balls.", check:()=> stationReps(ACH_WALLBALL_RE)>=2500 , category:"hyrox", tier:"bronze", value:"2.5K", prog:{ have:()=> Math.round(stationReps(ACH_WALLBALL_RE)), need:2500 } },
