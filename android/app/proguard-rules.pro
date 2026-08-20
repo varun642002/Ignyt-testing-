@@ -36,3 +36,22 @@
 -keepclassmembers class * {
     @android.webkit.JavascriptInterface <methods>;
 }
+
+# ---------------------------------------------------------------------------------------
+# @capacitor-firebase/authentication ships handlers for EVERY provider it supports --
+# Facebook, Twitter, Play Games and so on -- in one artifact, whether or not the app uses
+# them. IGNYT uses email and Apple only, so the Facebook SDK is not a dependency and R8
+# fails the release build on classes that are referenced but will never be loaded.
+#
+# -dontwarn, NOT -keep. There is nothing to keep: the classes genuinely are not in the APK.
+# The handler that references them is only constructed when its provider is invoked, which
+# cannot happen without Facebook sign-in being configured. Keeping them would ask R8 to
+# preserve classes that do not exist.
+#
+# Added when Firebase arrived with the Kotlin 2.1 bump; debug builds never showed it because
+# they do not minify.
+-dontwarn com.facebook.CallbackManager$Factory
+-dontwarn com.facebook.CallbackManager
+-dontwarn com.facebook.FacebookCallback
+-dontwarn com.facebook.login.LoginManager
+-dontwarn com.facebook.login.widget.LoginButton
